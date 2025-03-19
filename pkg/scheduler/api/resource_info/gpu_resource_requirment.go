@@ -23,10 +23,10 @@ const (
 )
 
 type GpuResourceRequirement struct {
-	count        int64
-	portion      float64
-	gpuMemory    int64
-	migResources map[v1.ResourceName]int64
+	count        int64                     `json:"count,omitempty"`
+	portion      float64                   `json:"portion,omitempty"`
+	gpuMemory    int64                     `json:"gpuMemory,omitempty"`
+	migResources map[v1.ResourceName]int64 `json:"migResources,omitempty"`
 }
 
 func NewGpuResourceRequirement() *GpuResourceRequirement {

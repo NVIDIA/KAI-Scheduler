@@ -8,6 +8,6 @@ import (
 )
 
 type StorageClassInfo struct {
-	ID          common_info.StorageClassID
-	Provisioner string
+	ID          common_info.StorageClassID `json:"id"`
+	Provisioner string `json:"provisioner"`
 }

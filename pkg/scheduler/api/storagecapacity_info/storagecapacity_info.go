@@ -20,24 +20,24 @@ import (
 )
 
 type StorageCapacityInfo struct {
-	UID  common_info.StorageCapacityID
-	Name string
+	UID  common_info.StorageCapacityID `json:"uid"`
+	Name string `json:"name"`
 
 	// StorageClass is the name of the StorageClass that this capacity applies to.
-	StorageClass common_info.StorageClassID
+	StorageClass common_info.StorageClassID `json:"storageClass"`
 
 	// ProvisionedPVCs is a map of all existing PVCs provisioned from a node with access to this capacity and
 	// with matching StorageClass, and are reclaimable (owned by a single pod)
-	ProvisionedPVCs map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo
+	ProvisionedPVCs map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo `json:"provisionedPvcs"`
 
 	// The capacity on this storage reported by the csidriver
-	capacity *resource.Quantity
+	capacity *resource.Quantity `json:"capacity"`
 
 	// MaximumVolumeSize is the largest size that may be used in a
 	// ResourceRequirements.Requests in a volume claim that uses this storage capacity.
-	MaximumVolumeSize *resource.Quantity
+	MaximumVolumeSize *resource.Quantity `json:"maximumVolumeSize"`
 
-	nodeTopology labels.Selector
+	nodeTopology labels.Selector `json:"nodeTopology"`
 }
 
 func NewStorageCapacityInfo(capacity *v1.CSIStorageCapacity) (*StorageCapacityInfo, error) {

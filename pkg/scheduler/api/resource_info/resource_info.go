@@ -15,8 +15,8 @@ import (
 )
 
 type Resource struct {
-	BaseResource
-	gpus float64
+	BaseResource `json:"baseResource,omitempty"`
+	gpus         float64 `json:"gpus,omitempty"`
 }
 
 func EmptyResource() *Resource {

@@ -49,30 +49,30 @@ const (
 
 // NodeInfo is node level aggregated information.
 type NodeInfo struct {
-	Name string
-	Node *v1.Node
+	Name string `json:"name,omitempty"`
+	Node *v1.Node `json:"node,omitempty"`
 
 	// The releasing resource on that node (excluding shared GPUs)
-	Releasing *resource_info.Resource
+	Releasing *resource_info.Resource `json:"releasing,omitempty"`
 	// The idle resource on that node (excluding shared GPUs)
-	Idle *resource_info.Resource
+	Idle *resource_info.Resource `json:"idle,omitempty"`
 	// The used resource on that node, including running and terminating
 	// pods (excluding shared GPUs)
-	Used *resource_info.Resource
+	Used *resource_info.Resource `json:"used,omitempty"`
 
-	Allocatable *resource_info.Resource
+	Allocatable *resource_info.Resource `json:"allocatable,omitempty"`
 
-	AccessibleStorageCapacities map[common_info.StorageClassID][]*sc_info.StorageCapacityInfo
+	AccessibleStorageCapacities map[common_info.StorageClassID][]*sc_info.StorageCapacityInfo `json:"accessibleStorageCapacities,omitempty"`
 
-	PodInfos               map[common_info.PodID]*pod_info.PodInfo
-	MaxTaskNum             int
-	MemoryOfEveryGpuOnNode int64
-	GpuMemorySynced        bool
-	LegacyMIGTasks         map[common_info.PodID]string
+	PodInfos               map[common_info.PodID]*pod_info.PodInfo `json:"podInfos,omitempty"`
+	MaxTaskNum             int `json:"maxTaskNum,omitempty"`
+	MemoryOfEveryGpuOnNode int64 `json:"memoryOfEveryGpuOnNode,omitempty"`
+	GpuMemorySynced        bool `json:"gpuMemorySynced,omitempty"`
+	LegacyMIGTasks         map[common_info.PodID]string `json:"legacyMigTasks,omitempty"`
 
-	PodAffinityInfo pod_affinity.NodePodAffinityInfo
+	PodAffinityInfo pod_affinity.NodePodAffinityInfo `json:"podAffinityInfo,omitempty"`
 
-	GpuSharingNodeInfo
+	GpuSharingNodeInfo `json:"gpuSharingNodeInfo,omitempty"`
 }
 
 func NewNodeInfo(node *v1.Node, podAffinityInfo pod_affinity.NodePodAffinityInfo) *NodeInfo {

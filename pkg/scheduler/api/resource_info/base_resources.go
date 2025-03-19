@@ -21,9 +21,9 @@ const (
 )
 
 type BaseResource struct {
-	milliCpu        float64
-	memory          float64
-	scalarResources map[v1.ResourceName]int64
+	milliCpu        float64                   `json:"milliCpu,omitempty"`
+	memory          float64                   `json:"memory,omitempty"`
+	scalarResources map[v1.ResourceName]int64 `json:"scalarResources,omitempty"`
 }
 
 func EmptyBaseResource() *BaseResource {

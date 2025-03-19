@@ -16,22 +16,22 @@ import (
 type Key common_info.ObjectKey
 
 type StorageClaimInfo struct {
-	Key          Key
-	Name         string
-	Namespace    string
-	Size         *resource.Quantity
-	Phase        v1.PersistentVolumeClaimPhase
-	StorageClass common_info.StorageClassID
+	Key          Key `json:"key,omitempty"`
+	Name         string `json:"name,omitempty"`
+	Namespace    string `json:"namespace,omitempty"`
+	Size         *resource.Quantity `json:"size,omitempty"`
+	Phase        v1.PersistentVolumeClaimPhase `json:"phase,omitempty"`
+	StorageClass common_info.StorageClassID `json:"storageClass,omitempty"`
 
 	// PodOwnerReference is set only when there is a single pod owner to the PVC
-	PodOwnerReference *PodOwnerReference
-	DeletedOwner      bool
+	PodOwnerReference *PodOwnerReference `json:"podOwnerReference,omitempty"`
+	DeletedOwner      bool `json:"deletedOwner,omitempty"`
 }
 
 type PodOwnerReference struct {
-	PodID        common_info.PodID
-	PodName      string
-	PodNamespace string
+	PodID        common_info.PodID `json:"podId,omitempty"`
+	PodName      string `json:"podName,omitempty"`
+	PodNamespace string `json:"podNamespace,omitempty"`
 }
 
 func (po *PodOwnerReference) Clone() *PodOwnerReference {

@@ -19,8 +19,8 @@ const (
 )
 
 type ResourceRequirements struct {
-	BaseResource
-	GpuResourceRequirement
+	BaseResource           `json:"baseResource,omitempty"`
+	GpuResourceRequirement `json:"gpuResourceRequirement,omitempty"`
 }
 
 func EmptyResourceRequirements() *ResourceRequirements {

@@ -31,47 +31,47 @@ const (
 )
 
 type JobRequirement struct {
-	GPU      float64
-	MilliCPU float64
-	Memory   float64
+	GPU      float64 `json:"gpu,omitempty"`
+	MilliCPU float64 `json:"milliCpu,omitempty"`
+	Memory   float64 `json:"memory,omitempty"`
 }
 
 type StalenessInfo struct {
-	TimeStamp *time.Time
-	Stale     bool
+	TimeStamp *time.Time `json:"timeStamp,omitempty"`
+	Stale     bool       `json:"stale,omitempty"`
 }
 
 type PodGroupInfo struct {
-	UID common_info.PodGroupID
+	UID common_info.PodGroupID `json:"uid,omitempty"`
 
-	Name      string
-	Namespace string
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 
-	Queue common_info.QueueID
+	Queue common_info.QueueID `json:"queue,omitempty"`
 
-	Priority int32
+	Priority int32 `json:"priority,omitempty"`
 
-	MinAvailable int32
+	MinAvailable int32 `json:"minAvailable,omitempty"`
 
-	JobFitErrors   enginev2alpha2.UnschedulableExplanations
-	NodesFitErrors map[common_info.PodID]*common_info.FitErrors
+	JobFitErrors   enginev2alpha2.UnschedulableExplanations `json:"jobFitErrors,omitempty"`
+	NodesFitErrors map[common_info.PodID]*common_info.FitErrors `json:"nodesFitErrors,omitempty"`
 
 	// All tasks of the Job.
-	PodStatusIndex map[pod_status.PodStatus]pod_info.PodsMap
-	PodInfos       pod_info.PodsMap
+	PodStatusIndex map[pod_status.PodStatus]pod_info.PodsMap `json:"podStatusIndex,omitempty"`
+	PodInfos       pod_info.PodsMap `json:"podInfos,omitempty"`
 
-	Allocated *resource_info.Resource
+	Allocated *resource_info.Resource `json:"allocated,omitempty"`
 
-	CreationTimestamp metav1.Time
-	PodGroup          *enginev2alpha2.PodGroup
-	PodGroupUID       types.UID
+	CreationTimestamp metav1.Time `json:"creationTimestamp,omitempty"`
+	PodGroup          *enginev2alpha2.PodGroup `json:"podGroup,omitempty"`
+	PodGroupUID       types.UID `json:"podGroupUid,omitempty"`
 
 	// TODO(k82cn): keep backward compatibility, removed it when v1alpha1 finalized.
-	PDB *policyv1.PodDisruptionBudget
+	PDB *policyv1.PodDisruptionBudget `json:"pdb,omitempty"`
 
-	StalenessInfo
+	StalenessInfo `json:"stalenessInfo,omitempty"`
 
-	schedulingConstraintsSignature common_info.SchedulingConstraintsSignature
+	schedulingConstraintsSignature common_info.SchedulingConstraintsSignature `json:"schedulingConstraintsSignature,omitempty"`
 }
 
 func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *PodGroupInfo {

@@ -14,13 +14,13 @@ import (
 )
 
 type QueueInfo struct {
-	UID               common_info.QueueID
-	Name              string
-	ParentQueue       common_info.QueueID
-	ChildQueues       []common_info.QueueID
-	Resources         QueueQuota
-	Priority          int
-	CreationTimestamp metav1.Time
+	UID               common_info.QueueID `json:"uid,omitempty"`
+	Name              string              `json:"name,omitempty"`
+	ParentQueue       common_info.QueueID `json:"parentQueue,omitempty"`
+	ChildQueues       []common_info.QueueID `json:"childQueues,omitempty"`
+	Resources         QueueQuota          `json:"resources,omitempty"`
+	Priority          int                 `json:"priority,omitempty"`
+	CreationTimestamp metav1.Time         `json:"creationTimestamp,omitempty"`
 }
 
 func NewQueueInfo(queue *enginev2.Queue) *QueueInfo {

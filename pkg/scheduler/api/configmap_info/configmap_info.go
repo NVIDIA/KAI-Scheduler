@@ -11,9 +11,9 @@ import (
 )
 
 type ConfigMapInfo struct {
-	UID       common_info.ConfigMapID
-	Name      string
-	Namespace string
+	UID       common_info.ConfigMapID `json:"uid,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func NewConfigMapInfo(configMap *v1.ConfigMap) *ConfigMapInfo {
