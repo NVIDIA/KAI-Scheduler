@@ -1,0 +1,60 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+name: KAI Scheduler - Release
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  test-build-and-push:
+    name: Test & Build & Push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Extract package version
+        run: |
+          echo "PACKAGE_VERSION=$(GITHUB_REF/refs\/tags\//)" >> $GITHUB_ENV
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.4'
+
+      - name: Login to NGC Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: nvcr.io
+          username: $oauthtoken
+          password: ${{ secrets.NGC_API_KEY }}
+
+      - name: Set up helm
+        env:
+          NGC_API_KEY: ${{ secrets.NGC_API_KEY }}
+        run: |
+          helm repo add nvstaging https://helm.ngc.nvidia.com/nvstaging/runai --username=\$oauthtoken --password=$NGC_API_KEY
+          helm plugin install https://github.com/chartmuseum/helm-push
+
+      - name: Run tests
+        run: make test
+
+      - name: Docker build & push
+        run: make build DOCKER_BUILD_PLATFORM=linux/amd64,linux/arm64 VERSION=$PACKAGE_VERSION DOCKER_BUILDX_ADDITIONAL_ARGS=--push
+
+      - name: Build helm chart
+        run: |
+          helm package ./deployments/kai-scheduler -d ./charts --version $PACKAGE_VERSION
+
+      - name: Upload As Release Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: charts/*.tgz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload helm chart to NGC
+        run: |
+          helm cm-push ./charts/kai-scheduler-$PACKAGE_VERSION.tgz nvstaging

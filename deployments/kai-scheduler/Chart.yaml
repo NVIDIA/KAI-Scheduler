@@ -3,7 +3,7 @@
 
 apiVersion: v2
 name: kai-scheduler
-description: Kube AI Scheduler by NVIDIA
+description: KAI Scheduler by NVIDIA
 type: application
 version: 0.0.0
 appVersion: "0.0.0"
