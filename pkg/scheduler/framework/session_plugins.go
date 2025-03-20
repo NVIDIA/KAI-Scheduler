@@ -66,10 +66,10 @@ func (ssn *Session) AddGetQueueAllocatedResourcesFn(of api.QueueResource) {
 }
 
 func (ssn *Session) AddHttpHandler(path string, handler func(http.ResponseWriter, *http.Request)) {
-	if ssn.mux == nil {
+	if server == nil {
 		return
 	}
-	ssn.mux.HandleFunc(path, handler)
+	server.registerPlugin(path, handler)
 }
 
 func (ssn *Session) CanReclaimResources(reclaimer *reclaimer_info.ReclaimerInfo) bool {

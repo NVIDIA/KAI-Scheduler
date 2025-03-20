@@ -20,7 +20,11 @@ func OpenSession(cache cache.Cache, config *conf.SchedulerConfiguration,
 	openSessionStart := time.Now()
 	defer metrics.UpdateOpenSessionDuration(openSessionStart)
 
-	ssn, err := openSession(cache, sessionId, *schedulerParams)
+	if server == nil {
+		server = newPluginServer(mux)
+	}
+
+	ssn, err := openSession(cache, sessionId, *schedulerParams, mux)
 	if err != nil {
 		return nil, err
 	}
