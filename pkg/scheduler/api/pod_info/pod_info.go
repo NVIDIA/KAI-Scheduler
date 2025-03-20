@@ -405,7 +405,7 @@ func (pi *PodInfo) updatePodAdditionalFieldsIfRunaiPodgroup(bindRequest *bindreq
 	}
 
 	pi.updateLegacyMigResourceRequestFromAnnotations()
-	if len(pi.ResReq.MigResources()) > 0 {
+	if len(pi.ResReq.MIGResources) > 0 {
 		pi.ResourceRequestType = RequestTypeMigInstance
 	}
 }

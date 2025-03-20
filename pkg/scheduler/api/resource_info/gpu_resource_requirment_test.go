@@ -57,9 +57,9 @@ var _ = Describe("GpuResourceRequirement mechanism", func() {
 			err := gpuResource1.SetMaxResource(gpuResource2)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(gpuResource1.GPUs()).To(Equal(float64(5)))
-			Expect(gpuResource1.MigResources()["nvidia.com/mig-1g.5gb"]).To(Equal(int64(2)))
-			Expect(gpuResource1.MigResources()["nvidia.com/mig-2g.10gb"]).To(Equal(int64(1)))
-			Expect(gpuResource1.MigResources()["nvidia.com/mig-3g.20gb"]).To(Equal(int64(1)))
+			Expect(gpuResource1.MIGResources["nvidia.com/mig-1g.5gb"]).To(Equal(int64(2)))
+			Expect(gpuResource1.MIGResources["nvidia.com/mig-2g.10gb"]).To(Equal(int64(1)))
+			Expect(gpuResource1.MIGResources["nvidia.com/mig-3g.20gb"]).To(Equal(int64(1)))
 		})
 
 		It("Support multi fractions", func() {
@@ -155,14 +155,14 @@ var _ = Describe("GpuResourceRequirement mechanism", func() {
 func newGpuResourceRequirementWithValues(
 	gpus float64, gpuMemory int64, migResources map[v1.ResourceName]int64) *GpuResourceRequirement {
 	gResource := &GpuResourceRequirement{
-		count:        fractionDefaultCount,
-		portion:      gpus,
-		gpuMemory:    gpuMemory,
-		migResources: migResources,
+		Count:        fractionDefaultCount,
+		Portion:      gpus,
+		GPUMemory:    gpuMemory,
+		MIGResources: migResources,
 	}
 	if gpus >= wholeGpuPortion {
-		gResource.count = int64(gpus)
-		gResource.portion = wholeGpuPortion
+		gResource.Count = int64(gpus)
+		gResource.Portion = wholeGpuPortion
 	}
 	return gResource
 }

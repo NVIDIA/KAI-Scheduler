@@ -140,11 +140,11 @@ func TestStatement_Evict_Unevict(t *testing.T) {
 
 			actualJob := ssn.PodGroupInfos[tt.args.jobName]
 			assert.Equal(t, *originalJob.Allocated, *actualJob.Allocated)
-			assert.Equal(t, tt.expected.jobGpuAllocation, actualJob.Allocated.GPUs())
+			assert.Equal(t, tt.expected.jobGpuAllocation, actualJob.Allocated.GPUs)
 
 			actualNodeInfo := extractNodeAssertedInfo(nodesInfoMap[actualTask.NodeName])
 			originalNodeInfo.assertEqual(t, actualNodeInfo)
-			assert.Equal(t, tt.expected.usedGpuOnNode, actualNodeInfo.used.GPUs())
+			assert.Equal(t, tt.expected.usedGpuOnNode, actualNodeInfo.used.GPUs)
 		})
 	}
 }
@@ -663,16 +663,16 @@ func TestStatement_Pipeline_Unpipeline(t *testing.T) {
 
 			actualPipelinedJob := ssn.PodGroupInfos[tt.args.jobName]
 			assert.Equal(t, *originalPipelineJob.Allocated, *actualPipelinedJob.Allocated)
-			assert.Equal(t, tt.expected.jobGpuAllocated, actualPipelinedJob.Allocated.GPUs())
+			assert.Equal(t, tt.expected.jobGpuAllocated, actualPipelinedJob.Allocated.GPUs)
 
 			if pipelinedTask.NodeName != "" {
 				pipelinedFromNodeInfo := extractNodeAssertedInfo(nodesInfoMap[pipelinedTask.NodeName])
 				originalPipelinedNodeInfo.assertEqual(t, pipelinedFromNodeInfo)
-				assert.Equal(t, tt.expected.usedGpuOnPipelineOriginNode, originalPipelinedNodeInfo.used.GPUs())
+				assert.Equal(t, tt.expected.usedGpuOnPipelineOriginNode, originalPipelinedNodeInfo.used.GPUs)
 			}
 			pipelinedToNodeInfo := extractNodeAssertedInfo(nodesInfoMap[tt.args.nodeToPipeline])
 			originalPipelinedToNodeInfo.assertEqual(t, pipelinedToNodeInfo)
-			assert.Equal(t, tt.expected.usedGpuOnPipelinedNode, originalPipelinedToNodeInfo.used.GPUs())
+			assert.Equal(t, tt.expected.usedGpuOnPipelinedNode, originalPipelinedToNodeInfo.used.GPUs)
 		})
 	}
 }
@@ -1030,11 +1030,11 @@ func TestStatement_Allocate_Unallocate(t *testing.T) {
 
 			actualAllocatedJob := ssn.PodGroupInfos[tt.args.jobName]
 			assert.Equal(t, *originalAllocateJob.Allocated, *actualAllocatedJob.Allocated)
-			assert.Equal(t, tt.expected.jobAllocated.GPUs(), actualAllocatedJob.Allocated.GPUs())
+			assert.Equal(t, tt.expected.jobAllocated.GPUs, actualAllocatedJob.Allocated.GPUs)
 
 			actualNodeInfo := extractNodeAssertedInfo(nodesInfoMap[tt.args.nodeToPipeline])
 			originalNodeInfo.assertEqual(t, actualNodeInfo)
-			assert.Equal(t, tt.expected.usedOnNode.GPUs(), actualNodeInfo.used.GPUs())
+			assert.Equal(t, tt.expected.usedOnNode.GPUs, actualNodeInfo.used.GPUs)
 		})
 	}
 }

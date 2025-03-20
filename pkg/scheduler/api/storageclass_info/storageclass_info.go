@@ -9,5 +9,5 @@ import (
 
 type StorageClassInfo struct {
 	ID          common_info.StorageClassID `json:"id"`
-	Provisioner string `json:"provisioner"`
+	Provisioner string                     `json:"provisioner"`
 }

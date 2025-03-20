@@ -16,19 +16,19 @@ import (
 
 type Resource struct {
 	BaseResource `json:"baseResource,omitempty"`
-	gpus         float64 `json:"gpus,omitempty"`
+	GPUs         float64 `json:"gpus,omitempty"`
 }
 
 func EmptyResource() *Resource {
 	return &Resource{
-		gpus:         0,
+		GPUs:         0,
 		BaseResource: *EmptyBaseResource(),
 	}
 }
 
 func NewResource(milliCPU float64, memory float64, gpus float64) *Resource {
 	return &Resource{
-		gpus:         gpus,
+		GPUs:         gpus,
 		BaseResource: *NewBaseResourceWithValues(milliCPU, memory),
 	}
 }
@@ -38,16 +38,16 @@ func ResourceFromResourceList(rList v1.ResourceList) *Resource {
 	for rName, rQuant := range rList {
 		switch rName {
 		case v1.ResourceCPU:
-			r.milliCpu += float64(rQuant.MilliValue())
+			r.CPUMilliCores += float64(rQuant.MilliValue())
 		case v1.ResourceMemory:
-			r.memory += float64(rQuant.Value())
+			r.MemoryBytes += float64(rQuant.Value())
 		case GPUResourceName, amdGpuResourceName:
-			r.gpus += float64(rQuant.Value())
+			r.GPUs += float64(rQuant.Value())
 		default:
 			if IsMigResource(rName) {
-				r.scalarResources[rName] += rQuant.Value()
+				r.ScalarResources[rName] += rQuant.Value()
 			} else if k8s_internal.IsScalarResourceName(rName) || rName == v1.ResourceEphemeralStorage || rName == v1.ResourceStorage {
-				r.scalarResources[rName] += rQuant.MilliValue()
+				r.ScalarResources[rName] += rQuant.MilliValue()
 			}
 		}
 	}
@@ -56,18 +56,18 @@ func ResourceFromResourceList(rList v1.ResourceList) *Resource {
 
 func (r *Resource) Add(other *Resource) {
 	r.BaseResource.Add(&other.BaseResource)
-	r.gpus += other.gpus
+	r.GPUs += other.GPUs
 }
 
 func (r *Resource) Sub(other *Resource) {
 	r.BaseResource.Sub(&other.BaseResource)
-	r.gpus -= other.gpus
+	r.GPUs -= other.GPUs
 }
 
 func (r *Resource) Get(rn v1.ResourceName) float64 {
 	switch rn {
 	case GPUResourceName, amdGpuResourceName:
-		return r.gpus
+		return r.GPUs
 	default:
 		return r.BaseResource.Get(rn)
 	}
@@ -75,13 +75,13 @@ func (r *Resource) Get(rn v1.ResourceName) float64 {
 
 func (r *Resource) Clone() *Resource {
 	return &Resource{
-		gpus:         r.gpus,
+		GPUs:         r.GPUs,
 		BaseResource: *r.BaseResource.Clone(),
 	}
 }
 
 func (r *Resource) LessEqual(rr *Resource) bool {
-	if r.gpus > rr.gpus {
+	if r.GPUs > rr.GPUs {
 		return false
 	}
 	return r.BaseResource.LessEqual(&rr.BaseResource)
@@ -92,17 +92,17 @@ func (r *Resource) SetMaxResource(rr *Resource) {
 		return
 	}
 	r.BaseResource.SetMaxResource(&rr.BaseResource)
-	if rr.gpus > r.gpus {
-		r.gpus = rr.gpus
+	if rr.GPUs > r.GPUs {
+		r.GPUs = rr.GPUs
 	}
 }
 
 func (r *Resource) String() string {
 	return fmt.Sprintf(
 		"CPU: %s (cores), memory: %s (GB), Gpus: %s",
-		HumanizeResource(r.milliCpu, MilliCPUToCores),
-		HumanizeResource(r.memory, MemoryToGB),
-		HumanizeResource(r.gpus, 1),
+		HumanizeResource(r.CPUMilliCores, MilliCPUToCores),
+		HumanizeResource(r.MemoryBytes, MemoryToGB),
+		HumanizeResource(r.GPUs, 1),
 	)
 }
 
@@ -111,7 +111,7 @@ func (r *Resource) DetailedString() string {
 
 	messageBuilder.WriteString(r.String())
 
-	for rName, rQuant := range r.scalarResources {
+	for rName, rQuant := range r.ScalarResources {
 		messageBuilder.WriteString(fmt.Sprintf(", %s: %v", rName, rQuant))
 	}
 	return messageBuilder.String()
@@ -119,27 +119,23 @@ func (r *Resource) DetailedString() string {
 
 func (r *Resource) AddResourceRequirements(req *ResourceRequirements) {
 	r.BaseResource.Add(&req.BaseResource)
-	r.gpus += req.GPUs()
-	for migProfile, migCount := range req.MigResources() {
-		r.BaseResource.scalarResources[migProfile] += migCount
+	r.GPUs += req.GPUs()
+	for migProfile, migCount := range req.MIGResources {
+		r.BaseResource.ScalarResources[migProfile] += migCount
 	}
 }
 
 func (r *Resource) SubResourceRequirements(req *ResourceRequirements) {
 	r.BaseResource.Sub(&req.BaseResource)
-	r.gpus -= req.GPUs()
-	for migProfile, migCount := range req.MigResources() {
-		r.BaseResource.scalarResources[migProfile] -= migCount
+	r.GPUs -= req.GPUs()
+	for migProfile, migCount := range req.MIGResources {
+		r.BaseResource.ScalarResources[migProfile] -= migCount
 	}
-}
-
-func (r *Resource) GPUs() float64 {
-	return r.gpus
 }
 
 func (r *Resource) GetSumGPUs() float64 {
 	var totalMigGPUs float64
-	for resourceName, quant := range r.ScalarResources() {
+	for resourceName, quant := range r.ScalarResources {
 		if !IsMigResource(resourceName) {
 			continue
 		}
@@ -152,19 +148,19 @@ func (r *Resource) GetSumGPUs() float64 {
 		totalMigGPUs += float64(gpuPortion) * float64(quant)
 	}
 
-	return totalMigGPUs + r.gpus
+	return totalMigGPUs + r.GPUs
 }
 
 func (r *Resource) SetGPUs(gpus float64) {
-	r.gpus = gpus
+	r.GPUs = gpus
 }
 
 func (r *Resource) AddGPUs(addGpus float64) {
-	r.gpus += addGpus
+	r.GPUs += addGpus
 }
 
 func (r *Resource) SubGPUs(subGpus float64) {
-	r.gpus -= subGpus
+	r.GPUs -= subGpus
 }
 
 func StringResourceArray(ra []*Resource) string {

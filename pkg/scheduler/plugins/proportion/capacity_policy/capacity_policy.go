@@ -78,8 +78,8 @@ func getRequiredQuota(tasksToAllocate []*pod_info.PodInfo) *podgroup_info.JobReq
 	quota := podgroup_info.JobRequirement{}
 	for _, pod := range tasksToAllocate {
 		quota.GPU += pod.ResReq.GetSumGPUs()
-		quota.MilliCPU += pod.ResReq.Cpu()
-		quota.Memory += pod.ResReq.Memory()
+		quota.MilliCPU += pod.ResReq.CPUMilliCores
+		quota.Memory += pod.ResReq.MemoryBytes
 	}
 	return &quota
 }

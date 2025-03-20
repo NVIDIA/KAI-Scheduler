@@ -136,8 +136,8 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 			}
 
 			sumOfJobRequestedGPU += taskInfo.ResReq.GPUs()
-			sumOfJobRequestedMillisCpu += taskInfo.ResReq.Cpu()
-			sumOfJobRequestedMemory += taskInfo.ResReq.Memory()
+			sumOfJobRequestedMillisCpu += taskInfo.ResReq.CPUMilliCores
+			sumOfJobRequestedMemory += taskInfo.ResReq.MemoryBytes
 			sumOfAcceptedGpus += taskInfo.AcceptedResource.GPUs()
 
 			// verify fractional GPUs index
@@ -211,14 +211,14 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 						taskExpectedResult.GPUsRequired)
 				}
 
-				requestedMilliCPUs := task.ResReq.Cpu()
+				requestedMilliCPUs := task.ResReq.CPUMilliCores
 				if taskExpectedResult.MilliCpuRequired != 0 && requestedMilliCPUs != taskExpectedResult.MilliCpuRequired {
 					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses MilliCpu: %v, "+
 						"was expecting MilliCpu: %v", testNumber, testMetadata.Name, taskId, requestedMilliCPUs,
 						taskExpectedResult.MilliCpuRequired)
 				}
 
-				requestedMemory := task.ResReq.Memory()
+				requestedMemory := task.ResReq.MemoryBytes
 				if taskExpectedResult.MemoryRequired != 0 && requestedMemory != taskExpectedResult.MemoryRequired {
 					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses Memory: %v, "+
 						"was expecting Memory: %v", testNumber, testMetadata.Name, taskId, requestedMemory,
@@ -258,12 +258,12 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 			t.Errorf("Test number: %d, name: %v, has failed. Couldn't find node: %v for expected nodes resources.", testNumber, testMetadata.Name, nodeName)
 		}
 
-		if nodeExpectedResources.ReleasingGPUs != ssnNode.Releasing.GPUs() {
-			t.Errorf("Test number: %d, name: %v, has failed. Node name: %v, actual Releasing GPUs: %v, was expecting Releasing GPUs: %v", testNumber, testMetadata.Name, nodeName, ssnNode.Releasing.GPUs(), nodeExpectedResources.ReleasingGPUs)
+		if nodeExpectedResources.ReleasingGPUs != ssnNode.Releasing.GPUs {
+			t.Errorf("Test number: %d, name: %v, has failed. Node name: %v, actual Releasing GPUs: %v, was expecting Releasing GPUs: %v", testNumber, testMetadata.Name, nodeName, ssnNode.Releasing.GPUs, nodeExpectedResources.ReleasingGPUs)
 		}
 
-		if nodeExpectedResources.IdleGPUs != ssnNode.Idle.GPUs() {
-			t.Errorf("Test number: %d, name: %v, has failed. Node name: %v, actual Idle GPUs: %v, was expecting Idle GPUs: %v", testNumber, testMetadata.Name, nodeName, ssnNode.Idle.GPUs(), nodeExpectedResources.IdleGPUs)
+		if nodeExpectedResources.IdleGPUs != ssnNode.Idle.GPUs {
+			t.Errorf("Test number: %d, name: %v, has failed. Node name: %v, actual Idle GPUs: %v, was expecting Idle GPUs: %v", testNumber, testMetadata.Name, nodeName, ssnNode.Idle.GPUs, nodeExpectedResources.IdleGPUs)
 		}
 	}
 }

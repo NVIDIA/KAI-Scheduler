@@ -9,11 +9,11 @@ import (
 )
 
 func QuantifyResource(resource *resource_info.Resource) rs.ResourceQuantities {
-	return rs.NewResourceQuantities(resource.Cpu(), resource.Memory(), resource.GetSumGPUs())
+	return rs.NewResourceQuantities(resource.CPUMilliCores, resource.MemoryBytes, resource.GetSumGPUs())
 }
 
 func QuantifyResourceRequirements(resource *resource_info.ResourceRequirements) rs.ResourceQuantities {
-	return rs.NewResourceQuantities(resource.Cpu(), resource.Memory(), resource.GetSumGPUs())
+	return rs.NewResourceQuantities(resource.CPUMilliCores, resource.MemoryBytes, resource.GetSumGPUs())
 }
 
 func ResourceRequirementsFromQuantities(quantities rs.ResourceQuantities) *resource_info.ResourceRequirements {

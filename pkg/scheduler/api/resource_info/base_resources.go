@@ -21,59 +21,59 @@ const (
 )
 
 type BaseResource struct {
-	milliCpu        float64                   `json:"milliCpu,omitempty"`
-	memory          float64                   `json:"memory,omitempty"`
-	scalarResources map[v1.ResourceName]int64 `json:"scalarResources,omitempty"`
+	CPUMilliCores   float64                   `json:"milliCpu,omitempty"`
+	MemoryBytes     float64                   `json:"memory,omitempty"`
+	ScalarResources map[v1.ResourceName]int64 `json:"scalarResources,omitempty"`
 }
 
 func EmptyBaseResource() *BaseResource {
 	return &BaseResource{
-		milliCpu:        0,
-		memory:          0,
-		scalarResources: make(map[v1.ResourceName]int64),
+		CPUMilliCores:   0,
+		MemoryBytes:     0,
+		ScalarResources: make(map[v1.ResourceName]int64),
 	}
 }
 
 func NewBaseResourceWithValues(milliCPU float64, memory float64) *BaseResource {
 	return &BaseResource{
-		milliCpu:        milliCPU,
-		memory:          memory,
-		scalarResources: make(map[v1.ResourceName]int64),
+		CPUMilliCores:   milliCPU,
+		MemoryBytes:     memory,
+		ScalarResources: make(map[v1.ResourceName]int64),
 	}
 }
 
 func (r *BaseResource) Clone() *BaseResource {
 	return &BaseResource{
-		milliCpu:        r.milliCpu,
-		memory:          r.memory,
-		scalarResources: maps.Clone(r.scalarResources),
+		CPUMilliCores:   r.CPUMilliCores,
+		MemoryBytes:     r.MemoryBytes,
+		ScalarResources: maps.Clone(r.ScalarResources),
 	}
 }
 
 func (r *BaseResource) Add(other *BaseResource) {
-	r.milliCpu += other.milliCpu
-	r.memory += other.memory
-	for rName, rrValue := range other.scalarResources {
-		r.scalarResources[rName] += rrValue
+	r.CPUMilliCores += other.CPUMilliCores
+	r.MemoryBytes += other.MemoryBytes
+	for rName, rrValue := range other.ScalarResources {
+		r.ScalarResources[rName] += rrValue
 	}
 }
 
 func (r *BaseResource) Sub(other *BaseResource) {
-	r.milliCpu -= other.milliCpu
-	r.memory -= other.memory
-	for rName, rrValue := range other.scalarResources {
-		r.scalarResources[rName] -= rrValue
+	r.CPUMilliCores -= other.CPUMilliCores
+	r.MemoryBytes -= other.MemoryBytes
+	for rName, rrValue := range other.ScalarResources {
+		r.ScalarResources[rName] -= rrValue
 	}
 }
 
 func (r *BaseResource) Get(rn v1.ResourceName) float64 {
 	switch rn {
 	case v1.ResourceCPU:
-		return r.milliCpu
+		return r.CPUMilliCores
 	case v1.ResourceMemory:
-		return r.memory
+		return r.MemoryBytes
 	default:
-		rQuan, found := r.scalarResources[rn]
+		rQuan, found := r.ScalarResources[rn]
 		if !found {
 			return 0
 		}
@@ -82,14 +82,14 @@ func (r *BaseResource) Get(rn v1.ResourceName) float64 {
 }
 
 func (r *BaseResource) LessEqual(rr *BaseResource) bool {
-	if r.milliCpu > rr.milliCpu {
+	if r.CPUMilliCores > rr.CPUMilliCores {
 		return false
 	}
-	if r.memory > rr.memory {
+	if r.MemoryBytes > rr.MemoryBytes {
 		return false
 	}
-	for rName, rQuant := range r.scalarResources {
-		rrQuant, found := rr.scalarResources[rName]
+	for rName, rQuant := range r.ScalarResources {
+		rrQuant, found := rr.ScalarResources[rName]
 		if !found || rQuant > rrQuant {
 			return false
 		}
@@ -101,9 +101,9 @@ func (r *BaseResource) LessEqual(rr *BaseResource) bool {
 func (r *BaseResource) ToResourceList() v1.ResourceList {
 	rl := v1.ResourceList{}
 
-	rl[v1.ResourceCPU] = *resource.NewMilliQuantity(int64(r.milliCpu), resource.DecimalSI)
-	rl[v1.ResourceMemory] = *resource.NewQuantity(int64(r.memory), resource.DecimalSI)
-	for rName, rQuant := range r.scalarResources {
+	rl[v1.ResourceCPU] = *resource.NewMilliQuantity(int64(r.CPUMilliCores), resource.DecimalSI)
+	rl[v1.ResourceMemory] = *resource.NewQuantity(int64(r.MemoryBytes), resource.DecimalSI)
+	for rName, rQuant := range r.ScalarResources {
 		rl[rName] = *resource.NewMilliQuantity(int64(rQuant), resource.DecimalSI)
 	}
 
@@ -111,10 +111,10 @@ func (r *BaseResource) ToResourceList() v1.ResourceList {
 }
 
 func (r *BaseResource) IsEmpty() bool {
-	if r.milliCpu >= minMilliCPU || r.memory >= MinMemory {
+	if r.CPUMilliCores >= minMilliCPU || r.MemoryBytes >= MinMemory {
 		return false
 	}
-	for _, rQuant := range r.scalarResources {
+	for _, rQuant := range r.ScalarResources {
 		if rQuant >= minMilliScalarResources {
 			return false
 		}
@@ -128,33 +128,21 @@ func (r *BaseResource) SetMaxResource(rr *BaseResource) {
 		return
 	}
 
-	if rr.milliCpu > r.milliCpu {
-		r.milliCpu = rr.milliCpu
+	if rr.CPUMilliCores > r.CPUMilliCores {
+		r.CPUMilliCores = rr.CPUMilliCores
 	}
-	if rr.memory > r.memory {
-		r.memory = rr.memory
+	if rr.MemoryBytes > r.MemoryBytes {
+		r.MemoryBytes = rr.MemoryBytes
 	}
 
-	if r.scalarResources == nil {
-		r.scalarResources = make(map[v1.ResourceName]int64)
+	if r.ScalarResources == nil {
+		r.ScalarResources = make(map[v1.ResourceName]int64)
 	}
-	for rrName, rrQuant := range rr.scalarResources {
-		if rQuant, found := r.scalarResources[rrName]; !found || rrQuant > rQuant {
-			r.scalarResources[rrName] = rrQuant
+	for rrName, rrQuant := range rr.ScalarResources {
+		if rQuant, found := r.ScalarResources[rrName]; !found || rrQuant > rQuant {
+			r.ScalarResources[rrName] = rrQuant
 		}
 	}
-}
-
-func (r *BaseResource) Cpu() float64 {
-	return r.Get(v1.ResourceCPU)
-}
-
-func (r *BaseResource) Memory() float64 {
-	return r.Get(v1.ResourceMemory)
-}
-
-func (r *BaseResource) ScalarResources() map[v1.ResourceName]int64 {
-	return r.scalarResources
 }
 
 func HumanizeResource(value float64, unitAdjustment float64) string {

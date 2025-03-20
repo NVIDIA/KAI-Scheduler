@@ -22,18 +22,18 @@ import (
 
 // ClusterInfo is a snapshot of cluster by cache.
 type ClusterInfo struct {
-	Pods                        []*v1.Pod                                    `json:"pods,omitempty"`
-	PodGroupInfos               map[common_info.PodGroupID]*podgroup_info.PodGroupInfo `json:"podGroupInfos,omitempty"`
-	Nodes                       map[string]*node_info.NodeInfo               `json:"nodes,omitempty"`
-	BindRequests                bindrequest_info.BindRequestMap              `json:"bindRequests,omitempty"`
-	BindRequestsForDeletedNodes []*bindrequest_info.BindRequestInfo         `json:"bindRequestsForDeletedNodes,omitempty"`
-	Queues                      map[common_info.QueueID]*queue_info.QueueInfo `json:"queues,omitempty"`
-	Departments                 map[common_info.QueueID]*queue_info.QueueInfo `json:"departments,omitempty"`
-	StorageClaims               map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo `json:"storageClaims,omitempty"`
+	Pods                        []*v1.Pod                                                                   `json:"pods,omitempty"`
+	PodGroupInfos               map[common_info.PodGroupID]*podgroup_info.PodGroupInfo                      `json:"podGroupInfos,omitempty"`
+	Nodes                       map[string]*node_info.NodeInfo                                              `json:"nodes,omitempty"`
+	BindRequests                bindrequest_info.BindRequestMap                                             `json:"bindRequests,omitempty"`
+	BindRequestsForDeletedNodes []*bindrequest_info.BindRequestInfo                                         `json:"bindRequestsForDeletedNodes,omitempty"`
+	Queues                      map[common_info.QueueID]*queue_info.QueueInfo                               `json:"queues,omitempty"`
+	Departments                 map[common_info.QueueID]*queue_info.QueueInfo                               `json:"departments,omitempty"`
+	StorageClaims               map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo               `json:"storageClaims,omitempty"`
 	StorageCapacities           map[common_info.StorageCapacityID]*storagecapacity_info.StorageCapacityInfo `json:"storageCapacities,omitempty"`
-	CSIDrivers                  map[common_info.CSIDriverID]*csidriver_info.CSIDriverInfo `json:"csiDrivers,omitempty"`
-	StorageClasses              map[common_info.StorageClassID]*storageclass_info.StorageClassInfo `json:"storageClasses,omitempty"`
-	ConfigMaps                  map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo `json:"configMaps,omitempty"`
+	CSIDrivers                  map[common_info.CSIDriverID]*csidriver_info.CSIDriverInfo                   `json:"csiDrivers,omitempty"`
+	StorageClasses              map[common_info.StorageClassID]*storageclass_info.StorageClassInfo          `json:"storageClasses,omitempty"`
+	ConfigMaps                  map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo                   `json:"configMaps,omitempty"`
 }
 
 func NewClusterInfo() *ClusterInfo {

@@ -37,8 +37,8 @@ func (pp *nodeAvailabilityPlugin) nodeOrderFn(task *pod_info.PodInfo, node *node
 
 	log.InfraLogger.V(7).Infof(
 		"Estimating Task: <%v/%v> Job: <%v> for node: <%s> that has <%f> idle GPUs and <%f> releasing GPUs and <%f> allocated GPUs. Score: %f",
-		task.Namespace, task.Name, task.Job, node.Name, node.Idle.GPUs(), node.Releasing.GPUs(),
-		node.Used.GPUs(), score)
+		task.Namespace, task.Name, task.Job, node.Name, node.Idle.GPUs, node.Releasing.GPUs,
+		node.Used.GPUs, score)
 	return score, nil
 }
 

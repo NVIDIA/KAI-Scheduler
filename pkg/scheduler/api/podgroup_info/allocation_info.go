@@ -49,7 +49,7 @@ func GetTasksToAllocateRequestedGPUs(
 		tasksTotalRequestedGPUs += task.ResReq.GPUs()
 		tasksTotalRequestedGpuMemory += task.ResReq.GpuMemory()
 
-		for migResource, quant := range task.ResReq.MigResources() {
+		for migResource, quant := range task.ResReq.MIGResources {
 			gpuPortion, mem, err := resources.ExtractGpuAndMemoryFromMigResourceName(migResource.String())
 			if err != nil {
 				log.InfraLogger.Errorf("failed to evaluate device portion for resource %v: %v", migResource, err)

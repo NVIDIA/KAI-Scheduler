@@ -49,7 +49,7 @@ const (
 
 // NodeInfo is node level aggregated information.
 type NodeInfo struct {
-	Name string `json:"name,omitempty"`
+	Name string   `json:"name,omitempty"`
 	Node *v1.Node `json:"node,omitempty"`
 
 	// The releasing resource on that node (excluding shared GPUs)
@@ -65,10 +65,10 @@ type NodeInfo struct {
 	AccessibleStorageCapacities map[common_info.StorageClassID][]*sc_info.StorageCapacityInfo `json:"accessibleStorageCapacities,omitempty"`
 
 	PodInfos               map[common_info.PodID]*pod_info.PodInfo `json:"podInfos,omitempty"`
-	MaxTaskNum             int `json:"maxTaskNum,omitempty"`
-	MemoryOfEveryGpuOnNode int64 `json:"memoryOfEveryGpuOnNode,omitempty"`
-	GpuMemorySynced        bool `json:"gpuMemorySynced,omitempty"`
-	LegacyMIGTasks         map[common_info.PodID]string `json:"legacyMigTasks,omitempty"`
+	MaxTaskNum             int                                     `json:"maxTaskNum,omitempty"`
+	MemoryOfEveryGpuOnNode int64                                   `json:"memoryOfEveryGpuOnNode,omitempty"`
+	GpuMemorySynced        bool                                    `json:"gpuMemorySynced,omitempty"`
+	LegacyMIGTasks         map[common_info.PodID]string            `json:"legacyMigTasks,omitempty"`
 
 	PodAffinityInfo pod_affinity.NodePodAffinityInfo `json:"podAffinityInfo,omitempty"`
 
@@ -103,7 +103,7 @@ func NewNodeInfo(node *v1.Node, podAffinityInfo pod_affinity.NodePodAffinityInfo
 	nodeInfo.MaxTaskNum = int(numTasks.Value())
 
 	capacity := resource_info.ResourceFromResourceList(node.Status.Capacity)
-	if capacity.GPUs() != nodeInfo.Allocatable.GPUs() {
+	if capacity.GPUs != nodeInfo.Allocatable.GPUs {
 		log.InfraLogger.V(2).Warnf(
 			"For node %s, the capacity and allocatable are different. Capacity %v, Allocatable %v",
 			node.Name, capacity.DetailedString(), nodeInfo.Allocatable.DetailedString())
@@ -307,7 +307,7 @@ func (ni *NodeInfo) isTaskAllocatableOnNonAllocatedResources(
 	if !ni.isValidGpuPortion(task.ResReq) {
 		return false
 	}
-	nodeIdleOrReleasingWholeGpus := int64(math.Floor(nodeNonAllocatedResources.GPUs()))
+	nodeIdleOrReleasingWholeGpus := int64(math.Floor(nodeNonAllocatedResources.GPUs))
 	nodeNonAllocatedResourcesMatchingSharedGpus := ni.fractionTaskGpusAllocatableDeviceCount(task)
 	if nodeIdleOrReleasingWholeGpus+nodeNonAllocatedResourcesMatchingSharedGpus >= task.ResReq.GetNumOfGpuDevices() {
 		return true
@@ -515,9 +515,9 @@ func (ni *NodeInfo) String() string {
 
 func (ni *NodeInfo) GetSumOfIdleGPUs() (float64, int64) {
 	sumOfSharedGPUs, sumOfSharedGPUsMemory := ni.getSumOfAvailableSharedGPUs()
-	idleGPUs := ni.Idle.GPUs()
+	idleGPUs := ni.Idle.GPUs
 
-	for resourceName, qty := range ni.Idle.ScalarResources() {
+	for resourceName, qty := range ni.Idle.ScalarResources {
 		if !isMigResource(resourceName.String()) {
 			continue
 		}
@@ -534,9 +534,9 @@ func (ni *NodeInfo) GetSumOfIdleGPUs() (float64, int64) {
 
 func (ni *NodeInfo) GetSumOfReleasingGPUs() (float64, int64) {
 	sumOfSharedGPUs, sumOfSharedGPUsMemory := ni.getSumOfReleasingSharedGPUs()
-	releasingGPUs := ni.Releasing.GPUs()
+	releasingGPUs := ni.Releasing.GPUs
 
-	for resourceName, qty := range ni.Releasing.ScalarResources() {
+	for resourceName, qty := range ni.Releasing.ScalarResources {
 		if !isMigResource(resourceName.String()) {
 			continue
 		}
@@ -569,7 +569,7 @@ func (ni *NodeInfo) GetNumberOfGPUsInNode() int64 {
 	numberOfGPUs, err := ni.getNodeGpuCountLabelValue()
 	if err != nil {
 		log.InfraLogger.V(6).Infof("Node: <%v> had no annotations of nvidia.com/gpu.count", ni.Name)
-		return int64(ni.Allocatable.GPUs())
+		return int64(ni.Allocatable.GPUs)
 	}
 	return int64(numberOfGPUs)
 }
@@ -629,7 +629,7 @@ func (ni *NodeInfo) IsCPUOnlyNode() bool {
 	if ni.IsMIGEnabled() {
 		return false
 	}
-	return ni.Allocatable.GPUs() == 0
+	return ni.Allocatable.GPUs == 0
 }
 
 func (ni *NodeInfo) IsMIGEnabled() bool {
@@ -638,7 +638,7 @@ func (ni *NodeInfo) IsMIGEnabled() bool {
 		isMig, err := strconv.ParseBool(enabled)
 		return err == nil && isMig
 	}
-	for nodeResource := range ni.Allocatable.ScalarResources() {
+	for nodeResource := range ni.Allocatable.ScalarResources {
 		if isMigResource(nodeResource.String()) {
 			return true
 		}
@@ -663,13 +663,13 @@ func (ni *NodeInfo) GetMigStrategy() MigStrategy {
 
 func (ni *NodeInfo) GetRequiredInitQuota(pi *pod_info.PodInfo) *podgroup_info.JobRequirement {
 	quota := podgroup_info.JobRequirement{}
-	if len(pi.ResReq.MigResources()) != 0 {
+	if len(pi.ResReq.MIGResources) != 0 {
 		quota.GPU = pi.ResReq.GetSumGPUs()
 	} else {
 		quota.GPU = ni.getGpuMemoryFractionalOnNode(ni.GetResourceGpuMemory(pi.ResReq))
 	}
-	quota.MilliCPU = pi.ResReq.Cpu()
-	quota.Memory = pi.ResReq.Memory()
+	quota.MilliCPU = pi.ResReq.CPUMilliCores
+	quota.Memory = pi.ResReq.MemoryBytes
 	return &quota
 }
 
@@ -682,7 +682,7 @@ func (ni *NodeInfo) setAcceptedResources(pi *pod_info.PodInfo) {
 	if pi.IsMigCandidate() {
 		pi.ResourceReceivedType = pod_info.ReceivedTypeMigInstance
 		pi.AcceptedResource.GpuResourceRequirement =
-			*resource_info.NewGpuResourceRequirementWithMig(pi.ResReq.MigResources())
+			*resource_info.NewGpuResourceRequirementWithMig(pi.ResReq.MIGResources)
 	} else if pi.IsFractionCandidate() {
 		pi.ResourceReceivedType = pod_info.ReceivedTypeFraction
 		pi.AcceptedResource.GpuResourceRequirement = *resource_info.NewGpuResourceRequirementWithMultiFraction(

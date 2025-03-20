@@ -789,7 +789,7 @@ func TestBindRequests(t *testing.T) {
 		assert.Equal(t, assertedPods, expectedPodAsserts)
 
 		for _, node := range snapshot.Nodes {
-			assert.Equal(t, float64(test.resultNodes[node.Name].MilliValue()), node.Idle.Cpu())
+			assert.Equal(t, float64(test.resultNodes[node.Name].MilliValue()), node.Idle.CPUMilliCores)
 		}
 	}
 }

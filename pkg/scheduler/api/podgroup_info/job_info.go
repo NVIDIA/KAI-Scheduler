@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -53,25 +53,25 @@ type PodGroupInfo struct {
 
 	MinAvailable int32 `json:"minAvailable,omitempty"`
 
-	JobFitErrors   enginev2alpha2.UnschedulableExplanations `json:"jobFitErrors,omitempty"`
+	JobFitErrors   enginev2alpha2.UnschedulableExplanations     `json:"jobFitErrors,omitempty"`
 	NodesFitErrors map[common_info.PodID]*common_info.FitErrors `json:"nodesFitErrors,omitempty"`
 
 	// All tasks of the Job.
 	PodStatusIndex map[pod_status.PodStatus]pod_info.PodsMap `json:"podStatusIndex,omitempty"`
-	PodInfos       pod_info.PodsMap `json:"podInfos,omitempty"`
+	PodInfos       pod_info.PodsMap                          `json:"podInfos,omitempty"`
 
 	Allocated *resource_info.Resource `json:"allocated,omitempty"`
 
-	CreationTimestamp metav1.Time `json:"creationTimestamp,omitempty"`
+	CreationTimestamp metav1.Time              `json:"creationTimestamp,omitempty"`
 	PodGroup          *enginev2alpha2.PodGroup `json:"podGroup,omitempty"`
-	PodGroupUID       types.UID `json:"podGroupUid,omitempty"`
+	PodGroupUID       types.UID                `json:"podGroupUid,omitempty"`
 
 	// TODO(k82cn): keep backward compatibility, removed it when v1alpha1 finalized.
 	PDB *policyv1.PodDisruptionBudget `json:"pdb,omitempty"`
 
 	StalenessInfo `json:"stalenessInfo,omitempty"`
 
-	schedulingConstraintsSignature common_info.SchedulingConstraintsSignature `json:"schedulingConstraintsSignature,omitempty"`
+	SchedulingConstraintsSignature common_info.SchedulingConstraintsSignature `json:"schedulingConstraintsSignature,omitempty"`
 }
 
 func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *PodGroupInfo {
@@ -378,13 +378,13 @@ func (podGroupInfo *PodGroupInfo) SetJobFitError(reason enginev2alpha2.Unschedul
 }
 
 func (podGroupInfo *PodGroupInfo) GetSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
-	if podGroupInfo.schedulingConstraintsSignature != "" {
-		return podGroupInfo.schedulingConstraintsSignature
+	if podGroupInfo.SchedulingConstraintsSignature != "" {
+		return podGroupInfo.SchedulingConstraintsSignature
 	}
 
 	key := podGroupInfo.generateSchedulingConstraintsSignature()
 
-	podGroupInfo.schedulingConstraintsSignature = key
+	podGroupInfo.SchedulingConstraintsSignature = key
 	return key
 }
 

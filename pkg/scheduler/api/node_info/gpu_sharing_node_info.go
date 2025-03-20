@@ -60,8 +60,8 @@ func getAcceptedTaskResourceWithoutSharedGPU(task *pod_info.PodInfo) *resource_i
 	requestedResourceWithoutSharedGPU := resource_info.EmptyResource()
 	requestedResourceWithoutSharedGPU.BaseResource = *task.AcceptedResource.BaseResource.Clone()
 	requestedResourceWithoutSharedGPU.SetGPUs(task.AcceptedResource.GPUs())
-	maps.Copy(requestedResourceWithoutSharedGPU.ScalarResources(), task.AcceptedResource.MigResources())
-	maps.Copy(requestedResourceWithoutSharedGPU.ScalarResources(), task.AcceptedResource.ScalarResources())
+	maps.Copy(requestedResourceWithoutSharedGPU.ScalarResources, task.AcceptedResource.MIGResources)
+	maps.Copy(requestedResourceWithoutSharedGPU.ScalarResources, task.AcceptedResource.ScalarResources)
 	if task.IsSharedGPUAllocation() {
 		requestedResourceWithoutSharedGPU.SetGPUs(0)
 	}
@@ -106,7 +106,7 @@ func (ni *NodeInfo) addSharedTaskResourcesPerPodGroup(task *pod_info.PodInfo, gp
 				ni.Releasing.AddGPUs(1)
 				ni.markSharedGpuAsReleasing(gpuGroup)
 			}
-			if int(ni.GetNumberOfGPUsInNode()) < int(ni.Idle.GPUs())+ni.getNumberOfUsedGPUs() {
+			if int(ni.GetNumberOfGPUsInNode()) < int(ni.Idle.GPUs)+ni.getNumberOfUsedGPUs() {
 				ni.Idle.SubGPUs(1)
 			}
 		}
@@ -122,7 +122,7 @@ func (ni *NodeInfo) addSharedTaskResourcesPerPodGroup(task *pod_info.PodInfo, gp
 
 		if ni.UsedSharedGPUsMemory[gpuGroup] <= ni.GetResourceGpuMemory(task.ResReq) {
 			// no other fractional was allocated here yet
-			if int(ni.GetNumberOfGPUsInNode()) < int(ni.Idle.GPUs())+ni.getNumberOfUsedGPUs() {
+			if int(ni.GetNumberOfGPUsInNode()) < int(ni.Idle.GPUs)+ni.getNumberOfUsedGPUs() {
 				ni.Idle.SubGPUs(1)
 			}
 		}
@@ -181,7 +181,7 @@ func (ni *NodeInfo) removeSharedTaskResourcesPerPodGroup(task *pod_info.PodInfo,
 
 		if ni.UsedSharedGPUsMemory[gpuGroup] <= 0 {
 			// is this the last releasing task for this gpu
-			if int(ni.GetNumberOfGPUsInNode()) >= int(ni.Idle.GPUs())+ni.getNumberOfUsedGPUs() {
+			if int(ni.GetNumberOfGPUsInNode()) >= int(ni.Idle.GPUs)+ni.getNumberOfUsedGPUs() {
 				ni.Idle.AddGPUs(1)
 			}
 			if ni.isSharedGpuMarkedAsReleasing(gpuGroup) {
@@ -211,7 +211,7 @@ func (ni *NodeInfo) removeSharedTaskResourcesPerPodGroup(task *pod_info.PodInfo,
 
 		if ni.UsedSharedGPUsMemory[gpuGroup] <= 0 {
 			// no other fractional was allocated here yet
-			if int(ni.GetNumberOfGPUsInNode()) >= int(ni.Idle.GPUs())+ni.getNumberOfUsedGPUs() {
+			if int(ni.GetNumberOfGPUsInNode()) >= int(ni.Idle.GPUs)+ni.getNumberOfUsedGPUs() {
 				ni.Idle.AddGPUs(1)
 			}
 		}
@@ -271,7 +271,7 @@ func (ni *NodeInfo) getNumberOfUsedSharedGPUs() int {
 }
 
 func (ni *NodeInfo) getNumberOfUsedGPUs() int {
-	return int(ni.Used.GPUs()) + ni.getNumberOfUsedSharedGPUs()
+	return int(ni.Used.GPUs) + ni.getNumberOfUsedSharedGPUs()
 }
 
 func (ni *NodeInfo) GetNumberOfAllocatedSharedGPUs() int {

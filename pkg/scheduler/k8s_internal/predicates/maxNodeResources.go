@@ -51,22 +51,22 @@ func (mnr *MaxNodeResourcesPredicate) PreFilter(_ context.Context, _ *k8sframewo
 
 	podInfo := pod_info.NewTaskInfo(pod)
 
-	if podInfo.ResReq.GPUs() > mnr.maxResources.GPUs() {
+	if podInfo.ResReq.GPUs() > mnr.maxResources.GPUs {
 		return nil, k8sframework.NewStatus(k8sframework.Unschedulable,
-			mnr.buildUnschedulableMessage(podInfo, "GPU", mnr.maxResources.GPUs(), ""))
+			mnr.buildUnschedulableMessage(podInfo, "GPU", mnr.maxResources.GPUs, ""))
 	}
-	if podInfo.ResReq.Cpu() > mnr.maxResources.Cpu() {
+	if podInfo.ResReq.CPUMilliCores > mnr.maxResources.CPUMilliCores {
 		return nil, k8sframework.NewStatus(k8sframework.Unschedulable,
 			mnr.buildUnschedulableMessage(podInfo, "CPU",
-				mnr.maxResources.Cpu()/resource_info.MilliCPUToCores, "cores"))
+				mnr.maxResources.CPUMilliCores/resource_info.MilliCPUToCores, "cores"))
 	}
-	if podInfo.ResReq.Memory() > mnr.maxResources.Memory() {
+	if podInfo.ResReq.MemoryBytes > mnr.maxResources.MemoryBytes {
 		return nil, k8sframework.NewStatus(k8sframework.Unschedulable,
 			mnr.buildUnschedulableMessage(podInfo, "memory",
-				mnr.maxResources.Memory()/resource_info.MemoryToGB, "GB"))
+				mnr.maxResources.MemoryBytes/resource_info.MemoryToGB, "GB"))
 	}
-	for rName, rQuant := range podInfo.ResReq.ScalarResources() {
-		rrQuant, found := mnr.maxResources.ScalarResources()[rName]
+	for rName, rQuant := range podInfo.ResReq.ScalarResources {
+		rrQuant, found := mnr.maxResources.ScalarResources[rName]
 		if !found || rQuant > rrQuant {
 			return nil, k8sframework.NewStatus(k8sframework.Unschedulable,
 				mnr.buildUnschedulableMessage(podInfo, string(rName), float64(rrQuant), ""))

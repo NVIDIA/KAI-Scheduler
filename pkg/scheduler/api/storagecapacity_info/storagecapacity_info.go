@@ -21,7 +21,7 @@ import (
 
 type StorageCapacityInfo struct {
 	UID  common_info.StorageCapacityID `json:"uid"`
-	Name string `json:"name"`
+	Name string                        `json:"name"`
 
 	// StorageClass is the name of the StorageClass that this capacity applies to.
 	StorageClass common_info.StorageClassID `json:"storageClass"`
@@ -30,14 +30,14 @@ type StorageCapacityInfo struct {
 	// with matching StorageClass, and are reclaimable (owned by a single pod)
 	ProvisionedPVCs map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo `json:"provisionedPvcs"`
 
-	// The capacity on this storage reported by the csidriver
-	capacity *resource.Quantity `json:"capacity"`
+	// The Capacity on this storage reported by the csidriver
+	Capacity *resource.Quantity `json:"capacity"`
 
 	// MaximumVolumeSize is the largest size that may be used in a
 	// ResourceRequirements.Requests in a volume claim that uses this storage capacity.
 	MaximumVolumeSize *resource.Quantity `json:"maximumVolumeSize"`
 
-	nodeTopology labels.Selector `json:"nodeTopology"`
+	NodeTopology labels.Selector `json:"nodeTopology"`
 }
 
 func NewStorageCapacityInfo(capacity *v1.CSIStorageCapacity) (*StorageCapacityInfo, error) {
@@ -57,9 +57,9 @@ func NewStorageCapacityInfo(capacity *v1.CSIStorageCapacity) (*StorageCapacityIn
 		Name:              capacity.Name,
 		StorageClass:      common_info.StorageClassID(capacity.StorageClassName),
 		ProvisionedPVCs:   map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
-		capacity:          capacity.Capacity, // ToDo: get something more accurate
+		Capacity:          capacity.Capacity, // ToDo: get something more accurate
 		MaximumVolumeSize: capacity.MaximumVolumeSize,
-		nodeTopology:      selector,
+		NodeTopology:      selector,
 	}, nil
 }
 
@@ -70,25 +70,25 @@ func (sc *StorageCapacityInfo) Clone() *StorageCapacityInfo {
 		provisionedPVCs[key] = claim
 	}
 
-	capacity := sc.capacity.DeepCopy()
+	capacity := sc.Capacity.DeepCopy()
 	maximumVolumeSize := sc.MaximumVolumeSize.DeepCopy()
 	return &StorageCapacityInfo{
 		UID:               sc.UID,
 		Name:              sc.Name,
 		StorageClass:      sc.StorageClass,
 		ProvisionedPVCs:   provisionedPVCs,
-		capacity:          &capacity,
+		Capacity:          &capacity,
 		MaximumVolumeSize: &maximumVolumeSize,
-		nodeTopology:      sc.nodeTopology.DeepCopySelector(),
+		NodeTopology:      sc.NodeTopology.DeepCopySelector(),
 	}
 }
 
 func (sc *StorageCapacityInfo) IsNodeValid(nodeLabels map[string]string) bool {
-	if sc.nodeTopology == nil {
+	if sc.NodeTopology == nil {
 		return true
 	}
 
-	return sc.nodeTopology.Matches(labels.Set(nodeLabels))
+	return sc.NodeTopology.Matches(labels.Set(nodeLabels))
 }
 
 // ArePVCsAllocatable returns true if all unbound PVCs passed can be allocated together by this storage capacity,
@@ -130,11 +130,11 @@ func (sc *StorageCapacityInfo) ArePVCsAllocatableOnReleasingOrIdle(pvcs []*stora
 // stated in the object is the allocatable. However, if we have virtually allocated pvcs on this capacity, the pvc object
 // is still considered PENDING and not taken into account in StorageCapacityInfo.capacity. So we subtract all claims that are PENDING.
 func (sc *StorageCapacityInfo) Allocatable() resource.Quantity {
-	if sc.capacity == nil {
+	if sc.Capacity == nil {
 		return *resource.NewQuantity(0, resource.BinarySI)
 	}
 
-	allocatable := sc.capacity.DeepCopy()
+	allocatable := sc.Capacity.DeepCopy()
 	for _, claim := range sc.ProvisionedPVCs {
 		if claim.Phase == v13.ClaimBound {
 			continue

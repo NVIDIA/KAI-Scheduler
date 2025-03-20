@@ -18,8 +18,8 @@ var _ = Describe("ResourceRequirements Info internal logic", func() {
 				v1.ResourceMemory: resource.MustParse("5G"),
 			}
 			resourceInfo := RequirementsFromResourceList(resourceList)
-			Expect(resourceInfo.Cpu()).To(Equal(float64(1000)))
-			Expect(resourceInfo.Memory()).To(Equal(float64(5000000000)))
+			Expect(resourceInfo.CPUMilliCores).To(Equal(float64(1000)))
+			Expect(resourceInfo.MemoryBytes).To(Equal(float64(5000000000)))
 
 			newResourceList := resourceInfo.ToResourceList()
 			compareResourceLists(resourceList, newResourceList)
@@ -29,7 +29,7 @@ var _ = Describe("ResourceRequirements Info internal logic", func() {
 				v1.ResourceCPU: resource.MustParse("-1"),
 			}
 			resourceInfo := RequirementsFromResourceList(resourceList)
-			Expect(resourceInfo.Cpu()).To(Equal(float64(-1000)))
+			Expect(resourceInfo.CPUMilliCores).To(Equal(float64(-1000)))
 
 			newResourceList := resourceInfo.ToResourceList()
 			compareResourceLists(resourceList, newResourceList)
@@ -71,8 +71,8 @@ var _ = Describe("ResourceRequirements Info internal logic", func() {
 			}
 			resourceInfo := RequirementsFromResourceList(resourceList)
 			clone := resourceInfo.Clone()
-			Expect(clone.Cpu()).To(Equal(float64(1000)))
-			Expect(clone.Memory()).To(Equal(float64(5000000000)))
+			Expect(clone.CPUMilliCores).To(Equal(float64(1000)))
+			Expect(clone.MemoryBytes).To(Equal(float64(5000000000)))
 			Expect(clone.Get("run.ai/test-resource")).To(Equal(float64(1000)))
 		})
 	})
@@ -89,8 +89,8 @@ var _ = Describe("ResourceRequirements Info internal logic", func() {
 			})
 			err := resourceInfo.SetMaxResource(resourceInfo2)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(resourceInfo.Cpu()).To(Equal(float64(2000)))
-			Expect(resourceInfo.Memory()).To(Equal(float64(5000000000)))
+			Expect(resourceInfo.CPUMilliCores).To(Equal(float64(2000)))
+			Expect(resourceInfo.MemoryBytes).To(Equal(float64(5000000000)))
 
 		})
 	})
