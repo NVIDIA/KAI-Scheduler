@@ -489,8 +489,8 @@ func TestGetPodStorageClaims(t *testing.T) {
 		UID:                "pod-uid",
 		Name:               "pod-name",
 		Namespace:          "test-namespace",
-		ownedStorageClaims: map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
-		storageClaims:      map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
+		OwnedStorageClaims: map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
+		StorageClaims:      map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
 	}
 
 	assert.Equal(t, 0, len(pod.GetAllStorageClaims()))

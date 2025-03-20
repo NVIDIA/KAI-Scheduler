@@ -106,7 +106,7 @@ func TestPodSchedulingConstraintsSignature(t *testing.T) {
 
 	podInfo := NewTaskInfo(&pod)
 	storageClaimID := storageclaim_info.NewKey("test-namespace", "claim-1")
-	podInfo.storageClaims = map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{
+	podInfo.StorageClaims = map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{
 		storageClaimID: {
 			Key:          storageClaimID,
 			Name:         "claim-1",

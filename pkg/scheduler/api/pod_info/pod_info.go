@@ -52,50 +52,50 @@ const (
 type PodsMap map[common_info.PodID]*PodInfo
 
 type PodInfo struct {
-	UID common_info.PodID
-	Job common_info.PodGroupID
+	UID common_info.PodID      `json:"uid"`
+	Job common_info.PodGroupID `json:"job"`
 
-	Name      string
-	Namespace string
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
 
-	ResourceRequestType  ResourceRequestType
-	ResourceReceivedType ResourceReceivedType
+	ResourceRequestType  ResourceRequestType  `json:"resource_request_type"`
+	ResourceReceivedType ResourceReceivedType `json:"resource_received_type"`
 
 	// ResReq are the minimal resources that needed to launch a pod. (includes init containers resources)
-	ResReq           *resource_info.ResourceRequirements
-	AcceptedResource *resource_info.ResourceRequirements
+	ResReq           *resource_info.ResourceRequirements `json:"res_req"`
+	AcceptedResource *resource_info.ResourceRequirements `json:"accepted_resource"`
 
-	schedulingConstraintsSignature common_info.SchedulingConstraintsSignature
+	SchedulingConstraintsSignature common_info.SchedulingConstraintsSignature `json:"scheduling_constraints_signature"`
 
-	GPUGroups []string
+	GPUGroups []string `json:"gpu_groups"`
 
-	NodeName        string
-	Status          pod_status.PodStatus
-	IsVirtualStatus bool
-	IsLegacyMIGtask bool
+	NodeName        string               `json:"node_name"`
+	Status          pod_status.PodStatus `json:"status"`
+	IsVirtualStatus bool                 `json:"is_virtual_status"`
+	IsLegacyMIGtask bool                 `json:"is_legacy_mig_task"`
 
-	BindRequest *bindrequest_info.BindRequestInfo
+	BindRequest *bindrequest_info.BindRequestInfo `json:"bind_request"`
 
-	ResourceClaimInfo bindrequest_info.ResourceClaimInfo
+	ResourceClaimInfo bindrequest_info.ResourceClaimInfo `json:"resource_claim_info"`
 
 	// OwnedStorageClaims are StorageClaims that are owned exclusively by the pod, and we can count on them being deleted
 	// if the pod is evicted
-	ownedStorageClaims map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo
+	OwnedStorageClaims map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo `json:"owned_storage_claims"`
 
-	// storageClaims are all storage claims used by the pod, with any status and any ownership situation. Not mutually exclusive
+	// StorageClaims are all storage claims used by the pod, with any status and any ownership situation. Not mutually exclusive
 	// with ownedStorageClaims
-	storageClaims map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo
+	StorageClaims map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo `json:"storage_claims"`
 
-	Pod *v1.Pod
+	Pod *v1.Pod `json:"pod"`
 }
 
 func (pi *PodInfo) GetAllStorageClaims() map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo {
-	return pi.storageClaims
+	return pi.StorageClaims
 }
 
 func (pi *PodInfo) GetDeletedStorageClaimsNames() string {
 	var deletedClaims []*storageclaim_info.StorageClaimInfo
-	for _, claim := range pi.storageClaims {
+	for _, claim := range pi.StorageClaims {
 		if claim.HasDeletedOwner() {
 			deletedClaims = append(deletedClaims, claim)
 		}
@@ -131,18 +131,18 @@ func (pi *PodInfo) GetUnboundOrReleasingStorageClaimsByStorageClass() map[common
 }
 
 func (pi *PodInfo) GetOwnedStorageClaims() map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo {
-	return pi.ownedStorageClaims
+	return pi.OwnedStorageClaims
 }
 
 func (pi *PodInfo) UpsertStorageClaim(claimInfo *storageclaim_info.StorageClaimInfo) {
 	if claimInfo.PodOwnerReference != nil && claimInfo.PodOwnerReference.PodID == pi.UID {
-		pi.ownedStorageClaims[claimInfo.Key] = claimInfo
+		pi.OwnedStorageClaims[claimInfo.Key] = claimInfo
 
 		if pi.Pod != nil && pi.Pod.DeletionTimestamp == nil {
 			claimInfo.MarkOwnerAlive()
 		}
 	}
-	pi.storageClaims[claimInfo.Key] = claimInfo
+	pi.StorageClaims[claimInfo.Key] = claimInfo
 }
 
 func NewTaskInfo(pod *v1.Pod) *PodInfo {
@@ -173,9 +173,9 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 		ResourceRequestType:            RequestTypeRegular,
 		ResourceReceivedType:           ReceivedTypeNone,
 		BindRequest:                    bindRequest,
-		schedulingConstraintsSignature: "",
-		storageClaims:                  map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
-		ownedStorageClaims:             map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
+		SchedulingConstraintsSignature: "",
+		StorageClaims:                  map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
+		OwnedStorageClaims:             map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
 	}
 
 	podInfo.updatePodAdditionalFieldsIfRunaiPodgroup(bindRequest)
@@ -199,8 +199,8 @@ func (pi *PodInfo) Clone() *PodInfo {
 		ResourceReceivedType: pi.ResourceReceivedType,
 		IsVirtualStatus:      pi.IsVirtualStatus,
 		IsLegacyMIGtask:      pi.IsLegacyMIGtask,
-		storageClaims:        pi.storageClaims,
-		ownedStorageClaims:   pi.ownedStorageClaims,
+		StorageClaims:        pi.StorageClaims,
+		OwnedStorageClaims:   pi.OwnedStorageClaims,
 	}
 }
 
@@ -272,10 +272,10 @@ func (pi *PodInfo) IsResourceReservationTask() bool {
 }
 
 func (pi *PodInfo) GetSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
-	if pi.schedulingConstraintsSignature == "" {
-		pi.schedulingConstraintsSignature = schedulingConstraintsSignature(pi.Pod, pi.storageClaims)
+	if pi.SchedulingConstraintsSignature == "" {
+		pi.SchedulingConstraintsSignature = schedulingConstraintsSignature(pi.Pod, pi.StorageClaims)
 	}
-	return pi.schedulingConstraintsSignature
+	return pi.SchedulingConstraintsSignature
 }
 
 // PodKey returns the string key of a pod.
