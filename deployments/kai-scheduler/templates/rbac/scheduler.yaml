@@ -1,0 +1,113 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: scheduler
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - events
+      - persistentvolumeclaims
+      - pods
+      - pods/status
+      - pods/binding
+      - services
+      - persistentvolumes
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - scheduling.run.ai
+    resources:
+      - bindrequests
+      - podgroups
+      - podgroups/status
+      - queues
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - storageclasses
+      - csinodes
+      - csidrivers
+      - csistoragecapacities
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - scheduling.k8s.io
+    resources:
+      - priorityclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - resource.k8s.io
+    resources:
+      - deviceclasses
+      - resourceslices
+      - resourceclaims
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - events
+      - persistentvolumeclaims
+      - pods
+      - pods/status
+      - pods/binding
+      - pods/finalizers
+      - services
+      - services/finalizers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+  - apiGroups:
+      - scheduling.run.ai
+    resources:
+      - bindrequests
+      - podgroups
+      - podgroups/status
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update

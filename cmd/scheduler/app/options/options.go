@@ -20,10 +20,11 @@ const (
 	defaultProfilerApiPort             = "8182"
 	defaultVerbosityLevel              = 3
 	defaultMaxConsolidationPreemptees  = 16
-	DefaultDetailedFitError            = false
+	defaultDetailedFitError            = false
 	DefaultPyroscopeMutexProfilerRate  = 5
 	DefaultPyroscopeBlockProfilerRate  = 5
 	defaultNumOfStatusRecordingWorkers = 5
+	defaultNodePoolLabelKey            = "runai/node-pool"
 )
 
 // ServerOption is the main context object for the controller manager.
@@ -69,7 +70,7 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	// kai-scheduler will ignore pods with scheduler names other than specified with the option
 	fs.StringVar(&s.SchedulerName, "scheduler-name", defaultSchedulerName, "kai-scheduler will handle pods with the scheduler-name")
 	fs.BoolVar(&s.RestrictSchedulingNodes, "restrict-node-scheduling", false, "kai-scheduler will allocate jobs only to restricted nodes")
-	fs.StringVar(&s.NodePoolLabelKey, "nodepool-label-key", "", "The label key by which to filter scheduling nodepool")
+	fs.StringVar(&s.NodePoolLabelKey, "nodepool-label-key", defaultNodePoolLabelKey, "The label key by which to filter scheduling nodepool")
 	fs.StringVar(&s.NodePoolLabelValue, "partition-label-value", "", "The label value by which to filter scheduling partition")
 	fs.StringVar(&s.SchedulerConf, "scheduler-conf", "", "The absolute path of scheduler configuration file")
 	fs.DurationVar(&s.SchedulePeriod, "schedule-period", defaultSchedulerPeriod, "The period between each scheduling cycle")
@@ -88,7 +89,7 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&s.MaxNumberConsolidationPreemptees, "max-consolidation-preemptees", defaultMaxConsolidationPreemptees, "Maximum number of consolidation preemptees. Defaults to 16")
 	fs.IntVar(&s.QPS, "qps", 50, "Queries per second to the K8s API server")
 	fs.IntVar(&s.Burst, "burst", 300, "Burst to the K8s API server")
-	fs.BoolVar(&s.DetailedFitErrors, "detailed-fit-errors", DefaultDetailedFitError, "Write detailed fit errors for every node on every podgroup")
+	fs.BoolVar(&s.DetailedFitErrors, "detailed-fit-errors", defaultDetailedFitError, "Write detailed fit errors for every node on every podgroup")
 	fs.BoolVar(&s.ScheduleCSIStorage, "schedule-csi-storage", false, "Enables advanced scheduling (preempt, reclaim) for csi storage objects")
 	fs.BoolVar(&s.UseSchedulingSignatures, "use-scheduling-signatures", true, "Use scheduling signatures to avoid duplicate scheduling attempts for identical jobs")
 	fs.BoolVar(&s.FullHierarchyFairness, "full-hierarchy-fairness", true, "Fairness across project and department levels")

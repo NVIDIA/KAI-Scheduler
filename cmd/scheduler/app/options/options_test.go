@@ -45,6 +45,7 @@ func TestAddFlags(t *testing.T) {
 		PyroscopeMutexProfilerRate:        DefaultPyroscopeMutexProfilerRate,
 		GlobalDefaultStalenessGracePeriod: defaultStalenessGracePeriod,
 		NumOfStatusRecordingWorkers:       defaultNumOfStatusRecordingWorkers,
+		NodePoolLabelKey:                  defaultNodePoolLabelKey,
 	}
 
 	if !reflect.DeepEqual(expected, s) {
