@@ -4,6 +4,7 @@
 package scheduler
 
 import (
+	"net/http"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -28,12 +29,14 @@ type Scheduler struct {
 	schedulerParams   *conf.SchedulerParams
 	schedulerConfPath string
 	schedulePeriod    time.Duration
+	mux               *http.ServeMux
 }
 
 func NewScheduler(
 	config *rest.Config,
 	schedulerConfPath string,
 	schedulerParams *conf.SchedulerParams,
+	mux *http.ServeMux,
 ) (*Scheduler, error) {
 	kubeClient, kubeAiSchedulerClient := newClients(config)
 	schedulerCacheParams := &schedcache.SchedulerCacheParams{
@@ -54,6 +57,7 @@ func NewScheduler(
 		schedulerConfPath: schedulerConfPath,
 		cache:             schedcache.New(schedulerCacheParams),
 		schedulePeriod:    schedulerParams.SchedulePeriod,
+		mux:               mux,
 	}
 
 	actions.InitDefaultActions()
@@ -89,7 +93,7 @@ func (s *Scheduler) runOnce() {
 
 	defer metrics.UpdateE2eDuration(scheduleStartTime)
 
-	ssn, err := framework.OpenSession(s.cache, s.config, s.schedulerParams, sessionId)
+	ssn, err := framework.OpenSession(s.cache, s.config, s.schedulerParams, sessionId, s.mux)
 	if err != nil {
 		log.InfraLogger.Errorf("Error while opening session, will try again next cycle. \nCause: %+v", err)
 		return

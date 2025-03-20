@@ -765,7 +765,7 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 						RestrictSchedulingNodes: testData.isRestrictNode,
 						SchedulerName:           schedulerName,
 					},
-					"1")
+					"1", nil)
 				if got := getNodeResources(session, testData.node); !reflect.DeepEqual(got, testData.want) {
 					Fail(fmt.Sprintf("getNodeResources() = %v, want %v", got, testData.want))
 				}

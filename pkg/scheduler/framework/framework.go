@@ -4,6 +4,7 @@
 package framework
 
 import (
+	"net/http"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -15,7 +16,7 @@ import (
 )
 
 func OpenSession(cache cache.Cache, config *conf.SchedulerConfiguration,
-	schedulerParams *conf.SchedulerParams, sessionId types.UID) (*Session, error) {
+	schedulerParams *conf.SchedulerParams, sessionId types.UID, mux *http.ServeMux) (*Session, error) {
 	openSessionStart := time.Now()
 	defer metrics.UpdateOpenSessionDuration(openSessionStart)
 

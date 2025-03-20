@@ -85,6 +85,14 @@ func RunApp() error {
 		os.Exit(1)
 	}
 
+	mux := http.NewServeMux()
+	go func() {
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, "Hello, World!")
+		})
+		http.ListenAndServe(fmt.Sprintf(":%d", so.PluginServerPort), mux)
+	}()
+
 	setupProfiling(so)
 	if err := setupLogging(so); err != nil {
 		fmt.Printf("Failed to initialize loggers: %v", err)
@@ -96,7 +104,7 @@ func RunApp() error {
 	config.QPS = float32(so.QPS)
 	config.Burst = so.Burst
 
-	return Run(so, config)
+	return Run(so, config, mux)
 }
 
 func setupProfiling(so *options.ServerOption) {
@@ -122,7 +130,7 @@ func setupLogging(so *options.ServerOption) error {
 	return nil
 }
 
-func Run(opt *options.ServerOption, config *restclient.Config) error {
+func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMux) error {
 	if opt.PrintVersion {
 		version.PrintVersion()
 	}
@@ -130,6 +138,7 @@ func Run(opt *options.ServerOption, config *restclient.Config) error {
 	scheduler, err := scheduler.NewScheduler(config,
 		opt.SchedulerConf,
 		BuildSchedulerParams(opt),
+		mux,
 	)
 	if err != nil {
 		return err

@@ -203,7 +203,9 @@ func testPodPreferredAffinity(testData testInput, clusterAffinityInfo pod_affini
 		mockCache,
 		&conf.SchedulerConfiguration{Tiers: []conf.Tier{}},
 		&conf.SchedulerParams{},
-		sessionId)
+		sessionId,
+		nil,
+	)
 	Expect(err).To(Succeed())
 
 	Expect(ssn.NodePreOrderFns).To(HaveLen(0), "Expected no node pre-order functions")

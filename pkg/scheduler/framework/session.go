@@ -5,6 +5,7 @@ package framework
 
 import (
 	"fmt"
+	"net/http"
 	"sort"
 	"sync"
 	"time"
@@ -60,6 +61,7 @@ type Session struct {
 	plugins         map[string]Plugin
 	eventHandlers   []*EventHandler
 	schedulerParams conf.SchedulerParams
+	mux             *http.ServeMux
 
 	k8sPodState map[types.UID]k8s_internal.SessionState
 }

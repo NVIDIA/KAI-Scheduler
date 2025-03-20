@@ -46,6 +46,7 @@ func TestAddFlags(t *testing.T) {
 		GlobalDefaultStalenessGracePeriod: defaultStalenessGracePeriod,
 		NumOfStatusRecordingWorkers:       defaultNumOfStatusRecordingWorkers,
 		NodePoolLabelKey:                  defaultNodePoolLabelKey,
+		PluginServerPort:                  8081,
 	}
 
 	if !reflect.DeepEqual(expected, s) {
