@@ -8,6 +8,7 @@ import (
 	"maps"
 	"math"
 	"net/http"
+	"slices"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -384,7 +385,7 @@ func (pp *proportionPlugin) getQueueAllocatedResourceFn(queue *queue_info.QueueI
 func (pp *proportionPlugin) requestQueueFairShare(w http.ResponseWriter, r *http.Request) {
 	queue := r.URL.Query().Get("queue")
 	if queue == "" {
-		queues := maps.Keys(pp.queues)
+		queues := slices.Collect(maps.Keys(pp.queues))
 		_, _ = w.Write([]byte(fmt.Sprintf("%v", queues)))
 		return
 	}
