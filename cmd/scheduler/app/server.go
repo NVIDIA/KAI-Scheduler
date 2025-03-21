@@ -87,9 +87,6 @@ func RunApp() error {
 
 	mux := http.NewServeMux()
 	go func() {
-		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintf(w, "Hello, World!")
-		})
 		_ = http.ListenAndServe(fmt.Sprintf(":%d", so.PluginServerPort), mux)
 	}()
 

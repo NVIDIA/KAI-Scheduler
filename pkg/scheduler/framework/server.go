@@ -14,10 +14,15 @@ type PluginServer struct {
 }
 
 func newPluginServer(mux *http.ServeMux) *PluginServer {
-	return &PluginServer{
+	ps := &PluginServer{
 		registeredPlugins: map[string]func(http.ResponseWriter, *http.Request){},
 		mux:               mux,
 	}
+	if ps.mux != nil {
+		ps.mux.HandleFunc("/", ps.handlePlugin)
+	}
+
+	return ps
 }
 
 func (ps *PluginServer) registerPlugin(path string, handler func(http.ResponseWriter, *http.Request)) error {
@@ -25,11 +30,16 @@ func (ps *PluginServer) registerPlugin(path string, handler func(http.ResponseWr
 		return fmt.Errorf("server not initialized")
 	}
 
-	if _, ok := ps.registeredPlugins[path]; ok {
-		return fmt.Errorf("plugin %s already registered", path)
-	}
-
 	ps.registeredPlugins[path] = handler
-	ps.mux.HandleFunc(path, handler)
 	return nil
+}
+
+func (ps *PluginServer) handlePlugin(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	handler, ok := ps.registeredPlugins[path]
+	if !ok {
+		http.Error(w, "plugin not found", http.StatusNotFound)
+		return
+	}
+	handler(w, r)
 }
