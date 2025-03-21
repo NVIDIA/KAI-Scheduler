@@ -20,6 +20,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/ray"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/resourcetype"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/taskorder"
 )
 
@@ -43,4 +44,7 @@ func InitDefaultPlugins() {
 
 	// Plugins for Queues
 	framework.RegisterPluginBuilder("proportion", proportion.New)
+
+	//
+	framework.RegisterPluginBuilder("snapshot", snapshot.New)
 }
