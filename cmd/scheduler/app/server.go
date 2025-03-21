@@ -90,7 +90,7 @@ func RunApp() error {
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Hello, World!")
 		})
-		http.ListenAndServe(fmt.Sprintf(":%d", so.PluginServerPort), mux)
+		_ = http.ListenAndServe(fmt.Sprintf(":%d", so.PluginServerPort), mux)
 	}()
 
 	setupProfiling(so)
