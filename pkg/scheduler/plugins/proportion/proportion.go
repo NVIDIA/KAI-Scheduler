@@ -57,6 +57,9 @@ func (pp *proportionPlugin) Name() string {
 }
 
 func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
+	pp.totalResource = rs.EmptyResourceQuantities()
+	pp.queues = make(map[common_info.QueueID]*rs.QueueAttributes)
+
 	pp.calculateResourcesProportion(ssn)
 	pp.taskOrderFunc = ssn.TaskOrderFn
 	pp.reclaimablePlugin = rec.New(ssn.IsInferencePreemptible(), pp.taskOrderFunc)
@@ -84,8 +87,8 @@ func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 }
 
 func (pp *proportionPlugin) OnSessionClose(*framework.Session) {
-	pp.totalResource = nil
-	pp.queues = nil
+	// pp.totalResource = nil
+	// pp.queues = nil
 }
 
 func (pp *proportionPlugin) OnJobSolutionStartFn() {
