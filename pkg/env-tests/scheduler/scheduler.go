@@ -39,7 +39,7 @@ func RunScheduler(cfg *rest.Config, stopCh chan struct{}) error {
 
 	params := app.BuildSchedulerParams(opt)
 
-	s, err := scheduler.NewScheduler(cfg, "", params)
+	s, err := scheduler.NewScheduler(cfg, "", params, nil)
 	if err != nil {
 		return err
 	}
