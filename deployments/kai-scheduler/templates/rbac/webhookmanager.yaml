@@ -5,7 +5,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
-    helm.sh/hook: pre-install,post-install
+    helm.sh/hook: pre-install,post-install,pre-upgrade,post-upgrade
     helm.sh/hook-delete-policy: hook-succeeded
     helm.sh/hook-weight: "-3"
   name: webhookmanager
