@@ -41,9 +41,9 @@ KAI Scheduler can be installed:
 
 #### Install from Production
 ```sh
-helm repo add nvidia https://helm.ngc.nvidia.com/nvidia
+helm repo add kai-scheduler https://helm.ngc.nvidia.com/nvidia/kai-scheduler
 helm repo update
-helm upgrade -i kai-scheduler nvidia/kai-scheduler -n kai-scheduler --create-namespace
+helm upgrade -i kai-scheduler kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace
 ```
 
 #### Build from Source
