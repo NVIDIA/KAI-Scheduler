@@ -24,7 +24,7 @@ const (
 	DefaultPyroscopeMutexProfilerRate  = 5
 	DefaultPyroscopeBlockProfilerRate  = 5
 	defaultNumOfStatusRecordingWorkers = 5
-	defaultNodePoolLabelKey            = "runai/node-pool"
+	defaultNodePoolLabelKey            = ""
 )
 
 // ServerOption is the main context object for the controller manager.
