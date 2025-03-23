@@ -109,6 +109,9 @@ func (su *defaultStatusUpdater) updatePod(
 	}
 }
 
+// +kubebuilder:rbac:groups="scheduling.run.ai",resources=podgroups,verbs=update;patch
+// +kubebuilder:rbac:groups="scheduling.run.ai",resources=podgroups/status,verbs=create;delete;update;patch;get;list;watch
+
 func (su *defaultStatusUpdater) updatePodGroup(
 	ctx context.Context, _ updatePayloadKey, patchData []byte, subResources []string, updateStatus bool, object runtime.Object,
 ) {

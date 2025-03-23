@@ -35,6 +35,8 @@ type draPlugin struct {
 	celCache *cel.Cache
 }
 
+// +kubebuilder:rbac:groups="resource.k8s.io",resources=deviceclasses;resourceslices;resourceclaims,verbs=get;list;watch
+
 func New(pluginArgs map[string]string) framework.Plugin {
 	maxCelCacheEntries := defaultMaxCelCacheEntries
 	if entries, found := pluginArgs[maxCelCacheEntriesKey]; found {

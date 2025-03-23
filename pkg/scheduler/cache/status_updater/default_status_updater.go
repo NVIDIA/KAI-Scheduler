@@ -70,6 +70,8 @@ type defaultStatusUpdater struct {
 	inFlightPods      sync.Map
 }
 
+// +kubebuilder:rbac:groups="",resources=events,verbs=create;update;patch;delete;list;get;watch
+
 func New(
 	kubeClient kubernetes.Interface,
 	kubeaischedClient kubeaischedulerver.Interface,
@@ -106,6 +108,9 @@ func (su *defaultStatusUpdater) Evicted(
 	su.recorder.AnnotatedEventf(evictedPodGroup, evictionEventMetadata, v1.EventTypeNormal, "Evict",
 		message)
 }
+
+// +kubebuilder:rbac:groups="",resources=pods,verbs=update;patch
+// +kubebuilder:rbac:groups="",resources=pods/status,verbs=get;list;watch;create;delete;update;patch
 
 func (su *defaultStatusUpdater) Bound(
 	pod *v1.Pod, hostname string,

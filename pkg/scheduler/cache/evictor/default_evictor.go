@@ -21,6 +21,8 @@ func New(kubeClient kubernetes.Interface) *defaultEvictor {
 	}
 }
 
+// +kubebuilder:rbac:groups="",resources=pods,verbs=delete
+
 func (de *defaultEvictor) Evict(p *v1.Pod) error {
 	return de.kubeClient.CoreV1().Pods(p.Namespace).Delete(context.Background(), p.Name,
 		metav1.DeleteOptions{})

@@ -45,6 +45,8 @@ type k8sLister struct {
 	partitionSelector labels.Selector
 }
 
+// +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
+
 func New(
 	informerFactory informers.SharedInformerFactory, kubeAiSchedulerInformerFactory kubeAiSchedulerInfo.SharedInformerFactory,
 	partitionSelector labels.Selector,
@@ -70,25 +72,37 @@ func New(
 	}
 }
 
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
+
 func (k *k8sLister) ListPods() ([]*v1.Pod, error) {
 	return k.podLister.List(labels.Everything())
 }
+
+// +kubebuilder:rbac:groups="scheduling.run.ai",resources=podgroups,verbs=get;list;watch
 
 func (k *k8sLister) ListPodGroups() ([]*enginev2alpha2.PodGroup, error) {
 	return k.podGroupLister.List(k.partitionSelector)
 }
 
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch
+
 func (k *k8sLister) ListNodes() ([]*v1.Node, error) {
 	return k.nodeLister.List(k.partitionSelector)
 }
+
+// +kubebuilder:rbac:groups="scheduling.run.ai",resources=queues,verbs=get;list;watch
 
 func (k *k8sLister) ListQueues() ([]*enginev2.Queue, error) {
 	return k.queueLister.List(k.partitionSelector)
 }
 
+// +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch
+
 func (k *k8sLister) ListPodDisruptionBudgets() ([]*k8spolicyv1.PodDisruptionBudget, error) {
 	return k.pdbLister.List(labels.Everything())
 }
+
+// +kubebuilder:rbac:groups="scheduling.k8s.io",resources=priorityclasses,verbs=get;list;watch
 
 func (k *k8sLister) ListPriorityClasses() ([]*v14.PriorityClass, error) {
 	return k.pcLister.List(labels.Everything())
@@ -102,25 +116,37 @@ func (k *k8sLister) ListPodByIndex(index, value string) ([]interface{}, error) {
 	return k.podInformer.GetIndexer().ByIndex(index, value)
 }
 
+// +kubebuilder:rbac:groups="",resources=persistentvolumeclaims;persistentvolumes,verbs=get;list;watch
+
 func (k *k8sLister) ListPersistentVolumeClaims() ([]*v1.PersistentVolumeClaim, error) {
 	return k.pvcLister.List(labels.Everything())
 }
+
+// +kubebuilder:rbac:groups="storage.k8s.io",resources=csistoragecapacities,verbs=get;list;watch
 
 func (k *k8sLister) ListCSIStorageCapacities() ([]*storage.CSIStorageCapacity, error) {
 	return k.storageCapacityLister.List(labels.Everything())
 }
 
+// +kubebuilder:rbac:groups="storage.k8s.io",resources=storageclasses,verbs=get;list;watch
+
 func (k *k8sLister) ListStorageClasses() ([]*storage.StorageClass, error) {
 	return k.storageClassLister.List(labels.Everything())
 }
+
+// +kubebuilder:rbac:groups="storage.k8s.io",resources=csidrivers;csinodes,verbs=get;list;watch
 
 func (k *k8sLister) ListCSIDrivers() ([]*storage.CSIDriver, error) {
 	return k.csiDriverLister.List(labels.Everything())
 }
 
+// +kubebuilder:rbac:groups="scheduling.run.ai",resources=bindrequests,verbs=get;list;watch
+
 func (k *k8sLister) ListBindRequests() ([]*schedulingv1alpha2.BindRequest, error) {
 	return k.bindRequestLister.List(labels.Everything())
 }
+
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 
 func (k *k8sLister) ListConfigMaps() ([]*v1.ConfigMap, error) {
 	return k.cmLister.List(labels.Everything())

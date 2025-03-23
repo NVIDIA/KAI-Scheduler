@@ -227,6 +227,9 @@ func (sc *SchedulerCache) Bind(taskInfo *pod_info.PodInfo, hostname string) erro
 	return sc.StatusUpdater.Bound(taskInfo.Pod, hostname, err, sc.getNodPoolName())
 }
 
+// +kubebuilder:rbac:groups="scheduling.run.ai",resources=bindrequests,verbs=create;update;patch
+// +kubebuilder:rbac:groups="",resources=pods/finalizers,verbs=create;delete;update;patch;get;list
+
 func (sc *SchedulerCache) createBindRequest(podInfo *pod_info.PodInfo, nodeName string) error {
 	bindRequest := &schedulingv1alpha2.BindRequest{
 		ObjectMeta: metav1.ObjectMeta{
@@ -286,6 +289,8 @@ func (sc *SchedulerCache) RecordJobStatusEvent(job *podgroup_info.PodGroupInfo) 
 func (sc *SchedulerCache) TaskPipelined(task *pod_info.PodInfo, message string) {
 	sc.StatusUpdater.Pipelined(task.Pod, message)
 }
+
+// +kubebuilder:rbac:groups="scheduling.run.ai",resources=bindrequests,verbs=delete
 
 // Clean Stale BindRequest
 func (sc *SchedulerCache) cleanStaleBindRequest(

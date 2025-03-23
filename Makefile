@@ -61,6 +61,7 @@ manifests: controller-gen kustomize ## Generate ClusterRole and CustomResourceDe
 	$(CONTROLLER_GEN) rbac:roleName=podgrouper,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/podgrouper/..." paths="./cmd/podgrouper/..." output:stdout > deployments/kai-scheduler/templates/rbac/podgrouper.yaml
 	$(CONTROLLER_GEN) rbac:roleName=binder,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/binder/..." paths="./cmd/binder/..." output:stdout > deployments/kai-scheduler/templates/rbac/binder.yaml
 	$(CONTROLLER_GEN) rbac:roleName=resource-reservation,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/resourcereservation/..." paths="./cmd/resourcereservation/..." output:stdout > deployments/kai-scheduler/templates/rbac/resourcereservation.yaml
+	$(CONTROLLER_GEN) rbac:roleName=scheduler,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/scheduler/..." paths="./cmd/scheduler/..." output:stdout > deployments/kai-scheduler/templates/rbac/scheduler.yaml
 
 	$(CONTROLLER_GEN) rbac:roleName=webhookmanager,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/webhookmanager/..." paths="./cmd/webhookmanager/..." output:stdout > deployments/kustomization/webhookmanager-clusterrole/resource.yaml
 	$(KUSTOMIZE) build deployments/kustomization/webhookmanager-clusterrole >  deployments/kai-scheduler/templates/rbac/webhookmanager.yaml
