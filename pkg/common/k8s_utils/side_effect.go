@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package kube_ai_scheduler
+package k8s_utils
 
 import (
 	_ "k8s.io/cli-runtime"
