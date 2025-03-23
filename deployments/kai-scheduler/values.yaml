@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 global:
-  registry: nvcr.io/nvstaging/runai
+  registry: nvcr.io/nvidia/kai-scheduler
   securityContext: {}
   imagePullSecrets: []
   gpuSharing: false
