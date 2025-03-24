@@ -2,3 +2,4 @@ bin/
 .idea/
 charts/
 cover.out
+.DS_Store

@@ -3,10 +3,12 @@ module github.com/NVIDIA/KAI-scheduler
 go 1.23.4
 
 require (
+	github.com/NVIDIA/gpu-operator v1.8.3-0.20240812232433-87286e93f2c9
 	github.com/argoproj/argo-workflows/v3 v3.6.4
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gin-contrib/pprof v1.5.2
 	github.com/gin-gonic/gin v1.10.0
+	github.com/go-logr/logr v1.4.2
 	github.com/golang/glog v1.2.4
 	github.com/grafana/pyroscope-go v1.2.1
 	github.com/onsi/ginkgo v1.16.5
@@ -14,6 +16,7 @@ require (
 	github.com/onsi/gomega v1.36.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.5
+	github.com/run-ai/kwok-operator v0.0.0-20240926063032-05b6364bc7c7
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
 	github.com/xyproto/randomstring v1.2.0
@@ -51,6 +54,7 @@ require (
 	k8s.io/pod-security-admission v0.32.1
 	k8s.io/sample-apiserver v0.32.1
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
+	knative.dev/pkg v0.0.0-20250117084104-c43477f0052b
 	knative.dev/serving v0.44.0
 	sigs.k8s.io/controller-runtime v0.20.0
 	sigs.k8s.io/karpenter v1.2.0
@@ -59,9 +63,11 @@ require (
 require (
 	cel.dev/expr v0.18.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/NVIDIA/k8s-kata-manager v0.2.0 // indirect
+	github.com/NVIDIA/k8s-operator-libs v0.0.0-20240627150410-078e3039ecf7 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
-	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/awslabs/operatorpkg v0.0.0-20241205163410-0fff9f28d115 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
@@ -83,7 +89,6 @@ require (
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
@@ -132,6 +137,7 @@ require (
 	github.com/opencontainers/selinux v1.11.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.73.2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
@@ -157,6 +163,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	golang.org/x/arch v0.12.0 // indirect
 	golang.org/x/crypto v0.35.0 // indirect
+	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/oauth2 v0.25.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
@@ -183,7 +190,6 @@ require (
 	k8s.io/kube-scheduler v0.32.1 // indirect
 	k8s.io/kubelet v0.32.1 // indirect
 	knative.dev/networking v0.0.0-20250117155906-67d1c274ba6a // indirect
-	knative.dev/pkg v0.0.0-20250117084104-c43477f0052b // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect

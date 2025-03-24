@@ -9,6 +9,12 @@ contrib.go.opencensus.io/exporter/prometheus v0.4.2/go.mod h1:dvEHbiKmgvbr5pjaF9
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
+github.com/NVIDIA/gpu-operator v1.8.3-0.20240812232433-87286e93f2c9 h1:9yw3Jkto9ZqtNwlnOzxAlKufMNplaWPRfkXhCUFHXgI=
+github.com/NVIDIA/gpu-operator v1.8.3-0.20240812232433-87286e93f2c9/go.mod h1:lOgoRYbt1dtCVGX+EhxuZgPonfcIs41BXrnIPk3fE3I=
+github.com/NVIDIA/k8s-kata-manager v0.2.0 h1:K+BFkXTOvXXj/kmbNfxFCXM+GkdOVZj2WTHQ7b2uQA0=
+github.com/NVIDIA/k8s-kata-manager v0.2.0/go.mod h1:fVUz0DLzwW9RQBE59cLNTi3LrzVwSXWIogr9y5FocPM=
+github.com/NVIDIA/k8s-operator-libs v0.0.0-20240627150410-078e3039ecf7 h1:NaClubDuTKoXy4Ev4ZkmpVy3u6xdwd3I1XFJdoI1r+M=
+github.com/NVIDIA/k8s-operator-libs v0.0.0-20240627150410-078e3039ecf7/go.mod h1:d8YV6Am03Z9VS4fh6virN/ltOSasCZtAhkwMRU1X6Vs=
 github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/Pallinder/go-randomdata v1.2.0 h1:DZ41wBchNRb/0GfsePLiSwb0PHZmT67XY00lCDlaYPg=
@@ -20,8 +26,8 @@ github.com/argoproj/argo-workflows/v3 v3.6.4 h1:5+Cc1UwaQE5ka3w7R3hxZ1TK3M6VjDEX
 github.com/argoproj/argo-workflows/v3 v3.6.4/go.mod h1:2f5zB8CkbNCCO1od+kd1dWkVokqcuyvu+tc+Jwx1MZg=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
-github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a h1:idn718Q4B6AGu/h5Sxe66HYVdqdGu2l9Iebqhi/AEoA=
-github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
+github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3dyBCFEj5IhUbnKptjxatkF07cF2ak3yi77so=
+github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/avast/retry-go v3.0.0+incompatible h1:4SOWQ7Qs+oroOTQOYnAHqelpCO0biHSxpiH9JdtuBj0=
 github.com/avast/retry-go v3.0.0+incompatible/go.mod h1:XtSnn+n/sHqQIpZ10K1qAevBhOOCWBLXXy3hyiqqBrY=
 github.com/awslabs/operatorpkg v0.0.0-20241205163410-0fff9f28d115 h1:9nhjY3dzCpEmhpQ0vMlhB7wqucAiftLjAIEQu8uT2J4=
@@ -258,6 +264,8 @@ github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.73.2 h1:GwlGJPK6vf1UIohpc72KJVkKYlzki1UgE3xC4bWbf20=
+github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.73.2/go.mod h1:yJ3CawR/A5qEYFEeCOUVYLTwYxmacfHQhJS+b/2QiaM=
 github.com/prometheus/client_golang v1.20.5 h1:cxppBPuYhUnsO6yo/aoRol4L7q7UFfdm+bR9r+8l63Y=
 github.com/prometheus/client_golang v1.20.5/go.mod h1:PIEt8X02hGcP8JWbeHyeZ53Y/jReSnHgO035n//V5WE=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
@@ -274,6 +282,8 @@ github.com/robfig/cron/v3 v3.0.1/go.mod h1:eQICP3HwyT7UooqI/z+Ov+PtYAWygg1TEWWzG
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.12.0 h1:exVL4IDcn6na9z1rAb56Vxr+CgyK3nn3O+epU5NdKM8=
 github.com/rogpeppe/go-internal v1.12.0/go.mod h1:E+RYuTGaKKdloAfM02xzb0FW3Paa99yedzYV+kq4uf4=
+github.com/run-ai/kwok-operator v0.0.0-20240926063032-05b6364bc7c7 h1:7sUlviMShcd8g6sf2Q93ix+geV0staOMk42Rs0rAJqA=
+github.com/run-ai/kwok-operator v0.0.0-20240926063032-05b6364bc7c7/go.mod h1:vih5aAo7hS8Mt6NXsIUI8SYW+WfB4GhZOuLZzLjZWcc=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/samber/lo v1.47.0 h1:z7RynLwP5nbyRscyvcD043DWYoOcYRv3mV8lBeqOCLc=
 github.com/samber/lo v1.47.0/go.mod h1:RmDH9Ct32Qy3gduHQuKJ3gW1fMHAnE/fAzQuf6He5cU=
