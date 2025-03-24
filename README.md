@@ -41,9 +41,9 @@ KAI Scheduler can be installed:
 
 #### Install from Production
 ```sh
-helm repo add kai-scheduler https://helm.ngc.nvidia.com/nvidia/kai-scheduler
+helm repo add nvidia-k8s https://helm.ngc.nvidia.com/nvidia/k8s
 helm repo update
-helm upgrade -i kai-scheduler kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace
+helm upgrade -i kai-scheduler nvidia-k8s/kai-scheduler -n kai-scheduler --create-namespace --set "global.registry=nvcr.io/nvidia/k8s"
 ```
 
 #### Build from Source
