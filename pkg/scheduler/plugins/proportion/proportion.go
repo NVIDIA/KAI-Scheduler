@@ -87,10 +87,7 @@ func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddHttpHandler("/queue-fair-share", pp.requestQueueFairShare)
 }
 
-func (pp *proportionPlugin) OnSessionClose(*framework.Session) {
-	// pp.totalResource = nil
-	// pp.queues = nil
-}
+func (pp *proportionPlugin) OnSessionClose(*framework.Session) {}
 
 func (pp *proportionPlugin) OnJobSolutionStartFn() {
 	pp.jobSimulationQueues = map[common_info.QueueID]*rs.QueueAttributes{}
