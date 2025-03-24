@@ -4,11 +4,7 @@
 package proportion
 
 import (
-	"fmt"
-	"maps"
 	"math"
-	"net/http"
-	"slices"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -58,9 +54,6 @@ func (pp *proportionPlugin) Name() string {
 }
 
 func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
-	pp.totalResource = rs.EmptyResourceQuantities()
-	pp.queues = make(map[common_info.QueueID]*rs.QueueAttributes)
-
 	pp.calculateResourcesProportion(ssn)
 	pp.taskOrderFunc = ssn.TaskOrderFn
 	pp.reclaimablePlugin = rec.New(ssn.IsInferencePreemptible(), pp.taskOrderFunc)
@@ -83,11 +76,12 @@ func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddGetQueueAllocatedResourcesFn(pp.getQueueAllocatedResourceFn)
 	ssn.AddGetQueueDeservedResourcesFn(pp.getQueueDeservedResourcesFn)
 	ssn.AddGetQueueFairShareFn(pp.getQueueFairShareFn)
-
-	ssn.AddHttpHandler("/queue-fair-share", pp.requestQueueFairShare)
 }
 
-func (pp *proportionPlugin) OnSessionClose(*framework.Session) {}
+func (pp *proportionPlugin) OnSessionClose(*framework.Session) {
+	pp.totalResource = nil
+	pp.queues = nil
+}
 
 func (pp *proportionPlugin) OnJobSolutionStartFn() {
 	pp.jobSimulationQueues = map[common_info.QueueID]*rs.QueueAttributes{}
@@ -377,19 +371,4 @@ func (pp *proportionPlugin) getQueueFairShareFn(queue *queue_info.QueueInfo) *re
 func (pp *proportionPlugin) getQueueAllocatedResourceFn(queue *queue_info.QueueInfo) *resource_info.ResourceRequirements {
 	queueAttributes := pp.queues[queue.UID]
 	return utils.ResourceRequirementsFromQuantities(queueAttributes.GetAllocatedShare())
-}
-
-func (pp *proportionPlugin) requestQueueFairShare(w http.ResponseWriter, r *http.Request) {
-	queue := r.URL.Query().Get("queue")
-	if queue == "" {
-		queues := slices.Collect(maps.Keys(pp.queues))
-		_, _ = w.Write([]byte(fmt.Sprintf("%v", queues)))
-		return
-	}
-	queueAttributes, found := pp.queues[common_info.QueueID(queue)]
-	if !found {
-		http.Error(w, "Queue not found", http.StatusNotFound)
-		return
-	}
-	_, _ = w.Write([]byte(queueAttributes.GetFairShare().String()))
 }
