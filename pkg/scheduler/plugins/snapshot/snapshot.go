@@ -4,13 +4,20 @@
 package snapshot
 
 import (
+	"archive/zip"
 	"encoding/json"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+)
+
+const (
+	SnapshotFileName = "snapshot.json"
 )
 
 type Snapshot struct {
@@ -46,8 +53,32 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 		Config:          sp.session.Config,
 		SchedulerParams: &sp.session.SchedulerParams,
 	}
-	if err := json.NewEncoder(writer).Encode(snapshotAndConfig); err != nil {
+	jsonBytes, err := json.Marshal(snapshotAndConfig)
+	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Header().Set("Content-Disposition", "attachment; filename=snapshot.zip")
+	writer.Header().Set("Content-Type", "application/zip")
+
+	zipWriter := zip.NewWriter(writer)
+	jsonWriter, err := zipWriter.Create(SnapshotFileName)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = io.Copy(jsonWriter, strings.NewReader(string(jsonBytes)))
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = zipWriter.Close()
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
