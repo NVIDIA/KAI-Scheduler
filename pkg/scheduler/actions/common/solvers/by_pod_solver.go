@@ -46,7 +46,6 @@ type byPodSolver struct {
 	solutionValidator        SolutionValidator
 	allowVictimConsolidation bool
 	actionType               framework.ActionType
-	returnSolvingStatement   bool
 }
 
 func newByPodSolver(
@@ -54,14 +53,12 @@ func newByPodSolver(
 	checkVictims SolutionValidator,
 	allowVictimConsolidation bool,
 	action framework.ActionType,
-	returnSolvingStatement bool,
 ) *byPodSolver {
 	return &byPodSolver{
 		feasibleNodes:            feasibleNodes,
 		solutionValidator:        checkVictims,
 		allowVictimConsolidation: allowVictimConsolidation,
 		actionType:               action,
-		returnSolvingStatement:   returnSolvingStatement,
 	}
 }
 
@@ -205,9 +202,7 @@ func (s *byPodSolver) handleScenarioSolution(
 		victimsTasks = append(victimsTasks, solutionVictims.pipelinedVictims...)
 		actualVictimJobs = getVictimJobsFromVictimTasks(victimsTasks, scenario)
 	}
-	if !s.returnSolvingStatement {
-		statement.Discard()
-	}
+
 	return &solutionResult{true, victimsTasks, actualVictimJobs, statement}
 }
 
