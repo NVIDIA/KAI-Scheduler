@@ -7,5 +7,5 @@ kind: Namespace
 metadata:
   name: runai-reservation
   annotations:
-    "helm.sh/resource-policy": keep
+    helm.sh/resource-policy: keep
 {{- end }}

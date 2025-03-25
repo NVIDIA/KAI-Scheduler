@@ -415,13 +415,13 @@ func (ssn *Session) AllowConsolidatingReclaim() bool {
 	return ssn.SchedulerParams.AllowConsolidatingReclaim
 }
 
-func (s *Session) GetGlobalDefaultStalenessGracePeriod() time.Duration {
-	return s.SchedulerParams.GlobalDefaultStalenessGracePeriod
+func (ssn *Session) GetGlobalDefaultStalenessGracePeriod() time.Duration {
+	return ssn.SchedulerParams.GlobalDefaultStalenessGracePeriod
 }
 
 // OverrideGlobalDefaultStalenessGracePeriod overrides the value returned by GetGlobalDefaultStalenessGracePeriod. Use for testing purposes.
-func (s *Session) OverrideGlobalDefaultStalenessGracePeriod(t time.Duration) {
-	s.SchedulerParams.GlobalDefaultStalenessGracePeriod = t
+func (ssn *Session) OverrideGlobalDefaultStalenessGracePeriod(t time.Duration) {
+	ssn.SchedulerParams.GlobalDefaultStalenessGracePeriod = t
 }
 
 // OverrideAllowConsolidatingReclaim overrides the value returned by allowConsolidatingReclaim. Use for testing purposes.

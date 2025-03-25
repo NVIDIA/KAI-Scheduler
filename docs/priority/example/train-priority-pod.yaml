@@ -1,0 +1,19 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: train-pod
+  labels:
+    runai/queue: test
+    priorityClassName: train
+spec:
+  schedulerName: kai-scheduler
+  containers:
+    - name: main
+      image: ubuntu
+      args: ["sleep", "infinity"]
+      resources:
+        limits:
+          nvidia.com/gpu: "1"

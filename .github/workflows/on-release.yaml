@@ -45,10 +45,11 @@ jobs:
         run: make test
 
       - name: Docker build & push
-        run: make build DOCKER_BUILD_PLATFORM=linux/amd64,linux/arm64 VERSION=$PACKAGE_VERSION DOCKER_BUILDX_ADDITIONAL_ARGS=--push
+        run: make build DOCKER_BUILD_PLATFORM=linux/amd64,linux/arm64 DOCKER_REPO_BASE=nvcr.io/nvidia/k8s VERSION=$PACKAGE_VERSION DOCKER_BUILDX_ADDITIONAL_ARGS=--push
 
       - name: Build helm chart
         run: |
+          sed -i 's#registry/local/kai-scheduler#nvcr.io/nvidia/k8s#' deployments/kai-scheduler/values.yaml
           helm package ./deployments/kai-scheduler -d ./charts --version $PACKAGE_VERSION
 
       - name: Upload As Release Asset

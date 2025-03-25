@@ -6,8 +6,8 @@ Queues are typically assigned to different consumers in the cluster (users, grou
 KAI Scheduler operates with two levels of hierarchical scheduling queue system.
 
 This command sets up two scheduling queue hierarchies:
-* `default` – A top-level queue.
-* `test` – A leaf queue under the default hierarchy
+* `default` – A top-level queue that governs resource division of other leaf queues.
+* `test` – A leaf queue under the default top-level queue. Workloads should reference this queue.
 
 For this example, these queues do not have resource limits, meaning they can consume cluster resources freely.
 ```
@@ -17,7 +17,7 @@ Pods can now be assigned to the `test` queue and submitted to the cluster for sc
 
 ### Assigning Pods to Queues
 To schedule a pod using KAI Scheduler, ensure the following:
-1. Specify the queue name using the `runai/queue` label on the pod
+1. Specify the queue name using the `runai/queue: test` label on the pod/workload.
 2. Set the scheduler name in the pod specification as `kai-scheduler`
 This ensures the pod is placed in the correct scheduling queue and managed by KAI Scheduler.
 

@@ -22,7 +22,6 @@ It can run alongside other schedulers installed on the cluster.
 * [GPU Sharing](docs/gpu-sharing/README.md): Allow multiple workloads to efficiently share single or multiple GPUs, maximizing resource utilization.
 * Cloud & On-premise Support: Fully compatible with dynamic cloud infrastructures (including auto-scalers like Karpenter) as well as static on-premise deployments.
 
-
 ## Prerequisites
 Before installing KAI Scheduler, ensure you have:
 
@@ -45,10 +44,8 @@ helm repo add nvidia-k8s https://helm.ngc.nvidia.com/nvidia/k8s
 helm repo update
 helm upgrade -i kai-scheduler nvidia-k8s/kai-scheduler -n kai-scheduler --create-namespace --set "global.registry=nvcr.io/nvidia/k8s"
 ```
-
 #### Build from Source
 Follow the instructions [here](docs/developer/building-from-source.md)
-
 
 ## Quick Start
 To start scheduling workloads with KAI Scheduler, please continue to [Quick Start example](docs/quickstart/README.md)

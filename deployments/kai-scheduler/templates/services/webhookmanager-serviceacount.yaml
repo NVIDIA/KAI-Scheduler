@@ -6,6 +6,6 @@ kind: ServiceAccount
 metadata:
   name: webhookmanager
   annotations:
-    "helm.sh/hook": pre-install,post-install,pre-upgrade,post-upgrade
-    "helm.sh/hook-weight": "-2"
-    "helm.sh/hook-delete-policy": hook-succeeded
+    helm.sh/hook: pre-install,post-install,pre-upgrade,post-upgrade
+    helm.sh/hook-weight: "-2"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
