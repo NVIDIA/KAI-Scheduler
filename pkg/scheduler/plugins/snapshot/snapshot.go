@@ -10,6 +10,12 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
+type Snapshot struct {
+	Snapshot        *api.ClusterInfo             `json:"snapshot"`
+	Config          *conf.SchedulerConfiguration `json:"config"`
+	SchedulerParams *conf.SchedulerParams        `json:"schedulerParams"`
+}
+
 type snapshotPlugin struct {
 	session *framework.Session
 }
@@ -34,11 +40,7 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	snapshotAndConfig := struct {
-		Snapshot        *api.ClusterInfo             `json:"snapshot"`
-		Config          *conf.SchedulerConfiguration `json:"config"`
-		SchedulerParams *conf.SchedulerParams        `json:"schedulerParams"`
-	}{
+	snapshotAndConfig := Snapshot{
 		Snapshot:        snapshot,
 		Config:          sp.session.Config,
 		SchedulerParams: &sp.session.SchedulerParams,
