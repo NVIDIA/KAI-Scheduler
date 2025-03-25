@@ -4,10 +4,13 @@
 package snapshot
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +35,6 @@ func TestSnapshotPlugin(t *testing.T) {
 	fakeKubeClient := fake.NewSimpleClientset()
 	fakeKubeAISchedulerClient := kubeaischedulerver.NewSimpleClientset()
 
-	// Create test resources
 	testPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-pod",
@@ -115,7 +117,6 @@ func TestSnapshotPlugin(t *testing.T) {
 		},
 	}
 
-	// Create scheduler configuration
 	schedulerConfig := &conf.SchedulerConfiguration{
 		Actions: "allocate",
 		Tiers: []conf.Tier{
@@ -137,10 +138,9 @@ func TestSnapshotPlugin(t *testing.T) {
 		},
 	}
 
-	// Create cache
 	schedulerCache := cache.New(&cache.SchedulerCacheParams{
 		KubeClient:                  fakeKubeClient,
-		KubeAISchedulerClient:       fakeKubeAISchedulerClient,
+		KAISchedulerClient:          fakeKubeAISchedulerClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      false,
@@ -151,11 +151,9 @@ func TestSnapshotPlugin(t *testing.T) {
 		NumOfStatusRecordingWorkers: 1,
 	})
 
-	// Start cache
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Create test resources in fake clients after cache is started and synced
 	_, err := fakeKubeClient.CoreV1().Pods("default").Create(ctx, testPod, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
@@ -173,59 +171,65 @@ func TestSnapshotPlugin(t *testing.T) {
 	schedulerCache.Run(ctx.Done())
 	schedulerCache.WaitForCacheSync(ctx.Done())
 
-	// Create session
 	session := &framework.Session{
 		Config:          schedulerConfig,
 		SchedulerParams: schedulerParams,
 		Cache:           schedulerCache,
 	}
 
-	// Create snapshot plugin
 	plugin := New(nil)
 	plugin.OnSessionOpen(session)
 
-	// Create test HTTP request and response writer
 	req := httptest.NewRequest("GET", "/get-snapshot", nil)
 	w := httptest.NewRecorder()
 
-	// Call serveSnapshot
 	plugin.(*snapshotPlugin).serveSnapshot(w, req)
 
-	// Check response status
 	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "application/zip", w.Header().Get("Content-Type"))
 
-	// Parse response
-	var snapshot Snapshot
-	err = json.Unmarshal(w.Body.Bytes(), &snapshot)
+	zipReader, err := zip.NewReader(strings.NewReader(w.Body.String()), int64(len(w.Body.Bytes())))
 	assert.NoError(t, err)
 
-	// Verify configuration
+	var snapshotFile io.ReadCloser
+	for _, file := range zipReader.File {
+		if file.Name == "snapshot.json" {
+			snapshotFile, err = file.Open()
+			assert.NoError(t, err)
+			break
+		}
+	}
+	assert.NotNil(t, snapshotFile)
+	defer snapshotFile.Close()
+
+	snapshotBytes, err := io.ReadAll(snapshotFile)
+	assert.NoError(t, err)
+
+	var snapshot Snapshot
+	err = json.Unmarshal(snapshotBytes, &snapshot)
+	assert.NoError(t, err)
+
 	assert.Equal(t, schedulerConfig.Actions, snapshot.Config.Actions)
 	assert.Equal(t, schedulerParams.SchedulerName, snapshot.SchedulerParams.SchedulerName)
 	assert.Equal(t, schedulerParams.PartitionParams.NodePoolLabelKey, snapshot.SchedulerParams.PartitionParams.NodePoolLabelKey)
 	assert.Equal(t, schedulerParams.PartitionParams.NodePoolLabelValue, snapshot.SchedulerParams.PartitionParams.NodePoolLabelValue)
 
-	// Verify resources in snapshot
 	assert.NotNil(t, snapshot.RawObjects)
 
-	// Verify Pods
 	assert.Len(t, snapshot.RawObjects.Pods, 1)
 	assert.Equal(t, testPod.Name, snapshot.RawObjects.Pods[0].Name)
 	assert.Equal(t, testPod.Namespace, snapshot.RawObjects.Pods[0].Namespace)
 
-	// Verify Nodes
 	assert.Len(t, snapshot.RawObjects.Nodes, 1)
 	if len(snapshot.RawObjects.Nodes) > 0 {
 		assert.Equal(t, testNodes[0].Name, snapshot.RawObjects.Nodes[0].Name)
 	}
 
-	// Verify Queues
 	assert.Len(t, snapshot.RawObjects.Queues, 1)
 	if len(snapshot.RawObjects.Queues) > 0 {
 		assert.Equal(t, testQueue.Name, snapshot.RawObjects.Queues[0].Name)
 	}
 
-	// Verify PodGroups
 	assert.Len(t, snapshot.RawObjects.PodGroups, 1)
 	if len(snapshot.RawObjects.PodGroups) > 0 {
 		assert.Equal(t, testPodGroup.Name, snapshot.RawObjects.PodGroups[0].Name)

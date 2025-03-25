@@ -4,8 +4,11 @@
 package snapshot
 
 import (
+	"archive/zip"
 	"encoding/json"
+	"io"
 	"net/http"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	k8spolicyv1 "k8s.io/api/policy/v1"
@@ -19,6 +22,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+)
+
+const (
+	SnapshotFileName = "snapshot.json"
 )
 
 // RawKubernetesObjects contains the raw Kubernetes objects from the cluster
@@ -165,8 +172,32 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 		SchedulerParams: &sp.session.SchedulerParams,
 		RawObjects:      rawObjects,
 	}
-	if err := json.NewEncoder(writer).Encode(snapshotAndConfig); err != nil {
+	jsonBytes, err := json.Marshal(snapshotAndConfig)
+	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Header().Set("Content-Disposition", "attachment; filename=snapshot.zip")
+	writer.Header().Set("Content-Type", "application/zip")
+
+	zipWriter := zip.NewWriter(writer)
+	jsonWriter, err := zipWriter.Create(SnapshotFileName)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = io.Copy(jsonWriter, strings.NewReader(string(jsonBytes)))
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = zipWriter.Close()
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 

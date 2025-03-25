@@ -317,7 +317,7 @@ func TestRecordJobStatusEvent(t *testing.T) {
 
 			cache := New(&SchedulerCacheParams{
 				KubeClient:                  kubeClient,
-				KubeAISchedulerClient:       kubeAiSchedulerClient,
+				KAISchedulerClient:          kubeAiSchedulerClient,
 				NodePoolParams:              &conf.SchedulingNodePoolParams{},
 				DetailedFitErrors:           detailedFitErrors,
 				FullHierarchyFairness:       true,
