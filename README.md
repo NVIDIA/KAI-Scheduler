@@ -53,8 +53,5 @@ Follow the instructions [here](docs/developer/building-from-source.md)
 ## Quick Start
 To start scheduling workloads with KAI Scheduler, please continue to [Quick Start example](docs/quickstart/README.md)
 
-## API
-PLEACEHOLDER - How to use?
-
 ## Support and Getting Help
 Please open [an issue on the GitHub project](https://github.com/NVIDIA/KAI-scheduler/issues/new) for any questions. Your feedback is appreciated.
