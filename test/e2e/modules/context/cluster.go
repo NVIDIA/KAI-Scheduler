@@ -14,10 +14,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
 )
 
-const (
-	defaultServiceAccountName = "default"
-)
-
 func (tc *TestContext) createClusterQueues(ctx context.Context) error {
 	for _, testQueue := range tc.Queues {
 		err := createQueueContext(ctx, testQueue)

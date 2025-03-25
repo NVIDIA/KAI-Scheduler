@@ -69,7 +69,10 @@ func (ssn *Session) AddHttpHandler(path string, handler func(http.ResponseWriter
 	if server == nil {
 		return
 	}
-	server.registerPlugin(path, handler)
+	err := server.registerPlugin(path, handler)
+	if err != nil {
+		log.InfraLogger.Errorf("Failed to register plugin %s: %v", path, err)
+	}
 }
 
 func (ssn *Session) CanReclaimResources(reclaimer *reclaimer_info.ReclaimerInfo) bool {
