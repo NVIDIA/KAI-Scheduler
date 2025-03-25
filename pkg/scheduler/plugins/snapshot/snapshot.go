@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/run-ai/kube-ai-scheduler/pkg/scheduler/framework"
-	"github.com/run-ai/kube-ai-scheduler/pkg/scheduler/log"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
 type snapshotPlugin struct {
@@ -32,7 +34,16 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := json.NewEncoder(writer).Encode(snapshot); err != nil {
+	snapshotAndConfig := struct {
+		Snapshot        *api.ClusterInfo             `json:"snapshot"`
+		Config          *conf.SchedulerConfiguration `json:"config"`
+		SchedulerParams *conf.SchedulerParams        `json:"schedulerParams"`
+	}{
+		Snapshot:        snapshot,
+		Config:          sp.session.Config,
+		SchedulerParams: &sp.session.SchedulerParams,
+	}
+	if err := json.NewEncoder(writer).Encode(snapshotAndConfig); err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 }

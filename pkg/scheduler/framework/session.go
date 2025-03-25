@@ -62,7 +62,7 @@ type Session struct {
 	Config          *conf.SchedulerConfiguration
 	plugins         map[string]Plugin
 	eventHandlers   []*EventHandler
-	schedulerParams conf.SchedulerParams
+	SchedulerParams conf.SchedulerParams
 	mux             *http.ServeMux
 
 	k8sPodState map[types.UID]k8s_internal.SessionState
@@ -321,7 +321,7 @@ func openSession(cache cache.Cache, sessionId types.UID, schedulerParams conf.Sc
 		Queues:        map[common_info.QueueID]*queue_info.QueueInfo{},
 
 		plugins:         map[string]Plugin{},
-		schedulerParams: schedulerParams,
+		SchedulerParams: schedulerParams,
 		mux:             mux,
 		k8sPodState:     map[types.UID]k8s_internal.SessionState{},
 	}
@@ -362,24 +362,24 @@ func closeSession(ssn *Session) {
 }
 
 func (ssn *Session) GetMaxNumberConsolidationPreemptees() int {
-	return ssn.schedulerParams.MaxNumberConsolidationPreemptees
+	return ssn.SchedulerParams.MaxNumberConsolidationPreemptees
 }
 
 func (ssn *Session) OverrideMaxNumberConsolidationPreemptees(maxPreemptees int) {
-	ssn.schedulerParams.MaxNumberConsolidationPreemptees = maxPreemptees
+	ssn.SchedulerParams.MaxNumberConsolidationPreemptees = maxPreemptees
 }
 
 func (ssn *Session) IsInferencePreemptible() bool {
-	return ssn.schedulerParams.IsInferencePreemptible
+	return ssn.SchedulerParams.IsInferencePreemptible
 }
 
 // OverrideInferencePreemptible overrides the value returned by IsInferencePreemptible. Use for testing purposes.
 func (ssn *Session) OverrideInferencePreemptible(isInferencePreemptible bool) {
-	ssn.schedulerParams.IsInferencePreemptible = isInferencePreemptible
+	ssn.SchedulerParams.IsInferencePreemptible = isInferencePreemptible
 }
 
 func (ssn *Session) UseSchedulingSignatures() bool {
-	return ssn.schedulerParams.UseSchedulingSignatures
+	return ssn.SchedulerParams.UseSchedulingSignatures
 }
 
 func (ssn *Session) GetJobsDepth(action ActionType) int {
@@ -401,40 +401,40 @@ func (ssn *Session) CountLeafQueues() int {
 }
 
 func (ssn *Session) ScheduleCSIStorage() bool {
-	return ssn.schedulerParams.ScheduleCSIStorage
+	return ssn.SchedulerParams.ScheduleCSIStorage
 }
 
 func (ssn *Session) NodePoolName() string {
-	if ssn.schedulerParams.PartitionParams == nil {
+	if ssn.SchedulerParams.PartitionParams == nil {
 		return ""
 	}
-	return ssn.schedulerParams.PartitionParams.NodePoolLabelValue
+	return ssn.SchedulerParams.PartitionParams.NodePoolLabelValue
 }
 
 func (ssn *Session) AllowConsolidatingReclaim() bool {
-	return ssn.schedulerParams.AllowConsolidatingReclaim
+	return ssn.SchedulerParams.AllowConsolidatingReclaim
 }
 
 func (s *Session) GetGlobalDefaultStalenessGracePeriod() time.Duration {
-	return s.schedulerParams.GlobalDefaultStalenessGracePeriod
+	return s.SchedulerParams.GlobalDefaultStalenessGracePeriod
 }
 
 // OverrideGlobalDefaultStalenessGracePeriod overrides the value returned by GetGlobalDefaultStalenessGracePeriod. Use for testing purposes.
 func (s *Session) OverrideGlobalDefaultStalenessGracePeriod(t time.Duration) {
-	s.schedulerParams.GlobalDefaultStalenessGracePeriod = t
+	s.SchedulerParams.GlobalDefaultStalenessGracePeriod = t
 }
 
 // OverrideAllowConsolidatingReclaim overrides the value returned by allowConsolidatingReclaim. Use for testing purposes.
 func (ssn *Session) OverrideAllowConsolidatingReclaim(allowConsolidatingReclaim bool) {
-	ssn.schedulerParams.AllowConsolidatingReclaim = allowConsolidatingReclaim
+	ssn.SchedulerParams.AllowConsolidatingReclaim = allowConsolidatingReclaim
 }
 
 func (ssn *Session) GetSchedulerName() string {
-	return ssn.schedulerParams.SchedulerName
+	return ssn.SchedulerParams.SchedulerName
 }
 
 func (ssn *Session) OverrideSchedulerName(name string) {
-	ssn.schedulerParams.SchedulerName = name
+	ssn.SchedulerParams.SchedulerName = name
 }
 
 func (ssn *Session) InternalK8sPlugins() *k8splugins.K8sPlugins {

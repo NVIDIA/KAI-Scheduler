@@ -297,5 +297,5 @@ func (ssn *Session) NodeOrderFn(task *pod_info.PodInfo, node *node_info.NodeInfo
 }
 
 func (ssn *Session) IsRestrictNodeSchedulingEnabled() bool {
-	return ssn.schedulerParams.RestrictSchedulingNodes
+	return ssn.SchedulerParams.RestrictSchedulingNodes
 }
