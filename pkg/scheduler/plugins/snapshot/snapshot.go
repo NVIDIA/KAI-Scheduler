@@ -14,7 +14,7 @@ import (
 )
 
 type Snapshot struct {
-	Snapshot        *api.ClusterInfo             `json:"snapshot"`
+	ClusterInfo     *api.ClusterInfo             `json:"snapshot"`
 	Config          *conf.SchedulerConfiguration `json:"config"`
 	SchedulerParams *conf.SchedulerParams        `json:"schedulerParams"`
 }
@@ -33,9 +33,7 @@ func (sp *snapshotPlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddHttpHandler("/get-snapshot", sp.serveSnapshot)
 }
 
-func (sp *snapshotPlugin) OnSessionClose(ssn *framework.Session) {
-	// Handle the session close event.
-}
+func (sp *snapshotPlugin) OnSessionClose(ssn *framework.Session) {}
 
 func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *http.Request) {
 	snapshot, err := sp.session.Cache.Snapshot()
@@ -44,7 +42,7 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 		return
 	}
 	snapshotAndConfig := Snapshot{
-		Snapshot:        snapshot,
+		ClusterInfo:     snapshot,
 		Config:          sp.session.Config,
 		SchedulerParams: &sp.session.SchedulerParams,
 	}

@@ -45,6 +45,6 @@ func InitDefaultPlugins() {
 	// Plugins for Queues
 	framework.RegisterPluginBuilder("proportion", proportion.New)
 
-	//
+	// Other Plugins
 	framework.RegisterPluginBuilder("snapshot", snapshot.New)
 }
