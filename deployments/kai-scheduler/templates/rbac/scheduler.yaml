@@ -6,108 +6,118 @@ kind: ClusterRole
 metadata:
   name: scheduler
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-      - events
-      - persistentvolumeclaims
-      - pods
-      - pods/status
-      - pods/binding
-      - services
-      - persistentvolumes
-      - namespaces
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - scheduling.run.ai
-    resources:
-      - bindrequests
-      - podgroups
-      - podgroups/status
-      - queues
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - nodes
-    verbs:
-      - get
-      - list
-      - watch
-      - patch
-  - apiGroups:
-      - storage.k8s.io
-    resources:
-      - storageclasses
-      - csinodes
-      - csidrivers
-      - csistoragecapacities
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - policy
-    resources:
-      - poddisruptionbudgets
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - scheduling.k8s.io
-    resources:
-      - priorityclasses
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - resource.k8s.io
-    resources:
-      - deviceclasses
-      - resourceslices
-      - resourceclaims
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-      - events
-      - persistentvolumeclaims
-      - pods
-      - pods/status
-      - pods/binding
-      - pods/finalizers
-      - services
-      - services/finalizers
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-  - apiGroups:
-      - scheduling.run.ai
-    resources:
-      - bindrequests
-      - podgroups
-      - podgroups/status
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - namespaces
+  - nodes
+  - persistentvolumeclaims
+  - persistentvolumes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  - pods/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/finalizers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - resource.k8s.io
+  resources:
+  - deviceclasses
+  - resourceclaims
+  - resourceslices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - scheduling.k8s.io
+  resources:
+  - priorityclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - scheduling.run.ai
+  resources:
+  - bindrequests
+  - podgroups/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - scheduling.run.ai
+  resources:
+  - podgroups
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - scheduling.run.ai
+  resources:
+  - queues
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - csidrivers
+  - csinodes
+  - csistoragecapacities
+  - storageclasses
+  verbs:
+  - get
+  - list
+  - watch
