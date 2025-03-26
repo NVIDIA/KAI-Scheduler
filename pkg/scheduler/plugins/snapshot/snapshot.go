@@ -21,7 +21,7 @@ const (
 )
 
 type Snapshot struct {
-	ClusterInfo     *api.ClusterInfo             `json:"snapshot"`
+	ClusterInfo     *api.ClusterInfo             `json:"clusterInfo"`
 	Config          *conf.SchedulerConfiguration `json:"config"`
 	SchedulerParams *conf.SchedulerParams        `json:"schedulerParams"`
 }
