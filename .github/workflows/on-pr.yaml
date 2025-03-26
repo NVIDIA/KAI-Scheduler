@@ -54,8 +54,7 @@ jobs:
       - name: Build helm chart
         run: |
           sed -i 's#registry/local/kai-scheduler#${{ env.DOCKER_REGISTRY }}#' deployments/kai-scheduler/values.yaml
-          sed -i "s/appVersion.*/appVersion: $PACKAGE_VERSION/" deployments/kai-scheduler/Chart.yaml
-          helm package ./deployments/kai-scheduler -d ./charts --version $PACKAGE_VERSION
+          helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
 
       - name: Upload helm chart as an artifact
         uses: actions/upload-artifact@v4
