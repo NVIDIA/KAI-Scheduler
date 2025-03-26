@@ -1,9 +1,9 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-# Kubernetes AI (KAI) Scheduler
-The Kubernetes AI Scheduler is a robust, efficient, and scalable [Kubernetes scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/) that optimizes GPU resource allocation for AI and machine learning workloads.
+# KAI Scheduler
+KAI Scheduler is a robust, efficient, and scalable [Kubernetes scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/) that optimizes GPU resource allocation for AI and machine learning workloads.
 
 Designed to manage large-scale GPU clusters, including thousands of nodes, and high-throughput of workloads, makes the KAI Scheduler ideal for extensive and demanding environments.
-The Kubernetes AI Scheduler allows administrators of Kubernetes clusters to dynamically allocate GPU resources to workloads. 
+KAI Scheduler allows administrators of Kubernetes clusters to dynamically allocate GPU resources to workloads. 
 
 KAI Scheduler supports the entire AI lifecycle, from small, interactive jobs that require minimal resources to large training and inference, all within the same cluster. 
 It ensures optimal resource allocation while maintaining resource fairness between the different consumers.
