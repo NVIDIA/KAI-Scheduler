@@ -7,6 +7,7 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -36,6 +37,48 @@ import (
 type mockCache struct {
 	cache.Cache
 	snapshot *api.ClusterInfo
+}
+
+func main() {
+	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	filename := fs.String("filename", "", "location of the zipped JSON file")
+	_ = fs.Parse(os.Args[1:])
+	if filename == nil || len(*filename) == 0 {
+		fs.Usage()
+		return
+	}
+
+	if err := log.InitLoggers(0); err != nil {
+		fmt.Printf("Failed to initialize logger: %v", err)
+		return
+	}
+
+	snapshot, err := loadSnapshot(*filename)
+	if err != nil {
+		log.InfraLogger.Fatalf(err.Error(), err)
+	}
+
+	actions.InitDefaultActions()
+	plugins.InitDefaultPlugins()
+
+	mockCache := &mockCache{snapshot: snapshot.ClusterInfo}
+
+	ssn, err := framework.OpenSession(
+		mockCache, &conf.SchedulerConfiguration{}, snapshot.SchedulerParams, "", &http.ServeMux{},
+	)
+	if err != nil {
+		log.InfraLogger.Fatalf(err.Error(), err)
+	}
+	defer framework.CloseSession(ssn)
+
+	actions, _ := conf_util.GetActionsFromConfig(snapshot.Config)
+	for _, action := range actions {
+		log.InfraLogger.SetAction(string(action.Name()))
+		metrics.SetCurrentAction(string(action.Name()))
+		actionStartTime := time.Now()
+		action.Execute(ssn)
+		metrics.UpdateActionDuration(string(action.Name()), metrics.Duration(actionStartTime))
+	}
 }
 
 func (m *mockCache) Snapshot() (*api.ClusterInfo, error) {
@@ -74,12 +117,12 @@ func (m *mockCache) WaitForWorkers(stopCh <-chan struct{}) {
 }
 
 func (m *mockCache) Bind(podInfo *pod_info.PodInfo, hostname string) error {
-	log.InfraLogger.V(1).Infow("Bind", "pod name", podInfo.Name, "namespace", podInfo.Namespace, "node", hostname)
+	log.InfraLogger.V(0).Infow("Bind", "pod name", podInfo.Name, "namespace", podInfo.Namespace, "node", hostname)
 	return nil
 }
 
 func (m *mockCache) Evict(ssnPod *v1.Pod, job *podgroup_info.PodGroupInfo, evictionMetadata eviction_info.EvictionMetadata, message string) error {
-	log.InfraLogger.V(1).Infow(
+	log.InfraLogger.V(0).Infow(
 		"Evict",
 		"pod name", ssnPod.Name,
 		"namespace", ssnPod.Namespace,
@@ -124,36 +167,4 @@ func loadSnapshot(filename string) (*snapshot.Snapshot, error) {
 	}
 
 	return nil, os.ErrNotExist
-}
-
-func main() {
-	filename := flag.String("filename", "", "location of the zipped JSON file")
-	flag.Parse()
-
-	snapshot, err := loadSnapshot(*filename)
-	if err != nil {
-		log.InfraLogger.Fatalf(err.Error(), err)
-	}
-
-	actions.InitDefaultActions()
-	plugins.InitDefaultPlugins()
-
-	mockCache := &mockCache{snapshot: snapshot.Snapshot}
-
-	ssn, err := framework.OpenSession(
-		mockCache, &conf.SchedulerConfiguration{}, snapshot.SchedulerParams, "", &http.ServeMux{},
-	)
-	if err != nil {
-		log.InfraLogger.Fatalf(err.Error(), err)
-	}
-	defer framework.CloseSession(ssn)
-
-	actions, _ := conf_util.GetActionsFromConfig(snapshot.Config)
-	for _, action := range actions {
-		log.InfraLogger.SetAction(string(action.Name()))
-		metrics.SetCurrentAction(string(action.Name()))
-		actionStartTime := time.Now()
-		action.Execute(ssn)
-		metrics.UpdateActionDuration(string(action.Name()), metrics.Duration(actionStartTime))
-	}
 }
