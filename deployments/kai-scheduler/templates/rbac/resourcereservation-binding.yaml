@@ -12,5 +12,5 @@ subjects:
     namespace: runai-reservation
 roleRef:
   kind: ClusterRole
-  name: resource-reservation
+  name: kai-resource-reservation
   apiGroup: rbac.authorization.k8s.io

@@ -4,7 +4,7 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: mutating-binder
+  name: kai-binder-mutating
 webhooks:
 - admissionReviewVersions:
   - v1
@@ -38,7 +38,7 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: validating-binder
+  name: kai-binder-validating
 webhooks:
 - admissionReviewVersions:
   - v1

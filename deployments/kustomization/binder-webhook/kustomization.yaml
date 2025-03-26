@@ -16,11 +16,11 @@ patches:
   patch: |-
     - op: replace
       path: /metadata/name
-      value: mutating-binder
+      value: kai-binder-mutating
 - target:
     kind: ValidatingWebhookConfiguration
     name: validating-webhook-configuration
   patch: |-
     - op: replace
       path: /metadata/name
-      value: validating-binder
+      value: kai-binder-validating

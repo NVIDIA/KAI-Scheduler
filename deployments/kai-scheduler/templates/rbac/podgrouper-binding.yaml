@@ -4,12 +4,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: podgrouper
+  name: kai-podgrouper
 subjects:
   - kind: ServiceAccount
     name: podgrouper
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: podgrouper
+  name: kai-podgrouper
   apiGroup: rbac.authorization.k8s.io

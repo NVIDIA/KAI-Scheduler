@@ -32,8 +32,8 @@ spec:
             - --namespace={{ .Release.Namespace }}
             - --patch-webhooks
             - --secret-name={{ .Values.binder.certSecretName }}
-            - --validating-webhook-name=validating-binder
-            - --mutating-webhook-name=mutating-binder
+            - --validating-webhook-name=kai-binder-validating
+            - --mutating-webhook-name=kai-binder-mutating
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
