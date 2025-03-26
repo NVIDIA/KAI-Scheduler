@@ -7,9 +7,9 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"flag"
-	"log"
 	"net/http"
 	"os"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
@@ -17,7 +17,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
@@ -25,8 +24,11 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	k8splugins "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
 )
@@ -72,17 +74,23 @@ func (m *mockCache) WaitForWorkers(stopCh <-chan struct{}) {
 }
 
 func (m *mockCache) Bind(podInfo *pod_info.PodInfo, hostname string) error {
-	// No-op
+	log.InfraLogger.V(1).Infow("Bind", "pod name", podInfo.Name, "namespace", podInfo.Namespace, "node", hostname)
 	return nil
 }
 
 func (m *mockCache) Evict(ssnPod *v1.Pod, job *podgroup_info.PodGroupInfo, evictionMetadata eviction_info.EvictionMetadata, message string) error {
-	// No-op
+	log.InfraLogger.V(1).Infow(
+		"Evict",
+		"pod name", ssnPod.Name,
+		"namespace", ssnPod.Namespace,
+		"node", ssnPod.Spec.NodeSelector,
+		"job", job.Name,
+		"evictionMetadata", evictionMetadata,
+		"message", message)
 	return nil
 }
 
 func (m *mockCache) RecordJobStatusEvent(job *podgroup_info.PodGroupInfo) error {
-	// No-op
 	return nil
 }
 
@@ -115,7 +123,6 @@ func loadSnapshot(filename string) (*snapshot.Snapshot, error) {
 		}
 	}
 
-	// If no JSON file is found, return an error
 	return nil, os.ErrNotExist
 }
 
@@ -125,23 +132,28 @@ func main() {
 
 	snapshot, err := loadSnapshot(*filename)
 	if err != nil {
-		log.Fatal(err)
+		log.InfraLogger.Fatalf(err.Error(), err)
 	}
 
 	actions.InitDefaultActions()
 	plugins.InitDefaultPlugins()
 
 	mockCache := &mockCache{snapshot: snapshot.Snapshot}
-	actions := []scheduler.Action{}                 // Load actions from configuration
-	schedulerParams := &scheduler.SchedulerParams{} // Load scheduler params from configuration
 
-	session, err := framework.OpenSession(mockCache, &conf.SchedulerConfiguration{}, schedulerParams, "", &http.ServeMux{})
+	ssn, err := framework.OpenSession(
+		mockCache, &conf.SchedulerConfiguration{}, snapshot.SchedulerParams, "", &http.ServeMux{},
+	)
 	if err != nil {
-		log.Fatal(err)
+		log.InfraLogger.Fatalf(err.Error(), err)
 	}
-	defer framework.CloseSession(session)
+	defer framework.CloseSession(ssn)
 
+	actions, _ := conf_util.GetActionsFromConfig(snapshot.Config)
 	for _, action := range actions {
-		action.Execute(session)
+		log.InfraLogger.SetAction(string(action.Name()))
+		metrics.SetCurrentAction(string(action.Name()))
+		actionStartTime := time.Now()
+		action.Execute(ssn)
+		metrics.UpdateActionDuration(string(action.Name()), metrics.Duration(actionStartTime))
 	}
 }
