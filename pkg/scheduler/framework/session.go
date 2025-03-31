@@ -149,8 +149,8 @@ func filterGpusByEnoughResources(node *node_info.NodeInfo, pod *pod_info.PodInfo
 			filteredGPUs = append(filteredGPUs, gpuIdx)
 		}
 	}
-	if node.Idle.GPUs > 0 || node.Releasing.GPUs > 0 {
-		for range int(node.Idle.GPUs) + int(node.Releasing.GPUs) {
+	if node.Idle.GPUs() > 0 || node.Releasing.GPUs() > 0 {
+		for range int(node.Idle.GPUs()) + int(node.Releasing.GPUs()) {
 			filteredGPUs = append(filteredGPUs, pod_info.WholeGpuIndicator)
 		}
 	}

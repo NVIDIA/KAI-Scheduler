@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,47 +31,47 @@ const (
 )
 
 type JobRequirement struct {
-	GPU      float64 `json:"gpu,omitempty"`
-	MilliCPU float64 `json:"milliCpu,omitempty"`
-	Memory   float64 `json:"memory,omitempty"`
+	GPU      float64
+	MilliCPU float64
+	Memory   float64
 }
 
 type StalenessInfo struct {
-	TimeStamp *time.Time `json:"timeStamp,omitempty"`
-	Stale     bool       `json:"stale,omitempty"`
+	TimeStamp *time.Time
+	Stale     bool
 }
 
 type PodGroupInfo struct {
-	UID common_info.PodGroupID `json:"uid,omitempty"`
+	UID common_info.PodGroupID
 
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+	Name      string
+	Namespace string
 
-	Queue common_info.QueueID `json:"queue,omitempty"`
+	Queue common_info.QueueID
 
-	Priority int32 `json:"priority,omitempty"`
+	Priority int32
 
-	MinAvailable int32 `json:"minAvailable,omitempty"`
+	MinAvailable int32
 
-	JobFitErrors   enginev2alpha2.UnschedulableExplanations     `json:"jobFitErrors,omitempty"`
-	NodesFitErrors map[common_info.PodID]*common_info.FitErrors `json:"nodesFitErrors,omitempty"`
+	JobFitErrors   enginev2alpha2.UnschedulableExplanations
+	NodesFitErrors map[common_info.PodID]*common_info.FitErrors
 
 	// All tasks of the Job.
-	PodStatusIndex map[pod_status.PodStatus]pod_info.PodsMap `json:"podStatusIndex,omitempty"`
-	PodInfos       pod_info.PodsMap                          `json:"podInfos,omitempty"`
+	PodStatusIndex map[pod_status.PodStatus]pod_info.PodsMap
+	PodInfos       pod_info.PodsMap
 
-	Allocated *resource_info.Resource `json:"allocated,omitempty"`
+	Allocated *resource_info.Resource
 
-	CreationTimestamp metav1.Time              `json:"creationTimestamp,omitempty"`
-	PodGroup          *enginev2alpha2.PodGroup `json:"podGroup,omitempty"`
-	PodGroupUID       types.UID                `json:"podGroupUid,omitempty"`
+	CreationTimestamp metav1.Time
+	PodGroup          *enginev2alpha2.PodGroup
+	PodGroupUID       types.UID
 
 	// TODO(k82cn): keep backward compatibility, removed it when v1alpha1 finalized.
-	PDB *policyv1.PodDisruptionBudget `json:"pdb,omitempty"`
+	PDB *policyv1.PodDisruptionBudget
 
-	StalenessInfo `json:"stalenessInfo,omitempty"`
+	StalenessInfo
 
-	SchedulingConstraintsSignature common_info.SchedulingConstraintsSignature `json:"schedulingConstraintsSignature,omitempty"`
+	schedulingConstraintsSignature common_info.SchedulingConstraintsSignature
 }
 
 func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *PodGroupInfo {
@@ -378,13 +378,13 @@ func (podGroupInfo *PodGroupInfo) SetJobFitError(reason enginev2alpha2.Unschedul
 }
 
 func (podGroupInfo *PodGroupInfo) GetSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
-	if podGroupInfo.SchedulingConstraintsSignature != "" {
-		return podGroupInfo.SchedulingConstraintsSignature
+	if podGroupInfo.schedulingConstraintsSignature != "" {
+		return podGroupInfo.schedulingConstraintsSignature
 	}
 
 	key := podGroupInfo.generateSchedulingConstraintsSignature()
 
-	podGroupInfo.SchedulingConstraintsSignature = key
+	podGroupInfo.schedulingConstraintsSignature = key
 	return key
 }
 
