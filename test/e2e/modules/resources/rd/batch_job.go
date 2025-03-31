@@ -1,19 +1,16 @@
-/*
-Copyright 2025 NVIDIA CORPORATION
-SPDX-License-Identifier: Apache-2.0
-*/
 package rd
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
@@ -58,7 +55,7 @@ func GetJobPods(ctx context.Context, client *kubernetes.Clientset, job *batchv1.
 	pods, err := client.CoreV1().Pods(job.Namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=%s", BatchJobAppLabel, job.Labels[BatchJobAppLabel]),
 	})
-	gomega.Expect(err).To(gomega.Succeed())
+	Expect(err).To(Succeed())
 	return pods.Items
 }
 
@@ -68,10 +65,10 @@ func DeleteJob(ctx context.Context, client *kubernetes.Clientset, job *batchv1.J
 		PropagationPolicy:  &propagationPolicy,
 		GracePeriodSeconds: ptr.Int64(0),
 	})
-	gomega.Expect(err).To(gomega.Succeed())
+	Expect(err).To(Succeed())
 }
 
-func DeleteAllJobsInNamespace(ctx context.Context, client runtimeClient.Client, namespace string) error {
+func DeleteAllJobsInNamespace(ctx context.Context, client client.Client, namespace string) error {
 	err := client.DeleteAllOf(
 		ctx, &batchv1.Job{},
 		runtimeClient.InNamespace(namespace),
