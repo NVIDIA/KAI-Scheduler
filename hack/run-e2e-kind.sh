@@ -22,9 +22,13 @@ kubectl create namespace kai-scheduler
 # Set an appropriate secret to allow the kube-ai system pods to pull from nvstaging-runai and pull test images for the e2e tests
 kubectl apply -f ${NVCR_SECRET_FILE_PATH} -n kai-scheduler
 
+# Add necessary helm repos
+helm repo add fake-gpu https://runai.jfrog.io/artifactory/api/helm/fake-gpu-operator-charts-prod
+helm repo update
 
 # Install the fake-gpu-operator to provide a fake GPU resources for the e2e tests
-helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.53 --set topology.nodePools.default.gpuCount=8
+helm upgrade -i gpu-operator fake-gpu/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.53 --set topology.nodePools.default.gpuCount=8
+sleep 10 # Wait for the fake-gpu-operator to start
 
 helm upgrade -i kai-scheduler nvstaging-runai/kai-scheduler -n kai-scheduler --create-namespace --set "global.imagePullSecrets[0].name=nvcr-secret" --set "global.gpuSharing=true" --set "global.registry=nvcr.io/nvstaging/runai" --version v0.2.0
 
