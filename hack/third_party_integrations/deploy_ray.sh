@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
 set -e
 
 #helm repo add kuberay https://ray-project.github.io/kuberay-helm/
