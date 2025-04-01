@@ -70,7 +70,7 @@ func CleanupResourceClaims(ctx context.Context, clientset kubernetes.Interface, 
 			LabelSelector: fmt.Sprintf("%s=engine-e2e", constants.AppLabelName),
 		})
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if !errors.IsNotFound(err) {
 			gomega.Expect(err).To(gomega.Succeed(), "Failed to delete resource claim")
 		}
 	}
