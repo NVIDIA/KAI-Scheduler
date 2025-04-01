@@ -12,7 +12,8 @@ spec:
   containers:
     - name: main
       image: ubuntu
-      args: ["sleep", "infinity"]
+      command: ["bash", "-c"]
+      args: ["nvidia-smi; trap 'exit 0' TERM; sleep 9000 & wait"]
       resources:
         limits:
           nvidia.com/gpu: "1"
