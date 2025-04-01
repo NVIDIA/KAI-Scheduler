@@ -290,8 +290,6 @@ github.com/rogpeppe/go-internal v1.12.0 h1:exVL4IDcn6na9z1rAb56Vxr+CgyK3nn3O+epU
 github.com/rogpeppe/go-internal v1.12.0/go.mod h1:E+RYuTGaKKdloAfM02xzb0FW3Paa99yedzYV+kq4uf4=
 github.com/run-ai/kwok-operator v0.0.0-20240926063032-05b6364bc7c7 h1:7sUlviMShcd8g6sf2Q93ix+geV0staOMk42Rs0rAJqA=
 github.com/run-ai/kwok-operator v0.0.0-20240926063032-05b6364bc7c7/go.mod h1:vih5aAo7hS8Mt6NXsIUI8SYW+WfB4GhZOuLZzLjZWcc=
-github.com/run-ai/runai-engine/sdk v0.0.0-20250324061740-fb522a7e84ae h1:WM9hnQd7+1HBNpKaPrRR++2RC7BcslZXuM4iF9zOMXY=
-github.com/run-ai/runai-engine/sdk v0.0.0-20250324061740-fb522a7e84ae/go.mod h1:UvJhnLkM6dD4qsOeS9qoDJcACz4sVAgqnbd+rfjOxi4=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/samber/lo v1.47.0 h1:z7RynLwP5nbyRscyvcD043DWYoOcYRv3mV8lBeqOCLc=
 github.com/samber/lo v1.47.0/go.mod h1:RmDH9Ct32Qy3gduHQuKJ3gW1fMHAnE/fAzQuf6He5cU=

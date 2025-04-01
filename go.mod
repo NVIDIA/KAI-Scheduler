@@ -20,7 +20,6 @@ require (
 	github.com/prometheus/client_golang v1.20.5
 	github.com/ray-project/kuberay/ray-operator v1.3.1
 	github.com/run-ai/kwok-operator v0.0.0-20240926063032-05b6364bc7c7
-	github.com/run-ai/runai-engine/sdk v0.0.0-20250324061740-fb522a7e84ae
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
 	github.com/xyproto/randomstring v1.2.0

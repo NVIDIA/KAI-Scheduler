@@ -18,13 +18,13 @@ import (
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/capacity"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/crd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
-	"github.com/run-ai/runai-engine/sdk/constants"
 
 	trainingoperatorv1 "github.com/kubeflow/training-operator/pkg/apis/kubeflow.org/v1"
 )
@@ -66,10 +66,10 @@ var _ = Describe("XGBoost integration", Ordered, func() {
 	It("should run the pods of the XGBoost", func(ctx context.Context) {
 		singleGPURequest := v1.ResourceRequirements{
 			Limits: v1.ResourceList{
-				constants.NvidiaGpuResourceName: resource.MustParse("1"),
+				constants.GpuResource: resource.MustParse("1"),
 			},
 			Requests: v1.ResourceList{
-				constants.NvidiaGpuResourceName: resource.MustParse("1"),
+				constants.GpuResource: resource.MustParse("1"),
 			},
 		}
 
