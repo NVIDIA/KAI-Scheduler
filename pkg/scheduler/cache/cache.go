@@ -35,6 +35,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info/data_lister"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/evictor"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/status_updater"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
@@ -353,4 +354,14 @@ func (sc *SchedulerCache) SnapshotSharedLister() k8sframework.NodeInfoLister {
 
 func (sc *SchedulerCache) InternalK8sPlugins() *k8splugins.K8sPlugins {
 	return sc.internalPlugins
+}
+
+// GetDataLister returns the DataLister from the cluster info
+func (sc *SchedulerCache) GetDataLister() data_lister.DataLister {
+	selector, err := sc.schedulingNodePoolParams.GetLabelSelector()
+	if err != nil {
+		log.InfraLogger.Errorf("Failed to get label selector: %v", err)
+		return nil
+	}
+	return data_lister.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, selector)
 }

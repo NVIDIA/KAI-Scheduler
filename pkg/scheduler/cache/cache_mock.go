@@ -16,6 +16,7 @@ import (
 	eviction_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
 	pod_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	podgroup_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	data_lister "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info/data_lister"
 	plugins "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/plugins"
 	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
@@ -74,6 +75,20 @@ func (m *MockCache) Evict(ssnPod *v1.Pod, job *podgroup_info.PodGroupInfo, evict
 func (mr *MockCacheMockRecorder) Evict(ssnPod, job, evictionMetadata, message any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Evict", reflect.TypeOf((*MockCache)(nil).Evict), ssnPod, job, evictionMetadata, message)
+}
+
+// GetDataLister mocks base method.
+func (m *MockCache) GetDataLister() data_lister.DataLister {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDataLister")
+	ret0, _ := ret[0].(data_lister.DataLister)
+	return ret0
+}
+
+// GetDataLister indicates an expected call of GetDataLister.
+func (mr *MockCacheMockRecorder) GetDataLister() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDataLister", reflect.TypeOf((*MockCache)(nil).GetDataLister))
 }
 
 // InternalK8sPlugins mocks base method.

@@ -13,6 +13,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info/data_lister"
 	k8splugins "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/plugins"
 )
 
@@ -29,4 +30,5 @@ type Cache interface {
 	SnapshotSharedLister() k8sframework.NodeInfoLister
 	InternalK8sPlugins() *k8splugins.K8sPlugins
 	WaitForWorkers(stopCh <-chan struct{})
+	GetDataLister() data_lister.DataLister
 }
