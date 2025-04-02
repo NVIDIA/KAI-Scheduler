@@ -33,7 +33,7 @@ $(SERVICE_NAMES):
 	$(MAKE) docker-build-generic SERVICE_NAME=$@
 
 .PHONY: validate
-validate: generate manifests clients gen-license generate-mocks
+validate: generate manifests clients gen-license generate-mocks lint
 	git diff --exit-code
 
 .PHONY: generate-mocks
