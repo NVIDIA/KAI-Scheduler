@@ -55,11 +55,11 @@ var _ = Describe("JAX integration", Ordered, func() {
 	})
 
 	AfterAll(func(ctx context.Context) {
-		//testCtx.ClusterCleanup(ctx)
+		testCtx.ClusterCleanup(ctx)
 	})
 
 	AfterEach(func(ctx context.Context) {
-		//testCtx.TestContextCleanup(ctx)
+		testCtx.TestContextCleanup(ctx)
 	})
 
 	It("should run the pods of the Jax", func(ctx context.Context) {
