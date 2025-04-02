@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 apiVersion: "kubeflow.org/v1"
-kind: PyTorchJob
+kind: "PyTorchJob"
 metadata:
-  name: pytorch-example
+  name: "pytorch-dist-mnist-nccl"
   labels:
     runai/queue: test
 spec:
@@ -16,11 +16,10 @@ spec:
         spec:
           schedulerName: kai-scheduler
           containers:
-            - args:
-                - --backend
-                - gloo
-              image: gcr.io/kubeflow-ci/pytorch-dist-mnist-test:v1.0
-              name: pytorch
+            - name: pytorch
+              image: ghcr.io/kubeflow/training-v1/pytorch-dist-mnist:latest
+              args: ["--backend", "nccl", "--batch-size", "2048", "--epochs", "900"]
+              # Comment out the below resources to use the CPU.
               resources:
                 limits:
                   nvidia.com/gpu: "1"
@@ -31,11 +30,10 @@ spec:
         spec:
           schedulerName: kai-scheduler
           containers:
-            - args:
-                - --backend
-                - gloo
-              image: gcr.io/kubeflow-ci/pytorch-dist-mnist-test:v1.0
-              name: pytorch
+            - name: pytorch
+              image: ghcr.io/kubeflow/training-v1/pytorch-dist-mnist:latest
+              args: ["--backend", "nccl", "--batch-size", "2048", "--epochs", "900"]
+              # Comment out the below resources to use the CPU.
               resources:
                 limits:
                   nvidia.com/gpu: "1"
