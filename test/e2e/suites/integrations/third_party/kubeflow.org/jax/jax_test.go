@@ -18,7 +18,7 @@ import (
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/capacity"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
@@ -55,20 +55,20 @@ var _ = Describe("JAX integration", Ordered, func() {
 	})
 
 	AfterAll(func(ctx context.Context) {
-		testCtx.ClusterCleanup(ctx)
+		//testCtx.ClusterCleanup(ctx)
 	})
 
 	AfterEach(func(ctx context.Context) {
-		testCtx.TestContextCleanup(ctx)
+		//testCtx.TestContextCleanup(ctx)
 	})
 
 	It("should run the pods of the Jax", func(ctx context.Context) {
 		singleGPURequest := v1.ResourceRequirements{
 			Limits: v1.ResourceList{
-				constants.GPUResource: resource.MustParse("1"),
+				constants.GpuResource: resource.MustParse("1"),
 			},
 			Requests: v1.ResourceList{
-				constants.GPUResource: resource.MustParse("1"),
+				constants.GpuResource: resource.MustParse("1"),
 			},
 		}
 
