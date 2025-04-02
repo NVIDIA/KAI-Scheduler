@@ -5,7 +5,7 @@ There are several ways for users to request a portion of GPU for their pods:
 * Pod can request a specific GPU memory amount (e.g. 2000Mib), leaving the remaining GPU memory for other pods.
 * Or, it can request a portion of a GPU device memory (e.g. 0.5) that the pod intends to consume from the mounted GPU device.
 
-KAI Scheduler does not enforce memory allocation limit or performs memory isolation between processes. 
+KAI Scheduler does not enforce memory allocation limit or performs memory isolation between processes.
 In order to make sure the pods share the GPU device nicely it is important that the running processes will allocate GPU memory up to the requested amount and not beyond that.
 In addition, note that pods sharing a single GPU device can reside in different namespaces.
 
@@ -34,6 +34,6 @@ To submit a pod that request a specific amount of GPU memory, run this command:
 ```
 kubectl apply -f gpu-memory.yaml
 ```
-In the gpu-sharing.yaml file, the pod includes a `gpu-memory` annotation with a value of 2000 (in Mib), meaning:
+In the gpu-memory.yaml file, the pod includes a `gpu-memory` annotation with a value of 2000 (in Mib), meaning:
 * The pod is allowed to consume up to 2000 Mib of a GPU device memory
 * The remaining GPU device memory can be shared with other pods in the cluster
