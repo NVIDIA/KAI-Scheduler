@@ -13,7 +13,7 @@ spec:
     - name: main
       image: ubuntu
       command: ["bash", "-c"]
-      args: ["nvidia-smi; trap 'exit 0' TERM; sleep 9000 & wait"]
+      args: ["nvidia-smi; trap 'exit 0' TERM; sleep infinity & wait"]
       resources:
         limits:
           nvidia.com/gpu: "1"
