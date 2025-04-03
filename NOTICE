@@ -8732,3 +8732,8 @@ zwitch
 Licensed under the MIT License
 Copyright (c) 2016 Titus Wormer <tituswormer@gmail.com>
 Grand Total
+
+This project includes components from kube-batch, which is licensed under the Apache License, Version 2.0.
+Copyright (c) The Kubernetes Authors.
+This project includes components derived from kube-batch, originally developed by The Kubernetes Authors.
+
