@@ -229,7 +229,7 @@ func setupCacheWithObjects(snapshot bool, objects []runtime.Object, kubeAiSchedu
 
 	cache := New(&SchedulerCacheParams{
 		KubeClient:            kubeClient,
-		KubeAISchedulerClient: kubeAiSchedulerClient,
+		KAISchedulerClient:    kubeAiSchedulerClient,
 		NodePoolParams:        &conf.SchedulingNodePoolParams{},
 		FullHierarchyFairness: true,
 	})

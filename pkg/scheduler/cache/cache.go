@@ -63,7 +63,7 @@ type SchedulerCacheParams struct {
 	NodePoolParams              *conf.SchedulingNodePoolParams
 	RestrictNodeScheduling      bool
 	KubeClient                  kubernetes.Interface
-	KubeAISchedulerClient       kubeaischedulerver.Interface
+	KAISchedulerClient          kubeaischedulerver.Interface
 	DetailedFitErrors           bool
 	ScheduleCSIStorage          bool
 	FullHierarchyFairness       bool
@@ -105,7 +105,7 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 		scheduleCSIStorage:       schedulerCacheParams.ScheduleCSIStorage,
 		fullHierarchyFairness:    schedulerCacheParams.FullHierarchyFairness,
 		kubeClient:               schedulerCacheParams.KubeClient,
-		kubeAiSchedulerClient:    schedulerCacheParams.KubeAISchedulerClient,
+		kubeAiSchedulerClient:    schedulerCacheParams.KAISchedulerClient,
 	}
 
 	schedulerName := schedulerCacheParams.SchedulerName

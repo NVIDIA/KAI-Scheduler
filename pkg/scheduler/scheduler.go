@@ -41,7 +41,7 @@ func NewScheduler(
 	kubeClient, kubeAiSchedulerClient := newClients(config)
 	schedulerCacheParams := &schedcache.SchedulerCacheParams{
 		KubeClient:                  kubeClient,
-		KubeAISchedulerClient:       kubeAiSchedulerClient,
+		KAISchedulerClient:          kubeAiSchedulerClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      schedulerParams.RestrictSchedulingNodes,
