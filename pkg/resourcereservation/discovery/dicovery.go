@@ -6,47 +6,44 @@ package discovery
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
+	"github.com/NVIDIA/go-nvml/pkg/nvml"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const (
-	gpusDir = "/proc/driver/nvidia/gpus/"
-)
-
-func GetGPUDevice(ctx context.Context, podName string, namespace string) (string, error) {
+func GetGPUDevice(ctx context.Context) (string, error) {
 	logger := log.FromContext(ctx)
-	logger.Info("Getting GPU device id for pod", "namespace", namespace, "name", podName)
 
-	deviceSubDirs, err := os.ReadDir(gpusDir)
-	if err != nil {
-		return "", fmt.Errorf("failed to read GPU devices dir: %v", err)
+	ret := nvml.Init()
+	if ret != nvml.SUCCESS {
+		return "", fmt.Errorf("unable to initialize NVML: %v", nvml.ErrorString(ret))
+	}
+	defer func() {
+		ret := nvml.Shutdown()
+		if ret != nvml.SUCCESS {
+			logger.Info("Unable to shutdown NVML", "error", nvml.ErrorString(ret))
+		}
+	}()
+
+	count, ret := nvml.DeviceGetCount()
+	if ret != nvml.SUCCESS {
+		return "", fmt.Errorf("unable to get device count: %v", nvml.ErrorString(ret))
 	}
 
-	for _, subDir := range deviceSubDirs {
-		infoFilePath := filepath.Join(gpusDir, subDir.Name(), "information")
-
-		logger.Info("Getting GPU device info", "path", infoFilePath)
-
-		data, err := os.ReadFile(infoFilePath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read GPU device information: %v", err)
-		}
-
-		content := string(data)
-		logger.Info("GPU device info", "content", content)
-
-		lines := strings.Split(content, "\n")
-		for _, line := range lines {
-			if strings.Contains(line, "GPU UUID") {
-				words := strings.Fields(line)
-				return words[len(words)-1], nil
-			}
-		}
+	logger.Info(fmt.Sprintf("Found %d GPU devices", count))
+	if count != 1 {
+		return "", fmt.Errorf("found %d devices, 1 was expected", count)
 	}
 
-	return "", fmt.Errorf("failed to find GPU UUID")
+	device, ret := nvml.DeviceGetHandleByIndex(0)
+	if ret != nvml.SUCCESS {
+		return "", fmt.Errorf("unable to get device handle: %v", nvml.ErrorString(ret))
+	}
+
+	uuid, ret := device.GetUUID()
+	if ret != nvml.SUCCESS {
+		return "", fmt.Errorf("unable to get device uuid: %v", nvml.ErrorString(ret))
+	}
+
+	return uuid, nil
 }

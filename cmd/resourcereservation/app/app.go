@@ -56,8 +56,9 @@ func Run(ctx context.Context) error {
 	}
 
 	if !patched {
+		logger.Info("Looking for GPU device id for pod", "namespace", namespace, "name", name)
 		var gpuDevice string
-		gpuDevice, err = discovery.GetGPUDevice(ctx, namespace, name)
+		gpuDevice, err = discovery.GetGPUDevice(ctx)
 		if err != nil {
 			return err
 		}
