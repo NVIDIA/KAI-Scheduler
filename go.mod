@@ -3,7 +3,7 @@ module github.com/NVIDIA/KAI-scheduler
 go 1.23.4
 
 require (
-	github.com/NVIDIA/go-nvml v0.12.0-3
+	github.com/NVIDIA/go-nvml v0.12.4-1
 	github.com/NVIDIA/gpu-operator v1.8.3-0.20240812232433-87286e93f2c9
 	github.com/argoproj/argo-workflows/v3 v3.6.4
 	github.com/dustin/go-humanize v1.0.1

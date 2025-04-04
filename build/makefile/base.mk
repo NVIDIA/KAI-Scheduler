@@ -49,7 +49,7 @@ DOCKER_COMMAND=docker run --rm -w ${DOCKER_WORK_DIR} -v "${PWD}/:/local:z" -u $(
 
 ### Targets
 builder:
-	DOCKER_BUILDKIT=1 docker buildx build -f build/builder/Dockerfile -t builder:${GO_IMAGE_VERSION} .
+	DOCKER_BUILDKIT=1 docker buildx build -f build/builder/Dockerfile --load -t builder:${GO_IMAGE_VERSION} .
 .PHONY: builder
 
 docker-build-generic:

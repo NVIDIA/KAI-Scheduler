@@ -9,8 +9,8 @@ contrib.go.opencensus.io/exporter/prometheus v0.4.2/go.mod h1:dvEHbiKmgvbr5pjaF9
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
-github.com/NVIDIA/go-nvml v0.12.0-3 h1:QwfjYxEqIQVRhl8327g2Y3ZvKResPydpGSKtCIIK9jE=
-github.com/NVIDIA/go-nvml v0.12.0-3/go.mod h1:SOufGc5Wql+cxrIZ8RyJwVKDYxfbs4WPkHXqadcbfvA=
+github.com/NVIDIA/go-nvml v0.12.4-1 h1:WKUvqshhWSNTfm47ETRhv0A0zJyr1ncCuHiXwoTrBEc=
+github.com/NVIDIA/go-nvml v0.12.4-1/go.mod h1:8Llmj+1Rr+9VGGwZuRer5N/aCjxGuR5nPb/9ebBiIEQ=
 github.com/NVIDIA/gpu-operator v1.8.3-0.20240812232433-87286e93f2c9 h1:9yw3Jkto9ZqtNwlnOzxAlKufMNplaWPRfkXhCUFHXgI=
 github.com/NVIDIA/gpu-operator v1.8.3-0.20240812232433-87286e93f2c9/go.mod h1:lOgoRYbt1dtCVGX+EhxuZgPonfcIs41BXrnIPk3fE3I=
 github.com/NVIDIA/k8s-kata-manager v0.2.0 h1:K+BFkXTOvXXj/kmbNfxFCXM+GkdOVZj2WTHQ7b2uQA0=
