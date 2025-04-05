@@ -48,6 +48,10 @@ DOCKER_WORK_DIR?=/local
 DOCKER_COMMAND=docker run --rm -w ${DOCKER_WORK_DIR} -v "${PWD}/:/local:z" -u $(shell id -u):$(shell id -g)
 
 ### Targets
+builder:
+	DOCKER_BUILDKIT=1 docker buildx build -f build/builder/Dockerfile --load -t builder:${GO_IMAGE_VERSION} .
+.PHONY: builder
+
 docker-build-generic:
 	DOCKER_BUILDKIT=1 docker buildx build ${DOCKER_BUILD_ADDITIONAL_ARGS} --build-arg SERVICE_NAME=${SERVICE_NAME} -f ${DOCKERFILE_PATH} -t ${DOCKER_IMAGE_NAME} ${DOCKER_BUILDX_ADDITIONAL_ARGS} --platform ${DOCKER_BUILD_PLATFORM} .
 .PHONY: docker-build-generic

@@ -9,8 +9,8 @@ env:
   DOCKER_REGISTRY: "nvcr.io/nvstaging/runai"
 
 jobs:
-  test-build-and-push:
-    name: Test & Build & Push
+  test-and-build:
+    name: Test & Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -34,7 +34,7 @@ jobs:
       - name: Run tests
         run: make test
 
-      - name: Docker build & push
+      - name: Build docker images
         run: make build DOCKER_BUILD_PLATFORM=linux/amd64,linux/arm64 DOCKER_REPO_BASE=${{ env.DOCKER_REGISTRY }} VERSION=$PACKAGE_VERSION
 
       - name: Build helm chart
