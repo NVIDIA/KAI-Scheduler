@@ -1,0 +1,23 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+topology:
+  # nodePools is a map of node pool name to node pool configuration.
+  # Nodes are assigned to node pools based on the node pool label's value (key is configurable via nodePoolLabelKey).
+  # 
+  # For example, nodes that have the label "run.ai/simulated-gpu-node-pool: default"
+  # will be assigned to the "default" node pool.
+  nodePools:
+    default:
+      gpuProduct: Tesla-K80
+      gpuCount: 8
+      gpuMemory: 11441
+    mig:
+      gpuProduct: A100-SXM4-40GB
+      gpuCount: 0
+      otherDevices:
+        - name: nvidia.com/mig-1g.5gb
+          count: 3
+        - name: nvidia.com/mig-2g.10gb
+          count: 2
+  nodePoolLabelKey: run.ai/simulated-gpu-node-pool
