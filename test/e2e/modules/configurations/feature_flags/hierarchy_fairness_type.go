@@ -7,6 +7,7 @@ package feature_flags
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
@@ -22,10 +23,15 @@ func SetFullHierarchyFairness(
 		constant.SchedulerDeploymentName,
 		constant.SchedulerContainerName,
 		func(args []string) []string {
-			if value == nil {
-				return args
+			if value != nil {
+				return append(args, fmt.Sprintf("--full-hierarchy-fairness=%t", *value))
 			}
-			return append(args, fmt.Sprintf("--full-hierarchy-fairness=%t", *value))
+			for i, arg := range args {
+				if strings.HasPrefix(arg, "--full-hierarchy-fairness=") {
+					return append(args[:i], args[i+1:]...)
+				}
+			}
+			return args
 		},
 	)
 

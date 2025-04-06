@@ -41,7 +41,7 @@ sleep 30
 # Install ginkgo if it's not installed
 if [ ! -f ${GOBIN}/ginkgo ]; then
     echo "Installing ginkgo"
-    GOBIN=${GOBIN} go install github.com/onsi/ginkgo/v2/ginkgo@v2.22.2
+    GOBIN=${GOBIN} go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.3
 fi
 
 ${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv ${REPO_ROOT}/test/e2e/suites --label-filter '!autoscale', '!scale'
