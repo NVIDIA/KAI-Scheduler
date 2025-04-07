@@ -31,6 +31,7 @@ sleep 10 # Wait for the fake-gpu-operator to start
 if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then
     ${REPO_ROOT}/hack/third_party_integrations/deploy_ray.sh
     ${REPO_ROOT}/hack/third_party_integrations/deploy_kubeflow.sh
+    ${REPO_ROOT}/hack/third_party_integrations/deploy_knative.sh
 fi
 
 helm upgrade -i kai-scheduler nvidia/kai-scheduler -n kai-scheduler --create-namespace --set "global.registry=nvcr.io/nvidia/k8s" --set "global.gpuSharing=true"
