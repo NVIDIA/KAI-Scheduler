@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -46,4 +47,23 @@ func ForRunningSystemComponentEvent(ctx context.Context, client runtimeClient.Wi
 		return rd.IsPodRunning(objPod)
 	}
 	ForRunaiComponentPod(ctx, client, appLabelComponentName, runningCondition)
+}
+
+func PatchSystemDeploymentFeatureFlags(
+	ctx context.Context,
+	kubeClientset kubernetes.Interface,
+	controllerClient runtimeClient.WithWatch,
+	namespace string,
+	deploymentName string,
+	containerName string,
+	featureFlagsUpdater ArgsUpdater,
+) error {
+
+	err := PatchDeploymentArgs(ctx, kubeClientset, namespace, deploymentName, containerName, featureFlagsUpdater)
+	if err != nil {
+		return fmt.Errorf("failed to patch deployment %s: %w", deploymentName, err)
+	}
+	WaitForDeploymentPodsRunning(ctx, controllerClient, deploymentName, namespace)
+
+	return nil
 }

@@ -11,14 +11,16 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
 func SetFullHierarchyFairness(
 	ctx context.Context, testCtx *testcontext.TestContext, value *bool,
 ) error {
-	return PatchSystemDeploymentFeatureFlags(
+	return wait.PatchSystemDeploymentFeatureFlags(
 		ctx,
-		testCtx,
+		testCtx.KubeClientset,
+		testCtx.ControllerClient,
 		constant.SystemPodsNamespace,
 		constant.SchedulerDeploymentName,
 		constant.SchedulerContainerName,

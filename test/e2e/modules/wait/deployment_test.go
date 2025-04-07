@@ -2,7 +2,7 @@
 Copyright 2025 NVIDIA CORPORATION
 SPDX-License-Identifier: Apache-2.0
 */
-package feature_flags
+package wait
 
 import (
 	"context"
@@ -59,7 +59,7 @@ func TestPatchDeploymentArgs(t *testing.T) {
 	}
 
 	// Call the function under test
-	err := patchDeploymentArgs(
+	err := PatchDeploymentArgs(
 		context.TODO(),
 		clientset,
 		testNamespace,
@@ -136,7 +136,7 @@ func TestPatchDeploymentArgs_ContainerNotFound(t *testing.T) {
 	}
 
 	// Call the function under test with a container name that doesn't exist
-	err := patchDeploymentArgs(
+	err := PatchDeploymentArgs(
 		context.TODO(),
 		clientset,
 		testNamespace,
