@@ -78,7 +78,7 @@ func WaitForDeploymentPodsRunning(ctx context.Context, client runtimeClient.With
 	}
 }
 
-func PatchDeploymentArgs(
+func patchDeploymentArgs(
 	ctx context.Context,
 	clientset kubernetes.Interface,
 	namespace string,

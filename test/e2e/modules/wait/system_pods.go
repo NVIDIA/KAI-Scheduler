@@ -59,7 +59,7 @@ func PatchSystemDeploymentFeatureFlags(
 	featureFlagsUpdater ArgsUpdater,
 ) error {
 
-	err := PatchDeploymentArgs(ctx, kubeClientset, namespace, deploymentName, containerName, featureFlagsUpdater)
+	err := patchDeploymentArgs(ctx, kubeClientset, namespace, deploymentName, containerName, featureFlagsUpdater)
 	if err != nil {
 		return fmt.Errorf("failed to patch deployment %s: %w", deploymentName, err)
 	}

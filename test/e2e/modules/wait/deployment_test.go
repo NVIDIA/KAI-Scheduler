@@ -59,7 +59,7 @@ func TestPatchDeploymentArgs(t *testing.T) {
 	}
 
 	// Call the function under test
-	err := PatchDeploymentArgs(
+	err := patchDeploymentArgs(
 		context.TODO(),
 		clientset,
 		testNamespace,
@@ -136,7 +136,7 @@ func TestPatchDeploymentArgs_ContainerNotFound(t *testing.T) {
 	}
 
 	// Call the function under test with a container name that doesn't exist
-	err := PatchDeploymentArgs(
+	err := patchDeploymentArgs(
 		context.TODO(),
 		clientset,
 		testNamespace,
