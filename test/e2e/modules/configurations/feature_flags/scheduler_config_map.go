@@ -82,8 +82,6 @@ func updateKaiSchedulerConfigMap(ctx context.Context, testCtx *testContext.TestC
 		return err
 	}
 
-	wait.ForRolloutRestartDeployment(ctx, testCtx.ControllerClient, constant.SystemPodsNamespace,
+	return wait.ForRolloutRestartDeployment(ctx, testCtx.ControllerClient, constant.SystemPodsNamespace,
 		constant.SchedulerDeploymentName)
-
-	return nil
 }
