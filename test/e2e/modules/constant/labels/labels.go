@@ -6,4 +6,5 @@ package labels
 
 const (
 	ReservationPod = "reservationPod"
+	Operated       = "operated"
 )
