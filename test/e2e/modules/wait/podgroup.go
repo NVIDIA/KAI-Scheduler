@@ -21,7 +21,6 @@ func WaitForPodGroupsToBeReady(
 	controllerClient runtimeClient.WithWatch,
 	namespace string,
 	numPodGroups int) {
-	// TODO: validate this works properly
 	Eventually(func(g Gomega) {
 		podGroups, err := runaiClientset.SchedulingV2alpha2().PodGroups(namespace).List(
 			ctx, metav1.ListOptions{},
