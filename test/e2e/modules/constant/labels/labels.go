@@ -5,6 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 package labels
 
 const (
-	ReservationPod = "reservationPod"
 	Operated       = "operated"
+	ReservationPod = "reservationPod"
+	Scale          = "scale"
+	Autoscale      = "autoscale"
 )
