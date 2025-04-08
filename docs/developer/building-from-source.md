@@ -24,7 +24,7 @@ To build and deploy KAI Scheduler from source, follow these steps:
 4. Make sure the images are accessible from cluster nodes, either by pushing the images to a private registry or loading them to nodes cache.
    For example, you can load the images to kind cluster with this command:
    ```sh
-   for img in $(docker images | grep kai-scheduler | awk '{print $1":"$2}'); 
+   for img in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep kai-scheduler); 
       do kind load docker-image $img --name <KIND-CLUSTER-NAME>; done
    ```
 
