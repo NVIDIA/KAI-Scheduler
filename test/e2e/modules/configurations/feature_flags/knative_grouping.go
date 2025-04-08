@@ -12,19 +12,20 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
-func SetFullHierarchyFairness(
-	ctx context.Context, testCtx *testcontext.TestContext, value *bool,
-) error {
+func UnsetKnativeGangScheduling(ctx context.Context, testCtx *testcontext.TestContext) error {
+	return SetKnativeGangScheduling(ctx, testCtx, nil)
+}
+
+func SetKnativeGangScheduling(ctx context.Context, testCtx *testcontext.TestContext, value *bool) error {
 	return wait.PatchSystemDeploymentFeatureFlags(
 		ctx,
 		testCtx.KubeClientset,
 		testCtx.ControllerClient,
 		constant.SystemPodsNamespace,
-		constant.SchedulerDeploymentName,
-		constant.SchedulerContainerName,
+		"podgrouper",
+		"podgrouper",
 		func(args []string) []string {
-			return genericArgsUpdater(args, "--full-hierarchy-fairness=", value)
+			return genericArgsUpdater(args, "--knative-gang-schedule=", value)
 		},
 	)
-
 }

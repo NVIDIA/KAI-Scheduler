@@ -8,7 +8,8 @@ on:
       - created
 
 env:
-  DOCKER_REGISTRY: "nvcr.io/nvidia/k8s"
+  DOCKER_REGISTRY: "nvcr.io/nvstaging/runai"
+  CHART_DEFAULT_IMAGE_REGISTRY: "nvcr.io/nvidia/k8s"
 
 jobs:
   test-build-and-push:
@@ -52,7 +53,7 @@ jobs:
 
       - name: Build helm chart
         run: |
-          sed -i 's#registry/local/kai-scheduler#${{ env.DOCKER_REGISTRY }}#' deployments/kai-scheduler/values.yaml
+          sed -i 's#registry/local/kai-scheduler#${{ env.CHART_DEFAULT_IMAGE_REGISTRY }}#' deployments/kai-scheduler/values.yaml
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
 
       - name: Upload As Release Asset

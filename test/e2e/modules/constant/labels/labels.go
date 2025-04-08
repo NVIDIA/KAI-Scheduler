@@ -7,4 +7,6 @@ package labels
 const (
 	Operated       = "operated"
 	ReservationPod = "reservationPod"
+	Scale          = "scale"
+	Autoscale      = "autoscale"
 )
