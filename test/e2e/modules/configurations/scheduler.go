@@ -36,5 +36,5 @@ func EnableScheduler(ctx context.Context, testCtx *testcontext.TestContext) {
 		Fail(fmt.Sprintf("Failed to enable scheduler with 1 replicas: %v", err))
 	}
 
-	wait.ForRunningSchedulerPodEvent(ctx, testCtx.ControllerClient, constant.SchedulerDeploymentName)
+	wait.ForRunningSystemComponentEvent(ctx, testCtx.ControllerClient, constant.SchedulerDeploymentName)
 }
