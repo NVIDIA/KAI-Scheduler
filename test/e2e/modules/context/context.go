@@ -85,8 +85,8 @@ func (tc *TestContext) TestContextCleanup(ctx context.Context) {
 	wait.ForNoE2EPods(ctx, tc.ControllerClient)
 	wait.ForNoReservationPods(ctx, tc.ControllerClient)
 
-	wait.ForRunningBinderPodEvent(ctx, tc.ControllerClient)
-	wait.ForRunningSchedulerPodEvent(ctx, tc.ControllerClient, "scheduler")
+	wait.ForRunningSystemComponentEvent(ctx, tc.ControllerClient, "binder")
+	wait.ForRunningSystemComponentEvent(ctx, tc.ControllerClient, "scheduler")
 }
 
 func (tc *TestContext) ClusterCleanup(ctx context.Context) {

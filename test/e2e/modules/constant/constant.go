@@ -16,4 +16,5 @@ const (
 	QueueLabelKey                   = "runai/queue"
 
 	SchedulerDeploymentName = "scheduler"
+	SchedulerContainerName  = "scheduler"
 )

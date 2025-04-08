@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -32,23 +33,7 @@ func ForRunaiComponentPod(
 	}
 }
 
-func ForExactlyNComponentPodsToExist(
-	ctx context.Context, client runtimeClient.WithWatch,
-	appLabelComponentName string, n int,
-) {
-	ForPodsWithCondition(ctx, client, func(event watch.Event) bool {
-		pods, ok := event.Object.(*v1.PodList)
-		if !ok {
-			return false
-		}
-		return len(pods.Items) == n
-	},
-		runtimeClient.InNamespace(constants.SystemPodsNamespace),
-		runtimeClient.MatchingLabels{constants.AppLabelName: appLabelComponentName},
-	)
-}
-
-func ForRunningSchedulerPodEvent(ctx context.Context, client runtimeClient.WithWatch, schedulerAppName string) {
+func ForRunningSystemComponentEvent(ctx context.Context, client runtimeClient.WithWatch, appLabelComponentName string) {
 	runningCondition := func(event watch.Event) bool {
 		podListObj, ok := event.Object.(*v1.PodList)
 		if !ok {
@@ -61,21 +46,24 @@ func ForRunningSchedulerPodEvent(ctx context.Context, client runtimeClient.WithW
 		objPod := &podListObj.Items[0]
 		return rd.IsPodRunning(objPod)
 	}
-	ForRunaiComponentPod(ctx, client, schedulerAppName, runningCondition)
+	ForRunaiComponentPod(ctx, client, appLabelComponentName, runningCondition)
 }
 
-func ForRunningBinderPodEvent(ctx context.Context, client runtimeClient.WithWatch) {
-	runningCondition := func(event watch.Event) bool {
-		podListObj, ok := event.Object.(*v1.PodList)
-		if !ok {
-			Fail(fmt.Sprintf("Failed to process event for pod %s", event.Object))
-		}
-		if len(podListObj.Items) != 1 {
-			return false
-		}
+func PatchSystemDeploymentFeatureFlags(
+	ctx context.Context,
+	kubeClientset kubernetes.Interface,
+	controllerClient runtimeClient.WithWatch,
+	namespace string,
+	deploymentName string,
+	containerName string,
+	featureFlagsUpdater ArgsUpdater,
+) error {
 
-		objPod := &podListObj.Items[0]
-		return rd.IsPodRunning(objPod)
+	err := patchDeploymentArgs(ctx, kubeClientset, namespace, deploymentName, containerName, featureFlagsUpdater)
+	if err != nil {
+		return fmt.Errorf("failed to patch deployment %s: %w", deploymentName, err)
 	}
-	ForRunaiComponentPod(ctx, client, "binder", runningCondition)
+	WaitForDeploymentPodsRunning(ctx, controllerClient, deploymentName, namespace)
+
+	return nil
 }
