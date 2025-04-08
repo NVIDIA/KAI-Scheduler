@@ -6,32 +6,24 @@ package feature_flags
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	testContext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
 func SetRestrictNodeScheduling(
 	value *bool, testCtx *testContext.TestContext, ctx context.Context,
 ) error {
-	return PatchSystemDeploymentFeatureFlags(
+	return wait.PatchSystemDeploymentFeatureFlags(
 		ctx,
-		testCtx,
+		testCtx.KubeClientset,
+		testCtx.ControllerClient,
 		constant.SystemPodsNamespace,
 		constant.SchedulerDeploymentName,
 		constant.SchedulerContainerName,
 		func(args []string) []string {
-			if value != nil {
-				return append(args, fmt.Sprintf("--restrict-node-scheduling=%t", *value))
-			}
-			for i, arg := range args {
-				if strings.HasPrefix(arg, "--restrict-node-scheduling=") {
-					return append(args[:i], args[i+1:]...)
-				}
-			}
-			return args
+			return genericArgsUpdater(args, "--restrict-node-scheduling=", value)
 		},
 	)
 }
