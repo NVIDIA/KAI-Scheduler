@@ -9,8 +9,8 @@ env:
   DOCKER_REGISTRY: "nvcr.io/nvstaging/runai"
 
 jobs:
-  test-and-build:
-    name: Test & Build
+  validate-and-test:
+    name: Validate & Test
     runs-on: ubuntu-latest
     outputs:
       package_version: ${{ steps.package_version.outputs.PACKAGE_VERSION }}
