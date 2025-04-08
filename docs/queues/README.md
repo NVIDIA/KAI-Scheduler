@@ -46,7 +46,7 @@ The `gpu` field sets the quota policy for GPU resources assigned to the queue. G
 ```
 quota: integer
 overQuotaWeight: integer
-limit: intereg
+limit: integer
 ```
 
 ### Quota (Optional)
