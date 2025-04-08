@@ -27,6 +27,116 @@ The scheduler and binder communicate through a custom resource called `BindReque
 
 The BindRequest API serves as a clear contract between the scheduler and binder, allowing them to operate independently.
 
+### Example BindRequest for NVIDIA GPU DRA Driver
+
+The NVIDIA [k8s-dra-driver-gpu](https://github.com/NVIDIA/k8s-dra-driver-gpu) leverages the upstream Dynamic Resource Allocation (DRA) API to support NVIDIA Multi-Node NVLink available in GB200 GPUs via a ComputeDomain CRD that lets you define resource templates which you can reference in your workloads.
+
+Before running this example, make sure you have the k8s-dra-driver-gpu installed by following the [instructions from here](https://github.com/NVIDIA/k8s-dra-driver-gpu/discussions/249). And DRA feature gate enabled in the KAI-scheduler. You can set the DRA flag like this:
+
+```bash
+helm upgrade -i kai-scheduler nvidia-k8s/kai-scheduler -n kai-scheduler --set "global.registry=nvcr.io/nvidia/k8s" --set scheduler.additionalArgs[0]=--feature-gates=DynamicResourceAllocation=true --set binder.additionalArgs[0]=--feature-gates=DynamicResourceAllocation=true
+```
+
+Example pod spec with ComputeDomain
+
+```bash
+cat <<EOF > gpu-imex-pod.yaml
+---
+apiVersion: resource.nvidia.com/v1beta1
+kind: ComputeDomain
+metadata:
+  name: imex-channel-injection
+spec:
+  numNodes: 1
+  channel:
+    resourceClaimTemplate:
+      name: imex-channel-0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-imex-pod
+  labels:
+    runai/queue: test
+spec:
+  schedulerName: kai-scheduler
+  containers:
+    - name: main
+      image: ubuntu
+      command: ["bash", "-c"]
+      args: ["nvidia-smi; ls -la /dev/nvidia-caps-imex-channels; trap 'exit 0' TERM; sleep 9000 & wait"]
+      resources:
+        limits:
+          nvidia.com/gpu: "1"
+        claims:
+        - name: imex-channel-0
+  resourceClaims:
+  - name: imex-channel-0
+    resourceClaimTemplateName: imex-channel-0
+EOF
+
+kubectl apply -f gpu-imex-pod.yaml
+```
+
+Scheuler will autogenarte the BindRequest for the ComputeDomain
+
+```bash
+kubectl get BindRequest gpu-imex-pod-8g6vlrjxpp -o yaml
+
+apiVersion: scheduling.run.ai/v1alpha2
+kind: BindRequest
+metadata:
+  creationTimestamp: "2025-04-08T21:55:32Z"
+  generation: 1
+  labels:
+    pod-name: gpu-imex-pod
+    selected-node: sc-starwars-mab10-b00
+  name: gpu-imex-pod-8g6vlrjxpp
+  namespace: default
+  ownerReferences:
+  - apiVersion: v1
+    kind: Pod
+    name: gpu-imex-pod
+    uid: 6306ffe2-a348-467a-b9aa-7176f2e95f53
+  resourceVersion: "17426791"
+  uid: 3c56aca5-027c-4bcd-9e9a-755e4c61ee8b
+spec:
+  podName: gpu-imex-pod
+  receivedGPU:
+    count: 1
+    portion: "1.00"
+  receivedResourceType: Regular
+  resourceClaimAllocations:
+  - allocation:
+      devices:
+        config:
+        - opaque:
+            driver: compute-domain.nvidia.com
+            parameters:
+              apiVersion: resource.nvidia.com/v1beta1
+              domainID: 83479f70-e292-43d6-aa67-dd4ba8adab8f
+              kind: ComputeDomainChannelConfig
+          requests:
+          - channel
+          source: FromClaim
+        results:
+        - device: channel-0
+          driver: compute-domain.nvidia.com
+          pool: sc-starwars-mab10-b00
+          request: channel
+      nodeSelector:
+        nodeSelectorTerms:
+        - matchFields:
+          - key: metadata.name
+            operator: In
+            values:
+            - sc-starwars-mab10-b00
+    name: imex-channel-0
+  selectedNode: sc-starwars-mab10-b00
+status:
+  phase: Succeeded
+```
+
 ### Binding Process
 
 1. The scheduler creates a BindRequest for each pod that needs to be bound
