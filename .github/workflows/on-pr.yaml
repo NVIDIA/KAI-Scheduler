@@ -12,8 +12,6 @@ jobs:
   validate-and-test:
     name: Validate & Test
     runs-on: ubuntu-latest
-    outputs:
-      package_version: ${{ steps.package_version.outputs.PACKAGE_VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
