@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,6 +39,20 @@ type JobRequirement struct {
 type StalenessInfo struct {
 	TimeStamp *time.Time
 	Stale     bool
+}
+
+type PodGroupInfos struct {
+	PodGroupInfos []*PodGroupInfo
+}
+
+func NewPodGroupInfos(rawJobInfos []interface{}) PodGroupInfos {
+	pgs := PodGroupInfos{
+		PodGroupInfos: make([]*PodGroupInfo, len(rawJobInfos)),
+	}
+	for i, jobInfo := range rawJobInfos {
+		pgs.PodGroupInfos[i] = jobInfo.(*PodGroupInfo)
+	}
+	return pgs
 }
 
 type PodGroupInfo struct {
