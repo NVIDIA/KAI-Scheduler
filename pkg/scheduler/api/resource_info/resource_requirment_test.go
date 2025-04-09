@@ -50,7 +50,7 @@ var _ = Describe("ResourceRequirements Info internal logic", func() {
 
 			newResourceList := resourceInfo.ToResourceList()
 			gpuResource := newResourceList[GPUResourceName]
-			Expect(gpuResource.MilliValue()).To(Equal(500))
+			Expect(gpuResource.MilliValue()).To(Equal(int64(500)))
 		})
 		It("Other Resources", func() {
 			resourceList := v1.ResourceList{
