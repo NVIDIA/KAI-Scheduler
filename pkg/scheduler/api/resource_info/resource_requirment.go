@@ -71,7 +71,12 @@ func RequirementsFromResourceList(rl v1.ResourceList) *ResourceRequirements {
 func (r *ResourceRequirements) ToResourceList() v1.ResourceList {
 	rl := r.BaseResource.ToResourceList()
 
-	rl[GPUResourceName] = *resource.NewQuantity(int64(r.GPUs()), resource.DecimalSI)
+	if r.GPUs() > 0 && r.GPUs() < wholeGpuPortion { // fractional GPUs
+		rl[GPUResourceName] = *resource.NewMilliQuantity(int64(r.GPUs()*1000), resource.DecimalSI)
+	} else { // whole GPUs
+		rl[GPUResourceName] = *resource.NewQuantity(r.GetNumOfGpuDevices(), resource.DecimalSI)
+	}
+
 	for rName, rQuant := range r.MigResources() {
 		rl[rName] = *resource.NewQuantity(rQuant, resource.DecimalSI)
 	}

@@ -44,6 +44,14 @@ var _ = Describe("ResourceRequirements Info internal logic", func() {
 			newResourceList := resourceInfo.ToResourceList()
 			compareResourceLists(resourceList, newResourceList)
 		})
+		It("GPU Fractional Resources", func() {
+			resourceInfo := NewResourceRequirementsWithGpus(0.5)
+			Expect(resourceInfo.GPUs()).To(Equal(0.5))
+
+			newResourceList := resourceInfo.ToResourceList()
+			gpuResource := newResourceList[GPUResourceName]
+			Expect(gpuResource.MilliValue()).To(Equal(500))
+		})
 		It("Other Resources", func() {
 			resourceList := v1.ResourceList{
 				v1.ResourceName("run.ai/test-resource"): resource.MustParse("1"),
