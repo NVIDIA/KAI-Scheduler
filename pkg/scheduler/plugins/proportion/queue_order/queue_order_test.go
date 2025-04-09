@@ -17,8 +17,8 @@ type testMetadata struct {
 	Name           string
 	lqueue         *resource_share.QueueAttributes
 	rqueue         *resource_share.QueueAttributes
-	lJobInfo       *podgroup_info.PodGroupInfo
-	rJobInfo       *podgroup_info.PodGroupInfo
+	lJobInfos      podgroup_info.PodGroupInfos
+	rJobInfos      podgroup_info.PodGroupInfos
 	expectedResult int
 }
 
@@ -58,8 +58,8 @@ func TestGetQueueOrderResult(t *testing.T) {
 					},
 				},
 			},
-			lJobInfo:       &podgroup_info.PodGroupInfo{},
-			rJobInfo:       &podgroup_info.PodGroupInfo{},
+			lJobInfos:      podgroup_info.PodGroupInfos{PodGroupInfos: []*podgroup_info.PodGroupInfo{}},
+			rJobInfos:      podgroup_info.PodGroupInfos{PodGroupInfos: []*podgroup_info.PodGroupInfo{}},
 			expectedResult: rQueuePrioritized,
 		},
 		{
@@ -98,8 +98,8 @@ func TestGetQueueOrderResult(t *testing.T) {
 					},
 				},
 			},
-			lJobInfo:       &podgroup_info.PodGroupInfo{},
-			rJobInfo:       &podgroup_info.PodGroupInfo{},
+			lJobInfos:      podgroup_info.PodGroupInfos{PodGroupInfos: []*podgroup_info.PodGroupInfo{}},
+			rJobInfos:      podgroup_info.PodGroupInfos{PodGroupInfos: []*podgroup_info.PodGroupInfo{}},
 			expectedResult: rQueuePrioritized,
 		},
 		{
@@ -138,8 +138,8 @@ func TestGetQueueOrderResult(t *testing.T) {
 					},
 				},
 			},
-			lJobInfo:       &podgroup_info.PodGroupInfo{},
-			rJobInfo:       &podgroup_info.PodGroupInfo{},
+			lJobInfos:      podgroup_info.PodGroupInfos{PodGroupInfos: []*podgroup_info.PodGroupInfo{}},
+			rJobInfos:      podgroup_info.PodGroupInfos{PodGroupInfos: []*podgroup_info.PodGroupInfo{}},
 			expectedResult: lQueuePrioritized,
 		},
 		{
@@ -178,8 +178,8 @@ func TestGetQueueOrderResult(t *testing.T) {
 					},
 				},
 			},
-			lJobInfo:       &podgroup_info.PodGroupInfo{},
-			rJobInfo:       &podgroup_info.PodGroupInfo{},
+			lJobInfos:      podgroup_info.PodGroupInfos{PodGroupInfos: []*podgroup_info.PodGroupInfo{}},
+			rJobInfos:      podgroup_info.PodGroupInfos{PodGroupInfos: []*podgroup_info.PodGroupInfo{}},
 			expectedResult: lQueuePrioritized,
 		},
 	}
@@ -194,7 +194,7 @@ func TestGetQueueOrderResult(t *testing.T) {
 				}
 				return false
 			}
-			result := GetQueueOrderResult(test.lqueue, test.rqueue, test.lJobInfo, test.rJobInfo, taskOrderFn, resource_share.ResourceQuantities{})
+			result := GetQueueOrderResult(test.lqueue, test.rqueue, test.lJobInfos.PodGroupInfos, test.rJobInfos.PodGroupInfos, taskOrderFn, resource_share.ResourceQuantities{})
 			assert.Equal(t, test.expectedResult, result)
 		})
 	}
