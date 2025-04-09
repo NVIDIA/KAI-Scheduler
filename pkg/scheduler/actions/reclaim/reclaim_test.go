@@ -28,7 +28,7 @@ func TestHandleReclaim(t *testing.T) {
 	testsMetadata := getTestsMetadata()
 
 	for testNumber, testMetadata := range testsMetadata {
-		t.Logf("Running test number: %v, test name: %v,", testNumber, testMetadata.Name)
+		t.Logf("Running test number: %v, test name: %v,", testNumber, testMetadata.TestTopologyBasic.Name)
 		ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
 		reclaimAction := reclaim.New()
 		reclaimAction.Execute(ssn)
@@ -108,6 +108,170 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						NumberOfCacheBinds:      2,
 						NumberOfCacheEvictions:  2,
 						NumberOfPipelineActions: 1,
+					},
+				},
+			},
+		},
+		{
+			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Name: "Reclaim jobs according to queue fair share",
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:                "q0_running_job0",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								NodeName: "node0",
+								State:    pod_status.Running,
+							},
+						},
+					}, {
+						Name:                "q0_running_job1",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								NodeName: "node0",
+								State:    pod_status.Running,
+							},
+						},
+					}, {
+						Name:                "q0_running_job2",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber - 1,
+						QueueName:           "queue0",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								NodeName: "node0",
+								State:    pod_status.Running,
+							},
+						},
+					}, {
+						Name:                "q1_running_job0",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue1",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								NodeName: "node0",
+								State:    pod_status.Running,
+							},
+						},
+					}, {
+						Name:                "q1_running_job1",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue1",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								NodeName: "node0",
+								State:    pod_status.Running,
+							},
+						},
+					}, {
+						Name:                "q1_running_job2",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber - 1,
+						QueueName:           "queue1",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								NodeName: "node0",
+								State:    pod_status.Running,
+							},
+						},
+					}, {
+						Name:                "reclaimer",
+						MinAvailable:        ptr.To(int32(2)),
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "reclaimer_queue",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State: pod_status.Pending,
+							},
+							{
+								State: pod_status.Pending,
+							},
+						},
+					},
+				},
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node0": {
+						GPUs: 6,
+					},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:               "queue0",
+						DeservedGPUs:       1,
+						GPUOverQuotaWeight: 1,
+						ParentQueue:        "d1",
+					},
+					{
+						Name:               "queue1",
+						DeservedGPUs:       1,
+						GPUOverQuotaWeight: 1,
+						ParentQueue:        "d1",
+					},
+					{
+						Name:               "reclaimer_queue",
+						DeservedGPUs:       2,
+						GPUOverQuotaWeight: 0,
+						//Priority:           pointer.Int(commonconstants.DefaultQueuePriority + 1),
+						ParentQueue: "d1",
+					},
+				},
+				Departments: []test_utils.TestDepartmentBasic{
+					{
+						Name:         "d1",
+						DeservedGPUs: 1,
+					},
+				},
+				JobExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"q0_running_job0": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Running,
+					},
+					"q0_running_job1": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Running,
+					},
+					"q0_running_job2": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Releasing,
+					},
+					"q1_running_job0": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Running,
+					},
+					"q1_running_job1": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Running,
+					},
+					"q1_running_job2": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Releasing,
+					},
+					"reclaimer": {
+						NodeName:     "node0",
+						GPUsRequired: 2,
+						Status:       pod_status.Pipelined,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheBinds:      1,
+						NumberOfCacheEvictions:  3,
+						NumberOfPipelineActions: 2,
 					},
 				},
 			},
