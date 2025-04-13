@@ -16,7 +16,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/nodeplacement"
 
+	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -66,9 +69,26 @@ var _ = Describe("NodeSpread", func() {
 			}
 
 			for _, c := range cases {
-				task := &pod_info.PodInfo{
-					ResReq: resource_info.NewResourceRequirementsWithGpus(1),
-				}
+				task := pod_info.NewTaskInfo(&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-pod",
+						Annotations: map[string]string{
+							"kai.scheduler/placementStrategy":        "spread",
+							commonconstants.PodGroupAnnotationForPod: "test-group",
+						},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										resource_info.GPUResourceName: resource.MustParse("1"),
+									},
+								},
+							},
+						},
+					},
+				})
 
 				node := &node_info.NodeInfo{
 					Node: &corev1.Node{
@@ -96,9 +116,26 @@ var _ = Describe("NodeSpread", func() {
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(actual).To(Equal(c.expected))
 
-				task = &pod_info.PodInfo{
-					ResReq: resource_info.NewResourceRequirements(0, 1, 0),
-				}
+				task = pod_info.NewTaskInfo(&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-pod-cpu",
+						Annotations: map[string]string{
+							"kai.scheduler/placementStrategy":        "spread",
+							commonconstants.PodGroupAnnotationForPod: "test-group",
+						},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU: resource.MustParse("1"),
+									},
+								},
+							},
+						},
+					},
+				})
 
 				node = &node_info.NodeInfo{
 					Node:        &corev1.Node{},

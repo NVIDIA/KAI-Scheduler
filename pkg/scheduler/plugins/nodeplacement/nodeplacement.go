@@ -67,15 +67,37 @@ func (pp *nodePlacementPlugin) OnSessionOpen(ssn *framework.Session) {
 }
 
 func (pp *nodePlacementPlugin) nodeOrderFn(task *pod_info.PodInfo, node *node_info.NodeInfo) (float64, error) {
-	if task != nil && task.IsCPUOnlyRequest() {
+	strategy := task.GetPlacementStrategy()
+	if task.IsCPUOnlyRequest() {
+		if strategy == pod_info.PlacementStrategySpread ||
+			(strategy == "" && pp.pluginArguments[constants.CPUResource] == constants.SpreadStrategy) {
+			return pp.cpuTaskScoreFn(task, node)
+		}
 		return pp.cpuTaskScoreFn(task, node)
+	}
+
+	// GPU case
+	if strategy == pod_info.PlacementStrategySpread ||
+		(strategy == "" && pp.pluginArguments[constants.GPUResource] == constants.SpreadStrategy) {
+		return pp.gpuTaskScoreFn(task, node)
 	}
 	return pp.gpuTaskScoreFn(task, node)
 }
 
 func (pp *nodePlacementPlugin) nodePreOrderFn(task *pod_info.PodInfo, fittingNodes []*node_info.NodeInfo) error {
-	if task != nil && task.IsCPUOnlyRequest() {
+	strategy := task.GetPlacementStrategy()
+	if task.IsCPUOnlyRequest() {
+		if strategy == pod_info.PlacementStrategySpread ||
+			(strategy == "" && pp.pluginArguments[constants.CPUResource] == constants.SpreadStrategy) {
+			return pp.cpuPreOrderFn(task, fittingNodes)
+		}
 		return pp.cpuPreOrderFn(task, fittingNodes)
+	}
+
+	// GPU case
+	if strategy == pod_info.PlacementStrategySpread ||
+		(strategy == "" && pp.pluginArguments[constants.GPUResource] == constants.SpreadStrategy) {
+		return pp.gpuPreOrderFn(task, fittingNodes)
 	}
 	return pp.gpuPreOrderFn(task, fittingNodes)
 }

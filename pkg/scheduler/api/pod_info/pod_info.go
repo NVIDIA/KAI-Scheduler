@@ -29,6 +29,10 @@ const (
 
 	ResourceReservationPodPrefix     = "runai-reservation"
 	ResourceReservationAppLabelValue = ResourceReservationPodPrefix
+
+	PlacementStrategyAnnotationKey = "kai.scheduler/placementStrategy"
+	PlacementStrategyBinpack       = "binpack"
+	PlacementStrategySpread        = "spread"
 )
 
 type ResourceRequestType string
@@ -54,6 +58,8 @@ type PodsMap map[common_info.PodID]*PodInfo
 type PodInfo struct {
 	UID common_info.PodID
 	Job common_info.PodGroupID
+
+	PlacementStrategy string
 
 	Name      string
 	Namespace string
@@ -143,6 +149,10 @@ func (pi *PodInfo) UpsertStorageClaim(claimInfo *storageclaim_info.StorageClaimI
 		}
 	}
 	pi.storageClaims[claimInfo.Key] = claimInfo
+}
+
+func (pi *PodInfo) GetPlacementStrategy() string {
+	return pi.PlacementStrategy
 }
 
 func NewTaskInfo(pod *v1.Pod) *PodInfo {
@@ -362,6 +372,10 @@ func getTaskStatus(pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo) p
 func (pi *PodInfo) updatePodAdditionalFieldsIfRunaiPodgroup(bindRequest *bindrequest_info.BindRequestInfo) {
 	if len(pi.Job) == 0 {
 		return
+	}
+
+	if strategy, found := pi.Pod.Annotations[PlacementStrategyAnnotationKey]; found {
+		pi.PlacementStrategy = strategy
 	}
 
 	if bindRequest != nil && len(bindRequest.BindRequest.Spec.SelectedGPUGroups) > 0 {

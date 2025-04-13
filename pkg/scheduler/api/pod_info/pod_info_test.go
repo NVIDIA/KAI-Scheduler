@@ -209,6 +209,7 @@ func TestPodInfo_updatePodAdditionalFieldsIfRunaiPodgroup(t *testing.T) {
 		SelectedMigProfile   string
 		IsBound              bool
 		IsChiefPod           bool
+		PlacementStrategy    string
 	}
 	tests := []struct {
 		name     string
@@ -453,6 +454,60 @@ func TestPodInfo_updatePodAdditionalFieldsIfRunaiPodgroup(t *testing.T) {
 				GPUGroups:            nil,
 			},
 		},
+		{
+			"Pod with placement strategy annotation",
+			podFields{
+				Job:       common_info.FakePogGroupId,
+				Name:      "p1",
+				Namespace: "ns1",
+				Status:    pod_status.Pending,
+				Pod: common_info.BuildPod("ns1", "p1", "node1", v1.PodPending,
+					common_info.BuildResourceList("2000m", "2G"),
+					nil,
+					map[string]string{},
+					map[string]string{
+						PlacementStrategyAnnotationKey: "binpack",
+					}),
+			},
+			expected{
+				Resreq:              resource_info.EmptyResourceRequirements(),
+				InitResreq:          resource_info.EmptyResourceRequirements(),
+				AcceptedResource:    nil,
+				ResourceRequestType: "",
+				GPUGroups:           nil,
+				SelectedMigProfile:  "",
+				IsBound:             false,
+				IsChiefPod:          true,
+				PlacementStrategy:   "binpack",
+			},
+		},
+		{
+			"Pod with spread placement strategy",
+			podFields{
+				Job:       common_info.FakePogGroupId,
+				Name:      "p1",
+				Namespace: "ns1",
+				Status:    pod_status.Pending,
+				Pod: common_info.BuildPod("ns1", "p1", "node1", v1.PodPending,
+					common_info.BuildResourceList("2000m", "2G"),
+					nil,
+					map[string]string{},
+					map[string]string{
+						PlacementStrategyAnnotationKey: "spread",
+					}),
+			},
+			expected{
+				Resreq:              resource_info.EmptyResourceRequirements(),
+				InitResreq:          resource_info.EmptyResourceRequirements(),
+				AcceptedResource:    nil,
+				ResourceRequestType: "",
+				GPUGroups:           nil,
+				SelectedMigProfile:  "",
+				IsBound:             false,
+				IsChiefPod:          true,
+				PlacementStrategy:   "spread",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -479,6 +534,10 @@ func TestPodInfo_updatePodAdditionalFieldsIfRunaiPodgroup(t *testing.T) {
 			if !reflect.DeepEqual(pi.GPUGroups, tt.expected.GPUGroups) {
 				t.Errorf("case (%s) failed: GPUGroups \n expected %v, \n got: %v \n",
 					tt.name, tt.expected.GPUGroups, pi.GPUGroups)
+			}
+			if pi.PlacementStrategy != tt.expected.PlacementStrategy {
+				t.Errorf("case (%s) failed: PlacementStrategy \n expected %v, \n got: %v \n",
+					tt.name, tt.expected.PlacementStrategy, pi.PlacementStrategy)
 			}
 		})
 	}

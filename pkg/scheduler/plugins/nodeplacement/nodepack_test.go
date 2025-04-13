@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
@@ -41,7 +42,6 @@ func TestNodePack(t *testing.T) {
 
 	for i, testMetadata := range testsMetadata {
 		ssn, task, expectedScoreMap := buildSingleTestParams(testMetadata)
-
 		t.Run(testMetadata.name, func(t *testing.T) {
 			testScoresOfCurrentTopology(t, i, testMetadata.name, ssn, task, expectedScoreMap)
 		})
@@ -264,6 +264,10 @@ func createFakeTask(taskName string) *pod_info.PodInfo {
 	return pod_info.NewTaskInfo(&v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: taskName,
+			Annotations: map[string]string{
+				"kai.scheduler/placementStrategy":        "binpack",
+				commonconstants.PodGroupAnnotationForPod: taskName + "-group",
+			},
 		},
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
