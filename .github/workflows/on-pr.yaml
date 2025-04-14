@@ -5,13 +5,6 @@ name: KAI Scheduler - Pull Request
 on:
   pull_request:
 
-permissions:
-  contents: read
-  packages: write
-
-env:
-  REGISTRY: "ghcr.io/nvidia/kai-scheduler"
-
 jobs:
   validate-and-test:
     name: Validate & Test
@@ -43,10 +36,8 @@ jobs:
       - name: Extract package version
         id: package_version
         run: |
-          PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)
-          echo $PACKAGE_VERSION
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -56,33 +47,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Create image cache directory
+        run: mkdir images
+
+      - name: Cache for docker images and helm chart
+        uses: actions/cache@v4
         with:
-          registry: ghcr.io
-          username: ${{github.actor}}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          path: images
+          key:  images-${{ github.sha }}
 
-      - name: Build and push Docker images
+      - name: Build docker images
         run: |
-          PACKAGE_VERSION=${{ steps.package_version.outputs.PACKAGE_VERSION }}
-          make build DOCKER_REPO_BASE=${{ env.REGISTRY }} VERSION=$PACKAGE_VERSION DOCKER_BUILDX_ADDITIONAL_ARGS="--load --push"
+          make build DOCKER_BUILDX_ADDITIONAL_ARGS=--load VERSION=$PACKAGE_VERSION
+          docker save $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION) | gzip > images/docker_images.tgz
 
-      - name: Build Helm Chart
+      - name: Build helm chart
         run: |
-          PACKAGE_VERSION=${{ steps.package_version.outputs.PACKAGE_VERSION }}
-          sed -i 's#registry/local/kai-scheduler#${{ env.REGISTRY }}#' deployments/kai-scheduler/values.yaml
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
-          
-      - name: Push Helm Chart to Packages
-        run: |
-          helm push ./charts/*.tgz oci://${{ env.REGISTRY }}
-
-      - name: Upload Helm Chart as an artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: kai-scheduler-chart
-          path: ./charts/*.tgz
+          cp charts/kai-scheduler-$PACKAGE_VERSION.tgz images/
 
   e2e-tests:
     name: Run E2E Tests
@@ -92,6 +74,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache restore
+        uses: actions/cache/restore@v4
+        with:
+          path: images
+          key:  images-${{ github.sha }}
+
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.10.0
         with:
@@ -99,11 +87,15 @@ jobs:
           version: v0.26.0
           config: ./hack/e2e-kind-config.yaml
 
-      - name: Download Helm chart artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: kai-scheduler-chart
-          path: ./charts
+      - name: Load docker images to kind
+        working-directory: images
+        env:
+          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
+        run: |
+          docker load < docker_images.tgz
+          for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
+            kind load docker-image $image --name kind
+          done
 
       - name: Deploy fake gpu operator
         run: |
@@ -116,8 +108,8 @@ jobs:
         env:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
-          helm upgrade -i kai-scheduler ./charts/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
-            --set "global.registry=${{ env.REGISTRY }}" --set "global.gpuSharing=true" --wait
+          helm upgrade -i kai-scheduler ./images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
+            --set "global.gpuSharing=true" --wait
 
       - name: Set up Go
         uses: actions/setup-go@v2
