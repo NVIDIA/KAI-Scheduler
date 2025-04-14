@@ -12,8 +12,8 @@ env:
   CHART_DEFAULT_IMAGE_REGISTRY: "nvcr.io/nvidia/k8s"
 
 jobs:
-  test-build-and-push:
-    name: Test & Build & Push
+  build-and-push:
+    name: Build & Push
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,7 +21,9 @@ jobs:
 
       - name: Extract package version
         run: |
-          echo "PACKAGE_VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+          PACKAGE_VERSION=${GITHUB_REF_NAME}
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo $PACKAGE_VERSION
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -44,9 +46,6 @@ jobs:
         run: |
           helm repo add nvstaging https://helm.ngc.nvidia.com/nvstaging/runai --username=\$oauthtoken --password=$NGC_API_KEY
           helm plugin install https://github.com/chartmuseum/helm-push
-
-      - name: Run tests
-        run: make test
 
       - name: Docker build & push
         run: make build DOCKER_BUILD_PLATFORM=linux/amd64,linux/arm64 DOCKER_REPO_BASE=${{ env.DOCKER_REGISTRY }} VERSION=$PACKAGE_VERSION DOCKER_BUILDX_ADDITIONAL_ARGS=--push

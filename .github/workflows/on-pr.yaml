@@ -5,8 +5,9 @@ name: KAI Scheduler - Pull Request
 on:
   pull_request:
 
-env:
-  DOCKER_REGISTRY: "nvcr.io/nvstaging/runai"
+concurrency:
+  group: ${{ github.head_ref || github.ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   validate-and-test:
@@ -39,8 +40,10 @@ jobs:
       - name: Extract package version
         id: package_version
         run: |
-          echo "PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo $PACKAGE_VERSION
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -61,12 +64,11 @@ jobs:
 
       - name: Build docker images
         run: |
-          make build DOCKER_BUILDX_ADDITIONAL_ARGS=--load DOCKER_REPO_BASE=${{ env.DOCKER_REGISTRY }} VERSION=$PACKAGE_VERSION
-          docker save $(docker images --format '{{.Repository}}:{{.Tag}}' | grep ${{ env.DOCKER_REGISTRY }}) | gzip > images/docker_images.tgz
+          make build DOCKER_BUILDX_ADDITIONAL_ARGS=--load VERSION=$PACKAGE_VERSION
+          docker save $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION) | gzip > images/docker_images.tgz
 
       - name: Build helm chart
         run: |
-          sed -i 's#registry/local/kai-scheduler#${{ env.DOCKER_REGISTRY }}#' deployments/kai-scheduler/values.yaml
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
           cp charts/kai-scheduler-$PACKAGE_VERSION.tgz images/
 
@@ -93,9 +95,11 @@ jobs:
 
       - name: Load docker images to kind
         working-directory: images
+        env:
+          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
           docker load < docker_images.tgz
-          for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep ${{ env.DOCKER_REGISTRY }}); do
+          for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
             kind load docker-image $image --name kind
           done
 
@@ -111,7 +115,7 @@ jobs:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
           helm upgrade -i kai-scheduler ./images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
-            --set "global.registry=${{ env.DOCKER_REGISTRY }}" --set "global.gpuSharing=true" --wait
+            --set "global.gpuSharing=true" --wait
 
       - name: Set up Go
         uses: actions/setup-go@v2
