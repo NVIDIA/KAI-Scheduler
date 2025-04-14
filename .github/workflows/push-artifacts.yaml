@@ -25,9 +25,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Extract package version
+      - name: Extract package version from tag
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
-          echo "PACKAGE_VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+          PACKAGE_VERSION=${GITHUB_REF_NAME}
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo $PACKAGE_VERSION
+
+      - name: Extract package version from branch commit
+        if: startsWith(github.ref, 'refs/heads/')
+        run: |
+          PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo $PACKAGE_VERSION
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -52,13 +62,6 @@ jobs:
           sed -i 's#registry/local/kai-scheduler#${{ env.DOCKER_REGISTRY }}#' deployments/kai-scheduler/values.yaml
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
 
-      - name: Upload As Release Asset
-        uses: softprops/action-gh-release@v1
-        with:
-          files: charts/*.tgz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Push Helm Chart
         run: |
-          helm push ./charts/kai-scheduler-$PACKAGE_VERSION.tgz oci://${{ env.REGISTRY }}
+          helm push ./charts/kai-scheduler-$PACKAGE_VERSION.tgz oci://${{ env.DOCKER_REGISTRY }}

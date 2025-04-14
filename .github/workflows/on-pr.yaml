@@ -36,8 +36,10 @@ jobs:
       - name: Extract package version
         id: package_version
         run: |
-          echo "PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo $PACKAGE_VERSION
 
       - name: Set up Go
         uses: actions/setup-go@v5
