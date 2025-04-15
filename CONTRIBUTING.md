@@ -1,34 +1,51 @@
-Developer Certificate of Origin
-Version 1.1
+# Contributing to KAI Scheduler
 
-Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
+Thank you for your interest in contributing to KAI Scheduler! This document provides guidelines and instructions to help you get started with contributing to our project.
 
-Everyone is permitted to copy and distribute verbatim copies of this
-license document, but changing it is not allowed.
+Make sure to read our [Contributor License Agreement](CLA.md).
 
+## Getting Started
+### New Contributors
+We're excited to help you make your first contribution! Whether you're interested in filing issues, developing features, fixing bugs, or improving documentation, we're here to support you through the process.
 
-Developer's Certificate of Origin 1.1
+Browse issues labeled [good first issue] or [help wanted] on GitHub for an easy introduction.
 
-By making a contribution to this project, I certify that:
+### Developers
+The main building blocks of KAI Scheduler are documented in the `docs/developer` folder. Here are the key components:
+- [Action Framework](docs/developer/action-framework.md): Core scheduler logic
+- [Plugin Framework](docs/developer/plugin-framework.md): Extensible plugin system
+- [Pod Grouper](docs/developer/pod-grouper.md): Group scheduling functionality
+- [Binder](docs/developer/binder.md): Binding logic
 
-(a) The contribution was created in whole or in part by me and I
-    have the right to submit it under the open source license
-    indicated in the file; or
+We recommend reading these documents to understand the architecture before making significant contributions.
 
-(b) The contribution is based upon previous work that, to the best
-    of my knowledge, is covered under an appropriate open source
-    license and I have the right under that license to submit that
-    work with modifications, whether created in whole or in part
-    by me, under the same open source license (unless I am
-    permitted to submit under a different license), as indicated
-    in the file; or
+## How to Contribute
+### Reporting Issues
+Open an issue with a clear description, steps to reproduce, and relevant environment details.
+Use our issue templates for guidance.
 
-(c) The contribution was provided directly to me by some other
-    person who certified (a), (b) or (c) and I have not modified
-    it.
+### Improving Documentation
+Help us keep the docs clear and useful by fixing typos, updating outdated information, or adding examples.
 
-(d) I understand and agree that this project and the contribution
-    are public and that a record of the contribution (including all
-    personal information I submit with it, including my sign-off) is
-    maintained indefinitely and may be redistributed consistent with
-    this project or the open source license(s) involved.
+### Code & Documentation
+- Fork & Clone: Start by forking the repository and cloning it locally.
+- Create a Branch: Use a descriptive name (e.g., feature/add-cool-feature or bugfix/fix-issue123).
+- Make Changes: Keep commits small and focused. For detailed build and test instructions, see [Building from Source](docs/developer/building-from-source.md).
+- Submit a PR: Open a pull request, reference any related issues, and follow our commit message guidelines.
+
+### Pull Request Checklist
+Before introducing major changes, it's strongly recommended to open a PR outlining the proposed design.
+Each PR should meet the following requirements:
+- All tests pass. To run the full test suite locally, use: make build validate test
+- Any affected code is covered by new or updated tests
+- Relevant documentation has been added or updated
+
+## Getting Help
+If you have questions or need assistance:
+- Open an issue on [GitHub](https://github.com/NVIDIA/KAI-Scheduler/issues).
+- Join our community discussions (we are using [#batch-wg](https://cloud-native.slack.com/archives/C02Q5DFF3MM) Slack channel).
+
+## License
+By contributing, you agree that your contributions will be licensed under the Apache License 2.0.
+
+Thank you for your interest and happy coding!
