@@ -53,7 +53,7 @@ func (su *defaultStatusUpdater) syncPodGroup(inFlightPodGroup, snapshotPodGroup 
 	updatedSchedulingCondition := false
 	lastSchedulingCondition := utils.GetLastSchedulingCondition(inFlightPodGroup)
 	currentLastSchedulingCondition := utils.GetLastSchedulingCondition(snapshotPodGroup)
-	if currentLastSchedulingCondition != nil && lastSchedulingCondition.TransitionID == currentLastSchedulingCondition.TransitionID {
+	if currentLastSchedulingCondition != nil && lastSchedulingCondition.TransitionID <= currentLastSchedulingCondition.TransitionID {
 		updatedSchedulingCondition = true
 	} else {
 		snapshotPodGroup.Status.SchedulingConditions = inFlightPodGroup.Status.SchedulingConditions
