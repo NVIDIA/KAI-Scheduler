@@ -25,8 +25,10 @@ func (su *defaultStatusUpdater) Run(stopCh <-chan struct{}) {
 }
 
 func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*enginev2alpha2.PodGroup) {
+	usedKeys := make(map[updatePayloadKey]bool, len(podGroups))
 	for i := range podGroups {
 		key := su.keyForPayload(podGroups[i].Name, podGroups[i].Namespace, podGroups[i].UID)
+		usedKeys[key] = true
 		inflightUpdateAny, found := su.inFlightPodGroups.Load(key)
 		if !found {
 			continue
@@ -37,6 +39,14 @@ func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*eng
 			su.inFlightPodGroups.Delete(key)
 		}
 	}
+
+	// Cleanup podGroups that don't comeup anymore
+	su.inFlightPodGroups.Range(func(key any, _ any) bool {
+		if _, found := usedKeys[key.(updatePayloadKey)]; !found {
+			su.inFlightPodGroups.Delete(key)
+		}
+		return true
+	})
 }
 
 func (su *defaultStatusUpdater) syncPodGroup(inFlightPodGroup, snapshotPodGroup *enginev2alpha2.PodGroup) bool {
