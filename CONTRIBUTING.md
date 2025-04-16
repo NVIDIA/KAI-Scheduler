@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to KAI Scheduler! This document provides guidelines and instructions to help you get started with contributing to our project.
 
-Make sure to read our [Contributor License Agreement](CLA.md).
+Make sure to read our [Contributor License Agreement](CLA.md) and [Code of Conduct](code_of_conduct.md).
 
 ## Getting Started
 ### New Contributors
