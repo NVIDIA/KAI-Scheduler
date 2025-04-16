@@ -124,7 +124,7 @@ func TestHandleDelaidLauncherPolicy(t *testing.T) {
 						"namespace": "test-ns",
 					},
 					"spec": map[string]interface{}{
-						"launcherCreationPolicy": delaiedLauncherCreationPolicy,
+						"launcherCreationPolicy": delayedLauncherCreationPolicy,
 						ReplicaSpecName: map[string]interface{}{
 							MasterName: map[string]interface{}{
 								"replicas": int64(1),
@@ -158,7 +158,7 @@ func TestHandleDelaidLauncherPolicy(t *testing.T) {
 						"namespace": "test-ns",
 					},
 					"spec": map[string]interface{}{
-						"launcherCreationPolicy": delaiedLauncherCreationPolicy,
+						"launcherCreationPolicy": delayedLauncherCreationPolicy,
 						ReplicaSpecName: map[string]interface{}{
 							MasterName: map[string]interface{}{
 								"replicas": int64(1),
@@ -181,7 +181,7 @@ func TestHandleDelaidLauncherPolicy(t *testing.T) {
 						"namespace": "test-ns",
 					},
 					"spec": map[string]interface{}{
-						"launcherCreationPolicy": delaiedLauncherCreationPolicy,
+						"launcherCreationPolicy": delayedLauncherCreationPolicy,
 						ReplicaSpecName: map[string]interface{}{
 							MasterName: map[string]interface{}{
 								"replicas": int64(0),
@@ -272,7 +272,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 						"namespace": "test-ns",
 					},
 					"spec": map[string]interface{}{
-						"launcherCreationPolicy": delaiedLauncherCreationPolicy,
+						"launcherCreationPolicy": delayedLauncherCreationPolicy,
 						ReplicaSpecName: map[string]interface{}{
 							MasterName: map[string]interface{}{
 								"replicas": int64(1),
@@ -307,7 +307,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 						"namespace": "test-ns",
 					},
 					"spec": map[string]interface{}{
-						"launcherCreationPolicy": delaiedLauncherCreationPolicy,
+						"launcherCreationPolicy": delayedLauncherCreationPolicy,
 						ReplicaSpecName: map[string]interface{}{
 							MasterName: map[string]interface{}{
 								"replicas": int64(1),

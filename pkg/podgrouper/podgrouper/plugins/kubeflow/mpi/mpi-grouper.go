@@ -21,7 +21,7 @@ const (
 	MasterName      = "Launcher"
 	WorkerName      = "Worker"
 
-	delaiedLauncherCreationPolicy = "WaitForWorkersReady"
+	delayedLauncherCreationPolicy = "WaitForWorkersReady"
 	jobNameLabel                  = "training.kubeflow.org/job-name"
 	podRoleNameLabel              = "training.kubeflow.org/job-role"
 	launcherPodRoleName           = "launcher"
@@ -45,7 +45,7 @@ func (mg *MpiGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, p
 	if err != nil {
 		return nil, err
 	}
-	if found && launcherCreationPolicy == delaiedLauncherCreationPolicy {
+	if found && launcherCreationPolicy == delayedLauncherCreationPolicy {
 		if err := mg.handleDelaidLauncherPolicy(topOwner, gp); err != nil {
 			return gp, err
 		}
@@ -63,8 +63,8 @@ func (mg *MpiGrouper) handleDelaidLauncherPolicy(topOwner *unstructured.Unstruct
 		if err != nil || !found || replicas == 0 { //  This if should always be false - the same thing is tested in GetPodGroupMetadata
 			return fmt.Errorf("the type of the job %s doesn't allow for 0 mpiReplicaSpecs pods. Please fix the replica field", topOwner.GetName())
 		}
-		// If the delaiedLauncherCreationPolicy is set and the launcher pod hasn't been created yet,
-		// the minAvailable should contain the launcher as part of the replicas
+		// If the delayedLauncherCreationPolicy is set and the launcher pod hasn't been created yet,
+		// the minAvailable should not contain the launcher as part of the replicas
 		gp.MinAvailable = gp.MinAvailable - int32(replicas)
 	}
 	return nil
