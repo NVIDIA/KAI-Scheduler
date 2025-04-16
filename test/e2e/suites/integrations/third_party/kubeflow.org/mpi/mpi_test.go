@@ -118,5 +118,30 @@ var _ = Describe("Kubeflow.org MPIJob Integration", Ordered, func() {
 			}
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, namespace, pods)
 		})
+
+		It("MPIJob - V2beta1 - Delayed Launcher", func(ctx context.Context) {
+			obj := mpi.CreateV2beta1Object(namespace, testCtx.Queues[0].Name)
+			obj.Spec.LauncherCreationPolicy = "WaitForWorkersReady"
+			_, err := mpiOperatorSdk.KubeflowV2beta1().MPIJobs(namespace).Create(ctx, obj, v1.CreateOptions{})
+			Expect(err).To(Succeed())
+			defer func() {
+				err = mpiOperatorSdk.KubeflowV2beta1().MPIJobs(namespace).Delete(ctx, obj.Name, v1.DeleteOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			}()
+
+			labelSelector := v1.LabelSelector{MatchLabels: map[string]string{constants.AppLabelName: obj.Labels[constants.AppLabelName]}}
+			wait.ForAtLeastNPodCreation(ctx, testCtx.ControllerClient, labelSelector, 2)
+
+			podList, err := testCtx.KubeClientset.CoreV1().Pods(namespace).List(ctx,
+				v1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", constants.AppLabelName, obj.Labels[constants.AppLabelName])},
+			)
+			Expect(err).To(Succeed())
+
+			pods := make([]*v12.Pod, len(podList.Items))
+			for i, pod := range podList.Items {
+				pods[i] = &pod
+			}
+			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, namespace, pods)
+		})
 	})
 })
