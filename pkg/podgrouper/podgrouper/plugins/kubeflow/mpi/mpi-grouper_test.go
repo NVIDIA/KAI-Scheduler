@@ -1,0 +1,218 @@
+package mpi
+
+import (
+	"testing"
+	"time"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+)
+
+func TestLauncherPodExists(t *testing.T) {
+	tests := []struct {
+		name           string
+		existingPods   []client.Object
+		expectedResult bool
+		expectedError  bool
+	}{
+		{
+			name: "No launcher pods exist",
+			existingPods: []client.Object{
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "worker-1",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							jobNameLabel:     "test-job",
+							podRoleNameLabel: "worker",
+						},
+					},
+				},
+			},
+			expectedResult: false,
+			expectedError:  false,
+		},
+		{
+			name: "Launcher pod exists and is not terminating",
+			existingPods: []client.Object{
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "launcher",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							jobNameLabel:     "test-job",
+							podRoleNameLabel: launcherPodRoleName,
+						},
+					},
+				},
+			},
+			expectedResult: true,
+			expectedError:  false,
+		},
+		{
+			name: "Launcher pod exists and is terminating",
+			existingPods: []client.Object{
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "launcher",
+						Namespace:         "test-ns",
+						DeletionTimestamp: &metav1.Time{Time: time.Now()},
+						Finalizers:        []string{"mpi-launcher"},
+						Labels: map[string]string{
+							jobNameLabel:     "test-job",
+							podRoleNameLabel: launcherPodRoleName,
+						},
+					},
+				},
+			},
+			expectedResult: false,
+			expectedError:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			_ = v1.AddToScheme(scheme)
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.existingPods...).Build()
+
+			mg := NewMpiGrouper(fakeClient)
+			topOwner := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "test-job",
+						"namespace": "test-ns",
+					},
+				},
+			}
+
+			result, err := mg.launcherPodExists(topOwner)
+			if (err != nil) != tt.expectedError {
+				t.Errorf("launcherPodExists() error = %v, expectedError %v", err, tt.expectedError)
+				return
+			}
+			if result != tt.expectedResult {
+				t.Errorf("launcherPodExists() = %v, want %v", result, tt.expectedResult)
+			}
+		})
+	}
+}
+
+func TestHandleDelaidLauncherPolicy(t *testing.T) {
+	tests := []struct {
+		name             string
+		topOwner         *unstructured.Unstructured
+		initialMinAvail  int32
+		expectedMinAvail int32
+		existingPods     []client.Object
+		expectedError    bool
+	}{
+		{
+			name: "Launcher exists, no change to minAvailable",
+			topOwner: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "test-job",
+						"namespace": "test-ns",
+					},
+					"spec": map[string]interface{}{
+						"launcherCreationPolicy": delaiedLauncherCreationPolicy,
+						ReplicaSpecName: map[string]interface{}{
+							MasterName: map[string]interface{}{
+								"replicas": int64(1),
+							},
+						},
+					},
+				},
+			},
+			initialMinAvail:  5,
+			expectedMinAvail: 5,
+			existingPods: []client.Object{
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "launcher",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							jobNameLabel:     "test-job",
+							podRoleNameLabel: launcherPodRoleName,
+						},
+					},
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name: "Launcher doesn't exist, reduce minAvailable",
+			topOwner: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "test-job",
+						"namespace": "test-ns",
+					},
+					"spec": map[string]interface{}{
+						"launcherCreationPolicy": delaiedLauncherCreationPolicy,
+						ReplicaSpecName: map[string]interface{}{
+							MasterName: map[string]interface{}{
+								"replicas": int64(1),
+							},
+						},
+					},
+				},
+			},
+			initialMinAvail:  5,
+			expectedMinAvail: 4,
+			existingPods:     []client.Object{},
+			expectedError:    false,
+		},
+		{
+			name: "Invalid replicas configuration",
+			topOwner: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "test-job",
+						"namespace": "test-ns",
+					},
+					"spec": map[string]interface{}{
+						"launcherCreationPolicy": delaiedLauncherCreationPolicy,
+						ReplicaSpecName: map[string]interface{}{
+							MasterName: map[string]interface{}{
+								"replicas": int64(0),
+							},
+						},
+					},
+				},
+			},
+			initialMinAvail:  5,
+			expectedMinAvail: 5,
+			existingPods:     []client.Object{},
+			expectedError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			_ = v1.AddToScheme(scheme)
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.existingPods...).Build()
+
+			mg := NewMpiGrouper(fakeClient)
+			gp := &podgroup.Metadata{
+				MinAvailable: tt.initialMinAvail,
+			}
+
+			err := mg.handleDelaidLauncherPolicy(tt.topOwner, gp)
+			if (err != nil) != tt.expectedError {
+				t.Errorf("handleDelaidLauncherPolicy() error = %v, expectedError %v", err, tt.expectedError)
+				return
+			}
+			if !tt.expectedError && gp.MinAvailable != tt.expectedMinAvail {
+				t.Errorf("handleDelaidLauncherPolicy() MinAvailable = %v, want %v", gp.MinAvailable, tt.expectedMinAvail)
+			}
+		})
+	}
+}

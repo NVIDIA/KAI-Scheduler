@@ -14,7 +14,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/job"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/knative"
 	jaxplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/jax"
-	mpiplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/mpi"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/mpi"
 	notebookplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/notebook"
 	pytorchplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/pytorch"
 	tensorflowlugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/tensorflow"
@@ -75,6 +75,7 @@ func NewSupportedTypes(kubeClient client.Client, searchForLegacyPodGroups, gangS
 	rayGrouper := ray.NewRayGrouper(kubeClient)
 	runaiJobGrouper := runaijob.NewRunaiJobGrouper(kubeClient, searchForLegacyPodGroups)
 	k8sJobGrouper := job.NewK8sJobGrouper(kubeClient, searchForLegacyPodGroups)
+	mpiGrouper := mpi.NewMpiGrouper(kubeClient)
 
 	table := supportedTypes{
 		{
@@ -121,12 +122,12 @@ func NewSupportedTypes(kubeClient client.Client, searchForLegacyPodGroups, gangS
 			Group:   "kubeflow.org",
 			Version: "v1",
 			Kind:    "MPIJob",
-		}: mpiplugin.GetPodGroupMetadata,
+		}: mpiGrouper.GetPodGroupMetadata,
 		{
 			Group:   "kubeflow.org",
 			Version: "v2beta1",
 			Kind:    "MPIJob",
-		}: mpiplugin.GetPodGroupMetadata,
+		}: mpiGrouper.GetPodGroupMetadata,
 		{
 			Group:   "kubeflow.org",
 			Version: "v1beta1",
