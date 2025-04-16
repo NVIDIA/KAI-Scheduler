@@ -31,7 +31,7 @@ Help us keep the docs clear and useful by fixing typos, updating outdated inform
 - Fork & Clone: Start by forking the repository and cloning it locally.
 - Create a Branch: Use a descriptive name (e.g., feature/add-cool-feature or bugfix/fix-issue123).
 - Make Changes: Keep commits small and focused. For detailed build and test instructions, see [Building from Source](docs/developer/building-from-source.md).
-- Submit a PR: Open a pull request, reference any related issues, and follow our commit message guidelines.
+- Submit a PR: Open a pull request and reference any related issues.
 
 ### Pull Request Checklist
 Before introducing major changes, it's strongly recommended to open a PR outlining the proposed design.
