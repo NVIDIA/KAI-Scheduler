@@ -46,14 +46,14 @@ func (mg *MpiGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, p
 		return nil, err
 	}
 	if found && launcherCreationPolicy == delayedLauncherCreationPolicy {
-		if err := mg.handleDelaidLauncherPolicy(topOwner, gp); err != nil {
+		if err := mg.handleDelayedLauncherPolicy(topOwner, gp); err != nil {
 			return gp, err
 		}
 	}
 	return gp, nil
 }
 
-func (mg *MpiGrouper) handleDelaidLauncherPolicy(topOwner *unstructured.Unstructured, gp *podgroup.Metadata) error {
+func (mg *MpiGrouper) handleDelayedLauncherPolicy(topOwner *unstructured.Unstructured, gp *podgroup.Metadata) error {
 	hasLauncherPod, err := mg.launcherPodExists(topOwner)
 	if err != nil {
 		return err

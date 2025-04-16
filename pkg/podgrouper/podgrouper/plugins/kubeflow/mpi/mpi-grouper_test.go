@@ -106,7 +106,7 @@ func TestLauncherPodExists(t *testing.T) {
 	}
 }
 
-func TestHandleDelaidLauncherPolicy(t *testing.T) {
+func TestHandleDelayedLauncherPolicy(t *testing.T) {
 	tests := []struct {
 		name             string
 		topOwner         *unstructured.Unstructured
@@ -208,13 +208,13 @@ func TestHandleDelaidLauncherPolicy(t *testing.T) {
 				MinAvailable: tt.initialMinAvail,
 			}
 
-			err := mg.handleDelaidLauncherPolicy(tt.topOwner, gp)
+			err := mg.handleDelayedLauncherPolicy(tt.topOwner, gp)
 			if (err != nil) != tt.expectedError {
-				t.Errorf("handleDelaidLauncherPolicy() error = %v, expectedError %v", err, tt.expectedError)
+				t.Errorf("handleDelayedLauncherPolicy() error = %v, expectedError %v", err, tt.expectedError)
 				return
 			}
 			if !tt.expectedError && gp.MinAvailable != tt.expectedMinAvail {
-				t.Errorf("handleDelaidLauncherPolicy() MinAvailable = %v, want %v", gp.MinAvailable, tt.expectedMinAvail)
+				t.Errorf("handleDelayedLauncherPolicy() MinAvailable = %v, want %v", gp.MinAvailable, tt.expectedMinAvail)
 			}
 		})
 	}
