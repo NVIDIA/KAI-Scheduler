@@ -114,7 +114,7 @@ func TestNewPodgrouper(t *testing.T) {
 	resources := append(nativeK8sTestResources, runaiTestResources...)
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(resources...).Build()
 
-	grouper := podgrouper.NewPodgrouper(client, false, true)
+	grouper := podgrouper.NewPodgrouper(client, client, false, true)
 
 	topOwner, owners, err := grouper.GetPodOwners(context.Background(), &pod)
 	assert.Nil(t, err)
@@ -308,7 +308,7 @@ kind: Pod
 					gangScheduleKnative:      true,
 				}
 			}
-			grouper := podgrouper.NewPodgrouper(client,
+			grouper := podgrouper.NewPodgrouper(client, client,
 				tt.podGrouperOptions.searchForLegacyPodGroups,
 				tt.podGrouperOptions.gangScheduleKnative,
 			)
