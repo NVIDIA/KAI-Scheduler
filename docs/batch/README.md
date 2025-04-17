@@ -13,7 +13,7 @@ This will create 2 pods that will be scheduled separately. Both pods will either
 To run in a distributed way across multiple pods, you can use PyTorchJob.
 
 ### Prerequisites
-This requires the [training-operator](https://github.com/kubeflow/trainer) to be installed in the cluster.
+This requires the [kubeflow-training-operator-v1](https://www.kubeflow.org/docs/components/trainer/legacy-v1/) to be installed in the cluster.
 
 ### Instructions
 Apply the following command to create a sample PyTorchJob with a master pod and two worker pods:
