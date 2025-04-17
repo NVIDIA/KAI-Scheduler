@@ -30,14 +30,22 @@ type Interface interface {
 
 type podGrouper struct {
 	supportedTypes supportedtypes.SupportedTypes
-	client         client.Client
+
+	client client.Client
+	// For runtime client with cache enabled, GET/LIST calls create an informer/watch for the specified object.
+	// Unfortunetly, this is true even if the GET call fails with an RBAC error. The created listener will panic and the reconciler crashes.
+	// Using a client without cache for calls that might get this error allow ius to handle the error gracefully.
+	// https://github.com/kubernetes/client-go/issues/1310#issuecomment-1921598658
+	// https://github.com/kubernetes-sigs/controller-runtime/issues/1222#issuecomment-713037979
+	clientWithoutCache client.Client
 }
 
 type GetPodGroupMetadataFunc func(topOwner *unstructured.Unstructured, pod *v1.Pod, otherOwners ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error)
 
-func NewPodgrouper(client client.Client, searchForLegacyPodGroups, gangScheduleKnative bool) *podGrouper {
+func NewPodgrouper(client client.Client, clientWithoutCache client.Client, searchForLegacyPodGroups, gangScheduleKnative bool) *podGrouper {
 	podGrouper := &podGrouper{
-		client: client,
+		client:             client,
+		clientWithoutCache: clientWithoutCache,
 	}
 
 	supportedTypes := supportedtypes.NewSupportedTypes(client, searchForLegacyPodGroups, gangScheduleKnative)
@@ -130,7 +138,7 @@ func (pg *podGrouper) getOwnerInstance(ctx context.Context, ownerRef *metav1.Own
 		Version: groupVersion[1],
 		Kind:    ownerRef.Kind,
 	})
-	err := pg.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ownerRef.Name}, owner)
+	err := pg.clientWithoutCache.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ownerRef.Name}, owner)
 	if err != nil {
 		return nil, err
 	}
