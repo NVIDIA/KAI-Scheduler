@@ -121,7 +121,12 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager, configs Configs) error {
-	r.podGrouper = podgrouper.NewPodgrouper(mgr.GetClient(), configs.SearchForLegacyPodGroups, configs.KnativeGangSchedule)
+	clientWithoutCache, err := client.New(mgr.GetConfig(), client.Options{Cache: nil})
+	if err != nil {
+		return err
+	}
+
+	r.podGrouper = podgrouper.NewPodgrouper(mgr.GetClient(), clientWithoutCache, configs.SearchForLegacyPodGroups, configs.KnativeGangSchedule)
 	r.PodGroupHandler = podgroup.NewHandler(mgr.GetClient(), configs.NodePoolLabelKey)
 	r.configs = configs
 	r.eventRecorder = mgr.GetEventRecorderFor(controllerName)
