@@ -360,6 +360,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 				departmentIdToDepartmentMetadata: tt.fields.departmentIdToDepartmentMetadata,
 				ssn:                              ssn,
 				jobsOrderInitOptions:             tt.fields.jobsOrderInitOptions,
+				queuePopsMap:                     map[common_info.QueueID]int{},
 			}
 			jobsOrder.InitializeWithJobs(tt.fields.InsertedJob)
 			jobsOrder.PushJob(tt.args.job)
@@ -457,6 +458,7 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 				departmentIdToDepartmentMetadata: tt.fields.departmentIdToDepartmentMetadata,
 				ssn:                              ssn,
 				jobsOrderInitOptions:             tt.fields.jobsOrderInitOptions,
+				queuePopsMap:                     map[common_info.QueueID]int{},
 			}
 			jobsOrder.InitializeWithJobs(tt.fields.InsertedJob)
 

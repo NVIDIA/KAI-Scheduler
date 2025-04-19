@@ -113,5 +113,7 @@ func (asb *PodAccumulatedScenarioBuilder) GetNextScenario() *solverscenario.ByNo
 		}
 	}
 
+	asb.victimsJobsQueue.ResetQueuePopsMap()
+
 	return asb.lastScenario
 }
