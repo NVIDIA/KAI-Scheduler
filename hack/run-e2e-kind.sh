@@ -20,7 +20,6 @@ kind create cluster --config ${KIND_CONFIG} --name $CLUSTER_NAME
 
 # Add necessary helm repos
 helm repo add fake-gpu https://runai.jfrog.io/artifactory/api/helm/fake-gpu-operator-charts-prod
-helm repo add nvidia https://helm.ngc.nvidia.com/nvidia/k8s
 helm repo update
 
 # Install the fake-gpu-operator to provide a fake GPU resources for the e2e tests
@@ -34,7 +33,7 @@ if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then
     ${REPO_ROOT}/hack/third_party_integrations/deploy_knative.sh
 fi
 
-helm upgrade -i kai-scheduler nvidia/kai-scheduler -n kai-scheduler --create-namespace --set "global.registry=nvcr.io/nvidia/k8s" --set "global.gpuSharing=true"
+helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --version latest
 
 # Allow all the pods in the fake-gpu-operator and kai-scheduler to start
 sleep 30

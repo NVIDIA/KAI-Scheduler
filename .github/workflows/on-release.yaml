@@ -8,8 +8,7 @@ on:
       - created
 
 env:
-  DOCKER_REGISTRY: "nvcr.io/nvstaging/runai"
-  CHART_DEFAULT_IMAGE_REGISTRY: "nvcr.io/nvidia/k8s"
+  DOCKER_REGISTRY: "ghcr.io/nvidia/kai-scheduler"
 
 jobs:
   build-and-push:
@@ -30,38 +29,17 @@ jobs:
         with:
           go-version: '1.23.4'
 
-      - name: Login to NGC Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: nvcr.io
-          username: $oauthtoken
-          password: ${{ secrets.NGC_API_KEY }}
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Set up helm
-        env:
-          NGC_API_KEY: ${{ secrets.NGC_API_KEY }}
-        run: |
-          helm repo add nvstaging https://helm.ngc.nvidia.com/nvstaging/runai --username=\$oauthtoken --password=$NGC_API_KEY
-          helm plugin install https://github.com/chartmuseum/helm-push
-
-      - name: Docker build & push
-        run: make build DOCKER_BUILD_PLATFORM=linux/amd64,linux/arm64 DOCKER_REPO_BASE=${{ env.DOCKER_REGISTRY }} VERSION=$PACKAGE_VERSION DOCKER_BUILDX_ADDITIONAL_ARGS=--push
-
       - name: Build helm chart
         run: |
-          sed -i 's#registry/local/kai-scheduler#${{ env.CHART_DEFAULT_IMAGE_REGISTRY }}#' deployments/kai-scheduler/values.yaml
+          sed -i 's#registry/local/kai-scheduler#${{ env.DOCKER_REGISTRY }}#' deployments/kai-scheduler/values.yaml
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
 
       - name: Upload As Release Asset
         uses: softprops/action-gh-release@v1
         with:
-          files: charts/*.tgz
+          files: charts/kai-scheduler-$PACKAGE_VERSION.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload helm chart to NGC
-        run: |
-          helm cm-push ./charts/kai-scheduler-$PACKAGE_VERSION.tgz nvstaging

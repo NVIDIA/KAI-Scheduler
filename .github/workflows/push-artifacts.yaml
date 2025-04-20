@@ -64,3 +64,8 @@ jobs:
       - name: Push Helm Chart
         run: |
           helm push ./charts/kai-scheduler-$PACKAGE_VERSION.tgz oci://${{ env.DOCKER_REGISTRY }}
+
+      - name: Push Helm Chart as latest version
+        if: startsWith(github.ref, 'refs/heads/')
+        run: |
+          helm push ./charts/kai-scheduler-$PACKAGE_VERSION.tgz oci://${{ env.DOCKER_REGISTRY }} --version latest
