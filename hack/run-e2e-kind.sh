@@ -33,7 +33,8 @@ if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then
     ${REPO_ROOT}/hack/third_party_integrations/deploy_knative.sh
 fi
 
-helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --version latest
+PACKAGE_VERSION=0.0.0-$(git rev-parse --short origin/main)
+helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --version "$PACKAGE_VERSION"
 
 # Allow all the pods in the fake-gpu-operator and kai-scheduler to start
 sleep 30
