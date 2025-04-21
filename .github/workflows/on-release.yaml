@@ -40,6 +40,6 @@ jobs:
       - name: Upload As Release Asset
         uses: softprops/action-gh-release@v1
         with:
-          files: charts/kai-scheduler-$PACKAGE_VERSION.tgz
+          files: charts/kai-scheduler-${{ env.PACKAGE_VERSION }}.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
