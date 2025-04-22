@@ -75,7 +75,7 @@ var _ = Describe("Namespace options", Ordered, func() {
 		It("Fraction GPU request", Label(labels.ReservationPod), func(ctx context.Context) {
 			pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 			pod.Annotations = map[string]string{
-				constants.RunaiGpuFraction: "0.5",
+				constants.GpuFraction: "0.5",
 			}
 
 			targetNamespace := pod.Namespace

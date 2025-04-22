@@ -47,8 +47,8 @@ func TestValidateGpuRequests(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						constants.MpsAnnotation:    "true",
-						constants.RunaiGpuFraction: "0.5",
+						constants.MpsAnnotation: "true",
+						constants.GpuFraction:   "0.5",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -84,7 +84,7 @@ func TestValidateGpuRequests(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						constants.RunaiGpuFraction: "0.5",
+						constants.GpuFraction: "0.5",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -164,8 +164,8 @@ func TestValidateGpuRequests(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						constants.RunaiGpuFraction: "0.5",
-						constants.RunaiGpuMemory:   "1",
+						constants.GpuFraction: "0.5",
+						constants.GpuMemory:   "1",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -183,7 +183,7 @@ func TestValidateGpuRequests(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						constants.RunaiGpuMemory: "1",
+						constants.GpuMemory: "1",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -205,7 +205,7 @@ func TestValidateGpuRequests(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						constants.RunaiGpuMemory: "-1",
+						constants.GpuMemory: "-1",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -223,7 +223,7 @@ func TestValidateGpuRequests(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						constants.RunaiGpuFraction: "-1",
+						constants.GpuFraction: "-1",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -241,7 +241,7 @@ func TestValidateGpuRequests(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						constants.RunaiGpuFraction: "1.2",
+						constants.GpuFraction: "1.2",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -259,7 +259,7 @@ func TestValidateGpuRequests(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						constants.RunaiGpuFractionsNumDevices: "1",
+						constants.GpuFractionsNumDevices: "1",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -279,8 +279,8 @@ func TestValidateGpuRequests(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						constants.RunaiGpuFractionsNumDevices: "1.2",
-						constants.RunaiGpuFraction:            "0.2",
+						constants.GpuFractionsNumDevices: "1.2",
+						constants.GpuFraction:            "0.2",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -298,8 +298,8 @@ func TestValidateGpuRequests(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						constants.RunaiGpuFractionsNumDevices: "2",
-						constants.RunaiGpuMemory:              "1000",
+						constants.GpuFractionsNumDevices: "2",
+						constants.GpuMemory:              "1000",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -317,8 +317,8 @@ func TestValidateGpuRequests(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						constants.RunaiGpuFractionsNumDevices: "2",
-						constants.RunaiGpuFraction:            "0.3",
+						constants.GpuFractionsNumDevices: "2",
+						constants.GpuFraction:            "0.3",
 					},
 				},
 				Spec: v1.PodSpec{

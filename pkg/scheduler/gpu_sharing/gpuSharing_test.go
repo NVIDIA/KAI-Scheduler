@@ -103,7 +103,7 @@ func Test_getNodePreferableGpuForSharing(t *testing.T) {
 						Name: "p1",
 						Annotations: map[string]string{
 							commonconstants.PodGroupAnnotationForPod: "pg1",
-							commonconstants.RunaiGpuFraction:         "0.5",
+							commonconstants.GpuFraction:              "0.5",
 						},
 					},
 					Spec: v1.PodSpec{
@@ -158,7 +158,7 @@ func Test_getNodePreferableGpuForSharing(t *testing.T) {
 						Name: "p1",
 						Annotations: map[string]string{
 							commonconstants.PodGroupAnnotationForPod: "pg1",
-							commonconstants.RunaiGpuFraction:         "0.5",
+							commonconstants.GpuFraction:              "0.5",
 						},
 					},
 					Spec: v1.PodSpec{
@@ -212,9 +212,9 @@ func Test_getNodePreferableGpuForSharing(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "p1",
 						Annotations: map[string]string{
-							commonconstants.PodGroupAnnotationForPod:    "pg1",
-							commonconstants.RunaiGpuFraction:            "0.5",
-							commonconstants.RunaiGpuFractionsNumDevices: "2",
+							commonconstants.PodGroupAnnotationForPod: "pg1",
+							commonconstants.GpuFraction:              "0.5",
+							commonconstants.GpuFractionsNumDevices:   "2",
 						},
 					},
 					Spec: v1.PodSpec{

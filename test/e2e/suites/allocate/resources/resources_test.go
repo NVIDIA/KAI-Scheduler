@@ -78,7 +78,7 @@ var _ = Describe("Schedule pod with resource request", Ordered, func() {
 		It("Fraction GPU request", Label(labels.ReservationPod), func(ctx context.Context) {
 			pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 			pod.Annotations = map[string]string{
-				constants.RunaiGpuFraction: "0.5",
+				constants.GpuFraction: "0.5",
 			}
 
 			_, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
@@ -90,7 +90,7 @@ var _ = Describe("Schedule pod with resource request", Ordered, func() {
 		It("GPU memory request - valid", Label(labels.ReservationPod), func(ctx context.Context) {
 			pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 			pod.Annotations = map[string]string{
-				constants.RunaiGpuMemory: "500",
+				constants.GpuMemory: "500",
 			}
 
 			_, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
@@ -103,7 +103,7 @@ var _ = Describe("Schedule pod with resource request", Ordered, func() {
 			func(ctx context.Context) {
 				pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 				pod.Annotations = map[string]string{
-					constants.RunaiGpuMemory: "500000000",
+					constants.GpuMemory: "500000000",
 				}
 
 				_, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)

@@ -122,7 +122,7 @@ var _ = Describe("K8S Native object integrations", Ordered, func() {
 			namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
 			deployment := rd.CreateDeploymentObject(namespace, testCtx.Queues[0].Name)
 			deployment.Spec.Template.Annotations = map[string]string{
-				constants.RunaiGpuFraction: "0.1",
+				constants.GpuFraction: "0.1",
 			}
 
 			Expect(countSharedConfigmaps(ctx, testCtx.ControllerClient, namespace)).To(Equal(0))

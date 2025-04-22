@@ -228,7 +228,7 @@ var _ = Describe("Max Allowed Policy Check", func() {
 					},
 					job: &podgroup_info.PodGroupInfo{
 						Name:      "job-a",
-						Namespace: "runai-team-a",
+						Namespace: "team-a",
 						Queue:     "queue1",
 					},
 					requestedShare: rs.ResourceQuantities{
@@ -254,7 +254,7 @@ var _ = Describe("Max Allowed Policy Check", func() {
 					},
 					job: &podgroup_info.PodGroupInfo{
 						Name:      "job-a",
-						Namespace: "runai-team-a",
+						Namespace: "team-a",
 						Queue:     "queue1",
 					},
 					requestedShare: rs.ResourceQuantities{
@@ -280,7 +280,7 @@ var _ = Describe("Max Allowed Policy Check", func() {
 					},
 					job: &podgroup_info.PodGroupInfo{
 						Name:      "job-a",
-						Namespace: "runai-team-a",
+						Namespace: "team-a",
 						Queue:     "queue1",
 					},
 					requestedShare: rs.ResourceQuantities{
@@ -332,7 +332,7 @@ var _ = Describe("Max Allowed Policy Check", func() {
 					},
 					job: &podgroup_info.PodGroupInfo{
 						Name:      "job-a",
-						Namespace: "runai-team-a",
+						Namespace: "team-a",
 						Queue:     "leaf-queue",
 					},
 					requestedShare: rs.ResourceQuantities{
@@ -384,7 +384,7 @@ var _ = Describe("Max Allowed Policy Check", func() {
 					},
 					job: &podgroup_info.PodGroupInfo{
 						Name:      "job-a",
-						Namespace: "runai-team-a",
+						Namespace: "team-a",
 						Queue:     "leaf-queue",
 					},
 					requestedShare: rs.ResourceQuantities{

@@ -71,7 +71,7 @@ func SetNvidiaVisibleDevices(ctx context.Context, kubeClient client.Client, pod 
 	return err
 }
 
-func SetRunaiNumOfGPUDevices(
+func SetNumOfGPUDevices(
 	ctx context.Context, kubeClient client.Client, pod *v1.Pod, container *v1.Container, numOfGPUs string,
 ) error {
 	updateFunc := func(data map[string]string) error {

@@ -188,7 +188,7 @@ func TestGetPodResourceWithoutInitContainers(t *testing.T) {
 	}
 }
 
-func TestPodInfo_updatePodAdditionalFieldsIfRunaiPodgroup(t *testing.T) {
+func TestPodInfo_updatePodAdditionalFields(t *testing.T) {
 	type podFields struct {
 		Job            common_info.PodGroupID
 		Name           string
@@ -309,8 +309,8 @@ func TestPodInfo_updatePodAdditionalFieldsIfRunaiPodgroup(t *testing.T) {
 					nil,
 					map[string]string{},
 					map[string]string{
-						GpuMemoryAnnotationName:                     "1024",
-						commonconstants.RunaiGpuFractionsNumDevices: "2",
+						GpuMemoryAnnotationName:                "1024",
+						commonconstants.GpuFractionsNumDevices: "2",
 					}),
 			},
 			expected{
@@ -404,8 +404,8 @@ func TestPodInfo_updatePodAdditionalFieldsIfRunaiPodgroup(t *testing.T) {
 					nil,
 					map[string]string{},
 					map[string]string{
-						common_info.GPUFraction:                     "0.5",
-						commonconstants.RunaiGpuFractionsNumDevices: "3",
+						common_info.GPUFraction:                "0.5",
+						commonconstants.GpuFractionsNumDevices: "3",
 					}),
 			},
 			expected{
@@ -465,7 +465,7 @@ func TestPodInfo_updatePodAdditionalFieldsIfRunaiPodgroup(t *testing.T) {
 				Pod:       tt.fields.Pod,
 				GPUGroups: make([]string, 0),
 			}
-			pi.updatePodAdditionalFieldsIfRunaiPodgroup(tt.fields.bindingRequest)
+			pi.updatePodAdditionalFields(tt.fields.bindingRequest)
 
 			if !reflect.DeepEqual(pi.ResReq, tt.expected.InitResreq) {
 				t.Errorf("case (%s) failed: ResReq \n expected %v, \n got: %v \n",

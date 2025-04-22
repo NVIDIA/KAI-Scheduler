@@ -15,12 +15,12 @@ import (
 )
 
 func ValidateGpuRequests(pod *v1.Pod) error {
-	containerIndex := getRunaiContainerIndex(pod.Labels, pod.Spec.Containers)
+	containerIndex := getGpuSharingContainerIndex(pod.Labels, pod.Spec.Containers)
 	container := pod.Spec.Containers[containerIndex]
 
-	gpuFractionFromAnnotation, hasGpuFractionAnnotation := pod.Annotations[constants.RunaiGpuFraction]
-	gpuMemoryFromAnnotation, hasGpuMemoryAnnotation := pod.Annotations[constants.RunaiGpuMemory]
-	gpuFractionsCountFromAnnotation, hasGpuFractionsCount := pod.Annotations[constants.RunaiGpuFractionsNumDevices]
+	gpuFractionFromAnnotation, hasGpuFractionAnnotation := pod.Annotations[constants.GpuFraction]
+	gpuMemoryFromAnnotation, hasGpuMemoryAnnotation := pod.Annotations[constants.GpuMemory]
+	gpuFractionsCountFromAnnotation, hasGpuFractionsCount := pod.Annotations[constants.GpuFractionsNumDevices]
 	_, hasGpuLimitAnnotation := pod.Annotations[constants.RunaiGpuLimit]
 	mpsFromAnnotation, hasMpsAnnotation := pod.Annotations[constants.MpsAnnotation]
 	_, hasGpuResourceRequest := container.Resources.Requests[constants.GpuResource]
@@ -82,7 +82,7 @@ func ValidateGpuRequests(pod *v1.Pod) error {
 	return nil
 }
 
-func getRunaiContainerIndex(labels map[string]string, containers []v1.Container) int {
+func getGpuSharingContainerIndex(labels map[string]string, containers []v1.Container) int {
 	if len(containers) == 1 {
 		return 0
 	}

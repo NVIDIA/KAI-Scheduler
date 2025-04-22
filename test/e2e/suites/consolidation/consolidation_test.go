@@ -153,7 +153,7 @@ var _ = Describe("Consolidation", Ordered, func() {
 		// fill the node with jobs
 		testQueue := testCtx.Queues[0]
 		annotations := map[string]string{
-			constants.RunaiGpuFraction: "0.5",
+			constants.GpuFraction: "0.5",
 		}
 		nodeSelector := map[string]string{constant.NodeNamePodLabelName: node.Name}
 		fillerJobs, _, err := fillers.FillAllNodesWithJobs(

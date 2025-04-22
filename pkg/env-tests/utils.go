@@ -118,7 +118,7 @@ func CreatePodObject(namespace, name string, resources corev1.ResourceRequiremen
 				},
 			},
 			TerminationGracePeriodSeconds: ptr.To(int64(0)),
-			SchedulerName:                 "runai-scheduler",
+			SchedulerName:                 "kai-scheduler",
 		},
 	}
 

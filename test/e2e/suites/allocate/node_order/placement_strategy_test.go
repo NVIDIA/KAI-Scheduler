@@ -110,14 +110,14 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 		It("Schedule on same GPU", Label(labels.ReservationPod), func(ctx context.Context) {
 			pod1 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 			pod1.Annotations = map[string]string{
-				constants.RunaiGpuFraction: "0.5",
+				constants.GpuFraction: "0.5",
 			}
 			pod1, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod1)
 			Expect(err).To(Succeed())
 
 			pod2 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 			pod2.Annotations = map[string]string{
-				constants.RunaiGpuFraction: "0.5",
+				constants.GpuFraction: "0.5",
 			}
 			pod2, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod2)
 			Expect(err).To(Succeed())
@@ -183,14 +183,14 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 		It("Schedule on different nodes - fractions", func(ctx context.Context) {
 			pod1 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 			pod1.Annotations = map[string]string{
-				constants.RunaiGpuFraction: "0.5",
+				constants.GpuFraction: "0.5",
 			}
 			_, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod1)
 			Expect(err).To(Succeed())
 
 			pod2 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 			pod2.Annotations = map[string]string{
-				constants.RunaiGpuFraction: "0.5",
+				constants.GpuFraction: "0.5",
 			}
 			_, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod2)
 			Expect(err).To(Succeed())
@@ -209,7 +209,7 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 		It("Schedule on different gpus", Label(labels.ReservationPod), func(ctx context.Context) {
 			pod1 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 			pod1.Annotations = map[string]string{
-				constants.RunaiGpuFraction: "0.5",
+				constants.GpuFraction: "0.5",
 			}
 			pod1, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod1)
 			Expect(err).To(Succeed())
@@ -220,7 +220,7 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 
 			pod2 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 			pod2.Annotations = map[string]string{
-				constants.RunaiGpuFraction: "0.5",
+				constants.GpuFraction: "0.5",
 			}
 			pod2.Spec.Affinity = &v1.Affinity{
 				NodeAffinity: &v1.NodeAffinity{

@@ -178,7 +178,7 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 		ownedStorageClaims:             map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
 	}
 
-	podInfo.updatePodAdditionalFieldsIfRunaiPodgroup(bindRequest)
+	podInfo.updatePodAdditionalFields(bindRequest)
 	return podInfo
 }
 
@@ -257,7 +257,7 @@ func (pi *PodInfo) IsRequireAnyKindOfGPU() bool {
 	return pi.ResReq.GPUs() > 0 || pi.IsMemoryRequest() || pi.IsMigProfileRequest()
 }
 
-func (pi *PodInfo) IsRunaiUtilityPod() bool {
+func (pi *PodInfo) IsKaiUtilityPod() bool {
 	return pi.IsResourceReservationTask() || pi.IsScaleAdjustTask()
 }
 
@@ -359,7 +359,7 @@ func getTaskStatus(pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo) p
 	return pod_status.Unknown
 }
 
-func (pi *PodInfo) updatePodAdditionalFieldsIfRunaiPodgroup(bindRequest *bindrequest_info.BindRequestInfo) {
+func (pi *PodInfo) updatePodAdditionalFields(bindRequest *bindrequest_info.BindRequestInfo) {
 	if len(pi.Job) == 0 {
 		return
 	}
@@ -394,7 +394,7 @@ func (pi *PodInfo) updatePodAdditionalFieldsIfRunaiPodgroup(bindRequest *bindreq
 	}
 
 	if pi.ResourceRequestType == RequestTypeFraction || pi.ResourceRequestType == RequestTypeGpuMemory {
-		numFractionDevicesStr, found := pi.Pod.Annotations[commonconstants.RunaiGpuFractionsNumDevices]
+		numFractionDevicesStr, found := pi.Pod.Annotations[commonconstants.GpuFractionsNumDevices]
 		if found && numFractionDevicesStr != "" {
 			numFractionDevices, numFractionDevicesErr := strconv.ParseInt(numFractionDevicesStr, 10, 64)
 			if numFractionDevicesErr == nil {

@@ -36,7 +36,7 @@ func createPod(ctx context.Context, testCtx *testcontext.TestContext, queue *v2.
 		}
 	} else if gpus > 0 {
 		pod.Annotations = map[string]string{
-			constants.RunaiGpuFraction: fmt.Sprintf("%f", gpus),
+			constants.GpuFraction: fmt.Sprintf("%f", gpus),
 		}
 	}
 

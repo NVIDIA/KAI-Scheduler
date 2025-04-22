@@ -19,16 +19,16 @@ var (
 )
 
 func RequestsGPUFraction(pod *v1.Pod) bool {
-	_, foundFraction := pod.Annotations[constants.RunaiGpuFraction]
-	_, foundGPUMemory := pod.Annotations[constants.RunaiGpuMemory]
+	_, foundFraction := pod.Annotations[constants.GpuFraction]
+	_, foundGPUMemory := pod.Annotations[constants.GpuMemory]
 	return foundFraction || foundGPUMemory
 }
 
 func GetNumGPUFractionDevices(pod *v1.Pod) (int64, error) {
-	mumDevicesStr, found := pod.Annotations[constants.GPUFractionsNumDevices]
+	mumDevicesStr, found := pod.Annotations[constants.GpuFractionsNumDevices]
 	if !found {
-		_, foundFraction := pod.Annotations[constants.RunaiGpuFraction]
-		_, foundGPUMemory := pod.Annotations[constants.RunaiGpuMemory]
+		_, foundFraction := pod.Annotations[constants.GpuFraction]
+		_, foundGPUMemory := pod.Annotations[constants.GpuMemory]
 		if foundFraction || foundGPUMemory {
 			return 1, nil
 		}

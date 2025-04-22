@@ -970,7 +970,7 @@ func createPod(namespace, name string, options podCreationOptions) *pod_info.Pod
 		pod.Spec.Containers[0].Resources.Requests[resource_info.GPUResourceName] = resource.MustParse(numGPUsStr)
 		pod.Spec.Containers[0].Resources.Limits[resource_info.GPUResourceName] = resource.MustParse(numGPUsStr)
 	} else {
-		pod.Annotations[commonconstants.RunaiGpuFraction] = numGPUsStr
+		pod.Annotations[commonconstants.GpuFraction] = numGPUsStr
 	}
 
 	task := pod_info.NewTaskInfo(pod)

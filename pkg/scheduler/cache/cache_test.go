@@ -42,10 +42,10 @@ var _ = Describe("Cache", func() {
 						},
 					},
 				}
-				runaiCache, stopCh := setupCacheWithObjects(true, objects, &schedulingv1alpha2.BindRequest{})
+				cache, stopCh := setupCacheWithObjects(true, objects, &schedulingv1alpha2.BindRequest{})
 				defer close(stopCh)
 
-				runaiCache.(*SchedulerCache).kubeAiSchedulerClient.SchedulingV1alpha2().(*fakeschedulingv1alpha2.FakeSchedulingV1alpha2).PrependReactor(
+				cache.(*SchedulerCache).kubeAiSchedulerClient.SchedulingV1alpha2().(*fakeschedulingv1alpha2.FakeSchedulingV1alpha2).PrependReactor(
 					"create", "bindrequests",
 					func(action faketesting.Action) (handled bool, ret runtime.Object, err error) {
 						return true, nil, fmt.Errorf("failed to create bind request")
@@ -79,7 +79,7 @@ var _ = Describe("Cache", func() {
 
 				taskInfo := pod_info.NewTaskInfo(pod)
 
-				err := runaiCache.Bind(taskInfo, "node-1")
+				err := cache.Bind(taskInfo, "node-1")
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -88,7 +88,7 @@ var _ = Describe("Cache", func() {
 	Describe("Stale BindRequests Cleanup", func() {
 		It("Delete a single stale bind request",
 			func() {
-				runaiCache, stopCh := setupCacheWithObjects(true, []runtime.Object{}, &schedulingv1alpha2.BindRequest{
+				cache, stopCh := setupCacheWithObjects(true, []runtime.Object{}, &schedulingv1alpha2.BindRequest{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "bind-request-1",
 						Namespace: "namespace-1",
@@ -105,7 +105,7 @@ var _ = Describe("Cache", func() {
 				})
 				defer close(stopCh)
 
-				kubeAiSchedulerClient := runaiCache.(*SchedulerCache).kubeAiSchedulerClient
+				kubeAiSchedulerClient := cache.(*SchedulerCache).kubeAiSchedulerClient
 				bindRequestsAfterCleanup, err := kubeAiSchedulerClient.SchedulingV1alpha2().BindRequests("namespace-1").List(context.TODO(), metav1.ListOptions{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(bindRequestsAfterCleanup.Items).To(HaveLen(0))
@@ -113,7 +113,7 @@ var _ = Describe("Cache", func() {
 		)
 
 		It("Delete single stale bind and leaves on", func() {
-			runaiCache, stopCh := setupCacheWithObjects(
+			cache, stopCh := setupCacheWithObjects(
 				true,
 				[]runtime.Object{
 					&v1.Node{
@@ -159,14 +159,14 @@ var _ = Describe("Cache", func() {
 			)
 			defer close(stopCh)
 
-			kubeAiSchedulerClient := runaiCache.(*SchedulerCache).kubeAiSchedulerClient
+			kubeAiSchedulerClient := cache.(*SchedulerCache).kubeAiSchedulerClient
 			bindRequestsAfterCleanup, err := kubeAiSchedulerClient.SchedulingV1alpha2().BindRequests("namespace-1").List(context.TODO(), metav1.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bindRequestsAfterCleanup.Items).To(HaveLen(1))
 		})
 
 		It("Reports all failed deletions", func() {
-			runaiCache, stopCh := setupCacheWithObjects(
+			cache, stopCh := setupCacheWithObjects(
 				false,
 				[]runtime.Object{},
 				&schedulingv1alpha2.BindRequest{
@@ -202,19 +202,19 @@ var _ = Describe("Cache", func() {
 			)
 			defer close(stopCh)
 
-			runaiCache.(*SchedulerCache).kubeAiSchedulerClient.SchedulingV1alpha2().(*fakeschedulingv1alpha2.FakeSchedulingV1alpha2).PrependReactor(
+			cache.(*SchedulerCache).kubeAiSchedulerClient.SchedulingV1alpha2().(*fakeschedulingv1alpha2.FakeSchedulingV1alpha2).PrependReactor(
 				"delete", "bindrequests",
 				func(action faketesting.Action) (handled bool, ret runtime.Object, err error) {
 					return true, nil, fmt.Errorf("failed to delete bind request")
 				},
 			)
 
-			_, err := runaiCache.Snapshot()
+			_, err := cache.Snapshot()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("bind-request-1"))
 			Expect(err.Error()).To(ContainSubstring("bind-request-2"))
 
-			kubeAiSchedulerClient := runaiCache.(*SchedulerCache).kubeAiSchedulerClient
+			kubeAiSchedulerClient := cache.(*SchedulerCache).kubeAiSchedulerClient
 			bindRequestsAfterCleanup, err := kubeAiSchedulerClient.SchedulingV1alpha2().BindRequests("namespace-1").List(context.TODO(), metav1.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bindRequestsAfterCleanup.Items).To(HaveLen(2))

@@ -152,7 +152,7 @@ func ResourcesRequestToList(req corev1.ResourceList, podAnnotations map[string]s
 func calcPodGpus(podAnnotations map[string]string, req corev1.ResourceList) resource.Quantity {
 	gpuReq := req[constants.GpuResource].DeepCopy()
 
-	if fractionalGpuStr := podAnnotations[constants.RunaiGpuFraction]; fractionalGpuStr != "" {
+	if fractionalGpuStr := podAnnotations[constants.GpuFraction]; fractionalGpuStr != "" {
 		fractionalGpu := resource.MustParse(fractionalGpuStr)
 
 		gpuReq.Add(fractionalGpu)

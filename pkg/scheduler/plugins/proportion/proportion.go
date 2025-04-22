@@ -144,13 +144,13 @@ func getNodeResources(ssn *framework.Session, node *node_info.NodeInfo) rs.Resou
 		nodeResource[rs.GpuResource] += float64(migEnabledGpus)
 	}
 
-	// Subtract non runai controlled resources
+	// Subtract resources of non-related pods
 	schedulerName := ssn.GetSchedulerName()
 	for _, podInfo := range node.PodInfos {
 		if podInfo.Pod.Spec.SchedulerName != schedulerName &&
 			pod_status.IsActiveUsedStatus(podInfo.Status) &&
-			!podInfo.IsRunaiUtilityPod() {
-			log.InfraLogger.V(7).Infof("Pod %s/%s is non-runai controlled, marking resources as unallocatable "+
+			!podInfo.IsKaiUtilityPod() {
+			log.InfraLogger.V(7).Infof("Pod %s/%s is scheduled by a different scheduler, marking resources as unallocatable "+
 				"on node %s", podInfo.Namespace, podInfo.Name, node.Name)
 			nodeResource.Sub(utils.QuantifyResourceRequirements(podInfo.ResReq))
 		}

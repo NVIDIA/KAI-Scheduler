@@ -73,7 +73,7 @@ func TestValidate(t *testing.T) {
 					Name:      "test-pod",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						constants.RunaiGpuFraction: "0.5",
+						constants.GpuFraction: "0.5",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -97,7 +97,7 @@ func TestValidate(t *testing.T) {
 					Name:      "test-pod",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						constants.RunaiGpuFraction: "0.5",
+						constants.GpuFraction: "0.5",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -120,7 +120,7 @@ func TestValidate(t *testing.T) {
 					Name:      "test-pod",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						constants.RunaiGpuMemory: "1024",
+						constants.GpuMemory: "1024",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -144,7 +144,7 @@ func TestValidate(t *testing.T) {
 					Name:      "test-pod",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						constants.RunaiGpuMemory: "1024",
+						constants.GpuMemory: "1024",
 					},
 				},
 				Spec: v1.PodSpec{

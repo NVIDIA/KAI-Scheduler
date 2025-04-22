@@ -113,7 +113,7 @@ func (p *GPUSharing) PreBind(
 	}
 
 	numOfGPUDevices := fmt.Sprintf("%v", bindRequest.Spec.ReceivedGPU.Portion)
-	return common.SetRunaiNumOfGPUDevices(ctx, p.kubeClient, pod, fractionContainer, numOfGPUDevices)
+	return common.SetNumOfGPUDevices(ctx, p.kubeClient, pod, fractionContainer, numOfGPUDevices)
 }
 
 func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, pod *v1.Pod) (error, bool) {

@@ -155,7 +155,7 @@ var _ = Describe("Quota Policy Check", func() {
 					},
 					job: &podgroup_info.PodGroupInfo{
 						Name:      "job-a",
-						Namespace: "runai-team-a",
+						Namespace: "team-a",
 						Queue:     "queue1",
 						Priority:  constants.PriorityTrainNumber,
 					},
@@ -182,7 +182,7 @@ var _ = Describe("Quota Policy Check", func() {
 					},
 					job: &podgroup_info.PodGroupInfo{
 						Name:      "job-a",
-						Namespace: "runai-team-a",
+						Namespace: "team-a",
 						Queue:     "queue1",
 						Priority:  constants.PriorityBuildNumber,
 					},
@@ -209,7 +209,7 @@ var _ = Describe("Quota Policy Check", func() {
 					},
 					job: &podgroup_info.PodGroupInfo{
 						Name:      "job-a",
-						Namespace: "runai-team-a",
+						Namespace: "team-a",
 						Queue:     "queue1",
 						Priority:  constants.PriorityBuildNumber,
 					},
@@ -262,7 +262,7 @@ var _ = Describe("Quota Policy Check", func() {
 					},
 					job: &podgroup_info.PodGroupInfo{
 						Name:      "job-a",
-						Namespace: "runai-team-a",
+						Namespace: "team-a",
 						Queue:     "leaf-queue",
 						Priority:  constants.PriorityBuildNumber,
 					},
@@ -315,7 +315,7 @@ var _ = Describe("Quota Policy Check", func() {
 					},
 					job: &podgroup_info.PodGroupInfo{
 						Name:      "job-a",
-						Namespace: "runai-team-a",
+						Namespace: "team-a",
 						Queue:     "leaf-queue",
 						Priority:  constants.PriorityBuildNumber,
 					},

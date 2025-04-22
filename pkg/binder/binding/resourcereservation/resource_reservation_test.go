@@ -296,7 +296,7 @@ var _ = Describe("ResourceReservationService", func() {
 			It(testName, func() {
 				fractionPod := &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "runai-team-a",
+						Namespace: "team-a",
 						Name:      "fraction-pod",
 					},
 				}

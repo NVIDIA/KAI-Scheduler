@@ -34,7 +34,7 @@ func InitOptions() *Options {
 	fs := pflag.CommandLine
 
 	fs.StringVar(&options.ResourceReservePodImage,
-		"resource-reservation-pod-image", "runai.jfrog.io/op-containers-prod-virt/resource-reservation", "Container image for the resource reservation pod")
+		"resource-reservation-pod-image", "registry/local/kai-scheduler/resource-reservation", "Container image for the resource reservation pod")
 	fs.IntVar(&options.ResourceReservationAllocationTimeout,
 		"resource-reservation-allocation-timeout", 40,
 		"Resource reservation allocation timeout in seconds")

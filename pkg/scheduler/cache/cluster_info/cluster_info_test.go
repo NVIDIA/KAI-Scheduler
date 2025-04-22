@@ -1106,11 +1106,11 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 			ParentQueue: parentQueue1.Name,
 		},
 	}
-	runaiObjects := []runtime.Object{parentQueue0, parentQueue1, queue0, queue1}
+	objects := []runtime.Object{parentQueue0, parentQueue1, queue0, queue1}
 	params := &conf.SchedulingNodePoolParams{
 		NodePoolLabelKey:   NodePoolNameLabel,
 		NodePoolLabelValue: "nodepool-a"}
-	clusterInfo := newClusterInfoTestsInner(t, []runtime.Object{}, runaiObjects, params, false)
+	clusterInfo := newClusterInfoTestsInner(t, []runtime.Object{}, objects, params, false)
 
 	snapshot, err := clusterInfo.Snapshot()
 	assert.Nil(t, err)
@@ -1493,7 +1493,7 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 		&v1core.Pod{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      "pod-1",
-				Namespace: "runai-test",
+				Namespace: "test",
 				UID:       "pod-1",
 				Annotations: map[string]string{
 					commonconstants.PodGroupAnnotationForPod: "podGroup-0",
@@ -1557,7 +1557,7 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 	pvc := &v1core.PersistentVolumeClaim{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      "pvc-1",
-			Namespace: "runai-test",
+			Namespace: "test",
 			OwnerReferences: []v1.OwnerReference{
 				{
 					APIVersion: "v1",

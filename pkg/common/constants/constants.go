@@ -16,15 +16,14 @@ const (
 	TopOwnerMetadataKey = "run.ai/top-owner-metadata"
 
 	// Annotations
-	PodGroupAnnotationForPod    = "pod-group-name"
-	RunaiGpuFraction            = "gpu-fraction"
-	RunaiGpuMemory              = "gpu-memory"
-	GPUFractionsNumDevices      = "gpu-fraction-num-devices"
-	ReceivedResourceType        = "received-resource-type"
-	RunaiGpuFractionsNumDevices = "gpu-fraction-num-devices"
-	RunaiGpuLimit               = "runai-gpu-limit"
-	MpsAnnotation               = "mps"
-	StalePodgroupTimeStamp      = "run.ai/stale-podgroup-timestamp"
+	PodGroupAnnotationForPod = "pod-group-name"
+	GpuFraction              = "gpu-fraction"
+	GpuMemory                = "gpu-memory"
+	ReceivedResourceType     = "received-resource-type"
+	GpuFractionsNumDevices   = "gpu-fraction-num-devices"
+	RunaiGpuLimit            = "runai-gpu-limit"
+	MpsAnnotation            = "mps"
+	StalePodgroupTimeStamp   = "run.ai/stale-podgroup-timestamp"
 
 	// Labels
 	NodePoolNameLabel        = "runai/node-pool"
@@ -36,6 +35,5 @@ const (
 	QueueLabelKey            = "runai/queue"
 
 	// Namespaces
-	SystemPodsNamespace       = "kai-scheduler"
 	RunaiReservationNamespace = "runai-reservation"
 )

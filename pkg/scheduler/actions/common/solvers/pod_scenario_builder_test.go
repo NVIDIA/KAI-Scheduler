@@ -206,7 +206,7 @@ func createJobWithTasks(
 ) (*podgroup_info.PodGroupInfo, []*pod_info.PodInfo) {
 	jobTasks := []*pod_info.PodInfo{}
 
-	namespace := "runai-" + queueName
+	namespace := "kai-" + queueName
 	jobUID := strconv.Itoa(jobID)
 
 	for taskID := 0; taskID < tasksPerJob; taskID++ {

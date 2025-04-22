@@ -581,7 +581,7 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 				},
 			},
 			{
-				name:           "Count out resources for non runai pods",
+				name:           "Count out resources for non-related pods",
 				isRestrictNode: true,
 				node: &node_info.NodeInfo{
 					Name:        "n1",
@@ -615,7 +615,7 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 				},
 			},
 			{
-				name:           "Count out resources for non runai pods - consider reservation pods",
+				name:           "Count out resources for non-related pods - consider reservation pods",
 				isRestrictNode: true,
 				node: &node_info.NodeInfo{
 					Name:        "n1",
@@ -661,7 +661,7 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 				},
 			},
 			{
-				name:           "Count out resources for non runai pods - consider scaler pods",
+				name:           "Count out resources for non-related pods - consider scaler pods",
 				isRestrictNode: true,
 				node: &node_info.NodeInfo{
 					Name:        "n1",
@@ -707,7 +707,7 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 				},
 			},
 			{
-				name:           "Do not count out resources for non runai pods if non active",
+				name:           "Do not count out resources for non-related pods if non active",
 				isRestrictNode: true,
 				node: &node_info.NodeInfo{
 					Name:        "n1",

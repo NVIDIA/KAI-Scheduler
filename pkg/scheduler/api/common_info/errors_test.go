@@ -23,9 +23,9 @@ func TestFitErrors_Error(t *testing.T) {
 		{
 			"If no individual node errors exist, print only the main error ",
 			fields{
-				err: "Pod runai-team-a/task-pv-pod fails scheduling with error(s):\nfailed to run Volume Binding: pod has unbound immediate PersistentVolumeClaims. Reasons: pod has unbound immediate PersistentVolumeClaims\n",
+				err: "Pod team-a/task-pv-pod fails scheduling with error(s):\nfailed to run Volume Binding: pod has unbound immediate PersistentVolumeClaims. Reasons: pod has unbound immediate PersistentVolumeClaims\n",
 			},
-			"Pod runai-team-a/task-pv-pod fails scheduling with error(s):\nfailed to run Volume Binding: pod has unbound immediate PersistentVolumeClaims. Reasons: pod has unbound immediate PersistentVolumeClaims\n",
+			"Pod team-a/task-pv-pod fails scheduling with error(s):\nfailed to run Volume Binding: pod has unbound immediate PersistentVolumeClaims. Reasons: pod has unbound immediate PersistentVolumeClaims\n",
 		},
 	}
 	for _, tt := range tests {
