@@ -18,6 +18,10 @@ spec:
         app: scheduler
     spec:
       serviceAccountName: scheduler
+      {{- if .Values.global.securityContext }}
+      securityContext:
+        {{- toYaml .Values.global.securityContext | nindent 8 }}
+      {{- end }}
       containers:
         - name: scheduler
           image: "{{ .Values.global.registry }}/{{ .Values.scheduler.image.name }}:{{ .Chart.Version }}"
@@ -30,10 +34,6 @@ spec:
           {{- if .Values.scheduler.resources }}
           resources:
             {{- toYaml .Values.scheduler.resources | nindent 12 }}
-          {{- end }}
-          {{- if .Values.global.securityContext }}
-          securityContext:
-            {{- toYaml .Values.global.securityContext | nindent 12 }}
           {{- end }}
           ports:
             - name: metrics

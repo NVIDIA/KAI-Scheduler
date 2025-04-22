@@ -3,7 +3,15 @@
 
 global:
   registry: registry/local/kai-scheduler
-  securityContext: {}
+  securityContext:
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
   imagePullSecrets: []
   gpuSharing: false
 

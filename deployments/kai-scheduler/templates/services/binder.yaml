@@ -18,6 +18,10 @@ spec:
         app: binder
     spec:
       serviceAccountName: binder
+      {{- if .Values.global.securityContext }}
+      securityContext:
+        {{- toYaml .Values.global.securityContext | nindent 8 }}
+      {{- end }}
       containers:
         - name: binder
           image: "{{ .Values.global.registry }}/{{ .Values.binder.image.name }}:{{ .Chart.Version }}"
@@ -34,10 +38,6 @@ spec:
           {{- if .Values.binder.resources }}
           resources:
             {{- toYaml .Values.binder.resources | nindent 12 }}
-          {{- end }}
-          {{- if .Values.global.securityContext }}
-          securityContext:
-            {{- toYaml .Values.global.securityContext | nindent 12 }}
           {{- end }}
           ports:
             - name: webhook

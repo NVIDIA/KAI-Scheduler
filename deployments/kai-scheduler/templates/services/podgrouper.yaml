@@ -16,6 +16,10 @@ spec:
         app: podgrouper
     spec:
       serviceAccountName: podgrouper
+      {{- if .Values.global.securityContext }}
+      securityContext:
+        {{- toYaml .Values.global.securityContext | nindent 8 }}
+      {{- end }}
       containers:
         - name: podgrouper
           image: "{{ .Values.global.registry }}/{{ .Values.podgrouper.image.name }}:{{ .Chart.Version }}"
@@ -27,10 +31,6 @@ spec:
           {{- if .Values.podgrouper.resources }}
           resources:
             {{- toYaml .Values.podgrouper.resources | nindent 12 }}
-          {{- end }}
-          {{- if .Values.global.securityContext }}
-          securityContext:
-            {{- toYaml .Values.global.securityContext | nindent 12 }}
           {{- end }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:

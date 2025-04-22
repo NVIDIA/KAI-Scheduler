@@ -16,6 +16,10 @@ spec:
     spec:
       serviceAccountName: webhookmanager
       restartPolicy: Never
+      {{- if .Values.global.securityContext }}
+      securityContext:
+        {{- toYaml .Values.global.securityContext | nindent 8 }}
+      {{- end }}
       containers:
         - name: pre-install-hook
           image: "{{ .Values.global.registry }}/{{ .Values.webhookmanager.image.name }}:{{ .Chart.Version }}"
@@ -23,10 +27,6 @@ spec:
           {{- if .Values.webhookmanager.resources }}
           resources:
             {{- toYaml .Values.webhookmanager.resources | nindent 12 }}
-          {{- end }}
-          {{- if .Values.global.securityContext }}
-          securityContext:
-            {{- toYaml .Values.global.securityContext | nindent 12 }}
           {{- end }}
           args:
             - --namespace={{ .Release.Namespace }}
