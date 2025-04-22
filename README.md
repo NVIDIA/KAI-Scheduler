@@ -50,6 +50,27 @@ Follow the instructions [here](docs/developer/building-from-source.md)
 ## Quick Start
 To start scheduling workloads with KAI Scheduler, please continue to [Quick Start example](docs/quickstart/README.md)
 
+## Roadmap
+
+### High-level overview of the main priorities for 2025
+* Support Scheduling Gates https://github.com/NVIDIA/KAI-Scheduler/issues/63
+* Integration with Kueue https://github.com/NVIDIA/KAI-Scheduler/issues/68
+* Add Topology Aware Scheduling support of pod-group https://github.com/NVIDIA/KAI-Scheduler/issues/66
+* Support Min Run Time per workloads
+* Support Max Run Time per workload (with delayed requeue)
+* Add more PriorityClasses as part of the default KAI install
+* Support JobSet
+* Support LWS (LeaderWorkerSet)
+* Add metrics for pod and pod-group preemptions
+* Decouple Priority and Preemption
+
+### Long term goals
+* Support per queue time decay
+* Hyper scale improvements
+* Support Consolidation of Inference workloads for cluster defragmentation
+* Support n-levels of hierarchical queues
+* Graceful rollout of Inference workloads (new revision update using queue temporary over-quota)
+
 ## Support and Getting Help
 We’d love to hear from you! Here's how to reach out:
 
