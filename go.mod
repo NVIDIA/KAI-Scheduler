@@ -34,29 +34,29 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.32.1
-	k8s.io/apiextensions-apiserver v0.32.1
-	k8s.io/apimachinery v0.32.1
-	k8s.io/apiserver v0.32.1
-	k8s.io/cli-runtime v0.32.1
-	k8s.io/client-go v0.32.1
-	k8s.io/cluster-bootstrap v0.32.1
-	k8s.io/component-base v0.32.1
-	k8s.io/component-helpers v0.32.1
-	k8s.io/cri-client v0.32.1
-	k8s.io/dynamic-resource-allocation v0.32.1
-	k8s.io/endpointslice v0.32.1
-	k8s.io/externaljwt v0.32.1
+	k8s.io/api v0.32.4
+	k8s.io/apiextensions-apiserver v0.32.4
+	k8s.io/apimachinery v0.32.4
+	k8s.io/apiserver v0.32.4
+	k8s.io/cli-runtime v0.32.4
+	k8s.io/client-go v0.32.4
+	k8s.io/cluster-bootstrap v0.32.4
+	k8s.io/component-base v0.32.4
+	k8s.io/component-helpers v0.32.4
+	k8s.io/cri-client v0.32.4
+	k8s.io/dynamic-resource-allocation v0.32.4
+	k8s.io/endpointslice v0.32.4
+	k8s.io/externaljwt v0.32.4
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kube-aggregator v0.32.1
-	k8s.io/kube-controller-manager v0.32.1
-	k8s.io/kube-proxy v0.32.1
-	k8s.io/kubectl v0.32.1
+	k8s.io/kube-aggregator v0.32.4
+	k8s.io/kube-controller-manager v0.32.4
+	k8s.io/kube-proxy v0.32.4
+	k8s.io/kubectl v0.32.4
 	k8s.io/kubernetes v1.32.4
-	k8s.io/metrics v0.32.1
-	k8s.io/mount-utils v0.32.1
-	k8s.io/pod-security-admission v0.32.1
-	k8s.io/sample-apiserver v0.32.1
+	k8s.io/metrics v0.32.4
+	k8s.io/mount-utils v0.32.4
+	k8s.io/pod-security-admission v0.32.4
+	k8s.io/sample-apiserver v0.32.4
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	knative.dev/pkg v0.0.0-20250117084104-c43477f0052b
 	knative.dev/serving v0.44.0
@@ -185,14 +185,14 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-	k8s.io/cloud-provider v0.32.1 // indirect
-	k8s.io/controller-manager v0.32.1 // indirect
-	k8s.io/cri-api v0.32.1 // indirect
-	k8s.io/csi-translation-lib v0.32.1 // indirect
-	k8s.io/kms v0.32.1 // indirect
+	k8s.io/cloud-provider v0.32.4 // indirect
+	k8s.io/controller-manager v0.32.4 // indirect
+	k8s.io/cri-api v0.32.4 // indirect
+	k8s.io/csi-translation-lib v0.32.4 // indirect
+	k8s.io/kms v0.32.4 // indirect
 	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7 // indirect
-	k8s.io/kube-scheduler v0.32.1 // indirect
-	k8s.io/kubelet v0.32.1 // indirect
+	k8s.io/kube-scheduler v0.32.4 // indirect
+	k8s.io/kubelet v0.32.4 // indirect
 	knative.dev/networking v0.0.0-20250117155906-67d1c274ba6a // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0 // indirect
 	sigs.k8s.io/jobset v0.5.2 // indirect
