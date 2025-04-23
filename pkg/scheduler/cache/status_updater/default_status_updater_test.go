@@ -48,7 +48,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 					NodePool:           "default",
 					Reason:             "reason",
 					Message:            "message",
-					TransitionID:       "0",
+					TransitionID:       "1",
 					LastTransitionTime: metav1.Time{},
 					Status:             v1.ConditionTrue,
 				},

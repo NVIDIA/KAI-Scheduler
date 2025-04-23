@@ -387,16 +387,16 @@ func setPodGroupSchedulingCondition(podGroup *enginev2alpha2.PodGroup, schedulin
 }
 
 func setTransitionID(podGroup *enginev2alpha2.PodGroup, schedulingCondition, lastSchedulingCondition *enginev2alpha2.SchedulingCondition) {
-	lastTransitionID := -1
+	var lastTransitionID uint32 = 0
 	if lastSchedulingCondition != nil {
 		id, err := strconv.Atoi(lastSchedulingCondition.TransitionID)
-		if err != nil {
+		if err != nil || id < 0 {
 			log.InfraLogger.Errorf(
 				"Failed to parse transition ID for podgroup %s/%s, treating as 0. ID: %s, error: %v",
 				podGroup.Namespace, podGroup.Name, lastSchedulingCondition.TransitionID, err)
 			id = 0
 		}
-		lastTransitionID = id
+		lastTransitionID = uint32(id)
 	}
 	schedulingCondition.TransitionID = fmt.Sprintf("%d", lastTransitionID+1)
 }

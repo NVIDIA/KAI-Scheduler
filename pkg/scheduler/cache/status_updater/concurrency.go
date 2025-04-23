@@ -5,6 +5,7 @@ package status_updater
 
 import (
 	"context"
+	"strconv"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,9 +64,14 @@ func (su *defaultStatusUpdater) syncPodGroup(inFlightPodGroup, snapshotPodGroup 
 	updatedSchedulingCondition := false
 	lastSchedulingCondition := utils.GetLastSchedulingCondition(inFlightPodGroup)
 	currentLastSchedulingCondition := utils.GetLastSchedulingCondition(snapshotPodGroup)
-	if currentLastSchedulingCondition != nil && lastSchedulingCondition.TransitionID <= currentLastSchedulingCondition.TransitionID {
-		updatedSchedulingCondition = true
-	} else {
+	if currentLastSchedulingCondition != nil && lastSchedulingCondition != nil {
+		currentID, currentErr := strconv.Atoi(currentLastSchedulingCondition.TransitionID)
+		lastID, lastErr := strconv.Atoi(lastSchedulingCondition.TransitionID)
+		if currentErr == nil && lastErr == nil && (lastID <= currentID || currentID == 0) {
+			updatedSchedulingCondition = true
+		}
+	}
+	if !updatedSchedulingCondition {
 		snapshotPodGroup.Status.SchedulingConditions = inFlightPodGroup.Status.SchedulingConditions
 	}
 	return staleTimeStampUpdated && updatedSchedulingCondition
