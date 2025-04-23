@@ -30,9 +30,10 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/app/options"
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/profiling"
-	scheduler "github.com/NVIDIA/KAI-scheduler/pkg/scheduler"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/version"
 )
 
@@ -131,6 +132,7 @@ func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMu
 	if opt.PrintVersion {
 		version.PrintVersion()
 	}
+	metrics.SetSubSystemName(opt.MetricsSubSystemName)
 
 	scheduler, err := scheduler.NewScheduler(config,
 		opt.SchedulerConf,

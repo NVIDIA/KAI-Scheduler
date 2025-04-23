@@ -82,13 +82,12 @@ var _ = Describe("ResourceReservationService", func() {
 	)
 	Context("ReserveGpuDevice", func() {
 		for testName, testData := range map[string]struct {
-			reservationPod                 *v1.Pod
-			groupName                      string
-			clientInterceptFuncs           interceptor.Funcs
-			getGPUIndexFromMetricsAttempts int
-			numReservationPods             int
-			expectedGPUIndex               string
-			expectedErrorContains          string
+			reservationPod        *v1.Pod
+			groupName             string
+			clientInterceptFuncs  interceptor.Funcs
+			numReservationPods    int
+			expectedGPUIndex      string
+			expectedErrorContains string
 		}{
 			"reservation pod exists": {
 				groupName: existingGroup,

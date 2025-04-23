@@ -11,8 +11,6 @@ import (
 )
 
 const (
-	RunaiNamespace = "runai"
-
 	// OnSessionOpen label
 	OnSessionOpen = "OnSessionOpen"
 
@@ -22,10 +20,11 @@ const (
 
 var (
 	currentAction string
+	subsystemName string
 
 	e2eSchedulingLatency = promauto.NewGauge(
 		prometheus.GaugeOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "e2e_scheduling_latency_milliseconds",
 			Help:      "E2e scheduling latency in milliseconds (scheduling algorithm + binding), as a gauge",
 		},
@@ -33,7 +32,7 @@ var (
 
 	openSessionLatency = promauto.NewGauge(
 		prometheus.GaugeOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "open_session_latency_milliseconds",
 			Help:      "Open session latency in milliseconds, including all plugins, as a gauge",
 		},
@@ -41,7 +40,7 @@ var (
 
 	closeSessionLatency = promauto.NewGauge(
 		prometheus.GaugeOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "close_session_latency_milliseconds",
 			Help:      "Close session latency in milliseconds, including all plugins, as a gauge",
 		},
@@ -49,21 +48,21 @@ var (
 
 	pluginSchedulingLatency = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "plugin_scheduling_latency_milliseconds",
 			Help:      "Plugin scheduling latency in milliseconds, as a gauge",
 		}, []string{"plugin", "OnSession"})
 
 	actionSchedulingLatency = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "action_scheduling_latency_milliseconds",
 			Help:      "Action scheduling latency in milliseconds, as a gauge",
 		}, []string{"action"})
 
 	taskSchedulingLatency = promauto.NewHistogram(
 		prometheus.HistogramOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "task_scheduling_latency_milliseconds",
 			Help:      "Task scheduling latency in milliseconds",
 			Buckets:   prometheus.ExponentialBuckets(5, 2, 10),
@@ -72,7 +71,7 @@ var (
 
 	taskBindLatency = promauto.NewHistogram(
 		prometheus.HistogramOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "task_bind_latency_milliseconds",
 			Help:      "Task bind latency histogram in milliseconds",
 			Buckets:   prometheus.ExponentialBuckets(5, 2, 10),
@@ -81,35 +80,35 @@ var (
 
 	podgroupsScheduledByAction = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "podgroups_scheduled_by_action",
 			Help:      "Count of podgroups scheduled per action",
 		}, []string{"action"})
 
 	podgroupsConsideredByAction = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "podgroups_acted_on_by_action",
 			Help:      "Count of podgroups tried per action",
 		}, []string{"action"})
 
 	scenariosSimulatedByAction = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "scenarios_simulation_by_action",
 			Help:      "Count of scenarios simulated per action",
 		}, []string{"action"})
 
 	scenariosFilteredByAction = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "scenarios_filtered_by_action",
 			Help:      "Count of scenarios filtered per action",
 		}, []string{"action"})
 
 	preemptionAttempts = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "total_preemption_attempts",
 			Help:      "Total preemption attempts in the cluster till now",
 		},
@@ -117,19 +116,19 @@ var (
 
 	queueFairShareCPU = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "queue_fair_share_cpu_cores",
 			Help:      "CPU Fair share of queue, as a gauge. Value is in Cores",
 		}, []string{"queue_name"})
 	queueFairShareMemory = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "queue_fair_share_memory_gb",
 			Help:      "Memory Fair share of queue, as a gauge. Value is in GB",
 		}, []string{"queue_name"})
 	queueFairShareGPU = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Subsystem: RunaiNamespace,
+			Subsystem: subsystemName,
 			Name:      "queue_fair_share_gpu",
 			Help:      "GPU Fair share of queue, as a gauge. Values in GPU devices",
 		}, []string{"queue_name"})
@@ -166,6 +165,10 @@ func UpdateE2eDuration(startTime time.Time) {
 // UpdateTaskScheduleDuration updates single task scheduling latency
 func UpdateTaskScheduleDuration(duration time.Duration) {
 	taskSchedulingLatency.Observe(float64(duration.Milliseconds()))
+}
+
+func SetSubSystemName(name string) {
+	subsystemName = name
 }
 
 func SetCurrentAction(action string) {

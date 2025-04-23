@@ -14,6 +14,7 @@ import (
 
 const (
 	defaultSchedulerName               = "kai-scheduler"
+	defaultMetricsSubSystemName        = "kai"
 	defaultSchedulerPeriod             = time.Second
 	defaultStalenessGracePeriod        = 60 * time.Second
 	defaultListenAddress               = ":8080"
@@ -34,6 +35,7 @@ type ServerOption struct {
 	SchedulePeriod                    time.Duration
 	EnableLeaderElection              bool
 	PrintVersion                      bool
+	MetricsSubSystemName              string
 	RestrictSchedulingNodes           bool
 	NodePoolLabelKey                  string
 	NodePoolLabelValue                string
@@ -69,7 +71,7 @@ func NewServerOption() *ServerOption {
 // AddFlags adds flags for a specific CMServer to the specified FlagSet
 func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	// kai-scheduler will ignore pods with scheduler names other than specified with the option
-	fs.StringVar(&s.SchedulerName, "scheduler-name", defaultSchedulerName, "kai-scheduler will handle pods with the scheduler-name")
+	fs.StringVar(&s.SchedulerName, "scheduler-name", defaultSchedulerName, "The scheduler name in pod spec that handled by this scheduler")
 	fs.BoolVar(&s.RestrictSchedulingNodes, "restrict-node-scheduling", false, "kai-scheduler will allocate jobs only to restricted nodes")
 	fs.StringVar(&s.NodePoolLabelKey, "nodepool-label-key", defaultNodePoolLabelKey, "The label key by which to filter scheduling nodepool")
 	fs.StringVar(&s.NodePoolLabelValue, "partition-label-value", "", "The label value by which to filter scheduling partition")
@@ -79,6 +81,7 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 		"Start a leader election client and gain leadership before "+
 			"executing the main loop. Enable this when running replicated kai-scheduler for high availability")
 	fs.BoolVar(&s.PrintVersion, "version", true, "Show version")
+	fs.StringVar(&s.MetricsSubSystemName, "metrics-subsystem-name", defaultMetricsSubSystemName, "The name of the metrics subsystem")
 	fs.StringVar(&s.ListenAddress, "listen-address", defaultListenAddress, "The address to listen on for HTTP requests")
 	fs.BoolVar(&s.EnableProfiler, "enable-profiler", false, "Enable profiler")
 	fs.StringVar(&s.ProfilerApiPort, "profiler-port", defaultProfilerApiPort, "The port to listen for profiler api requests")
