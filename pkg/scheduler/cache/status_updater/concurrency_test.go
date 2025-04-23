@@ -195,7 +195,7 @@ var _ = Describe("Status Updater Concurrency", func() {
 						NodePool:           "other",
 						Reason:             "test",
 						Message:            "test",
-						TransitionID:       strconv.Itoa(lastTransitionId + 1),
+						TransitionID:       "0" + strconv.Itoa(lastTransitionId+1),
 						LastTransitionTime: metav1.Now(),
 						Status:             v1.ConditionTrue,
 					},
@@ -211,7 +211,6 @@ var _ = Describe("Status Updater Concurrency", func() {
 				Expect(podGroup.Status.SchedulingConditions).To(BeEmpty())
 			}
 		})
-
 	})
 
 	Context("large scale: increase queue size", func() {
