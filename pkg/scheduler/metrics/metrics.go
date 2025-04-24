@@ -19,12 +19,32 @@ const (
 )
 
 var (
-	currentAction string
-	subsystemName string
+	currentAction               string
+	e2eSchedulingLatency        prometheus.Gauge
+	openSessionLatency          prometheus.Gauge
+	closeSessionLatency         prometheus.Gauge
+	pluginSchedulingLatency     *prometheus.GaugeVec
+	actionSchedulingLatency     *prometheus.GaugeVec
+	taskSchedulingLatency       prometheus.Histogram
+	taskBindLatency             prometheus.Histogram
+	podgroupsScheduledByAction  *prometheus.CounterVec
+	podgroupsConsideredByAction *prometheus.CounterVec
+	scenariosSimulatedByAction  *prometheus.CounterVec
+	scenariosFilteredByAction   *prometheus.CounterVec
+	preemptionAttempts          prometheus.Counter
+	queueFairShareCPU           *prometheus.GaugeVec
+	queueFairShareMemory        *prometheus.GaugeVec
+	queueFairShareGPU           *prometheus.GaugeVec
+)
 
+func init() {
+	InitMetrics("")
+}
+
+func InitMetrics(namespace string) {
 	e2eSchedulingLatency = promauto.NewGauge(
 		prometheus.GaugeOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "e2e_scheduling_latency_milliseconds",
 			Help:      "E2e scheduling latency in milliseconds (scheduling algorithm + binding), as a gauge",
 		},
@@ -32,7 +52,7 @@ var (
 
 	openSessionLatency = promauto.NewGauge(
 		prometheus.GaugeOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "open_session_latency_milliseconds",
 			Help:      "Open session latency in milliseconds, including all plugins, as a gauge",
 		},
@@ -40,7 +60,7 @@ var (
 
 	closeSessionLatency = promauto.NewGauge(
 		prometheus.GaugeOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "close_session_latency_milliseconds",
 			Help:      "Close session latency in milliseconds, including all plugins, as a gauge",
 		},
@@ -48,21 +68,21 @@ var (
 
 	pluginSchedulingLatency = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "plugin_scheduling_latency_milliseconds",
 			Help:      "Plugin scheduling latency in milliseconds, as a gauge",
 		}, []string{"plugin", "OnSession"})
 
 	actionSchedulingLatency = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "action_scheduling_latency_milliseconds",
 			Help:      "Action scheduling latency in milliseconds, as a gauge",
 		}, []string{"action"})
 
 	taskSchedulingLatency = promauto.NewHistogram(
 		prometheus.HistogramOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "task_scheduling_latency_milliseconds",
 			Help:      "Task scheduling latency in milliseconds",
 			Buckets:   prometheus.ExponentialBuckets(5, 2, 10),
@@ -71,7 +91,7 @@ var (
 
 	taskBindLatency = promauto.NewHistogram(
 		prometheus.HistogramOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "task_bind_latency_milliseconds",
 			Help:      "Task bind latency histogram in milliseconds",
 			Buckets:   prometheus.ExponentialBuckets(5, 2, 10),
@@ -80,35 +100,35 @@ var (
 
 	podgroupsScheduledByAction = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "podgroups_scheduled_by_action",
 			Help:      "Count of podgroups scheduled per action",
 		}, []string{"action"})
 
 	podgroupsConsideredByAction = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "podgroups_acted_on_by_action",
 			Help:      "Count of podgroups tried per action",
 		}, []string{"action"})
 
 	scenariosSimulatedByAction = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "scenarios_simulation_by_action",
 			Help:      "Count of scenarios simulated per action",
 		}, []string{"action"})
 
 	scenariosFilteredByAction = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "scenarios_filtered_by_action",
 			Help:      "Count of scenarios filtered per action",
 		}, []string{"action"})
 
 	preemptionAttempts = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "total_preemption_attempts",
 			Help:      "Total preemption attempts in the cluster till now",
 		},
@@ -116,23 +136,23 @@ var (
 
 	queueFairShareCPU = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "queue_fair_share_cpu_cores",
 			Help:      "CPU Fair share of queue, as a gauge. Value is in Cores",
 		}, []string{"queue_name"})
 	queueFairShareMemory = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "queue_fair_share_memory_gb",
 			Help:      "Memory Fair share of queue, as a gauge. Value is in GB",
 		}, []string{"queue_name"})
 	queueFairShareGPU = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Subsystem: subsystemName,
+			Namespace: namespace,
 			Name:      "queue_fair_share_gpu",
 			Help:      "GPU Fair share of queue, as a gauge. Values in GPU devices",
 		}, []string{"queue_name"})
-)
+}
 
 // UpdateOpenSessionDuration updates latency for open session, including all plugins
 func UpdateOpenSessionDuration(startTime time.Time) {
@@ -165,10 +185,6 @@ func UpdateE2eDuration(startTime time.Time) {
 // UpdateTaskScheduleDuration updates single task scheduling latency
 func UpdateTaskScheduleDuration(duration time.Duration) {
 	taskSchedulingLatency.Observe(float64(duration.Milliseconds()))
-}
-
-func SetSubSystemName(name string) {
-	subsystemName = name
 }
 
 func SetCurrentAction(action string) {

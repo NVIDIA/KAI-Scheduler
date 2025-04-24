@@ -132,7 +132,7 @@ func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMu
 	if opt.PrintVersion {
 		version.PrintVersion()
 	}
-	metrics.SetSubSystemName(opt.MetricsSubSystemName)
+	metrics.InitMetrics(opt.MetricsNamespace)
 
 	scheduler, err := scheduler.NewScheduler(config,
 		opt.SchedulerConf,

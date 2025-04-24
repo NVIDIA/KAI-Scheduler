@@ -30,7 +30,7 @@ func TestAddFlags(t *testing.T) {
 		SchedulerName:                     defaultSchedulerName,
 		SchedulePeriod:                    5 * time.Minute,
 		PrintVersion:                      true,
-		MetricsSubSystemName:              defaultMetricsSubSystemName,
+		MetricsNamespace:                  defaultMetricsNamespace,
 		ListenAddress:                     defaultListenAddress,
 		ProfilerApiPort:                   defaultProfilerApiPort,
 		Verbosity:                         defaultVerbosityLevel,
