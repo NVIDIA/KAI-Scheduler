@@ -78,6 +78,7 @@ func main() {
 
 	schedulerCache := cache.New(schedulerCacheParams)
 	stopCh := make(chan struct{})
+	schedulerCache.Run(stopCh)
 	schedulerCache.WaitForCacheSync(stopCh)
 
 	ssn, err := framework.OpenSession(
