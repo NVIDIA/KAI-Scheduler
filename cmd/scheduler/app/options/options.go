@@ -14,7 +14,7 @@ import (
 
 const (
 	defaultSchedulerName               = "kai-scheduler"
-	defaultMetricsSubSystemName        = "kai"
+	defaultMetricsNamespace            = "kai"
 	defaultSchedulerPeriod             = time.Second
 	defaultStalenessGracePeriod        = 60 * time.Second
 	defaultListenAddress               = ":8080"
@@ -35,7 +35,7 @@ type ServerOption struct {
 	SchedulePeriod                    time.Duration
 	EnableLeaderElection              bool
 	PrintVersion                      bool
-	MetricsSubSystemName              string
+	MetricsNamespace                  string
 	RestrictSchedulingNodes           bool
 	NodePoolLabelKey                  string
 	NodePoolLabelValue                string
@@ -81,7 +81,7 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 		"Start a leader election client and gain leadership before "+
 			"executing the main loop. Enable this when running replicated kai-scheduler for high availability")
 	fs.BoolVar(&s.PrintVersion, "version", true, "Show version")
-	fs.StringVar(&s.MetricsSubSystemName, "metrics-subsystem-name", defaultMetricsSubSystemName, "The name of the metrics subsystem")
+	fs.StringVar(&s.MetricsNamespace, "metrics-namespace", defaultMetricsNamespace, "Metrics namespace")
 	fs.StringVar(&s.ListenAddress, "listen-address", defaultListenAddress, "The address to listen on for HTTP requests")
 	fs.BoolVar(&s.EnableProfiler, "enable-profiler", false, "Enable profiler")
 	fs.StringVar(&s.ProfilerApiPort, "profiler-port", defaultProfilerApiPort, "The port to listen for profiler api requests")
