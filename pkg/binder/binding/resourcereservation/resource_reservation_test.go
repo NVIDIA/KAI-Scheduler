@@ -24,6 +24,11 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
+const (
+	resourceReservationNameSpace      = "kai-resource-reservation"
+	resourceReservationServiceAccount = "kai-resource-reservation"
+)
+
 func TestResourceReservation(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "resource reservation")
@@ -37,7 +42,8 @@ func nodeNameIndexer(rawObj runtimeClient.Object) []string {
 func initializeTestService(
 	client runtimeClient.WithWatch,
 ) *service {
-	service := NewService(false, client, "", 40*time.Millisecond)
+	service := NewService(false, client, "", 40*time.Millisecond,
+		resourceReservationNameSpace, resourceReservationServiceAccount)
 
 	return service
 }
@@ -60,7 +66,7 @@ var _ = Describe("ResourceReservationService", func() {
 		exampleReservationPod = &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
-				Namespace: namespace,
+				Namespace: resourceReservationNameSpace,
 				Labels:    groupLabels,
 			},
 			Spec: v1.PodSpec{
@@ -93,7 +99,7 @@ var _ = Describe("ResourceReservationService", func() {
 				groupName: existingGroup,
 				reservationPod: &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
+						Namespace: resourceReservationNameSpace,
 						Annotations: map[string]string{
 							gpuIndexAnnotationName: "4",
 						},
@@ -109,7 +115,7 @@ var _ = Describe("ResourceReservationService", func() {
 				groupName: existingGroup,
 				reservationPod: &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace:   namespace,
+						Namespace:   resourceReservationNameSpace,
 						Annotations: map[string]string{},
 						Labels: map[string]string{
 							constants.GPUGroup: existingGroup,
@@ -134,7 +140,7 @@ var _ = Describe("ResourceReservationService", func() {
 				groupName: "other-group",
 				reservationPod: &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
+						Namespace: resourceReservationNameSpace,
 						Annotations: map[string]string{
 							gpuIndexAnnotationName: "4",
 						},
@@ -319,7 +325,7 @@ var _ = Describe("ResourceReservationService", func() {
 				}
 				pods := &v1.PodList{}
 				err = clientWithObjs.List(context.Background(), pods,
-					runtimeClient.InNamespace(namespace),
+					runtimeClient.InNamespace(resourceReservationNameSpace),
 				)
 				Expect(err).To(Succeed())
 				Expect(len(pods.Items)).To(Equal(testData.numReservationPods))
@@ -692,7 +698,7 @@ var _ = Describe("ResourceReservationService", func() {
 					&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "example",
-							Namespace: namespace,
+							Namespace: resourceReservationNameSpace,
 							Labels: map[string]string{
 								constants.GPUGroup: gpuGroup,
 							},
@@ -705,7 +711,7 @@ var _ = Describe("ResourceReservationService", func() {
 					&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "example2",
-							Namespace: namespace,
+							Namespace: resourceReservationNameSpace,
 							Labels: map[string]string{
 								constants.GPUGroup: gpuGroup2,
 							},
@@ -895,7 +901,7 @@ func exampleMockWatchPod(gpuIndex string, delay time.Duration) watch.Interface {
 		Delay: delay,
 		Pod: &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespace,
+				Namespace: resourceReservationNameSpace,
 				Annotations: map[string]string{
 					gpuIndexAnnotationName: gpuIndex,
 				},

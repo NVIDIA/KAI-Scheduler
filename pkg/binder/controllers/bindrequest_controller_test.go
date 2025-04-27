@@ -33,6 +33,11 @@ import (
 	mockplugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/mock"
 )
 
+const (
+	resourceReservationNameSpace      = "kai-resource-reservation"
+	resourceReservationServiceAccount = "kai-resource-reservation"
+)
+
 func TestBindRequest(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Binder Controller Suite")
@@ -80,7 +85,8 @@ var _ = Describe("BindRequest Controller", func() {
 		fakePlugin = mockplugins.NewMockPlugin(gomock.NewController(GinkgoT()))
 		binderPlugins.RegisterPlugin(fakePlugin)
 
-		rrs := resourcereservation.NewService(false, fakeClient, "", 40*time.Second)
+		rrs := resourcereservation.NewService(false, fakeClient, "", 40*time.Second,
+			resourceReservationNameSpace, resourceReservationServiceAccount)
 		binder := binding.NewBinder(fakeClient, rrs, binderPlugins)
 		reconciler = NewBindRequestReconciler(fakeClient, testScheme, fakeEventRecorder, params,
 			binder, rrs)

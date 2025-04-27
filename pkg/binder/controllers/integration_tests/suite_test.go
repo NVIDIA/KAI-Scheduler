@@ -37,6 +37,11 @@ import (
 	// +kubebuilder:scaffold:imports
 )
 
+const (
+	resourceReservationNameSpace      = "kai-resource-reservation"
+	resourceReservationServiceAccount = "kai-resource-reservation"
+)
+
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
@@ -109,7 +114,8 @@ var _ = BeforeSuite(func() {
 	gpuSharingPlugin := gpusharing.New(clientWithWatch, options.GpuCdiEnabled, options.GPUSharingEnabled)
 	binderPlugins.RegisterPlugin(gpuSharingPlugin)
 
-	rrs := resourcereservation.NewService(false, clientWithWatch, "", 40*time.Second)
+	rrs := resourcereservation.NewService(false, clientWithWatch, "", 40*time.Second,
+		resourceReservationNameSpace, resourceReservationServiceAccount)
 	podBinder := binding.NewBinder(k8sManager.GetClient(), rrs, binderPlugins)
 
 	err = controllers.NewBindRequestReconciler(

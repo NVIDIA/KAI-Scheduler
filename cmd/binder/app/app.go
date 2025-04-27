@@ -119,8 +119,9 @@ func New() (*App, error) {
 	kubeClient := kubernetes.NewForConfigOrDie(config)
 	informerFactory := informers.NewSharedInformerFactory(kubeClient, 0)
 
-	rrs := resourcereservation.NewService(options.FakeGPUNodes, clientWithWatch, options.ResourceReservePodImage,
-		time.Duration(options.ResourceReservationAllocationTimeout)*time.Second)
+	rrs := resourcereservation.NewService(options.FakeGPUNodes, clientWithWatch, options.ResourceReservationPodImage,
+		time.Duration(options.ResourceReservationAllocationTimeout)*time.Second,
+		options.ResourceReservationNamespace, options.ResourceReservationServiceAccount)
 
 	reconcilerParams := &controllers.ReconcilerParams{
 		MaxConcurrentReconciles:     options.MaxConcurrentReconciles,

@@ -10,7 +10,10 @@ import (
 )
 
 type Options struct {
-	ResourceReservePodImage              string
+	SchedulerName                        string
+	ResourceReservationNamespace         string
+	ResourceReservationServiceAccount    string
+	ResourceReservationPodImage          string
 	ResourceReservationAllocationTimeout int
 	QPS                                  float64
 	Burst                                int
@@ -25,7 +28,6 @@ type Options struct {
 	GpuCdiEnabled                        bool
 	VolumeBindingTimeoutSeconds          int
 	GPUSharingEnabled                    bool
-	SchedulerName                        string
 }
 
 func InitOptions() *Options {
@@ -33,7 +35,13 @@ func InitOptions() *Options {
 
 	fs := pflag.CommandLine
 
-	fs.StringVar(&options.ResourceReservePodImage,
+	fs.StringVar(&options.SchedulerName, "scheduler-name", "kai-scheduler",
+		"The scheduler name that will be used to schedule the jobs")
+	fs.StringVar(&options.ResourceReservationPodImage,
+		"resource-reservation-namespace", "kai-resource-reservation", "Namespace for resource reservation pods")
+	fs.StringVar(&options.ResourceReservationServiceAccount,
+		"resource-reservation-service-account", "kai-resource-reservation", "Service account for resource reservation pods")
+	fs.StringVar(&options.ResourceReservationPodImage,
 		"resource-reservation-pod-image", "registry/local/kai-scheduler/resource-reservation", "Container image for the resource reservation pod")
 	fs.IntVar(&options.ResourceReservationAllocationTimeout,
 		"resource-reservation-allocation-timeout", 40,
@@ -66,8 +74,6 @@ func InitOptions() *Options {
 	fs.BoolVar(&options.GPUSharingEnabled,
 		"gpu-sharing-enabled", false,
 		"Specifies if the GPU sharing is enabled")
-	fs.StringVar(&options.SchedulerName, "scheduler-name", "kai-scheduler",
-		"The scheduler name that will be used to schedule the jobs")
 
 	utilfeature.DefaultMutableFeatureGate.AddFlag(fs)
 

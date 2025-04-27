@@ -34,18 +34,14 @@ type Interface interface {
 }
 
 const (
-	resourceReservation                  = "runai-reservation"
-	namespace                            = "runai-reservation"
-	serviceAccountName                   = "runai-reservation"
-	scalingPodsNamespace                 = "runai-scale-adjust"
-	gpuIndexAnnotationName               = "run.ai/reserve_for_gpu_index"
-	numberOfGPUsToReserve                = 1
-	appLabelValue                        = resourceReservation
-	gpuReservationPodPrefix              = resourceReservation + "-gpu"
-	runaiResourceReservationAppLabelName = "app.runai.resource.reservation"
-	reservationPodRandomCharacters       = 5
-	unknownGpuIndicator                  = "-1"
-	nodeIndex                            = "runai-node"
+	resourceReservation            = "resource-reservation"
+	gpuReservationPodPrefix        = resourceReservation + "-gpu"
+	scalingPodsNamespace           = "runai-scale-adjust"
+	gpuIndexAnnotationName         = "run.ai/reserve_for_gpu_index"
+	numberOfGPUsToReserve          = 1
+	reservationPodRandomCharacters = 5
+	unknownGpuIndicator            = "-1"
+	nodeIndex                      = "runai-node"
 )
 
 type service struct {
@@ -54,6 +50,8 @@ type service struct {
 	reservationPodImage string
 	allocationTimeout   time.Duration
 	gpuGroupMutex       *group_mutex.GroupMutex
+	namespace           string
+	serviceAccountName  string
 }
 
 func NewService(
@@ -61,6 +59,8 @@ func NewService(
 	kubeClient client.WithWatch,
 	reservationPodImage string,
 	allocationTimeout time.Duration,
+	namespace string,
+	serviceAccountName string,
 ) *service {
 	return &service{
 		fakeGPuNodes:        fakeGPuNodes,
@@ -68,6 +68,8 @@ func NewService(
 		reservationPodImage: reservationPodImage,
 		allocationTimeout:   allocationTimeout,
 		gpuGroupMutex:       group_mutex.NewGroupMutex(),
+		namespace:           namespace,
+		serviceAccountName:  serviceAccountName,
 	}
 }
 
@@ -157,7 +159,7 @@ func (rsc *service) syncForPods(ctx context.Context, pods []*v1.Pod, gpuGroupToS
 	fractionPods := map[string][]*v1.Pod{}
 
 	for _, pod := range pods {
-		if pod.Namespace == namespace {
+		if pod.Namespace == rsc.namespace {
 			reservationPods[gpuGroupToSync] = pod
 			continue
 		}
@@ -301,7 +303,7 @@ func (rsc *service) findGPUIndexByGroup(gpuGroup string) (
 ) {
 	pods := &v1.PodList{}
 	err = rsc.kubeClient.List(context.Background(), pods,
-		client.InNamespace(namespace),
+		client.InNamespace(rsc.namespace),
 		client.MatchingLabels{constants.GPUGroup: gpuGroup})
 	if err != nil {
 		return "", err
@@ -385,16 +387,16 @@ func (rsc *service) createGPUReservationPod(ctx context.Context, nodeName, gpuGr
 		},
 	}
 
-	pod, err := rsc.createResourceReservationPod(nodeName, gpuGroup, podName, gpuReservationPodPrefix, resources)
+	pod, err := rsc.createResourceReservationPod(nodeName, gpuGroup, podName, resources)
 	if err != nil {
-		logger.Error(err, "Failed to created GPU reservation pod on node",
-			"nodeName", nodeName, "namespace", namespace, "name", podName)
+		logger.Error(err, "Failed to create GPU reservation pod on node",
+			"nodeName", nodeName, "namespace", rsc.namespace, "name", podName)
 		return nil, err
 	}
 
 	logger.Info(
 		"Successfully created GPU resource reservation pod",
-		"nodeName", nodeName, "namespace", namespace, "name", podName)
+		"nodeName", nodeName, "namespace", rsc.namespace, "name", podName)
 	return pod, nil
 }
 
@@ -405,7 +407,7 @@ func (rsc *service) waitForGPUReservationPodAllocation(
 	pods := &v1.PodList{}
 	watcher, err := rsc.kubeClient.Watch(
 		ctx, pods,
-		client.InNamespace(namespace),
+		client.InNamespace(rsc.namespace),
 		client.MatchingFields{"metadata.name": gpuReservationPodName},
 	)
 	if err != nil {
@@ -432,17 +434,15 @@ func (rsc *service) waitForGPUReservationPodAllocation(
 }
 
 func (rsc *service) createResourceReservationPod(
-	nodeName, gpuGroup, podName, appName string,
-	resources v1.ResourceRequirements,
+	nodeName, gpuGroup, podName string, resources v1.ResourceRequirements,
 ) (*v1.Pod, error) {
 	podSpec := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName,
-			Namespace: namespace,
+			Namespace: rsc.namespace,
 			Labels: map[string]string{
-				constants.AppLabelName:               appLabelValue,
-				constants.GPUGroup:                   gpuGroup,
-				runaiResourceReservationAppLabelName: appName,
+				constants.AppLabelName: resourceReservation,
+				constants.GPUGroup:     gpuGroup,
 			},
 			Annotations: map[string]string{
 				karpenterv1.DoNotDisruptAnnotationKey: "true",
@@ -450,7 +450,7 @@ func (rsc *service) createResourceReservationPod(
 		},
 		Spec: v1.PodSpec{
 			NodeName:           nodeName,
-			ServiceAccountName: serviceAccountName,
+			ServiceAccountName: rsc.serviceAccountName,
 			Containers: []v1.Container{
 				{
 					Name:            resourceReservation,
