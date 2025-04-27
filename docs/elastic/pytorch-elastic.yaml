@@ -5,6 +5,8 @@ apiVersion: "kubeflow.org/v1"
 kind: PyTorchJob
 metadata:
   name: elastic-example-imagenet
+  labels:
+    runai/queue: test
 spec:
   elasticPolicy:
     rdzvBackend: c10d
