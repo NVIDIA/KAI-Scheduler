@@ -158,6 +158,9 @@ func (g *GpuResourceRequirement) GPUs() float64 {
 }
 
 func (g *GpuResourceRequirement) GetNumOfGpuDevices() int64 {
+	if g.portion == 0 && g.gpuMemory == 0 {
+		return 0
+	}
 	return g.count
 }
 
