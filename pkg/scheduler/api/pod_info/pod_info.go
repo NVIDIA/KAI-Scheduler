@@ -26,9 +26,6 @@ const (
 	GPUGroup                           = "runai-gpu-group"
 	ReceivedResourceTypeAnnotationName = "received-resource-type"
 	WholeGpuIndicator                  = "-2"
-
-	ResourceReservationPodPrefix     = "runai-reservation"
-	ResourceReservationAppLabelValue = ResourceReservationPodPrefix
 )
 
 type ResourceRequestType string
@@ -255,20 +252,6 @@ func (pi *PodInfo) IsCPUOnlyRequest() bool {
 
 func (pi *PodInfo) IsRequireAnyKindOfGPU() bool {
 	return pi.ResReq.GPUs() > 0 || pi.IsMemoryRequest() || pi.IsMigProfileRequest()
-}
-
-func (pi *PodInfo) IsKaiUtilityPod() bool {
-	return pi.IsResourceReservationTask() || pi.IsScaleAdjustTask()
-}
-
-func (pi *PodInfo) IsScaleAdjustTask() bool {
-	appName, found := pi.Pod.Labels[commonconstants.AppLabelName]
-	return found && appName == commonconstants.ScalingPodAppLabelValue
-}
-
-func (pi *PodInfo) IsResourceReservationTask() bool {
-	appName, found := pi.Pod.Labels[commonconstants.AppLabelName]
-	return found && appName == ResourceReservationAppLabelValue
 }
 
 func (pi *PodInfo) GetSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {

@@ -9,7 +9,6 @@ const (
 	NvidiaGPUMemoryLabelName        = "nvidia.com/gpu.memory"
 	NodeNamePodLabelName            = "kubernetes.io/hostname"
 	RunaiSchedulerName              = "kai-scheduler"
-	RunaiReservationNamespace       = "runai-reservation"
 	SystemPodsNamespace             = "kai-scheduler"
 	NonPreemptiblePriorityThreshold = 100
 	EngineTestPodsApp               = "engine-e2e"

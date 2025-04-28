@@ -10,6 +10,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
@@ -149,7 +150,7 @@ func getNodeResources(ssn *framework.Session, node *node_info.NodeInfo) rs.Resou
 	for _, podInfo := range node.PodInfos {
 		if podInfo.Pod.Spec.SchedulerName != schedulerName &&
 			pod_status.IsActiveUsedStatus(podInfo.Status) &&
-			!podInfo.IsKaiUtilityPod() {
+			!pod_info.IsKaiUtilityPod(podInfo.Pod) {
 			log.InfraLogger.V(7).Infof("Pod %s/%s is scheduled by a different scheduler, marking resources as unallocatable "+
 				"on node %s", podInfo.Namespace, podInfo.Name, node.Name)
 			nodeResource.Sub(utils.QuantifyResourceRequirements(podInfo.ResReq))

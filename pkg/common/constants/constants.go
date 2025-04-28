@@ -6,7 +6,6 @@ package constants
 const (
 	AppLabelName              = "app"
 	GpuResource               = "nvidia.com/gpu"
-	ScalingPodAppLabelValue   = "scaling-pod"
 	UnlimitedResourceQuantity = float64(-1)
 	DefaultQueuePriority      = 100
 	DefaultNodePoolName       = "default"
@@ -33,7 +32,4 @@ const (
 	MigStrategyLabel         = "nvidia.com/mig.strategy"
 	GpuCountLabel            = "nvidia.com/gpu.count"
 	QueueLabelKey            = "runai/queue"
-
-	// Namespaces
-	RunaiReservationNamespace = "runai-reservation"
 )

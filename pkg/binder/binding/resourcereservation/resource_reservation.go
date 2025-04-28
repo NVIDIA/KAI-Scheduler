@@ -52,6 +52,7 @@ type service struct {
 	gpuGroupMutex       *group_mutex.GroupMutex
 	namespace           string
 	serviceAccountName  string
+	appLabelValue       string
 }
 
 func NewService(
@@ -61,6 +62,7 @@ func NewService(
 	allocationTimeout time.Duration,
 	namespace string,
 	serviceAccountName string,
+	appLabelValue string,
 ) *service {
 	return &service{
 		fakeGPuNodes:        fakeGPuNodes,
@@ -70,6 +72,7 @@ func NewService(
 		gpuGroupMutex:       group_mutex.NewGroupMutex(),
 		namespace:           namespace,
 		serviceAccountName:  serviceAccountName,
+		appLabelValue:       appLabelValue,
 	}
 }
 
@@ -441,7 +444,7 @@ func (rsc *service) createResourceReservationPod(
 			Name:      podName,
 			Namespace: rsc.namespace,
 			Labels: map[string]string{
-				constants.AppLabelName: resourceReservation,
+				constants.AppLabelName: rsc.appLabelValue,
 				constants.GPUGroup:     gpuGroup,
 			},
 			Annotations: map[string]string{

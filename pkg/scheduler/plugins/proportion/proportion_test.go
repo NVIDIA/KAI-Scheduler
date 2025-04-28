@@ -689,7 +689,7 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 						"scaler": {
 							Pod: &v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{
-									commonconstants.AppLabelName: commonconstants.ScalingPodAppLabelValue,
+									commonconstants.AppLabelName: pod_info.ScalingPodAppLabelValue,
 								}},
 								Spec: v1.PodSpec{
 									SchedulerName: "default-scheduler",

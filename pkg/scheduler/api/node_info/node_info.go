@@ -317,7 +317,7 @@ func (ni *NodeInfo) isTaskAllocatableOnNonAllocatedResources(
 }
 
 func (ni *NodeInfo) shouldAddTaskResources(task *pod_info.PodInfo) bool {
-	return !task.IsResourceReservationTask()
+	return !pod_info.IsResourceReservationTask(task.Pod)
 }
 
 func (ni *NodeInfo) AddTask(task *pod_info.PodInfo) error {

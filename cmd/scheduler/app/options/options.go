@@ -14,6 +14,7 @@ import (
 
 const (
 	defaultSchedulerName               = "kai-scheduler"
+	defaultResourceReservationAppLabel = "kai-resource-reservation"
 	defaultMetricsNamespace            = "kai"
 	defaultSchedulerPeriod             = time.Second
 	defaultStalenessGracePeriod        = 60 * time.Second
@@ -31,6 +32,7 @@ const (
 // ServerOption is the main context object for the controller manager.
 type ServerOption struct {
 	SchedulerName                     string
+	ResourceReservationAppLabel       string
 	SchedulerConf                     string
 	SchedulePeriod                    time.Duration
 	EnableLeaderElection              bool
@@ -72,6 +74,7 @@ func NewServerOption() *ServerOption {
 func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	// kai-scheduler will ignore pods with scheduler names other than specified with the option
 	fs.StringVar(&s.SchedulerName, "scheduler-name", defaultSchedulerName, "The scheduler name in pod spec that handled by this scheduler")
+	fs.StringVar(&s.ResourceReservationAppLabel, "resource-reservation-app-label", defaultResourceReservationAppLabel, "App label value of resource reservation pods")
 	fs.BoolVar(&s.RestrictSchedulingNodes, "restrict-node-scheduling", false, "kai-scheduler will allocate jobs only to restricted nodes")
 	fs.StringVar(&s.NodePoolLabelKey, "nodepool-label-key", defaultNodePoolLabelKey, "The label key by which to filter scheduling nodepool")
 	fs.StringVar(&s.NodePoolLabelValue, "partition-label-value", "", "The label value by which to filter scheduling partition")

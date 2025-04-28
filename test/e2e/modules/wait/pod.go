@@ -19,6 +19,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait/watcher"
 )
 
+const (
+	resourceReservationNamespace = "kai-resource-reservation"
+)
+
 type checkCondition func(watch.Event) bool
 type checkPodCondition func(*v1.Pod) bool
 
@@ -145,5 +149,5 @@ func ForNoE2EPods(ctx context.Context, client runtimeClient.WithWatch) {
 }
 
 func ForNoReservationPods(ctx context.Context, client runtimeClient.WithWatch) {
-	ForPodsToBeDeleted(ctx, client, runtimeClient.InNamespace(constants.RunaiReservationNamespace))
+	ForPodsToBeDeleted(ctx, client, runtimeClient.InNamespace(resourceReservationNamespace))
 }

@@ -39,7 +39,8 @@ import (
 
 const (
 	resourceReservationNameSpace      = "kai-resource-reservation"
-	resourceReservationServiceAccount = "kai-resource-reservation"
+	resourceReservationServiceAccount = resourceReservationNameSpace
+	resourceReservationAppLabelValue  = resourceReservationNameSpace
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -115,7 +116,7 @@ var _ = BeforeSuite(func() {
 	binderPlugins.RegisterPlugin(gpuSharingPlugin)
 
 	rrs := resourcereservation.NewService(false, clientWithWatch, "", 40*time.Second,
-		resourceReservationNameSpace, resourceReservationServiceAccount)
+		resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue)
 	podBinder := binding.NewBinder(k8sManager.GetClient(), rrs, binderPlugins)
 
 	err = controllers.NewBindRequestReconciler(

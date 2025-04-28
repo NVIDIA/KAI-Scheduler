@@ -31,6 +31,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/app/options"
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/profiling"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
@@ -97,6 +98,7 @@ func RunApp() error {
 	} else {
 		defer flushLogs()
 	}
+	applyConfig(so)
 
 	config := clientconfig.GetConfigOrDie()
 	config.QPS = float32(so.QPS)
@@ -126,6 +128,10 @@ func setupLogging(so *options.ServerOption) error {
 	// The default glog flush interval is 30 seconds, which is frighteningly long.
 	go wait.Until(flushLogs, *logFlushFreq, wait.NeverStop)
 	return nil
+}
+
+func applyConfig(so *options.ServerOption) {
+	pod_info.ResourceReservationAppLabelValue = so.ResourceReservationAppLabel
 }
 
 func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMux) error {

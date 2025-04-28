@@ -26,7 +26,8 @@ import (
 
 const (
 	resourceReservationNameSpace      = "kai-resource-reservation"
-	resourceReservationServiceAccount = "kai-resource-reservation"
+	resourceReservationServiceAccount = resourceReservationNameSpace
+	resourceReservationAppLabelValue  = resourceReservationNameSpace
 )
 
 func TestResourceReservation(t *testing.T) {
@@ -43,7 +44,7 @@ func initializeTestService(
 	client runtimeClient.WithWatch,
 ) *service {
 	service := NewService(false, client, "", 40*time.Millisecond,
-		resourceReservationNameSpace, resourceReservationServiceAccount)
+		resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue)
 
 	return service
 }
