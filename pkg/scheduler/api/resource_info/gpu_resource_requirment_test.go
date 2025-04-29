@@ -150,6 +150,23 @@ var _ = Describe("GpuResourceRequirement mechanism", func() {
 			Expect(gpuResource1.LessEqual(gpuResource2)).To(BeTrue())
 		})
 	})
+
+	Context("GetNumOfGpuDevices", func() {
+		It("should return 0 for 0 GPUs", func() {
+			gpuResource := NewGpuResourceRequirementWithGpus(0, 0)
+			Expect(gpuResource.GetNumOfGpuDevices()).To(Equal(int64(0)))
+		})
+
+		It("should return 1 for 0.5 GPUs", func() {
+			gpuResource := NewGpuResourceRequirementWithGpus(0.5, 0)
+			Expect(gpuResource.GetNumOfGpuDevices()).To(Equal(int64(1)))
+		})
+
+		It("should return 2 for 2 GPUs", func() {
+			gpuResource := NewGpuResourceRequirementWithGpus(2, 0)
+			Expect(gpuResource.GetNumOfGpuDevices()).To(Equal(int64(2)))
+		})
+	})
 })
 
 func newGpuResourceRequirementWithValues(

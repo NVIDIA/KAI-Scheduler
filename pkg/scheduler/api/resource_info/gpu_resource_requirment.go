@@ -40,7 +40,7 @@ func NewGpuResourceRequirement() *GpuResourceRequirement {
 
 func NewGpuResourceRequirementWithGpus(gpus float64, gpuMemory int64) *GpuResourceRequirement {
 	gResource := &GpuResourceRequirement{
-		count:        fractionDefaultCount,
+		count:        0,
 		portion:      gpus,
 		gpuMemory:    gpuMemory,
 		migResources: make(map[v1.ResourceName]int64),
@@ -48,6 +48,8 @@ func NewGpuResourceRequirementWithGpus(gpus float64, gpuMemory int64) *GpuResour
 	if gpus >= wholeGpuPortion {
 		gResource.count = int64(gpus)
 		gResource.portion = wholeGpuPortion
+	} else if gpus > 0 { // Fraction
+		gResource.count = fractionDefaultCount
 	}
 	return gResource
 }
@@ -158,9 +160,6 @@ func (g *GpuResourceRequirement) GPUs() float64 {
 }
 
 func (g *GpuResourceRequirement) GetNumOfGpuDevices() int64 {
-	if g.portion == 0 && g.gpuMemory == 0 {
-		return 0
-	}
 	return g.count
 }
 
