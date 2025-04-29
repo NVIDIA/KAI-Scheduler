@@ -48,7 +48,7 @@ func NewGpuResourceRequirementWithGpus(gpus float64, gpuMemory int64) *GpuResour
 	if gpus >= wholeGpuPortion {
 		gResource.count = int64(gpus)
 		gResource.portion = wholeGpuPortion
-	} else if gpus > 0 { // Fraction
+	} else if gpus > 0 || gpuMemory > 0 { // Fraction
 		gResource.count = fractionDefaultCount
 	}
 	return gResource
