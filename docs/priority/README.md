@@ -18,7 +18,7 @@ Some workloads have a predefined priorities. But, workload can have a custom pri
 2. By setting `priorityClassName` label on the workload's pods with the name of the desired priority class.
 3. By setting `pod.Spec.PriorityClassName` on the workload's pods with the name of the desired priority class.
 
-## Preemtibility
+## Preemptibility
 KAI Scheduler supports any PriorityClass deployed in the cluster. A PriorityClass with a value of 100 or higher is considered as non-preemptible.
 Non preemptible can only consume in-quota resources of the scheduling queue, and cannot go over quota. 
 Read about [scheduling queues](../queues/README.md) for more details.
