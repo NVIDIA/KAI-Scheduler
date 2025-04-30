@@ -106,10 +106,8 @@ jobs:
 
       - name: Deploy fake gpu operator
         run: |
-          helm repo add fake-gpu-operator https://fake-gpu-operator.storage.googleapis.com
-          helm repo update
-          helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
-              --version 0.0.58 --values ./hack/fake-gpu-operator-values.yaml --wait
+          helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
+              --version 0.0.62 --values ./hack/fake-gpu-operator-values.yaml --wait
 
       - name: install KAI-scheduler
         env:

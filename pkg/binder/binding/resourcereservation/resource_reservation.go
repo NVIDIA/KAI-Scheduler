@@ -339,7 +339,7 @@ func (rsc *service) createGPUReservationPodAndGetIndex(ctx context.Context, node
 			logger.Error(deleteErr, "failed to delete reservation pod", "name", pod.Name)
 		}
 		return unknownGpuIndicator, fmt.Errorf(
-			"failed waiting for GPU reservation pod to allocate: %v/%v", nodeName, pod.Name)
+			"failed waiting for GPU reservation pod to allocate: %v/%v", rsc.namespace, pod.Name)
 	}
 
 	return gpuIndex, err
