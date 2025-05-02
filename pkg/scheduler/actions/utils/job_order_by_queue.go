@@ -210,15 +210,15 @@ func (jobsOrder *JobsOrderByQueues) buildActiveJobOrderPriorityQueues(reverseOrd
 		jobsOrder.departmentIdToDepartmentMetadata[queue.ParentQueue].queuesPriorityQueue.Push(queue)
 		log.InfraLogger.V(7).Infof("Pushed queue to department's queue priority queue, department name: <%v>, queue name: <%v>, number of active jobs in queue: <%v>, reverseOrder: <%v>",
 			queue.ParentQueue, queue.Name, jobsOrder.queueIdToQueueMetadata[queue.UID].jobsInQueue.Len(), reverseOrder)
+	}
 
-		log.InfraLogger.V(7).Infof("Building departments, reverse order: <%v>", reverseOrder)
-		jobsOrder.activeDepartments = scheduler_util.NewPriorityQueue(
-			jobsOrder.buildFuncOrderBetweenDepartmentsWithJobs(reverseOrder),
-			scheduler_util.QueueCapacityInfinite)
-		for departmentUID := range jobsOrder.departmentIdToDepartmentMetadata {
-			log.InfraLogger.V(7).Infof("active Department <%s> ", departmentUID)
-			jobsOrder.activeDepartments.Push(jobsOrder.ssn.Queues[departmentUID])
-		}
+	log.InfraLogger.V(7).Infof("Building departments, reverse order: <%v>", reverseOrder)
+	jobsOrder.activeDepartments = scheduler_util.NewPriorityQueue(
+		jobsOrder.buildFuncOrderBetweenDepartmentsWithJobs(reverseOrder),
+		scheduler_util.QueueCapacityInfinite)
+	for departmentUID := range jobsOrder.departmentIdToDepartmentMetadata {
+		log.InfraLogger.V(7).Infof("active Department <%s> ", departmentUID)
+		jobsOrder.activeDepartments.Push(jobsOrder.ssn.Queues[departmentUID])
 	}
 }
 
