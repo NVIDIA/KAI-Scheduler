@@ -643,7 +643,7 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 						"reservation": {
 							Pod: &v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{
-									commonconstants.AppLabelName: pod_info.ResourceReservationAppLabelValue,
+									commonconstants.AppLabelName: conf.GetConfig().ResourceReservationAppLabelValue,
 								}},
 								Spec: v1.PodSpec{
 									SchedulerName: "default-scheduler",
@@ -689,7 +689,7 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 						"scaler": {
 							Pod: &v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{
-									commonconstants.AppLabelName: pod_info.ScalingPodAppLabelValue,
+									commonconstants.AppLabelName: conf.GetConfig().ScalingPodAppLabelValue,
 								}},
 								Spec: v1.PodSpec{
 									SchedulerName: "default-scheduler",

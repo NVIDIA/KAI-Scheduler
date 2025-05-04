@@ -7,11 +7,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
-)
-
-var (
-	ScalingPodAppLabelValue          = "scaling-pod"
-	ResourceReservationAppLabelValue = "kai-resource-reservation"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 )
 
 func IsKaiUtilityPod(pod *v1.Pod) bool {
@@ -20,10 +16,18 @@ func IsKaiUtilityPod(pod *v1.Pod) bool {
 
 func IsScaleAdjustTask(pod *v1.Pod) bool {
 	appName, found := pod.Labels[commonconstants.AppLabelName]
-	return found && appName == ScalingPodAppLabelValue
+	if !found {
+		return false
+	}
+	config := conf.GetConfig()
+	return appName == config.ScalingPodAppLabelValue
 }
 
 func IsResourceReservationTask(pod *v1.Pod) bool {
 	appName, found := pod.Labels[commonconstants.AppLabelName]
-	return found && appName == ResourceReservationAppLabelValue
+	if !found {
+		return false
+	}
+	config := conf.GetConfig()
+	return appName == config.ResourceReservationAppLabelValue
 }

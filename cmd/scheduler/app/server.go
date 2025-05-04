@@ -31,7 +31,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/app/options"
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/profiling"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
@@ -98,7 +97,7 @@ func RunApp() error {
 	} else {
 		defer flushLogs()
 	}
-	applyConfig(so)
+	setConfig(so)
 
 	config := clientconfig.GetConfigOrDie()
 	config.QPS = float32(so.QPS)
@@ -130,8 +129,9 @@ func setupLogging(so *options.ServerOption) error {
 	return nil
 }
 
-func applyConfig(so *options.ServerOption) {
-	pod_info.ResourceReservationAppLabelValue = so.ResourceReservationAppLabel
+func setConfig(so *options.ServerOption) {
+	config := conf.GetConfig()
+	config.ResourceReservationAppLabelValue = so.ResourceReservationAppLabel
 }
 
 func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMux) error {
