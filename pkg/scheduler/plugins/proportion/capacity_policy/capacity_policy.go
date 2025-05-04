@@ -16,6 +16,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	rs "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/resource_share"
@@ -150,7 +151,16 @@ func (cp *CapacityPolicy) OnSessionOpen(ssn *framework.Session) {
 // The function traverses up the queue hierarchy starting from the job's
 // immediate parent queue. If any quota would be exceeded, it returns an
 // error with a detailed message.
+//
+// Note: Preemptible jobs (PriorityTrainNumber) are allowed to exceed parent
+// queue quotas, while non-preemptible jobs must strictly adhere to quotas.
 func (cp *CapacityPolicy) checkParentQueueQuotas(job *podgroup_info.PodGroupInfo, ssn *framework.Session) error {
+	// Skip quota checks for preemptible jobs
+	if job.Priority == constants.PriorityTrainNumber {
+		log.InfraLogger.V(5).Infof("Job: <%v/%v> is preemptible, skipping parent queue quota checks", job.Namespace, job.Name)
+		return nil
+	}
+
 	// Get queue info for this job
 	queue, found := ssn.Queues[job.Queue]
 	if !found {

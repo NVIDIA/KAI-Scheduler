@@ -14,45 +14,65 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
+	rs "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/resource_share"
 )
+
+func convertToQueueInfo(attrs *rs.QueueAttributes) *queue_info.QueueInfo {
+	return &queue_info.QueueInfo{
+		Name:        attrs.Name,
+		ParentQueue: attrs.ParentQueue,
+		Resources: queue_info.QueueQuota{
+			GPU: queue_info.ResourceQuota{
+				Quota: attrs.GPU.MaxAllowed,
+			},
+			CPU: queue_info.ResourceQuota{
+				Quota: attrs.CPU.MaxAllowed,
+			},
+			Memory: queue_info.ResourceQuota{
+				Quota: attrs.Memory.MaxAllowed,
+			},
+		},
+	}
+}
 
 func TestParentQueueQuotaChecking(t *testing.T) {
 	tests := []struct {
 		name          string
-		queues        map[common_info.QueueID]*queue_info.QueueInfo
+		queues        map[common_info.QueueID]*rs.QueueAttributes
 		job           *podgroup_info.PodGroupInfo
 		expectedError bool
 		errorContains string
 	}{
 		{
 			name: "job within all quota limits",
-			queues: map[common_info.QueueID]*queue_info.QueueInfo{
-				"parent-queue": {
-					UID:  "parent-queue",
-					Name: "parent-queue",
-					Resources: queue_info.QueueQuota{
-						GPU: queue_info.ResourceQuota{
-							Quota: 10,
+			queues: map[common_info.QueueID]*rs.QueueAttributes{
+				"parent": {
+					Name: "parent",
+					QueueResourceShare: rs.QueueResourceShare{
+						GPU: rs.ResourceShare{
+							MaxAllowed: 10,
 						},
-						CPU: queue_info.ResourceQuota{
-							Quota: 100,
+						CPU: rs.ResourceShare{
+							MaxAllowed: 100,
 						},
-						Memory: queue_info.ResourceQuota{
-							Quota: 1024,
+						Memory: rs.ResourceShare{
+							MaxAllowed: 1024,
 						},
 					},
 				},
-				"child-queue": {
-					UID:         "child-queue",
-					Name:        "child-queue",
-					ParentQueue: "parent-queue",
+				"child": {
+					Name:        "child",
+					ParentQueue: "parent",
 				},
 			},
 			job: &podgroup_info.PodGroupInfo{
-				Queue: "child-queue",
+				Name:      "job-a",
+				Namespace: "team-a",
+				Queue:     "child",
 				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod1": {
+					"pod-1": {
 						Status: pod_status.Pending,
 						ResReq: resource_info.NewResourceRequirements(5, 50, 512),
 					},
@@ -62,163 +82,227 @@ func TestParentQueueQuotaChecking(t *testing.T) {
 		},
 		{
 			name: "job exceeds parent queue GPU quota",
-			queues: map[common_info.QueueID]*queue_info.QueueInfo{
-				"parent-queue": {
-					UID:  "parent-queue",
-					Name: "parent-queue",
-					Resources: queue_info.QueueQuota{
-						GPU: queue_info.ResourceQuota{
-							Quota: 10,
+			queues: map[common_info.QueueID]*rs.QueueAttributes{
+				"parent": {
+					Name: "parent",
+					QueueResourceShare: rs.QueueResourceShare{
+						GPU: rs.ResourceShare{
+							MaxAllowed: 5,
 						},
 					},
 				},
-				"child-queue": {
-					UID:         "child-queue",
-					Name:        "child-queue",
-					ParentQueue: "parent-queue",
+				"child": {
+					Name:        "child",
+					ParentQueue: "parent",
 				},
 			},
 			job: &podgroup_info.PodGroupInfo{
-				Queue: "child-queue",
+				Name:      "job-a",
+				Namespace: "team-a",
+				Queue:     "child",
 				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod1": {
+					"pod-1": {
 						Status: pod_status.Pending,
 						ResReq: resource_info.NewResourceRequirements(15, 0, 0),
 					},
 				},
 			},
 			expectedError: true,
-			errorContains: "quota has reached the allowable limit of GPUs",
+			errorContains: "parent queue 'parent' quota has reached the allowable limit of GPUs",
 		},
 		{
-			name: "job exceeds parent queue CPU quota",
-			queues: map[common_info.QueueID]*queue_info.QueueInfo{
-				"parent-queue": {
-					UID:  "parent-queue",
-					Name: "parent-queue",
-					Resources: queue_info.QueueQuota{
-						CPU: queue_info.ResourceQuota{
-							Quota: 100,
+			name: "preemptible job can exceed parent queue GPU quota",
+			queues: map[common_info.QueueID]*rs.QueueAttributes{
+				"parent": {
+					Name: "parent",
+					QueueResourceShare: rs.QueueResourceShare{
+						GPU: rs.ResourceShare{
+							MaxAllowed: 5,
 						},
 					},
 				},
-				"child-queue": {
-					UID:         "child-queue",
-					Name:        "child-queue",
-					ParentQueue: "parent-queue",
+				"child": {
+					Name:        "child",
+					ParentQueue: "parent",
 				},
 			},
 			job: &podgroup_info.PodGroupInfo{
-				Queue: "child-queue",
+				Name:      "job-a",
+				Namespace: "team-a",
+				Queue:     "child",
+				Priority:  constants.PriorityTrainNumber, // Preemptible job
 				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod1": {
+					"pod-1": {
+						Status: pod_status.Pending,
+						ResReq: resource_info.NewResourceRequirements(15, 0, 0), // Requesting 15 GPUs
+					},
+				},
+			},
+			expectedError: false, // Should not error for preemptible jobs
+		},
+		{
+			name: "non-preemptible job cannot exceed parent queue GPU quota",
+			queues: map[common_info.QueueID]*rs.QueueAttributes{
+				"parent": {
+					Name: "parent",
+					QueueResourceShare: rs.QueueResourceShare{
+						GPU: rs.ResourceShare{
+							MaxAllowed: 5,
+						},
+					},
+				},
+				"child": {
+					Name:        "child",
+					ParentQueue: "parent",
+				},
+			},
+			job: &podgroup_info.PodGroupInfo{
+				Name:      "job-a",
+				Namespace: "team-a",
+				Queue:     "child",
+				Priority:  constants.PriorityBuildNumber, // Non-preemptible job
+				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					"pod-1": {
+						Status: pod_status.Pending,
+						ResReq: resource_info.NewResourceRequirements(15, 0, 0), // Requesting 15 GPUs
+					},
+				},
+			},
+			expectedError: true,
+			errorContains: "parent queue 'parent' quota has reached the allowable limit of GPUs",
+		},
+		{
+			name: "job exceeds parent queue CPU quota",
+			queues: map[common_info.QueueID]*rs.QueueAttributes{
+				"parent": {
+					Name: "parent",
+					QueueResourceShare: rs.QueueResourceShare{
+						CPU: rs.ResourceShare{
+							MaxAllowed: 100,
+						},
+					},
+				},
+				"child": {
+					Name:        "child",
+					ParentQueue: "parent",
+				},
+			},
+			job: &podgroup_info.PodGroupInfo{
+				Name:      "job-a",
+				Namespace: "team-a",
+				Queue:     "child",
+				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					"pod-1": {
 						Status: pod_status.Pending,
 						ResReq: resource_info.NewResourceRequirements(0, 150, 0),
 					},
 				},
 			},
 			expectedError: true,
-			errorContains: "quota has reached the allowable limit of CPU",
+			errorContains: "parent queue 'parent' quota has reached the allowable limit of CPU",
 		},
 		{
 			name: "job exceeds parent queue Memory quota",
-			queues: map[common_info.QueueID]*queue_info.QueueInfo{
-				"parent-queue": {
-					UID:  "parent-queue",
-					Name: "parent-queue",
-					Resources: queue_info.QueueQuota{
-						Memory: queue_info.ResourceQuota{
-							Quota: 1024,
+			queues: map[common_info.QueueID]*rs.QueueAttributes{
+				"parent": {
+					Name: "parent",
+					QueueResourceShare: rs.QueueResourceShare{
+						Memory: rs.ResourceShare{
+							MaxAllowed: 1024,
 						},
 					},
 				},
-				"child-queue": {
-					UID:         "child-queue",
-					Name:        "child-queue",
-					ParentQueue: "parent-queue",
+				"child": {
+					Name:        "child",
+					ParentQueue: "parent",
 				},
 			},
 			job: &podgroup_info.PodGroupInfo{
-				Queue: "child-queue",
+				Name:      "job-a",
+				Namespace: "team-a",
+				Queue:     "child",
 				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod1": {
+					"pod-1": {
 						Status: pod_status.Pending,
 						ResReq: resource_info.NewResourceRequirements(0, 0, 2048),
 					},
 				},
 			},
 			expectedError: true,
-			errorContains: "quota has reached the allowable limit of Memory",
+			errorContains: "parent queue 'parent' quota has reached the allowable limit of Memory",
 		},
 		{
 			name: "multi-level queue hierarchy check with all resources",
-			queues: map[common_info.QueueID]*queue_info.QueueInfo{
-				"top-queue": {
-					UID:  "top-queue",
-					Name: "top-queue",
-					Resources: queue_info.QueueQuota{
-						GPU: queue_info.ResourceQuota{
-							Quota: 20,
+			queues: map[common_info.QueueID]*rs.QueueAttributes{
+				"top": {
+					Name: "top",
+					QueueResourceShare: rs.QueueResourceShare{
+						GPU: rs.ResourceShare{
+							MaxAllowed: 20,
 						},
-						CPU: queue_info.ResourceQuota{
-							Quota: 200,
+						CPU: rs.ResourceShare{
+							MaxAllowed: 200,
 						},
-						Memory: queue_info.ResourceQuota{
-							Quota: 2048,
-						},
-					},
-				},
-				"mid-queue": {
-					UID:         "mid-queue",
-					Name:        "mid-queue",
-					ParentQueue: "top-queue",
-					Resources: queue_info.QueueQuota{
-						GPU: queue_info.ResourceQuota{
-							Quota: 10,
-						},
-						CPU: queue_info.ResourceQuota{
-							Quota: 100,
-						},
-						Memory: queue_info.ResourceQuota{
-							Quota: 1024,
+						Memory: rs.ResourceShare{
+							MaxAllowed: 2048,
 						},
 					},
 				},
-				"leaf-queue": {
-					UID:         "leaf-queue",
-					Name:        "leaf-queue",
-					ParentQueue: "mid-queue",
+				"mid": {
+					Name:        "mid",
+					ParentQueue: "top",
+					QueueResourceShare: rs.QueueResourceShare{
+						GPU: rs.ResourceShare{
+							MaxAllowed: 10,
+						},
+						CPU: rs.ResourceShare{
+							MaxAllowed: 100,
+						},
+						Memory: rs.ResourceShare{
+							MaxAllowed: 1024,
+						},
+					},
+				},
+				"leaf": {
+					Name:        "leaf",
+					ParentQueue: "mid",
 				},
 			},
 			job: &podgroup_info.PodGroupInfo{
-				Queue: "leaf-queue",
+				Name:      "job-a",
+				Namespace: "team-a",
+				Queue:     "leaf",
 				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod1": {
+					"pod-1": {
 						Status: pod_status.Pending,
 						ResReq: resource_info.NewResourceRequirements(15, 150, 1500),
 					},
 				},
 			},
 			expectedError: true,
-			errorContains: "quota has reached the allowable limit",
+			errorContains: "parent queue 'mid' quota has reached the allowable limit",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create session with test queues
-			ssn := &framework.Session{
-				Queues: tt.queues,
+			cp := New(tt.queues, true) // isInferencePreemptible = true
+
+			// Convert QueueAttributes to QueueInfo for the session
+			queueInfos := make(map[common_info.QueueID]*queue_info.QueueInfo)
+			for id, attrs := range tt.queues {
+				queueInfos[id] = convertToQueueInfo(attrs)
 			}
 
-			// Create capacity policy
-			cp := &CapacityPolicy{}
+			ssn := &framework.Session{
+				Queues: queueInfos,
+			}
 
-			// Run the quota check
 			err := cp.checkParentQueueQuotas(tt.job, ssn)
 
 			if tt.expectedError {
-				if assert.Error(t, err) && tt.errorContains != "" {
+				assert.Error(t, err)
+				if tt.errorContains != "" {
 					assert.Contains(t, err.Error(), tt.errorContains)
 				}
 			} else {
