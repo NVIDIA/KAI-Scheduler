@@ -23,7 +23,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation/group_mutex"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
-	infralogger "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
 type Interface interface {
@@ -124,9 +123,10 @@ func (rsc *service) SyncForGpuGroup(ctx context.Context, gpuGroup string) error 
 }
 
 func (rsc *service) syncForGpuGroupWithLock(ctx context.Context, gpuGroup string) error {
+	logger := log.FromContext(ctx)
 	if gpuGroup == "" {
 		// Skip empty GPU groups
-		infralogger.InfraLogger.Warningf("Skipping sync for empty GPU group")
+		logger.Info("Skipping sync for empty GPU group")
 		return nil
 	}
 	podsList := &v1.PodList{}
