@@ -26,6 +26,7 @@ func TestHandleGangPreempt(t *testing.T) {
 	defer controller.Finish()
 	testsMetadata := getTestsGangMetadata()
 	for testNumber, testMetadata := range testsMetadata {
+		t.Logf("Running Test %d: %s", testNumber, testMetadata.TestTopologyBasic.Name)
 
 		ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
 		preemptAction := preempt.New()

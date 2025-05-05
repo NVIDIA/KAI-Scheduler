@@ -27,6 +27,8 @@ func TestHandleMemoryGPUAllocation(t *testing.T) {
 
 	testsMetadata := getMemoryGPUTestsMetadata()
 	for testNumber, testMetadata := range testsMetadata {
+		t.Logf("Running test %d: %s", testNumber, testMetadata.TestTopologyBasic.Name)
+
 		ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
 		allocateAction := allocate.New()
 		allocateAction.Execute(ssn)

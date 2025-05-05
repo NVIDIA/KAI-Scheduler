@@ -27,7 +27,7 @@ func TestConsolidation(t *testing.T) {
 	testsMetadata := getTestsMetadata()
 
 	for testNumber, testMetadata := range testsMetadata {
-		fmt.Printf("Running test %d/%d: %s\n", testNumber, len(testsMetadata), testMetadata.Name)
+		fmt.Printf("Running test %d/%d: %s\n", testNumber, len(testsMetadata), testMetadata.TestTopologyBasic.Name)
 		ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
 		consolidationAction := consolidation.New()
 		consolidationAction.Execute(ssn)

@@ -25,6 +25,8 @@ func TestHandleElasticAllocation(t *testing.T) {
 	defer controller.Finish()
 
 	for testNumber, testMetadata := range getElasticTestsMetadata() {
+		t.Logf("Running test %d: %s", testNumber, testMetadata.TestTopologyBasic.Name)
+
 		ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
 		allocateAction := allocate.New()
 		allocateAction.Execute(ssn)

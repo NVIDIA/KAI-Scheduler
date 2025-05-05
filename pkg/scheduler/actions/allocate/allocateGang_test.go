@@ -28,6 +28,8 @@ func TestHandleGangAllocation(t *testing.T) {
 
 func runTests(t *testing.T, testsMetadata []integration_tests_utils.TestTopologyMetadata, controller *Controller) {
 	for testNumber, testMetadata := range testsMetadata {
+		t.Logf("Running test %d: %s", testNumber, testMetadata.TestTopologyBasic.Name)
+
 		ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
 		allocateAction := allocate.New()
 		allocateAction.Execute(ssn)

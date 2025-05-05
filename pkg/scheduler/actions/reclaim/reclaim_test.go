@@ -28,7 +28,7 @@ func TestHandleReclaim(t *testing.T) {
 	testsMetadata := getTestsMetadata()
 
 	for testNumber, testMetadata := range testsMetadata {
-		t.Logf("Running test number: %v, test name: %v,", testNumber, testMetadata.Name)
+		t.Logf("Running test number: %v, test name: %v,", testNumber, testMetadata.TestTopologyBasic.Name)
 		ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
 		reclaimAction := reclaim.New()
 		reclaimAction.Execute(ssn)
