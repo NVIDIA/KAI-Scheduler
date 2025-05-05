@@ -36,9 +36,9 @@ type Interface interface {
 const (
 	resourceReservation            = "resource-reservation"
 	gpuReservationPodPrefix        = "gpu-reservation"
-	scalingPodsNamespace           = "runai-scale-adjust"
-	gpuIndexAnnotationName         = "run.ai/reserve_for_gpu_index"
-	numberOfGPUsToReserve          = 1
+	gpuIndexAnnotationName               = "run.ai/reserve_for_gpu_index"
+	numberOfGPUsToReserve                = 1
+
 	reservationPodRandomCharacters = 5
 	unknownGpuIndicator            = "-1"
 	nodeIndex                      = "runai-node"
@@ -53,6 +53,7 @@ type service struct {
 	namespace           string
 	serviceAccountName  string
 	appLabelValue       string
+	scalingPodNamespace string
 }
 
 func NewService(
@@ -63,6 +64,7 @@ func NewService(
 	namespace string,
 	serviceAccountName string,
 	appLabelValue string,
+	scalingPodNamespace string,
 ) *service {
 	return &service{
 		fakeGPuNodes:        fakeGPuNodes,
@@ -73,6 +75,7 @@ func NewService(
 		namespace:           namespace,
 		serviceAccountName:  serviceAccountName,
 		appLabelValue:       appLabelValue,
+		scalingPodNamespace: scalingPodNamespace,
 	}
 }
 
@@ -503,7 +506,7 @@ func (rsc *service) isScalingUp(ctx context.Context) bool {
 	logger := log.FromContext(ctx)
 	pods := &v1.PodList{}
 	err := rsc.kubeClient.List(ctx, pods,
-		client.InNamespace(scalingPodsNamespace),
+		client.InNamespace(rsc.scalingPodNamespace),
 	)
 	if err != nil {
 		logger.Error(err, "Could not list scaling pods")

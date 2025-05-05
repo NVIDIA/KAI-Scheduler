@@ -16,6 +16,7 @@ type Options struct {
 	ResourceReservationPodImage          string
 	ResourceReservationAppLabel          string
 	ResourceReservationAllocationTimeout int
+	ScalingPodNamespace                  string
 	QPS                                  float64
 	Burst                                int
 	MaxConcurrentReconciles              int
@@ -54,6 +55,9 @@ func InitOptions() *Options {
 	fs.IntVar(&options.ResourceReservationAllocationTimeout,
 		"resource-reservation-allocation-timeout", 40,
 		"Resource reservation allocation timeout in seconds")
+	fs.StringVar(&options.ScalingPodNamespace,
+		"scale-adjust-namespace", "kai-scale-adjust",
+		"Scaling pods namespace")
 	fs.Float64Var(&options.QPS,
 		"qps", 50,
 		"Queries per second to the K8s API server")

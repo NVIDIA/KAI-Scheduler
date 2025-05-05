@@ -28,6 +28,7 @@ const (
 	resourceReservationNameSpace      = "kai-resource-reservation"
 	resourceReservationServiceAccount = resourceReservationNameSpace
 	resourceReservationAppLabelValue  = resourceReservationNameSpace
+	scalingPodsNamespace              = "kai-scale-adjust"
 )
 
 func TestResourceReservation(t *testing.T) {
@@ -44,7 +45,7 @@ func initializeTestService(
 	client runtimeClient.WithWatch,
 ) *service {
 	service := NewService(false, client, "", 40*time.Millisecond,
-		resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue)
+		resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue, scalingPodsNamespace)
 
 	return service
 }

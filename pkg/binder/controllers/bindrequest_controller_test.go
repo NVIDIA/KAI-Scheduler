@@ -37,6 +37,7 @@ const (
 	resourceReservationNameSpace      = "kai-resource-reservation"
 	resourceReservationServiceAccount = resourceReservationNameSpace
 	resourceReservationAppLabelValue  = resourceReservationNameSpace
+	scalingPodsNamespace = "kai-scale-adjust"
 )
 
 func TestBindRequest(t *testing.T) {
@@ -87,7 +88,7 @@ var _ = Describe("BindRequest Controller", func() {
 		binderPlugins.RegisterPlugin(fakePlugin)
 
 		rrs := resourcereservation.NewService(false, fakeClient, "", 40*time.Second,
-			resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue)
+			resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue, scalingPodsNamespace)
 		binder := binding.NewBinder(fakeClient, rrs, binderPlugins)
 		reconciler = NewBindRequestReconciler(fakeClient, testScheme, fakeEventRecorder, params,
 			binder, rrs)
