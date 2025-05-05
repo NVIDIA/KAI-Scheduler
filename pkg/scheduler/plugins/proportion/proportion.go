@@ -340,7 +340,7 @@ func (pp *proportionPlugin) deallocateHandlerFn(ssn *framework.Session) func(eve
 }
 
 // CompareQueueFn
-func (pp *proportionPlugin) queueOrder(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, _, _ []*podgroup_info.PodGroupInfo) int {
+func (pp *proportionPlugin) queueOrder(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo) int {
 	lQueueAttributes, found := pp.queues[lQ.UID]
 	if !found {
 		log.InfraLogger.Errorf("Failed to find queue: <%v>", lQ.Name)
@@ -353,7 +353,7 @@ func (pp *proportionPlugin) queueOrder(lQ, rQ *queue_info.QueueInfo, lJob, rJob 
 		return -1
 	}
 
-	return queue_order.GetQueueOrderResult(lQueueAttributes, rQueueAttributes, lJob, rJob, pp.taskOrderFunc, pp.totalResource)
+	return queue_order.GetQueueOrderResult(lQueueAttributes, rQueueAttributes, lJob, rJob, lVictims, rVictims, pp.taskOrderFunc, pp.totalResource)
 }
 
 func (pp *proportionPlugin) getQueueDeservedResourcesFn(queue *queue_info.QueueInfo) *resource_info.ResourceRequirements {

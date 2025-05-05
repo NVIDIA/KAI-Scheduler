@@ -41,6 +41,10 @@ type StalenessInfo struct {
 	Stale     bool
 }
 
+type PodGroupInfos struct {
+	PodGroupInfos []*PodGroupInfo
+}
+
 type PodGroupInfo struct {
 	UID common_info.PodGroupID
 

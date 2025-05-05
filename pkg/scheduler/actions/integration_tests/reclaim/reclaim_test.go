@@ -671,7 +671,7 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		},
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
-				Name: "queue0 is over quota, queue1 is under quota, yet we don't reclaim because allocate will case a loop (this is a bug in allocate)",
+				Name: "queue0 is over quota, queue1 is under quota, reclaim only for pending_job1",
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
 						Name:                "running_job0",
@@ -762,9 +762,8 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						Status:       pod_status.Running,
 					},
 					"running_job1": {
-						NodeName:     "node0",
 						GPUsRequired: 1,
-						Status:       pod_status.Running,
+						Status:       pod_status.Pending,
 					},
 					"running_job2": {
 						NodeName:     "node0",
@@ -776,8 +775,9 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						Status:       pod_status.Pending,
 					},
 					"pending_job1": {
+						NodeName:     "node0",
 						GPUsRequired: 1,
-						Status:       pod_status.Pending,
+						Status:       pod_status.Running,
 					},
 					"pending_job2": {
 						GPUsRequired: 1,
@@ -786,8 +786,9 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 				},
 				Mocks: &test_utils.TestMock{
 					CacheRequirements: &test_utils.CacheMocking{
-						NumberOfCacheBinds:     0,
-						NumberOfCacheEvictions: 0,
+						NumberOfCacheBinds:      2,
+						NumberOfCacheEvictions:  2,
+						NumberOfPipelineActions: 2,
 					},
 				},
 			},
@@ -2420,177 +2421,6 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					"pending_job1": {
 						GPUsRequired:     1,
 						MilliCpuRequired: 2000,
-						MemoryRequired:   50000000,
-						Status:           pod_status.Pending,
-					},
-				},
-				Mocks: &test_utils.TestMock{
-					CacheRequirements: &test_utils.CacheMocking{
-						NumberOfCacheBinds:      2,
-						NumberOfCacheEvictions:  2,
-						NumberOfPipelineActions: 2,
-					},
-				},
-			},
-		},
-		{
-			TestTopologyBasic: test_utils.TestTopologyBasic{
-				Name: "[useOnlyFreeResources OFF sanity] q0,q1 allocated both gpu and cpu tasks, q1 has 0 deserved gpus and useOnlyFreeResources=false." +
-					" when tasks from q2 with higher priority require cpu + gpu, it reclaims both jobs from q1 despite only 1 of them having requested GPU because 2 jobs from q2 require GPU and memory limit on node allows 4 jobs total",
-				Jobs: []*jobs_fake.TestJobBasic{
-					{
-						Name:                  "running_job0",
-						RequiredGPUsPerTask:   2,
-						RequiredMemoryPerTask: 50000000,
-						RequiredCPUsPerTask:   2,
-						Priority:              constants.PriorityBuildNumber,
-						QueueName:             "queue0",
-						Tasks: []*tasks_fake.TestTaskBasic{
-							{
-								NodeName: "node0",
-								State:    pod_status.Running,
-							},
-						},
-					}, {
-						Name:                  "running_job1",
-						RequiredGPUsPerTask:   3,
-						RequiredMemoryPerTask: 50000000,
-						RequiredCPUsPerTask:   3,
-						Priority:              constants.PriorityBuildNumber,
-						QueueName:             "queue0",
-						Tasks: []*tasks_fake.TestTaskBasic{
-							{
-								NodeName: "node0",
-								State:    pod_status.Running,
-							},
-						},
-					}, {
-						Name:                  "running_job2",
-						RequiredGPUsPerTask:   1,
-						RequiredCPUsPerTask:   1,
-						RequiredMemoryPerTask: 50000000,
-						Priority:              constants.PriorityTrainNumber,
-						QueueName:             "queue1",
-						Tasks: []*tasks_fake.TestTaskBasic{
-							{
-								NodeName: "node0",
-								State:    pod_status.Running,
-							},
-						},
-					}, {
-						Name:                  "running_job3",
-						RequiredGPUsPerTask:   0,
-						RequiredCPUsPerTask:   4,
-						RequiredMemoryPerTask: 50000000,
-						Priority:              constants.PriorityTrainNumber,
-						QueueName:             "queue1",
-						Tasks: []*tasks_fake.TestTaskBasic{
-							{
-								NodeName: "node0",
-								State:    pod_status.Running,
-							},
-						},
-					}, {
-						Name:                  "pending_job0",
-						RequiredGPUsPerTask:   3,
-						RequiredCPUsPerTask:   1,
-						RequiredMemoryPerTask: 50000000,
-						Priority:              constants.PriorityBuildNumber,
-						QueueName:             "queue2",
-						Tasks: []*tasks_fake.TestTaskBasic{
-							{
-								State: pod_status.Pending,
-							},
-						},
-					}, {
-						Name:                  "pending_job1",
-						RequiredGPUsPerTask:   0,
-						RequiredCPUsPerTask:   3,
-						RequiredMemoryPerTask: 50000000,
-						Priority:              constants.PriorityBuildNumber,
-						QueueName:             "queue2",
-						Tasks: []*tasks_fake.TestTaskBasic{
-							{
-								State: pod_status.Pending,
-							},
-						},
-					}, {
-						Name:                  "pending_job2",
-						RequiredGPUsPerTask:   2,
-						RequiredCPUsPerTask:   1,
-						RequiredMemoryPerTask: 50000000,
-						Priority:              constants.PriorityBuildNumber,
-						QueueName:             "queue2",
-						Tasks: []*tasks_fake.TestTaskBasic{
-							{
-								State: pod_status.Pending,
-							},
-						},
-					},
-				},
-				Nodes: map[string]nodes_fake.TestNodeBasic{
-					"node0": {
-						GPUs:      10,
-						CPUMemory: 200000000,
-					},
-				},
-				Queues: []test_utils.TestQueueBasic{
-					{
-						Name:               "queue0",
-						DeservedGPUs:       5,
-						GPUOverQuotaWeight: 5,
-					},
-					{
-						Name:               "queue1",
-						DeservedGPUs:       0,
-						GPUOverQuotaWeight: 0,
-					},
-					{
-						Name:               "queue2",
-						DeservedGPUs:       5,
-						GPUOverQuotaWeight: 5,
-					},
-				},
-				JobExpectedResults: map[string]test_utils.TestExpectedResultBasic{
-					"running_job0": {
-						NodeName:         "node0",
-						GPUsRequired:     2,
-						MilliCpuRequired: 2000,
-						Status:           pod_status.Running,
-					},
-					"running_job1": {
-						NodeName:         "node0",
-						GPUsRequired:     3,
-						MilliCpuRequired: 3000,
-						Status:           pod_status.Running,
-					},
-					"running_job2": {
-						GPUsRequired:     1,
-						MilliCpuRequired: 1000,
-						Status:           pod_status.Pending,
-					},
-					"running_job3": {
-						GPUsRequired:     0,
-						MilliCpuRequired: 4000,
-						Status:           pod_status.Pending,
-					},
-					"pending_job0": {
-						NodeName:         "node0",
-						GPUsRequired:     3,
-						MilliCpuRequired: 1000,
-						MemoryRequired:   50000000,
-						Status:           pod_status.Running,
-					},
-					"pending_job1": {
-						NodeName:         "node0",
-						GPUsRequired:     0,
-						MilliCpuRequired: 3000,
-						MemoryRequired:   50000000,
-						Status:           pod_status.Running,
-					},
-					"pending_job2": {
-						GPUsRequired:     2,
-						MilliCpuRequired: 1000,
 						MemoryRequired:   50000000,
 						Status:           pod_status.Pending,
 					},

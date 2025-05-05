@@ -5,18 +5,23 @@ package utils
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/elastic"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/priority"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/scheduler_util"
 )
 
@@ -108,6 +113,207 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 		actualJobsOrder = append(actualJobsOrder, job.Name)
 	}
 	assert.Equal(t, expectedJobsOrder, actualJobsOrder)
+}
+
+func TestVictimQueue_PopNextJob(t *testing.T) {
+	now := metav1.Time{Time: time.Now()}
+	nowMinus1 := metav1.Time{Time: time.Now().Add(-time.Second)}
+	tests := []struct {
+		name                 string
+		jobsOrderInitOptions JobsOrderInitOptions
+		queues               map[common_info.QueueID]*queue_info.QueueInfo
+		initJobs             map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
+		expectedJobNames     []string
+	}{
+		{
+			name: "single podgroup insert - empty queue",
+			jobsOrderInitOptions: JobsOrderInitOptions{
+				VictimQueue:       true,
+				FilterNonPending:  false,
+				FilterUnready:     true,
+				MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+			},
+			queues: map[common_info.QueueID]*queue_info.QueueInfo{
+				"q1": {ParentQueue: "d1", UID: "q1", CreationTimestamp: now,
+					Resources: queue_info.QueueQuota{
+						GPU: queue_info.ResourceQuota{
+							Quota:           1,
+							Limit:           -1,
+							OverQuotaWeight: 1,
+						},
+						CPU: queue_info.ResourceQuota{
+							Quota:           1,
+							Limit:           -1,
+							OverQuotaWeight: 1,
+						},
+						Memory: queue_info.ResourceQuota{
+							Quota:           1,
+							Limit:           -1,
+							OverQuotaWeight: 1,
+						},
+					},
+				},
+				"q2": {ParentQueue: "d1", UID: "q2", CreationTimestamp: nowMinus1,
+					Resources: queue_info.QueueQuota{
+						GPU: queue_info.ResourceQuota{
+							Quota:           1,
+							Limit:           -1,
+							OverQuotaWeight: 1,
+						},
+						CPU: queue_info.ResourceQuota{
+							Quota:           1,
+							Limit:           -1,
+							OverQuotaWeight: 1,
+						},
+						Memory: queue_info.ResourceQuota{
+							Quota:           1,
+							Limit:           -1,
+							OverQuotaWeight: 1,
+						},
+					},
+				},
+				"d1": {UID: "d1", CreationTimestamp: now},
+			},
+			initJobs: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+				"q1j1": {
+					Name:     "q1j1",
+					Priority: 100,
+					Queue:    "q1",
+					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+						pod_status.Allocated: {
+							"p1": {
+								UID: "p1",
+								AcceptedResource: resource_info.NewResourceRequirements(
+									1,
+									1000,
+									1024,
+								),
+							},
+						},
+					},
+					Allocated: resource_info.NewResource(1000, 1024, 1),
+				},
+				"q1j2": {
+					Name:     "q1j2",
+					Priority: 99,
+					Queue:    "q1",
+					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+						pod_status.Allocated: {
+							"p1": {
+								UID: "p1",
+								AcceptedResource: resource_info.NewResourceRequirements(
+									1,
+									1000,
+									1024,
+								),
+							},
+						},
+					},
+					Allocated: resource_info.NewResource(1000, 1024, 1),
+				},
+				"q1j3": {
+					Name:     "q1j3",
+					Priority: 98,
+					Queue:    "q1",
+					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+						pod_status.Allocated: {
+							"p1": {
+								UID: "p1",
+								AcceptedResource: resource_info.NewResourceRequirements(
+									1,
+									1000,
+									1024,
+								),
+							},
+						},
+					},
+					Allocated: resource_info.NewResource(1000, 1024, 1),
+				},
+				"q2j1": {
+					Name:     "q2j1",
+					Priority: 100,
+					Queue:    "q2",
+					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+						pod_status.Allocated: {
+							"p1": {
+								UID: "p1",
+								AcceptedResource: resource_info.NewResourceRequirements(
+									1,
+									1000,
+									1024,
+								),
+							},
+						},
+					},
+					Allocated: resource_info.NewResource(1000, 1024, 1),
+				},
+				"q2j2": {
+					Name:     "q2j2",
+					Priority: 99,
+					Queue:    "q2",
+					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+						pod_status.Allocated: {
+							"p1": {
+								UID: "p1",
+								AcceptedResource: resource_info.NewResourceRequirements(
+									1,
+									1000,
+									1024,
+								),
+							},
+						},
+					},
+					Allocated: resource_info.NewResource(1000, 1024, 1),
+				},
+				"q2j3": {
+					Name:     "q2j3",
+					Priority: 98,
+					Queue:    "q2",
+					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+						pod_status.Allocated: {
+							"p1": {
+								UID: "p1",
+								AcceptedResource: resource_info.NewResourceRequirements(
+									1,
+									1000,
+									1024,
+								),
+							},
+						},
+					},
+					Allocated: resource_info.NewResource(1000, 1024, 1),
+				},
+			},
+			expectedJobNames: []string{"q1j3", "q2j3", "q1j2", "q2j2", "q1j1", "q2j1"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ssn := newPrioritySession()
+			ssn.Queues = tt.queues
+			ssn.PodGroupInfos = tt.initJobs
+			proportion.New(map[string]string{}).OnSessionOpen(ssn)
+
+			activeDepartments := scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
+				return !ssn.JobOrderFn(l, r)
+			}, scheduler_util.QueueCapacityInfinite)
+
+			jobsOrder := &JobsOrderByQueues{
+				activeDepartments:                activeDepartments,
+				queueIdToQueueMetadata:           map[common_info.QueueID]*jobsQueueMetadata{},
+				departmentIdToDepartmentMetadata: map[common_info.QueueID]*departmentMetadata{},
+				ssn:                              ssn,
+				jobsOrderInitOptions:             tt.jobsOrderInitOptions,
+				queuePopsMap:                     map[common_info.QueueID][]*podgroup_info.PodGroupInfo{},
+			}
+			jobsOrder.InitializeWithJobs(tt.initJobs)
+
+			for _, expectedJobName := range tt.expectedJobNames {
+				actualJob := jobsOrder.PopNextJob()
+				assert.Equal(t, expectedJobName, actualJob.Name)
+			}
+		})
+	}
 }
 
 func TestJobsOrderByQueues_PushJob(t *testing.T) {
@@ -352,6 +558,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 				departmentIdToDepartmentMetadata: map[common_info.QueueID]*departmentMetadata{},
 				ssn:                              ssn,
 				jobsOrderInitOptions:             tt.fields.jobsOrderInitOptions,
+				queuePopsMap:                     map[common_info.QueueID][]*podgroup_info.PodGroupInfo{},
 			}
 			jobsOrder.InitializeWithJobs(tt.fields.InsertedJob)
 			jobsOrder.PushJob(tt.args.job)
@@ -449,6 +656,7 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 				departmentIdToDepartmentMetadata: tt.fields.departmentIdToDepartmentMetadata,
 				ssn:                              ssn,
 				jobsOrderInitOptions:             tt.fields.jobsOrderInitOptions,
+				queuePopsMap:                     map[common_info.QueueID][]*podgroup_info.PodGroupInfo{},
 			}
 			jobsOrder.InitializeWithJobs(tt.fields.InsertedJob)
 

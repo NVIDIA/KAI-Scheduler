@@ -18,7 +18,8 @@ const (
 
 func GetQueueOrderResult(
 	lQueue *rs.QueueAttributes, rQueue *rs.QueueAttributes,
-	lJobInfo *podgroup_info.PodGroupInfo, rJobInfo *podgroup_info.PodGroupInfo,
+	lJobInfo, rJobInfo *podgroup_info.PodGroupInfo,
+	lVictims, rVictims []*podgroup_info.PodGroupInfo,
 	taskOrderFn common_info.LessFn, totalResources rs.ResourceQuantities,
 ) int {
 	var result int
@@ -30,7 +31,7 @@ func GetQueueOrderResult(
 
 	// queues that are currently utilizing more than their deserved quota will be ordered after queues that are under
 	// their deserved quota, to match GuaranteeDeservedQuotaStrategy (based on api.LessFn)
-	result = prioritizeUnderQuotaWithJob(lQueue, rQueue, lJobInfo, rJobInfo, taskOrderFn)
+	result = prioritizeUnderQuotaWithJob(lQueue, rQueue, lJobInfo, rJobInfo, lVictims, rVictims, taskOrderFn)
 	if result != equalPrioritization {
 		return result
 	}
@@ -41,8 +42,14 @@ func GetQueueOrderResult(
 		return result
 	}
 
+	// penalize queues that use resources while having no allocatable share
+	result = penalizeZeroShareWithJob(lQueue, rQueue, lJobInfo, rJobInfo, taskOrderFn)
+	if result != equalPrioritization {
+		return result
+	}
+
 	// queues with higher dominant resource share will be located further in the priority queue
-	result = prioritizeSmallerResourceShare(lQueue, rQueue, lJobInfo, rJobInfo, taskOrderFn, totalResources)
+	result = prioritizeSmallerResourceShare(lQueue, rQueue, lJobInfo, rJobInfo, lVictims, rVictims, taskOrderFn, totalResources)
 	if result != equalPrioritization {
 		return result
 	}
@@ -90,7 +97,9 @@ func prioritizeUnderUtilized(lQueue *rs.QueueAttributes, rQueue *rs.QueueAttribu
 	return equalPrioritization
 }
 
-func prioritizeUnderQuotaWithJob(lQueue, rQueue *rs.QueueAttributes, lJobInfo, rJobInfo *podgroup_info.PodGroupInfo,
+func prioritizeUnderQuotaWithJob(lQueue, rQueue *rs.QueueAttributes,
+	lJobInfo, rJobInfo *podgroup_info.PodGroupInfo,
+	lVictims, rVictims []*podgroup_info.PodGroupInfo,
 	taskOrderFn common_info.LessFn) int {
 
 	lAllocatedWithJob := lQueue.GetAllocatedShare()
@@ -98,10 +107,22 @@ func prioritizeUnderQuotaWithJob(lQueue, rQueue *rs.QueueAttributes, lJobInfo, r
 		podgroup_info.GetTasksToAllocateInitResource(lJobInfo, taskOrderFn, false))
 	lAllocatedWithJob.Add(lJobRequirements)
 
+	var lVictimsRequirements = rs.EmptyResourceQuantities()
+	for _, victim := range lVictims {
+		lVictimsRequirements.Add(utils.QuantifyResource(victim.Allocated))
+	}
+	lAllocatedWithJob.Sub(lVictimsRequirements)
+
 	rAllocatedWithJob := rQueue.GetAllocatedShare()
 	rJobRequirements := utils.QuantifyResource(
 		podgroup_info.GetTasksToAllocateInitResource(rJobInfo, taskOrderFn, false))
 	rAllocatedWithJob.Add(rJobRequirements)
+
+	var rVictimsRequirements = rs.EmptyResourceQuantities()
+	for _, victim := range rVictims {
+		rVictimsRequirements.Add(utils.QuantifyResource(victim.Allocated))
+	}
+	rAllocatedWithJob.Sub(rVictimsRequirements)
 
 	lStarved := lAllocatedWithJob.LessEqual(lQueue.GetDeservedShare())
 	rStarved := rAllocatedWithJob.LessEqual(rQueue.GetDeservedShare())
@@ -117,13 +138,66 @@ func prioritizeUnderQuotaWithJob(lQueue, rQueue *rs.QueueAttributes, lJobInfo, r
 	return equalPrioritization
 }
 
+func penalizeZeroShareWithJob(
+	lQueue *rs.QueueAttributes, rQueue *rs.QueueAttributes,
+	lJobInfo, rJobInfo *podgroup_info.PodGroupInfo,
+	taskOrderFn common_info.LessFn,
+) int {
+	lAllocatedWithJob := lQueue.GetAllocatedShare()
+	lJobRequirements := utils.QuantifyResource(
+		podgroup_info.GetTasksToAllocateInitResource(lJobInfo, taskOrderFn, false))
+	lAllocatedWithJob.Add(lJobRequirements)
+
+	rAllocatedWithJob := rQueue.GetAllocatedShare()
+	rJobRequirements := utils.QuantifyResource(
+		podgroup_info.GetTasksToAllocateInitResource(rJobInfo, taskOrderFn, false))
+	rAllocatedWithJob.Add(rJobRequirements)
+
+	lQueueViolation := false
+	for _, resource := range rs.AllResources {
+		allocatableShare := lQueue.GetAllocatableShare()[resource]
+		if allocatableShare != 0 {
+			continue
+		}
+
+		allocatedShare := lAllocatedWithJob[resource]
+		if allocatedShare > 0 {
+			lQueueViolation = true
+		}
+	}
+
+	rQueueViolation := false
+	for _, resource := range rs.AllResources {
+		allocatableShare := rQueue.GetAllocatableShare()[resource]
+		if allocatableShare != 0 {
+			continue
+		}
+
+		allocatedShare := rAllocatedWithJob[resource]
+		if allocatedShare > 0 {
+			rQueueViolation = true
+		}
+	}
+
+	if lQueueViolation && !rQueueViolation {
+		return rQueuePrioritized
+	}
+
+	if !lQueueViolation && rQueueViolation {
+		return lQueuePrioritized
+	}
+
+	return equalPrioritization
+}
+
 func prioritizeSmallerResourceShare(
 	lQueue *rs.QueueAttributes, rQueue *rs.QueueAttributes,
-	lJobInfo *podgroup_info.PodGroupInfo, rJobInfo *podgroup_info.PodGroupInfo,
+	lJobInfo, rJobInfo *podgroup_info.PodGroupInfo,
+	lVictims, rVictims []*podgroup_info.PodGroupInfo,
 	taskOrderFn common_info.LessFn, totalResources rs.ResourceQuantities,
 ) int {
-	lShare := calculateDominantResourceShareWithJob(lQueue, lJobInfo, taskOrderFn, totalResources)
-	rShare := calculateDominantResourceShareWithJob(rQueue, rJobInfo, taskOrderFn, totalResources)
+	lShare := calculateDominantResourceShareWithJob(lQueue, lJobInfo, lVictims, taskOrderFn, totalResources)
+	rShare := calculateDominantResourceShareWithJob(rQueue, rJobInfo, rVictims, taskOrderFn, totalResources)
 
 	if lShare < rShare {
 		return lQueuePrioritized
@@ -176,17 +250,24 @@ func prioritizeBasedOnCreationTime(lQueue *rs.QueueAttributes, rQueue *rs.QueueA
 }
 
 func calculateDominantResourceShareWithJob(
-	queueAttributes *rs.QueueAttributes, job *podgroup_info.PodGroupInfo,
-	taskOrderFn common_info.LessFn, totalResources rs.ResourceQuantities,
+	queueAttributes *rs.QueueAttributes, jobInfo *podgroup_info.PodGroupInfo,
+	victims []*podgroup_info.PodGroupInfo, taskOrderFn common_info.LessFn, totalResources rs.ResourceQuantities,
 ) float64 {
 	allocatedShare := queueAttributes.GetAllocatedShare()
 
 	initResQuantities := utils.QuantifyResource(
-		podgroup_info.GetTasksToAllocateInitResource(job, taskOrderFn, false))
+		podgroup_info.GetTasksToAllocateInitResource(jobInfo, taskOrderFn, false))
 
 	for _, resource := range rs.AllResources {
 		resourceShare := queueAttributes.ResourceShare(resource)
 		resourceShare.Allocated += initResQuantities[resource]
+	}
+
+	for _, victim := range victims {
+		for _, resource := range rs.AllResources {
+			resourceShare := queueAttributes.ResourceShare(resource)
+			resourceShare.Allocated -= utils.QuantifyResource(victim.Allocated)[resource]
+		}
 	}
 
 	share := queueAttributes.GetDominantResourceShare(totalResources)
