@@ -125,119 +125,107 @@ func getFirstPendingPod(job *podgroup_info.PodGroupInfo) *pod_info.PodInfo {
 	return nil
 }
 
-// OnSessionOpen is called when a new scheduling session begins. It registers
-// the early quota checking function that prevents jobs from being considered
-// for scheduling if they would exceed their parent queues' quotas.
-func (cp *CapacityPolicy) OnSessionOpen(ssn *framework.Session) {
-	// Register early quota checks
-	ssn.AddPrePredicateFn(func(task *pod_info.PodInfo, job *podgroup_info.PodGroupInfo) error {
-		// Only check for the first pending pod to avoid duplicate checks
-		firstPending := getFirstPendingPod(job)
-		if firstPending == nil || task != firstPending {
-			return nil
-		}
-
-		// Check parent queue quotas
-		return cp.checkParentQueueQuotas(job, ssn)
-	})
+// isPreemptibleJob checks if a job is preemptible based on its priority.
+// Preemptible jobs are allowed to exceed queue limits/quotas.
+func (cp *CapacityPolicy) isPreemptibleJob(job *podgroup_info.PodGroupInfo) bool {
+	preemptiblePriorities := map[int32]bool{
+		constants.PriorityInferenceNumber:              true,
+		constants.PriorityInteractivePreemptibleNumber: true,
+		constants.PriorityTrainNumber:                  true,
+	}
+	return preemptiblePriorities[job.Priority]
 }
 
-// checkParentQueueQuotas verifies that a job's resource requirements don't
-// exceed quotas at any level in its queue hierarchy. This includes:
-// - GPU quota checks
-// - CPU quota checks
-// - Memory quota checks
+// checkParentQueueLimits verifies that a job's resource requirements don't
+// exceed limits or quotas at any level in its queue hierarchy. This includes:
+// - GPU limit/quota checks
+// - CPU limit/quota checks
+// - Memory limit/quota checks
 //
 // The function traverses up the queue hierarchy starting from the job's
-// immediate parent queue. If any quota would be exceeded, it returns an
+// immediate parent queue. If any limit or quota would be exceeded, it returns an
 // error with a detailed message.
 //
-// Note: Preemptible jobs (PriorityTrainNumber) are allowed to exceed parent
-// queue quotas, while non-preemptible jobs must strictly adhere to quotas.
-func (cp *CapacityPolicy) checkParentQueueQuotas(job *podgroup_info.PodGroupInfo, ssn *framework.Session) error {
-	// Skip quota checks for preemptible jobs
-	if job.Priority == constants.PriorityTrainNumber {
-		log.InfraLogger.V(5).Infof("Job: <%v/%v> is preemptible, skipping parent queue quota checks", job.Namespace, job.Name)
+// For preemptible jobs, the limit/quota checks are skipped as they are allowed
+// to exceed queue limits/quotas.
+func (cp *CapacityPolicy) checkParentQueueLimits(job *podgroup_info.PodGroupInfo, ssn *framework.Session) error {
+	// Skip limit/quota checks for preemptible jobs
+	if cp.isPreemptibleJob(job) {
 		return nil
 	}
 
 	// Get queue info for this job
 	queue, found := ssn.Queues[job.Queue]
 	if !found {
-		return nil // Can't check quota without queue info
+		return nil // Can't check limits/quotas without queue info
 	}
 
-	// Only check parent queues, not the job's direct queue
-	currentQueueID := queue.ParentQueue
+	// Calculate job's minimum required resources
+	jobResources := resource_info.EmptyResource()
+	for _, pod := range job.PodInfos {
+		if pod.Status == pod_status.Pending {
+			jobResources.AddResourceRequirements(pod.ResReq)
+		}
+	}
 
-	for currentQueueID != "" {
+	// Traverse up the queue hierarchy
+	for currentQueueID := queue.ParentQueue; currentQueueID != ""; currentQueueID = ssn.Queues[currentQueueID].ParentQueue {
 		parentQueue, found := ssn.Queues[currentQueueID]
 		if !found {
 			break
 		}
 
-		// Calculate job's total resource requirements
-		jobResources := resource_info.EmptyResource()
-		for _, pod := range job.PodInfos {
-			if pod.Status == pod_status.Pending {
-				jobResources.AddResourceRequirements(pod.ResReq)
-			}
+		// Check resource limits and quotas
+		resourceChecks := []struct {
+			resourceType string
+			limit        float64
+			quota        float64
+			used         float64
+		}{
+			{"GPU", float64(parentQueue.Resources.GPU.Limit), float64(parentQueue.Resources.GPU.Quota), jobResources.GPUs()},
+			{"CPU", float64(parentQueue.Resources.CPU.Limit), float64(parentQueue.Resources.CPU.Quota), jobResources.Cpu()},
+			{"Memory", float64(parentQueue.Resources.Memory.Limit), float64(parentQueue.Resources.Memory.Quota), jobResources.Memory()},
 		}
 
-		// Check GPU quota
-		if parentQueue.Resources.GPU.Quota > 0 && jobResources.GPUs() > float64(parentQueue.Resources.GPU.Quota) {
-			errorMsg := fmt.Sprintf(
-				"parent queue '%s' quota has reached the allowable limit of GPUs. "+
-					"Limit is %.0f GPUs, workload requested %.0f GPUs",
-				parentQueue.Name,
-				parentQueue.Resources.GPU.Quota,
-				jobResources.GPUs())
+		for _, check := range resourceChecks {
+			// Check if either limit or quota is exceeded
+			if (check.limit > 0 && check.used > check.limit) || (check.quota > 0 && check.used > check.quota) {
+				// Use the more restrictive value for the error message
+				restrictiveValue := check.limit
+				if check.quota > 0 && (check.limit == 0 || check.quota < check.limit) {
+					restrictiveValue = check.quota
+				}
 
-			// Record event
-			if firstPod := getFirstPendingPod(job); firstPod != nil {
-				log.InfraLogger.Warningf("Queue quota exceeded: %s", errorMsg)
+				errorMsg := fmt.Sprintf(
+					"parent queue '%s' has reached the %s of %s. "+
+						"Value is %.0f, workload requested %.0f",
+					parentQueue.Name,
+					func() string {
+						if check.limit > 0 && check.quota > 0 {
+							return "limit/quota"
+						} else if check.limit > 0 {
+							return "limit"
+						} else {
+							return "quota"
+						}
+					}(),
+					check.resourceType,
+					restrictiveValue,
+					check.used)
+
+				log.InfraLogger.Warningf("Queue limit/quota exceeded: %s", errorMsg)
+				return fmt.Errorf(errorMsg)
 			}
-
-			return fmt.Errorf(errorMsg)
 		}
-
-		// Check CPU quota
-		if parentQueue.Resources.CPU.Quota > 0 && jobResources.Cpu() > float64(parentQueue.Resources.CPU.Quota) {
-			errorMsg := fmt.Sprintf(
-				"parent queue '%s' quota has reached the allowable limit of CPU. "+
-					"Limit is %.0f CPU, workload requested %.0f CPU",
-				parentQueue.Name,
-				parentQueue.Resources.CPU.Quota,
-				jobResources.Cpu())
-
-			// Record event
-			if firstPod := getFirstPendingPod(job); firstPod != nil {
-				log.InfraLogger.Warningf("Queue quota exceeded: %s", errorMsg)
-			}
-
-			return fmt.Errorf(errorMsg)
-		}
-
-		// Check Memory quota
-		if parentQueue.Resources.Memory.Quota > 0 && jobResources.Memory() > float64(parentQueue.Resources.Memory.Quota) {
-			errorMsg := fmt.Sprintf(
-				"parent queue '%s' quota has reached the allowable limit of Memory. "+
-					"Limit is %.0f Memory, workload requested %.0f Memory",
-				parentQueue.Name,
-				parentQueue.Resources.Memory.Quota,
-				jobResources.Memory())
-
-			// Record event
-			if firstPod := getFirstPendingPod(job); firstPod != nil {
-				log.InfraLogger.Warningf("Queue quota exceeded: %s", errorMsg)
-			}
-
-			return fmt.Errorf(errorMsg)
-		}
-
-		// Move up the hierarchy
-		currentQueueID = parentQueue.ParentQueue
 	}
 
 	return nil
+}
+
+// OnSessionOpen registers the early limit checking function that prevents jobs
+// from being considered for scheduling if they would exceed their parent queues' limits.
+func (cp *CapacityPolicy) OnSessionOpen(ssn *framework.Session) {
+	ssn.AddPrePredicateFn(func(task *pod_info.PodInfo, job *podgroup_info.PodGroupInfo) error {
+		return cp.checkParentQueueLimits(job, ssn)
+	})
 }
