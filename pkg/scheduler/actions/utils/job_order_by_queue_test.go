@@ -49,7 +49,7 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 					testPod: {},
 				},
 			},
-			PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+			PodInfos: pod_info.PodsMap{
 				testPod: {},
 			},
 		},
@@ -62,7 +62,7 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 					testPod: {},
 				},
 			},
-			PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+			PodInfos: pod_info.PodsMap{
 				testPod: {},
 			},
 		},
@@ -75,7 +75,7 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 					testPod: {},
 				},
 			},
-			PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+			PodInfos: pod_info.PodsMap{
 				testPod: {},
 			},
 		},
@@ -88,7 +88,7 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 					testPod: {},
 				},
 			},
-			PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+			PodInfos: pod_info.PodsMap{
 				testPod: {},
 			},
 		},
@@ -112,11 +112,9 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 
 func TestJobsOrderByQueues_PushJob(t *testing.T) {
 	type fields struct {
-		queueIdToQueueMetadata           map[common_info.QueueID]*jobsQueueMetadata
-		departmentIdToDepartmentMetadata map[common_info.QueueID]*departmentMetadata
-		jobsOrderInitOptions             JobsOrderInitOptions
-		Queues                           map[common_info.QueueID]*queue_info.QueueInfo
-		InsertedJob                      map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
+		jobsOrderInitOptions JobsOrderInitOptions
+		Queues               map[common_info.QueueID]*queue_info.QueueInfo
+		InsertedJob          map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
 	}
 	type args struct {
 		job *podgroup_info.PodGroupInfo
@@ -133,10 +131,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 		{
 			name: "single podgroup insert - empty queue",
 			fields: fields{
-				queueIdToQueueMetadata:           map[common_info.QueueID]*jobsQueueMetadata{},
-				departmentIdToDepartmentMetadata: map[common_info.QueueID]*departmentMetadata{},
 				jobsOrderInitOptions: JobsOrderInitOptions{
-					ReverseOrder:      false,
+					VictimQueue:       false,
 					FilterNonPending:  true,
 					FilterUnready:     true,
 					MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
@@ -157,7 +153,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 							"p1": {},
 						},
 					},
-					PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					PodInfos: pod_info.PodsMap{
 						"p1": {},
 					},
 				},
@@ -173,7 +169,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								"p1": {},
 							},
 						},
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						PodInfos: pod_info.PodsMap{
 							"p1": {},
 						},
 					},
@@ -183,10 +179,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 		{
 			name: "single podgroup insert - one in queue. On pop comes second",
 			fields: fields{
-				queueIdToQueueMetadata:           map[common_info.QueueID]*jobsQueueMetadata{},
-				departmentIdToDepartmentMetadata: map[common_info.QueueID]*departmentMetadata{},
 				jobsOrderInitOptions: JobsOrderInitOptions{
-					ReverseOrder:      false,
+					VictimQueue:       false,
 					FilterNonPending:  true,
 					FilterUnready:     true,
 					MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
@@ -206,7 +200,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								"p1": {},
 							},
 						},
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						PodInfos: pod_info.PodsMap{
 							"p1": {},
 						},
 					},
@@ -223,7 +217,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 							"p1": {},
 						},
 					},
-					PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					PodInfos: pod_info.PodsMap{
 						"p1": {},
 					},
 				},
@@ -240,7 +234,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								"p1": {},
 							},
 						},
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						PodInfos: pod_info.PodsMap{
 							"p1": {},
 						},
 					},
@@ -254,7 +248,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								"p1": {},
 							},
 						},
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						PodInfos: pod_info.PodsMap{
 							"p1": {},
 						},
 					},
@@ -264,10 +258,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 		{
 			name: "single podgroup insert - one in queue. On pop comes first",
 			fields: fields{
-				queueIdToQueueMetadata:           map[common_info.QueueID]*jobsQueueMetadata{},
-				departmentIdToDepartmentMetadata: map[common_info.QueueID]*departmentMetadata{},
 				jobsOrderInitOptions: JobsOrderInitOptions{
-					ReverseOrder:      false,
+					VictimQueue:       false,
 					FilterNonPending:  true,
 					FilterUnready:     true,
 					MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
@@ -287,7 +279,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								"p1": {},
 							},
 						},
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						PodInfos: pod_info.PodsMap{
 							"p1": {},
 						},
 					},
@@ -304,7 +296,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 							"p1": {},
 						},
 					},
-					PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					PodInfos: pod_info.PodsMap{
 						"p1": {},
 					},
 				},
@@ -321,7 +313,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								"p1": {},
 							},
 						},
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						PodInfos: pod_info.PodsMap{
 							"p1": {},
 						},
 					},
@@ -335,7 +327,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								"p1": {},
 							},
 						},
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						PodInfos: pod_info.PodsMap{
 							"p1": {},
 						},
 					},
@@ -348,7 +340,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 			ssn := newPrioritySession()
 			ssn.Queues = tt.fields.Queues
 			activeDepartments := scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
-				if tt.fields.jobsOrderInitOptions.ReverseOrder {
+				if tt.fields.jobsOrderInitOptions.VictimQueue {
 					return !ssn.JobOrderFn(l, r)
 				}
 				return ssn.JobOrderFn(l, r)
@@ -356,8 +348,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 
 			jobsOrder := &JobsOrderByQueues{
 				activeDepartments:                activeDepartments,
-				queueIdToQueueMetadata:           tt.fields.queueIdToQueueMetadata,
-				departmentIdToDepartmentMetadata: tt.fields.departmentIdToDepartmentMetadata,
+				queueIdToQueueMetadata:           map[common_info.QueueID]*jobsQueueMetadata{},
+				departmentIdToDepartmentMetadata: map[common_info.QueueID]*departmentMetadata{},
 				ssn:                              ssn,
 				jobsOrderInitOptions:             tt.fields.jobsOrderInitOptions,
 			}
@@ -394,7 +386,7 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 				queueIdToQueueMetadata:           map[common_info.QueueID]*jobsQueueMetadata{},
 				departmentIdToDepartmentMetadata: map[common_info.QueueID]*departmentMetadata{},
 				jobsOrderInitOptions: JobsOrderInitOptions{
-					ReverseOrder:      false,
+					VictimQueue:       false,
 					FilterNonPending:  true,
 					FilterUnready:     true,
 					MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
@@ -414,7 +406,7 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 								"p1": {},
 							},
 						},
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						PodInfos: pod_info.PodsMap{
 							"p1": {},
 						},
 					},
@@ -432,7 +424,7 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 								"p1": {},
 							},
 						},
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						PodInfos: pod_info.PodsMap{
 							"p1": {},
 						},
 					},
@@ -445,7 +437,7 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 			ssn := newPrioritySession()
 			ssn.Queues = tt.fields.Queues
 			activeDepartments := scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
-				if tt.fields.jobsOrderInitOptions.ReverseOrder {
+				if tt.fields.jobsOrderInitOptions.VictimQueue {
 					return !ssn.JobOrderFn(l, r)
 				}
 				return ssn.JobOrderFn(l, r)
@@ -483,6 +475,7 @@ func newPrioritySession() *framework.Session {
 					Plugins: []conf.PluginOption{
 						{Name: "Priority"},
 						{Name: "Elastic"},
+						{Name: "Proportion"},
 					},
 				},
 			},

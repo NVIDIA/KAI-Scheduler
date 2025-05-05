@@ -338,24 +338,21 @@ func (pp *proportionPlugin) deallocateHandlerFn(ssn *framework.Session) func(eve
 	}
 }
 
-func (pp *proportionPlugin) queueOrder(lQ, rQ, lT, rT interface{}) int {
-	lQueue := lQ.(*queue_info.QueueInfo)
-	rQueue := rQ.(*queue_info.QueueInfo)
-	lJobInfo := lT.(*podgroup_info.PodGroupInfo)
-	rJobInfo := rT.(*podgroup_info.PodGroupInfo)
-	lQueueAttributes, found := pp.queues[lQueue.UID]
+// CompareQueueFn
+func (pp *proportionPlugin) queueOrder(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, _, _ []*podgroup_info.PodGroupInfo) int {
+	lQueueAttributes, found := pp.queues[lQ.UID]
 	if !found {
-		log.InfraLogger.Errorf("Failed to find queue: <%v>", lQueue.Name)
+		log.InfraLogger.Errorf("Failed to find queue: <%v>", lQ.Name)
 		return 1
 	}
 
-	rQueueAttributes, found := pp.queues[rQueue.UID]
+	rQueueAttributes, found := pp.queues[rQ.UID]
 	if !found {
-		log.InfraLogger.Errorf("Failed to find queue: <%v>", rQueue.Name)
+		log.InfraLogger.Errorf("Failed to find queue: <%v>", rQ.Name)
 		return -1
 	}
 
-	return queue_order.GetQueueOrderResult(lQueueAttributes, rQueueAttributes, lJobInfo, rJobInfo, pp.taskOrderFunc, pp.totalResource)
+	return queue_order.GetQueueOrderResult(lQueueAttributes, rQueueAttributes, lJob, rJob, pp.taskOrderFunc, pp.totalResource)
 }
 
 func (pp *proportionPlugin) getQueueDeservedResourcesFn(queue *queue_info.QueueInfo) *resource_info.ResourceRequirements {

@@ -17,6 +17,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
+type CompareQueueFn func(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo) int
+
 func (ssn *Session) AddGPUOrderFn(gof api.GpuOrderFn) {
 	ssn.GpuOrderFns = append(ssn.GpuOrderFns, gof)
 }
@@ -45,7 +47,7 @@ func (ssn *Session) AddTaskOrderFn(tof common_info.CompareFn) {
 	ssn.TaskOrderFns = append(ssn.TaskOrderFns, tof)
 }
 
-func (ssn *Session) AddQueueOrderFn(qof common_info.CompareTwoFactors) {
+func (ssn *Session) AddQueueOrderFn(qof CompareQueueFn) {
 	ssn.QueueOrderFns = append(ssn.QueueOrderFns, qof)
 }
 
@@ -178,20 +180,18 @@ func (ssn *Session) TaskOrderFn(l, r interface{}) bool {
 	}
 }
 
-func (ssn *Session) QueueOrderFn(lQ, rQ, lT, rT interface{}) bool {
+func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo) bool {
 	for _, qof := range ssn.QueueOrderFns {
-		if j := qof(lQ, rQ, lT, rT); j != 0 {
+		if j := qof(lQ, rQ, lJob, rJob, lVictims, rVictims); j != 0 {
 			return j < 0
 		}
 	}
 
 	// If no queue order funcs, order queue by CreationTimestamp first, then by UID.
-	lv := lQ.(*queue_info.QueueInfo)
-	rv := rQ.(*queue_info.QueueInfo)
-	if lv.CreationTimestamp.Equal(&rv.CreationTimestamp) {
-		return lv.UID < rv.UID
+	if lQ.CreationTimestamp.Equal(&rQ.CreationTimestamp) {
+		return lQ.UID < rQ.UID
 	}
-	return lv.CreationTimestamp.Before(&rv.CreationTimestamp)
+	return lQ.CreationTimestamp.Before(&rQ.CreationTimestamp)
 }
 
 func (ssn *Session) IsNonPreemptibleJobOverQueueQuotaFn(job *podgroup_info.PodGroupInfo,

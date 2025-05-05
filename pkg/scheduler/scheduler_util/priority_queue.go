@@ -46,6 +46,14 @@ func (q *PriorityQueue) Pop() interface{} {
 	return heap.Pop(&q.queue)
 }
 
+func (q *PriorityQueue) Peek() interface{} {
+	if q.Len() == 0 {
+		return nil
+	}
+
+	return q.queue.items[q.Len()-1]
+}
+
 func (q *PriorityQueue) Empty() bool {
 	return q.queue.Len() == 0
 }

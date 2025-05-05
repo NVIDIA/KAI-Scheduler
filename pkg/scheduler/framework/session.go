@@ -46,7 +46,7 @@ type Session struct {
 	NodeOrderFns                          []api.NodeOrderFn
 	TaskOrderFns                          []common_info.CompareFn
 	JobOrderFns                           []common_info.CompareFn
-	QueueOrderFns                         []common_info.CompareTwoFactors
+	QueueOrderFns                         []CompareQueueFn
 	CanReclaimResourcesFns                []api.CanReclaimResourcesFn
 	ReclaimableFns                        []api.EvictableFn
 	OnJobSolutionStartFns                 []api.OnJobSolutionStartFn

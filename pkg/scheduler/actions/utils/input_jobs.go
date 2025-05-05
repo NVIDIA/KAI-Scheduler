@@ -14,7 +14,7 @@ type JobsOrderInitOptions struct {
 	FilterNonPending         bool
 	FilterNonPreemptible     bool
 	FilterNonActiveAllocated bool
-	ReverseOrder             bool
+	VictimQueue              bool
 	MaxJobsQueueDepth        int
 }
 
@@ -44,8 +44,8 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 			continue
 		}
 
-		jobsOrder.addJobToQueue(job, jobsOrder.jobsOrderInitOptions.ReverseOrder)
+		jobsOrder.addJobToQueue(job, jobsOrder.jobsOrderInitOptions.VictimQueue)
 	}
 
-	jobsOrder.buildActiveJobOrderPriorityQueues(jobsOrder.jobsOrderInitOptions.ReverseOrder)
+	jobsOrder.buildActiveJobOrderPriorityQueues(jobsOrder.jobsOrderInitOptions.VictimQueue)
 }

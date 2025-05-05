@@ -147,7 +147,7 @@ func getOrderedVictimsQueue(ssn *framework.Session, evictingQueue common_info.Qu
 		jobsOrderedByQueue := utils.NewJobsOrderByQueues(ssn, utils.JobsOrderInitOptions{
 			FilterNonPreemptible:     true,
 			FilterNonActiveAllocated: true,
-			ReverseOrder:             true,
+			VictimQueue:              true,
 			MaxJobsQueueDepth:        scheduler_util.QueueCapacityInfinite,
 		})
 		jobs := map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{}

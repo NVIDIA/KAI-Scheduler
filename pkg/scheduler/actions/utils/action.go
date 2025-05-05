@@ -39,7 +39,7 @@ func GetVictimsQueue(
 		}
 	}
 	victimsQueue := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
-		ReverseOrder:      true,
+		VictimQueue:       true,
 		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
 	})
 	victimsQueue.InitializeWithJobs(preemptees)
