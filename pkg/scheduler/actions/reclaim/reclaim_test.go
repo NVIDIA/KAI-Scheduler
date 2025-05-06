@@ -753,13 +753,6 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								NodeName: "node0",
 								State:    pod_status.Running,
 							},
-						},
-					}, {
-						Name:                "q0_job1",
-						RequiredGPUsPerTask: 1,
-						Priority:            constants.PriorityTrainNumber,
-						QueueName:           "queue0",
-						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName: "node1",
 								State:    pod_status.Running,
@@ -768,19 +761,15 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								NodeName: "node2",
 								State:    pod_status.Running,
 							},
-							{
-								NodeName: "node3",
-								State:    pod_status.Running,
-							},
 						},
 					}, {
-						Name:                "q0_job2",
+						Name:                "q0_job1",
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
-								NodeName: "node4",
+								NodeName: "node3",
 								State:    pod_status.Running,
 							},
 						},
@@ -815,9 +804,6 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					"node3": {
 						GPUs: 1,
 					},
-					"node4": {
-						GPUs: 1,
-					},
 				},
 				Queues: []test_utils.TestQueueBasic{
 					{
@@ -833,16 +819,11 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 				},
 				JobExpectedResults: map[string]test_utils.TestExpectedResultBasic{
 					"q0_job0": {
-						GPUsRequired:         1,
-						Status:               pod_status.Running,
-						DontValidateGPUGroup: true,
-					},
-					"q0_job1": {
 						GPUsRequired:         3,
 						Status:               pod_status.Releasing,
 						DontValidateGPUGroup: true,
 					},
-					"q0_job2": {
+					"q0_job1": {
 						GPUsRequired:         1,
 						Status:               pod_status.Running,
 						DontValidateGPUGroup: true,
