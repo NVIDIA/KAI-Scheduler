@@ -36,9 +36,8 @@ type Interface interface {
 const (
 	resourceReservation            = "resource-reservation"
 	gpuReservationPodPrefix        = "gpu-reservation"
-	gpuIndexAnnotationName               = "run.ai/reserve_for_gpu_index"
-	numberOfGPUsToReserve                = 1
-
+	gpuIndexAnnotationName         = "run.ai/reserve_for_gpu_index"
+	numberOfGPUsToReserve          = 1
 	reservationPodRandomCharacters = 5
 	unknownGpuIndicator            = "-1"
 	nodeIndex                      = "runai-node"

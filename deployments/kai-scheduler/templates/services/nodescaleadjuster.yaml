@@ -4,29 +4,30 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: podgrouper
+  name: node-scale-adjuster
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: podgrouper
+      app: node-scale-adjuster
   template:
     metadata:
       labels:
-        app: podgrouper
+        app: node-scale-adjuster
     spec:
-      serviceAccountName: podgrouper
+      serviceAccountName: node-scale-adjuster
       containers:
-        - name: podgrouper
-          image: "{{ .Values.global.registry }}/{{ .Values.podgrouper.image.name }}:{{ .Chart.Version }}"
+        - name: node-scale-adjuster
+          image: "{{ .Values.global.registry }}/{{ .Values.nodescaleadjuster.image.name }}:{{ .Chart.Version }}"
           imagePullPolicy: {{ .Values.podgrouper.image.pullPolicy }}
-          {{- if .Values.podgrouper.additionalArgs }}
           args:
-            {{- toYaml .Values.podgrouper.additionalArgs | nindent 12 }}
+            - "--scaling-pod-image={{ .Values.global.registry }}/{{ .Values.nodescaleadjuster.scalingPodImage.name }}:{{ .Chart.Version }}"
+          {{- if .Values.nodescaleadjuster.additionalArgs }}
+            {{- toYaml .Values.nodescaleadjuster.additionalArgs | nindent 12 }}
           {{- end }}
-          {{- if .Values.podgrouper.resources }}
+          {{- if .Values.nodescaleadjuster.resources }}
           resources:
-            {{- toYaml .Values.podgrouper.resources | nindent 12 }}
+            {{- toYaml .Values.nodescaleadjuster.resources | nindent 12 }}
           {{- end }}
           {{- if .Values.global.securityContext }}
           securityContext:

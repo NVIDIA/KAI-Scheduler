@@ -37,7 +37,7 @@ const (
 	resourceReservationNameSpace      = "kai-resource-reservation"
 	resourceReservationServiceAccount = resourceReservationNameSpace
 	resourceReservationAppLabelValue  = resourceReservationNameSpace
-	scalingPodsNamespace = "kai-scale-adjust"
+	scalingPodsNamespace              = "kai-scale-adjust"
 )
 
 func TestBindRequest(t *testing.T) {

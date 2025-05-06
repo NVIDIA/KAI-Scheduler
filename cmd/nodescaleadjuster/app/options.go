@@ -40,7 +40,7 @@ func (s *Options) AddFlags() {
 		"scaling-pod-app-label", "scaling-pod",
 		"Scaling pod app label")
 	flag.StringVar(&s.ScalingPodServiceAccount,
-		"scaling-pod-service-account", "kai-scale-adjuster",
+		"scaling-pod-service-account", "scaling-pod",
 		"Scaling pod service account name")
 	flag.Float64Var(&s.GPUMemoryToFractionRatio,
 		"gpu-memory-to-fraction-ratio", consts.DefaultGPUMemoryToFractionRatio,

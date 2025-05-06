@@ -12,7 +12,7 @@ podgrouper:
   image:
     name: podgrouper
     pullPolicy: IfNotPresent
-  args: []
+  additionalArgs: []
   resources:
     limits:
       cpu: "500m"
@@ -63,6 +63,21 @@ webhookmanager:
   image:
     name: webhookmanager
     pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+    requests:
+      cpu: "250m"
+      memory: "128Mi"
+
+nodescaleadjuster:
+  image:
+    name: nodescaleadjuster
+    pullPolicy: IfNotPresent
+  scalingPodImage:
+    name: scalingpod
+  additionalArgs: []
   resources:
     limits:
       cpu: "500m"

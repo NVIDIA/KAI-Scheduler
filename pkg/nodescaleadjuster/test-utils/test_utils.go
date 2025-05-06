@@ -20,9 +20,9 @@ import (
 
 const (
 	SchedulerName            = "kai-scheduler"
-	ScalingPodNamespace      = "kai-scale-adjuster"
+	ScalingPodNamespace      = "kai-scale-adjust"
 	ScalingPodAppLabel       = "scaling-pod"
-	ScalingPodServiceAccount = "kai-scale-adjuster"
+	ScalingPodServiceAccount = "scaling-pod"
 )
 
 func NewFakeClient(interceptorFuncs *interceptor.Funcs, objects ...client.Object) client.Client {
