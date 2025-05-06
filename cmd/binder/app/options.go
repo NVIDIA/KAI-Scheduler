@@ -40,16 +40,16 @@ func InitOptions() *Options {
 		"scheduler-name", "kai-scheduler",
 		"The scheduler name the workloads are scheduled with")
 	fs.StringVar(&options.ResourceReservationNamespace,
-		"resource-reservation-namespace", "kai-resource-reservation",
+		"resource-reservation-namespace", "runai-reservation",
 		"Namespace for resource reservation pods")
 	fs.StringVar(&options.ResourceReservationServiceAccount,
-		"resource-reservation-service-account", "kai-resource-reservation",
+		"resource-reservation-service-account", "runai-reservation",
 		"Service account name for resource reservation pods")
 	fs.StringVar(&options.ResourceReservationPodImage,
 		"resource-reservation-pod-image", "registry/local/kai-scheduler/resource-reservation",
 		"Container image for the resource reservation pod")
 	fs.StringVar(&options.ResourceReservationAppLabel,
-		"resource-reservation-app-label", "kai-resource-reservation",
+		"resource-reservation-app-label", "runai-reservation",
 		"App label value of resource reservation pods")
 	fs.IntVar(&options.ResourceReservationAllocationTimeout,
 		"resource-reservation-allocation-timeout", 40,

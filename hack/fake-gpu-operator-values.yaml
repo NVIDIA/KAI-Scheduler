@@ -15,4 +15,4 @@ topology:
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
 
 environment:
-  resourceReservationNamespace: kai-resource-reservation
+  resourceReservationNamespace: runai-reservation

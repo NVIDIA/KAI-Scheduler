@@ -1,11 +1,11 @@
 # Copyright 2025 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
 
-{{ if not (lookup "v1" "Namespace" "" "kai-resource-reservation") -}}
+{{ if not (lookup "v1" "Namespace" "" "runai-reservation") -}}
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kai-resource-reservation
+  name: runai-reservation
   annotations:
     helm.sh/resource-policy: keep
 {{- end }}
