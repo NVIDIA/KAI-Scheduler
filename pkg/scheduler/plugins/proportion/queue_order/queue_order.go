@@ -31,7 +31,7 @@ func GetQueueOrderResult(
 
 	// queues that are currently utilizing more than their deserved quota will be ordered after queues that are under
 	// their deserved quota, to match GuaranteeDeservedQuotaStrategy (based on api.LessFn)
-	result = prioritizeUnderQuotaWithJob(lQueue, rQueue, lJobInfo, rJobInfo, lVictims, rVictims, taskOrderFn)
+	result = prioritizeUnderQuotaWithJob(lQueue, rQueue, lJobInfo, rJobInfo, taskOrderFn)
 	if result != equalPrioritization {
 		return result
 	}
@@ -99,7 +99,6 @@ func prioritizeUnderUtilized(lQueue *rs.QueueAttributes, rQueue *rs.QueueAttribu
 
 func prioritizeUnderQuotaWithJob(lQueue, rQueue *rs.QueueAttributes,
 	lJobInfo, rJobInfo *podgroup_info.PodGroupInfo,
-	lVictims, rVictims []*podgroup_info.PodGroupInfo,
 	taskOrderFn common_info.LessFn) int {
 
 	lAllocatedWithJob := lQueue.GetAllocatedShare()
@@ -107,22 +106,10 @@ func prioritizeUnderQuotaWithJob(lQueue, rQueue *rs.QueueAttributes,
 		podgroup_info.GetTasksToAllocateInitResource(lJobInfo, taskOrderFn, false))
 	lAllocatedWithJob.Add(lJobRequirements)
 
-	var lVictimsRequirements = rs.EmptyResourceQuantities()
-	for _, victim := range lVictims {
-		lVictimsRequirements.Add(utils.QuantifyResource(victim.Allocated))
-	}
-	lAllocatedWithJob.Sub(lVictimsRequirements)
-
 	rAllocatedWithJob := rQueue.GetAllocatedShare()
 	rJobRequirements := utils.QuantifyResource(
 		podgroup_info.GetTasksToAllocateInitResource(rJobInfo, taskOrderFn, false))
 	rAllocatedWithJob.Add(rJobRequirements)
-
-	var rVictimsRequirements = rs.EmptyResourceQuantities()
-	for _, victim := range rVictims {
-		rVictimsRequirements.Add(utils.QuantifyResource(victim.Allocated))
-	}
-	rAllocatedWithJob.Sub(rVictimsRequirements)
 
 	lStarved := lAllocatedWithJob.LessEqual(lQueue.GetDeservedShare())
 	rStarved := rAllocatedWithJob.LessEqual(rQueue.GetDeservedShare())
