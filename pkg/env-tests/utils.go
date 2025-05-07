@@ -101,7 +101,7 @@ func CreatePodObject(namespace, name string, resources corev1.ResourceRequiremen
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Image: "gcr.io/run-ai-lab/ubuntu",
+					Image: "ubuntu",
 					Name:  "ubuntu-container",
 					Args: []string{
 						"sleep",

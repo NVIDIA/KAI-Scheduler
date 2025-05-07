@@ -82,7 +82,7 @@ func GetPodTemplate(queueName, matchLabelValue string) corev1.PodTemplateSpec {
 			TerminationGracePeriodSeconds: pointer.Int64(0),
 			Containers: []corev1.Container{
 				{
-					Image: "gcr.io/run-ai-lab/ubuntu",
+					Image: "ubuntu",
 					Name:  "pytorch",
 					Args: []string{
 						"sleep",
