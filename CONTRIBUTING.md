@@ -39,7 +39,7 @@ Each pull request should meet the following requirements:
 - All tests pass – Run the full test suite locally with: `make build validate test`
 - Test coverage – Add or update tests for any affected code.
 - Documentation – Update relevant documentation to reflect your changes.
-- Changes logged - If you changes warrent logging - like behavior changes (including bugfixes) or new features - add them to the [Changelog](CHANGELOG.md)
+- Changes logged - If your changes warrant logging - like behavior changes (including bugfixes) or new features - add them to the [Changelog](CHANGELOG.md)
 
 ## Getting Help
 Need support or have a question? We're here to help:
