@@ -30,6 +30,7 @@ Help us keep the docs clear and useful by fixing typos, updating outdated inform
 - Fork and Clone – Begin by forking the repository and cloning it to your local machine.
 - Create a Branch – Use a descriptive branch name, such as feature/add-cool-feature or bugfix/fix-issue123.
 - Make Changes – Keep your commits small, focused, and well-documented. For detailed build and test instructions, refer to [Building from Source](docs/developer/building-from-source.md).
+- Log Changes – For behavior-affecting changes (features, fixes, API changes), update the [changelog](CHANGELOG.md) file under the "Unreleased" section. Follow the format at [keepachangelog.com](https://keepachangelog.com/en/1.1.0/). Skip logging internal changes like refactoring or tests.
 - Submit a PR – Open a pull request and reference any relevant issues or discussions.
 
 ### Pull Request Checklist
@@ -38,6 +39,7 @@ Each pull request should meet the following requirements:
 - All tests pass – Run the full test suite locally with: `make build validate test`
 - Test coverage – Add or update tests for any affected code.
 - Documentation – Update relevant documentation to reflect your changes.
+- Changes logged - If you changes warrent logging - like behavior changes (including bugfixes) or new features - add them to the [Changelog](CHANGELOG.md)
 
 ## Getting Help
 Need support or have a question? We're here to help:
