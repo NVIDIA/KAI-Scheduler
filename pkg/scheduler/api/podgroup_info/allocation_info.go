@@ -27,7 +27,6 @@ func HasTasksToAllocate(podGroupInfo *PodGroupInfo, isRealAllocation bool) bool 
 func GetTasksToAllocate(
 	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) []*pod_info.PodInfo {
-
 	taskPriorityQueue := getTasksToAllocateQueue(podGroupInfo, taskOrderFn, isRealAllocation)
 	maxNumOfTasksToAllocate := getNumOfTasksToAllocate(podGroupInfo, taskPriorityQueue.Len())
 

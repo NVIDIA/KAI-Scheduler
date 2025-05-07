@@ -125,7 +125,7 @@ func CreatePodObject(namespace, name string, resources corev1.ResourceRequiremen
 	return pod
 }
 
-func GroupPods(ctx context.Context, c client.Client, queueName, podgroupName string, pods []*corev1.Pod) error {
+func GroupPods(ctx context.Context, c client.Client, queueName, podgroupName string, pods []*corev1.Pod, minMember int32) error {
 	if len(pods) == 0 {
 		return fmt.Errorf("no pods to group")
 	}
@@ -137,7 +137,7 @@ func GroupPods(ctx context.Context, c client.Client, queueName, podgroupName str
 		},
 		Spec: schedulingv2alpha2.PodGroupSpec{
 			Queue:             queueName,
-			MinMember:         int32(len(pods)),
+			MinMember:         minMember,
 			MarkUnschedulable: ptr.To(true),
 		},
 	}

@@ -107,7 +107,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			})
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 
-			err := GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod})
+			err := GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod}, 1)
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 
 			// Wait for bind request to be created instead of checking pod binding
@@ -122,7 +122,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			Expect(len(bindRequests.Items)).To(Equal(1), "Expected 1 bind request", PrettyPrintBindRequestList(bindRequests))
 		})
 
-		It("Should respect scheduling gates", func(ctx context.Context) {
+		It("Should respect scheduling gates - simple pod", func(ctx context.Context) {
 			// Create your pod as before
 			testPod := CreatePodObject(testNamespace.Name, "test-pod", corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
@@ -136,7 +136,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			}
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 
-			err := GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod})
+			err := GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod}, 1)
 
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 			err = wait.PollUntilContextTimeout(ctx, interval, defaultTimeout, true, func(ctx context.Context) (bool, error) {
@@ -171,6 +171,74 @@ var _ = Describe("Scheduler", Ordered, func() {
 				To(Succeed(), "Failed to list bind requests")
 
 			Expect(len(bindRequests.Items)).To(Equal(1), "Expected 1 bind request", PrettyPrintBindRequestList(bindRequests))
+		})
+
+		It("Should respect scheduling gates - podgroup", func(ctx context.Context) {
+			testPod1 := CreatePodObject(testNamespace.Name, "test-pod-1", corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					constants.GpuResource: resource.MustParse("1"),
+				},
+			})
+			testPod1.Spec.SchedulingGates = []corev1.PodSchedulingGate{
+				{
+					Name: "gated",
+				},
+			}
+			Expect(ctrlClient.Create(ctx, testPod1)).To(Succeed(), "Failed to create test pod")
+
+			testPod2 := CreatePodObject(testNamespace.Name, "test-pod-2", corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					constants.GpuResource: resource.MustParse("1"),
+				},
+			})
+			testPod2.Spec.SchedulingGates = []corev1.PodSchedulingGate{
+				{
+					Name: "gated",
+				},
+			}
+			Expect(ctrlClient.Create(ctx, testPod2)).To(Succeed(), "Failed to create test pod")
+
+			err := GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod1, testPod2}, 1)
+			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
+
+			err = wait.PollUntilContextTimeout(ctx, interval, defaultTimeout, true, func(ctx context.Context) (bool, error) {
+				var events corev1.EventList
+				Expect(ctrlClient.List(ctx, &events, client.InNamespace(testNamespace.Name))).
+					To(Succeed(), "Failed to list events")
+
+				for _, event := range events.Items {
+					if event.InvolvedObject.Kind != "PodGroup" || event.Reason != "NotReady" {
+						continue
+					}
+
+					return true, nil
+				}
+
+				return false, nil
+			})
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for unready podgroup event")
+
+			ctrlClient.Get(ctx, client.ObjectKey{Name: testPod1.Name, Namespace: testNamespace.Name}, testPod1)
+			ungatedPod := testPod1.DeepCopy()
+			ungatedPod.Spec.SchedulingGates = nil
+			patch := client.MergeFrom(testPod1)
+			Expect(ctrlClient.Patch(ctx, ungatedPod, patch)).To(Succeed(), "Failed to remove scheduling gates from test pod")
+
+			err = WaitForPodScheduled(ctx, ctrlClient, testPod1.Name, testNamespace.Name, defaultTimeout, interval)
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test pod to be scheduled")
+
+			ctrlClient.Get(ctx, client.ObjectKey{Name: testPod2.Name, Namespace: testNamespace.Name}, testPod2)
+			// expect testPod2 to not be scheduled
+			Expect(testPod2.Status.Phase).To(Equal(corev1.PodPending), "Expected test pod 2 to not be scheduled")
+
+			// ungate testPod2
+			ungatedPod2 := testPod2.DeepCopy()
+			ungatedPod2.Spec.SchedulingGates = nil
+			patch2 := client.MergeFrom(testPod2)
+			Expect(ctrlClient.Patch(ctx, ungatedPod2, patch2)).To(Succeed(), "Failed to remove scheduling gates from test pod")
+
+			err = WaitForPodScheduled(ctx, ctrlClient, testPod2.Name, testNamespace.Name, defaultTimeout, interval)
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test pod to be scheduled")
 		})
 	})
 
@@ -221,7 +289,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			dynamicresource.UseClaim(testPod, resourceClaim)
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 
-			err = GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod})
+			err = GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod}, 1)
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 
 			err = WaitForPodScheduled(ctx, ctrlClient, testPod.Name, testNamespace.Name, defaultTimeout, interval)
@@ -254,7 +322,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 				Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 				createdPods = append(createdPods, testPod)
 
-				err = GroupPods(ctx, ctrlClient, testQueue.Name, fmt.Sprintf("test-podgroup-%d", i), []*corev1.Pod{testPod})
+				err = GroupPods(ctx, ctrlClient, testQueue.Name, fmt.Sprintf("test-podgroup-%d", i), []*corev1.Pod{testPod}, 1)
 				Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 			}
 
