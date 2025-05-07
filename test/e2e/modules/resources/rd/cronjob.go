@@ -51,7 +51,7 @@ func CreateCronJobObject(namespace, queueName string) *batchv1.CronJob {
 							TerminationGracePeriodSeconds: pointer.Int64(0),
 							Containers: []v1.Container{
 								{
-									Image: "gcr.io/run-ai-lab/ubuntu",
+									Image: "ubuntu",
 									Name:  "ubuntu-container",
 									Args: []string{
 										"sleep",

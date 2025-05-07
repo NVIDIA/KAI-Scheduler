@@ -48,7 +48,7 @@ func CreateDeploymentObject(namespace, queueName string) *appsv1.Deployment {
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Image: "gcr.io/run-ai-lab/ubuntu",
+							Image: "ubuntu",
 							Name:  "ubuntu-container",
 							Args: []string{
 								"sleep",

@@ -146,7 +146,7 @@ func CreatePodObject(podQueue *v2.Queue, resources v1.ResourceRequirements) *v1.
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
 				{
-					Image: "nvcr.io/nvidia/base/ubuntu:22.04_20240212",
+					Image: "ubuntu",
 					Name:  "ubuntu-container",
 					Args: []string{
 						"sleep",
