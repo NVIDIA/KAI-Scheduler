@@ -326,8 +326,11 @@ func getTaskStatus(pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo) p
 		}
 
 		if bindRequest != nil {
-
 			return pod_status.Binding
+		}
+
+		if len(pod.Spec.SchedulingGates) > 0 {
+			return pod_status.Gated
 		}
 
 		return pod_status.Pending

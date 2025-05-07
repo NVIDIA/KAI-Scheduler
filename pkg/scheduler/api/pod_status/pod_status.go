@@ -10,6 +10,9 @@ const (
 	// Pending means the task is pending in the apiserver.
 	Pending PodStatus = 1 << iota
 
+	// Gated means the task is gated in the apiserver.
+	Gated
+
 	// Allocated means the scheduler assigns a host to it.
 	Allocated
 
@@ -46,7 +49,7 @@ const (
 const (
 	activeUsedStatuses      = Allocated | Pipelined | Binding | Bound | Running | Releasing
 	activeAllocatedStatuses = Allocated | Pipelined | Binding | Bound | Running
-	aliveStatuses           = Allocated | Pipelined | Binding | Bound | Running | Pending
+	aliveStatuses           = Allocated | Pipelined | Binding | Bound | Running | Pending | Gated
 	boundStatuses           = Allocated | Bound | Running | Releasing
 	allocatedStatuses       = Allocated | Bound | Binding | Running
 )
@@ -55,6 +58,8 @@ func (ps PodStatus) String() string {
 	switch ps {
 	case Pending:
 		return "Pending"
+	case Gated:
+		return "Gated"
 	case Allocated:
 		return "Allocated"
 	case Pipelined:

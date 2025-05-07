@@ -259,6 +259,10 @@ func (podGroupInfo *PodGroupInfo) GetNumPendingTasks() int {
 	return len(podGroupInfo.PodStatusIndex[pod_status.Pending])
 }
 
+func (podGroupInfo *PodGroupInfo) GetNumGatedTasks() int {
+	return len(podGroupInfo.PodStatusIndex[pod_status.Gated])
+}
+
 func (podGroupInfo *PodGroupInfo) GetAliveTasksRequestedGPUs() float64 {
 	tasksTotalRequestedGPUs := float64(0)
 	for _, task := range podGroupInfo.PodInfos {
@@ -282,8 +286,8 @@ func (podGroupInfo *PodGroupInfo) GetTasksActiveAllocatedReqResource() *resource
 }
 
 func (podGroupInfo *PodGroupInfo) IsReadyForScheduling() bool {
-	numAliveTasks := podGroupInfo.GetNumAliveTasks()
-	return int32(numAliveTasks) >= podGroupInfo.MinAvailable
+	validTasks := podGroupInfo.GetNumAliveTasks() - podGroupInfo.GetNumGatedTasks()
+	return int32(validTasks) >= podGroupInfo.MinAvailable
 }
 
 func (podGroupInfo *PodGroupInfo) IsPodGroupStale() bool {

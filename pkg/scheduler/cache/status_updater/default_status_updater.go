@@ -156,10 +156,6 @@ func (su *defaultStatusUpdater) RecordJobStatusEvent(job *podgroup_info.PodGroup
 		su.recordStaleJobEvent(job)
 	}
 
-	if job.GetNumPendingTasks() == 0 {
-		return nil
-	}
-
 	if !job.IsReadyForScheduling() {
 		su.recordJobNotReadyEvent(job)
 		return nil
@@ -214,8 +210,8 @@ func (su *defaultStatusUpdater) recordStaleJobEvent(job *podgroup_info.PodGroupI
 
 func (su *defaultStatusUpdater) recordJobNotReadyEvent(job *podgroup_info.PodGroupInfo) {
 	su.recorder.Eventf(job.PodGroup, v1.EventTypeNormal, "NotReady",
-		fmt.Sprintf("Job is not ready for scheduling. Waiting for %d pods, currently %d existing",
-			job.MinAvailable, job.GetNumAliveTasks()))
+		fmt.Sprintf("Job is not ready for scheduling. Waiting for %d pods, currently %d exist, %d are gated",
+			job.MinAvailable, job.GetNumAliveTasks(), job.GetNumGatedTasks()))
 }
 
 func (su *defaultStatusUpdater) markPodGroupUnschedulable(job *podgroup_info.PodGroupInfo, message string) bool {
