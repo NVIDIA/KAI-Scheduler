@@ -331,7 +331,7 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 						},
 					}),
 			),
-			expected: 2,
+			expected: 3,
 		},
 	}
 
@@ -339,6 +339,177 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 		result := test.job.GetNumAliveTasks()
 		if test.expected != result {
 			t.Errorf("GetNumAliveTasks failed. test '%s'. expected: %v, actual: %v",
+				test.name, test.expected, result)
+		}
+	}
+}
+
+func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
+	tests := []struct {
+		name         string
+		job          *PodGroupInfo
+		minAvailable int32
+		expected     bool
+	}{
+		{
+			name: "job with pending task",
+			job: NewPodGroupInfo("test-pg",
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "111",
+							Name:      "task1",
+							Namespace: "ns1",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						}})),
+			minAvailable: 1,
+			expected:     true,
+		},
+		{
+			name: "job with gated task",
+			job: NewPodGroupInfo("test-pg",
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "111",
+							Name:      "task1",
+							Namespace: "ns1",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						},
+						Spec: v1.PodSpec{
+							SchedulingGates: []v1.PodSchedulingGate{
+								{
+									Name: "gated",
+								},
+							},
+						},
+					},
+				),
+			),
+			minAvailable: 1,
+			expected:     false,
+		},
+		{
+			name: "job with pending task, minAvailable 2",
+			job: NewPodGroupInfo("test-pg",
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "111",
+							Name:      "task1",
+							Namespace: "ns1",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						}})),
+			minAvailable: 2,
+			expected:     false,
+		},
+		{
+			name: "job with pending & gated tasks",
+			job: NewPodGroupInfo("test-pg",
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "111",
+							Name:      "task1",
+							Namespace: "ns1",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						}},
+				),
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "222",
+							Name:      "task2",
+							Namespace: "ns1",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						}},
+				),
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "333",
+							Name:      "task3",
+							Namespace: "ns1",
+						},
+						Spec: v1.PodSpec{
+							SchedulingGates: []v1.PodSchedulingGate{
+								{
+									Name: "gated",
+								},
+							},
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						}},
+				),
+			),
+			minAvailable: 2,
+			expected:     true,
+		},
+		{
+			name: "job with pending & gated tasks",
+			job: NewPodGroupInfo("test-pg",
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "111",
+							Name:      "task1",
+							Namespace: "ns1",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						}},
+				),
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "222",
+							Name:      "task2",
+							Namespace: "ns1",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						}},
+				),
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "333",
+							Name:      "task3",
+							Namespace: "ns1",
+						},
+						Spec: v1.PodSpec{
+							SchedulingGates: []v1.PodSchedulingGate{
+								{
+									Name: "gated",
+								},
+							},
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						}},
+				),
+			),
+			minAvailable: 3,
+			expected:     false,
+		},
+	}
+
+	for _, test := range tests {
+		test.job.MinAvailable = test.minAvailable
+		result := test.job.IsReadyForScheduling()
+		if result != test.expected {
+			t.Errorf("IsReadyForScheduling failed. test '%s'. expected: %v, actual: %v",
 				test.name, test.expected, result)
 		}
 	}
