@@ -222,6 +222,32 @@ func WaitForPodScheduled(ctx context.Context, c client.Client, podName, namespac
 	})
 }
 
+// WaitForPodUnschedulable waits for a pod to be unschedulable
+func WaitForPodUnschedulable(ctx context.Context, c client.Client, podName, namespace string, timeout, interval time.Duration) error {
+	return wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+		var pod corev1.Pod
+		err := c.Get(ctx, client.ObjectKey{Name: podName, Namespace: namespace}, &pod)
+		if err != nil {
+			return false, err
+		}
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type != corev1.PodScheduled {
+				continue
+			}
+
+			if condition.Status != corev1.ConditionFalse {
+				return false, nil
+			}
+
+			if condition.Reason == corev1.PodReasonUnschedulable {
+				return true, nil
+			}
+		}
+
+		return false, nil
+	})
+}
+
 func DeleteAllInNamespace(ctx context.Context, c client.Client, namespace string, resources ...client.Object) error {
 	for _, resource := range resources {
 		err := c.DeleteAllOf(ctx, resource, client.InNamespace(namespace), client.GracePeriodSeconds(0))

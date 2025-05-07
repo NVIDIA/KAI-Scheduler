@@ -279,6 +279,60 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 			),
 			expected: 2,
 		},
+		{
+			name: "job with multiple tasks, some gated",
+			job: NewPodGroupInfo("123",
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "111",
+							Name:      "task1",
+							Namespace: "ns1",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						}}),
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "222",
+							Name:      "task2",
+							Namespace: "ns2",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodRunning,
+						}}),
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "333",
+							Name:      "task3",
+							Namespace: "ns3",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodFailed,
+						}}),
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "444",
+							Name:      "task4",
+							Namespace: "ns4",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						},
+						Spec: v1.PodSpec{
+							SchedulingGates: []v1.PodSchedulingGate{
+								{
+									Name: "gated",
+								},
+							},
+						},
+					}),
+			),
+			expected: 2,
+		},
 	}
 
 	for _, test := range tests {
@@ -364,6 +418,50 @@ func TestPodGroupInfo_GetNumPendingTasks(t *testing.T) {
 						Status: v1.PodStatus{
 							Phase: v1.PodFailed,
 						}}),
+			),
+			expected: 1,
+		},
+		{
+			name: "job with multiple tasks, some gated",
+			job: NewPodGroupInfo("123",
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "111",
+							Name:      "task1",
+							Namespace: "ns1",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodPending,
+						}}),
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "222",
+							Name:      "task2",
+							Namespace: "ns2",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodRunning,
+						}}),
+				pod_info.NewTaskInfo(
+					&v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							UID:       "333",
+							Name:      "task3",
+							Namespace: "ns3",
+						},
+						Status: v1.PodStatus{
+							Phase: v1.PodFailed,
+						},
+						Spec: v1.PodSpec{
+							SchedulingGates: []v1.PodSchedulingGate{
+								{
+									Name: "gated",
+								},
+							},
+						},
+					}),
 			),
 			expected: 1,
 		},

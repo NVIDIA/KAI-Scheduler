@@ -15,6 +15,7 @@ import (
 	resourcev1beta1 "k8s.io/api/resource/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kaiv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
@@ -110,6 +111,57 @@ var _ = Describe("Scheduler", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 
 			// Wait for bind request to be created instead of checking pod binding
+			err = WaitForPodScheduled(ctx, ctrlClient, testPod.Name, testNamespace.Name, defaultTimeout, interval)
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test pod to be scheduled")
+
+			// list bind requests
+			bindRequests := &kaiv1alpha2.BindRequestList{}
+			Expect(ctrlClient.List(ctx, bindRequests, client.InNamespace(testNamespace.Name))).
+				To(Succeed(), "Failed to list bind requests")
+
+			Expect(len(bindRequests.Items)).To(Equal(1), "Expected 1 bind request", PrettyPrintBindRequestList(bindRequests))
+		})
+
+		It("Should respect scheduling gates", func(ctx context.Context) {
+			// Create your pod as before
+			testPod := CreatePodObject(testNamespace.Name, "test-pod", corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					constants.GpuResource: resource.MustParse("1"),
+				},
+			})
+			testPod.Spec.SchedulingGates = []corev1.PodSchedulingGate{
+				{
+					Name: "gated",
+				},
+			}
+			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
+
+			err := GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod})
+
+			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
+			err = wait.PollUntilContextTimeout(ctx, interval, defaultTimeout, true, func(ctx context.Context) (bool, error) {
+				var events corev1.EventList
+				Expect(ctrlClient.List(ctx, &events, client.InNamespace(testNamespace.Name))).
+					To(Succeed(), "Failed to list events")
+
+				for _, event := range events.Items {
+					if event.InvolvedObject.Kind != "PodGroup" || event.Reason != "NotReady" {
+						continue
+					}
+
+					return true, nil
+				}
+
+				return false, nil
+			})
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for unready podgroup event")
+
+			ctrlClient.Get(ctx, client.ObjectKey{Name: testPod.Name, Namespace: testNamespace.Name}, testPod)
+			ungatedPod := testPod.DeepCopy()
+			ungatedPod.Spec.SchedulingGates = nil
+			patch := client.MergeFrom(testPod)
+			Expect(ctrlClient.Patch(ctx, ungatedPod, patch)).To(Succeed(), "Failed to remove scheduling gates from test pod")
+
 			err = WaitForPodScheduled(ctx, ctrlClient, testPod.Name, testNamespace.Name, defaultTimeout, interval)
 			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test pod to be scheduled")
 
