@@ -1,7 +1,7 @@
 # Copyright 2025 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
 
-{{- if .Values.global.autoscaling }}
+{{- if .Values.global.clusterAutoscaling }}
 apiVersion: v1
 kind: Namespace
 metadata:

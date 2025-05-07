@@ -6,7 +6,7 @@ global:
   securityContext: {}
   imagePullSecrets: []
   gpuSharing: false
-  autoscaling: false
+  clusterAutoscaling: false
 
 
 podgrouper:

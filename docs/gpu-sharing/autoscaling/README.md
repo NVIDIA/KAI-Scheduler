@@ -1,6 +1,6 @@
-# Autoscaling
-In Kubernetes, cluster autoscalers automatically adjust the size of a node pool in response to resource demands from running pods. 
-The autoscaler monitors for unschedulable pods—those that can't be placed on any current node due to insufficient resources. 
+# Cluster Autoscaling
+In Kubernetes, cluster autoscalers automatically adjust the size of a node pool in response to resource demands from running pods.
+The autoscaler monitors for unschedulable pods - those that can't be placed on any current node due to insufficient resources.  
 When such pods are detected and no existing nodes can host them, the autoscaler prompts the cloud provider to provision new nodes.
 
 KAI Scheduler natively supports Kubernetes node autoscalers. However, when using GPU Sharing, GPU requests are specified in pod annotations rather than the pod specification. 
@@ -10,7 +10,7 @@ When such a pod is found, `node-scale-adjuster` launches a temporary utility pod
 ## Prerequisites
 GPU sharing autoscaling is disabled by default. To enable it, add the following flag to the helm install command:
 ```
---set "global.autoscaling=true"
+--set "global.clusterAutoscaling=true"
 ```
 
 ## Handling Multiple pods
