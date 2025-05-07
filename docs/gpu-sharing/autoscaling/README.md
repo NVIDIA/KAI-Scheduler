@@ -24,3 +24,4 @@ When GPU memory is specified instead of fractions, the number of utility pods cr
 To handle this, `node-scale-adjuster` assumes a default value of 0.1 GPU per pod when calculating memory-based requests. 
 This means one utility pod is created for every 10 GPU memory requesting pods.
 You can adjust this behavior by changing the `--gpu-memory-to-fraction-ratio` flag in the `node-scale-adjuster` deployment.
+More details on supported arguments can be found [here](../../../cmd/nodescaleadjuster/app/options.go)
