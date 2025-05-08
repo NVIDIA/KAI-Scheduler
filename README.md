@@ -53,8 +53,9 @@ To start scheduling workloads with KAI Scheduler, please continue to [Quick Star
 ## Roadmap
 
 ### High-level overview of the main priorities for 2025
+* Refactor the codebase to enhance vendor neutrality
 * Support Scheduling Gates https://github.com/NVIDIA/KAI-Scheduler/issues/63
-* Integration with Kueue https://github.com/NVIDIA/KAI-Scheduler/issues/68
+* Research on possible integration with Kueue https://github.com/NVIDIA/KAI-Scheduler/issues/68
 * Add Topology Aware Scheduling support of pod-group https://github.com/NVIDIA/KAI-Scheduler/issues/66
 * Support Min Run Time per workloads
 * Support Max Run Time per workload (with delayed requeue)
