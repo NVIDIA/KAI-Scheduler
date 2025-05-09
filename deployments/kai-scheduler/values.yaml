@@ -7,6 +7,9 @@ global:
   imagePullSecrets: []
   gpuSharing: false
   clusterAutoscaling: false
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
 
 
 podgrouper:
