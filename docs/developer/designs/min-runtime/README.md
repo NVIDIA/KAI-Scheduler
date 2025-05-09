@@ -46,16 +46,16 @@ The idea around the algorithm here is to isolate settings of min-runtime in the 
 As a follow-up, we could also provide a setting to disable this and always use the leaf-tree resolved value in all cases. This could be favorable in a scenario where all min-runtimes in the queue tree are managed by one entity.
 
 ##### Example
-1. Leaf queues root.A.B.C.leaf1 (preemptor) and root.A.B.D.leaf2 (preemptee) will use the min-runtime resolved for root.A.B.D.
-2. Leaf queues root.A.B.C.leaf1 (preemptor) and root.A.B.C.leaf2 (preemptee) will use the min-runtime resolved for root.A.B.C.leaf2.
+1. Leaf queues `root.A.B.C.leaf1` (preemptor) and `root.A.B.D.leaf2` (preemptee) will use the min-runtime resolved for `root.A.B.D`.
+2. Leaf queues `root.A.B.C.leaf1` (preemptor) and `root.A.B.C.leaf2` (preemptee) will use the min-runtime resolved for `root.A.B.C.leaf2`.
 
 #### Preemptions (preemptor and preemptee are within the same leaf-queue)
 Starting from the leaf-queue, walk the tree until the first defined preempt-min-runtime is set and use that.
 
 ##### Example
-1. root.A.B has preempt-min-runtime: 600, root.A.B.C.leaf1 has preempt-min-runtime: 300. Job in leaf1 will have preempt-min-runtime: 300.
+1. `root.A.B` has preempt-min-runtime: 600, `root.A.B.C.leaf1` has preempt-min-runtime: 300. Job in leaf1 will have preempt-min-runtime: 300.
 
-1. root.A.B has preempt-min-runtime: 600, root.A.B.C.leaf1 has preempt-min-runtime unset. Job in leaf1 will have preempt-min-runtime: 600.
+1. `root.A.B` has preempt-min-runtime: 600, `root.A.B.C.leaf1` has preempt-min-runtime unset. Job in leaf1 will have preempt-min-runtime: 600.
 
 
 ## Development
@@ -63,7 +63,7 @@ Starting from the leaf-queue, walk the tree until the first defined preempt-min-
 ### Phase 1
 
 Add startTime to PodGroup by mimicking how staleTimestamp is set today:
-https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/cache/status_updater/default_status_updater.go#L149
+https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/cache/status_updater/default_status_updater.go#L149-L154
 
 This will be a readable annotation that is set to current time when the first pod of a podgroup reaches running state.
 
