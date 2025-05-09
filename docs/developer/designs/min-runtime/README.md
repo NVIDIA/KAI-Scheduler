@@ -76,13 +76,13 @@ These functions will return `[]*common_info.PodID`, a which is the set of PodIDs
 
 For the new Is* functions we will do set intersection between the results of each plugin returning the values, and use the result of that.
 
-IsReclaimable/IsPreemptible will be called in each action's victim selection filters, and will be called only AFTER a job has been considered eligible based on the fundamental filters of "reclaims" and "preemptible" (such as preemptible only being relevant for in-queue jobs). If the resulting set has length 0 the whole job is not considered preemptible/reclaimable.
+`IsReclaimable()`/`IsPreemptible()` will be called in each action's victim selection filters, and will be called only AFTER a job has been considered eligible based on the fundamental filters of "reclaims" and "preemptible" (such as preemptible only being relevant for in-queue jobs). If the resulting set has length 0 the whole job is considered not preemptible/reclaimable.
 
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/actions/preempt/preempt.go#L105-L134
 
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/actions/reclaim/reclaim.go#L154-L158
 
-Additionally will rename existing Reclaimable() to HasReclaimableResources() to better reflect what it is doing (and its other variables/names for the same purpose). Also need to refactor PluginOptions potentially to reflect the changed name.
+Additionally will rename existing `Reclaimable()` to `HasReclaimableResources()` to better reflect what it is doing (and its other variables/names for the same purpose). Also need to refactor PluginOptions potentially to reflect the changed name.
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/framework/session_plugins.go#L88
 
 ### Phase 3
@@ -93,22 +93,25 @@ For node pool level, `pkg/scheduler/conf/scheduler_conf.go` seems like the appro
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/conf/scheduler_conf.go#L18-L43
 
 
-Since queues are defined as CRDs, the extra values will have to be implemented in pkg/apis/scheduling/v2/queue_types.go under QueueSpec. If CRD allows it, we will use time.Duration to describe these values (also if time.Duration can describe -1 well), otherwise integer with seconds as value. 
+Since queues are defined as CRDs, the extra values will have to be implemented in `pkg/apis/scheduling/v2/queue_types.go` under `QueueSpec`.
+https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/apis/scheduling/v2/queue_types.go#L26-L49
+
+If CRD allows it, we will use `time.Duration` to describe these values (also if `time.Duration` can describe -1 well), otherwise integer with seconds as value. 
 
 
 ### Phase 4
 
-Implement min-runtime plugin for the scheduler that extends IsReclaimable() and IsPreemptible(), which will be used to filter out jobs eligible for preemption when scheduler tries to take these actions.
+Implement min-runtime plugin for the scheduler that extends `IsReclaimable()` and `IsPreemptible()`, which will be used to filter out jobs eligible for preemption when scheduler tries to take these actions.
 
-We will evaluate jobs in InReclaimable()/IsPreemptible() as follows:
+We will evaluate jobs in `InReclaimable()`/`IsPreemptible()` as follows:
 
-- 1. Resolve the correct min-runtime given scenario, preemptor and preemptee.
-- 2. If min-runtime is -1, return empty set.
-- 3. If currentTime > startTime + resolved min-runtime, return all pod ids in set.
-- 4. If job does not have MinAvailable set, return empty set.
-- 5. Sort tasks in elasic job based on reverse TaskOrderFn (to pick ones that can be sacrificed first), return (active-MinAvailable) pod ids in set.
+ 1. Resolve the correct min-runtime given scenario, preemptor and preemptee.
+ 2. If min-runtime is -1, return empty set.
+ 3. If currentTime > startTime + resolved min-runtime, return all pod ids in set.
+ 4. If job does not have `MinAvailable` set, return empty set.
+ 5. Sort tasks in elasic job based on reverse `TaskOrderFn` (to pick ones that can be sacrificed first), return (active-MinAvailable) pod ids in set.
 
 
-session_plugins.go will take intersection of sets returned by InReclaimable()/IsPreemptible() and return it to reclaim/preempt action.
+`session_plugins.go` will take intersection of sets returned by `InReclaimable()`/`IsPreemptible()` and return it to reclaim/preempt action.
 
 In either action, if length of set is non-zero, the information will be passed to the solver to consider the specific pods only when solving for a solution by getting the data down to https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/actions/common/solvers/pod_scenario_builder.go#L73 to filter out pods that can be evicted.
