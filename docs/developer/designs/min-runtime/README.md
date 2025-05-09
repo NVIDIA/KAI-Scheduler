@@ -67,26 +67,31 @@ https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e35
 
 This will be a readable annotation that is set to current time when the first pod of a podgroup reaches running state.
 
-For scheduling purposes, the readable timestamp is converted to a unix timestamp when pods are snapshotted, using https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/api/podgroup_info/job_info.go#L77
+For scheduling purposes, the readable timestamp is converted to a unix timestamp when pods are snapshotted, using https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/api/podgroup_info/job_info.go#L81
 
 ### Phase 2
 
-Prepare https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/framework/session_plugins.go to expose IsPreemptable() extension function (potentially moving existing isPreemptible to there?), as well as IsReclaimable().
-These functions will return []*common_info.PodID, a which is the set of PodIDs that are eligible for preemption/reclaims given the preemptor.
+Prepare https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/framework/session_plugins.go to expose `IsPreemptible()` extension function (potentially moving existing isPreemptible to there?), as well as `IsReclaimable()`.
+These functions will return `[]*common_info.PodID`, a which is the set of PodIDs that are eligible for preemption/reclaims given the preemptor.
 
 For the new Is* functions we will do set intersection between the results of each plugin returning the values, and use the result of that.
 
 IsReclaimable/IsPreemptible will be called in each action's victim selection filters, and will be called only AFTER a job has been considered eligible based on the fundamental filters of "reclaims" and "preemptible" (such as preemptible only being relevant for in-queue jobs). If the resulting set has length 0 the whole job is not considered preemptible/reclaimable.
 
-Also need to refactor PluginOptions potentially.
+https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/actions/preempt/preempt.go#L105-L134
 
-Additionally will rename existing Reclaimable() to HasReclaimableResources() to better reflect what it is doing.
+https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/actions/reclaim/reclaim.go#L154-L158
+
+Additionally will rename existing Reclaimable() to HasReclaimableResources() to better reflect what it is doing (and its other variables/names for the same purpose). Also need to refactor PluginOptions potentially to reflect the changed name.
+https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/framework/session_plugins.go#L88
 
 ### Phase 3
 
 Implement configuration options for (preempt|reclaim)-min-runtime in node pool and queue configurations.
 
-For node pool level, pkg/scheduler/conf/scheduler_conf.go seems like the appropriate place, either in SchedulerParams or SchedulerConfiguration.
+For node pool level, `pkg/scheduler/conf/scheduler_conf.go` seems like the appropriate place, either in `SchedulerParams` or `SchedulerConfiguration`.
+https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/conf/scheduler_conf.go#L18-L43
+
 
 Since queues are defined as CRDs, the extra values will have to be implemented in pkg/apis/scheduling/v2/queue_types.go under QueueSpec. If CRD allows it, we will use time.Duration to describe these values (also if time.Duration can describe -1 well), otherwise integer with seconds as value. 
 
