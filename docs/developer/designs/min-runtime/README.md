@@ -71,12 +71,13 @@ For scheduling purposes, the readable timestamp is converted to a unix timestamp
 
 ### Phase 2
 
-Prepare https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/framework/session_plugins.go to expose `IsPreemptible()` extension function (potentially moving existing isPreemptible to there?), as well as `IsReclaimable()`.
+Prepare https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/framework/session_plugins.go to expose `IsPreemptible(preemptor, preemptee)` extension function (potentially moving existing isPreemptible to there?), as well as `IsReclaimable(preemptor, preemptee)`.
 These functions will return `[]*common_info.PodID`, a which is the set of PodIDs that are eligible for preemption/reclaims given the preemptor.
 
 For the new Is* functions we will do set intersection between the results of each plugin returning the values, and use the result of that.
 
-`IsReclaimable()`/`IsPreemptible()` will be called in each action's victim selection filters, and will be called only AFTER a job has been considered eligible based on the fundamental filters of "reclaims" and "preemptible" (such as preemptible only being relevant for in-queue jobs). If the resulting set has length 0 the whole job is considered not preemptible/reclaimable.
+`IsReclaimable()`/`IsPreemptible()` will be called in each action's victim selection filters, and will be called only AFTER a job has been considered eligible based on the fundamental filters of "reclaims" and "preemptible" (such as preemptible only being relevant for in-queue jobs). 
+If the resulting set has length 0 the whole job is considered not preemptible/reclaimable.
 
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/actions/preempt/preempt.go#L105-L134
 
