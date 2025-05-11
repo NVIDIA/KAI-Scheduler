@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package plugins
+package defaultgrouper
 
 import (
 	"context"
@@ -20,11 +20,25 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/topowner"
 )
 
-var logger = log.FromContext(context.Background())
+var (
+	logger = log.FromContext(context.Background())
+)
 
-type GetPodGroupMetadataFunc func(topOwner *unstructured.Unstructured, pod *v1.Pod, otherOwners ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error)
+type Grouper interface {
+	GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, otherOwners ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error)
+}
 
-func GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
+type DefaultGrouper struct {
+	queueLabelKey string
+}
+
+func NewDefaultGrouper(queueLabelKey string) *DefaultGrouper {
+	return &DefaultGrouper{
+		queueLabelKey: queueLabelKey,
+	}
+}
+
+func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
 	podGroupMetadata := podgroup.Metadata{
 		Owner: metav1.OwnerReference{
 			APIVersion: topOwner.GetAPIVersion(),
@@ -33,22 +47,22 @@ func GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...
 			UID:        topOwner.GetUID(),
 		},
 		Namespace:         pod.GetNamespace(),
-		Name:              CalcPodGroupName(topOwner),
-		Annotations:       CalcPodGroupAnnotations(topOwner, pod),
-		Labels:            CalcPodGroupLabels(topOwner, pod),
-		Queue:             CalcPodGroupQueue(topOwner, pod),
-		PriorityClassName: CalcPodGroupPriorityClass(topOwner, pod, constants.TrainPriorityClass),
+		Name:              dg.CalcPodGroupName(topOwner),
+		Annotations:       dg.CalcPodGroupAnnotations(topOwner, pod),
+		Labels:            dg.CalcPodGroupLabels(topOwner, pod),
+		Queue:             dg.CalcPodGroupQueue(topOwner, pod),
+		PriorityClassName: dg.CalcPodGroupPriorityClass(topOwner, pod, constants.TrainPriorityClass),
 		MinAvailable:      1,
 	}
 
 	return &podGroupMetadata, nil
 }
 
-func CalcPodGroupName(topOwner *unstructured.Unstructured) string {
+func (dg *DefaultGrouper) CalcPodGroupName(topOwner *unstructured.Unstructured) string {
 	return fmt.Sprintf("%s-%s-%s", constants.PodGroupNamePrefix, topOwner.GetName(), topOwner.GetUID())
 }
 
-func CalcPodGroupAnnotations(topOwner *unstructured.Unstructured, pod *v1.Pod) map[string]string {
+func (dg *DefaultGrouper) CalcPodGroupAnnotations(topOwner *unstructured.Unstructured, pod *v1.Pod) map[string]string {
 	// Inherit all the annotations of the top owner
 	pgAnnotations := make(map[string]string, len(topOwner.GetAnnotations())+2)
 
@@ -70,7 +84,7 @@ func CalcPodGroupAnnotations(topOwner *unstructured.Unstructured, pod *v1.Pod) m
 	return pgAnnotations
 }
 
-func CalcPodGroupLabels(topOwner *unstructured.Unstructured, pod *v1.Pod) map[string]string {
+func (dg *DefaultGrouper) CalcPodGroupLabels(topOwner *unstructured.Unstructured, pod *v1.Pod) map[string]string {
 	// Inherit all the labels of the top owner
 	pgLabels := make(map[string]string, len(topOwner.GetLabels()))
 	maps.Copy(pgLabels, topOwner.GetLabels())
@@ -85,10 +99,10 @@ func CalcPodGroupLabels(topOwner *unstructured.Unstructured, pod *v1.Pod) map[st
 	return pgLabels
 }
 
-func CalcPodGroupQueue(topOwner *unstructured.Unstructured, pod *v1.Pod) string {
-	if queue, found := topOwner.GetLabels()[constants.QueueLabelKey]; found {
+func (dg *DefaultGrouper) CalcPodGroupQueue(topOwner *unstructured.Unstructured, pod *v1.Pod) string {
+	if queue, found := topOwner.GetLabels()[dg.queueLabelKey]; found {
 		return queue
-	} else if queue, found = pod.GetLabels()[constants.QueueLabelKey]; found {
+	} else if queue, found = pod.GetLabels()[dg.queueLabelKey]; found {
 		return queue
 	}
 
@@ -119,7 +133,7 @@ func calculateQueueName(topOwner *unstructured.Unstructured, pod *v1.Pod) string
 	return project
 }
 
-func CalcPodGroupPriorityClass(topOwner *unstructured.Unstructured, pod *v1.Pod,
+func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstructured, pod *v1.Pod,
 	defaultPriorityClassForJob string) string {
 	if priorityClassName, found := topOwner.GetLabels()[constants.PriorityLabelKey]; found {
 		return priorityClassName

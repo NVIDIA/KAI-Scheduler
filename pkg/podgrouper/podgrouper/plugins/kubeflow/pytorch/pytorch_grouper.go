@@ -19,8 +19,20 @@ const (
 	WorkerName      = "Worker"
 )
 
-func GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
-	podGroupMetadata, err := kubeflow.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{WorkerName})
+type PyTorchGrouper struct {
+	*kubeflow.KubeflowDistributedGrouper
+}
+
+func NewPytorchGrouper(queueLabelKey string) *PyTorchGrouper {
+	return &PyTorchGrouper{
+		KubeflowDistributedGrouper: kubeflow.NewKubeflowDistributedGrouper(queueLabelKey),
+	}
+}
+
+func (ptg *PyTorchGrouper) GetPodGroupMetadata(
+	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
+) (*podgroup.Metadata, error) {
+	podGroupMetadata, err := ptg.KubeflowDistributedGrouper.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{WorkerName})
 	if err != nil {
 		return nil, err
 	}

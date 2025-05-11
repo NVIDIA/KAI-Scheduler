@@ -7,7 +7,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
 func TestSkipTopOwnerGrouper(t *testing.T) {
@@ -24,7 +25,8 @@ func TestSkipTopOwnerGrouper(t *testing.T) {
 }
 
 const (
-	queueName = "test-queue"
+	queueLabelKey = "kai.scheduler/queue"
+	queueName     = "test-queue"
 )
 
 var examplePod = &v1.Pod{
@@ -47,15 +49,17 @@ var _ = Describe("SkipTopOwnerGrouper", func() {
 		var (
 			grouper        *skipTopOwnerGrouper
 			client         client.Client
-			supportedTypes map[metav1.GroupVersionKind]plugins.GetPodGroupMetadataFunc
+			defaultGrouper *defaultgrouper.DefaultGrouper
+			supportedTypes map[metav1.GroupVersionKind]defaultgrouper.Grouper
 		)
 
 		BeforeEach(func() {
 			client = fake.NewFakeClient()
-			supportedTypes = map[metav1.GroupVersionKind]plugins.GetPodGroupMetadataFunc{
-				{Group: "", Version: "v1", Kind: "Pod"}: plugins.GetPodGroupMetadata,
+			defaultGrouper = defaultgrouper.NewDefaultGrouper(queueLabelKey)
+			supportedTypes = map[metav1.GroupVersionKind]defaultgrouper.Grouper{
+				{Group: "", Version: "v1", Kind: "Pod"}: defaultGrouper,
 			}
-			grouper = &skipTopOwnerGrouper{client: client, supportedTypes: supportedTypes}
+			grouper = NewSkipTopOwnerGrouper(client, defaultGrouper, supportedTypes)
 		})
 
 		Context("when last owner is a pod", func() {
@@ -70,7 +74,7 @@ var _ = Describe("SkipTopOwnerGrouper", func() {
 							"name":      lastOwnerPartial.Name,
 							"namespace": "default",
 							"labels": map[string]interface{}{
-								"runai/queue": queueName,
+								queueLabelKey: queueName,
 							},
 						},
 					},
@@ -101,7 +105,7 @@ var _ = Describe("SkipTopOwnerGrouper", func() {
 							"name":      "other",
 							"namespace": "default",
 							"labels": map[string]interface{}{
-								"runai/queue": queueName,
+								queueLabelKey: queueName,
 							},
 						},
 					},
@@ -151,7 +155,7 @@ var _ = Describe("SkipTopOwnerGrouper", func() {
 			})
 
 			It("uses the second last owner when there are multiple", func() {
-				supportedTypes[metav1.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}] = plugins.GetPodGroupMetadata
+				supportedTypes[metav1.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}] = defaultGrouper
 
 				otherOwners := []*metav1.PartialObjectMetadata{objectToPartial(replicaSet), objectToPartial(deployment), objectToPartial(other)}
 				metadata, err := grouper.GetPodGroupMetadata(other, pod, otherOwners...)

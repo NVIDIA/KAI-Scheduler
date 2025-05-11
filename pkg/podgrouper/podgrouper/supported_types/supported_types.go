@@ -7,9 +7,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/aml"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/cronjobs"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/deployment"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/job"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/knative"
@@ -50,12 +50,12 @@ const (
 // +kubebuilder:rbac:groups=run.ai,resources=trainingworkloads;interactiveworkloads;distributedworkloads;inferenceworkloads,verbs=get;list;watch
 
 type SupportedTypes interface {
-	GetPodGroupMetadataFunc(metav1.GroupVersionKind) (plugins.GetPodGroupMetadataFunc, bool)
+	GetPodGroupMetadataFunc(metav1.GroupVersionKind) (defaultgrouper.Grouper, bool)
 }
 
-type supportedTypes map[metav1.GroupVersionKind]plugins.GetPodGroupMetadataFunc
+type supportedTypes map[metav1.GroupVersionKind]defaultgrouper.Grouper
 
-func (s supportedTypes) GetPodGroupMetadataFunc(gvk metav1.GroupVersionKind) (plugins.GetPodGroupMetadataFunc, bool) {
+func (s supportedTypes) GetPodGroupMetadataFunc(gvk metav1.GroupVersionKind) (defaultgrouper.Grouper, bool) {
 	if f, found := s[gvk]; found {
 		return f, true
 	}
@@ -68,181 +68,181 @@ func (s supportedTypes) GetPodGroupMetadataFunc(gvk metav1.GroupVersionKind) (pl
 	return nil, false
 }
 
-func NewSupportedTypes(kubeClient client.Client, searchForLegacyPodGroups, gangScheduleKnative bool) SupportedTypes {
+func NewSupportedTypes(kubeClient client.Client, searchForLegacyPodGroups,
+	gangScheduleKnative bool, queueLabelKey string) SupportedTypes {
 
-	inferenceServiceGrouper := knative.NewKnativeGrouper(kubeClient, gangScheduleKnative)
-	cronJobGrouper := cronjobs.NewCronJobGrouper(kubeClient)
-	rayGrouper := ray.NewRayGrouper(kubeClient)
-	runaiJobGrouper := runaijob.NewRunaiJobGrouper(kubeClient, searchForLegacyPodGroups)
-	k8sJobGrouper := job.NewK8sJobGrouper(kubeClient, searchForLegacyPodGroups)
-	mpiGrouper := mpi.NewMpiGrouper(kubeClient)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	mpiGrouper := mpi.NewMpiGrouper(kubeClient, queueLabelKey)
+	rayClusterGrouper := ray.NewRayClusterGrouper(kubeClient, queueLabelKey)
+	rayJobGrouper := ray.NewRayJobGrouper(kubeClient, queueLabelKey)
+	rayServiceGrouper := ray.NewRayServiceGrouper(kubeClient, queueLabelKey)
 
 	table := supportedTypes{
 		{
 			Group:   "apps",
 			Version: "v1",
 			Kind:    "Deployment",
-		}: deployment.GetPodGroupMetadata,
+		}: deployment.NewDeploymentGrouper(queueLabelKey),
 		{
 			Group:   "machinelearning.seldon.io",
 			Version: "v1alpha2",
 			Kind:    "SeldonDeployment",
-		}: plugins.GetPodGroupMetadata,
+		}: defaultGrouper,
 		{
 			Group:   "machinelearning.seldon.io",
 			Version: "v1",
 			Kind:    "SeldonDeployment",
-		}: plugins.GetPodGroupMetadata,
+		}: defaultGrouper,
 		{
 			Group:   "kubevirt.io",
 			Version: "v1",
 			Kind:    "VirtualMachineInstance",
-		}: plugins.GetPodGroupMetadata,
+		}: defaultGrouper,
 		{
 			Group:   "kubeflow.org",
 			Version: "v1",
 			Kind:    "TFJob",
-		}: tensorflowlugin.GetPodGroupMetadata,
+		}: tensorflowlugin.NewTensorflowGrouper(queueLabelKey),
 		{
 			Group:   "kubeflow.org",
 			Version: "v1",
 			Kind:    "PyTorchJob",
-		}: pytorchplugin.GetPodGroupMetadata,
+		}: pytorchplugin.NewPytorchGrouper(queueLabelKey),
 		{
 			Group:   "kubeflow.org",
 			Version: "v1",
 			Kind:    "XGBoostJob",
-		}: xgboostplugin.GetPodGroupMetadata,
+		}: xgboostplugin.NewXGBoostGrouper(queueLabelKey),
 		{
 			Group:   "kubeflow.org",
 			Version: "v1",
 			Kind:    "JAXJob",
-		}: jaxplugin.GetPodGroupMetadata,
+		}: jaxplugin.NewJaxGrouper(queueLabelKey),
 		{
 			Group:   "kubeflow.org",
 			Version: "v1",
 			Kind:    "MPIJob",
-		}: mpiGrouper.GetPodGroupMetadata,
+		}: mpiGrouper,
 		{
 			Group:   "kubeflow.org",
 			Version: "v2beta1",
 			Kind:    "MPIJob",
-		}: mpiGrouper.GetPodGroupMetadata,
+		}: mpiGrouper,
 		{
 			Group:   "kubeflow.org",
 			Version: "v1beta1",
 			Kind:    "Notebook",
-		}: notebookplugin.GetPodGroupMetadata,
+		}: notebookplugin.NewNotebookGrouper(queueLabelKey),
 		{
 			Group:   "batch",
 			Version: "v1",
 			Kind:    "Job",
-		}: k8sJobGrouper.GetPodGroupMetadata,
+		}: job.NewK8sJobGrouper(kubeClient, queueLabelKey, searchForLegacyPodGroups),
 		{
 			Group:   "apps",
 			Version: "v1",
 			Kind:    "StatefulSet",
-		}: plugins.GetPodGroupMetadata,
+		}: defaultGrouper,
 		{
 			Group:   "apps",
 			Version: "v1",
 			Kind:    "ReplicaSet",
-		}: plugins.GetPodGroupMetadata,
+		}: defaultGrouper,
 		{
 			Group:   "run.ai",
 			Version: "v1",
 			Kind:    "RunaiJob",
-		}: runaiJobGrouper.GetPodGroupMetadata,
+		}: runaijob.NewRunaiJobGrouper(kubeClient, queueLabelKey, searchForLegacyPodGroups),
 		{
 			Group:   "",
 			Version: "v1",
 			Kind:    "Pod",
-		}: podjob.GetPodGroupMetadata,
+		}: podjob.NewPodJobGrouper(queueLabelKey),
 		{
 			Group:   "amlarc.azureml.com",
 			Version: "v1alpha1",
 			Kind:    "AmlJob",
-		}: aml.GetPodGroupMetadata,
+		}: aml.NewAmlGrouper(queueLabelKey),
 		{
 			Group:   "serving.knative.dev",
 			Version: "v1",
 			Kind:    "Service",
-		}: inferenceServiceGrouper.GetPodGroupMetadata,
+		}: knative.NewKnativeGrouper(kubeClient, queueLabelKey, gangScheduleKnative),
 		{
 			Group:   "batch",
 			Version: "v1",
 			Kind:    "CronJob",
-		}: cronJobGrouper.GetPodGroupMetadata,
+		}: cronjobs.NewCronJobGrouper(kubeClient, queueLabelKey),
 		{
 			Group:   "workspace.devfile.io",
 			Version: "v1alpha2",
 			Kind:    "DevWorkspace",
-		}: plugins.GetPodGroupMetadata,
+		}: defaultGrouper,
 		{
 			Group:   "ray.io",
 			Version: "v1alpha1",
 			Kind:    "RayCluster",
-		}: rayGrouper.GetPodGroupMetadataForRayCluster,
+		}: rayClusterGrouper,
 		{
 			Group:   "ray.io",
 			Version: "v1alpha1",
 			Kind:    "RayJob",
-		}: rayGrouper.GetPodGroupMetadataForRayJob,
+		}: rayJobGrouper,
 		{
 			Group:   "ray.io",
 			Version: "v1alpha1",
 			Kind:    "RayService",
-		}: rayGrouper.GetPodGroupMetadataForRayService,
+		}: rayServiceGrouper,
 		{
 			Group:   "ray.io",
 			Version: "v1",
 			Kind:    "RayCluster",
-		}: rayGrouper.GetPodGroupMetadataForRayCluster,
+		}: rayClusterGrouper,
 		{
 			Group:   "ray.io",
 			Version: "v1",
 			Kind:    "RayJob",
-		}: rayGrouper.GetPodGroupMetadataForRayJob,
+		}: rayJobGrouper,
 		{
 			Group:   "ray.io",
 			Version: "v1",
 			Kind:    "RayService",
-		}: rayGrouper.GetPodGroupMetadataForRayService,
+		}: rayServiceGrouper,
 		{
 			Group:   "kubeflow.org",
 			Version: "v1alpha1",
 			Kind:    "ScheduledWorkflow",
-		}: plugins.GetPodGroupMetadata,
+		}: defaultGrouper,
 		{
 			Group:   "tekton.dev",
 			Version: "v1",
 			Kind:    "PipelineRun",
-		}: plugins.GetPodGroupMetadata,
+		}: defaultGrouper,
 		{
 			Group:   "tekton.dev",
 			Version: "v1",
 			Kind:    "TaskRun",
-		}: plugins.GetPodGroupMetadata,
+		}: defaultGrouper,
 		{
 			Group:   "egx.nvidia.io",
 			Version: "v1",
 			Kind:    "SPOTRequest",
-		}: spotrequest.GetPodGroupMetadata,
+		}: spotrequest.NewSpotRequestGrouper(queueLabelKey),
 	}
 
-	skipTopOwnerGrouper := skiptopowner.NewSkipTopOwnerGrouper(kubeClient, table)
+	skipTopOwnerGrouper := skiptopowner.NewSkipTopOwnerGrouper(kubeClient, defaultGrouper, table)
 	table[metav1.GroupVersionKind{
 		Group:   apiGroupArgo,
 		Version: "v1alpha1",
 		Kind:    "Workflow",
-	}] = skipTopOwnerGrouper.GetPodGroupMetadata
+	}] = skipTopOwnerGrouper
 
 	for _, kind := range []string{kindInferenceWorkload, kindTrainingWorkload, kindDistributedWorkload, kindInteractiveWorkload} {
 		table[metav1.GroupVersionKind{
 			Group:   apiGroupRunai,
 			Version: "*",
 			Kind:    kind,
-		}] = skipTopOwnerGrouper.GetPodGroupMetadata
+		}] = skipTopOwnerGrouper
 	}
 
 	return table

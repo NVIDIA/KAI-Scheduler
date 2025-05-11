@@ -10,15 +10,25 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
+
+type KubeflowDistributedGrouper struct {
+	*defaultgrouper.DefaultGrouper
+}
+
+func NewKubeflowDistributedGrouper(queueLabelKey string) *KubeflowDistributedGrouper {
+	return &KubeflowDistributedGrouper{
+		DefaultGrouper: defaultgrouper.NewDefaultGrouper(queueLabelKey),
+	}
+}
 
 // +kubebuilder:rbac:groups=kubeflow.org,resources=mpijobs;notebooks;pytorchjobs;jaxjobs;tfjobs;xgboostjobs;scheduledworkflows,verbs=get;list;watch
 // +kubebuilder:rbac:groups=kubeflow.org,resources=mpijobs/finalizers;notebooks/finalizers;pytorchjobs/finalizers;jaxjobs/finalizers;tfjobs/finalizers;xgboostjobs/finalizers;scheduledworkflows/finalizers,verbs=patch;update;create
 
-func GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod,
+func (kdg *KubeflowDistributedGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod,
 	replicaSpecName string, mandatorySpecNames []string) (*podgroup.Metadata, error) {
-	podGroupMetadata, err := plugins.GetPodGroupMetadata(topOwner, pod)
+	podGroupMetadata, err := kdg.DefaultGrouper.GetPodGroupMetadata(topOwner, pod)
 	if err != nil {
 		return nil, err
 	}

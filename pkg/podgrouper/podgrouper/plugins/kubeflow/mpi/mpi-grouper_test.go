@@ -7,13 +7,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
+)
+
+const (
+	queueLabelKey = "kai.scheduler/queue"
 )
 
 func TestLauncherPodExists(t *testing.T) {
@@ -84,7 +89,7 @@ func TestLauncherPodExists(t *testing.T) {
 			_ = v1.AddToScheme(scheme)
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.existingPods...).Build()
 
-			mg := NewMpiGrouper(fakeClient)
+			mg := NewMpiGrouper(fakeClient, queueLabelKey)
 			topOwner := &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -203,7 +208,7 @@ func TestHandleDelayedLauncherPolicy(t *testing.T) {
 			_ = v1.AddToScheme(scheme)
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.existingPods...).Build()
 
-			mg := NewMpiGrouper(fakeClient)
+			mg := NewMpiGrouper(fakeClient, queueLabelKey)
 			gp := &podgroup.Metadata{
 				MinAvailable: tt.initialMinAvail,
 			}
@@ -383,7 +388,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 			_ = v1.AddToScheme(scheme)
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.existingPods...).Build()
 
-			mg := NewMpiGrouper(fakeClient)
+			mg := NewMpiGrouper(fakeClient, queueLabelKey)
 			metadata, err := mg.GetPodGroupMetadata(tt.topOwner, tt.pod)
 
 			if (err != nil) != tt.expectedError {

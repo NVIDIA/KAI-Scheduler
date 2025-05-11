@@ -14,6 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+const (
+	queueLabelKey = "kai.scheduler/queue"
+)
+
 func TestSupportedTypes(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "SupportedTypes Suite")
@@ -28,7 +32,7 @@ var _ = Describe("SupportedTypes", func() {
 
 		BeforeEach(func() {
 			kubeClient = fake.NewFakeClient()
-			supported = NewSupportedTypes(kubeClient, false, false)
+			supported = NewSupportedTypes(kubeClient, false, false, queueLabelKey)
 		})
 
 		It("should return func and true for exact GVK match", func() {
@@ -62,7 +66,7 @@ var _ = Describe("SupportedTypes", func() {
 
 		BeforeEach(func() {
 			kubeClient = fake.NewFakeClient()
-			supported = NewSupportedTypes(kubeClient, false, false)
+			supported = NewSupportedTypes(kubeClient, false, false, queueLabelKey)
 		})
 
 		It("should successfully retrieve with any version for kind set with wildcard", func() {

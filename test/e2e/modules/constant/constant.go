@@ -12,7 +12,6 @@ const (
 	SystemPodsNamespace             = "kai-scheduler"
 	NonPreemptiblePriorityThreshold = 100
 	EngineTestPodsApp               = "engine-e2e"
-	QueueLabelKey                   = "runai/queue"
 
 	SchedulerDeploymentName = "scheduler"
 	SchedulerContainerName  = "scheduler"

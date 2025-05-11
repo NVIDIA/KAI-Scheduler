@@ -11,6 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+const queueLabelKey = "kai.scheduler/queue"
+
 func TestGetPodGroupMetadata(t *testing.T) {
 	owner := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -40,7 +42,8 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	amlGrouper := NewAmlGrouper(queueLabelKey)
+	podGroupMetadata, err := amlGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "test_kind", podGroupMetadata.Owner.Kind)
@@ -81,7 +84,8 @@ func TestGetPodGroupMetadataWithoutReplicas(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	_, err := GetPodGroupMetadata(owner, pod)
+	amlGrouper := NewAmlGrouper(queueLabelKey)
+	_, err := amlGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.NotNil(t, err)
 }

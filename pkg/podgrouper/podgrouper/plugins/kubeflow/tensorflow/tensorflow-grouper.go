@@ -16,6 +16,18 @@ const (
 	ReplicaSpecName = "tfReplicaSpecs"
 )
 
-func GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
-	return kubeflow.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{})
+type TensorflowGrouper struct {
+	*kubeflow.KubeflowDistributedGrouper
+}
+
+func NewTensorflowGrouper(queueLabelKey string) *TensorflowGrouper {
+	return &TensorflowGrouper{
+		kubeflow.NewKubeflowDistributedGrouper(queueLabelKey),
+	}
+}
+
+func (tfg *TensorflowGrouper) GetPodGroupMetadata(
+	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
+) (*podgroup.Metadata, error) {
+	return tfg.KubeflowDistributedGrouper.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{})
 }

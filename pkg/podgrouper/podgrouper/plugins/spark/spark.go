@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
 const (
@@ -16,14 +16,18 @@ const (
 	sparkAppSelectorLabelName = "spark-app-selector"
 )
 
-func IsSparkPod(pod *v1.Pod) bool {
-	_, foundSparkApp := pod.Labels[sparkAppLabelName]
-	_, foundSparkAppSelector := pod.Labels[sparkAppSelectorLabelName]
-	return foundSparkApp && foundSparkAppSelector
+type SparkGrouper struct {
+	*defaultgrouper.DefaultGrouper
 }
 
-func GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod) (*podgroup.Metadata, error) {
-	podGroupMetadata, err := plugins.GetPodGroupMetadata(topOwner, pod)
+func NewSparkGrouper(queueLabelKey string) *SparkGrouper {
+	return &SparkGrouper{
+		defaultgrouper.NewDefaultGrouper(queueLabelKey),
+	}
+}
+
+func (sg *SparkGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod) (*podgroup.Metadata, error) {
+	podGroupMetadata, err := sg.DefaultGrouper.GetPodGroupMetadata(topOwner, pod)
 	if err != nil {
 		return nil, err
 	}
@@ -31,4 +35,10 @@ func GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod) (*pod
 	podGroupMetadata.Name = pod.Labels[sparkAppSelectorLabelName]
 
 	return podGroupMetadata, nil
+}
+
+func IsSparkPod(pod *v1.Pod) bool {
+	_, foundSparkApp := pod.Labels[sparkAppLabelName]
+	_, foundSparkAppSelector := pod.Labels[sparkAppSelectorLabelName]
+	return foundSparkApp && foundSparkAppSelector
 }

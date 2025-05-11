@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -20,9 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
 const (
@@ -35,17 +35,19 @@ var logger = log.FromContext(context.Background())
 type knativeGrouper struct {
 	client       client.Client
 	gangSchedule bool
+	*defaultgrouper.DefaultGrouper
 }
 
-// +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions;configurations;services,verbs=get;list;watch
-// +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions/finalizers;configurations/finalizers;services/finalizers,verbs=patch;update;create
-
-func NewKnativeGrouper(client client.Client, gangSchedule bool) *knativeGrouper {
+func NewKnativeGrouper(client client.Client, queueLabelKey string, gangSchedule bool) *knativeGrouper {
 	return &knativeGrouper{
-		client:       client,
-		gangSchedule: gangSchedule,
+		client:         client,
+		gangSchedule:   gangSchedule,
+		DefaultGrouper: defaultgrouper.NewDefaultGrouper(queueLabelKey),
 	}
 }
+
+// +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions/finalizers;configurations/finalizers;services/finalizers,verbs=patch;update;create
+// +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions;configurations;services,verbs=get;list;watch
 
 func (g *knativeGrouper) GetPodGroupMetadata(_ *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
 	revisionName, found := pod.Labels[knativeRevisionLabel]
@@ -64,7 +66,7 @@ func (g *knativeGrouper) GetPodGroupMetadata(_ *unstructured.Unstructured, pod *
 	}
 
 	if !g.gangSchedule {
-		return getPodGroupFromPod(rev, pod)
+		return g.getPodGroupFromPod(rev, pod)
 	}
 
 	isBC, err := g.isBCRevision(rev)
@@ -73,13 +75,13 @@ func (g *knativeGrouper) GetPodGroupMetadata(_ *unstructured.Unstructured, pod *
 	}
 
 	if isBC {
-		return getPodGroupFromPod(rev, pod)
+		return g.getPodGroupFromPod(rev, pod)
 	}
 
-	return getPodGroupFromRevision(rev, pod)
+	return g.getPodGroupFromRevision(rev, pod)
 }
 
-func getPodGroupFromRevision(revision *unstructured.Unstructured, pod *v1.Pod) (*podgroup.Metadata, error) {
+func (g *knativeGrouper) getPodGroupFromRevision(revision *unstructured.Unstructured, pod *v1.Pod) (*podgroup.Metadata, error) {
 	annotations := revision.GetAnnotations()
 	minScale, exists := annotations[knativeMinScaleAnnotation]
 	if !exists {
@@ -102,10 +104,10 @@ func getPodGroupFromRevision(revision *unstructured.Unstructured, pod *v1.Pod) (
 	}
 
 	return &podgroup.Metadata{
-		Annotations:       plugins.CalcPodGroupAnnotations(revision, pod),
-		Labels:            plugins.CalcPodGroupLabels(revision, pod),
+		Annotations:       g.CalcPodGroupAnnotations(revision, pod),
+		Labels:            g.CalcPodGroupLabels(revision, pod),
 		PriorityClassName: constants.InferencePriorityClass,
-		Queue:             plugins.CalcPodGroupQueue(revision, pod),
+		Queue:             g.CalcPodGroupQueue(revision, pod),
 		Namespace:         revision.GetNamespace(),
 		Name:              calcPodGroupName(revision),
 		MinAvailable:      int32(minScaleInt),
@@ -113,7 +115,7 @@ func getPodGroupFromRevision(revision *unstructured.Unstructured, pod *v1.Pod) (
 	}, nil
 }
 
-func getPodGroupFromPod(revision *unstructured.Unstructured, pod *v1.Pod) (*podgroup.Metadata, error) {
+func (g *knativeGrouper) getPodGroupFromPod(revision *unstructured.Unstructured, pod *v1.Pod) (*podgroup.Metadata, error) {
 	ownerRef := &metav1.OwnerReference{
 		APIVersion: pod.APIVersion,
 		Kind:       pod.Kind,
@@ -122,10 +124,10 @@ func getPodGroupFromPod(revision *unstructured.Unstructured, pod *v1.Pod) (*podg
 	}
 
 	return &podgroup.Metadata{
-		Annotations:       plugins.CalcPodGroupAnnotations(revision, pod),
-		Labels:            plugins.CalcPodGroupLabels(revision, pod),
+		Annotations:       g.CalcPodGroupAnnotations(revision, pod),
+		Labels:            g.CalcPodGroupLabels(revision, pod),
 		PriorityClassName: constants.InferencePriorityClass,
-		Queue:             plugins.CalcPodGroupQueue(revision, pod),
+		Queue:             g.CalcPodGroupQueue(revision, pod),
 		Namespace:         pod.GetNamespace(),
 		Name:              calcPodGroupName(pod),
 		MinAvailable:      1,

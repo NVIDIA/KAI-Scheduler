@@ -5,7 +5,6 @@ package constants
 
 const (
 	PodGroupNamePrefix = "pg"
-	QueueLabelKey      = "runai/queue"
 	ProjectLabelKey    = "project"
 	PriorityLabelKey   = "priorityClassName"
 	UserLabelKey       = "user"

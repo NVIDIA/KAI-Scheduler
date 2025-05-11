@@ -80,7 +80,7 @@ func getPodTemplate(queueName, matchLabelValue string) corev1.PodTemplateSpec {
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				constants.AppLabelName: matchLabelValue,
-				"runai/queue":          queueName,
+				"kai.scheduler/queue":  queueName,
 			},
 		},
 		Spec: corev1.PodSpec{

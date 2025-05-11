@@ -23,6 +23,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
+const (
+	queueLabelKey = "kai.scheduler/queue"
+)
+
 var _ = Describe("Scheduling of Pod with PVC", Ordered, func() {
 	var (
 		testCtx *testcontext.TestContext
@@ -78,7 +82,7 @@ var _ = Describe("Scheduling of Pod with PVC", Ordered, func() {
 				MountPath: "/tmp/a",
 			},
 		}
-		pod.Labels["runai/queue"] = testCtx.Queues[0].Name
+		pod.Labels[queueLabelKey] = testCtx.Queues[0].Name
 
 		_, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod)
 		Expect(err).NotTo(HaveOccurred())
@@ -148,7 +152,7 @@ var _ = Describe("Scheduling of Pod with PVC", Ordered, func() {
 					MountPath: "/tmp/a",
 				},
 			}
-			pod.Labels["runai/queue"] = testCtx.Queues[0].Name
+			pod.Labels[queueLabelKey] = testCtx.Queues[0].Name
 
 			_, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod)
 			Expect(err).NotTo(HaveOccurred())
@@ -200,7 +204,7 @@ var _ = Describe("Scheduling of Pod with PVC", Ordered, func() {
 					MountPath: "/tmp/a",
 				},
 			}
-			pod.Labels["runai/queue"] = testCtx.Queues[0].Name
+			pod.Labels[queueLabelKey] = testCtx.Queues[0].Name
 
 			_, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod)
 			Expect(err).NotTo(HaveOccurred())

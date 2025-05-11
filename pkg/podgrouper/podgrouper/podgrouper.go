@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 	supportedtypes "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/supported_types"
 )
 
@@ -29,6 +29,8 @@ type Interface interface {
 }
 
 type podGrouper struct {
+	queueLabelKey  string
+	defaultGrouper *defaultgrouper.DefaultGrouper
 	supportedTypes supportedtypes.SupportedTypes
 
 	client client.Client
@@ -42,13 +44,18 @@ type podGrouper struct {
 
 type GetPodGroupMetadataFunc func(topOwner *unstructured.Unstructured, pod *v1.Pod, otherOwners ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error)
 
-func NewPodgrouper(client client.Client, clientWithoutCache client.Client, searchForLegacyPodGroups, gangScheduleKnative bool) *podGrouper {
+func NewPodgrouper(client client.Client, clientWithoutCache client.Client, searchForLegacyPodGroups,
+	gangScheduleKnative bool, queueLabelKey string) *podGrouper {
 	podGrouper := &podGrouper{
+		queueLabelKey:      queueLabelKey,
+		defaultGrouper:     defaultgrouper.NewDefaultGrouper(queueLabelKey),
 		client:             client,
 		clientWithoutCache: clientWithoutCache,
 	}
 
-	supportedTypes := supportedtypes.NewSupportedTypes(client, searchForLegacyPodGroups, gangScheduleKnative)
+	supportedTypes := supportedtypes.NewSupportedTypes(
+		client, searchForLegacyPodGroups, gangScheduleKnative, queueLabelKey,
+	)
 
 	podGrouper.supportedTypes = supportedTypes
 
@@ -82,13 +89,13 @@ func (pg *podGrouper) GetPodOwners(ctx context.Context, pod *v1.Pod) (
 func (pg *podGrouper) GetPGMetadata(ctx context.Context, pod *v1.Pod, topOwner *unstructured.Unstructured, allOwners []*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
 	logger := log.FromContext(ctx)
 	ownerKind := metav1.GroupVersionKind(topOwner.GroupVersionKind())
-	if function, found := pg.supportedTypes.GetPodGroupMetadataFunc(ownerKind); found {
-		return function(topOwner, pod, allOwners...)
+	if grouper, found := pg.supportedTypes.GetPodGroupMetadataFunc(ownerKind); found {
+		return grouper.GetPodGroupMetadata(topOwner, pod, allOwners...)
 	}
 
 	logger.V(1).Info("Implementation not found for top owner of pod, using the default implementation.",
 		"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "topOwner", topOwner)
-	return plugins.GetPodGroupMetadata(topOwner, pod)
+	return pg.defaultGrouper.GetPodGroupMetadata(topOwner, pod)
 }
 
 func (pg *podGrouper) getResourceOwners(ctx context.Context, pod *v1.Pod) (

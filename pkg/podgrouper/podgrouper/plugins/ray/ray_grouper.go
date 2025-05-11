@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
 const (
@@ -22,16 +22,22 @@ const (
 
 type RayGrouper struct {
 	client client.Client
+	*defaultgrouper.DefaultGrouper
+}
+
+func NewRayGrouper(client client.Client, queueLabelKey string) *RayGrouper {
+	return &RayGrouper{
+		client:         client,
+		DefaultGrouper: defaultgrouper.NewDefaultGrouper(queueLabelKey),
+	}
 }
 
 // +kubebuilder:rbac:groups=ray.io,resources=rayclusters;rayjobs;rayservices,verbs=get;list;watch
 // +kubebuilder:rbac:groups=ray.io,resources=rayclusters/finalizers;rayjobs/finalizers;rayservices/finalizers,verbs=patch;update;create
 
-func NewRayGrouper(client client.Client) *RayGrouper {
-	return &RayGrouper{client: client}
-}
-
-func (rg *RayGrouper) getPodGroupMetadataWithClusterNamePath(topOwner *unstructured.Unstructured, pod *v1.Pod, clusterNamePaths [][]string) (
+func (rg *RayGrouper) getPodGroupMetadataWithClusterNamePath(
+	topOwner *unstructured.Unstructured, pod *v1.Pod, clusterNamePaths [][]string,
+) (
 	*podgroup.Metadata, error,
 ) {
 	var rayClusterObj *unstructured.Unstructured
@@ -48,7 +54,7 @@ func (rg *RayGrouper) getPodGroupMetadataInternal(
 	topOwner *unstructured.Unstructured, rayClusterObj *unstructured.Unstructured, pod *v1.Pod) (
 	*podgroup.Metadata, error,
 ) {
-	podGroupMetadata, err := plugins.GetPodGroupMetadata(topOwner, pod)
+	podGroupMetadata, err := rg.DefaultGrouper.GetPodGroupMetadata(topOwner, pod)
 	if err != nil {
 		return nil, err
 	}

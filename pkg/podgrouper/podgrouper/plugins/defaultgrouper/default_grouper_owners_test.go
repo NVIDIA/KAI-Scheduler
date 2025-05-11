@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package plugins
+package defaultgrouper
 
 import (
 	"testing"
@@ -10,6 +10,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+const queueLabelKey = "kai.scheduler/queue"
 
 func TestGetPodGroupMetadata_KubeflowPipelineScheduledWorkflow(t *testing.T) {
 	owner := &unstructured.Unstructured{
@@ -52,7 +54,8 @@ func TestGetPodGroupMetadata_KubeflowPipelineScheduledWorkflow(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "ScheduledWorkflow", podGroupMetadata.Owner.Kind)
@@ -123,7 +126,8 @@ func TestGetPodGroupMetadata_ArgoWorkflow(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "Workflow", podGroupMetadata.Owner.Kind)
@@ -191,7 +195,8 @@ func TestGetPodGroupMetadata_Tekton_TaskRun(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "TaskRun", podGroupMetadata.Owner.Kind)
@@ -288,7 +293,8 @@ func TestGetPodGroupMetadata_Tekton_PipelineRun(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "PipelineRun", podGroupMetadata.Owner.Kind)

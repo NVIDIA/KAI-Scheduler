@@ -15,19 +15,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
-	defaultpodgrouper "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
-
-// +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch
-// +kubebuilder:rbac:groups=batch,resources=cronjobs/finalizers,verbs=patch;update;create
 
 type cronJobGrouper struct {
 	client client.Client
+	*defaultgrouper.DefaultGrouper
 }
 
-func NewCronJobGrouper(client client.Client) *cronJobGrouper {
-	return &cronJobGrouper{client: client}
+func NewCronJobGrouper(client client.Client, queueLabelKey string) *cronJobGrouper {
+	return &cronJobGrouper{
+		client:         client,
+		DefaultGrouper: defaultgrouper.NewDefaultGrouper(queueLabelKey),
+	}
 }
+
+// +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch
+// +kubebuilder:rbac:groups=batch,resources=cronjobs/finalizers,verbs=patch;update;create
 
 func (cg *cronJobGrouper) GetPodGroupMetadata(_ *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
 	owner, err := getJobOwnerReference(pod.OwnerReferences)
@@ -50,7 +54,7 @@ func (cg *cronJobGrouper) GetPodGroupMetadata(_ *unstructured.Unstructured, pod 
 	if err != nil {
 		return nil, err
 	}
-	return defaultpodgrouper.GetPodGroupMetadata(job, pod)
+	return cg.DefaultGrouper.GetPodGroupMetadata(job, pod)
 }
 
 func getJobOwnerReference(references []metav1.OwnerReference) (*metav1.OwnerReference, error) {

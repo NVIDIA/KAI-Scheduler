@@ -5,22 +5,23 @@ package app
 
 import (
 	"flag"
-	kubeAiSchedulerV2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	controllers "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper"
+
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	kubeAiSchedulerV2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	controllers "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper"
 	// +kubebuilder:scaffold:imports
 )
 

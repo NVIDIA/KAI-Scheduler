@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package plugins
+package defaultgrouper
 
 import (
 	"testing"
@@ -34,7 +34,8 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "test_kind", podGroupMetadata.Owner.Kind)
@@ -68,7 +69,8 @@ func TestGetPodGroupMetadataOnQueueFromOwnerDefaultNP(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "my-proj", podGroupMetadata.Queue)
@@ -101,7 +103,8 @@ func TestGetPodGroupMetadataInferQueueFromProjectNodepool(t *testing.T) {
 		},
 	}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "my-proj-np-1", podGroupMetadata.Queue)
@@ -119,7 +122,7 @@ func TestGetPodGroupMetadataOnQueueFromOwner(t *testing.T) {
 				"labels": map[string]interface{}{
 					"test_label":  "test_value",
 					"project":     "my-proj",
-					"runai/queue": "my-proj-np-1",
+					queueLabelKey: "my-proj-np-1",
 				},
 				"annotations": map[string]interface{}{
 					"test_annotation": "test_value",
@@ -129,7 +132,8 @@ func TestGetPodGroupMetadataOnQueueFromOwner(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "my-proj-np-1", podGroupMetadata.Queue)
@@ -156,12 +160,13 @@ func TestGetPodGroupMetadataOnQueueFromPod(t *testing.T) {
 	pod := &v1.Pod{
 		ObjectMeta: v12.ObjectMeta{
 			Labels: map[string]string{
-				"runai/queue": "my-queue",
+				queueLabelKey: "my-queue",
 			},
 		},
 	}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "my-queue", podGroupMetadata.Queue)
@@ -188,7 +193,8 @@ func TestGetPodGroupMetadataOnPriorityClassFromOwner(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "my-priority", podGroupMetadata.PriorityClassName)
@@ -220,7 +226,8 @@ func TestGetPodGroupMetadataOnPriorityClassFromPod(t *testing.T) {
 		},
 	}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "my-priority", podGroupMetadata.PriorityClassName)
@@ -250,7 +257,8 @@ func TestGetPodGroupMetadataOnPriorityClassFromPodSpec(t *testing.T) {
 		},
 	}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "my-priority", podGroupMetadata.PriorityClassName)
@@ -283,7 +291,8 @@ func TestGetPodGroupMetadata_OwnerUserOverridePodUser(t *testing.T) {
 		},
 	}
 
-	podGroupMetadata, err := GetPodGroupMetadata(owner, pod)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "ownerUser", podGroupMetadata.Labels["user"])

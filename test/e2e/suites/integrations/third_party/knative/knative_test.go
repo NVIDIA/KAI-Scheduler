@@ -290,7 +290,7 @@ func getKnativeServiceObject(serviceName, namespace, queueName string) *knatives
 						},
 						Labels: map[string]string{
 							constants.AppLabelName: "engine-e2e",
-							"runai/queue":          queueName,
+							"kai.scheduler/queue":  queueName,
 						},
 					},
 					Spec: knativeserving.RevisionSpec{

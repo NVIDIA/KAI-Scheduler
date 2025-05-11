@@ -6,22 +6,26 @@ package podgroup
 import (
 	"context"
 
-	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
+	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 )
 
 type Handler struct {
-	client      client.Client
-	nodePoolKey string
+	client        client.Client
+	nodePoolKey   string
+	queueLabelKey string
 }
 
-func NewHandler(client client.Client, nodePoolKey string) *Handler {
-	return &Handler{client: client, nodePoolKey: nodePoolKey}
+func NewHandler(client client.Client, nodePoolKey string, queueLabelKey string) *Handler {
+	return &Handler{
+		client:        client,
+		nodePoolKey:   nodePoolKey,
+		queueLabelKey: queueLabelKey,
+	}
 }
 
 func (h *Handler) ApplyToCluster(ctx context.Context, pgMetadata Metadata) error {
@@ -74,9 +78,9 @@ func (h *Handler) ignoreFields(oldPodGroup, newPodGroup *enginev2alpha2.PodGroup
 		delete(newPodGroupCopy.Labels, h.nodePoolKey)
 	}
 
-	queueName, found := oldPodGroup.Labels[constants.QueueLabelKey]
+	queueName, found := oldPodGroup.Labels[h.queueLabelKey]
 	if found {
-		newPodGroupCopy.Labels[constants.QueueLabelKey] = queueName
+		newPodGroupCopy.Labels[h.queueLabelKey] = queueName
 	}
 
 	return newPodGroupCopy

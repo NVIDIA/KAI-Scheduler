@@ -11,8 +11,6 @@ import (
 
 	argov1alpha1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/multierr"
 	v1 "k8s.io/api/core/v1"
@@ -20,6 +18,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper"
+)
+
+const (
+	queueLabelKey = "kai.scheduler/queue"
 )
 
 var pod = v1.Pod{
@@ -114,7 +119,8 @@ func TestNewPodgrouper(t *testing.T) {
 	resources := append(nativeK8sTestResources, runaiTestResources...)
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(resources...).Build()
 
-	grouper := podgrouper.NewPodgrouper(client, client, false, true)
+	grouper := podgrouper.NewPodgrouper(client, client, false, true,
+		queueLabelKey)
 
 	topOwner, owners, err := grouper.GetPodOwners(context.Background(), &pod)
 	assert.Nil(t, err)
@@ -237,7 +243,7 @@ kind: Pod
 						Namespace: "namespace",
 						UID:       "uid",
 						Labels: map[string]string{
-							"runai/queue": "test",
+							queueLabelKey: "test",
 						},
 					},
 					Spec:   argov1alpha1.WorkflowSpec{},
@@ -274,7 +280,7 @@ kind: Pod
 `,
 				},
 				Labels: map[string]string{
-					"runai/queue": "test",
+					queueLabelKey: "test",
 				},
 				PriorityClassName: "train",
 				Queue:             "test",
@@ -311,6 +317,7 @@ kind: Pod
 			grouper := podgrouper.NewPodgrouper(client, client,
 				tt.podGrouperOptions.searchForLegacyPodGroups,
 				tt.podGrouperOptions.gangScheduleKnative,
+				queueLabelKey,
 			)
 
 			topOwner, owners, err := grouper.GetPodOwners(context.Background(), tt.reconciledPod)

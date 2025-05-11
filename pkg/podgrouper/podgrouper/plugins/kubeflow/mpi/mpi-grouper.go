@@ -29,14 +29,18 @@ const (
 
 type MpiGrouper struct {
 	client client.Client
+	*kubeflow.KubeflowDistributedGrouper
 }
 
-func NewMpiGrouper(client client.Client) *MpiGrouper {
-	return &MpiGrouper{client: client}
+func NewMpiGrouper(client client.Client, queueLabelKey string) *MpiGrouper {
+	return &MpiGrouper{
+		client:                     client,
+		KubeflowDistributedGrouper: kubeflow.NewKubeflowDistributedGrouper(queueLabelKey),
+	}
 }
 
 func (mg *MpiGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
-	gp, err := kubeflow.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{MasterName, WorkerName})
+	gp, err := mg.KubeflowDistributedGrouper.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{MasterName, WorkerName})
 	if err != nil {
 		return nil, err
 	}

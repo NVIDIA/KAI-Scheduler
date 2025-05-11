@@ -15,17 +15,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
 type skipTopOwnerGrouper struct {
 	client         client.Client
-	supportedTypes map[metav1.GroupVersionKind]plugins.GetPodGroupMetadataFunc
+	defaultGrouper *defaultgrouper.DefaultGrouper
+	supportedTypes map[metav1.GroupVersionKind]defaultgrouper.Grouper
 }
 
-func NewSkipTopOwnerGrouper(client client.Client, supportedTypes map[metav1.GroupVersionKind]plugins.GetPodGroupMetadataFunc) *skipTopOwnerGrouper {
+func NewSkipTopOwnerGrouper(client client.Client, defaultGrouper *defaultgrouper.DefaultGrouper,
+	supportedTypes map[metav1.GroupVersionKind]defaultgrouper.Grouper) *skipTopOwnerGrouper {
 	return &skipTopOwnerGrouper{
 		client:         client,
+		defaultGrouper: defaultGrouper,
 		supportedTypes: supportedTypes,
 	}
 }
@@ -60,10 +63,10 @@ func (sk *skipTopOwnerGrouper) getSupportedTypePGMetadata(
 	lastOwner *unstructured.Unstructured, pod *v1.Pod, otherOwners ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {
 	ownerKind := metav1.GroupVersionKind(lastOwner.GroupVersionKind())
-	if function, found := sk.supportedTypes[ownerKind]; found {
-		return function(lastOwner, pod, otherOwners...)
+	if grouper, found := sk.supportedTypes[ownerKind]; found {
+		return grouper.GetPodGroupMetadata(lastOwner, pod, otherOwners...)
 	}
-	return plugins.GetPodGroupMetadata(lastOwner, pod, otherOwners...)
+	return sk.defaultGrouper.GetPodGroupMetadata(lastOwner, pod, otherOwners...)
 }
 
 func (sk *skipTopOwnerGrouper) getObjectInstance(objectRef *metav1.PartialObjectMetadata) (*unstructured.Unstructured, error) {

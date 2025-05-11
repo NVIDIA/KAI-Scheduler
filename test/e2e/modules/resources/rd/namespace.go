@@ -21,9 +21,9 @@ func CreateNamespaceObject(name, queueName string) *corev1.Namespace {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				"project":               queueName,
-				constants.QueueLabelKey: queueName,
-				constants.AppLabelName:  "engine-e2e",
+				"project":              queueName,
+				"kai.scheduler/queue":  queueName,
+				constants.AppLabelName: "engine-e2e",
 			},
 		},
 	}

@@ -16,12 +16,14 @@ const (
 	minAvailableNum   = 33
 	workerReplicasNum = 4
 	masterReplicasNum = 2
+	queueLabelKey     = "kai.scheduler/queue"
 )
 
 func TestGetPodGroupMetadata_OnlyReplicas(t *testing.T) {
 	pytorchJob := getBasicPytorchJob()
 	pod := &v1.Pod{}
-	metadata, err := GetPodGroupMetadata(pytorchJob, pod)
+	grouper := NewPytorchGrouper(queueLabelKey)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, workerReplicasNum+masterReplicasNum, metadata.MinAvailable)
 }
@@ -32,7 +34,8 @@ func TestGetPodGroupMetadata_OnlyMinReplicas(t *testing.T) {
 	assert.Nil(t, err, "Got error when setting minReplicas for pytorch job")
 
 	pod := &v1.Pod{}
-	metadata, err := GetPodGroupMetadata(pytorchJob, pod)
+	grouper := NewPytorchGrouper(queueLabelKey)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, minReplicasNum, metadata.MinAvailable)
 }
@@ -44,7 +47,8 @@ func TestGetPodGroupMetadata_OnlyMinAvailable(t *testing.T) {
 	assert.Nil(t, err, "Got error when setting minAvailable for pytorch job")
 
 	pod := &v1.Pod{}
-	metadata, err := GetPodGroupMetadata(pytorchJob, pod)
+	grouper := NewPytorchGrouper(queueLabelKey)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, minAvailableNum, metadata.MinAvailable)
@@ -62,7 +66,8 @@ func TestGetPodGroupMetadata_MinAvailableAndMinReplicas(t *testing.T) {
 	assert.Nil(t, err, "Got error when setting minAvailable for pytorch job")
 
 	pod := &v1.Pod{}
-	metadata, err := GetPodGroupMetadata(pytorchJob, pod)
+	grouper := NewPytorchGrouper(queueLabelKey)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, minAvailableNum, metadata.MinAvailable)
 }

@@ -18,6 +18,18 @@ const (
 	// Jax does not support master
 )
 
-func GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
-	return kubeflow.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{WorkerName})
+type JaxGrouper struct {
+	*kubeflow.KubeflowDistributedGrouper
+}
+
+func NewJaxGrouper(queueLabelKey string) *JaxGrouper {
+	return &JaxGrouper{
+		KubeflowDistributedGrouper: kubeflow.NewKubeflowDistributedGrouper(queueLabelKey),
+	}
+}
+
+func (jg *JaxGrouper) GetPodGroupMetadata(
+	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
+) (*podgroup.Metadata, error) {
+	return jg.KubeflowDistributedGrouper.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{WorkerName})
 }
