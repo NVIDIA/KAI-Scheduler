@@ -49,6 +49,13 @@ As a follow-up, we could also provide a setting to disable this and always use t
 1. Leaf queues `root.A.B.C.leaf1` (preemptor) and `root.A.B.D.leaf2` (preemptee) will use the min-runtime resolved for `root.A.B.D`.
 2. Leaf queues `root.A.B.C.leaf1` (preemptor) and `root.A.B.C.leaf2` (preemptee) will use the min-runtime resolved for `root.A.B.C.leaf2`.
 
+```mermaid
+graph TD
+    A[Queue A] --> B[Queue B<br/>600s]
+    B --> C[Queue C<br/>300s]
+    B --> D[Queue D]
+```
+
 #### Preemptions (preemptor and preemptee are within the same leaf-queue)
 Starting from the leaf-queue, walk the tree until the first defined preempt-min-runtime is set and use that.
 
