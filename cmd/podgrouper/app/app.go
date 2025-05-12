@@ -60,7 +60,7 @@ func Run() error {
 		}),
 		HealthProbeBindAddress: opts.ProbeAddr,
 		LeaderElection:         opts.EnableLeaderElection,
-		LeaderElectionID:       "54dff599.run.ai",
+		LeaderElectionID:       "54dff599.kai.scheduler",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
