@@ -55,7 +55,7 @@ Starting from the leaf-queue, walk the tree until the first defined preempt-min-
 ##### Example
 1. `root.A.B` has preempt-min-runtime: 600, `root.A.B.C.leaf1` has preempt-min-runtime: 300. Job in leaf1 will have preempt-min-runtime: 300.
 
-1. `root.A.B` has preempt-min-runtime: 600, `root.A.B.C.leaf1` has preempt-min-runtime unset. Job in leaf1 will have preempt-min-runtime: 600.
+2. `root.A.B` has preempt-min-runtime: 600, `root.A.B.C.leaf1` has preempt-min-runtime unset. Job in leaf1 will have preempt-min-runtime: 600.
 
 
 ## Development
