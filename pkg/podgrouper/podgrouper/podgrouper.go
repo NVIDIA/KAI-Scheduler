@@ -29,7 +29,6 @@ type Interface interface {
 }
 
 type podGrouper struct {
-	queueLabelKey  string
 	defaultGrouper *defaultgrouper.DefaultGrouper
 	supportedTypes supportedtypes.SupportedTypes
 
@@ -47,7 +46,6 @@ type GetPodGroupMetadataFunc func(topOwner *unstructured.Unstructured, pod *v1.P
 func NewPodgrouper(client client.Client, clientWithoutCache client.Client, searchForLegacyPodGroups,
 	gangScheduleKnative bool, queueLabelKey string) *podGrouper {
 	podGrouper := &podGrouper{
-		queueLabelKey:      queueLabelKey,
 		defaultGrouper:     defaultgrouper.NewDefaultGrouper(queueLabelKey),
 		client:             client,
 		clientWithoutCache: clientWithoutCache,
