@@ -74,9 +74,9 @@ graph TD
     C --> leaf2[Queue leaf2]
 ```
 
-1. `root.A.B` has preempt-min-runtime: 600, `root.A.B.C.leaf1` has preempt-min-runtime: 300. Workload in leaf1 will have preempt-min-runtime: 300.
+1. `root.A.B` has preempt-min-runtime: 600, `root.A.B.C.leaf1` has preempt-min-runtime: 300. Workloads in leaf1 will have preempt-min-runtime: 300.
 
-2. `root.A.B` has preempt-min-runtime: 600, `root.A.B.C.leaf2` has preempt-min-runtime unset. Workload in leaf1 will have preempt-min-runtime: 600.
+2. `root.A.B` has preempt-min-runtime: 600, `root.A.B.C.leaf2` has preempt-min-runtime unset. Workloads in leaf2 will have preempt-min-runtime: 600.
 
 
 ## Development
