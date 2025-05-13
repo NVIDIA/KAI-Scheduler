@@ -4,12 +4,13 @@
 package spotrequest
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -17,9 +18,9 @@ type SpotRequestGrouper struct {
 	*defaultgrouper.DefaultGrouper
 }
 
-func NewSpotRequestGrouper(queueLabelKey string) *SpotRequestGrouper {
+func NewSpotRequestGrouper(defaultGrouper *defaultgrouper.DefaultGrouper) *SpotRequestGrouper {
 	return &SpotRequestGrouper{
-		DefaultGrouper: defaultgrouper.NewDefaultGrouper(queueLabelKey),
+		DefaultGrouper: defaultGrouper,
 	}
 }
 

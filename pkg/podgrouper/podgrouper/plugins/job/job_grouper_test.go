@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 
 	"github.com/stretchr/testify/assert"
 
@@ -69,7 +70,8 @@ func TestGetPodGroupMetadata_Hpo(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects().Build()
 
-	runaiJobGrouper := NewK8sJobGrouper(client, queueLabelKey, false)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	runaiJobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
 
 	podGroupMetadata, err := runaiJobGrouper.GetPodGroupMetadata(owner, pod)
 	podGroupMetadata2, err2 := runaiJobGrouper.GetPodGroupMetadata(owner, pod2)
@@ -145,7 +147,8 @@ func TestGetPodGroupMetadata_LegacyPodGroup(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(runaiTestResources...).Build()
 
-	runaiJobGrouper := NewK8sJobGrouper(client, queueLabelKey, true)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	runaiJobGrouper := NewK8sJobGrouper(client, defaultGrouper, true)
 
 	podGroupMetadata, err := runaiJobGrouper.GetPodGroupMetadata(owner, pod)
 
@@ -217,7 +220,8 @@ func TestGetPodGroupMetadata_LegacyDisabledPodGroup(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(runaiTestResources...).Build()
 
-	runaiJobGrouper := NewK8sJobGrouper(client, queueLabelKey, false)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	runaiJobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
 
 	podGroupMetadata, err := runaiJobGrouper.GetPodGroupMetadata(owner, pod)
 
@@ -273,7 +277,8 @@ func TestGetPodGroupMetadata_LegacyNotFound(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(runaiTestResources...).Build()
 
-	runaiJobGrouper := NewK8sJobGrouper(client, queueLabelKey, true)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	runaiJobGrouper := NewK8sJobGrouper(client, defaultGrouper, true)
 
 	podGroupMetadata, err := runaiJobGrouper.GetPodGroupMetadata(owner, pod)
 
@@ -327,7 +332,8 @@ func TestGetPodGroupMetadata_RegularPodGroup(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects().Build()
 
-	runaiJobGrouper := NewK8sJobGrouper(client, queueLabelKey, false)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	runaiJobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
 
 	podGroupMetadata, err := runaiJobGrouper.GetPodGroupMetadata(owner, pod)
 

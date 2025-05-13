@@ -25,10 +25,10 @@ type RayGrouper struct {
 	*defaultgrouper.DefaultGrouper
 }
 
-func NewRayGrouper(client client.Client, queueLabelKey string) *RayGrouper {
+func NewRayGrouper(client client.Client, defaultGrouper *defaultgrouper.DefaultGrouper) *RayGrouper {
 	return &RayGrouper{
 		client:         client,
-		DefaultGrouper: defaultgrouper.NewDefaultGrouper(queueLabelKey),
+		DefaultGrouper: defaultGrouper,
 	}
 }
 

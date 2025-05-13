@@ -18,10 +18,10 @@ type PodJobGrouper struct {
 	*defaultgrouper.DefaultGrouper
 }
 
-func NewPodJobGrouper(queueLabelKey string) *PodJobGrouper {
+func NewPodJobGrouper(defaultGrouper *defaultgrouper.DefaultGrouper, sparkGrouper *spark.SparkGrouper) *PodJobGrouper {
 	return &PodJobGrouper{
-		SparkGrouper:   spark.NewSparkGrouper(queueLabelKey),
-		DefaultGrouper: defaultgrouper.NewDefaultGrouper(queueLabelKey),
+		SparkGrouper:   sparkGrouper,
+		DefaultGrouper: defaultGrouper,
 	}
 }
 

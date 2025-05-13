@@ -32,10 +32,10 @@ type MpiGrouper struct {
 	*kubeflow.KubeflowDistributedGrouper
 }
 
-func NewMpiGrouper(client client.Client, queueLabelKey string) *MpiGrouper {
+func NewMpiGrouper(client client.Client, kubeflowGrouper *kubeflow.KubeflowDistributedGrouper) *MpiGrouper {
 	return &MpiGrouper{
 		client:                     client,
-		KubeflowDistributedGrouper: kubeflow.NewKubeflowDistributedGrouper(queueLabelKey),
+		KubeflowDistributedGrouper: kubeflowGrouper,
 	}
 }
 

@@ -19,6 +19,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
 const (
@@ -95,7 +96,8 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	assert.Nil(t, err)
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(rev).Build()
-	grouper := NewKnativeGrouper(client, queueLabelKey, true)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	grouper := NewKnativeGrouper(client, defaultGrouper, true)
 
 	metadata, err := grouper.GetPodGroupMetadata(service, pod)
 	assert.Nil(t, err)
@@ -177,7 +179,8 @@ func TestGetPodGroupMetadata_MinScale(t *testing.T) {
 	assert.Nil(t, err)
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(rev).Build()
-	grouper := NewKnativeGrouper(client, queueLabelKey, true)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	grouper := NewKnativeGrouper(client, defaultGrouper, true)
 
 	metadata, err := grouper.GetPodGroupMetadata(service, pod)
 	assert.Nil(t, err)
@@ -598,7 +601,8 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 			if test.gangSchedule != nil {
 				gangSchedule = *test.gangSchedule
 			}
-			grouper := NewKnativeGrouper(client, queueLabelKey, gangSchedule)
+			defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+			grouper := NewKnativeGrouper(client, defaultGrouper, gangSchedule)
 
 			unstructuredService, err := runtime.DefaultUnstructuredConverter.ToUnstructured(test.service)
 			assert.Nil(t, err, "failed to convert knative service to unstructured")

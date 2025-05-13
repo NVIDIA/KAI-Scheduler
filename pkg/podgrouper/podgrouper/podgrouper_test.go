@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	argov1alpha1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
-
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/multierr"
 	v1 "k8s.io/api/core/v1"

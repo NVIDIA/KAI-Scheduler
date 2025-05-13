@@ -22,9 +22,9 @@ type XGBoostGrouper struct {
 	*kubeflow.KubeflowDistributedGrouper
 }
 
-func NewXGBoostGrouper(queueLabelKey string) *XGBoostGrouper {
+func NewXGBoostGrouper(kubeflowGrouper *kubeflow.KubeflowDistributedGrouper) *XGBoostGrouper {
 	return &XGBoostGrouper{
-		kubeflow.NewKubeflowDistributedGrouper(queueLabelKey),
+		kubeflowGrouper,
 	}
 }
 

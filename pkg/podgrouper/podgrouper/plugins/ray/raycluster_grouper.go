@@ -7,7 +7,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 )
@@ -16,9 +15,9 @@ type RayClusterGrouper struct {
 	*RayGrouper
 }
 
-func NewRayClusterGrouper(client client.Client, queueLabelKey string) *RayClusterGrouper {
+func NewRayClusterGrouper(rayGrouper *RayGrouper) *RayClusterGrouper {
 	return &RayClusterGrouper{
-		RayGrouper: NewRayGrouper(client, queueLabelKey),
+		RayGrouper: rayGrouper,
 	}
 }
 

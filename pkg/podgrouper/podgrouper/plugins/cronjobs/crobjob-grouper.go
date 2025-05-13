@@ -18,22 +18,22 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
-type cronJobGrouper struct {
+type CronJobGrouper struct {
 	client client.Client
 	*defaultgrouper.DefaultGrouper
 }
 
-func NewCronJobGrouper(client client.Client, queueLabelKey string) *cronJobGrouper {
-	return &cronJobGrouper{
+func NewCronJobGrouper(client client.Client, defaultGrouper *defaultgrouper.DefaultGrouper) *CronJobGrouper {
+	return &CronJobGrouper{
 		client:         client,
-		DefaultGrouper: defaultgrouper.NewDefaultGrouper(queueLabelKey),
+		DefaultGrouper: defaultGrouper,
 	}
 }
 
 // +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=batch,resources=cronjobs/finalizers,verbs=patch;update;create
 
-func (cg *cronJobGrouper) GetPodGroupMetadata(_ *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
+func (cg *CronJobGrouper) GetPodGroupMetadata(_ *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
 	owner, err := getJobOwnerReference(pod.OwnerReferences)
 	if err != nil {
 		return nil, err

@@ -8,21 +8,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
-
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"k8s.io/apimachinery/pkg/api/errors"
-
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
 type RunaiJobGrouper struct {
@@ -36,11 +33,13 @@ type RunaiJobGrouper struct {
 
 var logger = log.FromContext(context.Background())
 
-func NewRunaiJobGrouper(client client.Client, queueLabelKey string, searchForLegacyPodGroups bool) *RunaiJobGrouper {
+func NewRunaiJobGrouper(
+	client client.Client, defaultGrouper *defaultgrouper.DefaultGrouper, searchForLegacyPodGroups bool,
+) *RunaiJobGrouper {
 	return &RunaiJobGrouper{
 		client:                   client,
 		searchForLegacyPodGroups: searchForLegacyPodGroups,
-		DefaultGrouper:           defaultgrouper.NewDefaultGrouper(queueLabelKey),
+		DefaultGrouper:           defaultGrouper,
 	}
 }
 

@@ -20,9 +20,9 @@ type SparkGrouper struct {
 	*defaultgrouper.DefaultGrouper
 }
 
-func NewSparkGrouper(queueLabelKey string) *SparkGrouper {
+func NewSparkGrouper(defaultGrouper *defaultgrouper.DefaultGrouper) *SparkGrouper {
 	return &SparkGrouper{
-		defaultgrouper.NewDefaultGrouper(queueLabelKey),
+		defaultGrouper,
 	}
 }
 

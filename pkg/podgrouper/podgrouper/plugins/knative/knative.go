@@ -32,24 +32,24 @@ const (
 
 var logger = log.FromContext(context.Background())
 
-type knativeGrouper struct {
+type KnativeGrouper struct {
 	client       client.Client
 	gangSchedule bool
 	*defaultgrouper.DefaultGrouper
 }
 
-func NewKnativeGrouper(client client.Client, queueLabelKey string, gangSchedule bool) *knativeGrouper {
-	return &knativeGrouper{
+func NewKnativeGrouper(client client.Client, defaultGrouper *defaultgrouper.DefaultGrouper, gangSchedule bool) *KnativeGrouper {
+	return &KnativeGrouper{
 		client:         client,
 		gangSchedule:   gangSchedule,
-		DefaultGrouper: defaultgrouper.NewDefaultGrouper(queueLabelKey),
+		DefaultGrouper: defaultGrouper,
 	}
 }
 
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions/finalizers;configurations/finalizers;services/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions;configurations;services,verbs=get;list;watch
 
-func (g *knativeGrouper) GetPodGroupMetadata(_ *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
+func (g *KnativeGrouper) GetPodGroupMetadata(_ *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
 	revisionName, found := pod.Labels[knativeRevisionLabel]
 	if !found {
 		return nil, fmt.Errorf("revisionName not found for knative service pod %s/%s", pod.GetNamespace(), pod.GetName())
@@ -81,7 +81,7 @@ func (g *knativeGrouper) GetPodGroupMetadata(_ *unstructured.Unstructured, pod *
 	return g.getPodGroupFromRevision(rev, pod)
 }
 
-func (g *knativeGrouper) getPodGroupFromRevision(revision *unstructured.Unstructured, pod *v1.Pod) (*podgroup.Metadata, error) {
+func (g *KnativeGrouper) getPodGroupFromRevision(revision *unstructured.Unstructured, pod *v1.Pod) (*podgroup.Metadata, error) {
 	annotations := revision.GetAnnotations()
 	minScale, exists := annotations[knativeMinScaleAnnotation]
 	if !exists {
@@ -115,7 +115,7 @@ func (g *knativeGrouper) getPodGroupFromRevision(revision *unstructured.Unstruct
 	}, nil
 }
 
-func (g *knativeGrouper) getPodGroupFromPod(revision *unstructured.Unstructured, pod *v1.Pod) (*podgroup.Metadata, error) {
+func (g *KnativeGrouper) getPodGroupFromPod(revision *unstructured.Unstructured, pod *v1.Pod) (*podgroup.Metadata, error) {
 	ownerRef := &metav1.OwnerReference{
 		APIVersion: pod.APIVersion,
 		Kind:       pod.Kind,
@@ -140,7 +140,7 @@ func calcPodGroupName(obj metav1.Object) string {
 }
 
 // isBCRevision checks if the revision already has podgroups per pod. In that case, we will maintain this behavior for the revision.
-func (g *knativeGrouper) isBCRevision(revision *unstructured.Unstructured) (bool, error) {
+func (g *KnativeGrouper) isBCRevision(revision *unstructured.Unstructured) (bool, error) {
 	var pods v1.PodList
 	err := g.client.List(context.Background(), &pods, client.InNamespace(revision.GetNamespace()), client.MatchingLabels{
 		knativeRevisionLabel: revision.GetName(),

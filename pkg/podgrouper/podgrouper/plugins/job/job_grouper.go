@@ -29,11 +29,13 @@ type K8sJobGrouper struct {
 
 var logger = log.FromContext(context.Background())
 
-func NewK8sJobGrouper(client client.Client, queueLabelKey string, searchForLegacyPodGroups bool) *K8sJobGrouper {
+func NewK8sJobGrouper(
+	client client.Client, defaultGrouper *defaultgrouper.DefaultGrouper, searchForLegacyPodGroups bool,
+) *K8sJobGrouper {
 	return &K8sJobGrouper{
 		client:                   client,
 		searchForLegacyPodGroups: searchForLegacyPodGroups,
-		DefaultGrouper:           defaultgrouper.NewDefaultGrouper(queueLabelKey),
+		DefaultGrouper:           defaultGrouper,
 	}
 }
 

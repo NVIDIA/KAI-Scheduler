@@ -17,9 +17,9 @@ type KubeflowDistributedGrouper struct {
 	*defaultgrouper.DefaultGrouper
 }
 
-func NewKubeflowDistributedGrouper(queueLabelKey string) *KubeflowDistributedGrouper {
+func NewKubeflowDistributedGrouper(defaultGrouper *defaultgrouper.DefaultGrouper) *KubeflowDistributedGrouper {
 	return &KubeflowDistributedGrouper{
-		DefaultGrouper: defaultgrouper.NewDefaultGrouper(queueLabelKey),
+		DefaultGrouper: defaultGrouper,
 	}
 }
 

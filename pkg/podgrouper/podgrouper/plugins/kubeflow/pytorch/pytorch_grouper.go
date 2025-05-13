@@ -23,9 +23,9 @@ type PyTorchGrouper struct {
 	*kubeflow.KubeflowDistributedGrouper
 }
 
-func NewPytorchGrouper(queueLabelKey string) *PyTorchGrouper {
+func NewPyTorchGrouper(kubeflowGrouper *kubeflow.KubeflowDistributedGrouper) *PyTorchGrouper {
 	return &PyTorchGrouper{
-		KubeflowDistributedGrouper: kubeflow.NewKubeflowDistributedGrouper(queueLabelKey),
+		KubeflowDistributedGrouper: kubeflowGrouper,
 	}
 }
 

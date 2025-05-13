@@ -17,9 +17,9 @@ type NotebookGrouper struct {
 	*defaultgrouper.DefaultGrouper
 }
 
-func NewNotebookGrouper(queueLabelKey string) *NotebookGrouper {
+func NewNotebookGrouper(defaultGrouper *defaultgrouper.DefaultGrouper) *NotebookGrouper {
 	return &NotebookGrouper{
-		DefaultGrouper: defaultgrouper.NewDefaultGrouper(queueLabelKey),
+		DefaultGrouper: defaultGrouper,
 	}
 }
 

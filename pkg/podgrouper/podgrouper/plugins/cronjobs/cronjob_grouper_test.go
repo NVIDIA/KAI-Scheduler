@@ -17,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
 const (
@@ -64,7 +66,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	assert.Nil(t, err)
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(job).Build()
-	grouper := NewCronJobGrouper(client, queueLabelKey)
+	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(cronjob, pod)
 
 	assert.Nil(t, err)
@@ -102,7 +104,7 @@ func TestGetPodGroupMetadataJobOwnerNotFound(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(cronjob).Build()
-	grouper := NewCronJobGrouper(client, queueLabelKey)
+	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(cronjob, pod)
 
 	assert.NotNil(t, err)
@@ -141,7 +143,7 @@ func TestGetPodGroupMetadataJobNotExists(t *testing.T) {
 	assert.Nil(t, err)
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(cronjob).Build()
-	grouper := NewCronJobGrouper(client, queueLabelKey)
+	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(cronjob, pod)
 	assert.NotNil(t, err)
 	assert.Equal(t, fmt.Sprintf("jobs.batch \"%s\" not found", jobName), err.Error())

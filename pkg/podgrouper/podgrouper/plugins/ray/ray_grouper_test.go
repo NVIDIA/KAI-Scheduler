@@ -12,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
 const (
@@ -58,7 +60,8 @@ func TestGetPodGroupMetadata_RayCluster(t *testing.T) {
 	pod := &v1.Pod{}
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayCluster).Build()
-	grouper := NewRayClusterGrouper(client, queueLabelKey)
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey))
+	grouper := NewRayClusterGrouper(rayGrouper)
 
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(rayCluster, pod)
 
@@ -99,7 +102,8 @@ func TestGetPodGroupMetadata_RayJob(t *testing.T) {
 	pod := &v1.Pod{}
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayCluster).Build()
-	grouper := NewRayJobGrouper(client, queueLabelKey)
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey))
+	grouper := NewRayJobGrouper(rayGrouper)
 
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(owner, pod)
 
@@ -143,7 +147,8 @@ func TestGetPodGroupMetadata_RayJob_v1(t *testing.T) {
 	rayClusterCopy.SetAPIVersion("ray.io/v1")
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayClusterCopy).Build()
-	grouper := NewRayJobGrouper(client, queueLabelKey)
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey))
+	grouper := NewRayJobGrouper(rayGrouper)
 
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(owner, pod)
 
@@ -204,7 +209,8 @@ func TestGetPodGroupMetadata_RayService(t *testing.T) {
 	})
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayClusterCopy).Build()
-	grouper := NewRayServiceGrouper(client, queueLabelKey)
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey))
+	grouper := NewRayServiceGrouper(rayGrouper)
 
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(rayService, pod)
 

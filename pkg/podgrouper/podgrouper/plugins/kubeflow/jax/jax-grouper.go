@@ -22,9 +22,9 @@ type JaxGrouper struct {
 	*kubeflow.KubeflowDistributedGrouper
 }
 
-func NewJaxGrouper(queueLabelKey string) *JaxGrouper {
+func NewJaxGrouper(kubeflowGrouper *kubeflow.KubeflowDistributedGrouper) *JaxGrouper {
 	return &JaxGrouper{
-		KubeflowDistributedGrouper: kubeflow.NewKubeflowDistributedGrouper(queueLabelKey),
+		KubeflowDistributedGrouper: kubeflowGrouper,
 	}
 }
 

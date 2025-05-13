@@ -15,20 +15,22 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
-type deploymentGrouper struct {
+type DeploymentGrouper struct {
 	*defaultgrouper.DefaultGrouper
 }
 
-func NewDeploymentGrouper(queueLabelKey string) *deploymentGrouper {
-	return &deploymentGrouper{
-		defaultgrouper.NewDefaultGrouper(queueLabelKey),
+func NewDeploymentGrouper(defaultGrouper *defaultgrouper.DefaultGrouper) *DeploymentGrouper {
+	return &DeploymentGrouper{
+		defaultGrouper,
 	}
 }
 
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
 // +kubebuilder:rbac:groups=apps,resources=deployments/finalizers,verbs=patch;update;create
 
-func (dg *deploymentGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
+func (dg *DeploymentGrouper) GetPodGroupMetadata(
+	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
+) (*podgroup.Metadata, error) {
 	metadata, err := dg.DefaultGrouper.GetPodGroupMetadata(topOwner, pod)
 	if err != nil {
 		return nil, err

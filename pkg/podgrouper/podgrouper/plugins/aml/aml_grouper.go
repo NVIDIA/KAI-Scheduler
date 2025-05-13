@@ -14,20 +14,20 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
-type amlGrouper struct {
+type AmlGrouper struct {
 	*defaultgrouper.DefaultGrouper
 }
 
-func NewAmlGrouper(queueLabelKey string) *amlGrouper {
-	return &amlGrouper{
-		defaultgrouper.NewDefaultGrouper(queueLabelKey),
+func NewAmlGrouper(defaultGrouper *defaultgrouper.DefaultGrouper) *AmlGrouper {
+	return &AmlGrouper{
+		defaultGrouper,
 	}
 }
 
 // +kubebuilder:rbac:groups=amlarc.azureml.com,resources=amljobs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=amlarc.azureml.com,resources=amljobs/finalizers,verbs=patch;update;create
 
-func (amlGrouper *amlGrouper) GetPodGroupMetadata(
+func (amlGrouper *AmlGrouper) GetPodGroupMetadata(
 	amlJob *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {
 	podGroupMetadata, err := amlGrouper.DefaultGrouper.GetPodGroupMetadata(amlJob, pod)

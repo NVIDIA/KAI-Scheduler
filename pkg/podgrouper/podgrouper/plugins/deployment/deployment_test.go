@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
 const (
@@ -80,7 +81,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 		Status: v1.PodStatus{},
 	}
 
-	grouper := NewDeploymentGrouper(queueLabelKey)
+	grouper := NewDeploymentGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey))
 	metadata, err := grouper.GetPodGroupMetadata(deployment, pod1)
 	assert.Nil(t, err)
 	assert.Equal(t, "pg-pod-1-3", metadata.Name)
