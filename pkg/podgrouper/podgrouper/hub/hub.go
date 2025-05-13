@@ -75,6 +75,7 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
 
 	kubeFlowDistributedGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	mpiGrouper := mpi.NewMpiGrouper(kubeClient, kubeFlowDistributedGrouper)
 
 	rayGrouper := ray.NewRayGrouper(kubeClient, defaultGrouper)
 	rayClusterGrouper := ray.NewRayClusterGrouper(rayGrouper)
@@ -129,12 +130,12 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Group:   "kubeflow.org",
 			Version: "v1",
 			Kind:    "MPIJob",
-		}: mpi.NewMpiGrouper(kubeClient, kubeFlowDistributedGrouper),
+		}: mpiGrouper,
 		{
 			Group:   "kubeflow.org",
 			Version: "v2beta1",
 			Kind:    "MPIJob",
-		}: mpi.NewMpiGrouper(kubeClient, kubeFlowDistributedGrouper),
+		}: mpiGrouper,
 		{
 			Group:   "kubeflow.org",
 			Version: "v1beta1",
