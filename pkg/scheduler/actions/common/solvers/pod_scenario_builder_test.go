@@ -136,7 +136,6 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 
 			numberOfGeneratedScenarios := 0
 			for sn := scenarioBuilder.GetCurrentScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
-				fmt.Printf("scenario: %v\n", sn)
 				Expect(len(sn.RecordedVictimsJobs())).To(Equal(len(recordedVictimsJobs)))
 				numberOfGeneratedScenarios += 1
 			}
@@ -161,7 +160,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			var recordedVictimsJobs []*podgroup_info.PodGroupInfo
 
 			podGroupIndex := 0
-			// Only the first pod group with the last task is recordedVictim from first run
+			// Only the first pod group with the last task is recordedVictimJobs
 			for _, podGroupInfo := range ssn.PodGroupInfos {
 				if podGroupIndex == 0 {
 					podIndex := 0
@@ -184,7 +183,6 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 
 			numberOfGeneratedScenarios := 0
 			for sn := scenarioBuilder.GetCurrentScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
-				fmt.Printf("scenario: %v\n", sn)
 				Expect(len(sn.RecordedVictimsJobs())).To(Equal(len(recordedVictimsJobs)))
 				numberOfGeneratedScenarios += 1
 			}
