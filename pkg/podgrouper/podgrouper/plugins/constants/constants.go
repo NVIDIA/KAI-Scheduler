@@ -16,7 +16,4 @@ const (
 	InferencePriorityClass = "inference"
 
 	DefaultQueueName = "default-queue"
-
-	WorkloadKindLabelKey = "run.ai/workload-kind"
-	WorkloadNameLabelKey = "run.ai/workload-name"
 )

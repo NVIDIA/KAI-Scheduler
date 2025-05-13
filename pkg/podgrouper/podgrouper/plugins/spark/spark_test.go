@@ -8,7 +8,6 @@ import (
 
 	"golang.org/x/exp/maps"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,5 +68,4 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	podGroupMetadata, err := GetPodGroupMetadata(unstructuredPod, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, "spark-selector", podGroupMetadata.Name)
-	assert.Equal(t, sparkWorkloadKind, podGroupMetadata.Labels[constants.WorkloadKindLabelKey])
 }

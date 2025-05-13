@@ -4,21 +4,16 @@
 package spark
 
 import (
-	"fmt"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins"
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 )
 
 const (
 	sparkAppLabelName         = "spark-app-name"
 	sparkAppSelectorLabelName = "spark-app-selector"
-
-	sparkWorkloadKind = "Spark"
 )
 
 func IsSparkPod(pod *v1.Pod) bool {
@@ -33,9 +28,6 @@ func GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod) (*pod
 		return nil, err
 	}
 
-	podGroupMetadata.Labels[constants.WorkloadKindLabelKey] = sparkWorkloadKind
-	podGroupMetadata.Labels[constants.WorkloadNameLabelKey] = fmt.Sprintf(
-		"%s-%s", pod.Labels[sparkAppLabelName], pod.Labels[sparkAppSelectorLabelName])
 	podGroupMetadata.Name = pod.Labels[sparkAppSelectorLabelName]
 
 	return podGroupMetadata, nil
