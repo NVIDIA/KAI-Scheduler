@@ -6,6 +6,7 @@ package solvers
 import (
 	"fmt"
 	"strconv"
+	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -135,11 +136,60 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 
 			numberOfGeneratedScenarios := 0
 			for sn := scenarioBuilder.GetCurrentScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
+				fmt.Printf("scenario: %v\n", sn)
 				Expect(len(sn.RecordedVictimsJobs())).To(Equal(len(recordedVictimsJobs)))
 				numberOfGeneratedScenarios += 1
 			}
 
 			Expect(numberOfGeneratedScenarios).To(Equal(2))
+		})
+	})
+
+	Context("with recorded victims that are elastic", func() {
+		It("All scenarios have the same recorded victims", func() {
+			// run 1 job with 3 tasks, set minAvailable to 1 for elastic
+			ssn, _ = initializeSession(1, 3)
+			minAvailable := 1
+			for _, podGroupInfo := range ssn.PodGroupInfos {
+				podGroupInfo.MinAvailable = int32(minAvailable)
+				podGroupInfo.PodGroup.Spec.MinMember = int32(minAvailable)
+			}
+			submitQueue := createQueue("team-a")
+			ssn.Queues[submitQueue.UID] = submitQueue
+			reclaimerJob, _ = createJobWithTasks(1, 2, "team-a", v1.PodPending)
+
+			var recordedVictimsJobs []*podgroup_info.PodGroupInfo
+
+			podGroupIndex := 0
+			// Only the first pod group with the last task is recordedVictim from first run
+			for _, podGroupInfo := range ssn.PodGroupInfos {
+				if podGroupIndex == 0 {
+					podIndex := 0
+					var partialTasks []*pod_info.PodInfo
+					for _, podInfo := range podGroupInfo.PodInfos {
+						// use last pod as recorded victim as sorting will be reversed
+						if podInfo.Name == "pod-2" {
+							partialTasks = append(partialTasks, podInfo)
+						}
+						podIndex += 1
+					}
+					recordedVictimsJobs = append(recordedVictimsJobs, podGroupInfo.CloneWithTasks(partialTasks))
+				}
+				podGroupIndex += 1
+			}
+
+			victimsQueue := utils.GetVictimsQueue(ssn, nil)
+
+			scenarioBuilder = NewPodAccumulatedScenarioBuilder(ssn, reclaimerJob, recordedVictimsJobs, victimsQueue)
+
+			numberOfGeneratedScenarios := 0
+			for sn := scenarioBuilder.GetCurrentScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
+				fmt.Printf("scenario: %v\n", sn)
+				Expect(len(sn.RecordedVictimsJobs())).To(Equal(len(recordedVictimsJobs)))
+				numberOfGeneratedScenarios += 1
+			}
+
+			Expect(numberOfGeneratedScenarios).To(Equal(3))
 		})
 	})
 })
@@ -153,7 +203,6 @@ func initializeSession(jobsCount, tasksPerJob int) (*framework.Session, []*pod_i
 	queues := []*queue_info.QueueInfo{defaultQueue}
 
 	for jobID := 0; jobID < jobsCount; jobID++ {
-		jobTasks := []*pod_info.PodInfo{}
 		queueName := fmt.Sprintf("team-%d", jobID)
 		newJob, jobTasks := createJobWithTasks(tasksPerJob, jobID, queueName, v1.PodRunning)
 		jobs = append(jobs, newJob)
@@ -277,4 +326,9 @@ func requireOneGPU() v1.ResourceRequirements {
 			resource_info.GPUResourceName: resource.MustParse("1"),
 		},
 	}
+}
+
+func TestScenarioSolvers(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Scenario Solvers Suite")
 }
