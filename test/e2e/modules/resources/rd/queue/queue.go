@@ -118,7 +118,6 @@ func GetConnectedNamespaceToQueue(q *v2.Queue) string {
 
 func ConnectQueuesWithSharedParent(parentQueue *v2.Queue, childrenQueues ...*v2.Queue) {
 	parentQueue.Spec.ParentQueue = ""
-	parentQueue.Labels["run.ai/department-queue"] = "true"
 
 	for _, childQueue := range childrenQueues {
 		childQueue.Spec.ParentQueue = parentQueue.Name
