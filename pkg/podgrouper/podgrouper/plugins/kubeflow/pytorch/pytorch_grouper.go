@@ -29,6 +29,10 @@ func NewPyTorchGrouper(kubeflowGrouper *kubeflow.KubeflowDistributedGrouper) *Py
 	}
 }
 
+func (ptg *PyTorchGrouper) Name() string {
+	return "PyTorchJob Grouper"
+}
+
 func (ptg *PyTorchGrouper) GetPodGroupMetadata(
 	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {

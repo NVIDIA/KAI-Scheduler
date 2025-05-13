@@ -46,6 +46,10 @@ func NewKnativeGrouper(client client.Client, defaultGrouper *defaultgrouper.Defa
 	}
 }
 
+func (g *KnativeGrouper) Name() string {
+	return "KNative Grouper"
+}
+
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions/finalizers;configurations/finalizers;services/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions;configurations;services,verbs=get;list;watch
 

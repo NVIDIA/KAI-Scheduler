@@ -24,6 +24,10 @@ func NewAmlGrouper(defaultGrouper *defaultgrouper.DefaultGrouper) *AmlGrouper {
 	}
 }
 
+func (amlGrouper *AmlGrouper) Name() string {
+	return "AML Grouper"
+}
+
 // +kubebuilder:rbac:groups=amlarc.azureml.com,resources=amljobs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=amlarc.azureml.com,resources=amljobs/finalizers,verbs=patch;update;create
 

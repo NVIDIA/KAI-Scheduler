@@ -39,6 +39,10 @@ func NewK8sJobGrouper(
 	}
 }
 
+func (g *K8sJobGrouper) Name() string {
+	return "BatchJob Grouper"
+}
+
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=batch,resources=jobs/finalizers,verbs=patch;update;create
 

@@ -52,6 +52,10 @@ func (kdg *KubeflowDistributedGrouper) GetPodGroupMetadata(topOwner *unstructure
 	return podGroupMetadata, nil
 }
 
+func (kdg *KubeflowDistributedGrouper) Name() string {
+	return "Kubeflow Distributed Grouper"
+}
+
 func calcJobNumOfPods(
 	topOwner *unstructured.Unstructured,
 	replicaSpecName string, mandatorySpecNames []string,

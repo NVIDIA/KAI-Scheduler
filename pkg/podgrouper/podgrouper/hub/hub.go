@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package supportedtypes
+package pluginshub
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,6 +11,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/cronjobs"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/deployment"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/grouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/job"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/knative"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow"
@@ -51,27 +52,26 @@ const (
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns/finalizers;taskruns/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=run.ai,resources=trainingworkloads;interactiveworkloads;distributedworkloads;inferenceworkloads,verbs=get;list;watch
 
-type SupportedTypes interface {
-	GetPodGroupMetadataFunc(metav1.GroupVersionKind) (defaultgrouper.Grouper, bool)
+type PluginsHub struct {
+	defaultPlugin *defaultgrouper.DefaultGrouper
+	customPlugins map[metav1.GroupVersionKind]grouper.Grouper
 }
 
-type supportedTypes map[metav1.GroupVersionKind]defaultgrouper.Grouper
-
-func (s supportedTypes) GetPodGroupMetadataFunc(gvk metav1.GroupVersionKind) (defaultgrouper.Grouper, bool) {
-	if f, found := s[gvk]; found {
-		return f, true
+func (ph *PluginsHub) GetPodGrouperPlugin(gvk metav1.GroupVersionKind) grouper.Grouper {
+	if f, found := ph.customPlugins[gvk]; found {
+		return f
 	}
 
 	// search using wildcard version
 	gvk.Version = "*"
-	if f, found := s[gvk]; found {
-		return f, true
+	if f, found := ph.customPlugins[gvk]; found {
+		return f
 	}
-	return nil, false
+	return ph.defaultPlugin
 }
 
-func NewSupportedTypes(kubeClient client.Client, searchForLegacyPodGroups,
-	gangScheduleKnative bool, queueLabelKey string) SupportedTypes {
+func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
+	gangScheduleKnative bool, queueLabelKey string) *PluginsHub {
 	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
 
 	kubeFlowDistributedGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
@@ -84,7 +84,7 @@ func NewSupportedTypes(kubeClient client.Client, searchForLegacyPodGroups,
 	sparkGrouper := spark.NewSparkGrouper(defaultGrouper)
 	podJobGrouper := podjob.NewPodJobGrouper(defaultGrouper, sparkGrouper)
 
-	table := supportedTypes{
+	table := map[metav1.GroupVersionKind]grouper.Grouper{
 		{
 			Group:   "apps",
 			Version: "v1",
@@ -252,5 +252,8 @@ func NewSupportedTypes(kubeClient client.Client, searchForLegacyPodGroups,
 		}] = skipTopOwnerGrouper
 	}
 
-	return table
+	return &PluginsHub{
+		defaultPlugin: defaultGrouper,
+		customPlugins: table,
+	}
 }

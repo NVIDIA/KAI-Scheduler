@@ -28,6 +28,10 @@ func NewXGBoostGrouper(kubeflowGrouper *kubeflow.KubeflowDistributedGrouper) *XG
 	}
 }
 
+func (xgbg *XGBoostGrouper) Name() string {
+	return "XGBoost Grouper"
+}
+
 func (xgbg *XGBoostGrouper) GetPodGroupMetadata(
 	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {

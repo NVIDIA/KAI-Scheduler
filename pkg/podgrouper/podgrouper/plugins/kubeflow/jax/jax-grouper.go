@@ -28,6 +28,10 @@ func NewJaxGrouper(kubeflowGrouper *kubeflow.KubeflowDistributedGrouper) *JaxGro
 	}
 }
 
+func (jg *JaxGrouper) Name() string {
+	return "JAX Grouper"
+}
+
 func (jg *JaxGrouper) GetPodGroupMetadata(
 	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {

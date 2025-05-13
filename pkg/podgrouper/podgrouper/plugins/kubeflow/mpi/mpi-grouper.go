@@ -39,6 +39,10 @@ func NewMpiGrouper(client client.Client, kubeflowGrouper *kubeflow.KubeflowDistr
 	}
 }
 
+func (mg *MpiGrouper) Name() string {
+	return "MPI Grouper"
+}
+
 func (mg *MpiGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
 	gp, err := mg.KubeflowDistributedGrouper.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{MasterName, WorkerName})
 	if err != nil {

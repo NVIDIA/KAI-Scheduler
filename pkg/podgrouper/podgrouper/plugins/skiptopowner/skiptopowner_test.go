@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/grouper"
 )
 
 func TestSkipTopOwnerGrouper(t *testing.T) {
@@ -47,19 +48,19 @@ var examplePod = &v1.Pod{
 var _ = Describe("SkipTopOwnerGrouper", func() {
 	Describe("#GetPodGroupMetadata", func() {
 		var (
-			grouper        *skipTopOwnerGrouper
+			plugin         *skipTopOwnerGrouper
 			client         client.Client
 			defaultGrouper *defaultgrouper.DefaultGrouper
-			supportedTypes map[metav1.GroupVersionKind]defaultgrouper.Grouper
+			supportedTypes map[metav1.GroupVersionKind]grouper.Grouper
 		)
 
 		BeforeEach(func() {
 			client = fake.NewFakeClient()
 			defaultGrouper = defaultgrouper.NewDefaultGrouper(queueLabelKey)
-			supportedTypes = map[metav1.GroupVersionKind]defaultgrouper.Grouper{
+			supportedTypes = map[metav1.GroupVersionKind]grouper.Grouper{
 				{Group: "", Version: "v1", Kind: "Pod"}: defaultGrouper,
 			}
-			grouper = NewSkipTopOwnerGrouper(client, defaultGrouper, supportedTypes)
+			plugin = NewSkipTopOwnerGrouper(client, defaultGrouper, supportedTypes)
 		})
 
 		Context("when last owner is a pod", func() {
@@ -81,7 +82,7 @@ var _ = Describe("SkipTopOwnerGrouper", func() {
 				}
 				Expect(client.Create(context.TODO(), pod)).To(Succeed())
 
-				metadata, err := grouper.GetPodGroupMetadata(podObj, pod, lastOwnerPartial)
+				metadata, err := plugin.GetPodGroupMetadata(podObj, pod, lastOwnerPartial)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(metadata).NotTo(BeNil())
@@ -158,7 +159,7 @@ var _ = Describe("SkipTopOwnerGrouper", func() {
 				supportedTypes[metav1.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}] = defaultGrouper
 
 				otherOwners := []*metav1.PartialObjectMetadata{objectToPartial(replicaSet), objectToPartial(deployment), objectToPartial(other)}
-				metadata, err := grouper.GetPodGroupMetadata(other, pod, otherOwners...)
+				metadata, err := plugin.GetPodGroupMetadata(other, pod, otherOwners...)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(metadata).NotTo(BeNil())
@@ -168,7 +169,7 @@ var _ = Describe("SkipTopOwnerGrouper", func() {
 
 			It("uses the default function if no handler for owner is found", func() {
 				otherOwners := []*metav1.PartialObjectMetadata{objectToPartial(replicaSet), objectToPartial(deployment), objectToPartial(other)}
-				metadata, err := grouper.GetPodGroupMetadata(other, pod, otherOwners...)
+				metadata, err := plugin.GetPodGroupMetadata(other, pod, otherOwners...)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(metadata).NotTo(BeNil())
 				Expect(metadata.Queue).To(Equal(queueName))

@@ -25,6 +25,10 @@ func NewDeploymentGrouper(defaultGrouper *defaultgrouper.DefaultGrouper) *Deploy
 	}
 }
 
+func (dg *DeploymentGrouper) Name() string {
+	return "Deployment Grouper"
+}
+
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
 // +kubebuilder:rbac:groups=apps,resources=deployments/finalizers,verbs=patch;update;create
 

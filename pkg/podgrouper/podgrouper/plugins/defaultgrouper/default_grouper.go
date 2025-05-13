@@ -24,10 +24,6 @@ var (
 	logger = log.FromContext(context.Background())
 )
 
-type Grouper interface {
-	GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, otherOwners ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error)
-}
-
 type DefaultGrouper struct {
 	queueLabelKey string
 }
@@ -36,6 +32,10 @@ func NewDefaultGrouper(queueLabelKey string) *DefaultGrouper {
 	return &DefaultGrouper{
 		queueLabelKey: queueLabelKey,
 	}
+}
+
+func (dg *DefaultGrouper) Name() string {
+	return "Default Grouper"
 }
 
 func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {

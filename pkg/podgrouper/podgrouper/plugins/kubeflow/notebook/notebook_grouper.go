@@ -23,6 +23,10 @@ func NewNotebookGrouper(defaultGrouper *defaultgrouper.DefaultGrouper) *Notebook
 	}
 }
 
+func (ng *NotebookGrouper) Name() string {
+	return "Kubeflow Notebook Grouper"
+}
+
 func (ng *NotebookGrouper) GetPodGroupMetadata(
 	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {

@@ -26,6 +26,10 @@ func NewTensorFlowGrouper(kubeflowGrouper *kubeflow.KubeflowDistributedGrouper) 
 	}
 }
 
+func (tfg *TensorFlowGrouper) Name() string {
+	return "TensorFlow Grouper"
+}
+
 func (tfg *TensorFlowGrouper) GetPodGroupMetadata(
 	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {

@@ -30,6 +30,10 @@ func NewCronJobGrouper(client client.Client, defaultGrouper *defaultgrouper.Defa
 	}
 }
 
+func (cg *CronJobGrouper) Name() string {
+	return "CronJob Grouper"
+}
+
 // +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=batch,resources=cronjobs/finalizers,verbs=patch;update;create
 
