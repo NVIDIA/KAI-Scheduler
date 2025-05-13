@@ -6,7 +6,7 @@ kind: PyTorchJob
 metadata:
   name: elastic-example-imagenet
   labels:
-    kai.scheduler/queue: test
+    runai/queue: test
 spec:
   elasticPolicy:
     rdzvBackend: c10d

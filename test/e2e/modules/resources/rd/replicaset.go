@@ -42,7 +42,7 @@ func CreateReplicasetObject(namespace, queueName string) *v1.ReplicaSet {
 					Labels: map[string]string{
 						constants.AppLabelName: "engine-e2e",
 						ReplicaSetAppLabel:     matchLabelValue,
-						"kai.scheduler/queue":  queueName,
+						"runai/queue":          queueName,
 					},
 				},
 				Spec: v12.PodSpec{

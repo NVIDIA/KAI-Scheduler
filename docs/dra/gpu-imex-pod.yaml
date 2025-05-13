@@ -16,7 +16,7 @@ kind: Pod
 metadata:
   name: gpu-imex-pod
   labels:
-    kai.scheduler/queue: test
+    runai/queue: test
 spec:
   schedulerName: kai-scheduler
   containers:

@@ -6,7 +6,7 @@ kind: Pod
 metadata:
   name: cpu-only-pod
   labels:
-    kai.scheduler/queue: test
+    runai/queue: test
 spec:
   schedulerName: kai-scheduler
   containers:

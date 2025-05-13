@@ -6,7 +6,7 @@ kind: Pod
 metadata:
   name: gpu-sharing
   labels:
-    kai.scheduler/queue: test
+    runai/queue: test
   annotations:
     gpu-fraction: "0.5"
 spec:
