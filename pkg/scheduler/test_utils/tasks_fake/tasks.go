@@ -19,7 +19,7 @@ import (
 
 const (
 	ownerUUID       = "1234"
-	NodeAffinityKey = "run.ai/type"
+	NodeAffinityKey = "kai.scheduler/type"
 )
 
 type TestTaskBasic struct {

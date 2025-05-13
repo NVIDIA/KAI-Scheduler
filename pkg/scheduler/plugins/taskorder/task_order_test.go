@@ -17,7 +17,7 @@ func TestTaskOrder(t *testing.T) {
 	lPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				"run.ai/task-priority": "1",
+				"kai.scheduler/task-priority": "1",
 			},
 		},
 	}
@@ -25,17 +25,17 @@ func TestTaskOrder(t *testing.T) {
 	rPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				"run.ai/task-priority": "2",
+				"kai.scheduler/task-priority": "2",
 			},
 		},
 	}
 
 	assert.Equal(t, TaskOrderFn(pod_info.NewTaskInfo(lPod), pod_info.NewTaskInfo(rPod)), 1)
 
-	lPod.Labels["run.ai/task-priority"] = "2"
+	lPod.Labels["kai.scheduler/task-priority"] = "2"
 	assert.Equal(t, TaskOrderFn(pod_info.NewTaskInfo(lPod), pod_info.NewTaskInfo(rPod)), 0)
 
-	rPod.Labels["run.ai/task-priority"] = "1"
+	rPod.Labels["kai.scheduler/task-priority"] = "1"
 
 	assert.Equal(t, TaskOrderFn(pod_info.NewTaskInfo(lPod), pod_info.NewTaskInfo(rPod)), -1)
 

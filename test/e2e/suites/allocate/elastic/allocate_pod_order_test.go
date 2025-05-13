@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	taskOrderLabelKey = "run.ai/task-priority"
+	taskOrderLabelKey = "kai.scheduler/task-priority"
 )
 
 var _ = Describe("Elastic allocation pods order tests", Ordered, func() {

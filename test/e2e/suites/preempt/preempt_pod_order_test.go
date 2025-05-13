@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	taskOrderLabelKey = "run.ai/task-priority"
+	taskOrderLabelKey = "kai.scheduler/task-priority"
 )
 
 var _ = Describe("Priority pod order preemption with Elastic Jobs", Ordered, func() {
