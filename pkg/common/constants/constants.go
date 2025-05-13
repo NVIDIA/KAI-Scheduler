@@ -22,7 +22,7 @@ const (
 	GpuFractionsNumDevices   = "gpu-fraction-num-devices"
 	RunaiGpuLimit            = "runai-gpu-limit"
 	MpsAnnotation            = "mps"
-	StalePodgroupTimeStamp   = "run.ai/stale-podgroup-timestamp"
+	StalePodgroupTimeStamp   = "kai.scheduler/stale-podgroup-timestamp"
 
 	// Labels
 	NodePoolNameLabel        = "runai/node-pool"
