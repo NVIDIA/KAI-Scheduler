@@ -636,7 +636,8 @@ var _ = Describe("Reclaimable - Single department", func() {
 		Expect(result).To(Equal(false))
 	})
 	It("Reclaimer below deserved and reclaimee above deserved (within fair share)", func() {
-		queues["p2"].GPU.FairShare = 3
+		//Set fair share to 3
+		queues["p2"].QueueResourceShare.AddResourceShare(rs.GpuResource, 3-queues["p2"].GPU.FairShare)
 		result := reclaimable.Reclaimable(queues, reclaimerInfo, reclaimeeResourcesByQueue(reclaimees))
 		Expect(result).To(Equal(true))
 	})
@@ -644,7 +645,7 @@ var _ = Describe("Reclaimable - Single department", func() {
 		queues["p1"].GPU.Allocated = 3
 		queues["default"].GPU.Allocated = 6
 		queues["default"].GPU.Deserved = 7
-		queues["default"].GPU.FairShare = 7
+		queues["default"].QueueResourceShare.AddResourceShare(rs.GpuResource, 7-queues["p2"].GPU.FairShare)
 		result := reclaimable.Reclaimable(queues, reclaimerInfo, reclaimeeResourcesByQueue(reclaimees))
 		Expect(result).To(Equal(false))
 	})
