@@ -109,7 +109,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 	})
 
 	Context("with recorded victims", func() {
-		It("All scenarios have the same recorded victims", func() {
+		It("returns scenarios that have the same recorded victims", func() {
 			ssn, _ = initializeSession(3, 2)
 			for _, podGroupInfo := range ssn.PodGroupInfos {
 				podGroupInfo.MinAvailable = int32(len(podGroupInfo.PodInfos))
@@ -143,7 +143,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			Expect(numberOfGeneratedScenarios).To(Equal(2))
 		})
 
-		It("Returned scenarios have correct number of potential victims", func() {
+		It("returns scenarios that have correct number of potential victims", func() {
 			ssn, _ = initializeSession(3, 2)
 			for _, podGroupInfo := range ssn.PodGroupInfos {
 				podGroupInfo.MinAvailable = int32(len(podGroupInfo.PodInfos))
@@ -180,7 +180,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 	})
 
 	Context("with recorded victims that are elastic", func() {
-		It("All scenarios have the same recorded victims", func() {
+		It("returns scenarios that have the same recorded victims", func() {
 			// run 1 job with 3 tasks, set minAvailable to 1 for elastic
 			ssn, _ = initializeSession(1, 3)
 			minAvailable := 1
@@ -221,7 +221,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			Expect(numberOfGeneratedScenarios).To(Equal(3))
 		})
 
-		It("Returned scenarios have correct number of potential victims", func() {
+		It("returns scenarios that have correct number of potential victims", func() {
 			// run 1 job with 4 tasks, set minAvailable to 2 for elastic
 			ssn, _ = initializeSession(1, 4)
 			minAvailable := 2
