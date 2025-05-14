@@ -145,4 +145,45 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 			return len(pods.Items) == 0
 		})
 	})
+
+	It("Reclaim elastic job for a distributed job", func(ctx context.Context) {
+		testCtx = testcontext.GetConnectivity(ctx, Default)
+		parentQueue, reclaimeeQueue, reclaimerQueue = createQueues(2, 0, 2)
+		reclaimeeQueue.Spec.Resources.GPU.OverQuotaWeight = 0
+		testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
+		reclaimeeNamespace = queue.GetConnectedNamespaceToQueue(reclaimeeQueue)
+
+		// reclaimee job
+		reclaimeePodRequirements := v1.ResourceRequirements{
+			Limits: map[v1.ResourceName]resource.Quantity{
+				constants.GpuResource: resource.MustParse("1"),
+			},
+		}
+		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
+			"elastic-reclaimee-job", reclaimeeQueue, 2, nil,
+			reclaimeePodRequirements)
+		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimeeNamespace, reclaimeePods)
+
+		// reclaimer job
+		reclaimerPodRequirements := v1.ResourceRequirements{
+			Limits: map[v1.ResourceName]resource.Quantity{
+				constants.GpuResource: resource.MustParse("1"),
+			},
+		}
+		_, reclaimerPods := pod_group.CreateDistributedJob(
+			ctx, testCtx.KubeClientset, testCtx.ControllerClient,
+			reclaimerQueue, 2, reclaimerPodRequirements, "",
+		)
+		reclaimerNamespace := queue.GetConnectedNamespaceToQueue(reclaimerQueue)
+		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimerNamespace, reclaimerPods)
+
+		// verify results
+		wait.ForPodsWithCondition(ctx, testCtx.ControllerClient, func(watch.Event) bool {
+			pods, err := testCtx.KubeClientset.CoreV1().Pods(reclaimeeNamespace).List(ctx, metav1.ListOptions{
+				LabelSelector: fmt.Sprintf("%s=%s", podGroupLabelName, reclaimeePodGroup.Name),
+			})
+			Expect(err).To(Succeed())
+			return len(pods.Items) == 0
+		})
+	})
 })
