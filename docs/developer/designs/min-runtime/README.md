@@ -15,7 +15,6 @@ Unrestrained preemption can lead to resource thrashing, where workloads are repe
 The reclaim-min-runtime parameter can be configured with the following values:
 
 - **0 (default)**: Workloads are always preemptible via reclaims
-- **-1**: Workloads are never preemptible via reclaims
 - **Positive value**: Minimum guaranteed runtime before preemption via reclaims
 
 ### Preempt Min Runtime Configuration
@@ -25,7 +24,6 @@ In addition to protecting workloads from being preempted too early with reclaim-
 The preempt-min-runtime parameter can be configured with the following values:
 
 - **0 (default)**: Workloads can always be preempted by others (subject to reclaim-min-runtime constraints) in the same queue
-- **-1**: Workloads can never be preempted by others in the same queue
 - **Positive value**: Minimum guaranteed runtime before in-queue preemption
 
 ### Configuration Hierarchy
@@ -86,26 +84,33 @@ graph TD
 Add startTime to PodGroup by mimicking how staleTimestamp is set today:
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/cache/status_updater/default_status_updater.go#L149-L154
 
-This will be a readable annotation that is set to current time when the first pod of a podgroup reaches running state.
+This will be a readable annotation that is set to current time when the job has been successfully allocated.
 
 For scheduling purposes, the readable timestamp is converted to a unix timestamp when pods are snapshotted, using https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/api/podgroup_info/job_info.go#L81
 
+For a more advanced scenario, we could also make use of scheduling conditions, but have left that out of the design proposal for now.
+
 ### Phase 2
 
-Prepare https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/framework/session_plugins.go to expose `IsPreemptible(preemptor, preemptee)` extension function (potentially moving existing isPreemptible to there?), as well as `IsReclaimable(preemptor, preemptee)`.
-These functions will return `[]*common_info.PodID`, which is the set of PodIDs that are eligible for preemption/reclaims given the preemptor.
+Prepare https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/framework/session_plugins.go to expose `IsPreemptible(actionType, preemptor, preemptee) bool` extension function.
 
-For the new Is* functions we will do set intersection between the results of each plugin returning the values, and use the result of that.
+For the new function we will do boolean AND between the results of each plugin returning the values, and use the result of that to determine if the workload is preemptible at all.
 
-`IsReclaimable()`/`IsPreemptible()` will be called in each action's victim selection filters, and will be called only AFTER a workload has been considered eligible based on the fundamental filters of "reclaims" and "preemptible" (such as preemptible only being relevant for in-queue workloads). 
-If the resulting set has length 0 the whole workload is considered not preemptible/reclaimable.
+`IsPreemptible()` will be called in each action's victim selection filters, and will be called only AFTER a workload has been considered eligible based on the fundamental filters of "reclaims" and "preemptible" (such as preemptible only being relevant for in-queue workloads).
 
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/actions/preempt/preempt.go#L105-L134
 
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/actions/reclaim/reclaim.go#L154-L158
 
-Additionally will rename existing `Reclaimable()` to `HasReclaimableResources()` to better reflect what it is doing (and its other variables/names for the same purpose). Also need to refactor PluginOptions potentially to reflect the changed name.
-https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/framework/session_plugins.go#L88
+
+Secondly, because elastic workloads can always be partially preempted, we will also expose another plugin hook that allows plugins to inject new scenario filters to be used here:
+https://github.com/NVIDIA/KAI-Scheduler/blob/eb01078bf26f8f85ea20d44ba3b15912dae95e55/pkg/scheduler/actions/common/solvers/pod_scenario_builder.go#L100-L114
+
+`GetAccumulatedScenarioFilters(session *framework.Session, actionType ActionType, pendingJob *podgroup_info.PodGroupInfo)` will return a list of instances matching `accumulated_scenario_filters.Interface`. In `session_plugins.go`, the result from all plugins will be aggregated into a resulting slice, that is then returned to NewPodAccumulatedScenarioBuilder and appended to the list of scenarioFilters:
+https://github.com/NVIDIA/KAI-Scheduler/blob/eb01078bf26f8f85ea20d44ba3b15912dae95e55/pkg/scheduler/actions/common/solvers/pod_scenario_builder.go#L47-L51
+
+To get correct data about the action for the filter, we will propagate `actionType` down into the scenario builder so that the filter can be constructed based on the type of action taken.
+
 
 ### Phase 3
 
@@ -118,22 +123,22 @@ https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e35
 Since queues are defined as CRDs, the extra values will have to be implemented in `pkg/apis/scheduling/v2/queue_types.go` under `QueueSpec`.
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/apis/scheduling/v2/queue_types.go#L26-L49
 
-If CRD allows it, we will use `time.Duration` to describe these values (also if `time.Duration` can describe -1 well), otherwise integer with seconds as value. 
+If CRD allows it, we will use `time.Duration` to describe these values, otherwise integer with seconds as value. 
 
+It has been suggested to create a new v3alpha1 for these changes.
 
 ### Phase 4
 
-Implement min-runtime plugin for the scheduler that extends `IsReclaimable()` and `IsPreemptible()`, which will be used to filter out workloads eligible for preemption when scheduler tries to take these actions.
+Implement min-runtime plugin for the scheduler that extends `IsPreemptible()`, which will be used to filter out workloads eligible for preemption when scheduler tries to take these actions. We will also extend `GetAccumulatedScenarioFilters()` to validate and filter out scenarios that attempt to preempt elastic workloads beyond MinAvailable when there is min-runtime left.
 
-We will evaluate workloads in `InReclaimable()`/`IsPreemptible()` as follows:
+We will evaluate workloads in `IsPreemptible()` as follows:
 
- 1. Resolve the correct min-runtime given scenario, preemptor and preemptee.
- 2. If min-runtime is -1, return empty set.
- 3. If currentTime > startTime + resolved min-runtime, return all pod ids in set.
- 4. If workload does not have `MinAvailable` set, return empty set.
- 5. Sort tasks in elasic workload based on reverse `TaskOrderFn` (to pick ones that can be sacrificed first), return (active-MinAvailable) pod ids in set.
+ 1. If MinAvailable is set, always return true, as elastic workloads are handled by scenario filter instead.
+ 2. Resolve the correct min-runtime given actionType, preemptor and preemptee.
+ 3. If currentTime > startTime + resolved min-runtime, true.
+ 4. Else false.
 
+For workloads that are marked as preemptible, when the solver generates scenarios for victim preemption, `GetAccumulatedScenarioFilters()` will call our plugin which returns a `ElasticMinRuntimeFilter` that is defined within the min-runtime plugin.
 
-`session_plugins.go` will take intersection of sets returned by `InReclaimable()`/`IsPreemptible()` and return it to reclaim/preempt action.
-
-In either action, if length of set is non-zero, the information will be passed to the solver to consider the specific pods only when solving for a solution by getting the data down to https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/actions/common/solvers/pod_scenario_builder.go#L73 to filter out pods that can be evicted.
+When the filter is called, it will look at `scenario.victimJobsTaskGroups` and `potentialVictimsTasks` together with `pendingJob`.
+If any of the `victmJobsTaskGroups` are an elastic job with min-runtime left with regards to `pendingJob` (using the same resolver mentioned earlier), the scenario will be considered invalid if `recordedVictimTasks` and `potentialVictimTasks` would bring the elastic workload below MinAvailable pods.
