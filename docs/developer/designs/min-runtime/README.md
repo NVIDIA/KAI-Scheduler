@@ -84,7 +84,7 @@ graph TD
 Add startTime to PodGroup by mimicking how staleTimestamp is set today:
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/cache/status_updater/default_status_updater.go#L149-L154
 
-This will be a readable annotation that is set to current time when the job has been successfully allocated.
+This will be a readable annotation that is set to current time when the workload has been successfully allocated.
 
 For scheduling purposes, the readable timestamp is converted to a unix timestamp when pods are snapshotted, using https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/api/podgroup_info/job_info.go#L81
 
@@ -135,10 +135,12 @@ We will evaluate workloads in `IsPreemptible()` as follows:
 
  1. If MinAvailable is set, always return true, as elastic workloads are handled by scenario filter instead.
  2. Resolve the correct min-runtime given actionType, preemptor and preemptee.
- 3. If currentTime > startTime + resolved min-runtime, true.
+ 3. If currentTime > startTime + resolved min-runtime, return true.
  4. Else false.
 
-For workloads that are marked as preemptible, when the solver generates scenarios for victim preemption, `GetAccumulatedScenarioFilters()` will call our plugin which returns a `ElasticMinRuntimeFilter` that is defined within the min-runtime plugin.
+To handle elastic workload preemptability (which our plugin will always consider preemptible), we would do as follows:
 
-When the filter is called, it will look at `scenario.victimJobsTaskGroups` and `potentialVictimsTasks` together with `pendingJob`.
-If any of the `victmJobsTaskGroups` are an elastic job with min-runtime left with regards to `pendingJob` (using the same resolver mentioned earlier), the scenario will be considered invalid if `recordedVictimTasks` and `potentialVictimTasks` would bring the elastic workload below MinAvailable pods.
+When the solver creates the scenario builder, `GetAccumulatedScenarioFilters()` will call our plugin which returns a `ElasticMinRuntimeFilter` that is defined within the min-runtime plugin and adds it to the list of scenario filters.
+
+When the filter is called as a scenario is generated, it will look at `scenario.victimJobsTaskGroups` and `potentialVictimsTasks` together with `pendingJob`.
+If any of the `victmJobsTaskGroups` are an elastic workload with min-runtime left with regards to `pendingJob` (using the same min-runtime resolver mentioned earlier), the scenario will be considered invalid if `recordedVictimTasks` and `potentialVictimTasks` would bring the elastic workload below MinAvailable pods.
