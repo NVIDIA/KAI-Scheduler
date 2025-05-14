@@ -82,6 +82,8 @@ type PodGroupInfo struct {
 	tasksToAllocateInitResource *resource_info.Resource
 	PodStatusIndex              map[pod_status.PodStatus]pod_info.PodsMap
 	activeAllocatedCount        *int
+
+	StartTimestamp *time.Time
 }
 
 func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *PodGroupInfo {
@@ -100,6 +102,8 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 			TimeStamp: nil,
 			Stale:     false,
 		},
+
+		StartTimestamp:       nil,
 		activeAllocatedCount: ptr.To(0),
 	}
 
@@ -137,6 +141,16 @@ func (podGroupInfo *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 		} else {
 			podGroupInfo.StalenessInfo.TimeStamp = &staleTimeStamp
 			podGroupInfo.StalenessInfo.Stale = true
+		}
+	}
+
+	if pg.Annotations[commonconstants.StartTimeStamp] != "" {
+		startTime, err := time.Parse(time.RFC3339, pg.Annotations[commonconstants.StartTimeStamp])
+		if err != nil {
+			log.InfraLogger.V(7).Warnf("Failed to parse start timestamp for podgroup <%s/%s> err: %v",
+				podGroupInfo.Namespace, podGroupInfo.Name, err)
+		} else {
+			podGroupInfo.StartTimestamp = &startTime
 		}
 	}
 
