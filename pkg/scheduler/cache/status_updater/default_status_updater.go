@@ -217,7 +217,7 @@ func (su *defaultStatusUpdater) recordJobNotReadyEvent(job *podgroup_info.PodGro
 func (su *defaultStatusUpdater) markPodGroupUnschedulable(job *podgroup_info.PodGroupInfo, message string) bool {
 	su.recorder.Event(job.PodGroup, v1.EventTypeNormal, enginev2alpha2.PodGroupReasonUnschedulable, message)
 
-	if len(job.GetActiveAllocatedTasks()) > 0 {
+	if job.GetActiveAllocatedTasksCount() > 0 {
 		// Don't update podgroup condition if there are any allocated pods (RUN-20673)
 		return false
 	}

@@ -131,7 +131,7 @@ func handleFailedTaskAllocation(job *podgroup_info.PodGroupInfo, unschedulableTa
 		allocationError.SetError(common_info.DefaultPodError)
 	}
 
-	numRunningTasks := int32(len(job.GetActivelyRunningTasks()))
+	numRunningTasks := job.GetActivelyRunningTasksCount()
 	if job.MinAvailable > 1 && numRunningTasks < job.MinAvailable {
 		job.SetJobFitError(
 			podgroup_info.PodSchedulingErrors,

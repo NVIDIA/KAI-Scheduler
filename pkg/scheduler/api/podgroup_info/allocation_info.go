@@ -27,6 +27,10 @@ func HasTasksToAllocate(podGroupInfo *PodGroupInfo, isRealAllocation bool) bool 
 func GetTasksToAllocate(
 	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) []*pod_info.PodInfo {
+	if podGroupInfo.tasksToAllocate != nil {
+		return podGroupInfo.tasksToAllocate
+	}
+
 	taskPriorityQueue := getTasksToAllocateQueue(podGroupInfo, taskOrderFn, isRealAllocation)
 	maxNumOfTasksToAllocate := getNumOfTasksToAllocate(podGroupInfo, taskPriorityQueue.Len())
 
@@ -36,6 +40,7 @@ func GetTasksToAllocate(
 		tasksToAllocate = append(tasksToAllocate, nextPod)
 	}
 
+	podGroupInfo.tasksToAllocate = tasksToAllocate
 	return tasksToAllocate
 }
 
@@ -77,18 +82,21 @@ func GetJobsToAllocateInitResource(
 func GetTasksToAllocateInitResource(
 	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) *resource_info.Resource {
-	tasksTotalRequestedResource := resource_info.EmptyResource()
-
 	if podGroupInfo == nil {
-		return tasksTotalRequestedResource
+		return resource_info.EmptyResource()
+	}
+	if podGroupInfo.tasksToAllocateInitResource != nil {
+		return podGroupInfo.tasksToAllocateInitResource
 	}
 
+	tasksTotalRequestedResource := resource_info.EmptyResource()
 	for _, task := range GetTasksToAllocate(podGroupInfo, taskOrderFn, isRealAllocation) {
 		if task.ShouldAllocate(isRealAllocation) {
 			tasksTotalRequestedResource.AddResourceRequirements(task.ResReq)
 		}
 	}
 
+	podGroupInfo.tasksToAllocateInitResource = tasksTotalRequestedResource
 	return tasksTotalRequestedResource
 }
 

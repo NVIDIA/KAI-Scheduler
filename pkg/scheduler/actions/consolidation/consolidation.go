@@ -147,7 +147,7 @@ func buildPreemptibleFilterFunc(preemptor *podgroup_info.PodGroupInfo, maxPreemp
 			return false
 		}
 
-		if len(job.GetActiveAllocatedTasks()) == 0 {
+		if job.GetActiveAllocatedTasksCount() == 0 {
 			return false
 		}
 

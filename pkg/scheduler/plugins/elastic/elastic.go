@@ -29,8 +29,8 @@ func JobOrderFn(l, r interface{}) int {
 	lv := l.(*podgroup_info.PodGroupInfo)
 	rv := r.(*podgroup_info.PodGroupInfo)
 
-	lvAllocatedCount := int32(len(lv.GetActiveAllocatedTasks()))
-	rvAllocatedCount := int32(len(rv.GetActiveAllocatedTasks()))
+	lvAllocatedCount := int32(lv.GetActiveAllocatedTasksCount())
+	rvAllocatedCount := int32(rv.GetActiveAllocatedTasksCount())
 
 	if lvAllocatedCount < lv.MinAvailable && rvAllocatedCount >= rv.MinAvailable {
 		return -1

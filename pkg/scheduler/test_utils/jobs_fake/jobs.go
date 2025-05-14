@@ -95,6 +95,7 @@ func BuildJobInfo(
 ) *podgroup_info.PodGroupInfo {
 	allTasks := pod_info.PodsMap{}
 	taskStatusIndex := map[pod_status.PodStatus]pod_info.PodsMap{}
+	activeAllocatedCount := 0
 
 	for _, taskInfo := range taskInfos {
 		allTasks[taskInfo.UID] = taskInfo
@@ -102,21 +103,25 @@ func BuildJobInfo(
 			taskStatusIndex[taskInfo.Status] = pod_info.PodsMap{}
 		}
 		taskStatusIndex[taskInfo.Status][taskInfo.UID] = taskInfo
+		if pod_status.AllocatedStatus(taskInfo.Status) {
+			activeAllocatedCount++
+		}
 	}
 
 	result := &podgroup_info.PodGroupInfo{
-		UID:               uid,
-		Name:              name,
-		Namespace:         namespace,
-		Allocated:         allocatedResource,
-		PodInfos:          allTasks,
-		PodStatusIndex:    taskStatusIndex,
-		Priority:          priority,
-		JobFitErrors:      make(enginev2alpha2.UnschedulableExplanations, 0),
-		NodesFitErrors:    map[common_info.PodID]*common_info.FitErrors{},
-		Queue:             queueUID,
-		CreationTimestamp: metav1.Time{Time: jobCreationTime},
-		MinAvailable:      minAvailable,
+		UID:                  uid,
+		Name:                 name,
+		Namespace:            namespace,
+		Allocated:            allocatedResource,
+		PodInfos:             allTasks,
+		ActiveAllocatedCount: activeAllocatedCount,
+		PodStatusIndex:       taskStatusIndex,
+		Priority:             priority,
+		JobFitErrors:         make(enginev2alpha2.UnschedulableExplanations, 0),
+		NodesFitErrors:       map[common_info.PodID]*common_info.FitErrors{},
+		Queue:                queueUID,
+		CreationTimestamp:    metav1.Time{Time: jobCreationTime},
+		MinAvailable:         minAvailable,
 		PodGroup: &enginev2alpha2.PodGroup{
 			ObjectMeta: metav1.ObjectMeta{
 				UID:               types.UID(uid),
