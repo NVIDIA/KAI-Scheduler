@@ -5,6 +5,7 @@ package common
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -38,6 +39,9 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 			return false
 		}
 	}
+	// Set start time for the job
+	timeNow := time.Now()
+	job.StartTimestamp = &timeNow
 
 	return true
 }
