@@ -175,7 +175,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 				Expect(len(sn.PotentialVictimsTasks())).To(Equal(potentialVictimsPerScenario[numberOfGeneratedScenarios]))
 				numberOfGeneratedScenarios += 1
 			}
-
+			Expect(numberOfGeneratedScenarios).To(Equal(len(potentialVictimsPerScenario)))
 		})
 	})
 
@@ -260,6 +260,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 				Expect(len(sn.PotentialVictimsTasks())).To(Equal(potentialVictimsPerScenario[numberOfGeneratedScenarios]))
 				numberOfGeneratedScenarios += 1
 			}
+			Expect(numberOfGeneratedScenarios).To(Equal(len(potentialVictimsPerScenario)))
 		})
 	})
 })
