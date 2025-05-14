@@ -6,9 +6,12 @@ package app
 import (
 	"context"
 	"flag"
+	"fmt"
 	"time"
 
 	podmutator "github.com/NVIDIA/KAI-scheduler/pkg/binder/admission/pod-mutator"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -107,14 +110,20 @@ func New() (*App, error) {
 		return nil, err
 	}
 
-	clientWithWatch, err := client.NewWithWatch(config, client.Options{})
+	if err := createIndexesForResourceReservation(mgr); err != nil {
+		return nil, err
+	}
+
+	clientWithWatch, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
+		Scheme: scheme,
+		Cache: &client.CacheOptions{
+			Reader: mgr.GetCache(),
+		},
+	})
 	if err != nil {
 		setupLog.Error(err, "unable to create client with watch")
 		return nil, err
 	}
-	clientScheme := clientWithWatch.Scheme()
-	utilruntime.Must(clientgoscheme.AddToScheme(clientScheme))
-	utilruntime.Must(schedulingv1alpha2.AddToScheme(clientScheme))
 
 	kubeClient := kubernetes.NewForConfigOrDie(config)
 	informerFactory := informers.NewSharedInformerFactory(kubeClient, 0)
@@ -147,11 +156,16 @@ func (app *App) RegisterPlugins(plugins *plugins.BinderPlugins) {
 }
 
 func (app *App) Run() error {
-	err := app.rrs.Sync(context.Background())
-	if err != nil {
-		setupLog.Error(err, "unable to sync resource reservation")
-		return err
-	}
+	var err error
+	go func() {
+		app.manager.GetCache().WaitForCacheSync(context.Background())
+		setupLog.Info("syncing resource reservation")
+		err := app.rrs.Sync(context.Background())
+		if err != nil {
+			setupLog.Error(err, "unable to sync resource reservation")
+			panic(err)
+		}
+	}()
 
 	if err = (&controllers.PodReconciler{
 		Client:              app.manager.GetClient(),
@@ -177,7 +191,7 @@ func (app *App) Run() error {
 	app.InformerFactory.WaitForCacheSync(stopCh)
 
 	reconciler := controllers.NewBindRequestReconciler(
-		app.Client, app.manager.GetScheme(), app.manager.GetEventRecorderFor("binder"), app.reconcilerParams,
+		app.manager.GetClient(), app.manager.GetScheme(), app.manager.GetEventRecorderFor("binder"), app.reconcilerParams,
 		binder, app.rrs)
 	if err = reconciler.SetupWithManager(app.manager); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BindRequest")
@@ -199,5 +213,42 @@ func (app *App) Run() error {
 		setupLog.Error(err, "problem running manager")
 		return err
 	}
+	return nil
+}
+
+func createIndexesForResourceReservation(mgr manager.Manager) error {
+
+	if err := mgr.GetFieldIndexer().IndexField(
+		context.Background(), &corev1.Pod{}, "spec.nodeName",
+		func(obj client.Object) []string {
+			nodeName := obj.(*corev1.Pod).Spec.NodeName
+			if nodeName != "" {
+				return []string{nodeName}
+			}
+			return nil
+		},
+	); err != nil {
+		setupLog.Error(err, "failed to create index for spec.nodeName")
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(
+		context.Background(), &corev1.Pod{}, fmt.Sprintf("metadata.labels.%s", constants.GPUGroup),
+		func(obj client.Object) []string {
+			labels := obj.(*corev1.Pod).Labels
+			if labels == nil {
+				return nil
+			}
+			gpuGroup, found := labels[constants.GPUGroup]
+			if !found {
+				return nil
+			}
+			return []string{gpuGroup}
+		},
+	); err != nil {
+		setupLog.Error(err, "failed to create index for spec.nodeName")
+		return err
+	}
+
 	return nil
 }
