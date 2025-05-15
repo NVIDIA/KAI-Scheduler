@@ -98,6 +98,7 @@ func (pp *proportionPlugin) CanReclaimResourcesFn(reclaimer *reclaimer_info.Recl
 func (pp *proportionPlugin) reclaimableFn(
 	reclaimer *reclaimer_info.ReclaimerInfo,
 	reclaimees []*podgroup_info.PodGroupInfo,
+	_ []*pod_info.PodInfo,
 ) bool {
 	totalVictimsResources := make(map[common_info.QueueID][]*resource_info.Resource)
 	for _, jobTaskGroup := range reclaimees {

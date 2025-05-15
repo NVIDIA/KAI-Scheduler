@@ -20,6 +20,7 @@ import (
 type SolutionValidator func(
 	pendingJob *podgroup_info.PodGroupInfo,
 	victimJobs []*podgroup_info.PodGroupInfo,
+	victimTasks []*pod_info.PodInfo,
 ) bool
 
 type simulationVictims struct {
@@ -191,7 +192,7 @@ func (s *byPodSolver) handleScenarioSolution(
 	actualVictimJobs := getVictimJobsFromVictimTasks(victimsTasks, scenario)
 
 	if s.solutionValidator != nil {
-		validSolution := s.solutionValidator(pendingJob, actualVictimJobs)
+		validSolution := s.solutionValidator(pendingJob, actualVictimJobs, victimsTasks)
 		if !validSolution {
 			statement.Discard()
 			return &solutionResult{false, nil, nil, nil}
