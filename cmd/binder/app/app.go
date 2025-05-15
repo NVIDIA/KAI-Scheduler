@@ -222,10 +222,10 @@ func createIndexesForResourceReservation(mgr manager.Manager) error {
 		context.Background(), &corev1.Pod{}, "spec.nodeName",
 		func(obj client.Object) []string {
 			nodeName := obj.(*corev1.Pod).Spec.NodeName
-			if nodeName != "" {
-				return []string{nodeName}
+			if nodeName == "" {
+				return nil
 			}
-			return nil
+			return []string{nodeName}
 		},
 	); err != nil {
 		setupLog.Error(err, "failed to create index for spec.nodeName")
