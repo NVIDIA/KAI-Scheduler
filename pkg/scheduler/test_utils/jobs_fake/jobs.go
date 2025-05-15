@@ -130,6 +130,7 @@ func BuildJobInfo(
 			},
 		},
 	}
+	_ = result.GetActiveAllocatedTasksCount()
 	if staleDuration != nil {
 		staleTime := time.Now().Add(-1 * *staleDuration)
 		result.StalenessInfo.TimeStamp = &staleTime
