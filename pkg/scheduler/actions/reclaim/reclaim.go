@@ -12,7 +12,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/reclaimer_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
@@ -109,9 +108,9 @@ func (ra *reclaimAction) attemptToReclaimForSpecificJob(
 func reclaimableScenarioCheck(ssn *framework.Session,
 	reclaimerInfo *reclaimer_info.ReclaimerInfo) solvers.SolutionValidator {
 	return func(
-		pendingJob *podgroup_info.PodGroupInfo,
+		_ *podgroup_info.PodGroupInfo,
 		victimJobs []*podgroup_info.PodGroupInfo) bool {
-		return ssn.Reclaimable(reclaimerInfo, calcVictimResources(victimJobs))
+		return ssn.ReclaimScenarioValidator(reclaimerInfo, victimJobs)
 	}
 }
 
@@ -124,22 +123,6 @@ func buildReclaimerInfo(ssn *framework.Session, reclaimerJob *podgroup_info.PodG
 		RequiredResources: podgroup_info.GetTasksToAllocateInitResource(
 			reclaimerJob, ssn.TaskOrderFn, false),
 	}
-}
-
-func calcVictimResources(victimJobs []*podgroup_info.PodGroupInfo) map[common_info.QueueID][]*resource_info.Resource {
-	totalVictimsResources := make(map[common_info.QueueID][]*resource_info.Resource)
-	for _, jobTaskGroup := range victimJobs {
-		totalJobResources := resource_info.EmptyResource()
-		for _, task := range jobTaskGroup.PodInfos {
-			totalJobResources.AddResourceRequirements(task.AcceptedResource)
-		}
-
-		totalVictimsResources[jobTaskGroup.Queue] = append(
-			totalVictimsResources[jobTaskGroup.Queue],
-			totalJobResources,
-		)
-	}
-	return totalVictimsResources
 }
 
 func getOrderedVictimsQueue(ssn *framework.Session, evictingQueue common_info.QueueID) solvers.GenerateVictimsQueue {
