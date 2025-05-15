@@ -146,6 +146,33 @@ func (su *defaultStatusUpdater) Pipelined(pod *v1.Pod, message string) {
 	su.recorder.Eventf(pod, v1.EventTypeNormal, "Pipelined", message)
 }
 
+func (su *defaultStatusUpdater) PatchPodLabels(pod *v1.Pod, labels map[string]any) {
+	log.InfraLogger.V(6).Infof("Patching pod labels for %s/%s", pod.Namespace, pod.Name)
+
+	patchBytes, err := json.Marshal(map[string]any{
+		"metadata": map[string]any{
+			"labels": labels,
+		},
+	})
+
+	if err != nil {
+		log.InfraLogger.Errorf("Failed to create patch for pod labels <%s/%s>: %v",
+			pod.Namespace, pod.Name, err)
+		return
+	}
+
+	su.pushToUpdateQueue(
+		&updatePayload{
+			key:        su.keyForPayload(pod.Name, pod.Namespace, pod.UID) + "-Labels",
+			objectType: podType,
+		},
+		&inflightUpdate{
+			object:    pod,
+			patchData: patchBytes,
+		},
+	)
+}
+
 func (su *defaultStatusUpdater) RecordJobStatusEvent(job *podgroup_info.PodGroupInfo) error {
 	var err error
 	var patchData []byte
@@ -247,7 +274,7 @@ func (su *defaultStatusUpdater) updatePodCondition(pod *v1.Pod, condition *v1.Po
 
 		su.pushToUpdateQueue(
 			&updatePayload{
-				key:        su.keyForPayload(pod.Name, pod.Namespace, pod.UID),
+				key:        su.keyForPayload(pod.Name, pod.Namespace, pod.UID) + "-Status",
 				objectType: podType,
 			},
 			&inflightUpdate{

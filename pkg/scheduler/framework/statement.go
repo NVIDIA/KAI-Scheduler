@@ -9,14 +9,11 @@ import (
 	"golang.org/x/exp/slices"
 	"k8s.io/apimachinery/pkg/types"
 
-	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
@@ -345,9 +342,6 @@ func (s *Statement) commitAllocate(task *pod_info.PodInfo) error {
 		}
 	}()
 
-	log.InfraLogger.V(3).Infof(
-		"Creating bind request for task <%v/%v> to node <%v> gpuGroup: <%v>, requires: <%v> GPUs",
-		task.Namespace, task.Name, node.Name, task.GPUGroups, task.ResReq)
 	if task.IsFractionAllocation() {
 		for _, gpuGroup := range task.GPUGroups {
 			if _, found := node.UsedSharedGPUsMemory[gpuGroup]; !found {
@@ -356,17 +350,11 @@ func (s *Statement) commitAllocate(task *pod_info.PodInfo) error {
 		}
 	}
 
-	podGroup, found := s.ssn.PodGroupInfos[task.Job]
-	if !found {
-		return fmt.Errorf("failed to find podGroup <%v> for pod <%v/%v>", task.Job, task.Namespace, task.Name)
+	if err = s.ssn.BindPod(task); err != nil {
+		log.InfraLogger.Errorf("Failed to bind task <%v/%v>. Error: %v",
+			task.Namespace, task.Name, err)
 	}
-	labels := getNodePoolLabelsToPatchForPod(task, podGroup)
 
-	err = k8s_utils.Helpers.PatchPodAnnotationsAndLabelsInterface(
-		s.ssn.Cache.KubeClient(), task.Pod, map[string]interface{}{}, labels)
-	if err == nil {
-		task.IsVirtualStatus = false
-	}
 	return err
 }
 
@@ -547,13 +535,6 @@ func (s *Statement) Commit() error {
 				s.clearOperations()
 				return err
 			}
-
-			taskInfo.Pod.Spec.NodeName = taskInfo.NodeName
-			if err = s.ssn.BindPod(taskInfo); err != nil {
-				log.InfraLogger.Errorf("Failed to bind task <%v/%v>. Error: %v",
-					taskInfo.Namespace, taskInfo.Name, err)
-			}
-			taskInfo.Pod.Spec.NodeName = ""
 		}
 	}
 
@@ -635,25 +616,6 @@ func (s *Statement) cleanupFailedAllocation(task *pod_info.PodInfo, node *node_i
 		task.Namespace, task.Name, node.Name)
 
 	_ = s.unallocate(task, node.Name, false)
-}
-
-func getNodePoolLabelsToPatchForPod(task *pod_info.PodInfo, job *podgroup_info.PodGroupInfo) map[string]interface{} {
-	jobsNodePool, jobsNodePoolFound := job.PodGroup.Labels[commonconstants.NodePoolNameLabel]
-	podsNodePool, podsNodePoolFound := task.Pod.Labels[commonconstants.NodePoolNameLabel]
-
-	if (!jobsNodePoolFound && !podsNodePoolFound) || (podsNodePool == jobsNodePool) {
-		return map[string]interface{}{}
-	}
-
-	labels := map[string]interface{}{}
-
-	if !jobsNodePoolFound {
-		// to delete the label
-		labels[commonconstants.NodePoolNameLabel] = nil
-	} else {
-		labels[commonconstants.NodePoolNameLabel] = jobsNodePool
-	}
-	return labels
 }
 
 func (s *Statement) operationValid(i int) bool {

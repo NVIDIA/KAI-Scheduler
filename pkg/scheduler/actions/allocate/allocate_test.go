@@ -8,17 +8,16 @@ import (
 	"testing"
 
 	. "go.uber.org/mock/gomock"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/allocate"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
@@ -1787,18 +1786,16 @@ func TestHandleElasticJobCommitFailure(t *testing.T) {
 		},
 		controller,
 	)
-	k8s_utils.Helpers = &failingK8sUtils{k8s_utils.Helpers}
+	ssn.Cache = &failingBindCache{Cache: ssn.Cache}
 
 	allocateAction := allocate.New()
 	allocateAction.Execute(ssn)
 }
 
-type failingK8sUtils struct {
-	k8s_utils.Interface
+type failingBindCache struct {
+	cache.Cache
 }
 
-func (f *failingK8sUtils) PatchPodAnnotationsAndLabelsInterface(
-	_ kubernetes.Interface, _ *v1.Pod, _, _ map[string]interface{},
-) error {
+func (f *failingBindCache) Bind(podInfo *pod_info.PodInfo, hostname string) error {
 	return fmt.Errorf("create pod error")
 }

@@ -224,8 +224,19 @@ func (sc *SchedulerCache) Bind(taskInfo *pod_info.PodInfo, hostname string) erro
 	startTime := time.Now()
 	defer metrics.UpdateTaskBindDuration(startTime)
 
-	err := sc.createBindRequest(taskInfo, hostname)
-	return sc.StatusUpdater.Bound(taskInfo.Pod, hostname, err, sc.getNodPoolName())
+	log.InfraLogger.V(3).Infof(
+		"Creating bind request for task <%v/%v> to node <%v> gpuGroup: <%v>, requires: <%v> GPUs",
+		taskInfo.Namespace, taskInfo.Name, hostname, taskInfo.GPUGroups, taskInfo.ResReq)
+	bindRequestError := sc.createBindRequest(taskInfo, hostname)
+
+	if bindRequestError == nil {
+		labelsPatch := sc.nodePoolLabelsChange(taskInfo.Pod.Labels)
+		if len(labelsPatch) > 0 {
+			sc.StatusUpdater.PatchPodLabels(taskInfo.Pod, labelsPatch)
+		}
+	}
+
+	return sc.StatusUpdater.Bound(taskInfo.Pod, hostname, bindRequestError, sc.getNodPoolName())
 }
 
 // +kubebuilder:rbac:groups="scheduling.run.ai",resources=bindrequests,verbs=create;update;patch
@@ -274,6 +285,18 @@ func (sc *SchedulerCache) getNodPoolName() string {
 		return sc.schedulingNodePoolParams.NodePoolLabelValue
 	}
 	return "default"
+}
+
+func (sc *SchedulerCache) nodePoolLabelsChange(currentLabels map[string]string) map[string]any {
+	labels := map[string]any{}
+	if sc.schedulingNodePoolParams.NodePoolLabelKey == "" {
+		return labels
+	}
+	if value, found := currentLabels[sc.schedulingNodePoolParams.NodePoolLabelKey]; found && value == sc.schedulingNodePoolParams.NodePoolLabelValue {
+		return labels
+	}
+	labels[sc.schedulingNodePoolParams.NodePoolLabelKey] = sc.schedulingNodePoolParams.NodePoolLabelValue
+	return labels
 }
 
 func (sc *SchedulerCache) String() string {
