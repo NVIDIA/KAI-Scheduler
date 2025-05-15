@@ -51,9 +51,7 @@ func (alloc *allocateAction) Execute(ssn *framework.Session) {
 				continue
 			}
 			if err == nil && !pipelined {
-				// Set start time for the job after statement has been successfully committed
-				timeNow := time.Now()
-				job.LastStartTimestamp = &timeNow
+				setLastStartTimestamp(job)
 			}
 		} else {
 			stmt.Discard()
@@ -93,4 +91,9 @@ func attemptToAllocateJob(ssn *framework.Session, stmt *framework.Statement, job
 	}
 
 	return true, pipelined
+}
+
+func setLastStartTimestamp(job *podgroup_info.PodGroupInfo) {
+	timeNow := time.Now()
+	job.LastStartTimestamp = &timeNow
 }
