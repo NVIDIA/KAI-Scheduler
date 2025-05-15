@@ -131,6 +131,12 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 				}
 			}
 
+			if jobExpectedResult.Status == pod_status.Binding {
+				if job.LastStartTimestamp == nil {
+					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual last start timestamp is not set with pod_status.Binding", testNumber, testMetadata.Name, taskInfo.Name)
+				}
+			}
+
 			if len(jobExpectedResult.NodeName) > 0 && taskInfo.NodeName != jobExpectedResult.NodeName {
 				t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses node: %v, was expecting node: %v", testNumber, testMetadata.Name, taskInfo.Name, taskInfo.NodeName, jobExpectedResult.NodeName)
 			}
