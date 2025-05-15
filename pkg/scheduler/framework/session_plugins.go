@@ -55,8 +55,8 @@ func (ssn *Session) AddCanReclaimResourcesFn(crf api.CanReclaimResourcesFn) {
 	ssn.CanReclaimResourcesFns = append(ssn.CanReclaimResourcesFns, crf)
 }
 
-func (ssn *Session) AddReclaimableFn(rf api.EvictableFn) {
-	ssn.ReclaimableFns = append(ssn.ReclaimableFns, rf)
+func (ssn *Session) AddReclaimScenarioValidatorFn(rf api.ReclaimValidatorFn) {
+	ssn.ReclaimScenarioValidators = append(ssn.ReclaimScenarioValidators, rf)
 }
 
 func (ssn *Session) AddOnJobSolutionStartFn(jssf api.OnJobSolutionStartFn) {
@@ -85,12 +85,12 @@ func (ssn *Session) CanReclaimResources(reclaimer *reclaimer_info.ReclaimerInfo)
 	return false
 }
 
-func (ssn *Session) Reclaimable(
+func (ssn *Session) ReclaimScenarioValidator(
 	reclaimer *reclaimer_info.ReclaimerInfo,
-	reclaimeeResourcesByQueue map[common_info.QueueID][]*resource_info.Resource,
+	reclaimees []*podgroup_info.PodGroupInfo,
 ) bool {
-	for _, rf := range ssn.ReclaimableFns {
-		return rf(reclaimer, reclaimeeResourcesByQueue)
+	for _, rf := range ssn.ReclaimScenarioValidators {
+		return rf(reclaimer, reclaimees)
 	}
 
 	return false
