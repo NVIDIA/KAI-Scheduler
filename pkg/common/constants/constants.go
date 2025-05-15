@@ -23,7 +23,7 @@ const (
 	RunaiGpuLimit            = "runai-gpu-limit"
 	MpsAnnotation            = "mps"
 	StalePodgroupTimeStamp   = "kai.scheduler/stale-podgroup-timestamp"
-	StartTimeStamp           = "kai.scheduler/start-time-timestamp"
+	LastStartTimeStamp       = "kai.scheduler/last-start-timestamp"
 
 	// Labels
 	NodePoolNameLabel        = "runai/node-pool"

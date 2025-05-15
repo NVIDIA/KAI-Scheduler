@@ -41,7 +41,7 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 	}
 	// Set start time for the job
 	timeNow := time.Now()
-	job.StartTimestamp = &timeNow
+	job.LastStartTimestamp = &timeNow
 
 	return true
 }

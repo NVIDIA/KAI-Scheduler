@@ -320,7 +320,7 @@ func (su *defaultStatusUpdater) recordUnschedulablePodsEvents(job *podgroup_info
 func (su *defaultStatusUpdater) updatePodGroupAnnotations(job *podgroup_info.PodGroupInfo) ([]byte, error) {
 	old := job.PodGroup.DeepCopy()
 	updatedStaleTime := setPodGroupStaleTimeStamp(job.PodGroup, job.StalenessInfo.TimeStamp)
-	updatedStartTime := setPodGroupStartTimeStamp(job.PodGroup, job.StartTimestamp)
+	updatedStartTime := setPodGroupLastStartTimeStamp(job.PodGroup, job.LastStartTimestamp)
 	if !updatedStaleTime && !updatedStartTime {
 		return nil, nil
 	}
@@ -393,23 +393,23 @@ func setPodGroupStaleTimeStamp(podGroup *enginev2alpha2.PodGroup, staleTimeStamp
 	return true
 }
 
-func setPodGroupStartTimeStamp(podGroup *enginev2alpha2.PodGroup, startTimeStamp *time.Time) bool {
+func setPodGroupLastStartTimeStamp(podGroup *enginev2alpha2.PodGroup, startTimeStamp *time.Time) bool {
 	if podGroup.Annotations == nil {
 		podGroup.Annotations = make(map[string]string)
 	}
 
 	if startTimeStamp == nil {
-		if _, found := podGroup.Annotations[commonconstants.StartTimeStamp]; !found {
+		if _, found := podGroup.Annotations[commonconstants.LastStartTimeStamp]; !found {
 			return false
 		}
 
-		delete(podGroup.Annotations, commonconstants.StartTimeStamp)
+		delete(podGroup.Annotations, commonconstants.LastStartTimeStamp)
 		return true
 	}
 
-	currTimeStamp, found := podGroup.Annotations[commonconstants.StartTimeStamp]
+	currTimeStamp, found := podGroup.Annotations[commonconstants.LastStartTimeStamp]
 	if !found {
-		podGroup.Annotations[commonconstants.StartTimeStamp] = startTimeStamp.UTC().Format(time.RFC3339)
+		podGroup.Annotations[commonconstants.LastStartTimeStamp] = startTimeStamp.UTC().Format(time.RFC3339)
 		return true
 	}
 
@@ -417,7 +417,7 @@ func setPodGroupStartTimeStamp(podGroup *enginev2alpha2.PodGroup, startTimeStamp
 		return false
 	}
 
-	podGroup.Annotations[commonconstants.StartTimeStamp] = startTimeStamp.Format(time.RFC3339)
+	podGroup.Annotations[commonconstants.LastStartTimeStamp] = startTimeStamp.Format(time.RFC3339)
 	return true
 }
 
