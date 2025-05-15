@@ -83,6 +83,94 @@ func TestGetPodGroupMetadata_MinAvailableAndMinReplicas(t *testing.T) {
 	assert.EqualValues(t, minAvailableNum, metadata.MinAvailable)
 }
 
+// TestGetPodGroupMetadata_OnlyMasterReplicas tests a PyTorch job with only Master replicas and no Worker replicas
+func TestGetPodGroupMetadata_OnlyMasterReplicas(t *testing.T) {
+	pytorchJob := getPytorchJobWithOnlyMaster()
+	pod := &v1.Pod{}
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
+	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
+	assert.EqualValues(t, masterReplicasNum, metadata.MinAvailable)
+}
+
+// TestGetPodGroupMetadata_OnlyWorkerReplicas tests a PyTorch job with only Worker replicas and no Master replicas
+func TestGetPodGroupMetadata_OnlyWorkerReplicas(t *testing.T) {
+	pytorchJob := getPytorchJobWithOnlyWorker()
+	pod := &v1.Pod{}
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
+	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
+	assert.EqualValues(t, workerReplicasNum, metadata.MinAvailable)
+}
+
+// TestGetPodGroupMetadata_OnlyMasterWithMinReplicas tests a PyTorch job with only Master replicas
+// and a specified minReplicas value
+func TestGetPodGroupMetadata_OnlyMasterWithMinReplicas(t *testing.T) {
+	pytorchJob := getPytorchJobWithOnlyMaster()
+	err := unstructured.SetNestedField(pytorchJob.Object, int64(minReplicasNum), "spec", "elasticPolicy", "minReplicas")
+	assert.Nil(t, err, "Got error when setting minReplicas for pytorch job")
+
+	pod := &v1.Pod{}
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
+	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
+	assert.EqualValues(t, minReplicasNum, metadata.MinAvailable)
+}
+
+// TestGetPodGroupMetadata_OnlyWorkerWithMinReplicas tests a PyTorch job with only Worker replicas
+// and a specified minReplicas value
+func TestGetPodGroupMetadata_OnlyWorkerWithMinReplicas(t *testing.T) {
+	pytorchJob := getPytorchJobWithOnlyWorker()
+	err := unstructured.SetNestedField(pytorchJob.Object, int64(minReplicasNum), "spec", "elasticPolicy", "minReplicas")
+	assert.Nil(t, err, "Got error when setting minReplicas for pytorch job")
+
+	pod := &v1.Pod{}
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
+	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
+	assert.EqualValues(t, minReplicasNum, metadata.MinAvailable)
+}
+
+// TestGetPodGroupMetadata_OnlyMasterWithMinAvailable tests a PyTorch job with only Master replicas
+// and a specified minAvailable value
+func TestGetPodGroupMetadata_OnlyMasterWithMinAvailable(t *testing.T) {
+	pytorchJob := getPytorchJobWithOnlyMaster()
+	err := unstructured.SetNestedField(pytorchJob.Object, int64(minAvailableNum), "spec", "runPolicy", "schedulingPolicy", "minAvailable")
+	assert.Nil(t, err, "Got error when setting minAvailable for pytorch job")
+
+	pod := &v1.Pod{}
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
+	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
+	assert.EqualValues(t, minAvailableNum, metadata.MinAvailable)
+}
+
+// TestGetPodGroupMetadata_OnlyWorkerWithMinAvailable tests a PyTorch job with only Worker replicas
+// and a specified minAvailable value
+func TestGetPodGroupMetadata_OnlyWorkerWithMinAvailable(t *testing.T) {
+	pytorchJob := getPytorchJobWithOnlyWorker()
+	err := unstructured.SetNestedField(pytorchJob.Object, int64(minAvailableNum), "spec", "runPolicy", "schedulingPolicy", "minAvailable")
+	assert.Nil(t, err, "Got error when setting minAvailable for pytorch job")
+
+	pod := &v1.Pod{}
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
+	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
+	assert.EqualValues(t, minAvailableNum, metadata.MinAvailable)
+}
+
 func getBasicPytorchJob() *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -98,6 +186,50 @@ func getBasicPytorchJob() *unstructured.Unstructured {
 					"Master": map[string]interface{}{
 						"replicas": int64(masterReplicasNum),
 					},
+					"Worker": map[string]interface{}{
+						"replicas": int64(workerReplicasNum),
+					},
+				},
+			},
+		},
+	}
+}
+
+// getPytorchJobWithOnlyMaster returns a PyTorch job configuration with only Master replicas
+func getPytorchJobWithOnlyMaster() *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PyTorchJob",
+			"apiVersion": "kubeflow.org/v1",
+			"metadata": map[string]interface{}{
+				"name":      "test_job_master_only",
+				"namespace": "test_namespace",
+				"uid":       "2",
+			},
+			"spec": map[string]interface{}{
+				"pytorchReplicaSpecs": map[string]interface{}{
+					"Master": map[string]interface{}{
+						"replicas": int64(masterReplicasNum),
+					},
+				},
+			},
+		},
+	}
+}
+
+// getPytorchJobWithOnlyWorker returns a PyTorch job configuration with only Worker replicas
+func getPytorchJobWithOnlyWorker() *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PyTorchJob",
+			"apiVersion": "kubeflow.org/v1",
+			"metadata": map[string]interface{}{
+				"name":      "test_job_worker_only",
+				"namespace": "test_namespace",
+				"uid":       "3",
+			},
+			"spec": map[string]interface{}{
+				"pytorchReplicaSpecs": map[string]interface{}{
 					"Worker": map[string]interface{}{
 						"replicas": int64(workerReplicasNum),
 					},
