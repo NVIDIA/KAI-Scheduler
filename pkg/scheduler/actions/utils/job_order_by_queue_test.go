@@ -564,7 +564,9 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 			jobsOrder.PushJob(tt.args.job)
 
 			for _, expectedJob := range tt.expected.expectedJobsList {
+				_ = expectedJob.GetActiveAllocatedTasksCount()
 				actualJob := jobsOrder.PopNextJob()
+				_ = actualJob.GetActiveAllocatedTasksCount()
 				assert.Equal(t, expectedJob, actualJob)
 			}
 		})
