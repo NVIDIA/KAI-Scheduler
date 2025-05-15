@@ -88,9 +88,10 @@ func (ssn *Session) CanReclaimResources(reclaimer *reclaimer_info.ReclaimerInfo)
 func (ssn *Session) ReclaimScenarioValidator(
 	reclaimer *reclaimer_info.ReclaimerInfo,
 	reclaimees []*podgroup_info.PodGroupInfo,
+	victimsTasks []*pod_info.PodInfo,
 ) bool {
 	for _, rf := range ssn.ReclaimScenarioValidators {
-		return rf(reclaimer, reclaimees)
+		return rf(reclaimer, reclaimees, victimsTasks)
 	}
 
 	return false

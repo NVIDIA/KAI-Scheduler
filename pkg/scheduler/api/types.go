@@ -23,7 +23,7 @@ type PrePredicateFn func(*pod_info.PodInfo, *podgroup_info.PodGroupInfo) error
 type CanReclaimResourcesFn func(*reclaimer_info.ReclaimerInfo) bool
 
 // ReclaimValidatorFn is a function which determines the validity of a reclaim scenario.
-type ReclaimValidatorFn func(*reclaimer_info.ReclaimerInfo, []*podgroup_info.PodGroupInfo) bool
+type ReclaimValidatorFn func(*reclaimer_info.ReclaimerInfo, []*podgroup_info.PodGroupInfo, []*pod_info.PodInfo) bool
 
 // QueueResource is a function which returns the resource of a queue.
 type QueueResource func(*queue_info.QueueInfo) *resource_info.ResourceRequirements
