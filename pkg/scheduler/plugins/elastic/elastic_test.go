@@ -426,9 +426,11 @@ func TestJobOrderFn(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.args.l.(*podgroup_info.PodGroupInfo).GetActiveAllocatedTasksCount()
 			for _, pod := range tt.args.lPods {
 				tt.args.l.(*podgroup_info.PodGroupInfo).AddTaskInfo(pod)
 			}
+			tt.args.r.(*podgroup_info.PodGroupInfo).GetActiveAllocatedTasksCount()
 			for _, pod := range tt.args.rPods {
 				tt.args.r.(*podgroup_info.PodGroupInfo).AddTaskInfo(pod)
 			}
