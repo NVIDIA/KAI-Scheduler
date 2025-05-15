@@ -67,6 +67,10 @@ func (ssn *Session) AddGetQueueAllocatedResourcesFn(of api.QueueResource) {
 	ssn.GetQueueAllocatedResourcesFns = append(ssn.GetQueueAllocatedResourcesFns, of)
 }
 
+func (ssn *Session) AddReclaimeeFilterFn(rf api.ReclaimeeFilterFn) {
+	ssn.ReclaimeeFilterFns = append(ssn.ReclaimeeFilterFns, rf)
+}
+
 func (ssn *Session) AddHttpHandler(path string, handler func(http.ResponseWriter, *http.Request)) {
 	if server == nil {
 		return
@@ -83,6 +87,16 @@ func (ssn *Session) CanReclaimResources(reclaimer *reclaimer_info.ReclaimerInfo)
 	}
 
 	return false
+}
+
+func (ssn *Session) ReclaimeeFilter(reclaimer *reclaimer_info.ReclaimerInfo, victim *podgroup_info.PodGroupInfo) bool {
+	for _, rf := range ssn.ReclaimeeFilterFns {
+		if !rf(reclaimer, victim) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (ssn *Session) ReclaimScenarioValidator(
