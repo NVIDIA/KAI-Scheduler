@@ -16,7 +16,6 @@ import (
 
 const (
 	ReplicaSpecName = "pytorchReplicaSpecs"
-	WorkerName      = "Worker"
 )
 
 type PyTorchGrouper struct {
@@ -36,7 +35,7 @@ func (ptg *PyTorchGrouper) Name() string {
 func (ptg *PyTorchGrouper) GetPodGroupMetadata(
 	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {
-	podGroupMetadata, err := ptg.KubeflowDistributedGrouper.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{WorkerName})
+	podGroupMetadata, err := ptg.KubeflowDistributedGrouper.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{})
 	if err != nil {
 		return nil, err
 	}
