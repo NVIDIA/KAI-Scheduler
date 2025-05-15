@@ -1,4 +1,4 @@
-# [DRAFT] Minimum runtime before preemptions and reclaims
+# Guaranteed minimum runtime before preemptions and reclaims
 
 ## Overview
 
