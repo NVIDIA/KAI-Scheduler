@@ -77,6 +77,19 @@ func (asb *PodAccumulatedScenarioBuilder) GetNextScenario() *solverscenario.ByNo
 	// Jump over recorded victims in potential victims generation
 	for _, potentialVictimTask := range potentialVictimTasks {
 		if _, ok := asb.recordedVictimsTasks[potentialVictimTask.UID]; ok {
+			// If any of the tasks of the victim job are recorded victims
+			// we still want to evaluate the job again if there are tasks
+			// that are not recorded victims yet, like elastic jobs
+			var remainingTasks []*pod_info.PodInfo
+			for _, task := range nextVictimJob.PodInfos {
+				if _, ok := asb.recordedVictimsTasks[task.UID]; !ok {
+					remainingTasks = append(remainingTasks, task)
+				}
+			}
+			if len(remainingTasks) != 0 {
+				jobToPush := nextVictimJob.CloneWithTasks(remainingTasks)
+				asb.victimsJobsQueue.PushJob(jobToPush)
+			}
 			return asb.GetNextScenario()
 		}
 	}
