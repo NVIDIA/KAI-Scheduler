@@ -176,8 +176,8 @@ func (su *defaultStatusUpdater) PatchPodLabels(pod *v1.Pod, labels map[string]an
 func (su *defaultStatusUpdater) RecordJobStatusEvent(job *podgroup_info.PodGroupInfo) error {
 	var err error
 	var patchData []byte
-	if err, patchData = su.updatePodGroupStaleTimeStamp(job.PodGroup, job.StalenessInfo.TimeStamp); err != nil {
-		log.InfraLogger.V(7).Warnf("Failed to update podgroup stale time. error:: %s", err)
+	if patchData, err = su.updatePodGroupAnnotations(job); err != nil {
+		log.InfraLogger.V(7).Warnf("Failed to update podgroup annotations, error: %s", err)
 	}
 	if job.StalenessInfo.Stale {
 		su.recordStaleJobEvent(job)
@@ -317,23 +317,23 @@ func (su *defaultStatusUpdater) recordUnschedulablePodsEvents(job *podgroup_info
 	return errors.Join(errs...)
 }
 
-func (su *defaultStatusUpdater) updatePodGroupStaleTimeStamp(podGroup *enginev2alpha2.PodGroup, staleTimeStamp *time.Time) (error, []byte) {
-	old := podGroup.DeepCopy()
-	updated := setPodGroupStaleTimeStamp(podGroup, staleTimeStamp)
-
-	if !updated {
+func (su *defaultStatusUpdater) updatePodGroupAnnotations(job *podgroup_info.PodGroupInfo) ([]byte, error) {
+	old := job.PodGroup.DeepCopy()
+	updatedStaleTime := setPodGroupStaleTimeStamp(job.PodGroup, job.StalenessInfo.TimeStamp)
+	updatedStartTime := setPodGroupLastStartTimeStamp(job.PodGroup, job.LastStartTimestamp)
+	if !updatedStaleTime && !updatedStartTime {
 		return nil, nil
 	}
 
-	patchData, err := getPodGroupPatch(old, podGroup)
+	patchData, err := getPodGroupPatch(old, job.PodGroup)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	if patchData == nil {
 		return nil, nil
 	}
-	return nil, patchData
+	return patchData, nil
 }
 
 func (su *defaultStatusUpdater) recordUnschedulablePodGroup(job *podgroup_info.PodGroupInfo) bool {
@@ -390,6 +390,34 @@ func setPodGroupStaleTimeStamp(podGroup *enginev2alpha2.PodGroup, staleTimeStamp
 	}
 
 	podGroup.Annotations[commonconstants.StalePodgroupTimeStamp] = staleTimeStamp.Format(time.RFC3339)
+	return true
+}
+
+func setPodGroupLastStartTimeStamp(podGroup *enginev2alpha2.PodGroup, startTimeStamp *time.Time) bool {
+	if podGroup.Annotations == nil {
+		podGroup.Annotations = make(map[string]string)
+	}
+
+	if startTimeStamp == nil {
+		if _, found := podGroup.Annotations[commonconstants.LastStartTimeStamp]; !found {
+			return false
+		}
+
+		delete(podGroup.Annotations, commonconstants.LastStartTimeStamp)
+		return true
+	}
+
+	currTimeStamp, found := podGroup.Annotations[commonconstants.LastStartTimeStamp]
+	if !found {
+		podGroup.Annotations[commonconstants.LastStartTimeStamp] = startTimeStamp.UTC().Format(time.RFC3339)
+		return true
+	}
+
+	if currTimeStamp == startTimeStamp.Format(time.RFC3339) {
+		return false
+	}
+
+	podGroup.Annotations[commonconstants.LastStartTimeStamp] = startTimeStamp.Format(time.RFC3339)
 	return true
 }
 

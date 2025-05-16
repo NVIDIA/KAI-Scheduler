@@ -66,9 +66,10 @@ type PodGroupInfo struct {
 
 	Allocated *resource_info.Resource
 
-	CreationTimestamp metav1.Time
-	PodGroup          *enginev2alpha2.PodGroup
-	PodGroupUID       types.UID
+	CreationTimestamp  metav1.Time
+	LastStartTimestamp *time.Time
+	PodGroup           *enginev2alpha2.PodGroup
+	PodGroupUID        types.UID
 
 	// TODO(k82cn): keep backward compatibility, removed it when v1alpha1 finalized.
 	PDB *policyv1.PodDisruptionBudget
@@ -100,6 +101,8 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 			TimeStamp: nil,
 			Stale:     false,
 		},
+
+		LastStartTimestamp:   nil,
 		activeAllocatedCount: ptr.To(0),
 	}
 
@@ -137,6 +140,16 @@ func (podGroupInfo *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 		} else {
 			podGroupInfo.StalenessInfo.TimeStamp = &staleTimeStamp
 			podGroupInfo.StalenessInfo.Stale = true
+		}
+	}
+
+	if pg.Annotations[commonconstants.LastStartTimeStamp] != "" {
+		startTime, err := time.Parse(time.RFC3339, pg.Annotations[commonconstants.LastStartTimeStamp])
+		if err != nil {
+			log.InfraLogger.V(7).Warnf("Failed to parse start timestamp for podgroup <%s/%s> err: %v",
+				podGroupInfo.Namespace, podGroupInfo.Name, err)
+		} else {
+			podGroupInfo.LastStartTimestamp = &startTime
 		}
 	}
 
