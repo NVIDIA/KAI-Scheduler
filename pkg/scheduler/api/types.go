@@ -5,7 +5,6 @@ package api
 
 import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
@@ -23,8 +22,11 @@ type PrePredicateFn func(*pod_info.PodInfo, *podgroup_info.PodGroupInfo) error
 // CanReclaimResourcesFn is a function that determines if a reclaimer can get more resources
 type CanReclaimResourcesFn func(*reclaimer_info.ReclaimerInfo) bool
 
-// EvictableFn is a function which determines if a reclaimer can reclaim a victim.
-type EvictableFn func(*reclaimer_info.ReclaimerInfo, map[common_info.QueueID][]*resource_info.Resource) bool
+// ReclaimeeFilterFn is a function which filters out jobs that cannot a reclaimee candidate for a specific reclaimer.
+type ReclaimeeFilterFn func(*reclaimer_info.ReclaimerInfo, *podgroup_info.PodGroupInfo) bool
+
+// ReclaimValidatorFn is a function which determines the validity of a reclaim scenario.
+type ReclaimValidatorFn func(*reclaimer_info.ReclaimerInfo, []*podgroup_info.PodGroupInfo, []*pod_info.PodInfo) bool
 
 // QueueResource is a function which returns the resource of a queue.
 type QueueResource func(*queue_info.QueueInfo) *resource_info.ResourceRequirements
