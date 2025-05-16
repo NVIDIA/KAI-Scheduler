@@ -135,6 +135,10 @@ func BuildJobInfo(
 		staleTime := time.Now().Add(-1 * *staleDuration)
 		result.StalenessInfo.TimeStamp = &staleTime
 	}
+	if result.LastStartTimestamp == nil && podgroup_info.HasTasksAllocated(result) {
+		startTime := time.Now().Add(-1 * time.Minute * 1)
+		result.LastStartTimestamp = &startTime
+	}
 	return result
 }
 
