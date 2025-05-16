@@ -59,7 +59,7 @@ func (alloc *allocateAction) Execute(ssn *framework.Session) {
 	}
 }
 
-func attemptToAllocateJob(ssn *framework.Session, stmt *framework.Statement, job *podgroup_info.PodGroupInfo) (bool, bool) {
+func attemptToAllocateJob(ssn *framework.Session, stmt *framework.Statement, job *podgroup_info.PodGroupInfo) (allocated, pipelined bool) {
 	queue := ssn.Queues[job.Queue]
 
 	resReq := podgroup_info.GetTasksToAllocateInitResource(job, ssn.TaskOrderFn, true)
@@ -72,7 +72,7 @@ func attemptToAllocateJob(ssn *framework.Session, stmt *framework.Statement, job
 			job.Namespace, job.Name, job.Queue)
 		return false, false
 	}
-	pipelined := false
+	pipelined = false
 	if job.ShouldPipelineJob() {
 		log.InfraLogger.V(3).Infof(
 			"Some tasks were pipelined, setting all job to be pipelined for job: <%v/%v>",
