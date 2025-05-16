@@ -43,15 +43,16 @@ func (alloc *allocateAction) Execute(ssn *framework.Session) {
 	for !jobsOrderByQueues.IsEmpty() {
 		job := jobsOrderByQueues.PopNextJob()
 		stmt := ssn.Statement()
+		alreadyAllocated := podgroup_info.HasTasksAllocated(job)
 		if ok, pipelined := attemptToAllocateJob(ssn, stmt, job); ok {
 			metrics.IncPodgroupScheduledByAction()
 			err := stmt.Commit()
+			if err == nil && !pipelined && !alreadyAllocated {
+				setLastStartTimestamp(job)
+			}
 			if err == nil && podgroup_info.HasTasksToAllocate(job, true) {
 				jobsOrderByQueues.PushJob(job)
 				continue
-			}
-			if err == nil && !pipelined {
-				setLastStartTimestamp(job)
 			}
 		} else {
 			stmt.Discard()

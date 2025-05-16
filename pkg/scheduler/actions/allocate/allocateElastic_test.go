@@ -5,6 +5,7 @@ package allocate_test
 
 import (
 	"testing"
+	"time"
 
 	. "go.uber.org/mock/gomock"
 	"k8s.io/utils/pointer"
@@ -280,9 +281,10 @@ func getElasticTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 				},
 				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
 					"pending_job0-0": {
-						NodeName:     "node0",
-						GPUsRequired: 1,
-						Status:       pod_status.Running,
+						NodeName:                    "node0",
+						GPUsRequired:                1,
+						Status:                      pod_status.Running,
+						LastStartTimestampOlderThan: pointer.Duration(time.Second * 30),
 					},
 					"pending_job0-1": {
 						NodeName:     "node0",
