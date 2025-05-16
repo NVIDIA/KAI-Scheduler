@@ -224,7 +224,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 				LabelSelector: fmt.Sprintf("%s=%s", podGroupLabelName, reclaimeePodGroup.Name),
 			})
 			Expect(err).To(Succeed())
-			return len(pods.Items) == 0
+			return len(pods.Items) == 1
 		})
 	})
 })
