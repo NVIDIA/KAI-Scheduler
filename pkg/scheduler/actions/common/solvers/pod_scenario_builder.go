@@ -59,15 +59,20 @@ func NewPodAccumulatedScenarioBuilder(
 	}
 }
 
-func (asb *PodAccumulatedScenarioBuilder) GetCurrentScenario() *solverscenario.ByNodeScenario {
-	return asb.lastScenario
-}
-
 func (asb *PodAccumulatedScenarioBuilder) GetNextScenario() *solverscenario.ByNodeScenario {
 	if asb.victimsJobsQueue.IsEmpty() {
 		return nil
 	}
 
+	addedPotentialVictims := asb.addNextPotentialVictims()
+	if !addedPotentialVictims {
+		return asb.GetNextScenario()
+	}
+
+	return asb.GetValidScenario()
+}
+
+func (asb *PodAccumulatedScenarioBuilder) addNextPotentialVictims() bool {
 	nextVictimJob := asb.victimsJobsQueue.PopNextJob()
 
 	potentialVictimTasks, jobHasMoreTasks := podgroup_info.GetTasksToEvict(
@@ -90,7 +95,7 @@ func (asb *PodAccumulatedScenarioBuilder) GetNextScenario() *solverscenario.ByNo
 				jobToPush := nextVictimJob.CloneWithTasks(remainingTasks)
 				asb.victimsJobsQueue.PushJob(jobToPush)
 			}
-			return asb.GetNextScenario()
+			return false
 		}
 	}
 
@@ -109,7 +114,20 @@ func (asb *PodAccumulatedScenarioBuilder) GetNextScenario() *solverscenario.ByNo
 	if asb.lastScenario != nil {
 		asb.lastScenario.AddPotentialVictimsTasks(potentialVictimTasks)
 	}
+	return true
+}
 
+func (asb *PodAccumulatedScenarioBuilder) GetValidScenario() *solverscenario.ByNodeScenario {
+	if isValid, failedFilterName := asb.isScenarioValid(); !isValid {
+		log.InfraLogger.V(5).Infof("Filtered by %s for scenario: %s", failedFilterName, asb.lastScenario)
+		metrics.IncScenarioFilteredByAction()
+
+		return asb.GetNextScenario()
+	}
+	return asb.lastScenario
+}
+
+func (asb *PodAccumulatedScenarioBuilder) isScenarioValid() (bool, string) {
 	for _, filter := range asb.scenarioFilters {
 		validScenario, err := filter.Filter(asb.lastScenario)
 		if err != nil {
@@ -119,12 +137,8 @@ func (asb *PodAccumulatedScenarioBuilder) GetNextScenario() *solverscenario.ByNo
 			continue
 		}
 		if !validScenario {
-			log.InfraLogger.V(5).Infof(
-				"Filtered by %s for scenario: %s", filter.Name(), asb.lastScenario)
-			metrics.IncScenarioFilteredByAction()
-			return asb.GetNextScenario()
+			return false, filter.Name()
 		}
 	}
-
-	return asb.lastScenario
+	return true, ""
 }

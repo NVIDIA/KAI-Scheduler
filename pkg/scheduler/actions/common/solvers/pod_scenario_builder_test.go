@@ -36,23 +36,40 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 		reclaimerJob    *podgroup_info.PodGroupInfo
 		scenarioBuilder *PodAccumulatedScenarioBuilder
 	)
-	Context("with no jobs", func() {
+
+	Context("with no jobs - NewIdleGpusFilter irrelevant", func() {
 		BeforeEach(func() {
 			ssn, _ = initializeSession(0, 0)
 			submitQueue := createQueue("team-a")
 			ssn.Queues[submitQueue.UID] = submitQueue
-			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending)
+			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending, []v1.ResourceRequirements{})
 			recordedVictimsJobs := []*podgroup_info.PodGroupInfo{}
 			victimsQueue := utils.GetVictimsQueue(ssn, nil)
 
 			scenarioBuilder = NewPodAccumulatedScenarioBuilder(ssn, reclaimerJob, recordedVictimsJobs, victimsQueue)
 		})
-
-		It("If reclaimer job has pods to scheduler, first scenario exists", func() {
-			Expect(scenarioBuilder.GetCurrentScenario()).To(Not(BeNil()))
+		It("Reclaimer has pods, NewIdleGpusFilter irrelevant, no victims scenario is valid", func() {
+			Expect(scenarioBuilder.GetValidScenario()).To(Not(BeNil()))
 		})
-		It("returns nil scenario", func() {
+
+		It("No victims queue, no next scenario", func() {
 			Expect(scenarioBuilder.GetNextScenario()).To(BeNil())
+		})
+	})
+
+	Context("with no jobs - NewIdleGpusFilter filters no victim scenario", func() {
+		BeforeEach(func() {
+			ssn, _ = initializeSession(0, 0)
+			submitQueue := createQueue("team-a")
+			ssn.Queues[submitQueue.UID] = submitQueue
+			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
+			recordedVictimsJobs := []*podgroup_info.PodGroupInfo{}
+			victimsQueue := utils.GetVictimsQueue(ssn, nil)
+
+			scenarioBuilder = NewPodAccumulatedScenarioBuilder(ssn, reclaimerJob, recordedVictimsJobs, victimsQueue)
+		})
+		It("Empty victimsQueue, no valid scenario", func() {
+			Expect(scenarioBuilder.GetValidScenario()).To(BeNil())
 		})
 	})
 
@@ -61,7 +78,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			ssn, _ = initializeSession(2, 2)
 			submitQueue := createQueue("team-a")
 			ssn.Queues[submitQueue.UID] = submitQueue
-			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending)
+			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
 		})
 
 		It("returns scenario with all tasks in single groups when minAvailable is 1", func() {
@@ -69,7 +86,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 				utils.GetVictimsQueue(ssn, nil))
 
 			var lastScenario *scenario.ByNodeScenario
-			for tempScenario := scenarioBuilder.GetCurrentScenario(); tempScenario != nil; tempScenario =
+			for tempScenario := scenarioBuilder.GetValidScenario(); tempScenario != nil; tempScenario =
 				scenarioBuilder.GetNextScenario() {
 				lastScenario = tempScenario
 			}
@@ -93,7 +110,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 				utils.GetVictimsQueue(ssn, nil))
 
 			var lastScenario *scenario.ByNodeScenario
-			for tempScenario := scenarioBuilder.GetCurrentScenario(); tempScenario != nil; tempScenario =
+			for tempScenario := scenarioBuilder.GetValidScenario(); tempScenario != nil; tempScenario =
 				scenarioBuilder.GetNextScenario() {
 				lastScenario = tempScenario
 			}
@@ -117,7 +134,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			}
 			submitQueue := createQueue("team-a")
 			ssn.Queues[submitQueue.UID] = submitQueue
-			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending)
+			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
 
 			var recordedVictimsJobs []*podgroup_info.PodGroupInfo
 			recordedVictimIndexes := []int{0, 2}
@@ -135,7 +152,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			scenarioBuilder = NewPodAccumulatedScenarioBuilder(ssn, reclaimerJob, recordedVictimsJobs, victimsQueue)
 
 			numberOfGeneratedScenarios := 0
-			for sn := scenarioBuilder.GetCurrentScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
+			for sn := scenarioBuilder.GetValidScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
 				Expect(len(sn.RecordedVictimsJobs())).To(Equal(len(recordedVictimsJobs)))
 				numberOfGeneratedScenarios += 1
 			}
@@ -151,7 +168,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			}
 			submitQueue := createQueue("team-a")
 			ssn.Queues[submitQueue.UID] = submitQueue
-			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending)
+			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
 
 			var recordedVictimsJobs []*podgroup_info.PodGroupInfo
 			recordedVictimIndexes := []int{0, 2}
@@ -170,7 +187,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 
 			numberOfGeneratedScenarios := 0
 			potentialVictimsPerScenario := []int{0, 2}
-			for sn := scenarioBuilder.GetCurrentScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
+			for sn := scenarioBuilder.GetValidScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
 				Expect(numberOfGeneratedScenarios < len(potentialVictimsPerScenario)).To(BeTrue())
 				Expect(len(sn.PotentialVictimsTasks())).To(Equal(potentialVictimsPerScenario[numberOfGeneratedScenarios]))
 				numberOfGeneratedScenarios += 1
@@ -190,7 +207,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			}
 			submitQueue := createQueue("team-a")
 			ssn.Queues[submitQueue.UID] = submitQueue
-			reclaimerJob, _ = createJobWithTasks(1, 2, "team-a", v1.PodPending)
+			reclaimerJob, _ = createJobWithTasks(1, 2, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
 
 			var recordedVictimsJobs []*podgroup_info.PodGroupInfo
 
@@ -213,7 +230,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			scenarioBuilder = NewPodAccumulatedScenarioBuilder(ssn, reclaimerJob, recordedVictimsJobs, victimsQueue)
 
 			numberOfGeneratedScenarios := 0
-			for sn := scenarioBuilder.GetCurrentScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
+			for sn := scenarioBuilder.GetValidScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
 				Expect(len(sn.RecordedVictimsJobs())).To(Equal(len(recordedVictimsJobs)))
 				numberOfGeneratedScenarios += 1
 			}
@@ -231,7 +248,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			}
 			submitQueue := createQueue("team-a")
 			ssn.Queues[submitQueue.UID] = submitQueue
-			reclaimerJob, _ = createJobWithTasks(1, 2, "team-a", v1.PodPending)
+			reclaimerJob, _ = createJobWithTasks(1, 2, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
 
 			var recordedVictimsJobs []*podgroup_info.PodGroupInfo
 
@@ -255,7 +272,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 
 			numberOfGeneratedScenarios := 0
 			potentialVictimsPerScenario := []int{0, 1, 3}
-			for sn := scenarioBuilder.GetCurrentScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
+			for sn := scenarioBuilder.GetValidScenario(); sn != nil; sn = scenarioBuilder.GetNextScenario() {
 				Expect(numberOfGeneratedScenarios < len(potentialVictimsPerScenario)).To(BeTrue())
 				Expect(len(sn.PotentialVictimsTasks())).To(Equal(potentialVictimsPerScenario[numberOfGeneratedScenarios]))
 				numberOfGeneratedScenarios += 1
@@ -275,7 +292,7 @@ func initializeSession(jobsCount, tasksPerJob int) (*framework.Session, []*pod_i
 
 	for jobID := 0; jobID < jobsCount; jobID++ {
 		queueName := fmt.Sprintf("team-%d", jobID)
-		newJob, jobTasks := createJobWithTasks(tasksPerJob, jobID, queueName, v1.PodRunning)
+		newJob, jobTasks := createJobWithTasks(tasksPerJob, jobID, queueName, v1.PodRunning, []v1.ResourceRequirements{requireOneGPU()})
 		jobs = append(jobs, newJob)
 		tasks = append(tasks, jobTasks...)
 		queues = append(queues, createQueue(queueName))
@@ -322,7 +339,7 @@ func createQueue(queueName string) *queue_info.QueueInfo {
 }
 
 func createJobWithTasks(
-	tasksPerJob int, jobID int, queueName string, tasksStatus v1.PodPhase,
+	tasksPerJob int, jobID int, queueName string, tasksStatus v1.PodPhase, podResources []v1.ResourceRequirements,
 ) (*podgroup_info.PodGroupInfo, []*pod_info.PodInfo) {
 	jobTasks := []*pod_info.PodInfo{}
 
@@ -336,7 +353,7 @@ func createJobWithTasks(
 				strconv.Itoa(taskNum),
 				fmt.Sprintf("pod-%d", taskNum),
 				namespace, jobUID, tasksStatus,
-				[]v1.ResourceRequirements{requireOneGPU()},
+				podResources,
 			)))
 	}
 
