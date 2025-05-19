@@ -55,7 +55,7 @@ func (ssn *Session) AddCanReclaimResourcesFn(crf api.CanReclaimResourcesFn) {
 	ssn.CanReclaimResourcesFns = append(ssn.CanReclaimResourcesFns, crf)
 }
 
-func (ssn *Session) AddReclaimScenarioValidatorFn(rf api.ReclaimValidatorFn) {
+func (ssn *Session) AddReclaimScenarioValidatorFn(rf api.ScenarioValidatorFn) {
 	ssn.ReclaimScenarioValidators = append(ssn.ReclaimScenarioValidators, rf)
 }
 
@@ -67,7 +67,7 @@ func (ssn *Session) AddGetQueueAllocatedResourcesFn(of api.QueueResource) {
 	ssn.GetQueueAllocatedResourcesFns = append(ssn.GetQueueAllocatedResourcesFns, of)
 }
 
-func (ssn *Session) AddReclaimeeFilterFn(rf api.ReclaimeeFilterFn) {
+func (ssn *Session) AddReclaimeeFilterFn(rf api.VictimFilterFn) {
 	ssn.ReclaimeeFilterFns = append(ssn.ReclaimeeFilterFns, rf)
 }
 
