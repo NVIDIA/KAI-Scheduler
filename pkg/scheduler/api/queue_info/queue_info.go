@@ -21,6 +21,8 @@ type QueueInfo struct {
 	Resources         QueueQuota
 	Priority          int
 	CreationTimestamp metav1.Time
+	PreemptMinRuntime *metav1.Duration
+	ReclaimMinRuntime *metav1.Duration
 }
 
 func NewQueueInfo(queue *enginev2.Queue) *QueueInfo {
@@ -42,6 +44,8 @@ func NewQueueInfo(queue *enginev2.Queue) *QueueInfo {
 		Resources:         getQueueQuota(*queue),
 		Priority:          priority,
 		CreationTimestamp: queue.CreationTimestamp,
+		PreemptMinRuntime: queue.Spec.PreemptMinRuntime,
+		ReclaimMinRuntime: queue.Spec.ReclaimMinRuntime,
 	}
 }
 
