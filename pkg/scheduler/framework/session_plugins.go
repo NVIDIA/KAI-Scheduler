@@ -99,7 +99,9 @@ func (ssn *Session) ReclaimScenarioValidator(
 	victimsTasks []*pod_info.PodInfo,
 ) bool {
 	for _, rf := range ssn.ReclaimScenarioValidators {
-		return rf(reclaimer, reclaimees, victimsTasks)
+		if !rf(reclaimer, reclaimees, victimsTasks) {
+			return false
+		}
 	}
 
 	return true
@@ -121,7 +123,9 @@ func (ssn *Session) PreemptScenarioValidator(
 	victimTasks []*pod_info.PodInfo,
 ) bool {
 	for _, pf := range ssn.PreemptScenarioValidators {
-		return pf(preemptor, victimJobs, victimTasks)
+		if !pf(preemptor, victimJobs, victimTasks) {
+			return false
+		}
 	}
 
 	return true
