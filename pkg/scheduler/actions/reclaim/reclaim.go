@@ -140,7 +140,7 @@ func getOrderedVictimsQueue(ssn *framework.Session, reclaimerInfo *reclaimer_inf
 			if job.Queue == reclaimerInfo.Queue {
 				continue
 			}
-			if !ssn.ReclaimeeFilter(reclaimerInfo, job) {
+			if !ssn.ReclaimVictimFilter(reclaimerInfo, job) {
 				continue
 			}
 			jobs[job.UID] = job

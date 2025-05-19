@@ -48,8 +48,10 @@ type Session struct {
 	JobOrderFns                           []common_info.CompareFn
 	QueueOrderFns                         []CompareQueueFn
 	CanReclaimResourcesFns                []api.CanReclaimResourcesFn
-	ReclaimeeFilterFns                    []api.VictimFilterFn
+	ReclaimVictimFilterFns                []api.ReclaimeeFilterFn
+	PreemptVictimFilterFns                []api.PreemptVictimFilterFn
 	ReclaimScenarioValidators             []api.ScenarioValidatorFn
+	PreemptScenarioValidators             []api.PreemptScenarioValidatorFn
 	OnJobSolutionStartFns                 []api.OnJobSolutionStartFn
 	GetQueueAllocatedResourcesFns         []api.QueueResource
 	GetQueueDeservedResourcesFns          []api.QueueResource
