@@ -59,7 +59,7 @@ func (ssn *Session) AddGetQueueAllocatedResourcesFn(of api.QueueResource) {
 	ssn.GetQueueAllocatedResourcesFns = append(ssn.GetQueueAllocatedResourcesFns, of)
 }
 
-func (ssn *Session) AddPreemptVictimFilterFn(pf api.PreemptVictimFilterFn) {
+func (ssn *Session) AddPreemptVictimFilterFn(pf api.VictimFilterFn) {
 	ssn.PreemptVictimFilterFns = append(ssn.PreemptVictimFilterFns, pf)
 }
 
@@ -71,7 +71,7 @@ func (ssn *Session) AddReclaimScenarioValidatorFn(rf api.ScenarioValidatorFn) {
 	ssn.ReclaimScenarioValidators = append(ssn.ReclaimScenarioValidators, rf)
 }
 
-func (ssn *Session) AddReclaimeeFilterFn(rf api.ReclaimeeFilterFn) {
+func (ssn *Session) AddReclaimeeFilterFn(rf api.VictimFilterFn) {
 	ssn.ReclaimVictimFilterFns = append(ssn.ReclaimVictimFilterFns, rf)
 }
 
