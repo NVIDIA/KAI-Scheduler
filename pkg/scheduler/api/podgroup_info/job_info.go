@@ -305,6 +305,13 @@ func (podGroupInfo *PodGroupInfo) GetNumGatedTasks() int {
 	return len(podGroupInfo.PodStatusIndex[pod_status.Gated])
 }
 
+func (podGroupInfo *PodGroupInfo) GetNumAllocatedTasks() int {
+	return len(podGroupInfo.PodStatusIndex[pod_status.Allocated]) +
+		len(podGroupInfo.PodStatusIndex[pod_status.Running]) +
+		len(podGroupInfo.PodStatusIndex[pod_status.Binding]) +
+		len(podGroupInfo.PodStatusIndex[pod_status.Bound])
+}
+
 func (podGroupInfo *PodGroupInfo) GetAliveTasksRequestedGPUs() float64 {
 	tasksTotalRequestedGPUs := float64(0)
 	for _, task := range podGroupInfo.PodInfos {

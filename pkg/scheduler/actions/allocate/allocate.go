@@ -43,7 +43,7 @@ func (alloc *allocateAction) Execute(ssn *framework.Session) {
 	for !jobsOrderByQueues.IsEmpty() {
 		job := jobsOrderByQueues.PopNextJob()
 		stmt := ssn.Statement()
-		alreadyAllocated := podgroup_info.HasTasksAllocated(job)
+		alreadyAllocated := job.GetNumAllocatedTasks() > 0
 		if ok, pipelined := attemptToAllocateJob(ssn, stmt, job); ok {
 			metrics.IncPodgroupScheduledByAction()
 			err := stmt.Commit()

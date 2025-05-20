@@ -24,15 +24,6 @@ func HasTasksToAllocate(podGroupInfo *PodGroupInfo, isRealAllocation bool) bool 
 	return false
 }
 
-func HasTasksAllocated(podGroupInfo *PodGroupInfo) bool {
-	for _, task := range podGroupInfo.PodInfos {
-		if pod_status.AllocatedStatus(task.Status) {
-			return true
-		}
-	}
-	return false
-}
-
 func GetTasksToAllocate(
 	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) []*pod_info.PodInfo {
