@@ -83,7 +83,7 @@ func (ssn *Session) CanReclaimResources(reclaimer *reclaimer_info.ReclaimerInfo)
 	return false
 }
 
-func (ssn *Session) ReclaimVictimFilter(reclaimer *reclaimer_info.ReclaimerInfo, victim *podgroup_info.PodGroupInfo) bool {
+func (ssn *Session) ReclaimVictimFilter(reclaimer *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
 	for _, rf := range ssn.ReclaimVictimFilterFns {
 		if !rf(reclaimer, victim) {
 			return false

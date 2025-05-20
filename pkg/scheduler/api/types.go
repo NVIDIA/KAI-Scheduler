@@ -23,7 +23,7 @@ type PrePredicateFn func(*pod_info.PodInfo, *podgroup_info.PodGroupInfo) error
 type CanReclaimResourcesFn func(reclaimerInfo *reclaimer_info.ReclaimerInfo) bool
 
 // ReclaimeeFilterFn is a function which filters out jobs that cannot a victim candidate for a specific reclaimer.
-type ReclaimeeFilterFn func(reclaimer *reclaimer_info.ReclaimerInfo, victim *podgroup_info.PodGroupInfo) bool
+type ReclaimeeFilterFn func(reclaimer *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool
 
 // ScenarioValidatorFn is a function which determines the validity of a reclaim scenario.
 type ScenarioValidatorFn func(reclaimerInfo *reclaimer_info.ReclaimerInfo, victims []*podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo) bool

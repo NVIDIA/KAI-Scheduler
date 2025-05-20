@@ -101,7 +101,7 @@ func (ra *reclaimAction) attemptToReclaimForSpecificJob(
 	solver := solvers.NewJobsSolver(
 		feasibleNodes,
 		reclaimableScenarioCheck(ssn, reclaimerInfo),
-		getOrderedVictimsQueue(ssn, reclaimerInfo),
+		getOrderedVictimsQueue(ssn, reclaimer, reclaimerInfo),
 		framework.Reclaim)
 	return solver.Solve(ssn, reclaimer)
 }
@@ -127,7 +127,7 @@ func buildReclaimerInfo(ssn *framework.Session, reclaimerJob *podgroup_info.PodG
 	}
 }
 
-func getOrderedVictimsQueue(ssn *framework.Session, reclaimerInfo *reclaimer_info.ReclaimerInfo) solvers.GenerateVictimsQueue {
+func getOrderedVictimsQueue(ssn *framework.Session, reclaimer *podgroup_info.PodGroupInfo, reclaimerInfo *reclaimer_info.ReclaimerInfo) solvers.GenerateVictimsQueue {
 	return func() *utils.JobsOrderByQueues {
 		jobsOrderedByQueue := utils.NewJobsOrderByQueues(ssn, utils.JobsOrderInitOptions{
 			FilterNonPreemptible:     true,
@@ -140,7 +140,7 @@ func getOrderedVictimsQueue(ssn *framework.Session, reclaimerInfo *reclaimer_inf
 			if job.Queue == reclaimerInfo.Queue {
 				continue
 			}
-			if !ssn.ReclaimVictimFilter(reclaimerInfo, job) {
+			if !ssn.ReclaimVictimFilter(reclaimer, job) {
 				continue
 			}
 			jobs[job.UID] = job
