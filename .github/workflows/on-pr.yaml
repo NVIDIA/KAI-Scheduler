@@ -28,7 +28,7 @@ jobs:
 
       - name: Run tests
         run: make test
-        
+
       - name: Archive code coverage results
         uses: actions/upload-artifact@v4
         with:
@@ -50,6 +50,7 @@ jobs:
           coverage-artifact-name: "code-coverage"
           coverage-file-name: "coverage.out"
           root-package: "github.com/NVIDIA/KAI-Scheduler"
+          github-baseline-workflow-ref: update-coverage-badge.yaml
 
   build:
     name: Build
