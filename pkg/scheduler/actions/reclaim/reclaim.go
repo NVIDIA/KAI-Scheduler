@@ -10,9 +10,9 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/reclaimer_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
@@ -101,7 +101,7 @@ func (ra *reclaimAction) attemptToReclaimForSpecificJob(
 	solver := solvers.NewJobsSolver(
 		feasibleNodes,
 		reclaimableScenarioCheck(ssn, reclaimerInfo),
-		getOrderedVictimsQueue(ssn, reclaimer.Queue),
+		getOrderedVictimsQueue(ssn, reclaimer),
 		framework.Reclaim)
 	return solver.Solve(ssn, reclaimer)
 }
@@ -109,9 +109,10 @@ func (ra *reclaimAction) attemptToReclaimForSpecificJob(
 func reclaimableScenarioCheck(ssn *framework.Session,
 	reclaimerInfo *reclaimer_info.ReclaimerInfo) solvers.SolutionValidator {
 	return func(
-		pendingJob *podgroup_info.PodGroupInfo,
-		victimJobs []*podgroup_info.PodGroupInfo) bool {
-		return ssn.Reclaimable(reclaimerInfo, calcVictimResources(victimJobs))
+		_ *podgroup_info.PodGroupInfo,
+		victimJobs []*podgroup_info.PodGroupInfo,
+		victimTasks []*pod_info.PodInfo) bool {
+		return ssn.ReclaimScenarioValidator(reclaimerInfo, victimJobs, victimTasks)
 	}
 }
 
@@ -126,23 +127,7 @@ func buildReclaimerInfo(ssn *framework.Session, reclaimerJob *podgroup_info.PodG
 	}
 }
 
-func calcVictimResources(victimJobs []*podgroup_info.PodGroupInfo) map[common_info.QueueID][]*resource_info.Resource {
-	totalVictimsResources := make(map[common_info.QueueID][]*resource_info.Resource)
-	for _, jobTaskGroup := range victimJobs {
-		totalJobResources := resource_info.EmptyResource()
-		for _, task := range jobTaskGroup.PodInfos {
-			totalJobResources.AddResourceRequirements(task.AcceptedResource)
-		}
-
-		totalVictimsResources[jobTaskGroup.Queue] = append(
-			totalVictimsResources[jobTaskGroup.Queue],
-			totalJobResources,
-		)
-	}
-	return totalVictimsResources
-}
-
-func getOrderedVictimsQueue(ssn *framework.Session, evictingQueue common_info.QueueID) solvers.GenerateVictimsQueue {
+func getOrderedVictimsQueue(ssn *framework.Session, reclaimer *podgroup_info.PodGroupInfo) solvers.GenerateVictimsQueue {
 	return func() *utils.JobsOrderByQueues {
 		jobsOrderedByQueue := utils.NewJobsOrderByQueues(ssn, utils.JobsOrderInitOptions{
 			FilterNonPreemptible:     true,
@@ -152,10 +137,15 @@ func getOrderedVictimsQueue(ssn *framework.Session, evictingQueue common_info.Qu
 		})
 		jobs := map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{}
 		for _, job := range ssn.PodGroupInfos {
-			if job.Queue != evictingQueue {
-				jobs[job.UID] = job
+			if job.Queue == reclaimer.Queue {
+				continue
 			}
+			if !ssn.ReclaimVictimFilter(reclaimer, job) {
+				continue
+			}
+			jobs[job.UID] = job
 		}
+
 		jobsOrderedByQueue.InitializeWithJobs(jobs)
 		return &jobsOrderedByQueue
 	}

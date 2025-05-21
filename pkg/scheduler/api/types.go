@@ -5,7 +5,6 @@ package api
 
 import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
@@ -21,10 +20,16 @@ type PredicateFn func(*pod_info.PodInfo, *podgroup_info.PodGroupInfo, *node_info
 type PrePredicateFn func(*pod_info.PodInfo, *podgroup_info.PodGroupInfo) error
 
 // CanReclaimResourcesFn is a function that determines if a reclaimer can get more resources
-type CanReclaimResourcesFn func(*reclaimer_info.ReclaimerInfo) bool
+type CanReclaimResourcesFn func(reclaimerInfo *reclaimer_info.ReclaimerInfo) bool
 
-// EvictableFn is a function which determines if a reclaimer can reclaim a victim.
-type EvictableFn func(*reclaimer_info.ReclaimerInfo, map[common_info.QueueID][]*resource_info.Resource) bool
+// VictimFilterFn is a function which filters out jobs that cannot a victim candidate for a specific reclaimer.
+type VictimFilterFn func(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool
+
+// ScenarioValidatorFn is a function which determines the validity of a reclaim scenario.
+type ScenarioValidatorFn func(reclaimerInfo *reclaimer_info.ReclaimerInfo, victims []*podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo) bool
+
+// PreemptScenarioValidatorFn is a function which determines the validity of a preempt scenario.
+type PreemptScenarioValidatorFn func(preemptor *podgroup_info.PodGroupInfo, victims []*podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo) bool
 
 // QueueResource is a function which returns the resource of a queue.
 type QueueResource func(*queue_info.QueueInfo) *resource_info.ResourceRequirements

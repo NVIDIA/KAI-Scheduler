@@ -1,0 +1,82 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+name: Update Coverage Badge
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    paths:
+      - .github/workflows/update-coverage-badge.yaml
+  workflow_dispatch:
+
+jobs:
+  update-coverage:
+    name: Update Coverage Badge
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.4'
+
+      - name: Run tests with coverage
+        run: make test
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage
+          path: coverage/coverage.out
+
+      - name: Calculate coverage percentage
+        id: coverage
+        run: |
+          COVERAGE=$(go tool cover -func=coverage/coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
+          echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+          ROUNDED_COVERAGE=$(printf "%.0f" $COVERAGE)
+          echo "rounded=$ROUNDED_COVERAGE" >> $GITHUB_OUTPUT
+          echo "Total coverage: $COVERAGE%"
+          
+          # Determine badge color based on coverage percentage
+          if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+            echo "color=brightgreen" >> $GITHUB_OUTPUT
+          elif (( $(echo "$COVERAGE >= 70" | bc -l) )); then
+            echo "color=green" >> $GITHUB_OUTPUT
+          elif (( $(echo "$COVERAGE >= 60" | bc -l) )); then
+            echo "color=yellowgreen" >> $GITHUB_OUTPUT
+          elif (( $(echo "$COVERAGE >= 50" | bc -l) )); then
+            echo "color=yellow" >> $GITHUB_OUTPUT
+          elif (( $(echo "$COVERAGE >= 40" | bc -l) )); then
+            echo "color=orange" >> $GITHUB_OUTPUT
+          else
+            echo "color=red" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update README.md with Coverage Badge
+        if: github.event_name != 'pull_request'
+        run: |
+          # Create the shields.io URL with the coverage data
+          BADGE_URL="https://img.shields.io/badge/coverage-${{ steps.coverage.outputs.percentage }}%25-${{ steps.coverage.outputs.color }}"
+          
+          # Update the README.md file
+          sed -i -E "s|(\!\[License\]\([^)]+\))|\1 \![Coverage]($BADGE_URL)|" README.md
+          
+          # Check if the README has been modified
+          if git diff --exit-code README.md; then
+            echo "No changes to README.md"
+          else
+            git config --local user.email "action@github.com"
+            git config --local user.name "Update Coverage Badge Action"
+            git add README.md
+            git commit -m "docs: update test coverage badge [skip ci]"
+            git push
+          fi 

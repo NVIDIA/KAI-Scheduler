@@ -62,7 +62,7 @@ func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	capacityPolicy := cp.New(pp.queues, ssn.IsInferencePreemptible())
 	ssn.AddQueueOrderFn(pp.queueOrder)
 	ssn.AddCanReclaimResourcesFn(pp.CanReclaimResourcesFn)
-	ssn.AddReclaimableFn(pp.reclaimableFn)
+	ssn.AddReclaimScenarioValidatorFn(pp.reclaimableFn)
 	ssn.AddOnJobSolutionStartFn(pp.OnJobSolutionStartFn)
 	ssn.AddIsNonPreemptibleJobOverQueueQuotaFns(capacityPolicy.IsNonPreemptibleJobOverQuota)
 	ssn.AddIsJobOverCapacityFn(capacityPolicy.IsJobOverQueueCapacity)
@@ -97,9 +97,23 @@ func (pp *proportionPlugin) CanReclaimResourcesFn(reclaimer *reclaimer_info.Recl
 
 func (pp *proportionPlugin) reclaimableFn(
 	reclaimer *reclaimer_info.ReclaimerInfo,
-	reclaimeeResourcesByQueue map[common_info.QueueID][]*resource_info.Resource,
+	reclaimees []*podgroup_info.PodGroupInfo,
+	_ []*pod_info.PodInfo,
 ) bool {
-	return pp.reclaimablePlugin.Reclaimable(pp.jobSimulationQueues, reclaimer, reclaimeeResourcesByQueue)
+	totalVictimsResources := make(map[common_info.QueueID][]*resource_info.Resource)
+	for _, jobTaskGroup := range reclaimees {
+		totalJobResources := resource_info.EmptyResource()
+		for _, task := range jobTaskGroup.PodInfos {
+			totalJobResources.AddResourceRequirements(task.AcceptedResource)
+		}
+
+		totalVictimsResources[jobTaskGroup.Queue] = append(
+			totalVictimsResources[jobTaskGroup.Queue],
+			totalJobResources,
+		)
+	}
+
+	return pp.reclaimablePlugin.Reclaimable(pp.jobSimulationQueues, reclaimer, totalVictimsResources)
 }
 
 func (pp *proportionPlugin) calculateResourcesProportion(ssn *framework.Session) {

@@ -51,14 +51,6 @@ func (ssn *Session) AddQueueOrderFn(qof CompareQueueFn) {
 	ssn.QueueOrderFns = append(ssn.QueueOrderFns, qof)
 }
 
-func (ssn *Session) AddCanReclaimResourcesFn(crf api.CanReclaimResourcesFn) {
-	ssn.CanReclaimResourcesFns = append(ssn.CanReclaimResourcesFns, crf)
-}
-
-func (ssn *Session) AddReclaimableFn(rf api.EvictableFn) {
-	ssn.ReclaimableFns = append(ssn.ReclaimableFns, rf)
-}
-
 func (ssn *Session) AddOnJobSolutionStartFn(jssf api.OnJobSolutionStartFn) {
 	ssn.OnJobSolutionStartFns = append(ssn.OnJobSolutionStartFns, jssf)
 }
@@ -67,14 +59,20 @@ func (ssn *Session) AddGetQueueAllocatedResourcesFn(of api.QueueResource) {
 	ssn.GetQueueAllocatedResourcesFns = append(ssn.GetQueueAllocatedResourcesFns, of)
 }
 
-func (ssn *Session) AddHttpHandler(path string, handler func(http.ResponseWriter, *http.Request)) {
-	if server == nil {
-		return
-	}
-	err := server.registerPlugin(path, handler)
-	if err != nil {
-		log.InfraLogger.Errorf("Failed to register plugin %s: %v", path, err)
-	}
+func (ssn *Session) AddPreemptVictimFilterFn(pf api.VictimFilterFn) {
+	ssn.PreemptVictimFilterFns = append(ssn.PreemptVictimFilterFns, pf)
+}
+
+func (ssn *Session) AddCanReclaimResourcesFn(crf api.CanReclaimResourcesFn) {
+	ssn.CanReclaimResourcesFns = append(ssn.CanReclaimResourcesFns, crf)
+}
+
+func (ssn *Session) AddReclaimScenarioValidatorFn(rf api.ScenarioValidatorFn) {
+	ssn.ReclaimScenarioValidators = append(ssn.ReclaimScenarioValidators, rf)
+}
+
+func (ssn *Session) AddReclaimeeFilterFn(rf api.VictimFilterFn) {
+	ssn.ReclaimVictimFilterFns = append(ssn.ReclaimVictimFilterFns, rf)
 }
 
 func (ssn *Session) CanReclaimResources(reclaimer *reclaimer_info.ReclaimerInfo) bool {
@@ -85,15 +83,62 @@ func (ssn *Session) CanReclaimResources(reclaimer *reclaimer_info.ReclaimerInfo)
 	return false
 }
 
-func (ssn *Session) Reclaimable(
-	reclaimer *reclaimer_info.ReclaimerInfo,
-	reclaimeeResourcesByQueue map[common_info.QueueID][]*resource_info.Resource,
-) bool {
-	for _, rf := range ssn.ReclaimableFns {
-		return rf(reclaimer, reclaimeeResourcesByQueue)
+func (ssn *Session) ReclaimVictimFilter(reclaimer *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
+	for _, rf := range ssn.ReclaimVictimFilterFns {
+		if !rf(reclaimer, victim) {
+			return false
+		}
 	}
 
-	return false
+	return true
+}
+
+func (ssn *Session) ReclaimScenarioValidator(
+	reclaimer *reclaimer_info.ReclaimerInfo,
+	reclaimees []*podgroup_info.PodGroupInfo,
+	victimsTasks []*pod_info.PodInfo,
+) bool {
+	for _, rf := range ssn.ReclaimScenarioValidators {
+		if !rf(reclaimer, reclaimees, victimsTasks) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (ssn *Session) PreemptVictimFilter(preemptor *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
+	for _, pf := range ssn.PreemptVictimFilterFns {
+		if !pf(preemptor, victim) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (ssn *Session) PreemptScenarioValidator(
+	preemptor *podgroup_info.PodGroupInfo,
+	victimJobs []*podgroup_info.PodGroupInfo,
+	victimTasks []*pod_info.PodInfo,
+) bool {
+	for _, pf := range ssn.PreemptScenarioValidators {
+		if !pf(preemptor, victimJobs, victimTasks) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (ssn *Session) AddHttpHandler(path string, handler func(http.ResponseWriter, *http.Request)) {
+	if server == nil {
+		return
+	}
+	err := server.registerPlugin(path, handler)
+	if err != nil {
+		log.InfraLogger.Errorf("Failed to register plugin %s: %v", path, err)
+	}
 }
 
 func (ssn *Session) OnJobSolutionStart() {
