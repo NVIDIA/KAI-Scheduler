@@ -299,6 +299,7 @@ func (su *defaultStatusUpdater) recordUnschedulablePodsEvents(job *podgroup_info
 		msg = addNodePoolPrefixIfNeeded(job, msg)
 		log.InfraLogger.V(6).Infof("setting message for task: %v, %v", taskInfo.Name, msg)
 		updatePodCondition := utils.GetMarkUnschedulableValue(job.PodGroup.Spec.MarkUnschedulable)
+		updatePodCondition = updatePodCondition && !k8s_internal.IsPodScheduled(taskInfo.Pod)
 		if err := su.markTaskUnschedulable(taskInfo.Pod, msg, updatePodCondition); err != nil {
 			errs = append(errs, fmt.Errorf("failed to update unschedulable task status <%s/%s>: %v",
 				taskInfo.Namespace, taskInfo.Name, err))
