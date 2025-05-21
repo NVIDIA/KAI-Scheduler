@@ -105,6 +105,7 @@ var _ = Describe("Status Updater Concurrency", func() {
 				if jobIndex, _ := strconv.Atoi(strings.Split(job.Name, "-")[0]); jobIndex%2 == 0 {
 					job.StalenessInfo.TimeStamp = ptr.To(time.Now())
 					job.StalenessInfo.Stale = true
+					job.LastStartTimestamp = ptr.To(time.Now())
 				}
 				Expect(statusUpdater.RecordJobStatusEvent(job)).To(Succeed())
 			}
