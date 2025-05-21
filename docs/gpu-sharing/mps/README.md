@@ -1,0 +1,37 @@
+# GPU Sharing with MPS
+The KAI Scheduler supports GPU sharing by efficiently allocating a single GPU device to multiple pods.
+
+The Multi-Process Service (MPS) is an alternative, binary-compatible implementation of the CUDA Application Programming Interface (API). The MPS runtime architecture is designed to transparently enable co-operative multi-process CUDA applications, typically MPI jobs, to utilize Hyper-Q capabilities on the latest NVIDIA (Kepler-based) Tesla and Quadro GPUs.
+See the [NVIDIA MPS documentation](https://docs.nvidia.com/deploy/mps/index.html) for more details.
+
+There are multiple ways to enable MPS in a Kubernetes cluster. This README focuses on how to use MPS with the KAI Scheduler.
+
+### Prerequisites
+To use GPU sharing, ensure the following requirements are met:
+* KAI Scheduler is installed and running in your cluster, with gpu-sharing feature enabled.
+2. The MPS server is running on all GPU-enabled hosts (`nvidia-cuda-mps-control`), with the `CUDA_MPS_PIPE_DIRECTORY` environment variable set to `/tmp/nvidia-mps`.
+
+### MPS Enabled PODs
+To submit a pod that can share a GPU device and connect to the MPS server, run the following command:
+```
+kubectl apply -f gpu-sharing-with-mps.yaml
+```
+
+In the gpu-sharing-with-mps.yaml file, the pod defines an MPS volume using a hostPath set to /tmp/nvidia-smp, which is mounted to the same path within the container.
+
+### Configuring MPS
+If the MPS server on the host is configured with a custom `CUDA_MPS_PIPE_DIRECTORY` (e.g., `/other/path`), make sure the same path is mounted in the pod yaml.
+
+For additional MPS-related environment variables, refer to the [NVIDIA MPS documentation](https://docs.nvidia.com/deploy/mps/index.html#environment-variables).
+
+### Running MPS Server as Pods in the Cluster
+If you're running the MPS server as pods on GPU nodes, you must ensure that workload pods are scheduled to the same nodes.
+To achieve this, label the relevant nodes and apply node affinity or a node selector to the workload pods.
+
+For example:
+1. Label GPU nodes running the MPS server: `kubectl label node <NODE_NAME> nvidia.mps/enabled: true`
+2. Add nodeAffinity / nodeSelector to your workload pods:
+```
+nodeSelector:
+    nvidia.mps/enabled: true
+```
