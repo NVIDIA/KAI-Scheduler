@@ -71,6 +71,8 @@ jobs:
 
       - name: Update README.md with Coverage Badge
         if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Create the shields.io URL with the coverage data
           BADGE_URL="https://img.shields.io/badge/coverage-${{ steps.coverage.outputs.percentage }}%25-${{ steps.coverage.outputs.color }}"
