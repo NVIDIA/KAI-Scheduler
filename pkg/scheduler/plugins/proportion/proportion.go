@@ -37,9 +37,10 @@ type proportionPlugin struct {
 	queues              map[common_info.QueueID]*rs.QueueAttributes
 	jobSimulationQueues map[common_info.QueueID]*rs.QueueAttributes
 	// Arguments given for the plugin
-	pluginArguments   map[string]string
-	taskOrderFunc     common_info.LessFn
-	reclaimablePlugin *rec.Reclaimable
+	pluginArguments        map[string]string
+	taskOrderFunc          common_info.LessFn
+	reclaimablePlugin      *rec.Reclaimable
+	isInferencePreemptible bool
 }
 
 func New(arguments map[string]string) framework.Plugin {
@@ -58,7 +59,7 @@ func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.calculateResourcesProportion(ssn)
 	pp.taskOrderFunc = ssn.TaskOrderFn
 	pp.reclaimablePlugin = rec.New(ssn.IsInferencePreemptible(), pp.taskOrderFunc)
-
+	pp.isInferencePreemptible = ssn.IsInferencePreemptible()
 	capacityPolicy := cp.New(pp.queues, ssn.IsInferencePreemptible())
 	ssn.AddQueueOrderFn(pp.queueOrder)
 	ssn.AddCanReclaimResourcesFn(pp.CanReclaimResourcesFn)
@@ -91,15 +92,17 @@ func (pp *proportionPlugin) OnJobSolutionStartFn() {
 	}
 }
 
-func (pp *proportionPlugin) CanReclaimResourcesFn(reclaimer *reclaimer_info.ReclaimerInfo) bool {
-	return pp.reclaimablePlugin.CanReclaimResources(pp.queues, reclaimer)
+func (pp *proportionPlugin) CanReclaimResourcesFn(reclaimer *podgroup_info.PodGroupInfo) bool {
+	reclaimerInfo := pp.buildReclaimerInfo(reclaimer)
+	return pp.reclaimablePlugin.CanReclaimResources(pp.queues, reclaimerInfo)
 }
 
 func (pp *proportionPlugin) reclaimableFn(
-	reclaimer *reclaimer_info.ReclaimerInfo,
+	reclaimer *podgroup_info.PodGroupInfo,
 	reclaimees []*podgroup_info.PodGroupInfo,
 	_ []*pod_info.PodInfo,
 ) bool {
+	reclaimerInfo := pp.buildReclaimerInfo(reclaimer)
 	totalVictimsResources := make(map[common_info.QueueID][]*resource_info.Resource)
 	for _, jobTaskGroup := range reclaimees {
 		totalJobResources := resource_info.EmptyResource()
@@ -113,7 +116,7 @@ func (pp *proportionPlugin) reclaimableFn(
 		)
 	}
 
-	return pp.reclaimablePlugin.Reclaimable(pp.jobSimulationQueues, reclaimer, totalVictimsResources)
+	return pp.reclaimablePlugin.Reclaimable(pp.jobSimulationQueues, reclaimerInfo, totalVictimsResources)
 }
 
 func (pp *proportionPlugin) calculateResourcesProportion(ssn *framework.Session) {
@@ -178,6 +181,17 @@ func (pp *proportionPlugin) createQueueAttributes(ssn *framework.Session) {
 	pp.createQueueResourceAttrs(ssn)
 	pp.updateQueuesCurrentResourceUsage(ssn)
 	pp.setFairShare()
+}
+
+func (pp *proportionPlugin) buildReclaimerInfo(reclaimerJob *podgroup_info.PodGroupInfo) *reclaimer_info.ReclaimerInfo {
+	return &reclaimer_info.ReclaimerInfo{
+		Name:          reclaimerJob.Name,
+		Namespace:     reclaimerJob.Namespace,
+		Queue:         reclaimerJob.Queue,
+		IsPreemptable: reclaimerJob.IsPreemptibleJob(pp.isInferencePreemptible),
+		RequiredResources: podgroup_info.GetTasksToAllocateInitResource(
+			reclaimerJob, pp.taskOrderFunc, false),
+	}
 }
 
 func (pp *proportionPlugin) createQueueResourceAttrs(ssn *framework.Session) {
