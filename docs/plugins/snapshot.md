@@ -31,6 +31,12 @@ The snapshot plugin is a framework plugin that provides an HTTP endpoint to capt
 ### Usage
 
 The plugin registers an HTTP endpoint `/get-snapshot` that returns a ZIP file containing a JSON snapshot of the cluster state.
+Example for the scheduler pod that is deployed in `kai` namespace:
+```bash
+kubectl port-forward -n kai deployment/scheduler 8081 &
+curl -vv "localhost:8081/get-snapshot"  > snapshot.gzip
+./bin/snapshot-tool-amd64 --filename snapshot.gzip --verbosity 8
+```
 
 ### Response Format
 
@@ -64,22 +70,22 @@ The snapshot tool is a command-line utility that can load and analyze snapshots 
 ### Usage
 
 ```bash
-snapshot-tool -filename <snapshot-file> [-verbosity <log-level>]
+snapshot-tool --filename <snapshot-file> [--verbosity <log-level>]
 ```
 
 #### Arguments
 
-- `-filename`: Path to the snapshot ZIP file (required)
-- `-verbosity`: Logging verbosity level (default: 4)
+- `--filename`: Path to the snapshot ZIP file (required)
+- `--verbosity`: Logging verbosity level (default: 4)
 
 ### Example
 
 ```bash
 # Load and analyze a snapshot
-snapshot-tool -filename snapshot.zip
+snapshot-tool --filename snapshot.zip
 
 # Load and analyze a snapshot with increased verbosity
-snapshot-tool -filename snapshot.zip -verbosity 5
+snapshot-tool --filename snapshot.zip --verbosity 5
 ```
 
 ## Implementation Details
