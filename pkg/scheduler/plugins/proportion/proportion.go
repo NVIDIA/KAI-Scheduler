@@ -59,7 +59,6 @@ func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.calculateResourcesProportion(ssn)
 	pp.taskOrderFunc = ssn.TaskOrderFn
 	pp.reclaimablePlugin = rec.New(ssn.IsInferencePreemptible(), pp.taskOrderFunc)
-
 	pp.isInferencePreemptible = ssn.IsInferencePreemptible()
 	capacityPolicy := cp.New(pp.queues, ssn.IsInferencePreemptible())
 	ssn.AddQueueOrderFn(pp.queueOrder)
@@ -184,14 +183,14 @@ func (pp *proportionPlugin) createQueueAttributes(ssn *framework.Session) {
 	pp.setFairShare()
 }
 
-func (pp *proportionPlugin) buildReclaimerInfo(reclaimer *podgroup_info.PodGroupInfo) *reclaimer_info.ReclaimerInfo {
+func (pp *proportionPlugin) buildReclaimerInfo(reclaimerJob *podgroup_info.PodGroupInfo) *reclaimer_info.ReclaimerInfo {
 	return &reclaimer_info.ReclaimerInfo{
-		Name:          reclaimer.Name,
-		Namespace:     reclaimer.Namespace,
-		Queue:         reclaimer.Queue,
-		IsPreemptable: reclaimer.IsPreemptibleJob(pp.isInferencePreemptible),
+		Name:          reclaimerJob.Name,
+		Namespace:     reclaimerJob.Namespace,
+		Queue:         reclaimerJob.Queue,
+		IsPreemptable: reclaimerJob.IsPreemptibleJob(pp.isInferencePreemptible),
 		RequiredResources: podgroup_info.GetTasksToAllocateInitResource(
-			reclaimer, pp.taskOrderFunc, false),
+			reclaimerJob, pp.taskOrderFunc, false),
 	}
 }
 
