@@ -46,7 +46,6 @@ func (ra *reclaimAction) Execute(ssn *framework.Session) {
 
 	for !jobsOrderByQueues.IsEmpty() {
 		job := jobsOrderByQueues.PopNextJob()
-
 		if !ssn.CanReclaimResources(job) {
 			continue
 		}
