@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     
     steps:
       - name: Checkout code
@@ -61,6 +62,13 @@ jobs:
             echo "color=red" >> $GITHUB_OUTPUT
           fi
 
+      - name: Setup GitHub CLI
+        if: github.event_name != 'pull_request'
+        run: |
+          gh auth setup-git
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Update README.md with Coverage Badge
         if: github.event_name != 'pull_request'
         run: |
@@ -74,9 +82,18 @@ jobs:
           if git diff --exit-code README.md; then
             echo "No changes to README.md"
           else
+            # Create a new branch
+            BRANCH_NAME="update-coverage-badge-$(date +%Y%m%d%H%M%S)"
             git config --local user.email "action@github.com"
             git config --local user.name "Update Coverage Badge Action"
+            git checkout -b $BRANCH_NAME
             git add README.md
-            git commit -m "docs: update test coverage badge [skip ci]"
-            git push
+            git commit -m "docs: update test coverage badge"
+            git push --set-upstream origin $BRANCH_NAME
+            
+            # Create a pull request using GitHub CLI
+            gh pr create --title "Update coverage badge" \
+                         --body "Automatically updates the test coverage badge in README.md" \
+                         --base main \
+                         --head $BRANCH_NAME
           fi 
