@@ -223,6 +223,11 @@ var _ = Describe("Status Updater Concurrency", func() {
 				wg.Done()
 				return true, nil, nil
 			})
+			kubeClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("update", "pods", func(action faketesting.Action) (handled bool, ret runtime.Object, err error) {
+				<-signalCh
+				wg.Done()
+				return true, nil, nil
+			})
 			stopCh := make(chan struct{})
 			statusUpdater.Run(stopCh)
 			defer close(stopCh)

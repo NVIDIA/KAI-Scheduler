@@ -263,15 +263,6 @@ func (su *defaultStatusUpdater) updatePodCondition(pod *v1.Pod, condition *v1.Po
 		"Updating pod condition for %s/%s to (%s==%s)",
 		pod.Namespace, pod.Name, condition.Type, condition.Status)
 	if k8s_internal.UpdatePodCondition(&pod.Status, condition) {
-		statusPatchBaseObject := v1.PodStatus{}
-		statusPatchBaseObject.Conditions = []v1.PodCondition{*condition}
-		podStatusPatchBytes, err := json.Marshal(statusPatchBaseObject)
-		if err != nil {
-			return err
-		}
-
-		patchData := []byte(fmt.Sprintf(`{"status":%s}`, string(podStatusPatchBytes)))
-
 		su.pushToUpdateQueue(
 			&updatePayload{
 				key:        su.keyForPayload(pod.Name, pod.Namespace, pod.UID) + "-Status",
@@ -279,7 +270,7 @@ func (su *defaultStatusUpdater) updatePodCondition(pod *v1.Pod, condition *v1.Po
 			},
 			&inflightUpdate{
 				object:       pod,
-				patchData:    patchData,
+				patchData:    nil,
 				subResources: []string{"status"},
 			},
 		)

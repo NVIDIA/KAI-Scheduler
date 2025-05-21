@@ -98,7 +98,11 @@ func (su *defaultStatusUpdater) processPayload(ctx context.Context, payload *upd
 
 	switch payload.objectType {
 	case podType:
-		su.updatePod(ctx, payload.key, updateData.patchData, updateData.subResources, updateData.object)
+		if len(updateData.subResources) > 0 {
+			su.updatePodStatus(ctx, payload.key, updateData.object)
+		} else {
+			su.updatePod(ctx, payload.key, updateData.patchData, updateData.object)
+		}
 	case podGroupType:
 		su.updatePodGroup(ctx, payload.key, updateData.patchData, updateData.subResources, updateData.updateStatus, updateData.object)
 	}
@@ -120,12 +124,26 @@ func (su *defaultStatusUpdater) loadInflighUpdate(payload *updatePayload) (*infl
 	return data.(*inflightUpdate), true
 }
 
+func (su *defaultStatusUpdater) updatePodStatus(
+	ctx context.Context, key updatePayloadKey, object runtime.Object,
+) {
+	pod := object.(*v1.Pod)
+	_, err := su.kubeClient.CoreV1().Pods(pod.Namespace).UpdateStatus(
+		ctx, pod, metav1.UpdateOptions{},
+	)
+	if err != nil {
+		log.StatusUpdaterLogger.Errorf("Failed to update pod status %s/%s: %v", pod.Namespace, pod.Name, err)
+	} else {
+		su.inFlightPods.Delete(key)
+	}
+}
+
 func (su *defaultStatusUpdater) updatePod(
-	ctx context.Context, key updatePayloadKey, patchData []byte, subResources []string, object runtime.Object,
+	ctx context.Context, key updatePayloadKey, patchData []byte, object runtime.Object,
 ) {
 	pod := object.(*v1.Pod)
 	_, err := su.kubeClient.CoreV1().Pods(pod.Namespace).Patch(
-		ctx, pod.Name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{}, subResources...,
+		ctx, pod.Name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{},
 	)
 	if err != nil {
 		log.StatusUpdaterLogger.Errorf("Failed to update pod %s/%s: %v", pod.Namespace, pod.Name, err)
