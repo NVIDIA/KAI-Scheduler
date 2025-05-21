@@ -243,6 +243,23 @@ var _ = Describe("Reclaim", Ordered, func() {
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimer)
 		})
 
+		It("Simple priority reclaim - but has min runtime", func(ctx context.Context) {
+			testCtx = testcontext.GetConnectivity(ctx, Default)
+			parentQueue, reclaimeeQueue, reclaimerQueue := createQueues(4, 1, 0)
+			reclaimerQueue.Spec.Priority = pointer.Int(constants.DefaultQueuePriority + 1)
+			reclaimeeQueue.Spec.ReclaimMinRuntime = &metav1.Duration{Duration: 10 * time.Minute}
+			testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
+
+			pod := createPod(ctx, testCtx, reclaimeeQueue, 1)
+			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
+
+			reclaimee := createPod(ctx, testCtx, reclaimeeQueue, 3)
+			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimee)
+
+			reclaimer := createPod(ctx, testCtx, reclaimerQueue, 1)
+			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimer)
+		})
+
 		It("Reclaim based on priority, maintain over-quota weight proportion", func(ctx context.Context) {
 			// 8 GPUs in total
 			// reclaimee1, reclaimee 2: 1 deserved each, 6 GPUs leftover
