@@ -7,6 +7,9 @@ on:
   push:
     branches:
       - "main"
+  pull_request:
+    paths:
+      - .github/workflows/update-coverage-badge.yaml
   workflow_dispatch:
 
 jobs:
@@ -59,6 +62,7 @@ jobs:
           fi
 
       - name: Update README.md with Coverage Badge
+        if: github.event_name != 'pull_request'
         run: |
           # Create the shields.io URL with the coverage data
           BADGE_URL="https://img.shields.io/badge/coverage-${{ steps.coverage.outputs.percentage }}%25-${{ steps.coverage.outputs.color }}"
