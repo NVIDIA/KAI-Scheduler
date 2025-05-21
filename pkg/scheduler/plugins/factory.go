@@ -11,6 +11,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/gpusharingorder"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/gpuspread"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/kubeflow"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/minruntime"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/nodeavailability"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/nodeplacement"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/nominatednode"
@@ -44,6 +45,7 @@ func InitDefaultPlugins() {
 
 	// Plugins for Queues
 	framework.RegisterPluginBuilder("proportion", proportion.New)
+	framework.RegisterPluginBuilder("minruntime", minruntime.New)
 
 	// Other Plugins
 	framework.RegisterPluginBuilder("snapshot", snapshot.New)
