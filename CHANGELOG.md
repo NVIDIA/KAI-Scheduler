@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Added support for [k8s pod scheduling gates](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-scheduling-readiness/)
 - nodeSelector, affinity and tolerations configurable with global value definitions
+- Scheduler now adds a "LastStartTimestamp" to podgroup on allocation
 
 ### Changed
 - Queue order function now takes into account potential victims, resulting in better reclaim scenarios.
