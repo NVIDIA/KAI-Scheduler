@@ -102,6 +102,7 @@ func (mr *minruntimePlugin) OnSessionClose(ssn *framework.Session) {
 func (mr *minruntimePlugin) reclaimFilterFn(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
 	protected := mr.isReclaimMinRuntimeProtected(pendingJob, victim)
 	// always return true for elastic jobs, but cache the result for scenario validator
+	log.InfraLogger.V(3).Infof("preemptFilterFn: pendingJob: %s, victim: %s, protected: %t", pendingJob.Name, victim.Name, protected)
 	if victim.MinAvailable < int32(len(victim.PodInfos)) {
 		return true
 	}
@@ -112,8 +113,8 @@ func (mr *minruntimePlugin) reclaimFilterFn(pendingJob *podgroup_info.PodGroupIn
 func (mr *minruntimePlugin) preemptFilterFn(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
 	protected := mr.isPreemptMinRuntimeProtected(pendingJob, victim)
 	// always return true for elastic jobs, but cache the result for scenario validator
+	log.InfraLogger.V(3).Infof("preemptFilterFn: pendingJob: %s, victim: %s, protected: %t", pendingJob.Name, victim.Name, protected)
 	if victim.MinAvailable < int32(len(victim.PodInfos)) {
-
 		return true
 	}
 	return !protected
