@@ -168,9 +168,9 @@ The pod-grouper will look for topology annotations on the top owner of pods and 
 
 To support topology-aware scheduling, we'll define the following annotations that can be added to job resources (e.g., Job, BatchJob, MPIJob):
 
-1. `scheduling.kai.nvidia.com/topology-constraint-type`: Specifies whether the topology constraint is "Required" or "Preferred"
-2. `scheduling.kai.nvidia.com/topology-level`: The minimal level of hierarchy that the job will care for
-3. `scheduling.kai.nvidia.com/topology`: Name of the topology CRD that this job will use (support multiple different topologies on the same cluster)
+1. `kai.scheduler/topology-constraint-type`: Specifies whether the topology constraint is "Required" or "Preferred"
+2. `kai.scheduler/topology-level`: The minimal level of hierarchy that the job will care for
+3. `kai.scheduler/topology`: Name of the topology CRD that this job will use (support multiple different topologies on the same cluster)
 
 Example usage on a job:
 ```yaml
@@ -179,9 +179,9 @@ kind: Job
 metadata:
   name: topology-aware-job
   annotations:
-    scheduling.kai.nvidia.com/topology-constraint-type: "Required"
-    scheduling.kai.nvidia.com/topology-level: "rack"
-    scheduling.kai.nvidia.com/topology: "network"
+    kai.scheduler/topology-constraint-type: "Required"
+    kai.scheduler/topology-level: "rack"
+    kai.scheduler/topology: "network"
 ```
 
 #### PodGroup Structure Modifications
