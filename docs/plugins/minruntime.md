@@ -87,6 +87,30 @@ For reclamation, two methods are supported:
 
 The LCA method is the default method if none is specified. The purpose of the LCA method is to follow how policies might be set for queue hierarchy, allowing users in sub-queues to set min-runtime values that are honored by their siblings, whilst not affecting cousin queues.
 
+#### Examples
+```mermaid
+graph TD
+    A[Queue A] --> B[Queue B<br/>600s]
+    B --> C[Queue C]
+    B --> D[Queue D<br/>60s]
+    C --> leaf1[Queue leaf1<br/>0s]
+    C --> leaf2[Queue leaf2<br/>180s]
+    D --> leaf3[Queue leaf3]
+```
+##### Queue-based Resolution:
+* When leaf1 reclaims from leaf2, the value of 180s will be used
+* When leaf2 reclaims from leaf1, the value of 0s will be used
+* When leaf3 reclaims from leaf1, the value of 0s will be used
+* When leaf3 reclaims from leaf2, the value of 180s wil be used
+* When either leaf1 or leaf2 reclaims from leaf3: since no value is configured for leaf3, it will inherit the value of 60s from Queue D, which will be used
+
+##### LCA Resolution:
+* When leaf1 reclaims from leaf2, the value of 180s will be used
+* When leaf2 reclaims from leaf1, the value of 0s will be used
+* When leaf3 reclaims from leaf1: the relavant value should be taken from Queue C. Since no value is configured, it will inherit the value of 600s from Queue B
+* When leaf3 reclaims from leaf2, the same behavior from the previous example is expected, since Queue C detarmains the behavior
+* When either leaf1 or leaf2 reclaims from leaf3, the value of 60s will be used. This is the case even if leaf3 has a different value configured explicitly.
+
 ## Elastic Jobs Handling
 
 For elastic jobs (where `MinAvailable < len(PodInfos)`), the plugin:
