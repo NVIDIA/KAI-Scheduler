@@ -37,7 +37,6 @@ jobs:
 
   code-coverage-report:
     name: Code Coverage Report
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     needs: validate-and-test
     permissions:

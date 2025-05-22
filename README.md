@@ -1,4 +1,4 @@
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Coverage](https://github.com/NVIDIA/KAI-Scheduler/raw/coverage-badge/badges/coverage.svg)](https://github.com/NVIDIA/KAI-Scheduler/blob/main/.github/workflows/update-coverage-badge.yaml)
 # KAI Scheduler
 KAI Scheduler is a robust, efficient, and scalable [Kubernetes scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/) that optimizes GPU resource allocation for AI and machine learning workloads.
 
@@ -73,7 +73,7 @@ To start scheduling workloads with KAI Scheduler, please continue to [Quick Star
 * Graceful rollout of Inference workloads (new revision update using queue temporary over-quota)
 
 ## Support and Getting Help
-We’d love to hear from you! Here's how to reach out:
+We'd love to hear from you! Here's how to reach out:
 
 - Technical Questions, Bugs, and Feature Requests: Please open [an issue on GitHub](https://github.com/NVIDIA/KAI-scheduler/issues/new) for anything related to technical support, bug reports, or feature suggestions. This helps us track and address them efficiently.
 - For broader conversations, including roadmap planning, scheduling strategies, and working group coordination, join the [CNCF Slack workspace](https://communityinviter.com/apps/cloud-native/cncf) and visit the [#batch-wg](https://cloud-native.slack.com/archives/C02Q5DFF3MM) channel.

@@ -62,40 +62,61 @@ jobs:
             echo "color=red" >> $GITHUB_OUTPUT
           fi
 
-      - name: Setup GitHub CLI
+      - name: Create Coverage Badge SVG
         if: github.event_name != 'pull_request'
+        id: create_badge
         run: |
-          gh auth setup-git
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          mkdir -p badges
+          # Create SVG badge file
+          cat > badges/coverage.svg << EOF
+          <svg xmlns="http://www.w3.org/2000/svg" width="106" height="20">
+            <linearGradient id="b" x2="0" y2="100%">
+              <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+              <stop offset="1" stop-opacity=".1"/>
+            </linearGradient>
+            <mask id="a">
+              <rect width="106" height="20" rx="3" fill="#fff"/>
+            </mask>
+            <g mask="url(#a)">
+              <path fill="#555" d="M0 0h61v20H0z"/>
+              <path fill="#${{ steps.coverage.outputs.color }}" d="M61 0h45v20H61z"/>
+              <path fill="url(#b)" d="M0 0h106v20H0z"/>
+            </g>
+            <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+              <text x="30.5" y="15" fill="#010101" fill-opacity=".3">coverage</text>
+              <text x="30.5" y="14">coverage</text>
+              <text x="82.5" y="15" fill="#010101" fill-opacity=".3">${{ steps.coverage.outputs.percentage }}%</text>
+              <text x="82.5" y="14">${{ steps.coverage.outputs.percentage }}%</text>
+            </g>
+          </svg>
+          EOF
+          echo "Created coverage badge SVG"
 
-      - name: Update README.md with Coverage Badge
+      - name: Push Badge to Dedicated Branch
         if: github.event_name != 'pull_request'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Create the shields.io URL with the coverage data
-          BADGE_URL="https://img.shields.io/badge/coverage-${{ steps.coverage.outputs.percentage }}%25-${{ steps.coverage.outputs.color }}"
+          BADGE_BRANCH="coverage-badge"
           
-          # Update the README.md file
-          sed -i -E "s|(\!\[License\]\([^)]+\))|\1 \![Coverage]($BADGE_URL)|" README.md
+          # Setup git
+          git config --local user.email "action@github.com"
+          git config --local user.name "Coverage Badge Action"
           
-          # Check if the README has been modified
-          if git diff --exit-code README.md; then
-            echo "No changes to README.md"
+          # Try to fetch the badge branch, or create it if it doesn't exist
+          if ! git fetch origin $BADGE_BRANCH; then
+            # Create an orphan branch for the badge
+            git checkout --orphan $BADGE_BRANCH
+            git rm -rf .
           else
-            # Create a new branch
-            BRANCH_NAME="update-coverage-badge-$(date +%Y%m%d%H%M%S)"
-            git config --local user.email "action@github.com"
-            git config --local user.name "Update Coverage Badge Action"
-            git checkout -b $BRANCH_NAME
-            git add README.md
-            git commit -m "docs: update test coverage badge"
-            git push --set-upstream origin $BRANCH_NAME
-            
-            # Create a pull request using GitHub CLI
-            gh pr create --title "Update coverage badge" \
-                         --body "Automatically updates the test coverage badge in README.md" \
-                         --base main \
-                         --head $BRANCH_NAME
-          fi 
+            git checkout $BADGE_BRANCH
+          fi
+          
+          # Copy over just the badge SVG
+          mkdir -p badges
+          cp ../badges/coverage.svg badges/
+          
+          # Commit and push the badge
+          git add badges/coverage.svg
+          git commit -m "chore: update coverage badge [skip ci]" || echo "No changes to commit"
+          git push origin $BADGE_BRANCH
