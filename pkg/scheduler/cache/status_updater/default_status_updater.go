@@ -39,6 +39,8 @@ const (
 	evictorPodGroupNameAnnotations      = "evictor-pod-group-name"
 	evictorPodGroupNamespaceAnnotations = "evictor-pod-group-namespace"
 	evictorActionType                   = "evictor-action-type"
+
+	podStatusSubresource = "status"
 )
 
 type updatePayloadKey string
@@ -271,7 +273,7 @@ func (su *defaultStatusUpdater) updatePodCondition(pod *v1.Pod, condition *v1.Po
 			&inflightUpdate{
 				object:       pod,
 				patchData:    nil,
-				subResources: []string{"status"},
+				subResources: []string{podStatusSubresource},
 			},
 		)
 	}

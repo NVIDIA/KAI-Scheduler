@@ -98,10 +98,10 @@ func (su *defaultStatusUpdater) processPayload(ctx context.Context, payload *upd
 
 	switch payload.objectType {
 	case podType:
-		if len(updateData.subResources) > 0 {
+		if len(updateData.subResources) == 1 && updateData.subResources[0] == podStatusSubresource {
 			su.updatePodStatus(ctx, payload.key, updateData.object)
 		} else {
-			su.updatePod(ctx, payload.key, updateData.patchData, updateData.object)
+			su.patchPod(ctx, payload.key, updateData.patchData, updateData.object)
 		}
 	case podGroupType:
 		su.updatePodGroup(ctx, payload.key, updateData.patchData, updateData.subResources, updateData.updateStatus, updateData.object)
@@ -138,7 +138,7 @@ func (su *defaultStatusUpdater) updatePodStatus(
 	}
 }
 
-func (su *defaultStatusUpdater) updatePod(
+func (su *defaultStatusUpdater) patchPod(
 	ctx context.Context, key updatePayloadKey, patchData []byte, object runtime.Object,
 ) {
 	pod := object.(*v1.Pod)
