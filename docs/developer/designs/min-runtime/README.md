@@ -92,25 +92,21 @@ For a more advanced scenario, we could also make use of scheduling conditions, b
 
 ### Phase 2
 
-Prepare https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/framework/session_plugins.go to expose `IsPreemptible(actionType, preemptor, preemptee) bool` extension function.
+Prepare https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/framework/session_plugins.go to functions that can be used to filter whole jobs from preempt/reclaim actions.
 
-For the new function we will do boolean AND between the results of each plugin returning the values, and use the result of that to determine if the workload is preemptible at all.
+For the new functions we will do boolean AND between the results of each plugin returning the values, and use the result of that to determine if the workload is preemptible at all.
 
-`IsPreemptible()` will be called in each action's victim selection filters, and will be called only AFTER a workload has been considered eligible based on the fundamental filters of "reclaims" and "preemptible" (such as preemptible only being relevant for in-queue workloads).
+These functions will be called in each action's victim selection filters, and will be called only AFTER a workload has been considered eligible based on the fundamental filters of "reclaims" and "preemptible" (such as preemptible only being relevant for in-queue workloads).
 
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/actions/preempt/preempt.go#L105-L134
 
 https://github.com/NVIDIA/KAI-Scheduler/blob/420efcc17b770f30ca5b899bc3ca8969e352970a/pkg/scheduler/actions/reclaim/reclaim.go#L154-L158
 
 
-Secondly, because elastic workloads can always be partially preempted, we will also expose another plugin hook that allows plugins to inject new scenario filters to be used here:
-https://github.com/NVIDIA/KAI-Scheduler/blob/eb01078bf26f8f85ea20d44ba3b15912dae95e55/pkg/scheduler/actions/common/solvers/pod_scenario_builder.go#L100-L114
+Secondly, because elastic workloads can always be partially preempted, we will also expose another plugin hook that allows plugins to define custom scenario validators to be used here:
+https://github.com/NVIDIA/KAI-Scheduler/blob/7ba6bedce81b9f920f4278376eac28d6709477c7/pkg/scheduler/actions/common/solvers/job_solver.go#L33-L38
 
-`GetAccumulatedScenarioFilters(session *framework.Session, actionType ActionType, pendingJob *podgroup_info.PodGroupInfo)` will return a list of instances matching `accumulated_scenario_filters.Interface`. In `session_plugins.go`, the result from all plugins will be aggregated into a resulting slice, that is then returned to NewPodAccumulatedScenarioBuilder and appended to the list of scenarioFilters:
-https://github.com/NVIDIA/KAI-Scheduler/blob/eb01078bf26f8f85ea20d44ba3b15912dae95e55/pkg/scheduler/actions/common/solvers/pod_scenario_builder.go#L47-L51
-
-To get correct data about the action for the filter, we will propagate `actionType` down into the scenario builder so that the filter can be constructed based on the type of action taken.
-
+These functions will get a pendingJob, a list of victims and the current tasks that would be evicted with the current scenario, and if any plugin returns false the scenario will not be allowed to continue.
 
 ### Phase 3
 
@@ -129,9 +125,9 @@ It has been suggested to create a new v3alpha1 for these changes.
 
 ### Phase 4
 
-Implement min-runtime plugin for the scheduler that extends `IsPreemptible()`, which will be used to filter out workloads eligible for preemption when scheduler tries to take these actions. We will also extend `GetAccumulatedScenarioFilters()` to validate and filter out scenarios that attempt to preempt elastic workloads beyond MinAvailable when there is min-runtime left.
+Implement min-runtime plugin for the scheduler that extends the victim filters, which will be used to filter out workloads eligible for preemption when scheduler tries to take these actions. We will also extend the scenario validators to validate and filter out scenarios that attempt to preempt elastic workloads beyond MinAvailable when there is min-runtime left.
 
-We will evaluate workloads in `IsPreemptible()` as follows:
+We will evaluate workloads in the filter functions as follows:
 
  1. If MinAvailable is set, always return true, as elastic workloads are handled by scenario filter instead.
  2. Resolve the correct min-runtime given actionType, preemptor and preemptee.
@@ -140,7 +136,4 @@ We will evaluate workloads in `IsPreemptible()` as follows:
 
 To handle elastic workload preemptability (which our plugin will always consider preemptible), we would do as follows:
 
-When the solver creates the scenario builder, `GetAccumulatedScenarioFilters()` will call our plugin which returns a `ElasticMinRuntimeFilter` that is defined within the min-runtime plugin and adds it to the list of scenario filters.
-
-When the filter is called as a scenario is generated, it will look at `scenario.victimJobsTaskGroups` and `potentialVictimsTasks` together with `pendingJob`.
-If any of the `victmJobsTaskGroups` are an elastic workload with min-runtime left with regards to `pendingJob` (using the same min-runtime resolver mentioned earlier), the scenario will be considered invalid if `recordedVictimTasks` and `potentialVictimTasks` would bring the elastic workload below MinAvailable pods.
+When a scenario has been solved and has a set of victims with their target tasks, the scenario validator function is called. For each of the victims in the scenario, identify if any of them are elastic workloads, and if so make sure there are going to be at least MinAvailable tasks left if the scenario executes IF min-runtime has not passed yet.
