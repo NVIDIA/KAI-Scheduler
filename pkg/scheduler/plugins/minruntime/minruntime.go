@@ -66,8 +66,11 @@ func New(arguments map[string]string) framework.Plugin {
 	if plugin.reclaimResolveMethod == "" {
 		plugin.reclaimResolveMethod = resolveMethodLCA
 	}
+	// setup caches on plugin init, but they will be reset on session open anyway
 	plugin.preemptProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
 	plugin.reclaimProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
+	plugin.preemptMinRuntimeCache = make(map[common_info.QueueID]metav1.Duration)
+	plugin.reclaimMinRuntimeCache = make(map[common_info.QueueID]map[common_info.QueueID]metav1.Duration)
 	return plugin
 }
 
@@ -76,17 +79,24 @@ func (mr *minruntimePlugin) Name() string {
 }
 
 func (mr *minruntimePlugin) OnSessionOpen(ssn *framework.Session) {
-	mr.queues = ssn.Queues
 	ssn.AddReclaimVictimFilterFn(mr.reclaimFilterFn)
 	ssn.AddPreemptVictimFilterFn(mr.preemptFilterFn)
 	ssn.AddReclaimScenarioValidatorFn(mr.reclaimScenarioValidatorFn)
 	ssn.AddPreemptScenarioValidatorFn(mr.preemptScenarioValidatorFn)
+	mr.queues = ssn.Queues
+	// setup caches on session open
+	mr.preemptProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
+	mr.reclaimProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
+	mr.preemptMinRuntimeCache = make(map[common_info.QueueID]metav1.Duration)
+	mr.reclaimMinRuntimeCache = make(map[common_info.QueueID]map[common_info.QueueID]metav1.Duration)
 }
 
 func (mr *minruntimePlugin) OnSessionClose(ssn *framework.Session) {
 	mr.queues = nil
 	mr.preemptProtectionCache = nil
 	mr.reclaimProtectionCache = nil
+	mr.preemptMinRuntimeCache = nil
+	mr.reclaimMinRuntimeCache = nil
 }
 
 func (mr *minruntimePlugin) reclaimFilterFn(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
