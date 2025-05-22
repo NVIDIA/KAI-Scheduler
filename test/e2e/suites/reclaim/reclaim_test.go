@@ -247,7 +247,7 @@ var _ = Describe("Reclaim", Ordered, func() {
 			testCtx = testcontext.GetConnectivity(ctx, Default)
 			parentQueue, reclaimeeQueue, reclaimerQueue := createQueues(4, 1, 0)
 			reclaimerQueue.Spec.Priority = pointer.Int(constants.DefaultQueuePriority + 1)
-			reclaimeeQueue.Spec.ReclaimMinRuntime = &metav1.Duration{Duration: 10 * time.Minute}
+			reclaimeeQueue.Spec.ReclaimMinRuntime = &metav1.Duration{Duration: 90 * time.Second}
 			testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 
 			pod := createPod(ctx, testCtx, reclaimeeQueue, 1)
@@ -257,6 +257,21 @@ var _ = Describe("Reclaim", Ordered, func() {
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimee)
 
 			reclaimer := createPod(ctx, testCtx, reclaimerQueue, 1)
+			wait.ForPodsWithConditionFor(ctx, testCtx.ControllerClient, func(event watch.Event) bool {
+				pods, ok := event.Object.(*v1.PodList)
+				if !ok {
+					return false
+				}
+				for _, pod := range pods.Items {
+					fmt.Printf("pod: %s, phase: %s, looking for: %s\n", pod.Name, pod.Status.Phase, reclaimer.Name)
+					if pod.Name == reclaimer.Name && pod.Status.Phase == v1.PodPending {
+						return true
+					}
+				}
+				return false
+			},
+				1*time.Minute,
+			)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimer)
 		})
 
