@@ -232,11 +232,15 @@ func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgr
 		}
 	}
 
-	// If no queue order funcs, order queue by CreationTimestamp first, then by UID.
-	if lQ.CreationTimestamp.Equal(&rQ.CreationTimestamp) {
-		return lQ.UID < rQ.UID
+	// Queue order not resolved, fallback to job CreationTimestamp first, then by UID.
+	l, r := lJob, rJob
+	if lJob == nil || rJob == nil {
+		l, r = lVictims[0], rVictims[0]
 	}
-	return lQ.CreationTimestamp.Before(&rQ.CreationTimestamp)
+	if l.CreationTimestamp.Equal(&r.CreationTimestamp) {
+		return l.UID < r.UID
+	}
+	return l.CreationTimestamp.Before(&r.CreationTimestamp)
 }
 
 func (ssn *Session) IsNonPreemptibleJobOverQueueQuotaFn(job *podgroup_info.PodGroupInfo,
