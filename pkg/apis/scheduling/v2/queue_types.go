@@ -20,6 +20,14 @@ type QueueSpec struct {
 	// higher priority will be considerd first for allocation, and last for reclaim. When not set, default is 100.
 	// +optional
 	Priority *int `json:"priority,omitempty"`
+
+	// Minimum runtime of a job in queue before it can be preempted.
+	// +optional
+	PreemptMinRuntime *metav1.Duration `json:"preemptMinRuntime,omitempty"`
+
+	// Minimum runtime of a job in queue before it can be reclaimed.
+	// +optional
+	ReclaimMinRuntime *metav1.Duration `json:"reclaimMinRuntime,omitempty"`
 }
 
 // QueueStatus defines the observed state of Queue

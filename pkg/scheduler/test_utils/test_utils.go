@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
+	"time"
 
 	// lint:ignore ST1001 we want to use gomock here
 	. "go.uber.org/mock/gomock"
@@ -96,14 +97,15 @@ type TestSessionConfig struct {
 }
 
 type TestExpectedResultBasic struct {
-	NodeName             string
-	GPUsRequired         float64
-	GPUsAccepted         float64
-	MilliCpuRequired     float64
-	MemoryRequired       float64
-	Status               pod_status.PodStatus
-	GPUGroups            []string
-	DontValidateGPUGroup bool
+	NodeName                    string
+	GPUsRequired                float64
+	GPUsAccepted                float64
+	MilliCpuRequired            float64
+	MemoryRequired              float64
+	Status                      pod_status.PodStatus
+	GPUGroups                   []string
+	DontValidateGPUGroup        bool
+	LastStartTimestampOlderThan *time.Duration
 }
 
 type TestExpectedNodesResources struct {
@@ -163,6 +165,19 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 				}
 			}
 		}
+
+		if pod_status.AllocatedStatus(jobExpectedResult.Status) {
+			if job.LastStartTimestamp == nil {
+				t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual last start timestamp is not set expecting pod_status.%v", testNumber, testMetadata.Name, jobName, jobExpectedResult.Status.String())
+			} else if jobExpectedResult.LastStartTimestampOlderThan != nil {
+				now := time.Now()
+				if now.Sub(*job.LastStartTimestamp) < *jobExpectedResult.LastStartTimestampOlderThan {
+					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual last start timestamp is not older than %v", testNumber, testMetadata.Name, jobName,
+						*jobExpectedResult.LastStartTimestampOlderThan)
+				}
+			}
+		}
+
 		if sumOfAcceptedGpus != jobExpectedResult.GPUsAccepted && jobExpectedResult.GPUsAccepted != 0 {
 			t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual accept GPUs: %v, was expecting GPUs: %v", testNumber, testMetadata.Name, jobName, sumOfAcceptedGpus, jobExpectedResult.GPUsAccepted)
 		}
@@ -178,7 +193,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 	}
 
 	if len(testMetadata.TaskExpectedResults) > 0 {
-		for jobId := range ssn.PodGroupInfos {
+		for jobId, job := range ssn.PodGroupInfos {
 			for taskId, task := range ssn.PodGroupInfos[jobId].PodInfos {
 				taskExpectedResult, found := testMetadata.TaskExpectedResults[string(taskId)]
 				if !found {
@@ -223,6 +238,18 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses Memory: %v, "+
 						"was expecting Memory: %v", testNumber, testMetadata.Name, taskId, requestedMemory,
 						taskExpectedResult.MemoryRequired)
+				}
+
+				if pod_status.AllocatedStatus(taskExpectedResult.Status) {
+					if job.LastStartTimestamp == nil {
+						t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual last start timestamp is not set expecting pod_status.%v", testNumber, testMetadata.Name, taskId, taskExpectedResult.Status.String())
+					} else if taskExpectedResult.LastStartTimestampOlderThan != nil {
+						now := time.Now()
+						if now.Sub(*job.LastStartTimestamp) < *taskExpectedResult.LastStartTimestampOlderThan {
+							t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual last start timestamp is not older than %v", testNumber, testMetadata.Name, taskId,
+								*taskExpectedResult.LastStartTimestampOlderThan)
+						}
+					}
 				}
 
 				// verify fractional GPUs index

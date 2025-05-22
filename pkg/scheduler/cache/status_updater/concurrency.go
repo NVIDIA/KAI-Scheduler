@@ -60,6 +60,15 @@ func (su *defaultStatusUpdater) syncPodGroup(inFlightPodGroup, snapshotPodGroup 
 		}
 		snapshotPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp] = inFlightPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp]
 	}
+	lastStartTimestampUpdated := false
+	if snapshotPodGroup.Annotations[commonconstants.LastStartTimeStamp] == inFlightPodGroup.Annotations[commonconstants.LastStartTimeStamp] {
+		lastStartTimestampUpdated = true
+	} else {
+		if snapshotPodGroup.Annotations == nil {
+			snapshotPodGroup.Annotations = make(map[string]string)
+		}
+		snapshotPodGroup.Annotations[commonconstants.LastStartTimeStamp] = inFlightPodGroup.Annotations[commonconstants.LastStartTimeStamp]
+	}
 
 	updatedSchedulingCondition := false
 	lastSchedulingCondition := utils.GetLastSchedulingCondition(inFlightPodGroup)
@@ -74,7 +83,7 @@ func (su *defaultStatusUpdater) syncPodGroup(inFlightPodGroup, snapshotPodGroup 
 	if !updatedSchedulingCondition {
 		snapshotPodGroup.Status.SchedulingConditions = inFlightPodGroup.Status.SchedulingConditions
 	}
-	return staleTimeStampUpdated && updatedSchedulingCondition
+	return lastStartTimestampUpdated && staleTimeStampUpdated && updatedSchedulingCondition
 }
 
 func (su *defaultStatusUpdater) keyForPayload(name, namespace string, uid types.UID) updatePayloadKey {

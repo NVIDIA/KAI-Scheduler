@@ -4,6 +4,8 @@
 package allocate
 
 import (
+	"time"
+
 	"golang.org/x/exp/maps"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common"
@@ -41,11 +43,16 @@ func (alloc *allocateAction) Execute(ssn *framework.Session) {
 	for !jobsOrderByQueues.IsEmpty() {
 		job := jobsOrderByQueues.PopNextJob()
 		stmt := ssn.Statement()
-		if attemptToAllocateJob(ssn, stmt, job) {
+		alreadyAllocated := job.GetNumAllocatedTasks() > 0
+		if ok, pipelined := attemptToAllocateJob(ssn, stmt, job); ok {
 			metrics.IncPodgroupScheduledByAction()
 			err := stmt.Commit()
+			if err == nil && !pipelined && !alreadyAllocated {
+				setLastStartTimestamp(job)
+			}
 			if err == nil && podgroup_info.HasTasksToAllocate(job, true) {
 				jobsOrderByQueues.PushJob(job)
+				continue
 			}
 		} else {
 			stmt.Discard()
@@ -53,7 +60,7 @@ func (alloc *allocateAction) Execute(ssn *framework.Session) {
 	}
 }
 
-func attemptToAllocateJob(ssn *framework.Session, stmt *framework.Statement, job *podgroup_info.PodGroupInfo) bool {
+func attemptToAllocateJob(ssn *framework.Session, stmt *framework.Statement, job *podgroup_info.PodGroupInfo) (allocated, pipelined bool) {
 	queue := ssn.Queues[job.Queue]
 
 	resReq := podgroup_info.GetTasksToAllocateInitResource(job, ssn.TaskOrderFn, true)
@@ -64,9 +71,9 @@ func attemptToAllocateJob(ssn *framework.Session, stmt *framework.Statement, job
 	if !common.AllocateJob(ssn, stmt, nodes, job, false) {
 		log.InfraLogger.V(3).Infof("Could not allocate resources for job: <%v/%v> of queue <%v>",
 			job.Namespace, job.Name, job.Queue)
-		return false
+		return false, false
 	}
-
+	pipelined = false
 	if job.ShouldPipelineJob() {
 		log.InfraLogger.V(3).Infof(
 			"Some tasks were pipelined, setting all job to be pipelined for job: <%v/%v>",
@@ -76,12 +83,18 @@ func attemptToAllocateJob(ssn *framework.Session, stmt *framework.Statement, job
 			log.InfraLogger.Errorf(
 				"Failed to covert tasks from allocated to pipelined for job: <%v/%v>, error: <%v>",
 				job.Namespace, job.Name, err)
-			return false
+			return false, false
 		}
+		pipelined = true
 	} else {
 		log.InfraLogger.V(3).Infof("Succesfully allocated resources for job: <%v/%v>",
 			job.Namespace, job.Name)
 	}
 
-	return true
+	return true, pipelined
+}
+
+func setLastStartTimestamp(job *podgroup_info.PodGroupInfo) {
+	timeNow := time.Now()
+	job.LastStartTimestamp = &timeNow
 }

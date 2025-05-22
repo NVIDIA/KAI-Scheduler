@@ -5,6 +5,7 @@ package queue_info
 
 import (
 	"testing"
+	"time"
 
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -87,6 +88,32 @@ func TestNewQueueInfo(t *testing.T) {
 				Resources:         QueueQuota{},
 				Priority:          6,
 				CreationTimestamp: metav1.Time{},
+			},
+		},
+		{
+			name: "queue with min-runtime",
+			queue: &enginev2.Queue{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "queue",
+				},
+				Spec: enginev2.QueueSpec{
+					DisplayName:       "",
+					ParentQueue:       "",
+					Resources:         nil,
+					PreemptMinRuntime: &metav1.Duration{Duration: 10 * time.Minute},
+					ReclaimMinRuntime: &metav1.Duration{Duration: 10 * time.Minute},
+				},
+			},
+			expected: QueueInfo{
+				UID:               "queue",
+				Name:              "queue",
+				ParentQueue:       "",
+				ChildQueues:       []common_info.QueueID{},
+				Resources:         QueueQuota{},
+				Priority:          100,
+				CreationTimestamp: metav1.Time{},
+				PreemptMinRuntime: &metav1.Duration{Duration: 10 * time.Minute},
+				ReclaimMinRuntime: &metav1.Duration{Duration: 10 * time.Minute},
 			},
 		},
 		{
