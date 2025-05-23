@@ -60,12 +60,11 @@ jobs:
           fi
 
       - name: Create Coverage Badge SVG
-        if: github.event_name != 'pull_request'
         id: create_badge
         run: |
-          mkdir -p badges
+          mkdir -p temporarybadges
           # Create SVG badge file
-          cat > badges/coverage.svg << EOF
+          cat > temporarybadges/coverage.svg << EOF
           <svg xmlns="http://www.w3.org/2000/svg" width="106" height="20">
             <linearGradient id="b" x2="0" y2="100%">
               <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
@@ -90,16 +89,15 @@ jobs:
           echo "Created coverage badge SVG"
 
       - name: Push Badge to Dedicated Branch
-        if: github.event_name != 'pull_request'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BADGE_BRANCH="coverage-badge"
-          
+
           # Setup git
           git config --local user.email "action@github.com"
           git config --local user.name "Coverage Badge Action"
-          
+
           # Try to fetch the badge branch, or create it if it doesn't exist
           if ! git fetch origin $BADGE_BRANCH; then
             # Create an orphan branch for the badge
@@ -108,11 +106,11 @@ jobs:
           else
             git checkout $BADGE_BRANCH
           fi
-          
+
           # Copy over just the badge SVG
           mkdir -p badges
-          cp ../badges/coverage.svg badges/
-          
+          cp temporarybadges/coverage.svg badges/
+
           # Commit and push the badge
           git add badges/coverage.svg
           git commit -m "chore: update coverage badge [skip ci]" || echo "No changes to commit"
