@@ -231,7 +231,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 	It("Reclaim elastic job with min runtime protecting", func(ctx context.Context) {
 
 		// 3 GPUs in total
-		// reclaimee: 3 GPUs, 2 protected by min runtime (MinAvailable=1)
+		// reclaimee: 3 GPUs, 1 protected by min runtime (MinAvailable=1)
 		// reclaimer1: 2 GPUs, can reclaim 2 from reclaimee
 		// reclaimer2: 1 GPU, cannot reclaim from reclaimee until after min-runtime
 		testCtx = testcontext.GetConnectivity(ctx, Default)
