@@ -13,63 +13,62 @@ import (
 var _ = Describe("MinRuntime Resolver", func() {
 	var (
 		queues                 map[common_info.QueueID]*queue_info.QueueInfo
-		plugin                 *minruntimePlugin
-		defaultPreemptDuration *metav1.Duration
-		defaultReclaimDuration *metav1.Duration
+		resolver               *resolver
+		defaultPreemptDuration metav1.Duration
+		defaultReclaimDuration metav1.Duration
 	)
 
 	BeforeEach(func() {
 		queues = createTestQueues()
-		defaultPreemptDuration = &metav1.Duration{Duration: 2 * time.Second}
-		defaultReclaimDuration = &metav1.Duration{Duration: 1 * time.Second}
+		defaultPreemptDuration = metav1.Duration{Duration: 2 * time.Second}
+		defaultReclaimDuration = metav1.Duration{Duration: 1 * time.Second}
 
-		plugin = &minruntimePlugin{
-			queues:                   queues,
-			defaultPreemptMinRuntime: defaultPreemptDuration,
-			defaultReclaimMinRuntime: defaultReclaimDuration,
-			preemptMinRuntimeCache:   make(map[common_info.QueueID]metav1.Duration),
-			reclaimMinRuntimeCache:   make(map[common_info.QueueID]map[common_info.QueueID]metav1.Duration),
-		}
+		resolver = NewResolver(queues, defaultPreemptDuration, defaultReclaimDuration)
 	})
 
 	AfterEach(func() {
 		// Reset the caches after each test
-		plugin.preemptMinRuntimeCache = make(map[common_info.QueueID]metav1.Duration)
-		plugin.reclaimMinRuntimeCache = make(map[common_info.QueueID]map[common_info.QueueID]metav1.Duration)
+		resolver.preemptMinRuntimeCache = make(map[common_info.QueueID]metav1.Duration)
+		resolver.reclaimMinRuntimeCache = make(map[common_info.QueueID]map[common_info.QueueID]metav1.Duration)
 	})
 
 	Describe("getPreemptMinRuntime", func() {
 		Context("when queue has a set value (prod-team2)", func() {
 			It("should return the queue's value", func() {
-				result := plugin.getPreemptMinRuntime(queues["prod-team2"])
+				result, err := resolver.getPreemptMinRuntime(queues["prod-team2"])
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(metav1.Duration{Duration: 15 * time.Second}))
 			})
 		})
 
 		Context("when queue inherits from parent (prod-team1 from prod)", func() {
 			It("should return the parent's value", func() {
-				result := plugin.getPreemptMinRuntime(queues["prod-team1"])
+				result, err := resolver.getPreemptMinRuntime(queues["prod-team1"])
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(metav1.Duration{Duration: 20 * time.Second}))
 			})
 		})
 
 		Context("when queue inherits from parent (dev-team1 from dev)", func() {
 			It("should return the parent's value", func() {
-				result := plugin.getPreemptMinRuntime(queues["dev-team1"])
+				result, err := resolver.getPreemptMinRuntime(queues["dev-team1"])
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(metav1.Duration{Duration: 5 * time.Second}))
 			})
 		})
 
 		Context("when top-level queue has a set value (prod)", func() {
 			It("should return the queue's value", func() {
-				result := plugin.getPreemptMinRuntime(queues["prod"])
+				result, err := resolver.getPreemptMinRuntime(queues["prod"])
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(metav1.Duration{Duration: 20 * time.Second}))
 			})
 		})
 
 		Context("when research queue has a set value", func() {
 			It("should return the queue's value", func() {
-				result := plugin.getPreemptMinRuntime(queues["research"])
+				result, err := resolver.getPreemptMinRuntime(queues["research"])
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(metav1.Duration{Duration: 4 * time.Second}))
 			})
 		})
@@ -77,8 +76,17 @@ var _ = Describe("MinRuntime Resolver", func() {
 		Context("when no queue is found", func() {
 			It("should return the default value", func() {
 				nonexistentQueue := &queue_info.QueueInfo{UID: "nonexistent", ParentQueue: "also-nonexistent"}
-				result := plugin.getPreemptMinRuntime(nonexistentQueue)
-				Expect(result).To(Equal(*defaultPreemptDuration))
+				result, err := resolver.getPreemptMinRuntime(nonexistentQueue)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(defaultPreemptDuration))
+			})
+		})
+
+		Context("when queue is nil", func() {
+			It("should return an error and the default value", func() {
+				result, err := resolver.getPreemptMinRuntime(nil)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(Equal(defaultPreemptDuration))
 			})
 		})
 	})
@@ -86,22 +94,24 @@ var _ = Describe("MinRuntime Resolver", func() {
 	Describe("getReclaimMinRuntime with queue method", func() {
 		Context("when victim queue has a set value (pendingJob:dev-team1, victim:prod-team2)", func() {
 			It("should return the victim queue's value", func() {
-				result := plugin.getReclaimMinRuntime(
+				result, err := resolver.getReclaimMinRuntime(
 					resolveMethodQueue,
 					queues["dev-team1"],
 					queues["prod-team2"],
 				)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(metav1.Duration{Duration: 35 * time.Second}))
 			})
 		})
 
 		Context("when victim queue inherits from parent (pendingJob:dev-team1, victim:dev-team2)", func() {
 			It("should return the victim's parent value", func() {
-				result := plugin.getReclaimMinRuntime(
+				result, err := resolver.getReclaimMinRuntime(
 					resolveMethodQueue,
 					queues["dev-team1"],
 					queues["dev-team2"],
 				)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(metav1.Duration{Duration: 10 * time.Second}))
 			})
 		})
@@ -109,12 +119,25 @@ var _ = Describe("MinRuntime Resolver", func() {
 		Context("when victim queue is not found (pendingJob:dev-team1, victim:nonexistent)", func() {
 			It("should return the default value", func() {
 				nonexistentQueue := &queue_info.QueueInfo{UID: "nonexistent", ParentQueue: "also-nonexistent"}
-				result := plugin.getReclaimMinRuntime(
+				result, err := resolver.getReclaimMinRuntime(
 					resolveMethodQueue,
 					queues["dev-team1"],
 					nonexistentQueue,
 				)
-				Expect(result).To(Equal(*defaultReclaimDuration))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(defaultReclaimDuration))
+			})
+		})
+
+		Context("when queue is nil", func() {
+			It("should return an error and the default value", func() {
+				result, err := resolver.getReclaimMinRuntime(
+					resolveMethodQueue,
+					nil,
+					queues["dev-team2"],
+				)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(Equal(defaultReclaimDuration))
 			})
 		})
 	})
@@ -122,84 +145,97 @@ var _ = Describe("MinRuntime Resolver", func() {
 	Describe("getReclaimMinRuntimeLCA", func() {
 		Context("when pendingJob and victim are in different top-level queues (pendingJob:dev-team1, victim:prod-team2)", func() {
 			It("should use the top-level victim queue's value", func() {
-				result := plugin.getReclaimMinRuntimeLCA(
+				result, err := resolver.resolveReclaimMinRuntimeLCA(
 					queues["dev-team1"],
 					queues["prod-team2"],
 				)
-				// Should use the prod queue's value (30s) since it's the top-level ancestor of prod-team2
+				Expect(err).NotTo(HaveOccurred())
+				// In this case, the top-level ancestor's value will be used (prod's value is 30s)
 				Expect(result).To(Equal(metav1.Duration{Duration: 30 * time.Second}))
 			})
 		})
 
 		Context("when LCA is dev and victim is dev-team1 with ReclaimMinRuntime set (pendingJob:dev-team2, victim:dev-team1)", func() {
 			It("should return the victim's value", func() {
-				result := plugin.getReclaimMinRuntimeLCA(
+				result, err := resolver.resolveReclaimMinRuntimeLCA(
 					queues["dev-team2"],
 					queues["dev-team1"],
 				)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Duration).To(BeNumerically("==", 8*time.Second))
 			})
 		})
 
 		Context("when LCA is prod and victim is prod-team2 with ReclaimMinRuntime set (pendingJob:prod-team1, victim:prod-team2)", func() {
 			It("should return the victim's value", func() {
-				result := plugin.getReclaimMinRuntimeLCA(
+				result, err := resolver.resolveReclaimMinRuntimeLCA(
 					queues["prod-team1"],
 					queues["prod-team2"],
 				)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(metav1.Duration{Duration: 35 * time.Second}))
 			})
 		})
 
 		Context("when pendingJob and victim are the same queue (pendingJob:prod-team2, victim:prod-team2)", func() {
 			It("should return the queue's own value", func() {
-				result := plugin.getReclaimMinRuntimeLCA(
+				result, err := resolver.resolveReclaimMinRuntimeLCA(
 					queues["prod-team2"],
 					queues["prod-team2"],
 				)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(metav1.Duration{Duration: 35 * time.Second}))
 			})
 		})
 
 		Context("when research queue is victim (pendingJob:dev-team1, victim:research-project)", func() {
 			It("should use research queue's value from the top-level ancestor", func() {
-				result := plugin.getReclaimMinRuntimeLCA(
+				result, err := resolver.resolveReclaimMinRuntimeLCA(
 					queues["dev-team1"],
 					queues["research-project"],
 				)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(metav1.Duration{Duration: 6 * time.Second}))
+			})
+		})
+
+		Context("when queue is nil", func() {
+			It("should return an error and the default value", func() {
+				result, err := resolver.resolveReclaimMinRuntimeLCA(nil, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(Equal(defaultReclaimDuration))
 			})
 		})
 	})
 
 	Describe("getQueueHierarchyPath", func() {
 		It("should return correct path for top-level queue (dev)", func() {
-			result := plugin.getQueueHierarchyPath(queues["dev"])
+			result := resolver.getQueueHierarchyPath(queues["dev"])
 			resultUIDs := extractUIDs(result)
 			Expect(resultUIDs).To(Equal([]common_info.QueueID{"dev"}))
 		})
 
 		It("should return correct path for leaf queue (dev-team1)", func() {
-			result := plugin.getQueueHierarchyPath(queues["dev-team1"])
+			result := resolver.getQueueHierarchyPath(queues["dev-team1"])
 			resultUIDs := extractUIDs(result)
 			Expect(resultUIDs).To(Equal([]common_info.QueueID{"dev", "dev-team1"}))
 		})
 
 		It("should return correct path for different branch leaf queue (prod-team2)", func() {
-			result := plugin.getQueueHierarchyPath(queues["prod-team2"])
+			result := resolver.getQueueHierarchyPath(queues["prod-team2"])
 			resultUIDs := extractUIDs(result)
 			Expect(resultUIDs).To(Equal([]common_info.QueueID{"prod", "prod-team2"}))
 		})
 
 		It("should return correct path for research project queue", func() {
-			result := plugin.getQueueHierarchyPath(queues["research-project"])
+			result := resolver.getQueueHierarchyPath(queues["research-project"])
 			resultUIDs := extractUIDs(result)
 			Expect(resultUIDs).To(Equal([]common_info.QueueID{"research", "research-project"}))
 		})
 
 		It("should handle queues with non-existent parent", func() {
 			orphanQueue := &queue_info.QueueInfo{UID: "orphan", ParentQueue: "nonexistent"}
-			result := plugin.getQueueHierarchyPath(orphanQueue)
+			result := resolver.getQueueHierarchyPath(orphanQueue)
 			resultUIDs := extractUIDs(result)
 			Expect(resultUIDs).To(Equal([]common_info.QueueID{"orphan"}))
 		})
@@ -210,10 +246,12 @@ var _ = Describe("MinRuntime Resolver", func() {
 			preemptorQueue := queues["dev-team1"]
 			preempteeQueue := queues["prod-team2"]
 
-			queueResult := plugin.getReclaimMinRuntime(resolveMethodQueue, preemptorQueue, preempteeQueue)
+			queueResult, queueErr := resolver.getReclaimMinRuntime(resolveMethodQueue, preemptorQueue, preempteeQueue)
+			Expect(queueErr).NotTo(HaveOccurred())
 			Expect(queueResult).To(Equal(metav1.Duration{Duration: 35 * time.Second}))
 
-			lcaResult := plugin.getReclaimMinRuntime(resolveMethodLCA, preemptorQueue, preempteeQueue)
+			lcaResult, lcaErr := resolver.getReclaimMinRuntime(resolveMethodLCA, preemptorQueue, preempteeQueue)
+			Expect(lcaErr).NotTo(HaveOccurred())
 			// Should use prod's value (30s) since it's the top-level ancestor in the shadow parent tree
 			Expect(lcaResult).To(Equal(metav1.Duration{Duration: 30 * time.Second}))
 		})
@@ -222,10 +260,12 @@ var _ = Describe("MinRuntime Resolver", func() {
 			preemptorQueue := queues["dev-team1"]
 			preempteeQueue := queues["research-project"]
 
-			queueResult := plugin.getReclaimMinRuntime(resolveMethodQueue, preemptorQueue, preempteeQueue)
+			queueResult, queueErr := resolver.getReclaimMinRuntime(resolveMethodQueue, preemptorQueue, preempteeQueue)
+			Expect(queueErr).NotTo(HaveOccurred())
 			Expect(queueResult).To(Equal(metav1.Duration{Duration: 9 * time.Second}))
 
-			lcaResult := plugin.getReclaimMinRuntime(resolveMethodLCA, preemptorQueue, preempteeQueue)
+			lcaResult, lcaErr := resolver.getReclaimMinRuntime(resolveMethodLCA, preemptorQueue, preempteeQueue)
+			Expect(lcaErr).NotTo(HaveOccurred())
 			Expect(lcaResult).To(Equal(metav1.Duration{Duration: 6 * time.Second}))
 		})
 	})
@@ -233,46 +273,45 @@ var _ = Describe("MinRuntime Resolver", func() {
 	Describe("Edge cases", func() {
 		Context("with empty queue map", func() {
 			It("should handle empty queue map gracefully (pendingJob:dev-team1, victim:prod-team2)", func() {
-				emptyPlugin := &minruntimePlugin{
-					queues:                   nil,
-					defaultPreemptMinRuntime: defaultPreemptDuration,
-					defaultReclaimMinRuntime: defaultReclaimDuration,
-					preemptMinRuntimeCache:   make(map[common_info.QueueID]metav1.Duration),
-					reclaimMinRuntimeCache:   make(map[common_info.QueueID]map[common_info.QueueID]metav1.Duration),
-				}
+				emptyPlugin := NewResolver(nil, defaultPreemptDuration, defaultReclaimDuration)
 
 				result := emptyPlugin.getQueueHierarchyPath(queues["dev-team1"])
 				Expect(result).To(HaveLen(1))
 
-				preemptResult := emptyPlugin.getPreemptMinRuntime(queues["dev-team1"])
-				Expect(preemptResult).To(Equal(*defaultPreemptDuration))
+				preemptResult, preemptErr := emptyPlugin.getPreemptMinRuntime(queues["dev-team1"])
+				Expect(preemptErr).NotTo(HaveOccurred())
+				Expect(preemptResult).To(Equal(defaultPreemptDuration))
 
-				reclaimResult := emptyPlugin.getReclaimMinRuntime(resolveMethodLCA, queues["dev-team1"], queues["prod-team2"])
-				Expect(reclaimResult).To(Equal(*defaultReclaimDuration))
+				reclaimResult, reclaimErr := emptyPlugin.getReclaimMinRuntime(resolveMethodLCA, queues["dev-team1"], queues["prod-team2"])
+				Expect(reclaimErr).NotTo(HaveOccurred())
+				Expect(reclaimResult).To(Equal(defaultReclaimDuration))
 			})
 		})
 
 		Context("with nil queue", func() {
 			It("should handle nil queue gracefully", func() {
-				preemptResult := plugin.getPreemptMinRuntime(nil)
-				Expect(preemptResult).To(Equal(*defaultPreemptDuration))
+				preemptResult, preemptErr := resolver.getPreemptMinRuntime(nil)
+				Expect(preemptErr).To(HaveOccurred())
+				Expect(preemptResult).To(Equal(defaultPreemptDuration))
 
-				reclaimResult := plugin.getReclaimMinRuntimeLCA(nil, nil)
-				Expect(reclaimResult).To(Equal(*defaultReclaimDuration))
+				reclaimResult, reclaimErr := resolver.resolveReclaimMinRuntimeLCA(nil, nil)
+				Expect(reclaimErr).To(HaveOccurred())
+				Expect(reclaimResult).To(Equal(defaultReclaimDuration))
 			})
 		})
 
 		Context("with orphaned victim queue (pendingJob:dev-team1, victim:orphan)", func() {
-			It("should use plugin default value when ancestor is missing", func() {
+			It("should use resolver default value when ancestor is missing", func() {
 				orphanQueue := &queue_info.QueueInfo{
 					UID:               "orphan",
 					ParentQueue:       "nonexistent",
 					ReclaimMinRuntime: &metav1.Duration{Duration: 7 * time.Second},
 				}
 
-				result := plugin.getReclaimMinRuntimeLCA(queues["dev-team1"], orphanQueue)
-				// With the updated shadow parent approach, should use orphan's own value (7s)
-				Expect(result.Duration).To(BeNumerically("==", 1*time.Second))
+				result, err := resolver.resolveReclaimMinRuntimeLCA(queues["dev-team1"], orphanQueue)
+				Expect(err).NotTo(HaveOccurred())
+				// Current implementation should use the orphan queue's value since it has one set
+				Expect(result.Duration).To(BeNumerically("==", 7*time.Second))
 			})
 		})
 
@@ -292,20 +331,18 @@ var _ = Describe("MinRuntime Resolver", func() {
 					ReclaimMinRuntime: nil,
 				}
 
-				// Add these queues to a test plugin
+				// Add these queues to a test resolver
 				testQueues := map[common_info.QueueID]*queue_info.QueueInfo{
 					"no-reclaim": noReclaimQueue,
 					"leaf":       leafQueue,
 				}
 
-				testPlugin := &minruntimePlugin{
-					queues:                   testQueues,
-					defaultReclaimMinRuntime: defaultReclaimDuration,
-				}
+				resolver := NewResolver(testQueues, defaultPreemptDuration, defaultReclaimDuration)
 
 				// Test LCA between queue from different hierarchies
-				result := testPlugin.getReclaimMinRuntimeLCA(queues["dev-team1"], leafQueue)
-				Expect(result).To(Equal(*defaultReclaimDuration))
+				result, err := resolver.resolveReclaimMinRuntimeLCA(queues["dev-team1"], leafQueue)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(defaultReclaimDuration))
 			})
 		})
 	})

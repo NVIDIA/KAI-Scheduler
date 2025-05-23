@@ -66,7 +66,6 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 		case <-timer.C:
 			eventWatcher.sync(ctx)
 			if eventWatcher.satisfied() {
-				fmt.Printf("Time out satisfied\n")
 				return true
 			}
 			logger.Error(nil, "WaitForEvent timed out")
@@ -80,7 +79,6 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 					satisfiedSince = &now
 				} else {
 					if now.Sub(*satisfiedSince) > steadyStateTime {
-						fmt.Printf("Steady state duration %s reached\n", steadyStateTime)
 						return true
 					}
 				}
@@ -107,7 +105,6 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 					satisfiedSince = &now
 				} else {
 					if now.Sub(*satisfiedSince) > steadyStateTime {
-						fmt.Printf("Steady state duration %s reached\n", steadyStateTime)
 						return true
 					}
 				}

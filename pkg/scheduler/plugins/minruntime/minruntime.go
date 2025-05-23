@@ -1,6 +1,7 @@
 package minruntime
 
 import (
+	"slices"
 	"time"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -21,56 +22,43 @@ const (
 )
 
 type minruntimePlugin struct {
-	defaultReclaimMinRuntime *metav1.Duration
-	defaultPreemptMinRuntime *metav1.Duration
+	defaultReclaimMinRuntime metav1.Duration
+	defaultPreemptMinRuntime metav1.Duration
 	reclaimResolveMethod     string
 	queues                   map[common_info.QueueID]*queue_info.QueueInfo
-
-	preemptMinRuntimeCache map[common_info.QueueID]metav1.Duration
-	reclaimMinRuntimeCache map[common_info.QueueID]map[common_info.QueueID]metav1.Duration
+	podGroupInfos            map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
 
 	preemptProtectionCache map[common_info.PodGroupID]map[common_info.PodGroupID]bool
 	reclaimProtectionCache map[common_info.PodGroupID]map[common_info.PodGroupID]bool
+
+	resolver *resolver
+}
+
+func parseMinRuntime(arguments map[string]string, minRuntimeConfig string) metav1.Duration {
+	minRuntime := arguments[minRuntimeConfig]
+	duration, err := time.ParseDuration(minRuntime)
+	if err != nil {
+		log.InfraLogger.Errorf("Failed to parse %v (%v): %v, using default value 0s", minRuntimeConfig, minRuntime, err)
+		duration = 0 * time.Second
+	}
+	return metav1.Duration{Duration: duration}
 }
 
 func New(arguments map[string]string) framework.Plugin {
 	plugin := &minruntimePlugin{}
-	for key, value := range arguments {
-		switch key {
-		case defaultReclaimMinRuntimeConfig:
-			duration, err := time.ParseDuration(value)
-			if err != nil {
-				log.InfraLogger.Errorf("Failed to parse %v: %v, using default value 0", key, err)
-				duration = time.Duration(0 * time.Second)
-			}
-			plugin.defaultReclaimMinRuntime = &metav1.Duration{Duration: duration}
-		case defaultPreemptMinRuntimeConfig:
-			duration, err := time.ParseDuration(value)
-			if err != nil {
-				log.InfraLogger.Errorf("Failed to parse %v: %v, using default value 0", key, err)
-				duration = time.Duration(0 * time.Second)
-			}
-			plugin.defaultPreemptMinRuntime = &metav1.Duration{Duration: duration}
-		case reclaimResolveMethod:
-			plugin.reclaimResolveMethod = value
-		}
 
-	}
-	// Initialize with default values if not provided
-	if plugin.defaultReclaimMinRuntime == nil {
-		plugin.defaultReclaimMinRuntime = &metav1.Duration{Duration: time.Duration(0 * time.Second)}
-	}
-	if plugin.defaultPreemptMinRuntime == nil {
-		plugin.defaultPreemptMinRuntime = &metav1.Duration{Duration: time.Duration(0 * time.Second)}
-	}
-	if plugin.reclaimResolveMethod == "" {
+	plugin.defaultReclaimMinRuntime = parseMinRuntime(arguments, defaultReclaimMinRuntimeConfig)
+	plugin.defaultPreemptMinRuntime = parseMinRuntime(arguments, defaultPreemptMinRuntimeConfig)
+
+	validResolveMethods := []string{resolveMethodLCA, resolveMethodQueue}
+	plugin.reclaimResolveMethod = arguments[reclaimResolveMethod]
+	if len(plugin.reclaimResolveMethod) == 0 || !slices.Contains(validResolveMethods, plugin.reclaimResolveMethod) {
 		plugin.reclaimResolveMethod = resolveMethodLCA
 	}
 	// setup caches on plugin init, but they will be reset on session open anyway
 	plugin.preemptProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
 	plugin.reclaimProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
-	plugin.preemptMinRuntimeCache = make(map[common_info.QueueID]metav1.Duration)
-	plugin.reclaimMinRuntimeCache = make(map[common_info.QueueID]map[common_info.QueueID]metav1.Duration)
+
 	return plugin
 }
 
@@ -83,27 +71,28 @@ func (mr *minruntimePlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddPreemptVictimFilterFn(mr.preemptFilterFn)
 	ssn.AddReclaimScenarioValidatorFn(mr.reclaimScenarioValidatorFn)
 	ssn.AddPreemptScenarioValidatorFn(mr.preemptScenarioValidatorFn)
+	// store session data used for lookups
 	mr.queues = ssn.Queues
+	mr.podGroupInfos = ssn.PodGroupInfos
 	// setup caches on session open
 	mr.preemptProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
 	mr.reclaimProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
-	mr.preemptMinRuntimeCache = make(map[common_info.QueueID]metav1.Duration)
-	mr.reclaimMinRuntimeCache = make(map[common_info.QueueID]map[common_info.QueueID]metav1.Duration)
+
+	// initialize the resolver
+	mr.resolver = NewResolver(mr.queues, mr.defaultPreemptMinRuntime, mr.defaultReclaimMinRuntime)
 }
 
 func (mr *minruntimePlugin) OnSessionClose(ssn *framework.Session) {
 	mr.queues = nil
 	mr.preemptProtectionCache = nil
 	mr.reclaimProtectionCache = nil
-	mr.preemptMinRuntimeCache = nil
-	mr.reclaimMinRuntimeCache = nil
+	mr.resolver = nil
 }
 
 func (mr *minruntimePlugin) reclaimFilterFn(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
 	protected := mr.isReclaimMinRuntimeProtected(pendingJob, victim)
 	// always return true for elastic jobs, but cache the result for scenario validator
-	log.InfraLogger.V(3).Infof("preemptFilterFn: pendingJob: %s, victim: %s, protected: %t", pendingJob.Name, victim.Name, protected)
-	if victim.MinAvailable < int32(len(victim.PodInfos)) {
+	if victim.IsElastic() {
 		return true
 	}
 
@@ -113,36 +102,51 @@ func (mr *minruntimePlugin) reclaimFilterFn(pendingJob *podgroup_info.PodGroupIn
 func (mr *minruntimePlugin) preemptFilterFn(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
 	protected := mr.isPreemptMinRuntimeProtected(pendingJob, victim)
 	// always return true for elastic jobs, but cache the result for scenario validator
-	log.InfraLogger.V(3).Infof("preemptFilterFn: pendingJob: %s, victim: %s, protected: %t", pendingJob.Name, victim.Name, protected)
-	if victim.MinAvailable < int32(len(victim.PodInfos)) {
+	if victim.IsElastic() {
 		return true
 	}
 	return !protected
 }
 
-func (mr *minruntimePlugin) reclaimScenarioValidatorFn(reclaimer *podgroup_info.PodGroupInfo, victims []*podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo) bool {
-	for _, victim := range victims {
+func (mr *minruntimePlugin) reclaimScenarioValidatorFn(reclaimer *podgroup_info.PodGroupInfo, victimRepresentatives []*podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo) bool {
+	for _, victimRepresentative := range victimRepresentatives {
+		victim, found := mr.podGroupInfos[victimRepresentative.UID]
+		if !found {
+			continue
+		}
+		if victim.IsElastic() {
+			continue
+		}
 		protected := mr.isReclaimMinRuntimeProtected(reclaimer, victim)
-		if protected {
-			numVictimTasks := countVictimTasks(victim, tasks)
-			currentlyRunning := victim.GetActivelyRunningTasksCount()
-			if victim.MinAvailable > currentlyRunning-numVictimTasks {
-				return false
-			}
+		if !protected {
+			continue
+		}
+		numVictimTasks := int32(len(victim.PodInfos))
+		currentlyRunning := victim.GetActivelyRunningTasksCount()
+		if victim.MinAvailable > currentlyRunning-numVictimTasks {
+			return false
 		}
 	}
 	return true
 }
 
-func (mr *minruntimePlugin) preemptScenarioValidatorFn(preemptor *podgroup_info.PodGroupInfo, victims []*podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo) bool {
-	for _, victim := range victims {
+func (mr *minruntimePlugin) preemptScenarioValidatorFn(preemptor *podgroup_info.PodGroupInfo, victimRepresentatives []*podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo) bool {
+	for _, victimRepresentative := range victimRepresentatives {
+		victim, found := mr.podGroupInfos[victimRepresentative.UID]
+		if !found {
+			continue
+		}
+		if victim.IsElastic() {
+			continue
+		}
 		protected := mr.isPreemptMinRuntimeProtected(preemptor, victim)
-		if protected {
-			numVictimTasks := countVictimTasks(victim, tasks)
-			currentlyRunning := victim.GetActivelyRunningTasksCount()
-			if victim.MinAvailable > currentlyRunning-numVictimTasks {
-				return false
-			}
+		if !protected {
+			continue
+		}
+		numVictimTasks := int32(len(victim.PodInfos))
+		currentlyRunning := victim.GetActivelyRunningTasksCount()
+		if victim.MinAvailable > currentlyRunning-numVictimTasks {
+			return false
 		}
 	}
 	return true
@@ -153,25 +157,22 @@ func (mr *minruntimePlugin) isReclaimMinRuntimeProtected(pendingJob *podgroup_in
 		return true
 	}
 	// Get the appropriate queue objects for both jobs
-	pendingQueue, foundPending := mr.getQueueForJob(pendingJob)
-	victimQueue, foundVictim := mr.getQueueForJob(victim)
+	pendingQueue := mr.queues[pendingJob.Queue]
+	victimQueue := mr.queues[victim.Queue]
 
-	// If we can't find the queues, use default min runtime
-	var minRuntime metav1.Duration
-	if !foundPending || !foundVictim {
-		minRuntime = *mr.defaultReclaimMinRuntime
-	} else {
-		minRuntime = mr.getReclaimMinRuntime(mr.reclaimResolveMethod, pendingQueue, victimQueue)
+	minRuntime, err := mr.resolver.getReclaimMinRuntime(mr.reclaimResolveMethod, pendingQueue, victimQueue)
+	if err != nil {
+		log.InfraLogger.Errorf("Failed to get reclaim min runtime: %v", err)
+		minRuntime = mr.defaultReclaimMinRuntime
 	}
 
 	// If the victim's last start time plus minimum runtime is greater than current time,
 	// the victim is protected from reclaim
 	if victim.LastStartTimestamp != nil && !victim.LastStartTimestamp.IsZero() {
 		protectedUntil := victim.LastStartTimestamp.Add(minRuntime.Duration)
-		if time.Now().Before(protectedUntil) {
-			mr.cacheReclaimProtection(pendingJob, victim)
-			return true
-		}
+		protected := time.Now().Before(protectedUntil)
+		mr.cacheReclaimProtection(pendingJob, victim, protected)
+		return protected
 	}
 	return false
 }
@@ -180,60 +181,37 @@ func (mr *minruntimePlugin) isPreemptMinRuntimeProtected(pendingJob *podgroup_in
 	if mr.preemptProtectionCache[pendingJob.UID][victim.UID] {
 		return true
 	}
-
 	// Get the victim's queue
-	victimQueue, found := mr.getQueueForJob(victim)
+	victimQueue := mr.queues[victim.Queue]
 
-	// If we can't find the queue, use default min runtime
-	var minRuntime metav1.Duration
-	if !found {
-		minRuntime = *mr.defaultPreemptMinRuntime
-	} else {
-		minRuntime = mr.getPreemptMinRuntime(victimQueue)
+	minRuntime, err := mr.resolver.getPreemptMinRuntime(victimQueue)
+	if err != nil {
+		log.InfraLogger.Errorf("Failed to get preempt min runtime: %v", err)
+		minRuntime = mr.defaultPreemptMinRuntime
 	}
 
 	// If the victim's last start time plus minimum runtime is greater than current time,
 	// the victim is protected from preemption
 	if victim.LastStartTimestamp != nil && !victim.LastStartTimestamp.IsZero() {
 		protectedUntil := victim.LastStartTimestamp.Add(minRuntime.Duration)
-		if time.Now().Before(protectedUntil) {
-			mr.cachePreemptProtection(pendingJob, victim)
-			return true
-		}
+		protected := time.Now().Before(protectedUntil)
+		mr.cachePreemptProtection(pendingJob, victim, protected)
+		return protected
 	}
 
 	return false
 }
 
-func (mr *minruntimePlugin) cachePreemptProtection(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) {
+func (mr *minruntimePlugin) cachePreemptProtection(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo, protected bool) {
 	if mr.preemptProtectionCache[pendingJob.UID] == nil {
 		mr.preemptProtectionCache[pendingJob.UID] = make(map[common_info.PodGroupID]bool)
 	}
-	mr.preemptProtectionCache[pendingJob.UID][victim.UID] = true
+	mr.preemptProtectionCache[pendingJob.UID][victim.UID] = protected
 }
 
-func (mr *minruntimePlugin) cacheReclaimProtection(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) {
+func (mr *minruntimePlugin) cacheReclaimProtection(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo, protected bool) {
 	if mr.reclaimProtectionCache[pendingJob.UID] == nil {
 		mr.reclaimProtectionCache[pendingJob.UID] = make(map[common_info.PodGroupID]bool)
 	}
-	mr.reclaimProtectionCache[pendingJob.UID][victim.UID] = true
-}
-
-func (mr *minruntimePlugin) getQueueForJob(job *podgroup_info.PodGroupInfo) (*queue_info.QueueInfo, bool) {
-	if mr.queues == nil {
-		return nil, false
-	}
-
-	queue, found := mr.queues[job.Queue]
-	return queue, found
-}
-
-func countVictimTasks(victim *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo) int32 {
-	count := int32(0)
-	for _, task := range tasks {
-		if task.Job == victim.UID {
-			count++
-		}
-	}
-	return count
+	mr.reclaimProtectionCache[pendingJob.UID][victim.UID] = protected
 }
