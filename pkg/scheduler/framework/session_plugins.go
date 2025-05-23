@@ -12,7 +12,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/reclaimer_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
@@ -68,14 +67,18 @@ func (ssn *Session) AddCanReclaimResourcesFn(crf api.CanReclaimResourcesFn) {
 }
 
 func (ssn *Session) AddReclaimScenarioValidatorFn(rf api.ScenarioValidatorFn) {
-	ssn.ReclaimScenarioValidators = append(ssn.ReclaimScenarioValidators, rf)
+	ssn.ReclaimScenarioValidatorFns = append(ssn.ReclaimScenarioValidatorFns, rf)
+}
+
+func (ssn *Session) AddPreemptScenarioValidatorFn(rf api.ScenarioValidatorFn) {
+	ssn.PreemptScenarioValidatorFns = append(ssn.PreemptScenarioValidatorFns, rf)
 }
 
 func (ssn *Session) AddReclaimeeFilterFn(rf api.VictimFilterFn) {
 	ssn.ReclaimVictimFilterFns = append(ssn.ReclaimVictimFilterFns, rf)
 }
 
-func (ssn *Session) CanReclaimResources(reclaimer *reclaimer_info.ReclaimerInfo) bool {
+func (ssn *Session) CanReclaimResources(reclaimer *podgroup_info.PodGroupInfo) bool {
 	for _, canReclaimFn := range ssn.CanReclaimResourcesFns {
 		return canReclaimFn(reclaimer)
 	}
@@ -94,11 +97,11 @@ func (ssn *Session) ReclaimVictimFilter(reclaimer *podgroup_info.PodGroupInfo, v
 }
 
 func (ssn *Session) ReclaimScenarioValidator(
-	reclaimer *reclaimer_info.ReclaimerInfo,
+	reclaimer *podgroup_info.PodGroupInfo,
 	reclaimees []*podgroup_info.PodGroupInfo,
 	victimsTasks []*pod_info.PodInfo,
 ) bool {
-	for _, rf := range ssn.ReclaimScenarioValidators {
+	for _, rf := range ssn.ReclaimScenarioValidatorFns {
 		if !rf(reclaimer, reclaimees, victimsTasks) {
 			return false
 		}
@@ -122,7 +125,7 @@ func (ssn *Session) PreemptScenarioValidator(
 	victimJobs []*podgroup_info.PodGroupInfo,
 	victimTasks []*pod_info.PodInfo,
 ) bool {
-	for _, pf := range ssn.PreemptScenarioValidators {
+	for _, pf := range ssn.PreemptScenarioValidatorFns {
 		if !pf(preemptor, victimJobs, victimTasks) {
 			return false
 		}
