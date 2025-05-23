@@ -89,7 +89,7 @@ The LCA method is the default method if none is specified. The purpose of the LC
 
 ## Elastic Jobs Handling
 
-For elastic jobs (where `MinAvailable < len(PodInfos)`), the plugin:
+For elastic jobs (where `MinAvailable < number of pods in a job`), the plugin:
 
 1. Allows the job to be considered for preemption/reclamation in the filter phase
 2. Validates in the scenario validator phase that the job will maintain its minimum number of pods if min-runtime has not been reached.

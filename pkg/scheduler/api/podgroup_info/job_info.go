@@ -342,6 +342,10 @@ func (podGroupInfo *PodGroupInfo) IsReadyForScheduling() bool {
 	return int32(validTasks) >= podGroupInfo.MinAvailable
 }
 
+func (podGroupInfo *PodGroupInfo) IsElastic() bool {
+	return podGroupInfo.MinAvailable < int32(len(podGroupInfo.PodInfos))
+}
+
 func (podGroupInfo *PodGroupInfo) IsPodGroupStale() bool {
 	if podGroupInfo.PodStatusIndex[pod_status.Succeeded] != nil {
 		return false
