@@ -74,7 +74,7 @@ func (ssn *Session) AddPreemptScenarioValidatorFn(rf api.ScenarioValidatorFn) {
 	ssn.PreemptScenarioValidatorFns = append(ssn.PreemptScenarioValidatorFns, rf)
 }
 
-func (ssn *Session) AddReclaimeeFilterFn(rf api.VictimFilterFn) {
+func (ssn *Session) AddReclaimVictimFilterFn(rf api.VictimFilterFn) {
 	ssn.ReclaimVictimFilterFns = append(ssn.ReclaimVictimFilterFns, rf)
 }
 
