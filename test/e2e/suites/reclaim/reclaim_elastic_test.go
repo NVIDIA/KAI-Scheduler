@@ -297,7 +297,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 			}
 			return false
 		},
-			30*time.Minute,
+			30*time.Second,
 		)
 
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimerNamespace, reclaimer2Pods)
