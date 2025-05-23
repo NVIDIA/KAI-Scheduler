@@ -12,7 +12,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/reclaimer_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
@@ -49,8 +48,7 @@ func (ra *reclaimAction) Execute(ssn *framework.Session) {
 	for !jobsOrderByQueues.IsEmpty() {
 		job := jobsOrderByQueues.PopNextJob()
 
-		reclaimerInfo := buildReclaimerInfo(ssn, job)
-		if !ssn.CanReclaimResources(reclaimerInfo) {
+		if !ssn.CanReclaimResources(job) {
 			continue
 		}
 
@@ -69,7 +67,7 @@ func (ra *reclaimAction) Execute(ssn *framework.Session) {
 			}
 		}
 		metrics.IncPodgroupsConsideredByAction()
-		succeeded, statement, reclaimeeTasksNames := ra.attemptToReclaimForSpecificJob(ssn, job, reclaimerInfo)
+		succeeded, statement, reclaimeeTasksNames := ra.attemptToReclaimForSpecificJob(ssn, job)
 		if succeeded {
 			metrics.IncPodgroupScheduledByAction()
 			log.InfraLogger.V(3).Infof(
@@ -88,7 +86,7 @@ func (ra *reclaimAction) Execute(ssn *framework.Session) {
 }
 
 func (ra *reclaimAction) attemptToReclaimForSpecificJob(
-	ssn *framework.Session, reclaimer *podgroup_info.PodGroupInfo, reclaimerInfo *reclaimer_info.ReclaimerInfo,
+	ssn *framework.Session, reclaimer *podgroup_info.PodGroupInfo,
 ) (bool, *framework.Statement, []string) {
 	queue := ssn.Queues[reclaimer.Queue]
 	resReq := podgroup_info.GetTasksToAllocateInitResource(reclaimer, ssn.TaskOrderFn, false)
@@ -100,30 +98,19 @@ func (ra *reclaimAction) attemptToReclaimForSpecificJob(
 	feasibleNodes := common.FeasibleNodesForJob(maps.Values(ssn.Nodes), reclaimer)
 	solver := solvers.NewJobsSolver(
 		feasibleNodes,
-		reclaimableScenarioCheck(ssn, reclaimerInfo),
+		reclaimableScenarioCheck(ssn, reclaimer),
 		getOrderedVictimsQueue(ssn, reclaimer),
 		framework.Reclaim)
 	return solver.Solve(ssn, reclaimer)
 }
 
 func reclaimableScenarioCheck(ssn *framework.Session,
-	reclaimerInfo *reclaimer_info.ReclaimerInfo) solvers.SolutionValidator {
+	reclaimer *podgroup_info.PodGroupInfo) solvers.SolutionValidator {
 	return func(
 		_ *podgroup_info.PodGroupInfo,
 		victimJobs []*podgroup_info.PodGroupInfo,
 		victimTasks []*pod_info.PodInfo) bool {
-		return ssn.ReclaimScenarioValidator(reclaimerInfo, victimJobs, victimTasks)
-	}
-}
-
-func buildReclaimerInfo(ssn *framework.Session, reclaimerJob *podgroup_info.PodGroupInfo) *reclaimer_info.ReclaimerInfo {
-	return &reclaimer_info.ReclaimerInfo{
-		Name:          reclaimerJob.Name,
-		Namespace:     reclaimerJob.Namespace,
-		Queue:         reclaimerJob.Queue,
-		IsPreemptable: reclaimerJob.IsPreemptibleJob(ssn.IsInferencePreemptible()),
-		RequiredResources: podgroup_info.GetTasksToAllocateInitResource(
-			reclaimerJob, ssn.TaskOrderFn, false),
+		return ssn.ReclaimScenarioValidator(reclaimer, victimJobs, victimTasks)
 	}
 }
 
