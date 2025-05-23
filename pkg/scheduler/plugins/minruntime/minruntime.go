@@ -1,3 +1,6 @@
+// Copyright 2025 NVIDIA CORPORATION
+// SPDX-License-Identifier: Apache-2.0
+
 package minruntime
 
 import (
@@ -114,14 +117,14 @@ func (mr *minruntimePlugin) reclaimScenarioValidatorFn(reclaimer *podgroup_info.
 		if !found {
 			continue
 		}
-		if victim.IsElastic() {
+		if !victim.IsElastic() {
 			continue
 		}
 		protected := mr.isReclaimMinRuntimeProtected(reclaimer, victim)
 		if !protected {
 			continue
 		}
-		numVictimTasks := int32(len(victim.PodInfos))
+		numVictimTasks := getVictimCount(victimRepresentative, tasks)
 		currentlyRunning := victim.GetActivelyRunningTasksCount()
 		if victim.MinAvailable > currentlyRunning-numVictimTasks {
 			return false
@@ -136,14 +139,14 @@ func (mr *minruntimePlugin) preemptScenarioValidatorFn(preemptor *podgroup_info.
 		if !found {
 			continue
 		}
-		if victim.IsElastic() {
+		if !victim.IsElastic() {
 			continue
 		}
 		protected := mr.isPreemptMinRuntimeProtected(preemptor, victim)
 		if !protected {
 			continue
 		}
-		numVictimTasks := int32(len(victim.PodInfos))
+		numVictimTasks := getVictimCount(victimRepresentative, tasks)
 		currentlyRunning := victim.GetActivelyRunningTasksCount()
 		if victim.MinAvailable > currentlyRunning-numVictimTasks {
 			return false
@@ -214,4 +217,14 @@ func (mr *minruntimePlugin) cacheReclaimProtection(pendingJob *podgroup_info.Pod
 		mr.reclaimProtectionCache[pendingJob.UID] = make(map[common_info.PodGroupID]bool)
 	}
 	mr.reclaimProtectionCache[pendingJob.UID][victim.UID] = protected
+}
+
+func getVictimCount(victimRepresentative *podgroup_info.PodGroupInfo, victimTasks []*pod_info.PodInfo) int32 {
+	victimCount := int32(0)
+	for _, victimTask := range victimTasks {
+		if victimTask.Job == victimRepresentative.UID {
+			victimCount++
+		}
+	}
+	return victimCount
 }
