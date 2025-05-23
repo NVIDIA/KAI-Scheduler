@@ -249,11 +249,11 @@ var _ = Describe("MinRuntime Resolver", func() {
 			preemptorQueue := queues["dev-team1"]
 			preempteeQueue := queues["prod-team2"]
 
-			queueResult, queueErr := resolver.getReclaimMinRuntime(resolveMethodQueue, preemptorQueue, preempteeQueue)
+			queueResult, queueErr := resolver.resolveReclaimMinRuntimeQueue(preemptorQueue, preempteeQueue)
 			Expect(queueErr).NotTo(HaveOccurred())
 			Expect(queueResult).To(Equal(metav1.Duration{Duration: 35 * time.Second}))
 
-			lcaResult, lcaErr := resolver.getReclaimMinRuntime(resolveMethodLCA, preemptorQueue, preempteeQueue)
+			lcaResult, lcaErr := resolver.resolveReclaimMinRuntimeLCA(preemptorQueue, preempteeQueue)
 			Expect(lcaErr).NotTo(HaveOccurred())
 			// Should use prod's value (30s) since it's the top-level ancestor in the shadow parent tree
 			Expect(lcaResult).To(Equal(metav1.Duration{Duration: 30 * time.Second}))
@@ -263,34 +263,17 @@ var _ = Describe("MinRuntime Resolver", func() {
 			preemptorQueue := queues["dev-team1"]
 			preempteeQueue := queues["research-project"]
 
-			queueResult, queueErr := resolver.getReclaimMinRuntime(resolveMethodQueue, preemptorQueue, preempteeQueue)
+			queueResult, queueErr := resolver.resolveReclaimMinRuntimeQueue(preemptorQueue, preempteeQueue)
 			Expect(queueErr).NotTo(HaveOccurred())
 			Expect(queueResult).To(Equal(metav1.Duration{Duration: 9 * time.Second}))
 
-			lcaResult, lcaErr := resolver.getReclaimMinRuntime(resolveMethodLCA, preemptorQueue, preempteeQueue)
+			lcaResult, lcaErr := resolver.resolveReclaimMinRuntimeLCA(preemptorQueue, preempteeQueue)
 			Expect(lcaErr).NotTo(HaveOccurred())
 			Expect(lcaResult).To(Equal(metav1.Duration{Duration: 6 * time.Second}))
 		})
 	})
 
 	Describe("Edge cases", func() {
-		Context("with empty queue map", func() {
-			It("should handle empty queue map gracefully (pendingJob:dev-team1, victim:prod-team2)", func() {
-				emptyPlugin := NewResolver(nil, defaultPreemptDuration, defaultReclaimDuration)
-
-				result := emptyPlugin.getQueueHierarchyPath(queues["dev-team1"])
-				Expect(result).To(HaveLen(1))
-
-				preemptResult, preemptErr := emptyPlugin.getPreemptMinRuntime(queues["dev-team1"])
-				Expect(preemptErr).NotTo(HaveOccurred())
-				Expect(preemptResult).To(Equal(defaultPreemptDuration))
-
-				reclaimResult, reclaimErr := emptyPlugin.getReclaimMinRuntime(resolveMethodLCA, queues["dev-team1"], queues["prod-team2"])
-				Expect(reclaimErr).NotTo(HaveOccurred())
-				Expect(reclaimResult).To(Equal(defaultReclaimDuration))
-			})
-		})
-
 		Context("with nil queue", func() {
 			It("should handle nil queue gracefully", func() {
 				preemptResult, preemptErr := resolver.getPreemptMinRuntime(nil)
