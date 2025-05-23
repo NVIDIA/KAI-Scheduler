@@ -12,6 +12,19 @@ Workloads with specific topology requirements, such as distributed training jobs
 - Suboptimal performance for compute-intensive workloads
 - Inefficient resource utilization across the cluster
 
+## Usage Stories
+
+### Better Inter Pod Communication
+
+Distributed workload with high volume of communication between pods will prefer the pods to be as close as possible, with the highest volume and speed of network between them.
+If not possible to allocate them on the same node, then on the same rack or block. It is more important that it starts running than that it fills the exact topology requirements.
+
+### Highly Optimized With Regard to Network Infrastructure
+
+This workload wants to make sure that it takes advantage of the best setup its network can give.
+It wants to split the pods into groups that will fill entire nodes, and the groups be on the same rack if possible, or close one from the same block.
+The pods then need to get some hints to their respective location in this internal job topology.
+
 ## Goals
 
 - Implement topology-aware scheduling in KAI-Scheduler
@@ -32,6 +45,12 @@ Workloads with specific topology requirements, such as distributed training jobs
 
 Following Kueue's approach, topology will be represented as a hierarchical structure that describes the physical layout of resources in the cluster.
 We will be using Kueue Topology CRD as is or import its definition into KAI scheduler to simplify integrations and support it as a standard.
+
+### Assumptions / Requirements From Workloads
+
+- All pods must have the same requirements and roles
+    -  orchestrator / leader pods should also act as workers and be scheduled with the rest.
+- No order or rank is predefined on the pods.
 
 ### Implementation Approaches
 
@@ -84,7 +103,7 @@ graph TD
 ```
 
 * The distance from node NC4 to NC3 is 2, the distance between RB2 to NA1 is 5.
-* When using hard constraints (required) this will not always find a solution even if one exists in the cluster due to fragmentation of the resources between the nodes
+* When using hard constraints (required) this will have to check the subtree or re-build it in the first place to calculate according to the jobs need.
 * It will allow for soft/preferred constraints to still ensure it schedules pods "close" to the rest of the group even if the chosen topology can't accommodate the whole job.
 
 #### Approach 2: Simulation-based Evaluation
@@ -95,7 +114,7 @@ This approach involves:
 2. For each possible topology hierarchy that has enough resources:
    a. Add a virtual node selector to the job and simulate allocation
 
-* This will work best if the first approach is implemented first
+* This will work best if the first approach is implemented first to sort the nodes by their topology location and the available resources in each topology.
 * Significant performance reduction in big clusters is expected here.
 
 
@@ -159,6 +178,18 @@ There are two possibilities as to where the struct should be built and kept:
 Because this might be resource intensive we will leave users with the option to totally disable it and only reference it in the plugin.
 
 
+#### Topology Awareness Plugin
+
+##### Setup
+Maintain topology tree with available resources using the Allocate/Deallocate event handlers (similar to the dynamicresources plugin)
+
+##### Pre Process
+- Register the PrePredicate function (Possibly change its name to PreFilter ? ) to create a job-specific and look for allocation in that tree.
+- This is currently called per task, so with the current setup it will have to cache the result in the plugin (Possibly also using the resources tree hash?)
+- Search for the best allocation of the job in the tree and save that too for the next Predicate and NodeOrder calls.
+    - Predicate function will only be used for strict topology-aware scheduling.
+- NodeOrder will rank the selected node above all and then other nodes by distance. Use a factor that will make this plugin more dominant the any other (similar to pod affinity node order).
+- New plugin point for `BeforeBind` will allow to mutate the bind request / pod creating the bind request. It will be used to add rank labels to the pod in order to specify its chosen rank inside the job.
 
 ### Topology constraint request on a job
 
