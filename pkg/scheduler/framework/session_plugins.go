@@ -233,14 +233,38 @@ func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgr
 	}
 
 	// Queue order not resolved, fallback to job CreationTimestamp first, then by UID.
-	l, r := lJob, rJob
-	if lJob == nil || rJob == nil {
-		l, r = lVictims[0], rVictims[0]
+	lJ, rJ := ssn.getJobsForQueueOrder(lJob, rJob, lVictims, rVictims)
+	if lJ != nil && rJ != nil {
+		if !lJ.CreationTimestamp.Equal(&rJ.CreationTimestamp) {
+			return lJ.CreationTimestamp.Before(&rJ.CreationTimestamp)
+		}
+		return lJ.UID < rJ.UID
 	}
-	if l.CreationTimestamp.Equal(&r.CreationTimestamp) {
-		return l.UID < r.UID
+
+	// Queue CreationTimestamp and UID as final tie-breaker
+	if !lQ.CreationTimestamp.Equal(&rQ.CreationTimestamp) {
+		return lQ.CreationTimestamp.Before(&rQ.CreationTimestamp)
 	}
-	return l.CreationTimestamp.Before(&r.CreationTimestamp)
+	return lQ.UID < rQ.UID
+}
+
+func (ssn *Session) getJobsForQueueOrder(
+	lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo,
+) (*podgroup_info.PodGroupInfo, *podgroup_info.PodGroupInfo) {
+	if lJob != nil && rJob != nil {
+		return lJob, rJob
+	}
+	return ssn.getOldestJob(lVictims), ssn.getOldestJob(rVictims)
+}
+
+func (ssn *Session) getOldestJob(jobs []*podgroup_info.PodGroupInfo) *podgroup_info.PodGroupInfo {
+	var oldest *podgroup_info.PodGroupInfo
+	for _, job := range jobs {
+		if oldest == nil || job.CreationTimestamp.Before(&oldest.CreationTimestamp) {
+			oldest = job
+		}
+	}
+	return oldest
 }
 
 func (ssn *Session) IsNonPreemptibleJobOverQueueQuotaFn(job *podgroup_info.PodGroupInfo,

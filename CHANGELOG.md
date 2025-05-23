@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Queue order function now takes into account potential victims, resulting in better reclaim scenarios.
-- Queue order final tie-breaker is now based on workload creation timestamp instead of queue creation timestamp.
+- Queue order tie-breaker evaluates workload creation timestamp before queue creation timestamp.
 
 ### Fixes
 - Fixed preempt/reclaim of elastic workloads only taking one pod.
