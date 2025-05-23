@@ -263,7 +263,6 @@ var _ = Describe("Reclaim", Ordered, func() {
 					return false
 				}
 				for _, pod := range pods.Items {
-					fmt.Printf("pod: %s, phase: %s, looking for: %s\n", pod.Name, pod.Status.Phase, reclaimer.Name)
 					if pod.Name == reclaimer.Name && pod.Status.Phase == v1.PodPending {
 						return true
 					}

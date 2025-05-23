@@ -18,8 +18,8 @@ var _ = Describe("MinRuntime Plugin", func() {
 	var (
 		plugin                 *minruntimePlugin
 		queues                 map[common_info.QueueID]*queue_info.QueueInfo
-		defaultPreemptDuration *metav1.Duration
-		defaultReclaimDuration *metav1.Duration
+		defaultPreemptDuration metav1.Duration
+		defaultReclaimDuration metav1.Duration
 	)
 
 	// Helper function to create a PodGroupInfo with a specific last start timestamp
@@ -60,8 +60,8 @@ var _ = Describe("MinRuntime Plugin", func() {
 	BeforeEach(func() {
 		// Set up test data
 		queues = createTestQueues()
-		defaultPreemptDuration = &metav1.Duration{Duration: 5 * time.Second}
-		defaultReclaimDuration = &metav1.Duration{Duration: 3 * time.Second}
+		defaultPreemptDuration = metav1.Duration{Duration: 5 * time.Second}
+		defaultReclaimDuration = metav1.Duration{Duration: 3 * time.Second}
 
 		// Initialize the plugin
 		plugin = &minruntimePlugin{
@@ -71,17 +71,8 @@ var _ = Describe("MinRuntime Plugin", func() {
 			reclaimResolveMethod:     resolveMethodLCA,
 			preemptProtectionCache:   make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool),
 			reclaimProtectionCache:   make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool),
-
-			preemptMinRuntimeCache: make(map[common_info.QueueID]metav1.Duration),
-			reclaimMinRuntimeCache: make(map[common_info.QueueID]map[common_info.QueueID]metav1.Duration),
+			resolver:                 NewResolver(queues, defaultPreemptDuration, defaultReclaimDuration),
 		}
-	})
-
-	AfterEach(func() {
-		plugin.preemptProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
-		plugin.reclaimProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
-		plugin.preemptMinRuntimeCache = make(map[common_info.QueueID]metav1.Duration)
-		plugin.reclaimMinRuntimeCache = make(map[common_info.QueueID]map[common_info.QueueID]metav1.Duration)
 	})
 
 	Describe("preemptFilterFn", func() {
