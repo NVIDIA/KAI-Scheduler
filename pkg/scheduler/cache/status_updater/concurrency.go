@@ -5,6 +5,8 @@ package status_updater
 
 import (
 	"context"
+	"maps"
+	"reflect"
 	"strconv"
 
 	v1 "k8s.io/api/core/v1"
@@ -14,9 +16,13 @@ import (
 
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
 )
+
+type podUpdateKeyCalculator func(name string, namespace string, uid types.UID) updatePayloadKey
+type snapshotCompareinFlightObject func(inFlightPod *v1.Pod, informerPod *v1.Pod) bool
 
 func (su *defaultStatusUpdater) Run(stopCh <-chan struct{}) {
 	for i := 0; i < su.numberOfWorkers; i++ {
@@ -28,7 +34,7 @@ func (su *defaultStatusUpdater) Run(stopCh <-chan struct{}) {
 func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*enginev2alpha2.PodGroup) {
 	usedKeys := make(map[updatePayloadKey]bool, len(podGroups))
 	for i := range podGroups {
-		key := su.keyForPayload(podGroups[i].Name, podGroups[i].Namespace, podGroups[i].UID)
+		key := su.keyForPodGroupPayload(podGroups[i].Name, podGroups[i].Namespace, podGroups[i].UID)
 		usedKeys[key] = true
 		inflightUpdateAny, found := su.inFlightPodGroups.Load(key)
 		if !found {
@@ -86,8 +92,70 @@ func (su *defaultStatusUpdater) syncPodGroup(inFlightPodGroup, snapshotPodGroup 
 	return lastStartTimestampUpdated && staleTimeStampUpdated && updatedSchedulingCondition
 }
 
-func (su *defaultStatusUpdater) keyForPayload(name, namespace string, uid types.UID) updatePayloadKey {
+func (su *defaultStatusUpdater) SyncPodsWithPendingUpdates(pods []*v1.Pod) {
+	usedKeys := make(map[updatePayloadKey]bool, len(pods))
+	for _, pod := range pods {
+		su.syncInFlightPodSubspec(su.keyForPodLabelsPayload, pod, su.syncPodLabels, usedKeys)
+		su.syncInFlightPodSubspec(su.keyForPodStatusPayload, pod, su.shouldUpdateConditions, usedKeys)
+	}
+
+	// Cleanup pods that don't comeup anymore
+	su.inFlightPods.Range(func(key any, _ any) bool {
+		if _, found := usedKeys[key.(updatePayloadKey)]; !found {
+			su.inFlightPods.Delete(key)
+		}
+		return true
+	})
+}
+
+func (su *defaultStatusUpdater) syncInFlightPodSubspec(keyCalculator podUpdateKeyCalculator, informerPod *v1.Pod,
+	snapshotCompareinFlightObject snapshotCompareinFlightObject, usedKeys map[updatePayloadKey]bool) {
+	key := keyCalculator(informerPod.Name, informerPod.Namespace, informerPod.UID)
+	usedKeys[key] = true
+	inflightUpdateAny, found := su.inFlightPods.Load(key)
+	if !found {
+		return
+	}
+	inFlightPod := inflightUpdateAny.(*inflightUpdate).object.(*v1.Pod)
+	isUpdateRelevant := snapshotCompareinFlightObject(inFlightPod, informerPod)
+	if !isUpdateRelevant {
+		su.inFlightPods.Delete(key)
+	}
+}
+
+func (su *defaultStatusUpdater) shouldUpdateConditions(inFlightPod, snapshotPod *v1.Pod) bool {
+	hasConditionsToUpdate := false
+	for _, condition := range inFlightPod.Status.Conditions {
+		if condition.Type == v1.PodScheduled && k8s_internal.IsPodScheduled(snapshotPod) {
+			continue
+		}
+		hasConditionsToUpdate = hasConditionsToUpdate || k8s_internal.UpdatePodCondition(&snapshotPod.Status, &condition)
+	}
+	return hasConditionsToUpdate
+}
+
+func (su *defaultStatusUpdater) syncPodLabels(inFlightPod, snapshotPod *v1.Pod) bool {
+	if inFlightPod.Labels != nil && !reflect.DeepEqual(inFlightPod.Labels, snapshotPod.Labels) {
+		if snapshotPod.Labels == nil {
+			snapshotPod.Labels = make(map[string]string)
+		}
+		maps.Copy(snapshotPod.Labels, inFlightPod.Labels)
+		return true
+	}
+
+	return false
+}
+
+func (su *defaultStatusUpdater) keyForPodGroupPayload(name, namespace string, uid types.UID) updatePayloadKey {
 	return updatePayloadKey(types.NamespacedName{Name: name, Namespace: namespace}.String() + "_" + string(uid))
+}
+
+func (su *defaultStatusUpdater) keyForPodStatusPayload(name, namespace string, uid types.UID) updatePayloadKey {
+	return updatePayloadKey(types.NamespacedName{Name: name, Namespace: namespace}.String() + "_" + string(uid) + "-Status")
+}
+
+func (su *defaultStatusUpdater) keyForPodLabelsPayload(name, namespace string, uid types.UID) updatePayloadKey {
+	return updatePayloadKey(types.NamespacedName{Name: name, Namespace: namespace}.String() + "_" + string(uid) + "-Labels")
 }
 
 func (su *defaultStatusUpdater) processPayload(ctx context.Context, payload *updatePayload) {
@@ -129,8 +197,6 @@ func (su *defaultStatusUpdater) updatePod(
 	)
 	if err != nil {
 		log.StatusUpdaterLogger.Errorf("Failed to update pod %s/%s: %v", pod.Namespace, pod.Name, err)
-	} else {
-		su.inFlightPods.Delete(key)
 	}
 }
 

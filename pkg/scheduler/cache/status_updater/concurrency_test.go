@@ -55,20 +55,29 @@ var _ = Describe("Status Updater Concurrency", func() {
 			stopCh             chan struct{}
 			finishUpdatesChan  chan struct{}
 			podGroupsOriginals []*schedulingv2alpha2.PodGroup
-			wg                 sync.WaitGroup
+			podsOriginals      []*v1.Pod
+			wgPodGroups        sync.WaitGroup
+			wgPods             sync.WaitGroup
 		)
 
 		BeforeEach(func() {
-			wg = sync.WaitGroup{}
+			wgPodGroups = sync.WaitGroup{}
+			wgPods = sync.WaitGroup{}
 			finishUpdatesChan = make(chan struct{})
 			// wait with pod groups update until signal is given.
 			kubeAiSchedClient.SchedulingV2alpha2().(*fakeschedulingv2alpha2.FakeSchedulingV2alpha2).PrependReactor(
 				"update", "podgroups", func(action faketesting.Action) (handled bool, ret runtime.Object, err error) {
 					<-finishUpdatesChan
-					wg.Done()
+					wgPodGroups.Done()
 					return false, nil, nil
 				},
 			)
+			kubeClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor(
+				"patch", "pods", func(action faketesting.Action) (handled bool, ret runtime.Object, err error) {
+					<-finishUpdatesChan
+					wgPods.Done()
+					return false, nil, nil
+				})
 
 			stopCh = make(chan struct{})
 			statusUpdater.Run(stopCh)
@@ -92,22 +101,37 @@ var _ = Describe("Status Updater Concurrency", func() {
 
 			jobInfos, _, _ := jobs_fake.BuildJobsAndTasksMaps(jobs)
 			podGroupsOriginals = []*schedulingv2alpha2.PodGroup{}
+			podsOriginals = []*v1.Pod{}
 
 			for _, job := range jobInfos {
 				// Can't merge the loops because the fake client is handling concurrency by using a single lock
-				_, err := kubeAiSchedClient.SchedulingV2alpha2().PodGroups(job.Namespace).Create(nil, job.PodGroup, metav1.CreateOptions{})
+				_, err := kubeAiSchedClient.SchedulingV2alpha2().PodGroups(job.Namespace).Create(
+					context.Background(), job.PodGroup, metav1.CreateOptions{})
 				Expect(err).To(Succeed())
 				podGroupsOriginals = append(podGroupsOriginals, job.PodGroup.DeepCopy())
+				for _, task := range job.PodInfos {
+					_, err := kubeClient.CoreV1().Pods(task.Namespace).Create(
+						context.Background(), task.Pod, metav1.CreateOptions{})
+					Expect(err).To(Succeed())
+					podsOriginals = append(podsOriginals, task.Pod.DeepCopy())
+				}
 			}
 
 			for _, job := range jobInfos {
-				wg.Add(1)
+				wgPodGroups.Add(1)
+				wgPods.Add(len(job.PodInfos))
 				if jobIndex, _ := strconv.Atoi(strings.Split(job.Name, "-")[0]); jobIndex%2 == 0 {
 					job.StalenessInfo.TimeStamp = ptr.To(time.Now())
 					job.StalenessInfo.Stale = true
 					job.LastStartTimestamp = ptr.To(time.Now())
 				}
 				Expect(statusUpdater.RecordJobStatusEvent(job)).To(Succeed())
+				for _, task := range job.PodInfos {
+					wgPods.Add(1)
+					statusUpdater.PatchPodLabels(task.Pod, map[string]any{
+						"pod-group-name": job.Name,
+					})
+				}
 			}
 		})
 
@@ -117,7 +141,8 @@ var _ = Describe("Status Updater Concurrency", func() {
 			default:
 				close(finishUpdatesChan)
 			}
-			wg.Wait()
+			wgPodGroups.Wait()
+			wgPods.Wait()
 			close(stopCh)
 		})
 
@@ -149,7 +174,7 @@ var _ = Describe("Status Updater Concurrency", func() {
 
 		It("should clear update cache after it syncs with pods groups that are updated", func() {
 			close(finishUpdatesChan)
-			wg.Wait()
+			wgPodGroups.Wait()
 
 			podGroupsList, _ := kubeAiSchedClient.SchedulingV2alpha2().PodGroups("default").List(context.TODO(), metav1.ListOptions{})
 			podGroupsFromCluster := make([]*schedulingv2alpha2.PodGroup, 0, len(podGroupsList.Items))
@@ -168,7 +193,7 @@ var _ = Describe("Status Updater Concurrency", func() {
 
 		It("should clear pod groups that don't show on sync from inFlight cache", func() {
 			close(finishUpdatesChan)
-			wg.Wait()
+			wgPodGroups.Wait()
 
 			statusUpdater.SyncPodGroupsWithPendingUpdates([]*schedulingv2alpha2.PodGroup{})
 
@@ -181,7 +206,7 @@ var _ = Describe("Status Updater Concurrency", func() {
 
 		It("should accept newer pod group versions as synced", func() {
 			close(finishUpdatesChan)
-			wg.Wait()
+			wgPodGroups.Wait()
 
 			podGroupsList, _ := kubeAiSchedClient.SchedulingV2alpha2().PodGroups("default").List(context.TODO(), metav1.ListOptions{})
 			podGroupsFromCluster := make([]*schedulingv2alpha2.PodGroup, 0, len(podGroupsList.Items))
@@ -212,6 +237,37 @@ var _ = Describe("Status Updater Concurrency", func() {
 				Expect(podGroup.Status.SchedulingConditions).To(BeEmpty())
 			}
 		})
+
+		It("should update snapshot pods", func() {
+			// check that the pods are now not updated anymore
+			statusUpdater.SyncPodsWithPendingUpdates(podsOriginals)
+			for _, pod := range podsOriginals {
+				Expect(len(pod.Status.Conditions)).To(BeEquivalentTo(1))
+				Expect(len(pod.Labels)).To(BeEquivalentTo(2))
+			}
+		})
+
+		It("Do not update status snapshot pods if they are already scheduled", func() {
+			close(finishUpdatesChan)
+			wgPods.Wait()
+
+			scheduledPodsFromCluster := make([]*v1.Pod, 0, len(podsOriginals))
+			for _, pod := range podsOriginals {
+				copy := pod.DeepCopy()
+				copy.Status.Conditions = append(copy.Status.Conditions, v1.PodCondition{
+					Type:   v1.PodScheduled,
+					Status: v1.ConditionTrue,
+				})
+				scheduledPodsFromCluster = append(scheduledPodsFromCluster, copy)
+			}
+			statusUpdater.SyncPodsWithPendingUpdates(scheduledPodsFromCluster)
+
+			statusUpdater.SyncPodsWithPendingUpdates(podsOriginals)
+			for _, pod := range podsOriginals {
+				Expect(pod.Status.Conditions).To(BeEmpty())
+			}
+		})
+
 	})
 
 	Context("large scale: increase queue size", func() {
