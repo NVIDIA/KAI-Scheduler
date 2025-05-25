@@ -27,7 +27,7 @@ func (o *Options) AddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&o.MetricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	fs.StringVar(&o.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	fs.BoolVar(&o.EnableLeaderElection, "leader-elect", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
-	fs.StringVar(&o.NodePoolLabelKey, "nodepool-label-key", "kai.scheduler/node-pool", "The label key for node pools")
+	fs.StringVar(&o.NodePoolLabelKey, "nodepool-label-key", "", "The label key for node pools")
 	fs.IntVar(&o.QPS, "qps", 50, "Queries per second to the K8s API server")
 	fs.IntVar(&o.Burst, "burst", 300, "Burst to the K8s API server")
 	fs.IntVar(&o.MaxConcurrentReconciles, "max-concurrent-reconciles", 10, "Max concurrent reconciles")

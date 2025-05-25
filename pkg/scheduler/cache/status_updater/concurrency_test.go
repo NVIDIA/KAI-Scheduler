@@ -32,6 +32,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
 )
 
+const (
+	nodePoolLabelKey = "kai.scheduler/node-pool"
+)
+
 func TestConcurrency(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Status Updater Concurrency Suite")
@@ -48,7 +52,7 @@ var _ = Describe("Status Updater Concurrency", func() {
 		kubeAiSchedClient = kubeaischedfake.NewSimpleClientset()
 		recorder := record.NewFakeRecorder(100)
 		statusUpdater = New(kubeClient, kubeAiSchedClient, recorder, 4, false,
-			"kai.scheduler/node-pool")
+			nodePoolLabelKey)
 	})
 
 	Context("Pod Groups Syncing", func() {

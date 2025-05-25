@@ -18,6 +18,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
 )
 
+const (
+	nodePoolLabelKey = "kai.scheduler/node-pool"
+)
+
 func TestPodSchedulingConstraintsSignature(t *testing.T) {
 	pod := getRandomPod()
 	pod.Spec.NodeSelector = map[string]string{
@@ -32,7 +36,7 @@ func TestPodSchedulingConstraintsSignature(t *testing.T) {
 					{
 						MatchExpressions: []v1.NodeSelectorRequirement{
 							{
-								Key:      "kai.scheduler/node-pool",
+								Key:      nodePoolLabelKey,
 								Operator: "in",
 								Values:   []string{"node-pool-1"},
 							},

@@ -1902,7 +1902,7 @@ func TestSnapshotPodsInPartition(t *testing.T) {
 		t, clusterObjects,
 		[]runtime.Object{},
 		&conf.SchedulingNodePoolParams{
-			NodePoolLabelKey:   "kai.scheduler/node-pool",
+			NodePoolLabelKey:   NodePoolNameLabel,
 			NodePoolLabelValue: "foo",
 		},
 		true,

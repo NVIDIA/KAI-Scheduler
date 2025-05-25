@@ -103,7 +103,9 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	addNodePoolLabel(metadata, &pod, r.configs.NodePoolLabelKey)
+	if len(r.configs.NodePoolLabelKey) > 0 {
+		addNodePoolLabel(metadata, &pod, r.configs.NodePoolLabelKey)
+	}
 
 	err = r.PodGroupHandler.ApplyToCluster(ctx, *metadata)
 	if err != nil {
