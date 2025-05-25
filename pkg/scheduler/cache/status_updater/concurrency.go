@@ -28,7 +28,7 @@ func (su *defaultStatusUpdater) Run(stopCh <-chan struct{}) {
 func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*enginev2alpha2.PodGroup) {
 	usedKeys := make(map[updatePayloadKey]bool, len(podGroups))
 	for i := range podGroups {
-		key := su.keyForPayload(podGroups[i].Name, podGroups[i].Namespace, podGroups[i].UID)
+		key := su.keyForPodGroupPayload(podGroups[i].Name, podGroups[i].Namespace, podGroups[i].UID)
 		usedKeys[key] = true
 		inflightUpdateAny, found := su.inFlightPodGroups.Load(key)
 		if !found {
@@ -86,8 +86,16 @@ func (su *defaultStatusUpdater) syncPodGroup(inFlightPodGroup, snapshotPodGroup 
 	return lastStartTimestampUpdated && staleTimeStampUpdated && updatedSchedulingCondition
 }
 
-func (su *defaultStatusUpdater) keyForPayload(name, namespace string, uid types.UID) updatePayloadKey {
+func (su *defaultStatusUpdater) keyForPodGroupPayload(name, namespace string, uid types.UID) updatePayloadKey {
 	return updatePayloadKey(types.NamespacedName{Name: name, Namespace: namespace}.String() + "_" + string(uid))
+}
+
+func (su *defaultStatusUpdater) keyForPodStatusPayload(name, namespace string, uid types.UID) updatePayloadKey {
+	return updatePayloadKey(types.NamespacedName{Name: name, Namespace: namespace}.String() + "_" + string(uid) + "-Status")
+}
+
+func (su *defaultStatusUpdater) keyForPodLabelsPayload(name, namespace string, uid types.UID) updatePayloadKey {
+	return updatePayloadKey(types.NamespacedName{Name: name, Namespace: namespace}.String() + "_" + string(uid) + "-Labels")
 }
 
 func (su *defaultStatusUpdater) processPayload(ctx context.Context, payload *updatePayload) {
