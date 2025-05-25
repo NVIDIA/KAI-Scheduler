@@ -49,8 +49,8 @@ import (
 
 const (
 	successErrorMsg     = "SUCCESS"
-	NodePoolNameLabel   = "kai.scheduler/node-pool"
-	DefaultNodePoolName = "default"
+	nodePoolNameLabel   = "kai.scheduler/node-pool"
+	defaultNodePoolName = "default"
 )
 
 func TestSnapshot(t *testing.T) {
@@ -257,7 +257,7 @@ func TestSnapshotNodes(t *testing.T) {
 					ObjectMeta: v1.ObjectMeta{
 						Name: "node-1",
 						Labels: map[string]string{
-							DefaultNodePoolName: "pool-a",
+							defaultNodePoolName: "pool-a",
 						},
 					},
 					Status: v1core.NodeStatus{
@@ -270,7 +270,7 @@ func TestSnapshotNodes(t *testing.T) {
 					ObjectMeta: v1.ObjectMeta{
 						Name: "node-2",
 						Labels: map[string]string{
-							DefaultNodePoolName: "pool-b",
+							defaultNodePoolName: "pool-b",
 						},
 					},
 					Status: v1core.NodeStatus{
@@ -314,7 +314,7 @@ func TestSnapshotNodes(t *testing.T) {
 			clusterInfo := newClusterInfoTestsInner(
 				t, test.objs, []runtime.Object{},
 				&conf.SchedulingNodePoolParams{
-					NodePoolLabelKey:   DefaultNodePoolName,
+					NodePoolLabelKey:   defaultNodePoolName,
 					NodePoolLabelValue: test.nodePoolName,
 				},
 				true,
@@ -673,7 +673,7 @@ func TestBindRequests(t *testing.T) {
 						Name:      "my-pod-1234",
 						Namespace: namespace1,
 						Labels: map[string]string{
-							NodePoolNameLabel: "other-value",
+							nodePoolNameLabel: "other-value",
 						},
 					},
 					Spec: schedulingv1alpha2.BindRequestSpec{
@@ -722,7 +722,7 @@ func TestBindRequests(t *testing.T) {
 						Name:      "my-pod-1234",
 						Namespace: namespace1,
 						Labels: map[string]string{
-							NodePoolNameLabel: "other-value",
+							nodePoolNameLabel: "other-value",
 						},
 					},
 					Spec: schedulingv1alpha2.BindRequestSpec{
@@ -906,7 +906,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 					Status: enginev2alpha2.PodGroupStatus{
 						SchedulingConditions: []enginev2alpha2.SchedulingCondition{
 							{
-								NodePool: DefaultNodePoolName,
+								NodePool: defaultNodePoolName,
 							},
 						},
 					},
@@ -977,7 +977,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 					Status: enginev2alpha2.PodGroupStatus{
 						SchedulingConditions: []enginev2alpha2.SchedulingCondition{
 							{
-								NodePool: DefaultNodePoolName,
+								NodePool: defaultNodePoolName,
 							},
 						},
 					},
@@ -1021,7 +1021,7 @@ func TestSnapshotQueues(t *testing.T) {
 			ObjectMeta: v1.ObjectMeta{
 				Name: "department0-a",
 				Labels: map[string]string{
-					NodePoolNameLabel: "nodepool-a",
+					nodePoolNameLabel: "nodepool-a",
 				},
 			},
 			Spec: enginev2.QueueSpec{
@@ -1068,7 +1068,7 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 		ObjectMeta: v1.ObjectMeta{
 			Name: "department0",
 			Labels: map[string]string{
-				NodePoolNameLabel: "nodepool-a",
+				nodePoolNameLabel: "nodepool-a",
 			},
 		},
 		Spec: enginev2.QueueSpec{
@@ -1088,7 +1088,7 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 		ObjectMeta: v1.ObjectMeta{
 			Name: "queue0",
 			Labels: map[string]string{
-				NodePoolNameLabel: "nodepool-a",
+				nodePoolNameLabel: "nodepool-a",
 			},
 		},
 		Spec: enginev2.QueueSpec{
@@ -1099,7 +1099,7 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 		ObjectMeta: v1.ObjectMeta{
 			Name: "queue1",
 			Labels: map[string]string{
-				NodePoolNameLabel: "nodepool-a",
+				nodePoolNameLabel: "nodepool-a",
 			},
 		},
 		Spec: enginev2.QueueSpec{
@@ -1108,7 +1108,7 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 	}
 	objects := []runtime.Object{parentQueue0, parentQueue1, queue0, queue1}
 	params := &conf.SchedulingNodePoolParams{
-		NodePoolLabelKey:   NodePoolNameLabel,
+		NodePoolLabelKey:   nodePoolNameLabel,
 		NodePoolLabelValue: "nodepool-a"}
 	clusterInfo := newClusterInfoTestsInner(t, []runtime.Object{}, objects, params, false)
 
@@ -1427,7 +1427,7 @@ func TestIsPodGroupUpForScheduler(t *testing.T) {
 		{
 			testName:                "No last scheduling condition - default node pool",
 			schedulingBackoff:       ptr.To(int32(utils.SingleSchedulingBackoff)),
-			nodePoolName:            DefaultNodePoolName,
+			nodePoolName:            defaultNodePoolName,
 			lastSchedulingCondition: nil,
 			expectedResult:          true,
 		},
@@ -1452,7 +1452,7 @@ func TestIsPodGroupUpForScheduler(t *testing.T) {
 		{
 			testName:          "unassigned by condition - default node pool",
 			schedulingBackoff: ptr.To(int32(utils.SingleSchedulingBackoff)),
-			nodePoolName:      DefaultNodePoolName,
+			nodePoolName:      defaultNodePoolName,
 			lastSchedulingCondition: &enginev2alpha2.SchedulingCondition{
 				NodePool: "different-nodepool",
 			},
@@ -1463,16 +1463,16 @@ func TestIsPodGroupUpForScheduler(t *testing.T) {
 			schedulingBackoff: ptr.To(int32(utils.SingleSchedulingBackoff)),
 			nodePoolName:      "nodepoolc",
 			lastSchedulingCondition: &enginev2alpha2.SchedulingCondition{
-				NodePool: DefaultNodePoolName,
+				NodePool: defaultNodePoolName,
 			},
 			expectedResult: true,
 		},
 		{
 			testName:          "unassigned by condition - default node pool",
 			schedulingBackoff: ptr.To(int32(utils.SingleSchedulingBackoff)),
-			nodePoolName:      DefaultNodePoolName,
+			nodePoolName:      defaultNodePoolName,
 			lastSchedulingCondition: &enginev2alpha2.SchedulingCondition{
-				NodePool: DefaultNodePoolName,
+				NodePool: defaultNodePoolName,
 			},
 			expectedResult: false,
 		},
@@ -1626,8 +1626,8 @@ func createFakePodGroup(name string, schedulingBackoff *int32, nodePoolName stri
 			SchedulingConditions: []enginev2alpha2.SchedulingCondition{},
 		},
 	}
-	if nodePoolName != DefaultNodePoolName && nodePoolName != "" {
-		result.Labels[NodePoolNameLabel] = nodePoolName
+	if nodePoolName != defaultNodePoolName && nodePoolName != "" {
+		result.Labels[nodePoolNameLabel] = nodePoolName
 	}
 	if lastSchedulingCondition != nil {
 		result.Status.SchedulingConditions = append(result.Status.SchedulingConditions,
@@ -1823,7 +1823,7 @@ func TestNewClusterInfoAddIndexerFails(t *testing.T) {
 
 func newClusterInfoTests(t *testing.T, kubeObjects, kaiSchedulerObjects []runtime.Object) *ClusterInfo {
 	params := &conf.SchedulingNodePoolParams{
-		NodePoolLabelKey:   NodePoolNameLabel,
+		NodePoolLabelKey:   nodePoolNameLabel,
 		NodePoolLabelValue: "",
 	}
 	return newClusterInfoTestsInner(t, kubeObjects, kaiSchedulerObjects, params, true)
@@ -1862,7 +1862,7 @@ func TestSnapshotPodsInPartition(t *testing.T) {
 			ObjectMeta: v1.ObjectMeta{
 				Name: "node1",
 				Labels: map[string]string{
-					NodePoolNameLabel: "foo",
+					nodePoolNameLabel: "foo",
 				},
 			},
 		},
@@ -1870,7 +1870,7 @@ func TestSnapshotPodsInPartition(t *testing.T) {
 			ObjectMeta: v1.ObjectMeta{
 				Name: "node2",
 				Labels: map[string]string{
-					NodePoolNameLabel: "bar",
+					nodePoolNameLabel: "bar",
 				},
 			},
 		},
@@ -1878,7 +1878,7 @@ func TestSnapshotPodsInPartition(t *testing.T) {
 			ObjectMeta: v1.ObjectMeta{
 				Name: "pod1",
 				Labels: map[string]string{
-					NodePoolNameLabel: "foo",
+					nodePoolNameLabel: "foo",
 				},
 			},
 			Spec: v1core.PodSpec{
@@ -1889,7 +1889,7 @@ func TestSnapshotPodsInPartition(t *testing.T) {
 			ObjectMeta: v1.ObjectMeta{
 				Name: "pod2",
 				Labels: map[string]string{
-					NodePoolNameLabel: "bar",
+					nodePoolNameLabel: "bar",
 				},
 			},
 			Spec: v1core.PodSpec{
@@ -1902,7 +1902,7 @@ func TestSnapshotPodsInPartition(t *testing.T) {
 		t, clusterObjects,
 		[]runtime.Object{},
 		&conf.SchedulingNodePoolParams{
-			NodePoolLabelKey:   NodePoolNameLabel,
+			NodePoolLabelKey:   nodePoolNameLabel,
 			NodePoolLabelValue: "foo",
 		},
 		true,
