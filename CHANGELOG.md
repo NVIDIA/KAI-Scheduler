@@ -17,3 +17,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixes
 - Fixed preempt/reclaim of elastic workloads only taking one pod.
+- Fixed pod status scheduled race condition between the scheduler and the pod binding
