@@ -225,7 +225,9 @@ func (ssn *Session) TaskOrderFn(l, r interface{}) bool {
 	}
 }
 
-func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo) bool {
+func (ssn *Session) QueueOrderFn(
+	lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo,
+) bool {
 	for _, qof := range ssn.QueueOrderFns {
 		if j := qof(lQ, rQ, lJob, rJob, lVictims, rVictims); j != 0 {
 			return j < 0
@@ -233,38 +235,10 @@ func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgr
 	}
 
 	// Queue order not resolved, fallback to job CreationTimestamp first, then by UID.
-	lJ, rJ := ssn.getJobsForQueueOrder(lJob, rJob, lVictims, rVictims)
-	if lJ != nil && rJ != nil {
-		if !lJ.CreationTimestamp.Equal(&rJ.CreationTimestamp) {
-			return lJ.CreationTimestamp.Before(&rJ.CreationTimestamp)
-		}
-		return lJ.UID < rJ.UID
+	if !lJob.CreationTimestamp.Equal(&rJob.CreationTimestamp) {
+		return lJob.CreationTimestamp.Before(&rJob.CreationTimestamp)
 	}
-
-	// Queue CreationTimestamp and UID as final tie-breaker
-	if !lQ.CreationTimestamp.Equal(&rQ.CreationTimestamp) {
-		return lQ.CreationTimestamp.Before(&rQ.CreationTimestamp)
-	}
-	return lQ.UID < rQ.UID
-}
-
-func (ssn *Session) getJobsForQueueOrder(
-	lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo,
-) (*podgroup_info.PodGroupInfo, *podgroup_info.PodGroupInfo) {
-	if lJob != nil && rJob != nil {
-		return lJob, rJob
-	}
-	return ssn.getOldestJob(lVictims), ssn.getOldestJob(rVictims)
-}
-
-func (ssn *Session) getOldestJob(jobs []*podgroup_info.PodGroupInfo) *podgroup_info.PodGroupInfo {
-	var oldest *podgroup_info.PodGroupInfo
-	for _, job := range jobs {
-		if oldest == nil || job.CreationTimestamp.Before(&oldest.CreationTimestamp) {
-			oldest = job
-		}
-	}
-	return oldest
+	return lJob.UID < rJob.UID
 }
 
 func (ssn *Session) IsNonPreemptibleJobOverQueueQuotaFn(job *podgroup_info.PodGroupInfo,

@@ -247,36 +247,27 @@ func (jobsOrder *JobsOrderByQueues) buildFuncOrderBetweenQueuesWithJobs(jobsQueu
 			return reverseOrder // When l has higher priority, return false
 		}
 
-		var lPending, rPending *podgroup_info.PodGroupInfo
-		if !jobsOrder.jobsOrderInitOptions.VictimQueue {
-			lPending = jobsQueueMetadataPerQueue[lQueue.UID].jobsInQueue.Pop().(*podgroup_info.PodGroupInfo)
-			jobsQueueMetadataPerQueue[lQueue.UID].jobsInQueue.Push(lPending)
-			rPending = jobsQueueMetadataPerQueue[rQueue.UID].jobsInQueue.Pop().(*podgroup_info.PodGroupInfo)
-			jobsQueueMetadataPerQueue[rQueue.UID].jobsInQueue.Push(rPending)
-		}
+		var lJob, rJob *podgroup_info.PodGroupInfo
+		lJob = jobsQueueMetadataPerQueue[lQueue.UID].jobsInQueue.Pop().(*podgroup_info.PodGroupInfo)
+		jobsQueueMetadataPerQueue[lQueue.UID].jobsInQueue.Push(lJob)
+		rJob = jobsQueueMetadataPerQueue[rQueue.UID].jobsInQueue.Pop().(*podgroup_info.PodGroupInfo)
+		jobsQueueMetadataPerQueue[rQueue.UID].jobsInQueue.Push(rJob)
 
 		var lVictims, rVictims []*podgroup_info.PodGroupInfo
 		if jobsOrder.jobsOrderInitOptions.VictimQueue {
-			var lPoppedJobs []*podgroup_info.PodGroupInfo
 			if len(jobsOrder.queuePopsMap[lQueue.UID]) > 0 {
-				lPoppedJobs = append(lPoppedJobs, jobsOrder.queuePopsMap[lQueue.UID]...)
+				lVictims = append(lVictims, jobsOrder.queuePopsMap[lQueue.UID]...)
 			}
-			lVictims = append(lPoppedJobs, jobsQueueMetadataPerQueue[lQueue.UID].jobsInQueue.Pop().(*podgroup_info.PodGroupInfo))
-			jobsQueueMetadataPerQueue[lQueue.UID].jobsInQueue.Push(lVictims[len(lVictims)-1])
-
-			var rPoppedJobs []*podgroup_info.PodGroupInfo
 			if len(jobsOrder.queuePopsMap[rQueue.UID]) > 0 {
-				rPoppedJobs = append(rPoppedJobs, jobsOrder.queuePopsMap[rQueue.UID]...)
+				rVictims = append(rVictims, jobsOrder.queuePopsMap[rQueue.UID]...)
 			}
-			rVictims = append(rPoppedJobs, jobsQueueMetadataPerQueue[rQueue.UID].jobsInQueue.Pop().(*podgroup_info.PodGroupInfo))
-			jobsQueueMetadataPerQueue[rQueue.UID].jobsInQueue.Push(rVictims[len(rVictims)-1])
 		}
 
 		if reverseOrder {
-			return !jobsOrder.ssn.QueueOrderFn(lQueue, rQueue, lPending, rPending, lVictims, rVictims)
+			return !jobsOrder.ssn.QueueOrderFn(lQueue, rQueue, lJob, rJob, lVictims, rVictims)
 		}
 
-		return jobsOrder.ssn.QueueOrderFn(lQueue, rQueue, lPending, rPending, lVictims, rVictims)
+		return jobsOrder.ssn.QueueOrderFn(lQueue, rQueue, lJob, rJob, lVictims, rVictims)
 	}
 }
 
@@ -298,37 +289,28 @@ func (jobsOrder *JobsOrderByQueues) buildFuncOrderBetweenDepartmentsWithJobs(rev
 		lJobsInQueue := jobsOrder.queueIdToQueueMetadata[lBestQueue.UID].jobsInQueue
 		rJobsInQueue := jobsOrder.queueIdToQueueMetadata[rBestQueue.UID].jobsInQueue
 
-		var lPending, rPending *podgroup_info.PodGroupInfo
-		if !jobsOrder.jobsOrderInitOptions.VictimQueue {
-			lPending = lJobsInQueue.Pop().(*podgroup_info.PodGroupInfo)
-			lJobsInQueue.Push(lPending)
-			rPending = rJobsInQueue.Pop().(*podgroup_info.PodGroupInfo)
-			rJobsInQueue.Push(rPending)
-		}
+		var lJob, rJob *podgroup_info.PodGroupInfo
+		lJob = lJobsInQueue.Pop().(*podgroup_info.PodGroupInfo)
+		lJobsInQueue.Push(lJob)
+		rJob = rJobsInQueue.Pop().(*podgroup_info.PodGroupInfo)
+		rJobsInQueue.Push(rJob)
 
 		var lVictims, rVictims []*podgroup_info.PodGroupInfo
 		if jobsOrder.jobsOrderInitOptions.VictimQueue {
-			var lPoppedJobs []*podgroup_info.PodGroupInfo
 			if len(jobsOrder.queuePopsMap[lBestQueue.UID]) > 0 {
-				lPoppedJobs = append(lPoppedJobs, jobsOrder.queuePopsMap[lBestQueue.UID]...)
+				lVictims = append(lVictims, jobsOrder.queuePopsMap[lBestQueue.UID]...)
 			}
-			lVictims = append(lPoppedJobs, lJobsInQueue.Pop().(*podgroup_info.PodGroupInfo))
-			lJobsInQueue.Push(lVictims[len(lVictims)-1])
-
-			var rPoppedJobs []*podgroup_info.PodGroupInfo
 			if len(jobsOrder.queuePopsMap[rBestQueue.UID]) > 0 {
-				rPoppedJobs = append(rPoppedJobs, jobsOrder.queuePopsMap[rBestQueue.UID]...)
+				rVictims = append(rVictims, jobsOrder.queuePopsMap[rBestQueue.UID]...)
 			}
-			rVictims = append(rPoppedJobs, rJobsInQueue.Pop().(*podgroup_info.PodGroupInfo))
-			rJobsInQueue.Push(rVictims[len(rVictims)-1])
 		}
 		jobsOrder.departmentIdToDepartmentMetadata[lDepartment.UID].queuesPriorityQueue.Push(lBestQueue)
 		jobsOrder.departmentIdToDepartmentMetadata[rDepartment.UID].queuesPriorityQueue.Push(rBestQueue)
 
 		if reverseOrder {
-			return !jobsOrder.ssn.QueueOrderFn(lDepartment, rDepartment, lPending, rPending, lVictims, rVictims)
+			return !jobsOrder.ssn.QueueOrderFn(lDepartment, rDepartment, lJob, rJob, lVictims, rVictims)
 		}
 
-		return jobsOrder.ssn.QueueOrderFn(lDepartment, rDepartment, lPending, rPending, lVictims, rVictims)
+		return jobsOrder.ssn.QueueOrderFn(lDepartment, rDepartment, lJob, rJob, lVictims, rVictims)
 	}
 }
