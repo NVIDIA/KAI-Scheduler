@@ -35,7 +35,7 @@ import (
 
 type ClusterInfo struct {
 	dataLister               data_lister.DataLister
-	podGroupSync             status_updater.PodGroupsSync
+	inFlightSync             status_updater.InFlightSync
 	nodePoolParams           *conf.SchedulingNodePoolParams
 	restrictNodeScheduling   bool
 	clusterPodAffinityInfo   pod_affinity.ClusterPodAffinityInfo
@@ -59,7 +59,7 @@ func New(
 	clusterPodAffinityInfo pod_affinity.ClusterPodAffinityInfo,
 	includeCSIStorageObjects bool,
 	fullHierarchyFairness bool,
-	podGroupSync status_updater.PodGroupsSync,
+	inFlightSync status_updater.InFlightSync,
 ) (*ClusterInfo, error) {
 	indexers := cache.Indexers{
 		podByPodGroupIndexerName: podByPodGroupIndexer,
@@ -86,7 +86,7 @@ func New(
 		includeCSIStorageObjects: includeCSIStorageObjects,
 		nodePoolSelector:         nodePoolSelector,
 		fairnessLevelType:        fairnessLevelType,
-		podGroupSync:             podGroupSync,
+		inFlightSync:             inFlightSync,
 	}, nil
 }
 
@@ -119,6 +119,9 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 	if err != nil {
 		err = errors.WithStack(fmt.Errorf("error adding tasks to nodes: %c", err))
 		return nil, err
+	}
+	if c.inFlightSync != nil {
+		c.inFlightSync.SyncPodsWithPendingUpdates(snapshot.Pods)
 	}
 
 	queues, err := c.snapshotQueues()
@@ -268,8 +271,8 @@ func (c *ClusterInfo) snapshotPodGroups(
 		err = errors.WithStack(fmt.Errorf("error listing podgroups: %c", err))
 		return nil, err
 	}
-	if c.podGroupSync != nil {
-		c.podGroupSync.SyncPodGroupsWithPendingUpdates(podGroups)
+	if c.inFlightSync != nil {
+		c.inFlightSync.SyncPodGroupsWithPendingUpdates(podGroups)
 	}
 	podGroups = filterUnassignedPodGroups(podGroups)
 

@@ -155,6 +155,14 @@ func (su *defaultStatusUpdater) PatchPodLabels(pod *v1.Pod, labels map[string]an
 		},
 	})
 
+	// This will allow us to sync pods labels updates with the current labels seen in the snapshot
+	if pod.Labels == nil {
+		pod.Labels = make(map[string]string)
+	}
+	for key, value := range labels {
+		pod.Labels[key] = fmt.Sprintf("%v", value)
+	}
+
 	if err != nil {
 		log.InfraLogger.Errorf("Failed to create patch for pod labels <%s/%s>: %v",
 			pod.Namespace, pod.Name, err)
@@ -163,7 +171,7 @@ func (su *defaultStatusUpdater) PatchPodLabels(pod *v1.Pod, labels map[string]an
 
 	su.pushToUpdateQueue(
 		&updatePayload{
-			key:        su.keyForPayload(pod.Name, pod.Namespace, pod.UID) + "-Labels",
+			key:        su.keyForPodLabelsPayload(pod.Name, pod.Namespace, pod.UID),
 			objectType: podType,
 		},
 		&inflightUpdate{
@@ -197,7 +205,7 @@ func (su *defaultStatusUpdater) RecordJobStatusEvent(job *podgroup_info.PodGroup
 	if len(patchData) > 0 || updatePodgroupStatus {
 		su.pushToUpdateQueue(
 			&updatePayload{
-				key:        su.keyForPayload(job.PodGroup.Name, job.PodGroup.Namespace, job.PodGroup.UID),
+				key:        su.keyForPodGroupPayload(job.PodGroup.Name, job.PodGroup.Namespace, job.PodGroup.UID),
 				objectType: podGroupType,
 			},
 			&inflightUpdate{
@@ -274,7 +282,7 @@ func (su *defaultStatusUpdater) updatePodCondition(pod *v1.Pod, condition *v1.Po
 
 		su.pushToUpdateQueue(
 			&updatePayload{
-				key:        su.keyForPayload(pod.Name, pod.Namespace, pod.UID) + "-Status",
+				key:        su.keyForPodStatusPayload(pod.Name, pod.Namespace, pod.UID),
 				objectType: podType,
 			},
 			&inflightUpdate{
@@ -308,6 +316,7 @@ func (su *defaultStatusUpdater) recordUnschedulablePodsEvents(job *podgroup_info
 		msg = addNodePoolPrefixIfNeeded(job, msg)
 		log.InfraLogger.V(6).Infof("setting message for task: %v, %v", taskInfo.Name, msg)
 		updatePodCondition := utils.GetMarkUnschedulableValue(job.PodGroup.Spec.MarkUnschedulable)
+		updatePodCondition = updatePodCondition && !k8s_internal.IsPodScheduled(taskInfo.Pod)
 		if err := su.markTaskUnschedulable(taskInfo.Pod, msg, updatePodCondition); err != nil {
 			errs = append(errs, fmt.Errorf("failed to update unschedulable task status <%s/%s>: %v",
 				taskInfo.Namespace, taskInfo.Name, err))

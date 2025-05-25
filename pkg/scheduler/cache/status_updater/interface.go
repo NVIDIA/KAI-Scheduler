@@ -11,12 +11,13 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 )
 
-type PodGroupsSync interface {
+type InFlightSync interface {
+	SyncPodsWithPendingUpdates(pods []*v1.Pod)
 	SyncPodGroupsWithPendingUpdates(podGroups []*enginev2alpha2.PodGroup)
 }
 
 type Interface interface {
-	PodGroupsSync
+	InFlightSync
 	Evicted(evictedPodGroup *enginev2alpha2.PodGroup, evictionMetadata eviction_info.EvictionMetadata, message string)
 	Bound(pod *v1.Pod, hostname string, bindError error, nodePoolName string) error
 	Pipelined(pod *v1.Pod, message string)
