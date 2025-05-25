@@ -17,3 +17,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixes
 - Fixed preempt/reclaim of elastic workloads only taking one pod.
+- Scheduler now doesn't label pods' nodepool when nodepool label value is empty
