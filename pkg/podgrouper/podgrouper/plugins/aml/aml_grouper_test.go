@@ -13,7 +13,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
-const queueLabelKey = "kai.scheduler/queue"
+const (
+	queueLabelKey    = "kai.scheduler/queue"
+	nodePoolLabelKey = "kai.scheduler/node-pool"
+)
 
 func TestGetPodGroupMetadata(t *testing.T) {
 	owner := &unstructured.Unstructured{
@@ -44,7 +47,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	amlGrouper := NewAmlGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey))
+	amlGrouper := NewAmlGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	podGroupMetadata, err := amlGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -86,7 +89,7 @@ func TestGetPodGroupMetadataWithoutReplicas(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	amlGrouper := NewAmlGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey))
+	amlGrouper := NewAmlGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	_, err := amlGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.NotNil(t, err)

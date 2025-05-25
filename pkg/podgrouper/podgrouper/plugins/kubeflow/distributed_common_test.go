@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	queueLabelKey = "kai.scheduler/queue"
+	queueLabelKey    = "kai.scheduler/queue"
+	nodePoolLabelKey = "kai.scheduler/node-pool"
 )
 
 func TestGetPodGroupMetadata(t *testing.T) {
@@ -49,7 +50,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	grouper := NewKubeflowDistributedGrouper(defaultGrouper)
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(owner, pod,
 		"xReplicaSpecs", []string{"Master"})
@@ -97,7 +98,7 @@ func TestGetPodGroupMetadataOnQueueFromOwner(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	grouper := NewKubeflowDistributedGrouper(defaultGrouper)
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(owner, pod,
 		"xReplicaSpecs", []string{"Master"})
@@ -146,7 +147,7 @@ func TestGetPodGroupMetadataRunPolicy(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	grouper := NewKubeflowDistributedGrouper(defaultGrouper)
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(owner, pod, "xReplicaSpecs", []string{"Master"})
 
@@ -188,7 +189,7 @@ func TestGetPodGroupMetadata_NoPods(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	grouper := NewKubeflowDistributedGrouper(defaultGrouper)
 	_, err := grouper.GetPodGroupMetadata(owner, pod, "xReplicaSpecs", []string{"Master"})
 
@@ -229,7 +230,7 @@ func TestGetPodGroupMetadata_NoMastersAllowed(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	grouper := NewKubeflowDistributedGrouper(defaultGrouper)
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(owner, pod,
 		"xReplicaSpecs", []string{})
@@ -272,7 +273,7 @@ func TestGetPodGroupMetadata_NoMastersForbiden(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	grouper := NewKubeflowDistributedGrouper(defaultGrouper)
 	_, err := grouper.GetPodGroupMetadata(owner, pod,
 		"xReplicaSpecs", []string{"Master"})

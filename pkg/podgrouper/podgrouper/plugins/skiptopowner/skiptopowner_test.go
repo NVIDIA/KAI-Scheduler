@@ -26,8 +26,9 @@ func TestSkipTopOwnerGrouper(t *testing.T) {
 }
 
 const (
-	queueLabelKey = "kai.scheduler/queue"
-	queueName     = "test-queue"
+	queueLabelKey    = "kai.scheduler/queue"
+	nodePoolLabelKey = "kai.scheduler/node-pool"
+	queueName        = "test-queue"
 )
 
 var examplePod = &v1.Pod{
@@ -56,7 +57,7 @@ var _ = Describe("SkipTopOwnerGrouper", func() {
 
 		BeforeEach(func() {
 			client = fake.NewFakeClient()
-			defaultGrouper = defaultgrouper.NewDefaultGrouper(queueLabelKey)
+			defaultGrouper = defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 			supportedTypes = map[metav1.GroupVersionKind]grouper.Grouper{
 				{Group: "", Version: "v1", Kind: "Pod"}: defaultGrouper,
 			}

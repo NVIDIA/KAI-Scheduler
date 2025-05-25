@@ -60,6 +60,7 @@ type defaultStatusUpdater struct {
 	kubeaischedClient kubeaischedulerver.Interface
 	recorder          record.EventRecorder
 	detailedFitErrors bool
+	nodePoolLabelKey  string
 
 	numberOfWorkers   int
 	updateQueueIn     chan *updatePayload
@@ -78,12 +79,14 @@ func New(
 	recorder record.EventRecorder,
 	numberOfWorkers int,
 	detailedFitErrors bool,
+	nodePoolLabelKey string,
 ) *defaultStatusUpdater {
 	return &defaultStatusUpdater{
 		kubeClient:        kubeClient,
 		kubeaischedClient: kubeaischedClient,
 		recorder:          recorder,
 		detailedFitErrors: detailedFitErrors,
+		nodePoolLabelKey:  nodePoolLabelKey,
 
 		numberOfWorkers:   numberOfWorkers,
 		updateQueueIn:     make(chan *updatePayload),
@@ -255,7 +258,7 @@ func (su *defaultStatusUpdater) markPodGroupUnschedulable(job *podgroup_info.Pod
 	}
 	return su.updatePodGroupSchedulingCondition(job.PodGroup, &enginev2alpha2.SchedulingCondition{
 		Type:     enginev2alpha2.UnschedulableOnNodePool,
-		NodePool: utils.GetNodePoolNameFromLabels(job.PodGroup.Labels),
+		NodePool: utils.GetNodePoolNameFromLabels(job.PodGroup.Labels, su.nodePoolLabelKey),
 		Reason:   enginev2alpha2.PodGroupReasonUnschedulable,
 		Message:  message,
 		Status:   v1.ConditionTrue,
@@ -310,7 +313,7 @@ func (su *defaultStatusUpdater) recordUnschedulablePodsEvents(job *podgroup_info
 			msg = fmt.Sprintf("%s", job.JobFitErrors)
 		}
 
-		msg = addNodePoolPrefixIfNeeded(job, msg)
+		msg = su.addNodePoolPrefixIfNeeded(job, msg)
 		log.InfraLogger.V(6).Infof("setting message for task: %v, %v", taskInfo.Name, msg)
 		updatePodCondition := utils.GetMarkUnschedulableValue(job.PodGroup.Spec.MarkUnschedulable)
 		if err := su.markTaskUnschedulable(taskInfo.Pod, msg, updatePodCondition); err != nil {
@@ -348,7 +351,7 @@ func (su *defaultStatusUpdater) recordUnschedulablePodGroup(job *podgroup_info.P
 		msg = fmt.Sprintf("%s", job.JobFitErrors)
 	}
 
-	msg = addNodePoolPrefixIfNeeded(job, msg)
+	msg = su.addNodePoolPrefixIfNeeded(job, msg)
 	return su.markPodGroupUnschedulable(job, msg)
 }
 
@@ -361,10 +364,11 @@ func (su *defaultStatusUpdater) updatePodGroupSchedulingCondition(
 	return setPodGroupSchedulingCondition(podGroup, schedulingCondition)
 }
 
-func addNodePoolPrefixIfNeeded(job *podgroup_info.PodGroupInfo, msg string) string {
+func (su *defaultStatusUpdater) addNodePoolPrefixIfNeeded(job *podgroup_info.PodGroupInfo, msg string) string {
 	schedulingBackoff := utils.GetSchedulingBackoffValue(job.PodGroup.Spec.SchedulingBackoff)
 	if schedulingBackoff == utils.SingleSchedulingBackoff {
-		messagePrefix := fmt.Sprintf("Node-Pool '%s': ", utils.GetNodePoolNameFromLabels(job.PodGroup.Labels))
+		messagePrefix := fmt.Sprintf("Node-Pool '%s': ",
+			utils.GetNodePoolNameFromLabels(job.PodGroup.Labels, su.nodePoolLabelKey))
 		msg = fmt.Sprintf("%s%s", messagePrefix, msg)
 	}
 	return msg

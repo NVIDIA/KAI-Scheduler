@@ -271,7 +271,7 @@ func (c *ClusterInfo) snapshotPodGroups(
 	if c.podGroupSync != nil {
 		c.podGroupSync.SyncPodGroupsWithPendingUpdates(podGroups)
 	}
-	podGroups = filterUnassignedPodGroups(podGroups)
+	podGroups = c.filterUnassignedPodGroups(podGroups)
 
 	result := map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{}
 	for _, podGroup := range podGroups {
@@ -443,10 +443,10 @@ func filterUnmarkedNodes(nodes []*v1.Node) []*v1.Node {
 	return markedNodes
 }
 
-func filterUnassignedPodGroups(podGroups []*enginev2alpha2.PodGroup) []*enginev2alpha2.PodGroup {
+func (c *ClusterInfo) filterUnassignedPodGroups(podGroups []*enginev2alpha2.PodGroup) []*enginev2alpha2.PodGroup {
 	assignedPodGroups := make([]*enginev2alpha2.PodGroup, 0)
 	for _, podGroup := range podGroups {
-		result := isPodGroupUpForScheduler(podGroup)
+		result := c.isPodGroupUpForScheduler(podGroup)
 		if result {
 			assignedPodGroups = append(assignedPodGroups, podGroup)
 		} else {
@@ -457,7 +457,7 @@ func filterUnassignedPodGroups(podGroups []*enginev2alpha2.PodGroup) []*enginev2
 	return assignedPodGroups
 }
 
-func isPodGroupUpForScheduler(podGroup *enginev2alpha2.PodGroup) bool {
+func (c *ClusterInfo) isPodGroupUpForScheduler(podGroup *enginev2alpha2.PodGroup) bool {
 	if utils.GetSchedulingBackoffValue(podGroup.Spec.SchedulingBackoff) == utils.NoSchedulingBackoff {
 		return true
 	}
@@ -467,7 +467,7 @@ func isPodGroupUpForScheduler(podGroup *enginev2alpha2.PodGroup) bool {
 		return true
 	}
 
-	currentNodePoolName := utils.GetNodePoolNameFromLabels(podGroup.Labels)
+	currentNodePoolName := utils.GetNodePoolNameFromLabels(podGroup.Labels, c.nodePoolParams.NodePoolLabelKey)
 	if lastSchedulingCondition.NodePool != currentNodePoolName {
 		return true
 	}

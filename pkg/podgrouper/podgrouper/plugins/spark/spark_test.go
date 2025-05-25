@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	queueLabelKey = "kai.scheduler/queue"
+	queueLabelKey    = "kai.scheduler/queue"
+	nodePoolLabelKey = "kai.scheduler/node-pool"
 )
 
 func TestIsSparkPod(t *testing.T) {
@@ -70,7 +71,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 		Object: rawObjectMap,
 	}
 
-	grouper := NewSparkGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey))
+	grouper := NewSparkGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(unstructuredPod, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, "spark-selector", podGroupMetadata.Name)

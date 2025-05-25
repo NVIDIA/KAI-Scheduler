@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	queueLabelKey = "kai.scheduler/queue"
+	queueLabelKey    = "kai.scheduler/queue"
+	nodePoolLabelKey = "kai.scheduler/node-pool"
 )
 
 func TestLauncherPodExists(t *testing.T) {
@@ -91,7 +92,7 @@ func TestLauncherPodExists(t *testing.T) {
 			_ = v1.AddToScheme(scheme)
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.existingPods...).Build()
 
-			defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+			defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 			kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
 			mg := NewMpiGrouper(fakeClient, kubeFlowGrouper)
 			topOwner := &unstructured.Unstructured{
@@ -212,7 +213,7 @@ func TestHandleDelayedLauncherPolicy(t *testing.T) {
 			_ = v1.AddToScheme(scheme)
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.existingPods...).Build()
 
-			defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+			defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 			kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
 			mg := NewMpiGrouper(fakeClient, kubeFlowGrouper)
 			gp := &podgroup.Metadata{
@@ -394,7 +395,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 			_ = v1.AddToScheme(scheme)
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.existingPods...).Build()
 
-			defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+			defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 			kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
 			mg := NewMpiGrouper(fakeClient, kubeFlowGrouper)
 			metadata, err := mg.GetPodGroupMetadata(tt.topOwner, tt.pod)

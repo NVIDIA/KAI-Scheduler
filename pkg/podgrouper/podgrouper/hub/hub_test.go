@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	queueLabelKey = "kai.scheduler/queue"
+	queueLabelKey    = "kai.scheduler/queue"
+	nodePoolLabelKey = "kai.scheduler/node-pool"
 )
 
 func TestSupportedTypes(t *testing.T) {
@@ -32,7 +33,9 @@ var _ = Describe("SupportedTypes", func() {
 
 		BeforeEach(func() {
 			kubeClient = fake.NewFakeClient()
-			hub = NewPluginsHub(kubeClient, false, false, queueLabelKey)
+			hub = NewPluginsHub(
+				kubeClient, false, false, queueLabelKey, nodePoolLabelKey,
+			)
 		})
 
 		It("should return plugin for exact GVK match", func() {
@@ -66,7 +69,9 @@ var _ = Describe("SupportedTypes", func() {
 
 		BeforeEach(func() {
 			kubeClient = fake.NewFakeClient()
-			hub = NewPluginsHub(kubeClient, false, false, queueLabelKey)
+			hub = NewPluginsHub(
+				kubeClient, false, false, queueLabelKey, nodePoolLabelKey,
+			)
 		})
 
 		It("should successfully retrieve with any version for kind set with wildcard", func() {

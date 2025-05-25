@@ -26,7 +26,6 @@ const (
 	LastStartTimeStamp       = "kai.scheduler/last-start-timestamp"
 
 	// Labels
-	NodePoolNameLabel        = "runai/node-pool"
 	GPUGroup                 = "runai-gpu-group"
 	MultiGpuGroupLabelPrefix = GPUGroup + "/"
 	MigEnabledLabel          = "node-role.kubernetes.io/runai-mig-enabled"

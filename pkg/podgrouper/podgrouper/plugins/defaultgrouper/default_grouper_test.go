@@ -10,8 +10,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	commonconsts "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 func TestGetPodGroupMetadata(t *testing.T) {
@@ -34,7 +32,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -69,7 +67,7 @@ func TestGetPodGroupMetadataOnQueueFromOwnerDefaultNP(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -98,12 +96,12 @@ func TestGetPodGroupMetadataInferQueueFromProjectNodepool(t *testing.T) {
 	pod := &v1.Pod{
 		ObjectMeta: v12.ObjectMeta{
 			Labels: map[string]string{
-				commonconsts.NodePoolNameLabel: "np-1",
+				nodePoolLabelKey: "np-1",
 			},
 		},
 	}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -132,7 +130,7 @@ func TestGetPodGroupMetadataOnQueueFromOwner(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -165,7 +163,7 @@ func TestGetPodGroupMetadataOnQueueFromPod(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -193,7 +191,7 @@ func TestGetPodGroupMetadataOnPriorityClassFromOwner(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -226,7 +224,7 @@ func TestGetPodGroupMetadataOnPriorityClassFromPod(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -257,7 +255,7 @@ func TestGetPodGroupMetadataOnPriorityClassFromPodSpec(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -291,7 +289,7 @@ func TestGetPodGroupMetadata_OwnerUserOverridePodUser(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)

@@ -71,8 +71,8 @@ func (ph *PluginsHub) GetPodGrouperPlugin(gvk metav1.GroupVersionKind) grouper.G
 }
 
 func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
-	gangScheduleKnative bool, queueLabelKey string) *PluginsHub {
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	gangScheduleKnative bool, queueLabelKey, nodePoolLabelKey string) *PluginsHub {
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 
 	kubeFlowDistributedGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
 	mpiGrouper := mpi.NewMpiGrouper(kubeClient, kubeFlowDistributedGrouper)

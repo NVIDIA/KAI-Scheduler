@@ -25,12 +25,14 @@ var (
 )
 
 type DefaultGrouper struct {
-	queueLabelKey string
+	queueLabelKey    string
+	nodePoolLabelKey string
 }
 
-func NewDefaultGrouper(queueLabelKey string) *DefaultGrouper {
+func NewDefaultGrouper(queueLabelKey, nodePoolLabelKey string) *DefaultGrouper {
 	return &DefaultGrouper{
-		queueLabelKey: queueLabelKey,
+		queueLabelKey:    queueLabelKey,
+		nodePoolLabelKey: nodePoolLabelKey,
 	}
 }
 
@@ -106,7 +108,7 @@ func (dg *DefaultGrouper) CalcPodGroupQueue(topOwner *unstructured.Unstructured,
 		return queue
 	}
 
-	queue := calculateQueueName(topOwner, pod)
+	queue := dg.calculateQueueName(topOwner, pod)
 	if queue != "" {
 		return queue
 	}
@@ -114,7 +116,7 @@ func (dg *DefaultGrouper) CalcPodGroupQueue(topOwner *unstructured.Unstructured,
 	return constants.DefaultQueueName
 }
 
-func calculateQueueName(topOwner *unstructured.Unstructured, pod *v1.Pod) string {
+func (dg *DefaultGrouper) calculateQueueName(topOwner *unstructured.Unstructured, pod *v1.Pod) string {
 	project := ""
 	if projectLabel, found := topOwner.GetLabels()[constants.ProjectLabelKey]; found {
 		project = projectLabel
@@ -126,7 +128,7 @@ func calculateQueueName(topOwner *unstructured.Unstructured, pod *v1.Pod) string
 		return ""
 	}
 
-	if nodePool, found := pod.GetLabels()[commonconsts.NodePoolNameLabel]; found {
+	if nodePool, found := pod.GetLabels()[dg.nodePoolLabelKey]; found {
 		return fmt.Sprintf("%s-%s", project, nodePool)
 	}
 

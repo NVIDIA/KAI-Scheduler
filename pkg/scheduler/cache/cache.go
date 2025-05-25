@@ -120,7 +120,10 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 
 	sc.Evictor = evictor.New(sc.kubeClient)
 
-	sc.StatusUpdater = status_updater.New(sc.kubeClient, sc.kubeAiSchedulerClient, recorder, schedulerCacheParams.NumOfStatusRecordingWorkers, sc.detailedFitErrors)
+	sc.StatusUpdater = status_updater.New(
+		sc.kubeClient, sc.kubeAiSchedulerClient, recorder, schedulerCacheParams.NumOfStatusRecordingWorkers,
+		sc.detailedFitErrors, sc.schedulingNodePoolParams.NodePoolLabelKey,
+	)
 
 	sc.informerFactory = informers.NewSharedInformerFactory(sc.kubeClient, 0)
 	sc.kubeAiSchedulerInformerFactory = kubeaischedulerinfo.NewSharedInformerFactory(sc.kubeAiSchedulerClient, 0)

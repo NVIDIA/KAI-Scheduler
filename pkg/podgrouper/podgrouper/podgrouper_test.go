@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	queueLabelKey = "kai.scheduler/queue"
+	queueLabelKey    = "kai.scheduler/queue"
+	nodePoolLabelKey = "kai.scheduler/node-pool"
 )
 
 var pod = v1.Pod{
@@ -119,7 +120,7 @@ func TestNewPodgrouper(t *testing.T) {
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(resources...).Build()
 
 	grouper := podgrouper.NewPodgrouper(client, client, false, true,
-		queueLabelKey)
+		queueLabelKey, nodePoolLabelKey)
 
 	topOwner, owners, err := grouper.GetPodOwners(context.Background(), &pod)
 	assert.Nil(t, err)
@@ -317,6 +318,7 @@ kind: Pod
 				tt.podGrouperOptions.searchForLegacyPodGroups,
 				tt.podGrouperOptions.gangScheduleKnative,
 				queueLabelKey,
+				nodePoolLabelKey,
 			)
 
 			topOwner, owners, err := grouper.GetPodOwners(context.Background(), tt.reconciledPod)

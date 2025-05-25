@@ -22,11 +22,12 @@ import (
 )
 
 const (
-	podName       = "my-pod"
-	jobName       = "cron-27958584"
-	jobUID        = types.UID("123456789")
-	cronjobName   = "cron"
-	queueLabelKey = "kai.scheduler/queue"
+	podName          = "my-pod"
+	jobName          = "cron-27958584"
+	jobUID           = types.UID("123456789")
+	cronjobName      = "cron"
+	queueLabelKey    = "kai.scheduler/queue"
+	nodePoolLabelKey = "kai.scheduler/node-pool"
 )
 
 func TestGetPodGroupMetadata(t *testing.T) {
@@ -66,7 +67,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	assert.Nil(t, err)
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(job).Build()
-	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey))
+	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(cronjob, pod)
 
 	assert.Nil(t, err)
@@ -104,7 +105,7 @@ func TestGetPodGroupMetadataJobOwnerNotFound(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(cronjob).Build()
-	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey))
+	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(cronjob, pod)
 
 	assert.NotNil(t, err)
@@ -143,7 +144,7 @@ func TestGetPodGroupMetadataJobNotExists(t *testing.T) {
 	assert.Nil(t, err)
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(cronjob).Build()
-	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey))
+	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(cronjob, pod)
 	assert.NotNil(t, err)
 	assert.Equal(t, fmt.Sprintf("jobs.batch \"%s\" not found", jobName), err.Error())

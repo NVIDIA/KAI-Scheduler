@@ -47,7 +47,8 @@ var _ = Describe("Status Updater Concurrency", func() {
 		kubeClient = fake.NewSimpleClientset()
 		kubeAiSchedClient = kubeaischedfake.NewSimpleClientset()
 		recorder := record.NewFakeRecorder(100)
-		statusUpdater = New(kubeClient, kubeAiSchedClient, recorder, 4, false)
+		statusUpdater = New(kubeClient, kubeAiSchedClient, recorder, 4, false,
+			"kai.scheduler/node-pool")
 	})
 
 	Context("Pod Groups Syncing", func() {

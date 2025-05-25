@@ -223,9 +223,9 @@ var _ = Describe("Cache", func() {
 	})
 })
 
-func setupCacheWithObjects(snapshot bool, objects []runtime.Object, kubeAiSchedulerObjects ...runtime.Object) (Cache, chan struct{}) {
+func setupCacheWithObjects(snapshot bool, objects []runtime.Object, kaiSchedulerObjects ...runtime.Object) (Cache, chan struct{}) {
 	kubeClient := fake.NewSimpleClientset(objects...)
-	kubeAiSchedulerClient := kubeaischedulerfake.NewSimpleClientset(kubeAiSchedulerObjects...)
+	kubeAiSchedulerClient := kubeaischedulerfake.NewSimpleClientset(kaiSchedulerObjects...)
 
 	cache := New(&SchedulerCacheParams{
 		KubeClient:            kubeClient,

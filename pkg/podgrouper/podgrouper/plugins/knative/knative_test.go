@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	queueLabelKey = "kai.scheduler/queue"
+	queueLabelKey    = "kai.scheduler/queue"
+	nodePoolLabelKey = "kai.scheduler/node-pool"
 )
 
 func TestGetPodGroupMetadata(t *testing.T) {
@@ -96,7 +97,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	assert.Nil(t, err)
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(rev).Build()
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	grouper := NewKnativeGrouper(client, defaultGrouper, true)
 
 	metadata, err := grouper.GetPodGroupMetadata(service, pod)
@@ -179,7 +180,7 @@ func TestGetPodGroupMetadata_MinScale(t *testing.T) {
 	assert.Nil(t, err)
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(rev).Build()
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	grouper := NewKnativeGrouper(client, defaultGrouper, true)
 
 	metadata, err := grouper.GetPodGroupMetadata(service, pod)
@@ -601,7 +602,7 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 			if test.gangSchedule != nil {
 				gangSchedule = *test.gangSchedule
 			}
-			defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey)
+			defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 			grouper := NewKnativeGrouper(client, defaultGrouper, gangSchedule)
 
 			unstructuredService, err := runtime.DefaultUnstructuredConverter.ToUnstructured(test.service)

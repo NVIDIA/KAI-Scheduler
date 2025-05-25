@@ -11,7 +11,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const queueLabelKey = "kai.scheduler/queue"
+const (
+	queueLabelKey    = "kai.scheduler/queue"
+	nodePoolLabelKey = "kai.scheduler/node-pool"
+)
 
 func TestGetPodGroupMetadata_KubeflowPipelineScheduledWorkflow(t *testing.T) {
 	owner := &unstructured.Unstructured{
@@ -54,7 +57,7 @@ func TestGetPodGroupMetadata_KubeflowPipelineScheduledWorkflow(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -126,7 +129,7 @@ func TestGetPodGroupMetadata_ArgoWorkflow(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -195,7 +198,7 @@ func TestGetPodGroupMetadata_Tekton_TaskRun(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -293,7 +296,7 @@ func TestGetPodGroupMetadata_Tekton_PipelineRun(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)

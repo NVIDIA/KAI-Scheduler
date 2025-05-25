@@ -22,7 +22,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 )
 
-const nodePoolKey = "runai/node-pool"
+const nodePoolKey = "kai.scheduler/node-pool"
 
 func TestAddNodePoolLabel(t *testing.T) {
 	metadata := podgroup.Metadata{
