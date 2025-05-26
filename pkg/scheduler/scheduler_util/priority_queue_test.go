@@ -243,3 +243,63 @@ func TestPriorityQueue_Fix(t *testing.T) {
 		})
 	}
 }
+
+func TestPriorityQueue_EmptyAndLen(t *testing.T) {
+	type expected struct {
+		empty bool
+		len   int
+	}
+	tests := []struct {
+		name     string
+		setup    func(*PriorityQueue)
+		expected expected
+	}{
+		{
+			name:  "Empty queue",
+			setup: func(q *PriorityQueue) {},
+			expected: expected{
+				empty: true,
+				len:   0,
+			},
+		},
+		{
+			name: "Queue with one item",
+			setup: func(q *PriorityQueue) {
+				q.Push("test")
+			},
+			expected: expected{
+				empty: false,
+				len:   1,
+			},
+		},
+		{
+			name: "Queue with multiple items",
+			setup: func(q *PriorityQueue) {
+				q.Push("test1")
+				q.Push("test2")
+			},
+			expected: expected{
+				empty: false,
+				len:   2,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lessFn := func(a, b interface{}) bool {
+				return a.(string) < b.(string)
+			}
+			q := NewPriorityQueue(lessFn, QueueCapacityInfinite)
+
+			tt.setup(q)
+
+			if got := q.Empty(); got != tt.expected.empty {
+				t.Errorf("PriorityQueue.Empty() = %v, want %v", got, tt.expected.empty)
+			}
+			if got := q.Len(); got != tt.expected.len {
+				t.Errorf("PriorityQueue.Len() = %v, want %v", got, tt.expected.len)
+			}
+		})
+	}
+}
