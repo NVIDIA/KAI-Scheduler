@@ -131,7 +131,7 @@ func (jobsOrder *JobsOrderByQueues) getNextQueue(department *queue_info.QueueInf
 	queue := jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Peek().(*queue_info.QueueInfo)
 	if jobsOrder.queueIdToQueueMetadata[queue.UID].shouldUpdateQueueShare {
 		jobsOrder.updateTopQueueShare(queue, department)
-		queue = jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Peek().(*queue_info.QueueInfo)
+		return jobsOrder.getNextQueue(department)
 	}
 
 	if jobsOrder.queueIdToQueueMetadata[queue.UID].jobsInQueue.Len() == 0 {
@@ -152,7 +152,7 @@ func (jobsOrder *JobsOrderByQueues) getNextDepartment() *queue_info.QueueInfo {
 	department := jobsOrder.activeDepartments.Peek().(*queue_info.QueueInfo)
 	if jobsOrder.departmentIdToDepartmentMetadata[department.UID].shouldUpdateQueueShare {
 		jobsOrder.updateTopDepartmentShare(department)
-		department = jobsOrder.activeDepartments.Peek().(*queue_info.QueueInfo)
+		return jobsOrder.getNextDepartment()
 	}
 	if jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Empty() {
 		log.InfraLogger.V(7).Warnf("Department: <%v> is active, yet no queues in department", department.Name)
