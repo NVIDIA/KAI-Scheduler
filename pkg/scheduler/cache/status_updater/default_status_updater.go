@@ -142,6 +142,11 @@ func (su *defaultStatusUpdater) Bound(
 	return bindError
 }
 
+func (su *defaultStatusUpdater) PreBind(pod *v1.Pod) {
+	// Delete any pending status updates for this pod - after this binding, they will become no longer relevant
+	su.inFlightPods.Delete(su.keyForPodStatusPayload(pod.Name, pod.Namespace, pod.UID))
+}
+
 func (su *defaultStatusUpdater) Pipelined(pod *v1.Pod, message string) {
 	su.recorder.Eventf(pod, v1.EventTypeNormal, "Pipelined", message)
 }
@@ -163,7 +168,7 @@ func (su *defaultStatusUpdater) PatchPodLabels(pod *v1.Pod, labels map[string]an
 
 	su.pushToUpdateQueue(
 		&updatePayload{
-			key:        su.keyForPayload(pod.Name, pod.Namespace, pod.UID) + "-Labels",
+			key:        su.keyForPodLabelsPayload(pod.Name, pod.Namespace, pod.UID),
 			objectType: podType,
 		},
 		&inflightUpdate{
@@ -201,7 +206,7 @@ func (su *defaultStatusUpdater) RecordJobStatusEvent(job *podgroup_info.PodGroup
 	if len(patchData) > 0 || updatePodgroupStatus {
 		su.pushToUpdateQueue(
 			&updatePayload{
-				key:        su.keyForPayload(job.PodGroup.Name, job.PodGroup.Namespace, job.PodGroup.UID),
+				key:        su.keyForPodGroupPayload(job.PodGroup.Name, job.PodGroup.Namespace, job.PodGroup.UID),
 				objectType: podGroupType,
 			},
 			&inflightUpdate{
@@ -278,7 +283,7 @@ func (su *defaultStatusUpdater) updatePodCondition(pod *v1.Pod, condition *v1.Po
 
 		su.pushToUpdateQueue(
 			&updatePayload{
-				key:        su.keyForPayload(pod.Name, pod.Namespace, pod.UID) + "-Status",
+				key:        su.keyForPodStatusPayload(pod.Name, pod.Namespace, pod.UID),
 				objectType: podType,
 			},
 			&inflightUpdate{
