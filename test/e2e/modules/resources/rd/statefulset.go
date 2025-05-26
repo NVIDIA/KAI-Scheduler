@@ -50,7 +50,7 @@ func CreateStatefulSetObject(namespace, queueName string) *v1.StatefulSet {
 				Spec: v12.PodSpec{
 					Containers: []v12.Container{
 						{
-							Image: "gcr.io/run-ai-lab/ubuntu",
+							Image: "ubuntu",
 							Name:  "ubuntu-container",
 							Args: []string{
 								"sleep",
