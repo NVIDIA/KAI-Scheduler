@@ -217,7 +217,7 @@ func TestPriorityQueue_Fix(t *testing.T) {
 				maxQueueSize: QueueCapacityInfinite,
 			},
 			args: args{
-				previouslyPushed: []*item{&item{Value: 2}, &item{Value: 3}},
+				previouslyPushed: []*item{{Value: 2}, {Value: 3}},
 				valueToFix:       4,
 			},
 			want: want{
