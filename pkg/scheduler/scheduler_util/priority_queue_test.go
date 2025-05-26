@@ -168,6 +168,7 @@ func TestPriorityQueue_Peek(t *testing.T) {
 			for _, queueFill := range tt.args.previouslyPushed {
 				q.Push(queueFill)
 			}
+
 			if q.Len() != tt.want.queueLength {
 				t.Errorf("before peek, queue length got %v, want %v", q.Len(), tt.want.queueLength)
 			}
@@ -179,6 +180,65 @@ func TestPriorityQueue_Peek(t *testing.T) {
 
 			if q.Len() != tt.want.queueLength {
 				t.Errorf("after peek, queue length got %v, want %v", q.Len(), tt.want.queueLength)
+			}
+		})
+	}
+}
+
+func TestPriorityQueue_Fix(t *testing.T) {
+	type item struct {
+		Value int
+	}
+	type fields struct {
+		lessFn       common_info.LessFn
+		maxQueueSize int
+	}
+	type args struct {
+		previouslyPushed []*item
+		valueToFix       int
+	}
+	type want struct {
+		mostPrioritized item
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   want
+	}{
+		{
+			name: "basic fix",
+			fields: fields{
+				lessFn: func(l interface{}, r interface{}) bool {
+					lv := l.(*item)
+					rv := r.(*item)
+					return lv.Value < rv.Value
+				},
+				maxQueueSize: QueueCapacityInfinite,
+			},
+			args: args{
+				previouslyPushed: []*item{&item{Value: 2}, &item{Value: 3}},
+				valueToFix:       4,
+			},
+			want: want{
+				mostPrioritized: item{Value: 3},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q := NewPriorityQueue(tt.fields.lessFn, tt.fields.maxQueueSize)
+			for _, queueFill := range tt.args.previouslyPushed {
+				q.Push(queueFill)
+			}
+
+			firstMostPrioritized := q.Peek().(*item)
+			firstMostPrioritized.Value = tt.args.valueToFix
+			q.Fix(0)
+
+			mostPrioritized := q.Peek().(*item)
+			if !reflect.DeepEqual(*mostPrioritized, tt.want.mostPrioritized) {
+				t.Errorf("got %v, want %v", *mostPrioritized, tt.want.mostPrioritized)
 			}
 		})
 	}
