@@ -293,6 +293,9 @@ func (sc *SchedulerCache) nodePoolLabelsChange(currentLabels map[string]string) 
 	if sc.schedulingNodePoolParams.NodePoolLabelKey == "" {
 		return labels
 	}
+	if sc.schedulingNodePoolParams.NodePoolLabelValue == "" {
+		return labels
+	}
 	if value, found := currentLabels[sc.schedulingNodePoolParams.NodePoolLabelKey]; found && value == sc.schedulingNodePoolParams.NodePoolLabelValue {
 		return labels
 	}

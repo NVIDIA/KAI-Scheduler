@@ -4,10 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [v0.4.9]
+## [v0.4.9] - 2025-05-27
 
 ### Fixed
 - Fixed pod status scheduled race condition between the scheduler and the pod binding
+- Scheduler now doesn't label pods' nodepool when nodepool label value is empty
 
 ## [v0.4.8]
 
