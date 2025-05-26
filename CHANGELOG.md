@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Scheduler now doesn't label pods' nodepool when nodepool label value is empty
+- Fixed pod status scheduled race condition between the scheduler and the pod binding
 
 ## [v0.5.1] - 2025-05-20
 

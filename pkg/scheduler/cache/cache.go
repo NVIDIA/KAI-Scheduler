@@ -223,6 +223,7 @@ func (sc *SchedulerCache) WaitForWorkers(stopCh <-chan struct{}) {
 func (sc *SchedulerCache) Bind(taskInfo *pod_info.PodInfo, hostname string) error {
 	startTime := time.Now()
 	defer metrics.UpdateTaskBindDuration(startTime)
+	sc.StatusUpdater.PreBind(taskInfo.Pod)
 
 	log.InfraLogger.V(3).Infof(
 		"Creating bind request for task <%v/%v> to node <%v> gpuGroup: <%v>, requires: <%v> GPUs",
