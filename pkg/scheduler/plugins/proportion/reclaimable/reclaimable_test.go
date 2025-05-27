@@ -11,7 +11,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/reclaimer_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	rs "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/resource_share"
 
@@ -35,13 +34,13 @@ var _ = Describe("Can Reclaim Resources", func() {
 	Context("Preemptible job", func() {
 		tests := []struct {
 			name          string
-			reclaimerInfo *reclaimer_info.ReclaimerInfo
+			reclaimerInfo *ReclaimerInfo
 			queue         *rs.QueueAttributes
 			canReclaim    bool
 		}{
 			{
 				name: "No allocated resources, below fair share",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1000, 1000, 1),
 					IsPreemptable:     true,
@@ -68,7 +67,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "Some resources allocated, below fair share",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1000, 1000, 1),
 					IsPreemptable:     true,
@@ -95,7 +94,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "Some resources at fair share with job, other stay below",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(500, 1000, 0),
 					IsPreemptable:     true,
@@ -122,7 +121,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "Exactly at fair share with job",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1000, 1000, 1),
 					IsPreemptable:     true,
@@ -149,7 +148,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "Partially above fair share",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1, 1000, 1000),
 					IsPreemptable:     true,
@@ -176,7 +175,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "Fully above fair share",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1, 1000, 1000),
 					IsPreemptable:     true,
@@ -203,7 +202,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "Queue partially above fair share without job resources",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1, 1000, 1000),
 					IsPreemptable:     true,
@@ -249,13 +248,13 @@ var _ = Describe("Can Reclaim Resources", func() {
 	Context("Non-Preemptible job", func() {
 		tests := []struct {
 			name          string
-			reclaimerInfo *reclaimer_info.ReclaimerInfo
+			reclaimerInfo *ReclaimerInfo
 			queue         *rs.QueueAttributes
 			canReclaim    bool
 		}{
 			{
 				name: "No allocated resources, below quota",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1000, 1000, 1),
 					IsPreemptable:     false,
@@ -288,7 +287,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "No allocated resources, exactly at quota",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1000, 1000, 1),
 					IsPreemptable:     false,
@@ -321,7 +320,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "No allocated resources, partially above quota",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1, 1000, 1000),
 					IsPreemptable:     false,
@@ -354,7 +353,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "Some resources allocated, below quota",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1000, 1000, 1),
 					IsPreemptable:     false,
@@ -387,7 +386,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "Some preemptible resources allocated, zero quota",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1, 1000, 1000),
 					IsPreemptable:     false,
@@ -420,7 +419,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "Partially above quota",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1, 1000, 1000),
 					IsPreemptable:     false,
@@ -453,7 +452,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "Fully above quota",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1, 1000, 1000),
 					IsPreemptable:     false,
@@ -486,7 +485,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 			},
 			{
 				name: "Queue partially over quota without job resources",
-				reclaimerInfo: &reclaimer_info.ReclaimerInfo{
+				reclaimerInfo: &ReclaimerInfo{
 					Queue:             "queue1",
 					RequiredResources: resource_info.NewResource(1, 1000, 1000),
 					IsPreemptable:     false,
@@ -538,13 +537,13 @@ var _ = Describe("Can Reclaim Resources", func() {
 
 var _ = Describe("Reclaimable - Single department", func() {
 	var (
-		reclaimerInfo *reclaimer_info.ReclaimerInfo
+		reclaimerInfo *ReclaimerInfo
 		reclaimees    []*podgroup_info.PodGroupInfo
 		queues        map[common_info.QueueID]*rs.QueueAttributes
 		reclaimable   *Reclaimable
 	)
 	BeforeEach(func() {
-		reclaimerInfo = &reclaimer_info.ReclaimerInfo{
+		reclaimerInfo = &ReclaimerInfo{
 			Name:              "reclaimer",
 			Namespace:         "n1",
 			Queue:             "p1",
@@ -690,13 +689,13 @@ var _ = Describe("Reclaimable - Single department", func() {
 
 var _ = Describe("Reclaimable - Multiple departments", func() {
 	var (
-		reclaimerInfo *reclaimer_info.ReclaimerInfo
+		reclaimerInfo *ReclaimerInfo
 		reclaimees    []*podgroup_info.PodGroupInfo
 		queues        map[common_info.QueueID]*rs.QueueAttributes
 		reclaimable   *Reclaimable
 	)
 	BeforeEach(func() {
-		reclaimerInfo = &reclaimer_info.ReclaimerInfo{
+		reclaimerInfo = &ReclaimerInfo{
 			Name:              "reclaimer",
 			Namespace:         "n1",
 			Queue:             "p1",
@@ -804,13 +803,13 @@ var _ = Describe("Reclaimable - Multiple departments", func() {
 
 var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 	var (
-		reclaimerInfo *reclaimer_info.ReclaimerInfo
+		reclaimerInfo *ReclaimerInfo
 		reclaimee     *podgroup_info.PodGroupInfo
 		queuesData    map[common_info.QueueID]queuesTestData
 		reclaimable   *Reclaimable
 	)
 	BeforeEach(func() {
-		reclaimerInfo = &reclaimer_info.ReclaimerInfo{
+		reclaimerInfo = &ReclaimerInfo{
 			Name:              "reclaimer",
 			Namespace:         "n1",
 			Queue:             "left-leaf",
