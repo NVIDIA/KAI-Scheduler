@@ -8,6 +8,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/scenario"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -17,7 +18,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
-type SolutionValidator func(scenario *api.ScenarioInfo) bool
+type SolutionValidator func(scenario api.ScenarioInfo) bool
 
 type simulationVictims struct {
 	preemptedVictims []*pod_info.PodInfo
@@ -175,9 +176,6 @@ func (s *byPodSolver) evictPotentialVictimsFromNode(
 func (s *byPodSolver) handleScenarioSolution(
 	scenario *scenario.ByNodeScenario, statement *framework.Statement, solutionVictims *simulationVictims,
 ) *solutionResult {
-
-	pendingJob := scenario.PendingJob()
-
 	victimsTasks := make([]*pod_info.PodInfo, len(solutionVictims.preemptedVictims))
 	for i := 0; i < len(solutionVictims.preemptedVictims); i++ {
 		victimsTasks[i] = solutionVictims.preemptedVictims[i]
@@ -188,7 +186,7 @@ func (s *byPodSolver) handleScenarioSolution(
 	actualVictimJobs := getVictimJobsFromVictimTasks(victimsTasks, scenario)
 
 	if s.solutionValidator != nil {
-		validSolution := s.solutionValidator(pendingJob, actualVictimJobs, victimsTasks)
+		validSolution := s.solutionValidator(scenario)
 		if !validSolution {
 			statement.Discard()
 			return &solutionResult{false, nil, nil, nil}

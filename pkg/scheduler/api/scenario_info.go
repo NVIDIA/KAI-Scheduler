@@ -9,9 +9,9 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 )
 
-type ScenarioInfo struct {
-	Preemptor *podgroup_info.PodGroupInfo
-	Victims   map[common_info.PodGroupID]*VictimInfo
+type ScenarioInfo interface {
+	GetPreemptor() *podgroup_info.PodGroupInfo
+	GetVictims() map[common_info.PodGroupID]*VictimInfo
 }
 
 type VictimInfo struct {

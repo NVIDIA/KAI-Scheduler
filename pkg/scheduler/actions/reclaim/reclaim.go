@@ -97,19 +97,10 @@ func (ra *reclaimAction) attemptToReclaimForSpecificJob(
 	feasibleNodes := common.FeasibleNodesForJob(maps.Values(ssn.Nodes), reclaimer)
 	solver := solvers.NewJobsSolver(
 		feasibleNodes,
-		reclaimableScenarioCheck(ssn, reclaimer),
+		ssn.ReclaimScenarioValidator,
 		getOrderedVictimsQueue(ssn, reclaimer),
 		framework.Reclaim)
 	return solver.Solve(ssn, reclaimer)
-}
-
-func reclaimableScenarioCheck(ssn *framework.Session,
-	reclaimer *podgroup_info.PodGroupInfo) solvers.SolutionValidator {
-	return func(
-		scenario *api.ScenarioInfo,
-	) bool {
-		return ssn.ReclaimScenarioValidator(scenario)
-	}
 }
 
 func getOrderedVictimsQueue(ssn *framework.Session, reclaimer *podgroup_info.PodGroupInfo) solvers.GenerateVictimsQueue {

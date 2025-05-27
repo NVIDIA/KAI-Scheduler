@@ -25,7 +25,7 @@ type CanReclaimResourcesFn func(reclaimer *podgroup_info.PodGroupInfo) bool
 type VictimFilterFn func(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool
 
 // ScenarioValidatorFn is a function which determines the validity of a scenario.
-type ScenarioValidatorFn func(scenario *ScenarioInfo) bool
+type ScenarioValidatorFn func(scenario ScenarioInfo) bool
 
 // QueueResource is a function which returns the resource of a queue.
 type QueueResource func(*queue_info.QueueInfo) *resource_info.ResourceRequirements

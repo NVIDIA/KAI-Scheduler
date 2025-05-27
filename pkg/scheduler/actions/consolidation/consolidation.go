@@ -9,7 +9,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/utils"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
@@ -115,12 +115,10 @@ func attemptToConsolidatePreemptor(
 	return false, nil
 }
 
-func allPodsReallocated(_ *podgroup_info.PodGroupInfo,
-	consolidatedJobs []*podgroup_info.PodGroupInfo,
-	_ []*pod_info.PodInfo) bool {
-	for _, consolidatedJob := range consolidatedJobs {
-		for _, consolidatedTask := range consolidatedJob.PodInfos {
-			if consolidatedTask.Status == pod_status.Releasing {
+func allPodsReallocated(scenario api.ScenarioInfo) bool {
+	for _, victim := range scenario.GetVictims() {
+		for _, task := range victim.Tasks {
+			if task.Status == pod_status.Releasing {
 				return false
 			}
 		}
