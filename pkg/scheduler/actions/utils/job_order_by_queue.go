@@ -60,12 +60,12 @@ func (jobsOrder *JobsOrderByQueues) PopNextJob() *podgroup_info.PodGroupInfo {
 		return nil
 	}
 
-	department := jobsOrder.popNextDepartment()
+	department := jobsOrder.getNextDepartment()
 	if department == nil {
 		return nil
 	}
 
-	queue := jobsOrder.popNextQueue(department)
+	queue := jobsOrder.getNextQueue(department)
 	if queue == nil {
 		return nil
 	}
@@ -78,8 +78,8 @@ func (jobsOrder *JobsOrderByQueues) PopNextJob() *podgroup_info.PodGroupInfo {
 		jobsOrder.queuePopsMap[queue.UID] = append(jobsOrder.queuePopsMap[queue.UID], job)
 	}
 
-	jobsOrder.updateQueuePriorityQueue(queue, department)
-	jobsOrder.updateDepartmentPriorityQueue(department)
+	jobsOrder.handleJobPopOutOfQueue(queue, department)
+	jobsOrder.handleJobPopOutOfDepartment(department)
 
 	log.InfraLogger.V(7).Infof("Popped job: %v", job.Name)
 	return job
@@ -107,34 +107,31 @@ func (jobsOrder *JobsOrderByQueues) PushJob(job *podgroup_info.PodGroupInfo) {
 		department.Name)
 }
 
-func (jobsOrder *JobsOrderByQueues) updateDepartmentPriorityQueue(department *queue_info.QueueInfo) {
+func (jobsOrder *JobsOrderByQueues) handleJobPopOutOfDepartment(department *queue_info.QueueInfo) {
 	if jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Len() == 0 {
+		jobsOrder.activeDepartments.Pop()
 		delete(jobsOrder.departmentIdToDepartmentMetadata, department.UID)
 		return
 	}
 
-	jobsOrder.activeDepartments.Push(department)
 	jobsOrder.departmentIdToDepartmentMetadata[department.UID].shouldUpdateQueueShare = true
-	log.InfraLogger.V(7).Infof("Pushed department: %v", department.Name)
 }
 
-func (jobsOrder *JobsOrderByQueues) updateQueuePriorityQueue(queue, department *queue_info.QueueInfo) {
+func (jobsOrder *JobsOrderByQueues) handleJobPopOutOfQueue(queue, department *queue_info.QueueInfo) {
 	if jobsOrder.queueIdToQueueMetadata[queue.UID].jobsInQueue.Len() == 0 {
+		jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Pop()
 		delete(jobsOrder.queueIdToQueueMetadata, queue.UID)
 		return
 	}
 
-	jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Push(queue)
 	jobsOrder.queueIdToQueueMetadata[queue.UID].shouldUpdateQueueShare = true
-	log.InfraLogger.V(7).Infof("Pushed queue: %v", queue.Name)
 }
 
-func (jobsOrder *JobsOrderByQueues) popNextQueue(department *queue_info.QueueInfo) *queue_info.QueueInfo {
-	queue := jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Pop().(*queue_info.QueueInfo)
+func (jobsOrder *JobsOrderByQueues) getNextQueue(department *queue_info.QueueInfo) *queue_info.QueueInfo {
+	queue := jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Peek().(*queue_info.QueueInfo)
 	if jobsOrder.queueIdToQueueMetadata[queue.UID].shouldUpdateQueueShare {
-		jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Push(queue)
-		jobsOrder.queueIdToQueueMetadata[queue.UID].shouldUpdateQueueShare = false
-		queue = jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Pop().(*queue_info.QueueInfo)
+		jobsOrder.updateTopQueueShare(queue, department)
+		return jobsOrder.getNextQueue(department)
 	}
 
 	if jobsOrder.queueIdToQueueMetadata[queue.UID].jobsInQueue.Len() == 0 {
@@ -142,16 +139,20 @@ func (jobsOrder *JobsOrderByQueues) popNextQueue(department *queue_info.QueueInf
 		return nil
 	}
 
-	log.InfraLogger.V(7).Infof("Popped queue: %v", queue.Name)
+	log.InfraLogger.V(7).Infof("Get queue: %v", queue.Name)
 	return queue
 }
 
-func (jobsOrder *JobsOrderByQueues) popNextDepartment() *queue_info.QueueInfo {
-	department := jobsOrder.activeDepartments.Pop().(*queue_info.QueueInfo)
+func (jobsOrder *JobsOrderByQueues) updateTopQueueShare(topQueue *queue_info.QueueInfo, department *queue_info.QueueInfo) {
+	jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Fix(0)
+	jobsOrder.queueIdToQueueMetadata[topQueue.UID].shouldUpdateQueueShare = false
+}
+
+func (jobsOrder *JobsOrderByQueues) getNextDepartment() *queue_info.QueueInfo {
+	department := jobsOrder.activeDepartments.Peek().(*queue_info.QueueInfo)
 	if jobsOrder.departmentIdToDepartmentMetadata[department.UID].shouldUpdateQueueShare {
-		jobsOrder.activeDepartments.Push(department)
-		jobsOrder.departmentIdToDepartmentMetadata[department.UID].shouldUpdateQueueShare = false
-		department = jobsOrder.activeDepartments.Pop().(*queue_info.QueueInfo)
+		jobsOrder.updateTopDepartmentShare(department)
+		return jobsOrder.getNextDepartment()
 	}
 	if jobsOrder.departmentIdToDepartmentMetadata[department.UID].queuesPriorityQueue.Empty() {
 		log.InfraLogger.V(7).Warnf("Department: <%v> is active, yet no queues in department", department.Name)
@@ -160,6 +161,11 @@ func (jobsOrder *JobsOrderByQueues) popNextDepartment() *queue_info.QueueInfo {
 
 	log.InfraLogger.V(7).Infof("Popped department: %v", department.Name)
 	return department
+}
+
+func (jobsOrder *JobsOrderByQueues) updateTopDepartmentShare(topDepartment *queue_info.QueueInfo) {
+	jobsOrder.activeDepartments.Fix(0)
+	jobsOrder.departmentIdToDepartmentMetadata[topDepartment.UID].shouldUpdateQueueShare = false
 }
 
 // addJobToQueue adds `job` to the jobs queue, creating that job's queue in the jobs order if needed
