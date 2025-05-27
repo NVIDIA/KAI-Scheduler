@@ -184,7 +184,7 @@ func createExampleRayJob(
 							},
 						},
 						Spec: v1.PodSpec{
-							SchedulerName: constant.RunaiSchedulerName,
+							SchedulerName: constant.SchedulerName,
 							Containers: []v1.Container{
 								{
 									Name:      "ray-head",
@@ -252,7 +252,7 @@ func createExampleRayJob(
 								},
 							},
 							Spec: v1.PodSpec{
-								SchedulerName: constant.RunaiSchedulerName,
+								SchedulerName: constant.SchedulerName,
 								Containers: []v1.Container{
 									{
 										Name:      "ray-worker",

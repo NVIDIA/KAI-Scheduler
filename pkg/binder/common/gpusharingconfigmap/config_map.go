@@ -23,8 +23,6 @@ const (
 	maxVolumeNameLength         = 63
 	configMapNameNumRandomChars = 7
 	configMapNameExtraChars     = configMapNameNumRandomChars + 6
-	runaiVisibleDevices         = "RUNAI-VISIBLE-DEVICES"
-	runaiNumOfGpus              = "RUNAI_NUM_OF_GPUS"
 )
 
 func UpsertJobConfigMap(ctx context.Context,
@@ -217,13 +215,6 @@ func setConfigMapNameAnnotation(pod *v1.Pod, name string) {
 		pod.Annotations = map[string]string{}
 	}
 	pod.Annotations[DesiredConfigMapPrefixKey] = name
-}
-
-func GenerateCapabilitiesConfigMapData() map[string]string {
-	data := make(map[string]string)
-	data[runaiVisibleDevices] = ""
-	data[runaiNumOfGpus] = ""
-	return data
 }
 
 // ownerReferencesDifferent compares two OwnerReferences and returns true if they are not the same

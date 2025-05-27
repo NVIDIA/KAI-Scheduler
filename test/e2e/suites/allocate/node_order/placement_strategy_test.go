@@ -69,13 +69,13 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 	Context("Bin Packing", func() {
 		BeforeAll(func(ctx context.Context) {
 			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, binPackingPluginName); err != nil {
-				Fail(fmt.Sprintf("Failed to patch runai config with bin packing plugin: %v", err))
+				Fail(fmt.Sprintf("Failed to patch scheduler config with bin packing plugin: %v", err))
 			}
 		})
 
 		AfterAll(func(ctx context.Context) {
 			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, defaultPluginName); err != nil {
-				Fail(fmt.Sprintf("Failed to patch runai config with default plugin: %v", err))
+				Fail(fmt.Sprintf("Failed to patch scheduler config with default plugin: %v", err))
 			}
 		})
 
@@ -142,13 +142,13 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 	Context("Spreading", func() {
 		BeforeAll(func(ctx context.Context) {
 			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, spreadingPluginName); err != nil {
-				Fail(fmt.Sprintf("Failed to patch runai config with spreading plugin: %v", err))
+				Fail(fmt.Sprintf("Failed to patch scheduler config with spreading plugin: %v", err))
 			}
 		})
 
 		AfterAll(func(ctx context.Context) {
 			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, defaultPluginName); err != nil {
-				Fail(fmt.Sprintf("Failed to patch runai config with default plugin: %v", err))
+				Fail(fmt.Sprintf("Failed to patch scheduler config with default plugin: %v", err))
 			}
 		})
 

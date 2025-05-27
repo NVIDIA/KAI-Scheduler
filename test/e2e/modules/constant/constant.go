@@ -8,7 +8,7 @@ package constant
 const (
 	NvidiaGPUMemoryLabelName        = "nvidia.com/gpu.memory"
 	NodeNamePodLabelName            = "kubernetes.io/hostname"
-	RunaiSchedulerName              = "kai-scheduler"
+	SchedulerName                   = "kai-scheduler"
 	SystemPodsNamespace             = "kai-scheduler"
 	NonPreemptiblePriorityThreshold = 100
 	EngineTestPodsApp               = "engine-e2e"

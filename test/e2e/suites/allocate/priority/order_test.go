@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	runaiPriorityLabelName = "priorityClassName"
+	priorityClassLabelName = "priorityClassName"
 )
 
 var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered, func() {
@@ -81,7 +81,7 @@ var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered,
 				constants.GpuResource: resource.MustParse("1"),
 			},
 		})
-		lowPod.Labels[runaiPriorityLabelName] = lowPriority
+		lowPod.Labels[priorityClassLabelName] = lowPriority
 		_, err := rd.CreatePod(ctx, testCtx.KubeClientset, lowPod)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -90,7 +90,7 @@ var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered,
 				constants.GpuResource: resource.MustParse("1"),
 			},
 		})
-		highPod.Labels[runaiPriorityLabelName] = highPriority
+		highPod.Labels[priorityClassLabelName] = highPriority
 		_, err = rd.CreatePod(ctx, testCtx.KubeClientset, highPod)
 		Expect(err).NotTo(HaveOccurred())
 

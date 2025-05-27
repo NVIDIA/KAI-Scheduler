@@ -49,6 +49,9 @@ func GetGPUMemory(pod *v1.Pod) (int64, error) {
 }
 
 func GetNumGPUFractionDevices(pod *v1.Pod) (int64, error) {
+	if pod.Annotations == nil {
+		return 0, fractionDevicesAnnotationNotFound
+	}
 	mumDevicesStr, found := pod.Annotations[constants.GpuFractionsNumDevices]
 	if !found {
 		_, foundFraction := pod.Annotations[constants.GpuFraction]

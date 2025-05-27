@@ -72,10 +72,10 @@ func TestGetPodGroupMetadata_Hpo(t *testing.T) {
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects().Build()
 
 	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
-	runaiJobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
+	jobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
 
-	podGroupMetadata, err := runaiJobGrouper.GetPodGroupMetadata(owner, pod)
-	podGroupMetadata2, err2 := runaiJobGrouper.GetPodGroupMetadata(owner, pod2)
+	podGroupMetadata, err := jobGrouper.GetPodGroupMetadata(owner, pod)
+	podGroupMetadata2, err2 := jobGrouper.GetPodGroupMetadata(owner, pod2)
 
 	assert.Nil(t, err)
 	assert.Nil(t, err2)
@@ -122,7 +122,7 @@ func TestGetPodGroupMetadata_LegacyPodGroup(t *testing.T) {
 		},
 	}
 
-	var runaiTestResources = []runtime.Object{
+	var testResources = []runtime.Object{
 		&schedulingv2.PodGroup{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "PodGroup",
@@ -146,12 +146,12 @@ func TestGetPodGroupMetadata_LegacyPodGroup(t *testing.T) {
 		t.Fail()
 	}
 
-	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(runaiTestResources...).Build()
+	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testResources...).Build()
 
 	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
-	runaiJobGrouper := NewK8sJobGrouper(client, defaultGrouper, true)
+	jobGrouper := NewK8sJobGrouper(client, defaultGrouper, true)
 
-	podGroupMetadata, err := runaiJobGrouper.GetPodGroupMetadata(owner, pod)
+	podGroupMetadata, err := jobGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "pg-test_name-4kgrb-1234-5678", podGroupMetadata.Name)
@@ -195,7 +195,7 @@ func TestGetPodGroupMetadata_LegacyDisabledPodGroup(t *testing.T) {
 		},
 	}
 
-	var runaiTestResources = []runtime.Object{
+	var testResources = []runtime.Object{
 		&schedulingv2.PodGroup{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "PodGroup",
@@ -219,12 +219,12 @@ func TestGetPodGroupMetadata_LegacyDisabledPodGroup(t *testing.T) {
 		t.Fail()
 	}
 
-	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(runaiTestResources...).Build()
+	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testResources...).Build()
 
 	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
-	runaiJobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
+	jobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
 
-	podGroupMetadata, err := runaiJobGrouper.GetPodGroupMetadata(owner, pod)
+	podGroupMetadata, err := jobGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "pg-test_name-4kgrb-1234-5678", podGroupMetadata.Name)
@@ -268,7 +268,7 @@ func TestGetPodGroupMetadata_LegacyNotFound(t *testing.T) {
 		},
 	}
 
-	var runaiTestResources = []runtime.Object{}
+	var testResources = []runtime.Object{}
 
 	scheme := runtime.NewScheme()
 	err := schedulingv2.AddToScheme(scheme)
@@ -276,12 +276,12 @@ func TestGetPodGroupMetadata_LegacyNotFound(t *testing.T) {
 		t.Fail()
 	}
 
-	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(runaiTestResources...).Build()
+	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testResources...).Build()
 
 	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
-	runaiJobGrouper := NewK8sJobGrouper(client, defaultGrouper, true)
+	jobGrouper := NewK8sJobGrouper(client, defaultGrouper, true)
 
-	podGroupMetadata, err := runaiJobGrouper.GetPodGroupMetadata(owner, pod)
+	podGroupMetadata, err := jobGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "pg-test_name-4kgrb-1234-5678", podGroupMetadata.Name)
@@ -334,9 +334,9 @@ func TestGetPodGroupMetadata_RegularPodGroup(t *testing.T) {
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects().Build()
 
 	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
-	runaiJobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
+	jobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
 
-	podGroupMetadata, err := runaiJobGrouper.GetPodGroupMetadata(owner, pod)
+	podGroupMetadata, err := jobGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "pg-test_name-4kgrb-1234-5678", podGroupMetadata.Name)

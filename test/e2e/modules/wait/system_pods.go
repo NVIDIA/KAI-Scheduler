@@ -20,7 +20,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait/watcher"
 )
 
-func ForRunaiComponentPod(
+func ForKaiComponentPod(
 	ctx context.Context, client runtimeClient.WithWatch,
 	appLabelComponentName string, condition checkCondition,
 ) {
@@ -46,7 +46,7 @@ func ForRunningSystemComponentEvent(ctx context.Context, client runtimeClient.Wi
 		objPod := &podListObj.Items[0]
 		return rd.IsPodRunning(objPod)
 	}
-	ForRunaiComponentPod(ctx, client, appLabelComponentName, runningCondition)
+	ForKaiComponentPod(ctx, client, appLabelComponentName, runningCondition)
 }
 
 func PatchSystemDeploymentFeatureFlags(

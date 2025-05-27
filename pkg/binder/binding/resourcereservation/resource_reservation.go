@@ -40,7 +40,6 @@ const (
 	numberOfGPUsToReserve          = 1
 	reservationPodRandomCharacters = 5
 	unknownGpuIndicator            = "-1"
-	nodeIndex                      = "runai-node"
 )
 
 type service struct {
@@ -231,19 +230,14 @@ func (rsc *service) updatePodGPUGroup(
 		"namespace", pod.Namespace, "name", pod.Name, "node", nodeName,
 		"gpu-group", gpuGroup)
 	originalPod := pod.DeepCopy()
-	if pod.Annotations == nil {
-		pod.Annotations = map[string]string{}
+	if pod.Labels == nil {
+		pod.Labels = map[string]string{}
 	}
-	pod.Annotations[nodeIndex] = nodeName
-
 	isMultiFraction, err := resources.IsMultiFraction(pod)
 	if err != nil {
 		return fmt.Errorf(
-			"failed to determine is the pod <%s/%s> is a multi fractional pod while setting gpu group label. %w",
+			"failed to determine if pod <%s/%s> is a multi fractional pod while setting gpu group label. %w",
 			pod.Namespace, pod.Name, err)
-	}
-	if pod.Labels == nil {
-		pod.Labels = map[string]string{}
 	}
 	if isMultiFraction {
 		labelKey, labelValue := resources.GetMultiFractionGpuGroupLabel(gpuGroup)

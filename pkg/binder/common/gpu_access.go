@@ -16,7 +16,7 @@ func AddVisibleDevicesEnvVars(container *v1.Container, sharedGpuConfigMapName st
 		Name: NvidiaVisibleDevices,
 		ValueFrom: &v1.EnvVarSource{
 			ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-				Key: RunaiVisibleDevices,
+				Key: VisibleDevices,
 				LocalObjectReference: v1.LocalObjectReference{
 					Name: sharedGpuConfigMapName,
 				},
@@ -25,10 +25,10 @@ func AddVisibleDevicesEnvVars(container *v1.Container, sharedGpuConfigMapName st
 	})
 
 	AddEnvVarToContainer(container, v1.EnvVar{
-		Name: RunaiNumOfGpus,
+		Name: NumOfGpusEnvVar,
 		ValueFrom: &v1.EnvVarSource{
 			ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-				Key: RunaiNumOfGpus,
+				Key: NumOfGpusEnvVar,
 				LocalObjectReference: v1.LocalObjectReference{
 					Name: sharedGpuConfigMapName,
 				},
@@ -41,7 +41,7 @@ func SetNvidiaVisibleDevices(ctx context.Context, kubeClient client.Client, pod 
 	container *v1.Container, visibleDevicesValue string) error {
 	nvidiaVisibleDevicesDefinedInSpec := false
 	for _, envVar := range container.Env {
-		if envVar.Name == RunaiNumOfGpus && envVar.ValueFrom != nil &&
+		if envVar.Name == NumOfGpusEnvVar && envVar.ValueFrom != nil &&
 			envVar.ValueFrom.ConfigMapKeyRef != nil {
 			nvidiaVisibleDevicesDefinedInSpec = true
 		}
@@ -53,7 +53,7 @@ func SetNvidiaVisibleDevices(ctx context.Context, kubeClient client.Client, pod 
 		}
 		err = UpdateConfigMapEnvironmentVariable(ctx, kubeClient, pod, capabilitiesMapName,
 			func(data map[string]string) error {
-				data[RunaiVisibleDevices] = visibleDevicesValue
+				data[VisibleDevices] = visibleDevicesValue
 				return nil
 			})
 		return err
@@ -75,7 +75,7 @@ func SetNumOfGPUDevices(
 	ctx context.Context, kubeClient client.Client, pod *v1.Pod, container *v1.Container, numOfGPUs string,
 ) error {
 	updateFunc := func(data map[string]string) error {
-		data[RunaiNumOfGpus] = numOfGPUs
+		data[NumOfGpusEnvVar] = numOfGPUs
 		return nil
 	}
 	configMapName, err := GetConfigMapName(pod, container)

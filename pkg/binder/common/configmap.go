@@ -43,7 +43,7 @@ func getConfigMapByMounts(pod *v1.Pod, container *v1.Container) string {
 
 func getConfigMapNameByEnvVar(container *v1.Container) string {
 	for _, envVar := range container.Env {
-		if envVar.Name == RunaiNumOfGpus && envVar.ValueFrom != nil &&
+		if envVar.Name == NumOfGpusEnvVar && envVar.ValueFrom != nil &&
 			envVar.ValueFrom.ConfigMapKeyRef != nil {
 			return envVar.ValueFrom.ConfigMapKeyRef.Name
 		}

@@ -42,7 +42,7 @@ var happyFlowObjectsBc = []runtime.Object{
 			Containers: []v1.Container{{
 				Env: []v1.EnvVar{
 					{
-						Name: common.RunaiNumOfGpus,
+						Name: common.NumOfGpusEnvVar,
 						ValueFrom: &v1.EnvVarSource{
 							ConfigMapKeyRef: &v1.ConfigMapKeySelector{
 								LocalObjectReference: v1.LocalObjectReference{
@@ -217,8 +217,8 @@ var _ = Describe("FractionBinder", func() {
 				if err := fakeClient.Get(context.TODO(), client.ObjectKeyFromObject(configMap), configMap); err != nil {
 					Fail(fmt.Sprintf("Failed to read configmap: %v", err))
 				} else {
-					Expect(configMap.Data[common.RunaiVisibleDevices]).To(Equal(testData.gpuIndexByGroupIndex))
-					Expect(configMap.Data[common.RunaiNumOfGpus]).To(Equal("0.5"))
+					Expect(configMap.Data[common.VisibleDevices]).To(Equal(testData.gpuIndexByGroupIndex))
+					Expect(configMap.Data[common.NumOfGpusEnvVar]).To(Equal("0.5"))
 				}
 			})
 		}

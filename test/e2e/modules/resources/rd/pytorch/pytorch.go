@@ -78,7 +78,7 @@ func GetPodTemplate(queueName, matchLabelValue string) corev1.PodTemplateSpec {
 		},
 		Spec: corev1.PodSpec{
 			RestartPolicy:                 corev1.RestartPolicyNever,
-			SchedulerName:                 constant.RunaiSchedulerName,
+			SchedulerName:                 constant.SchedulerName,
 			TerminationGracePeriodSeconds: pointer.Int64(0),
 			Containers: []corev1.Container{
 				{

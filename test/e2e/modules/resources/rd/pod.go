@@ -158,7 +158,7 @@ func CreatePodObject(podQueue *v2.Queue, resources v1.ResourceRequirements) *v1.
 				},
 			},
 			TerminationGracePeriodSeconds: ptr.To(int64(0)),
-			SchedulerName:                 constant.RunaiSchedulerName,
+			SchedulerName:                 constant.SchedulerName,
 			Tolerations: []v1.Toleration{
 				{
 					Key:      "nvidia.com/gpu",

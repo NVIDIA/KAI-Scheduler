@@ -83,7 +83,7 @@ func TestBindApplyResourceReceivedType(t *testing.T) {
 							Name: common.NvidiaVisibleDevices,
 							ValueFrom: &v1.EnvVarSource{
 								ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-									Key: common.RunaiVisibleDevices,
+									Key: common.VisibleDevices,
 									LocalObjectReference: v1.LocalObjectReference{
 										Name: "my-config",
 									},
@@ -91,10 +91,10 @@ func TestBindApplyResourceReceivedType(t *testing.T) {
 							},
 						},
 						{
-							Name: common.RunaiNumOfGpus,
+							Name: common.NumOfGpusEnvVar,
 							ValueFrom: &v1.EnvVarSource{
 								ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-									Key: common.RunaiNumOfGpus,
+									Key: common.NumOfGpusEnvVar,
 									LocalObjectReference: v1.LocalObjectReference{
 										Name: "my-config",
 									},

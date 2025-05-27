@@ -14,19 +14,19 @@ import (
 	"k8s.io/client-go/kubernetes"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	runaiClient "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
+	kaiClient "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 func WaitForPodGroupsToBeReady(
 	ctx context.Context,
 	kubeClientset *kubernetes.Clientset,
-	runaiClientset *runaiClient.Clientset,
+	kaiClientset *kaiClient.Clientset,
 	controllerClient runtimeClient.WithWatch,
 	namespace string,
 	numPodGroups int) {
 	Eventually(func(g Gomega) {
-		podGroups, err := runaiClientset.SchedulingV2alpha2().PodGroups(namespace).List(
+		podGroups, err := kaiClientset.SchedulingV2alpha2().PodGroups(namespace).List(
 			ctx, metav1.ListOptions{},
 		)
 		g.Expect(err).To(Succeed())

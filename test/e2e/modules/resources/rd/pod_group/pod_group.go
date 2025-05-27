@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	runaiClient "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
+	kaiClient "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -59,7 +59,7 @@ func DeleteAllInNamespace(
 	return runtimeClient.IgnoreNotFound(err)
 }
 
-func CreateWithPods(ctx context.Context, client *kubernetes.Clientset, runaiClient *runaiClient.Clientset,
+func CreateWithPods(ctx context.Context, client *kubernetes.Clientset, kaiClient *kaiClient.Clientset,
 	podGroupName string, q *v2.Queue, numPods int, priorityClassName *string,
 	requirements v1.ResourceRequirements) (*v2alpha2.PodGroup, []*v1.Pod) {
 	namespace := queue.GetConnectedNamespaceToQueue(q)
@@ -67,7 +67,7 @@ func CreateWithPods(ctx context.Context, client *kubernetes.Clientset, runaiClie
 	if priorityClassName != nil {
 		podGroup.Spec.PriorityClassName = *priorityClassName
 	}
-	podGroup, err := runaiClient.SchedulingV2alpha2().PodGroups(namespace).Create(ctx, podGroup, metav1.CreateOptions{})
+	podGroup, err := kaiClient.SchedulingV2alpha2().PodGroups(namespace).Create(ctx, podGroup, metav1.CreateOptions{})
 	Expect(err).To(Succeed())
 
 	var pods []*v1.Pod

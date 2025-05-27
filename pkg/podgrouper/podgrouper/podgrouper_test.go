@@ -76,7 +76,7 @@ var podJobSpawn = v1.Pod{
 	Status: v1.PodStatus{},
 }
 
-var runaiTestResources = []runtime.Object{
+var testResources = []runtime.Object{
 	&unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"kind":       "RunaiJob",
@@ -116,7 +116,7 @@ func TestNewPodgrouper(t *testing.T) {
 		t.Fail()
 	}
 
-	resources := append(nativeK8sTestResources, runaiTestResources...)
+	resources := append(nativeK8sTestResources, testResources...)
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(resources...).Build()
 
 	grouper := podgrouper.NewPodgrouper(client, client, false, true,

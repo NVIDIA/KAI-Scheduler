@@ -47,7 +47,7 @@ func CreateCronJobObject(namespace, queueName string) *batchv1.CronJob {
 						},
 						Spec: v1.PodSpec{
 							RestartPolicy:                 v1.RestartPolicyNever,
-							SchedulerName:                 constant.RunaiSchedulerName,
+							SchedulerName:                 constant.SchedulerName,
 							TerminationGracePeriodSeconds: pointer.Int64(0),
 							Containers: []v1.Container{
 								{

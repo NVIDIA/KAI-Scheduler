@@ -5,8 +5,8 @@ package common
 
 const (
 	NvidiaVisibleDevices = "NVIDIA_VISIBLE_DEVICES"
-	RunaiVisibleDevices  = "RUNAI-VISIBLE-DEVICES"
-	RunaiNumOfGpus       = "RUNAI_NUM_OF_GPUS"
+	VisibleDevices       = "RUNAI-VISIBLE-DEVICES"
+	NumOfGpusEnvVar      = "RUNAI_NUM_OF_GPUS"
 	ReceivedTypeFraction = "Fraction"
 	ReceivedTypeRegular  = "Regular"
 )

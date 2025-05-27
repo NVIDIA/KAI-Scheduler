@@ -120,7 +120,7 @@ func TestGetPodGroupMetadata_LegacyPodGroup(t *testing.T) {
 		},
 	}
 
-	var runaiTestResources = []runtime.Object{
+	var testResources = []runtime.Object{
 		&schedulingv2.PodGroup{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "PodGroup",
@@ -144,7 +144,7 @@ func TestGetPodGroupMetadata_LegacyPodGroup(t *testing.T) {
 		t.Fail()
 	}
 
-	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(runaiTestResources...).Build()
+	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testResources...).Build()
 
 	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	runaiJobGrouper := NewRunaiJobGrouper(client, defaultGrouper, true)
@@ -193,7 +193,7 @@ func TestGetPodGroupMetadata_LegacyDisabledPodGroup(t *testing.T) {
 		},
 	}
 
-	var runaiTestResources = []runtime.Object{
+	var testResources = []runtime.Object{
 		&schedulingv2.PodGroup{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "PodGroup",
@@ -217,7 +217,7 @@ func TestGetPodGroupMetadata_LegacyDisabledPodGroup(t *testing.T) {
 		t.Fail()
 	}
 
-	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(runaiTestResources...).Build()
+	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testResources...).Build()
 
 	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	runaiJobGrouper := NewRunaiJobGrouper(client, defaultGrouper, false)
@@ -266,7 +266,7 @@ func TestGetPodGroupMetadata_LegacyNotFound(t *testing.T) {
 		},
 	}
 
-	var runaiTestResources = []runtime.Object{}
+	var testResources = []runtime.Object{}
 
 	scheme := runtime.NewScheme()
 	err := schedulingv2.AddToScheme(scheme)
@@ -274,7 +274,7 @@ func TestGetPodGroupMetadata_LegacyNotFound(t *testing.T) {
 		t.Fail()
 	}
 
-	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(runaiTestResources...).Build()
+	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testResources...).Build()
 
 	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	runaiJobGrouper := NewRunaiJobGrouper(client, defaultGrouper, true)

@@ -60,7 +60,7 @@ func CreateStatefulSetObject(namespace, queueName string) *v1.StatefulSet {
 						},
 					},
 					TerminationGracePeriodSeconds: pointer.Int64(0),
-					SchedulerName:                 constant.RunaiSchedulerName,
+					SchedulerName:                 constant.SchedulerName,
 					Tolerations: []v12.Toleration{
 						{
 							Key:      "nvidia.com/gpu",

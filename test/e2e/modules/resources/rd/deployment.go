@@ -58,7 +58,7 @@ func CreateDeploymentObject(namespace, queueName string) *appsv1.Deployment {
 						},
 					},
 					TerminationGracePeriodSeconds: ptr.To(int64(0)),
-					SchedulerName:                 constant.RunaiSchedulerName,
+					SchedulerName:                 constant.SchedulerName,
 					Tolerations: []v1.Toleration{
 						{
 							Key:      "nvidia.com/gpu",

@@ -295,7 +295,7 @@ func getKnativeServiceObject(serviceName, namespace, queueName string) *knatives
 					},
 					Spec: knativeserving.RevisionSpec{
 						PodSpec: corev1.PodSpec{
-							SchedulerName:                 constant.RunaiSchedulerName,
+							SchedulerName:                 constant.SchedulerName,
 							TerminationGracePeriodSeconds: ptr.Int64(0),
 							Containers: []corev1.Container{
 								{
