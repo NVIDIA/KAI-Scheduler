@@ -6,20 +6,26 @@ package scenario
 import (
 	"strings"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
 
+var _ api.ScenarioInfo = &BaseScenario{}
+
 type BaseScenario struct {
 	session *framework.Session
 
+	preemptor             *podgroup_info.PodGroupInfo
 	pendingTasks          []*pod_info.PodInfo
-	pendingTasksAsJob     *podgroup_info.PodGroupInfo
 	potentialVictimsTasks []*pod_info.PodInfo
 	recordedVictimsJobs   []*podgroup_info.PodGroupInfo
 	recordedVictimsTasks  []*pod_info.PodInfo
+
+	// Deprecated: Use preemptor instead
+	pendingTasksAsJob *podgroup_info.PodGroupInfo
 
 	victimsJobsTaskGroups map[common_info.PodGroupID][]*podgroup_info.PodGroupInfo
 }
@@ -30,6 +36,7 @@ func NewBaseScenario(
 ) *BaseScenario {
 	s := &BaseScenario{
 		session:               session,
+		preemptor:             session.PodGroupInfos[pendingTasksAsJob.UID],
 		pendingTasks:          make([]*pod_info.PodInfo, 0),
 		pendingTasksAsJob:     pendingTasksAsJob,
 		potentialVictimsTasks: make([]*pod_info.PodInfo, 0),
@@ -57,10 +64,12 @@ func NewBaseScenario(
 	return s
 }
 
+// Deprecated: Use GetPreemptor instead
 func (s *BaseScenario) PendingTasks() []*pod_info.PodInfo {
 	return s.pendingTasks
 }
 
+// Deprecated: Use GetPreemptor instead
 func (s *BaseScenario) PendingJob() *podgroup_info.PodGroupInfo {
 	return s.pendingTasksAsJob
 }
@@ -154,4 +163,41 @@ func (s *BaseScenario) String() string {
 
 func (s *BaseScenario) getJobForTask(task *pod_info.PodInfo) *podgroup_info.PodGroupInfo {
 	return s.session.PodGroupInfos[task.Job]
+}
+
+func (s *BaseScenario) GetPreemptor() *podgroup_info.PodGroupInfo {
+	return s.preemptor
+}
+
+func (s *BaseScenario) GetVictims() map[common_info.PodGroupID]*api.VictimInfo {
+	victims := make(map[common_info.PodGroupID]*api.VictimInfo)
+
+	// Process recorded victims
+	for _, victimJob := range s.recordedVictimsJobs {
+		var tasks []*pod_info.PodInfo
+		for _, podInfo := range victimJob.PodInfos {
+			tasks = append(tasks, podInfo)
+		}
+		victimInfo := &api.VictimInfo{
+			Job:               victimJob,
+			RepresentativeJob: s.GetVictimJobRepresentativeById(tasks[0]),
+			Tasks:             tasks,
+		}
+		victims[victimJob.UID] = victimInfo
+	}
+
+	// Process potential victims
+	for _, victimTask := range s.potentialVictimsTasks {
+		if _, exists := victims[victimTask.Job]; !exists {
+			job := s.getJobForTask(victimTask)
+			victimInfo := &api.VictimInfo{
+				Job:               job,
+				RepresentativeJob: s.GetVictimJobRepresentativeById(victimTask),
+				Tasks:             []*pod_info.PodInfo{victimTask},
+			}
+			victims[victimTask.Job] = victimInfo
+		}
+	}
+
+	return victims
 }
