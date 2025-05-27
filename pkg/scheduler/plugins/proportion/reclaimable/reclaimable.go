@@ -7,7 +7,6 @@ import (
 	"math"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/reclaimer_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/reclaimable/strategies"
@@ -26,7 +25,7 @@ func New(isInferencePreemptible bool, taskOrderFunc common_info.LessFn) *Reclaim
 
 func (r *Reclaimable) CanReclaimResources(
 	queues map[common_info.QueueID]*rs.QueueAttributes,
-	reclaimer *reclaimer_info.ReclaimerInfo,
+	reclaimer *ReclaimerInfo,
 ) bool {
 	reclaimerQueue := queues[reclaimer.Queue]
 	requestedResources := utils.QuantifyResource(reclaimer.RequiredResources)
@@ -52,7 +51,7 @@ func (r *Reclaimable) CanReclaimResources(
 
 func (r *Reclaimable) Reclaimable(
 	queues map[common_info.QueueID]*rs.QueueAttributes,
-	reclaimer *reclaimer_info.ReclaimerInfo,
+	reclaimer *ReclaimerInfo,
 	reclaimeeResourcesByQueue map[common_info.QueueID][]*resource_info.Resource,
 ) bool {
 	reclaimable, reclaimedQueuesRemainingResources :=
@@ -65,7 +64,7 @@ func (r *Reclaimable) Reclaimable(
 
 func (r *Reclaimable) reclaimResourcesFromReclaimees(
 	queues map[common_info.QueueID]*rs.QueueAttributes,
-	reclaimer *reclaimer_info.ReclaimerInfo,
+	reclaimer *ReclaimerInfo,
 	reclaimeesResourcesByQueue map[common_info.QueueID][]*resource_info.Resource,
 ) (
 	bool, map[common_info.QueueID]rs.ResourceQuantities,
@@ -116,7 +115,7 @@ func (r *Reclaimable) subtractReclaimedResources(
 
 func (r *Reclaimable) reclaimingQueuesRemainWithinBoundaries(
 	queues map[common_info.QueueID]*rs.QueueAttributes,
-	reclaimer *reclaimer_info.ReclaimerInfo,
+	reclaimer *ReclaimerInfo,
 	remainingResourcesMap map[common_info.QueueID]rs.ResourceQuantities,
 ) bool {
 

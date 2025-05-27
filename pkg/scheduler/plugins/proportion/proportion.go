@@ -7,6 +7,7 @@ import (
 	"math"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -14,7 +15,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/reclaimer_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
@@ -99,20 +99,18 @@ func (pp *proportionPlugin) CanReclaimResourcesFn(reclaimer *podgroup_info.PodGr
 }
 
 func (pp *proportionPlugin) reclaimableFn(
-	reclaimer *podgroup_info.PodGroupInfo,
-	reclaimees []*podgroup_info.PodGroupInfo,
-	_ []*pod_info.PodInfo,
+	scenario api.ScenarioInfo,
 ) bool {
-	reclaimerInfo := pp.buildReclaimerInfo(reclaimer)
+	reclaimerInfo := pp.buildReclaimerInfo(scenario.GetPreemptor())
 	totalVictimsResources := make(map[common_info.QueueID][]*resource_info.Resource)
-	for _, jobTaskGroup := range reclaimees {
+	for _, victim := range scenario.GetVictims() {
 		totalJobResources := resource_info.EmptyResource()
-		for _, task := range jobTaskGroup.PodInfos {
+		for _, task := range victim.Tasks {
 			totalJobResources.AddResourceRequirements(task.AcceptedResource)
 		}
 
-		totalVictimsResources[jobTaskGroup.Queue] = append(
-			totalVictimsResources[jobTaskGroup.Queue],
+		totalVictimsResources[victim.Job.Queue] = append(
+			totalVictimsResources[victim.Job.Queue],
 			totalJobResources,
 		)
 	}
@@ -184,8 +182,8 @@ func (pp *proportionPlugin) createQueueAttributes(ssn *framework.Session) {
 	pp.setFairShare()
 }
 
-func (pp *proportionPlugin) buildReclaimerInfo(reclaimer *podgroup_info.PodGroupInfo) *reclaimer_info.ReclaimerInfo {
-	return &reclaimer_info.ReclaimerInfo{
+func (pp *proportionPlugin) buildReclaimerInfo(reclaimer *podgroup_info.PodGroupInfo) *rec.ReclaimerInfo {
+	return &rec.ReclaimerInfo{
 		Name:          reclaimer.Name,
 		Namespace:     reclaimer.Namespace,
 		Queue:         reclaimer.Queue,
