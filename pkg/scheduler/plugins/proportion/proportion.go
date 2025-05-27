@@ -7,6 +7,7 @@ import (
 	"math"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -98,18 +99,18 @@ func (pp *proportionPlugin) CanReclaimResourcesFn(reclaimer *podgroup_info.PodGr
 }
 
 func (pp *proportionPlugin) reclaimableFn(
-	scenario *api.ScenarioInfo,
+	scenario api.ScenarioInfo,
 ) bool {
-	reclaimerInfo := pp.buildReclaimerInfo(reclaimer)
+	reclaimerInfo := pp.buildReclaimerInfo(scenario.GetPreemptor())
 	totalVictimsResources := make(map[common_info.QueueID][]*resource_info.Resource)
-	for _, jobTaskGroup := range reclaimees {
+	for _, victim := range scenario.GetVictims() {
 		totalJobResources := resource_info.EmptyResource()
-		for _, task := range jobTaskGroup.PodInfos {
+		for _, task := range victim.Tasks {
 			totalJobResources.AddResourceRequirements(task.AcceptedResource)
 		}
 
-		totalVictimsResources[jobTaskGroup.Queue] = append(
-			totalVictimsResources[jobTaskGroup.Queue],
+		totalVictimsResources[victim.Job.Queue] = append(
+			totalVictimsResources[victim.Job.Queue],
 			totalJobResources,
 		)
 	}
