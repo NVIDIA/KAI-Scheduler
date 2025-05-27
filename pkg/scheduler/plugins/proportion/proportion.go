@@ -98,9 +98,7 @@ func (pp *proportionPlugin) CanReclaimResourcesFn(reclaimer *podgroup_info.PodGr
 }
 
 func (pp *proportionPlugin) reclaimableFn(
-	reclaimer *podgroup_info.PodGroupInfo,
-	reclaimees []*podgroup_info.PodGroupInfo,
-	_ []*pod_info.PodInfo,
+	scenario *api.ScenarioInfo,
 ) bool {
 	reclaimerInfo := pp.buildReclaimerInfo(reclaimer)
 	totalVictimsResources := make(map[common_info.QueueID][]*resource_info.Resource)

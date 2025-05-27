@@ -17,11 +17,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
-type SolutionValidator func(
-	pendingJob *podgroup_info.PodGroupInfo,
-	victimJobs []*podgroup_info.PodGroupInfo,
-	victimTasks []*pod_info.PodInfo,
-) bool
+type SolutionValidator func(scenario *api.ScenarioInfo) bool
 
 type simulationVictims struct {
 	preemptedVictims []*pod_info.PodInfo
