@@ -17,6 +17,7 @@ import (
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
@@ -36,9 +37,17 @@ func LogClusterState(client runtimeClient.WithWatch, logger logr.Logger) {
 		constants.AppLabelName: "engine-e2e",
 	}))
 	if err != nil {
+		logger.Error(err, "Failed to get e2e pods")
 		return
 	}
 	logger.Info(fmt.Sprintf("Falied test cluster state - E2e pods: \n%v", podListPrinting(e2ePods)))
+
+	podGroups := &schedulingv2alpha2.PodGroupList{}
+	err = client.List(context.Background(), podGroups)
+	if err != nil {
+		logger.Error(err, "Failed to get e2e podgroups")
+	}
+	logger.Info(fmt.Sprintf("Falied test cluster state - E2e podgroups: \n%v", podGroupListPrinting(podGroups)))
 }
 
 func podListPrinting(podList *v1.PodList) string {
@@ -66,4 +75,15 @@ func podListPrinting(podList *v1.PodList) string {
 	}
 
 	return podListRepresentationString.String()
+}
+
+func podGroupListPrinting(podGroupList *schedulingv2alpha2.PodGroupList) string {
+	var podGroupListRepresentationString strings.Builder
+
+	for _, podGroup := range podGroupList.Items {
+		podGroupListRepresentationString.WriteString(fmt.Sprintf("Namespace: %s, Name: %s, Queue: %s, Status: %s\nConditions: %v\n",
+			podGroup.Namespace, podGroup.Name, podGroup.Spec.Queue, podGroup.Status.Phase, podGroup.Status.Conditions))
+	}
+
+	return podGroupListRepresentationString.String()
 }

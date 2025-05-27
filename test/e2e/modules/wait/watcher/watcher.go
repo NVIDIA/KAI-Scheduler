@@ -56,6 +56,7 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 
 	for {
 		select {
+
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.Canceled) {
 				logger.Error(ctx.Err(), "WaitForEvent has been canceled")
