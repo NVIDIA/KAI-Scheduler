@@ -10,7 +10,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
@@ -107,10 +106,9 @@ func (ra *reclaimAction) attemptToReclaimForSpecificJob(
 func reclaimableScenarioCheck(ssn *framework.Session,
 	reclaimer *podgroup_info.PodGroupInfo) solvers.SolutionValidator {
 	return func(
-		_ *podgroup_info.PodGroupInfo,
-		victimJobs []*podgroup_info.PodGroupInfo,
-		victimTasks []*pod_info.PodInfo) bool {
-		return ssn.ReclaimScenarioValidator(reclaimer, victimJobs, victimTasks)
+		scenario *api.ScenarioInfo,
+	) bool {
+		return ssn.ReclaimScenarioValidator(scenario)
 	}
 }
 
