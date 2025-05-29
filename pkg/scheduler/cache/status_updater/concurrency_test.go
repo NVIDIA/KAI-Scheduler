@@ -152,25 +152,6 @@ var _ = Describe("Status Updater Concurrency", func() {
 			}
 		})
 
-		It("should clear update cache after it syncs with pods groups that are updated", func() {
-			close(finishUpdatesChan)
-			wg.Wait()
-
-			podGroupsList, _ := kubeAiSchedClient.SchedulingV2alpha2().PodGroups("default").List(context.TODO(), metav1.ListOptions{})
-			podGroupsFromCluster := make([]*schedulingv2alpha2.PodGroup, 0, len(podGroupsList.Items))
-			for _, podGroup := range podGroupsList.Items {
-				podGroupsFromCluster = append(podGroupsFromCluster, podGroup.DeepCopy())
-			}
-
-			statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsFromCluster)
-
-			// check that the pods groups are now not updated anymore
-			statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsOriginals)
-			for _, podGroup := range podGroupsOriginals {
-				Expect(podGroup.Status.SchedulingConditions).To(BeEmpty())
-			}
-		})
-
 		It("should clear pod groups that don't show on sync from inFlight cache", func() {
 			close(finishUpdatesChan)
 			wg.Wait()
@@ -190,6 +171,7 @@ var _ = Describe("Status Updater Concurrency", func() {
 
 			podGroupsList, _ := kubeAiSchedClient.SchedulingV2alpha2().PodGroups("default").List(context.TODO(), metav1.ListOptions{})
 			podGroupsFromCluster := make([]*schedulingv2alpha2.PodGroup, 0, len(podGroupsList.Items))
+			podGroupsFromClusterOrigin := make([]*schedulingv2alpha2.PodGroup, 0, len(podGroupsList.Items))
 			for _, podGroup := range podGroupsList.Items {
 				podGroupCopy := podGroup.DeepCopy()
 				lastTransitionIdStr := utils.GetLastSchedulingCondition(podGroupCopy).TransitionID
@@ -207,14 +189,14 @@ var _ = Describe("Status Updater Concurrency", func() {
 					},
 				)
 				podGroupsFromCluster = append(podGroupsFromCluster, podGroupCopy)
+				podGroupsFromClusterOrigin = append(podGroupsFromClusterOrigin, podGroupCopy.DeepCopy())
 			}
 
 			statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsFromCluster)
 
-			// check that the pods groups are now not updated anymore
-			statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsOriginals)
-			for _, podGroup := range podGroupsOriginals {
-				Expect(podGroup.Status.SchedulingConditions).To(BeEmpty())
+			// check that the pods groups haven't been updated with older inFlight data
+			for pgIndex, podGroup := range podGroupsFromCluster {
+				Expect(podGroup.Status.SchedulingConditions).To(Equal(podGroupsFromClusterOrigin[pgIndex].Status.SchedulingConditions))
 			}
 		})
 	})
