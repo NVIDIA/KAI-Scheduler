@@ -35,10 +35,7 @@ func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*eng
 			continue
 		}
 		podGroup := inflightUpdateAny.(*inflightUpdate).object.(*enginev2alpha2.PodGroup)
-		isPodGroupUpdated := su.syncPodGroup(podGroup, podGroups[i])
-		if isPodGroupUpdated {
-			su.inFlightPodGroups.Delete(key)
-		}
+		su.syncPodGroup(podGroup, podGroups[i])
 	}
 
 	// Cleanup podGroups that don't comeup anymore
@@ -50,20 +47,14 @@ func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*eng
 	})
 }
 
-func (su *defaultStatusUpdater) syncPodGroup(inFlightPodGroup, snapshotPodGroup *enginev2alpha2.PodGroup) bool {
-	staleTimeStampUpdated := false
-	if snapshotPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp] == inFlightPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp] {
-		staleTimeStampUpdated = true
-	} else {
+func (su *defaultStatusUpdater) syncPodGroup(inFlightPodGroup, snapshotPodGroup *enginev2alpha2.PodGroup) {
+	if snapshotPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp] != inFlightPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp] {
 		if snapshotPodGroup.Annotations == nil {
 			snapshotPodGroup.Annotations = make(map[string]string)
 		}
 		snapshotPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp] = inFlightPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp]
 	}
-	lastStartTimestampUpdated := false
-	if snapshotPodGroup.Annotations[commonconstants.LastStartTimeStamp] == inFlightPodGroup.Annotations[commonconstants.LastStartTimeStamp] {
-		lastStartTimestampUpdated = true
-	} else {
+	if snapshotPodGroup.Annotations[commonconstants.LastStartTimeStamp] != inFlightPodGroup.Annotations[commonconstants.LastStartTimeStamp] {
 		if snapshotPodGroup.Annotations == nil {
 			snapshotPodGroup.Annotations = make(map[string]string)
 		}
@@ -83,7 +74,6 @@ func (su *defaultStatusUpdater) syncPodGroup(inFlightPodGroup, snapshotPodGroup 
 	if !updatedSchedulingCondition {
 		snapshotPodGroup.Status.SchedulingConditions = inFlightPodGroup.Status.SchedulingConditions
 	}
-	return lastStartTimestampUpdated && staleTimeStampUpdated && updatedSchedulingCondition
 }
 
 func (su *defaultStatusUpdater) keyForPodGroupPayload(name, namespace string, uid types.UID) updatePayloadKey {
@@ -101,6 +91,7 @@ func (su *defaultStatusUpdater) keyForPodLabelsPayload(name, namespace string, u
 func (su *defaultStatusUpdater) processPayload(ctx context.Context, payload *updatePayload) {
 	updateData, found := su.loadInflighUpdate(payload)
 	if !found {
+		log.StatusUpdaterLogger.V(6).Info("No inflight update found for %s", payload.key)
 		return
 	}
 
