@@ -65,20 +65,25 @@ var _ = Describe("Leader worker set Integration", Ordered, func() {
 			},
 		}
 		numOfGroups := 2
+		numWorkersReplicasPerGroup := 2
 
 		lwsJob, expectedPodsPerGrop := createExampleLWS(
 			testCtx.Queues[0], numOfGroups,
-			singleGPURequest, singleGPURequest, 2,
+			singleGPURequest, singleGPURequest, numWorkersReplicasPerGroup,
 		)
 		Expect(testCtx.ControllerClient.Create(ctx, lwsJob)).To(Succeed())
 		defer func() {
 			Expect(testCtx.ControllerClient.Delete(ctx, lwsJob)).To(Succeed())
 		}()
+
 		Eventually(func(g Gomega) bool {
 			podGroups := &v2alpha2.PodGroupList{}
 			testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(lwsJob.Namespace))
 
 			g.Expect(len(podGroups.Items)).To(Equal(numOfGroups))
+			for _, podGroup := range podGroups.Items {
+				g.Expect(podGroup.Spec.MinMember).To(Equal(int32(numWorkersReplicasPerGroup + 1)))
+			}
 			return true
 		}, time.Minute).Should(BeTrue())
 		Eventually(func(g Gomega) bool {
@@ -88,6 +93,52 @@ var _ = Describe("Leader worker set Integration", Ordered, func() {
 			g.Expect(len(pods.Items)).To(Equal(expectedPodsPerGrop * numOfGroups))
 			for _, pod := range pods.Items {
 				g.Expect(rd.IsPodReady(&pod)).To(BeTrue())
+			}
+			return true
+		}, time.Minute).Should(BeTrue())
+	})
+
+	It("Leader worker set - handle leader ready before workers startup policy", func(ctx context.Context) {
+		singleGPURequest := v1.ResourceRequirements{
+			Limits: v1.ResourceList{
+				constants.GpuResource: resource.MustParse("1"),
+			},
+			Requests: v1.ResourceList{
+				constants.GpuResource: resource.MustParse("1"),
+			},
+		}
+		numOfGroups := 2
+		numWorkersReplicasPerGroup := 2
+
+		lwsJob, expectedPodsPerGrop := createExampleLWS(
+			testCtx.Queues[0], numOfGroups,
+			singleGPURequest, singleGPURequest, numWorkersReplicasPerGroup,
+		)
+		lwsJob.Spec.StartupPolicy = lws.LeaderReadyStartupPolicy
+		Expect(testCtx.ControllerClient.Create(ctx, lwsJob)).To(Succeed())
+		defer func() {
+			Expect(testCtx.ControllerClient.Delete(ctx, lwsJob)).To(Succeed())
+		}()
+
+		Eventually(func(g Gomega) bool {
+			pods := &v1.PodList{}
+			testCtx.ControllerClient.List(ctx, pods, runtimeClient.InNamespace(lwsJob.Namespace))
+
+			g.Expect(len(pods.Items)).To(Equal(expectedPodsPerGrop * numOfGroups))
+			for _, pod := range pods.Items {
+				g.Expect(rd.IsPodReady(&pod)).To(BeTrue())
+			}
+			return true
+		}, time.Minute).Should(BeTrue())
+
+		// At first the podgrpup min member is 1 per podGroup, later changes to numWorkersReplicasPerGroup + 1
+		Eventually(func(g Gomega) bool {
+			podGroups := &v2alpha2.PodGroupList{}
+			testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(lwsJob.Namespace))
+
+			g.Expect(len(podGroups.Items)).To(Equal(numOfGroups))
+			for _, podGroup := range podGroups.Items {
+				g.Expect(podGroup.Spec.MinMember).To(Equal(int32(numWorkersReplicasPerGroup + 1)))
 			}
 			return true
 		}, time.Minute).Should(BeTrue())
