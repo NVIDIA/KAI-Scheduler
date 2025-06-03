@@ -37,8 +37,8 @@ func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*eng
 		podGroup := pgLatestUpdate.object.(*enginev2alpha2.PodGroup)
 		podGroupMatchesUpdate := su.syncPodGroup(podGroup, podGroups[i])
 		// Delete the inflight update if it was applied + the pod group in the lister matches the inFlight
-		if podGroupMatchesUpdate {
-			su.cleanPgUpdatesCaching(key, appliedUpdateFound)
+		if podGroupMatchesUpdate && appliedUpdateFound {
+			su.appliedPodGroupUpdates.Delete(key)
 		}
 	}
 
