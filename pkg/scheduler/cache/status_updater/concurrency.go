@@ -58,12 +58,6 @@ func (su *defaultStatusUpdater) getLatestPgUpdate(key updatePayloadKey) (*inflig
 	return pgLatestUpdate, inFlightUpdateFound, appliedUpdateFound
 }
 
-func (su *defaultStatusUpdater) cleanPgUpdatesCaching(key updatePayloadKey, appliedUpdateFound bool) {
-	if appliedUpdateFound {
-		su.appliedPodGroupUpdates.Delete(key)
-	}
-}
-
 func (su *defaultStatusUpdater) cleanUpdatesForNonSeenPodGroups(usedKeys map[updatePayloadKey]bool) {
 	su.inFlightPodGroups.Range(func(key any, _ any) bool {
 		if _, found := usedKeys[key.(updatePayloadKey)]; !found {
