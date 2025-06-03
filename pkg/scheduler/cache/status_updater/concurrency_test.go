@@ -305,11 +305,4 @@ var _ = Describe("Status Updater Concurrency", func() {
 			wg.Wait()
 		})
 	})
-
-	Context("Payload processing", func() {
-		It("pod group payload should be applied only once", func() {
-
-		})
-
-	})
 })

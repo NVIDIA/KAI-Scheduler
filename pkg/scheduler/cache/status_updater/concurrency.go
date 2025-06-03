@@ -30,15 +30,15 @@ func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*eng
 	for i := range podGroups {
 		key := su.keyForPodGroupPayload(podGroups[i].Name, podGroups[i].Namespace, podGroups[i].UID)
 		usedKeys[key] = true
-		pgLatestUpdate, inFlightUpdatefound, appliedUpdateFound := su.getLatestPgUpdate(key)
-		if !inFlightUpdatefound && !appliedUpdateFound {
+		pgLatestUpdate, inFlightUpdateFound, appliedUpdateFound := su.getLatestPgUpdate(key)
+		if !inFlightUpdateFound && !appliedUpdateFound {
 			continue
 		}
 		podGroup := pgLatestUpdate.object.(*enginev2alpha2.PodGroup)
 		podGroupMatchesUpdate := su.syncPodGroup(podGroup, podGroups[i])
 		// Delete the inflight update if it was applied + the pod group in the lister matches the inFlight
 		if podGroupMatchesUpdate {
-			su.cleanPgUpdatesCaching(key, inFlightUpdatefound, appliedUpdateFound)
+			su.cleanPgUpdatesCaching(key, appliedUpdateFound)
 		}
 	}
 
@@ -47,21 +47,18 @@ func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*eng
 }
 
 func (su *defaultStatusUpdater) getLatestPgUpdate(key updatePayloadKey) (*inflightUpdate, bool, bool) {
-	inflightPgUpdate, inFlightUpdatefound := su.inFlightPodGroups.Load(key)
+	inflightPgUpdate, inFlightUpdateFound := su.inFlightPodGroups.Load(key)
 	appliedPgUpdate, appliedUpdateFound := su.appliedPodGroupUpdates.Load(key)
 	var pgLatestUpdate *inflightUpdate
-	if inFlightUpdatefound {
+	if inFlightUpdateFound {
 		pgLatestUpdate = inflightPgUpdate.(*inflightUpdate)
 	} else if appliedUpdateFound {
 		pgLatestUpdate = appliedPgUpdate.(*inflightUpdate)
 	}
-	return pgLatestUpdate, inFlightUpdatefound, appliedUpdateFound
+	return pgLatestUpdate, inFlightUpdateFound, appliedUpdateFound
 }
 
-func (su *defaultStatusUpdater) cleanPgUpdatesCaching(key updatePayloadKey, inFlightUpdatefound, appliedUpdateFound bool) {
-	if inFlightUpdatefound {
-		su.inFlightPodGroups.Delete(key)
-	}
+func (su *defaultStatusUpdater) cleanPgUpdatesCaching(key updatePayloadKey, appliedUpdateFound bool) {
 	if appliedUpdateFound {
 		su.appliedPodGroupUpdates.Delete(key)
 	}
@@ -140,9 +137,7 @@ func (su *defaultStatusUpdater) processPayload(ctx context.Context, payload *upd
 	case podType:
 		su.updatePod(ctx, payload.key, updateData.patchData, updateData.subResources, updateData.object)
 	case podGroupType:
-		su.updatePodGroup(ctx, payload.key, updateData.patchData, updateData.subResources, updateData.updateStatus, updateData.object)
-		su.appliedPodGroupUpdates.Store(payload.key, updateData)
-		su.inFlightPodGroups.Delete(payload.key)
+		su.updatePodGroup(ctx, payload.key, updateData)
 	}
 }
 
@@ -180,25 +175,28 @@ func (su *defaultStatusUpdater) updatePod(
 // +kubebuilder:rbac:groups="scheduling.run.ai",resources=podgroups/status,verbs=create;delete;update;patch;get;list;watch
 
 func (su *defaultStatusUpdater) updatePodGroup(
-	ctx context.Context, _ updatePayloadKey, patchData []byte, subResources []string, updateStatus bool, object runtime.Object,
+	ctx context.Context, key updatePayloadKey, updateData *inflightUpdate,
 ) {
-	podGroup := object.(*enginev2alpha2.PodGroup)
+	podGroup := updateData.object.(*enginev2alpha2.PodGroup)
 
 	var err error
-	if updateStatus {
+	if updateData.updateStatus {
 		_, err = su.kubeaischedClient.SchedulingV2alpha2().PodGroups(podGroup.Namespace).UpdateStatus(
 			ctx, podGroup, metav1.UpdateOptions{},
 		)
 	}
-	if len(patchData) > 0 {
+	if len(updateData.patchData) > 0 {
 		_, err = su.kubeaischedClient.SchedulingV2alpha2().PodGroups(podGroup.Namespace).Patch(
-			ctx, podGroup.Name, types.JSONPatchType, patchData, metav1.PatchOptions{}, subResources...,
+			ctx, podGroup.Name, types.JSONPatchType, updateData.patchData, metav1.PatchOptions{}, updateData.subResources...,
 		)
 	}
 	if err != nil {
 		log.StatusUpdaterLogger.Errorf("Failed to update pod group %s/%s: %v", podGroup.Namespace, podGroup.Name, err)
+	} else {
+		// Move the update to the applied cache
+		su.appliedPodGroupUpdates.Store(key, updateData)
+		su.inFlightPodGroups.Delete(key)
 	}
-
 }
 
 func (su *defaultStatusUpdater) updateInFlightObject(key updatePayloadKey, objectType string, object *inflightUpdate) {
