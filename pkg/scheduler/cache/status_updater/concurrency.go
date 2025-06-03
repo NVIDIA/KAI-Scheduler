@@ -30,21 +30,53 @@ func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*eng
 	for i := range podGroups {
 		key := su.keyForPodGroupPayload(podGroups[i].Name, podGroups[i].Namespace, podGroups[i].UID)
 		usedKeys[key] = true
-		inflightUpdateAny, found := su.inFlightPodGroups.Load(key)
-		if !found {
+		pgLatestUpdate, inFlightUpdatefound, appliedUpdateFound := su.getLatestPgUpdate(key)
+		if !inFlightUpdatefound && !appliedUpdateFound {
 			continue
 		}
-		podGroup := inflightUpdateAny.(*inflightUpdate).object.(*enginev2alpha2.PodGroup)
-		isPodGroupUpdated := su.syncPodGroup(podGroup, podGroups[i])
-		if isPodGroupUpdated {
-			su.inFlightPodGroups.Delete(key)
+		podGroup := pgLatestUpdate.object.(*enginev2alpha2.PodGroup)
+		podGroupMatchesUpdate := su.syncPodGroup(podGroup, podGroups[i])
+		// Delete the inflight update if it was applied + the pod group in the lister matches the inFlight
+		if podGroupMatchesUpdate {
+			su.cleanPgUpdatesCaching(key, inFlightUpdatefound, appliedUpdateFound)
 		}
 	}
 
 	// Cleanup podGroups that don't comeup anymore
+	su.cleanUpdatesForNonSeenPodGroups(usedKeys)
+}
+
+func (su *defaultStatusUpdater) getLatestPgUpdate(key updatePayloadKey) (*inflightUpdate, bool, bool) {
+	inflightPgUpdate, inFlightUpdatefound := su.inFlightPodGroups.Load(key)
+	appliedPgUpdate, appliedUpdateFound := su.appliedPodGroupUpdates.Load(key)
+	var pgLatestUpdate *inflightUpdate
+	if inFlightUpdatefound {
+		pgLatestUpdate = inflightPgUpdate.(*inflightUpdate)
+	} else if appliedUpdateFound {
+		pgLatestUpdate = appliedPgUpdate.(*inflightUpdate)
+	}
+	return pgLatestUpdate, inFlightUpdatefound, appliedUpdateFound
+}
+
+func (su *defaultStatusUpdater) cleanPgUpdatesCaching(key updatePayloadKey, inFlightUpdatefound, appliedUpdateFound bool) {
+	if inFlightUpdatefound {
+		su.inFlightPodGroups.Delete(key)
+	}
+	if appliedUpdateFound {
+		su.appliedPodGroupUpdates.Delete(key)
+	}
+}
+
+func (su *defaultStatusUpdater) cleanUpdatesForNonSeenPodGroups(usedKeys map[updatePayloadKey]bool) {
 	su.inFlightPodGroups.Range(func(key any, _ any) bool {
 		if _, found := usedKeys[key.(updatePayloadKey)]; !found {
 			su.inFlightPodGroups.Delete(key)
+		}
+		return true
+	})
+	su.appliedPodGroupUpdates.Range(func(key any, _ any) bool {
+		if _, found := usedKeys[key.(updatePayloadKey)]; !found {
+			su.appliedPodGroupUpdates.Delete(key)
 		}
 		return true
 	})
@@ -109,6 +141,8 @@ func (su *defaultStatusUpdater) processPayload(ctx context.Context, payload *upd
 		su.updatePod(ctx, payload.key, updateData.patchData, updateData.subResources, updateData.object)
 	case podGroupType:
 		su.updatePodGroup(ctx, payload.key, updateData.patchData, updateData.subResources, updateData.updateStatus, updateData.object)
+		su.appliedPodGroupUpdates.Store(payload.key, updateData)
+		su.inFlightPodGroups.Delete(payload.key)
 	}
 }
 
@@ -164,6 +198,7 @@ func (su *defaultStatusUpdater) updatePodGroup(
 	if err != nil {
 		log.StatusUpdaterLogger.Errorf("Failed to update pod group %s/%s: %v", podGroup.Namespace, podGroup.Name, err)
 	}
+
 }
 
 func (su *defaultStatusUpdater) updateInFlightObject(key updatePayloadKey, objectType string, object *inflightUpdate) {

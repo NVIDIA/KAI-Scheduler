@@ -126,8 +126,47 @@ var _ = Describe("Status Updater Concurrency", func() {
 			close(stopCh)
 		})
 
-		It("should update pod groups", func() {
+		It("Podgroup updates are not moved to applied before the payload processing is done", func() {
+			appliedPodGroupUpdatesCount := 0
+			statusUpdater.appliedPodGroupUpdates.Range(func(key any, value any) bool {
+				appliedPodGroupUpdatesCount += 1
+				return true
+			})
+			Expect(appliedPodGroupUpdatesCount).To(Equal(0))
+
+			close(finishUpdatesChan)
+			wg.Wait()
+			time.Sleep(time.Second)
+
+			appliedPodGroupUpdatesCount = 0
+			statusUpdater.appliedPodGroupUpdates.Range(func(key any, value any) bool {
+				appliedPodGroupUpdatesCount += 1
+				return true
+			})
+			Expect(appliedPodGroupUpdatesCount).To(Equal(len(podGroupsOriginals)))
+
+		})
+
+		It("should update pod groups with in flight updates", func() {
 			// check that the pods groups are now not updated anymore
+			statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsOriginals)
+			for _, podGroup := range podGroupsOriginals {
+				Expect(podGroup.Status.SchedulingConditions).NotTo(BeEmpty())
+			}
+		})
+
+		It("should update pod groups with applied updates cache", func() {
+			close(finishUpdatesChan)
+			wg.Wait()
+			time.Sleep(time.Second)
+
+			appliedPodGroupUpdatesCount := 0
+			statusUpdater.appliedPodGroupUpdates.Range(func(key any, value any) bool {
+				appliedPodGroupUpdatesCount += 1
+				return true
+			})
+			Expect(appliedPodGroupUpdatesCount).To(Equal(len(podGroupsOriginals)))
+
 			statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsOriginals)
 			for _, podGroup := range podGroupsOriginals {
 				Expect(podGroup.Status.SchedulingConditions).NotTo(BeEmpty())
@@ -163,6 +202,20 @@ var _ = Describe("Status Updater Concurrency", func() {
 			}
 
 			statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsFromCluster)
+
+			// check that the inFlight and applied pod groups cache are empty
+			appliedPodGroupUpdatesCount := 0
+			statusUpdater.appliedPodGroupUpdates.Range(func(key any, value any) bool {
+				appliedPodGroupUpdatesCount += 1
+				return true
+			})
+			Expect(appliedPodGroupUpdatesCount).To(Equal(0))
+			numberOfPodGroupInFlight := 0
+			statusUpdater.inFlightPodGroups.Range(func(key any, value any) bool {
+				numberOfPodGroupInFlight += 1
+				return true
+			})
+			Expect(numberOfPodGroupInFlight).To(Equal(0))
 
 			// check that the pods groups are now not updated anymore
 			statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsOriginals)
@@ -251,5 +304,12 @@ var _ = Describe("Status Updater Concurrency", func() {
 			close(signalCh)
 			wg.Wait()
 		})
+	})
+
+	Context("Payload processing", func() {
+		It("pod group payload should be applied only once", func() {
+
+		})
+
 	})
 })

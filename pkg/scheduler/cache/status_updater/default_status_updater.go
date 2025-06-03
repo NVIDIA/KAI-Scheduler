@@ -69,6 +69,8 @@ type defaultStatusUpdater struct {
 
 	inFlightPodGroups sync.Map
 	inFlightPods      sync.Map
+
+	appliedPodGroupUpdates sync.Map
 }
 
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;update;patch;delete;list;get;watch
