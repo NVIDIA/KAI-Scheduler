@@ -36,7 +36,7 @@ func NewPodAccumulatedScenarioBuilder(
 	recordedVictimsTasks := make(map[common_info.PodID]*pod_info.PodInfo)
 	tasksToAllocate := podgroup_info.GetTasksToAllocate(pendingJob, session.TaskOrderFn, false)
 	if len(tasksToAllocate) != 0 {
-		scenario = solverscenario.NewByNodeScenario(session, pendingJob, nil, recordedVictimsJobs)
+		scenario = solverscenario.NewByNodeScenario(session, pendingJob, pendingJob, nil, recordedVictimsJobs)
 		for _, job := range recordedVictimsJobs {
 			for podId, podInfo := range job.PodInfos {
 				recordedVictimsTasks[podId] = podInfo

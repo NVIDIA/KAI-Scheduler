@@ -219,7 +219,7 @@ func TestPodSimpleScenario_AddPotentialVictimsTasks(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewBaseScenario(
-				tt.fields.session, tt.fields.pendingTasksAsJob, tt.fields.potentialVictimsTasks,
+				tt.fields.session, tt.fields.pendingTasksAsJob, tt.fields.pendingTasksAsJob, tt.fields.potentialVictimsTasks,
 				tt.fields.recordedVictimsJobs)
 			s.AddPotentialVictimsTasks(tt.args.tasks)
 			if !reflect.DeepEqual(s.potentialVictimsTasks, tt.expected.potentialVictimsTasks) {
@@ -493,7 +493,7 @@ func TestPodSimpleScenario_GetVictimJobRepresentativeById(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewBaseScenario(
-				tt.fields.session, tt.fields.pendingTasksAsJob, tt.fields.potentialVictimsTasks,
+				tt.fields.session, tt.fields.pendingTasksAsJob, tt.fields.pendingTasksAsJob, tt.fields.potentialVictimsTasks,
 				tt.fields.recordedVictimsJobs)
 			s.AddPotentialVictimsTasks(tt.args.tasks)
 			if got := s.GetVictimJobRepresentativeById(tt.args.victimPodInfo); !reflect.DeepEqual(got, tt.want) {
@@ -659,7 +659,7 @@ func TestPodSimpleScenario_LatestPotentialVictim(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewBaseScenario(
-				tt.fields.session, tt.fields.pendingTasksAsJob, tt.fields.potentialVictimsTasks,
+				tt.fields.session, tt.fields.pendingTasksAsJob, tt.fields.pendingTasksAsJob, tt.fields.potentialVictimsTasks,
 				[]*podgroup_info.PodGroupInfo{})
 			if tt.args.tasks != nil {
 				s.AddPotentialVictimsTasks(tt.args.tasks)

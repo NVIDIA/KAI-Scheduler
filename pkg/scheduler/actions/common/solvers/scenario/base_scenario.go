@@ -19,6 +19,7 @@ type BaseScenario struct {
 	session *framework.Session
 
 	preemptor             *podgroup_info.PodGroupInfo
+	victims               map[common_info.PodGroupID]*api.VictimInfo
 	pendingTasks          []*pod_info.PodInfo
 	potentialVictimsTasks []*pod_info.PodInfo
 	recordedVictimsJobs   []*podgroup_info.PodGroupInfo
@@ -31,12 +32,13 @@ type BaseScenario struct {
 }
 
 func NewBaseScenario(
-	session *framework.Session, pendingTasksAsJob *podgroup_info.PodGroupInfo, victimsTasks []*pod_info.PodInfo,
+	session *framework.Session, originalJob, pendingTasksAsJob *podgroup_info.PodGroupInfo, victimsTasks []*pod_info.PodInfo,
 	recordedVictimsJobs []*podgroup_info.PodGroupInfo,
 ) *BaseScenario {
 	s := &BaseScenario{
 		session:               session,
-		preemptor:             session.PodGroupInfos[pendingTasksAsJob.UID],
+		preemptor:             originalJob,
+		victims:               make(map[common_info.PodGroupID]*api.VictimInfo),
 		pendingTasks:          make([]*pod_info.PodInfo, 0),
 		pendingTasksAsJob:     pendingTasksAsJob,
 		potentialVictimsTasks: make([]*pod_info.PodInfo, 0),
@@ -118,6 +120,18 @@ func (s *BaseScenario) appendTasksAsVictimJob(tasks []*pod_info.PodInfo) {
 	job := originalJob.CloneWithTasks(tasks)
 
 	s.victimsJobsTaskGroups[job.UID] = append(s.victimsJobsTaskGroups[job.UID], job)
+
+	victimTasks := make([]*pod_info.PodInfo, 0)
+	victim, found := s.victims[job.UID]
+	if found {
+		victimTasks = victim.Tasks
+	}
+	victimTasks = append(victimTasks, tasks...)
+	s.victims[job.UID] = &api.VictimInfo{
+		Job:               job,
+		RepresentativeJob: originalJob,
+		Tasks:             victimTasks,
+	}
 }
 
 func (s *BaseScenario) GetVictimJobRepresentativeById(victimPodInfo *pod_info.PodInfo) *podgroup_info.PodGroupInfo {
@@ -170,34 +184,5 @@ func (s *BaseScenario) GetPreemptor() *podgroup_info.PodGroupInfo {
 }
 
 func (s *BaseScenario) GetVictims() map[common_info.PodGroupID]*api.VictimInfo {
-	victims := make(map[common_info.PodGroupID]*api.VictimInfo)
-
-	// Process recorded victims
-	for _, victimJob := range s.recordedVictimsJobs {
-		var tasks []*pod_info.PodInfo
-		for _, podInfo := range victimJob.PodInfos {
-			tasks = append(tasks, podInfo)
-		}
-		victimInfo := &api.VictimInfo{
-			Job:               victimJob,
-			RepresentativeJob: s.GetVictimJobRepresentativeById(tasks[0]),
-			Tasks:             tasks,
-		}
-		victims[victimJob.UID] = victimInfo
-	}
-
-	// Process potential victims
-	for _, victimTask := range s.potentialVictimsTasks {
-		if _, exists := victims[victimTask.Job]; !exists {
-			job := s.getJobForTask(victimTask)
-			victimInfo := &api.VictimInfo{
-				Job:               job,
-				RepresentativeJob: s.GetVictimJobRepresentativeById(victimTask),
-				Tasks:             []*pod_info.PodInfo{victimTask},
-			}
-			victims[victimTask.Job] = victimInfo
-		}
-	}
-
-	return victims
+	return s.victims
 }

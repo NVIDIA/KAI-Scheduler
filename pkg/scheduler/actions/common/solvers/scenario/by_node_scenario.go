@@ -23,11 +23,11 @@ type ByNodeScenario struct {
 }
 
 func NewByNodeScenario(
-	session *framework.Session, pendingTasksAsJob *podgroup_info.PodGroupInfo,
+	session *framework.Session, originalJob, pendingTasksAsJob *podgroup_info.PodGroupInfo,
 	potentialVictimsTasks []*pod_info.PodInfo, recordedVictimsJobs []*podgroup_info.PodGroupInfo,
 ) *ByNodeScenario {
 
-	simpleScenario := NewBaseScenario(session, pendingTasksAsJob, potentialVictimsTasks, recordedVictimsJobs)
+	simpleScenario := NewBaseScenario(session, originalJob, pendingTasksAsJob, potentialVictimsTasks, recordedVictimsJobs)
 
 	bns := &ByNodeScenario{
 		BaseScenario:               simpleScenario,
