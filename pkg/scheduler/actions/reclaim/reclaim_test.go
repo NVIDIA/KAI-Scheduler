@@ -2513,7 +2513,7 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		},
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
-				Name: "queue1 is under deserved quota, queue0 has exactly deserved quota - should not reclaim",
+				Name: "queue1 is under deserved quota, queue0 has exactly deserved quota - should consolidate q0 to node0 and pipeline q1 to node1",
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
 						Name:                "q0_job0",
