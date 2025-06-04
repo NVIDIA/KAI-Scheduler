@@ -5,7 +5,6 @@ package status_updater
 
 import (
 	"context"
-	"strconv"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,9 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
 )
 
 func (su *defaultStatusUpdater) Run(stopCh <-chan struct{}) {
@@ -23,109 +20,6 @@ func (su *defaultStatusUpdater) Run(stopCh <-chan struct{}) {
 		go su.updateWorker(stopCh)
 	}
 	go su.queueBufferWorker(stopCh)
-}
-
-func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*enginev2alpha2.PodGroup) {
-	usedKeys := make(map[updatePayloadKey]bool, len(podGroups))
-	for i := range podGroups {
-		key := su.keyForPodGroupPayload(podGroups[i].Name, podGroups[i].Namespace, podGroups[i].UID)
-		usedKeys[key] = true
-		pgLatestUpdate, inFlightUpdateFound, appliedUpdateFound := su.getLatestPgUpdate(key)
-		if !inFlightUpdateFound && !appliedUpdateFound {
-			continue
-		}
-		podGroup := pgLatestUpdate.object.(*enginev2alpha2.PodGroup)
-		podGroupsyncResults := su.syncPodGroup(podGroup, podGroups[i])
-		// Delete the inflight update if it was applied + the pod group in the lister matches the inFlight
-		if (podGroupsyncResults == equalStatuses || podGroupsyncResults == updateRequestIsOlder) && appliedUpdateFound {
-			su.appliedPodGroupUpdates.Delete(key)
-		} else if podGroupsyncResults == updateRequestIsOlder && inFlightUpdateFound {
-			su.inFlightPodGroups.Delete(key)
-		}
-	}
-
-	// Cleanup podGroups that don't comeup anymore
-	su.cleanUpdatesForNonSeenPodGroups(usedKeys)
-}
-
-func (su *defaultStatusUpdater) getLatestPgUpdate(key updatePayloadKey) (*inflightUpdate, bool, bool) {
-	inflightPgUpdate, inFlightUpdateFound := su.inFlightPodGroups.Load(key)
-	appliedPgUpdate, appliedUpdateFound := su.appliedPodGroupUpdates.Load(key)
-	var pgLatestUpdate *inflightUpdate
-	if inFlightUpdateFound {
-		pgLatestUpdate = inflightPgUpdate.(*inflightUpdate)
-	} else if appliedUpdateFound {
-		pgLatestUpdate = appliedPgUpdate.(*inflightUpdate)
-	}
-	return pgLatestUpdate, inFlightUpdateFound, appliedUpdateFound
-}
-
-func (su *defaultStatusUpdater) cleanUpdatesForNonSeenPodGroups(usedKeys map[updatePayloadKey]bool) {
-	su.inFlightPodGroups.Range(func(key any, _ any) bool {
-		if _, found := usedKeys[key.(updatePayloadKey)]; !found {
-			su.inFlightPodGroups.Delete(key)
-		}
-		return true
-	})
-	su.appliedPodGroupUpdates.Range(func(key any, _ any) bool {
-		if _, found := usedKeys[key.(updatePayloadKey)]; !found {
-			su.appliedPodGroupUpdates.Delete(key)
-		}
-		return true
-	})
-}
-
-func (su *defaultStatusUpdater) syncPodGroup(inFlightPodGroup, snapshotPodGroup *enginev2alpha2.PodGroup) podGroupStatusSyncResult {
-	staleTimeStampUpdated := false
-	if snapshotPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp] == inFlightPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp] {
-		staleTimeStampUpdated = true
-	} else {
-		if snapshotPodGroup.Annotations == nil {
-			snapshotPodGroup.Annotations = make(map[string]string)
-		}
-		snapshotPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp] = inFlightPodGroup.Annotations[commonconstants.StalePodgroupTimeStamp]
-	}
-	lastStartTimestampUpdated := false
-	if snapshotPodGroup.Annotations[commonconstants.LastStartTimeStamp] == inFlightPodGroup.Annotations[commonconstants.LastStartTimeStamp] {
-		lastStartTimestampUpdated = true
-	} else {
-		if snapshotPodGroup.Annotations == nil {
-			snapshotPodGroup.Annotations = make(map[string]string)
-		}
-		snapshotPodGroup.Annotations[commonconstants.LastStartTimeStamp] = inFlightPodGroup.Annotations[commonconstants.LastStartTimeStamp]
-	}
-
-	statusComparison := snapshotStatusIsOlder
-	lastSchedulingCondition := utils.GetLastSchedulingCondition(inFlightPodGroup)
-	currentLastSchedulingCondition := utils.GetLastSchedulingCondition(snapshotPodGroup)
-	if currentLastSchedulingCondition == nil && lastSchedulingCondition == nil {
-		statusComparison = equalStatuses
-	} else if currentLastSchedulingCondition == nil && lastSchedulingCondition != nil {
-		statusComparison = snapshotStatusIsOlder
-	} else if currentLastSchedulingCondition != nil && lastSchedulingCondition == nil {
-		statusComparison = updateRequestIsOlder
-	} else {
-		currentID, currentErr := strconv.Atoi(currentLastSchedulingCondition.TransitionID)
-		lastID, lastErr := strconv.Atoi(lastSchedulingCondition.TransitionID)
-		if currentErr == nil && lastErr == nil && (lastID > currentID || currentID == 0) {
-			statusComparison = snapshotStatusIsOlder
-		}
-		if currentErr == nil && lastErr == nil && (lastID == currentID) {
-			statusComparison = equalStatuses
-		}
-		if currentErr == nil && lastErr == nil && (lastID < currentID) {
-			statusComparison = updateRequestIsOlder
-		}
-	}
-
-	if statusComparison == equalStatuses || statusComparison == snapshotStatusIsOlder {
-		snapshotPodGroup.Status.SchedulingConditions = inFlightPodGroup.Status.SchedulingConditions
-	}
-	if statusComparison == equalStatuses && (!lastStartTimestampUpdated || !staleTimeStampUpdated) {
-		statusComparison = snapshotStatusIsOlder
-	}
-
-	return statusComparison
 }
 
 func (su *defaultStatusUpdater) keyForPodGroupPayload(name, namespace string, uid types.UID) updatePayloadKey {
