@@ -21,7 +21,6 @@ import (
 	kaischedulerfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
@@ -82,7 +81,7 @@ func main() {
 	schedulerCache.WaitForCacheSync(stopCh)
 
 	ssn, err := framework.OpenSession(
-		schedulerCache, &conf.SchedulerConfiguration{}, snapshot.SchedulerParams, "", &http.ServeMux{},
+		schedulerCache, snapshot.Config, snapshot.SchedulerParams, "", &http.ServeMux{},
 	)
 	if err != nil {
 		log.InfraLogger.Fatalf(err.Error(), err)
