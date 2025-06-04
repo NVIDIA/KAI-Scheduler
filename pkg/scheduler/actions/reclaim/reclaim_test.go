@@ -26,7 +26,6 @@ func TestHandleReclaim(t *testing.T) {
 	defer controller.Finish()
 	defer gock.Off()
 	testsMetadata := getTestsMetadata()
-
 	for testNumber, testMetadata := range testsMetadata {
 		t.Logf("Running test number: %v, test name: %v,", testNumber, testMetadata.TestTopologyBasic.Name)
 		ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
