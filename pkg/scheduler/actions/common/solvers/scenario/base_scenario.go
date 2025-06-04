@@ -26,8 +26,6 @@ type BaseScenario struct {
 	recordedVictimsTasks  []*pod_info.PodInfo
 
 	// Deprecated: Use preemptor instead
-	pendingTasksAsJob *podgroup_info.PodGroupInfo
-
 	victimsJobsTaskGroups map[common_info.PodGroupID][]*podgroup_info.PodGroupInfo
 }
 
@@ -40,7 +38,6 @@ func NewBaseScenario(
 		preemptor:             originalJob,
 		victims:               make(map[common_info.PodGroupID]*api.VictimInfo),
 		pendingTasks:          make([]*pod_info.PodInfo, 0),
-		pendingTasksAsJob:     pendingTasksAsJob,
 		potentialVictimsTasks: make([]*pod_info.PodInfo, 0),
 		recordedVictimsJobs:   make([]*podgroup_info.PodGroupInfo, len(recordedVictimsJobs)),
 		recordedVictimsTasks:  nil,
@@ -69,11 +66,6 @@ func NewBaseScenario(
 // Deprecated: Use GetPreemptor instead
 func (s *BaseScenario) PendingTasks() []*pod_info.PodInfo {
 	return s.pendingTasks
-}
-
-// Deprecated: Use GetPreemptor instead
-func (s *BaseScenario) PendingJob() *podgroup_info.PodGroupInfo {
-	return s.pendingTasksAsJob
 }
 
 func (s *BaseScenario) RecordedVictimsTasks() []*pod_info.PodInfo {

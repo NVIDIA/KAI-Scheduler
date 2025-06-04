@@ -65,7 +65,7 @@ func (s *byPodSolver) solve(
 ) *solutionResult {
 	statement := session.Statement()
 
-	pendingJob := scenario.PendingJob()
+	pendingJob := scenario.GetPreemptor()
 	nextTaskToFindAllocation := scenario.PendingTasks()[len(scenario.PendingTasks())-1]
 	latestPotentialVictim := scenario.LatestPotentialVictim()
 
@@ -100,7 +100,7 @@ func (s *byPodSolver) solve(
 func (s *byPodSolver) runSimulation(
 	session *framework.Session, scenario *scenario.ByNodeScenario, statement *framework.Statement,
 	victimTasks []*pod_info.PodInfo) *solutionResult {
-	pendingJob := scenario.PendingJob()
+	pendingJob := scenario.GetPreemptor()
 	nextTaskToFindAllocation := scenario.PendingTasks()[len(scenario.PendingTasks())-1]
 
 	successfulSimulation, solutionVictims, err :=
@@ -164,7 +164,7 @@ func (s *byPodSolver) evictPotentialVictimsFromNode(
 	session *framework.Session, scenario *scenario.ByNodeScenario, statement *framework.Statement, nodeToTest string,
 ) (*framework.Checkpoint, []*pod_info.PodInfo, error) {
 	recordedVictimsCheckpoint := statement.Checkpoint()
-	pendingJob := scenario.PendingJob()
+	pendingJob := scenario.GetPreemptor()
 
 	potentialVictimsTasks := scenario.VictimsTasksFromNodes([]string{nodeToTest})
 	if err := common.EvictAllPreemptees(session, potentialVictimsTasks, pendingJob, statement, s.actionType); err != nil {
@@ -215,7 +215,7 @@ func getNodesOfJob(pj *podgroup_info.PodGroupInfo) []string {
 
 func (s *byPodSolver) tryScenarioWithEvictedVictims(ssn *framework.Session, scenario *scenario.ByNodeScenario,
 	statement *framework.Statement, victimTasks []*pod_info.PodInfo) (bool, *simulationVictims, error) {
-	pendingJob := scenario.PendingJob()
+	pendingJob := scenario.GetPreemptor()
 
 	nodes := maps.Values(s.feasibleNodes)
 	jobsToAllocate := common.GetJobsToAllocate(ssn, victimTasks, pendingJob)
