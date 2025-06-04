@@ -21,6 +21,7 @@ data:
           - name: dynamicresources
           - name: gpupack
           - name: gpusharingorder
+          - name: snapshot
           - name: nodeplacement
             arguments:
               cpu: {{ .Values.scheduler.placementStrategy }}
