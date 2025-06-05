@@ -258,9 +258,9 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 				constants.GpuResource: resource.MustParse("1"),
 			},
 		}
-		_, reclaimer1Pods := pod_group.CreateDistributedJob(
+		_, reclaimer1Pods := pod_group.CreatePrefixedDistributedJob(
 			ctx, testCtx.KubeClientset, testCtx.ControllerClient,
-			reclaimerQueue, 2, reclaimer1PodRequirements, "",
+			reclaimerQueue, "reclaimer1-", 2, reclaimer1PodRequirements, "",
 		)
 		reclaimerNamespace := queue.GetConnectedNamespaceToQueue(reclaimerQueue)
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimerNamespace, reclaimer1Pods)
@@ -280,9 +280,9 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 				constants.GpuResource: resource.MustParse("1"),
 			},
 		}
-		_, reclaimer2Pods := pod_group.CreateDistributedJob(
+		_, reclaimer2Pods := pod_group.CreatePrefixedDistributedJob(
 			ctx, testCtx.KubeClientset, testCtx.ControllerClient,
-			reclaimerQueue, 1, reclaimer2PodRequirements, "",
+			reclaimerQueue, "reclaimer2-", 1, reclaimer2PodRequirements, "",
 		)
 		// should stay pending for at least 30 seconds, because of min runtime remaining for the protected elastic job
 		wait.ForPodsWithConditionSteadyState(ctx, testCtx.ControllerClient, func(event watch.Event) bool {
@@ -299,7 +299,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 		},
 			30*time.Second,
 		)
-
+		fmt.Println("pod stayed pending for at least 30 seconds, now it should schedule")
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimerNamespace, reclaimer2Pods)
 	})
 })
