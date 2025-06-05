@@ -96,7 +96,7 @@ func (ssn *Session) ReclaimVictimFilter(reclaimer *podgroup_info.PodGroupInfo, v
 	return true
 }
 
-func (ssn *Session) ReclaimScenarioValidator(scenario api.ScenarioInfo) bool {
+func (ssn *Session) ReclaimScenarioValidatorFn(scenario api.ScenarioInfo) bool {
 	for _, rf := range ssn.ReclaimScenarioValidatorFns {
 		if !rf(scenario) {
 			return false
