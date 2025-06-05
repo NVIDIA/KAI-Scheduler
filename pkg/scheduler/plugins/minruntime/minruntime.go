@@ -7,8 +7,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
@@ -111,44 +111,38 @@ func (mr *minruntimePlugin) preemptFilterFn(pendingJob *podgroup_info.PodGroupIn
 	return !protected
 }
 
-func (mr *minruntimePlugin) reclaimScenarioValidatorFn(reclaimer *podgroup_info.PodGroupInfo, victimRepresentatives []*podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo) bool {
-	for _, victimRepresentative := range victimRepresentatives {
-		victim, found := mr.podGroupInfos[victimRepresentative.UID]
-		if !found {
+func (mr *minruntimePlugin) reclaimScenarioValidatorFn(scenario api.ScenarioInfo) bool {
+	reclaimer := scenario.GetPreemptor()
+	for _, victimInfo := range scenario.GetVictims() {
+		if !victimInfo.Job.IsElastic() {
 			continue
 		}
-		if !victim.IsElastic() {
-			continue
-		}
-		protected := mr.isReclaimMinRuntimeProtected(reclaimer, victim)
+		protected := mr.isReclaimMinRuntimeProtected(reclaimer, victimInfo.Job)
 		if !protected {
 			continue
 		}
-		numVictimTasks := getVictimCount(victimRepresentative, tasks)
-		currentlyRunning := victim.GetActivelyRunningTasksCount()
-		if victim.MinAvailable > currentlyRunning-numVictimTasks {
+		numVictimTasks := int32(len(victimInfo.Tasks))
+		currentlyRunning := victimInfo.Job.GetActivelyRunningTasksCount()
+		if victimInfo.Job.MinAvailable > currentlyRunning-numVictimTasks {
 			return false
 		}
 	}
 	return true
 }
 
-func (mr *minruntimePlugin) preemptScenarioValidatorFn(preemptor *podgroup_info.PodGroupInfo, victimRepresentatives []*podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo) bool {
-	for _, victimRepresentative := range victimRepresentatives {
-		victim, found := mr.podGroupInfos[victimRepresentative.UID]
-		if !found {
+func (mr *minruntimePlugin) preemptScenarioValidatorFn(scenario api.ScenarioInfo) bool {
+	preemptor := scenario.GetPreemptor()
+	for _, victimInfo := range scenario.GetVictims() {
+		if !victimInfo.Job.IsElastic() {
 			continue
 		}
-		if !victim.IsElastic() {
-			continue
-		}
-		protected := mr.isPreemptMinRuntimeProtected(preemptor, victim)
+		protected := mr.isPreemptMinRuntimeProtected(preemptor, victimInfo.Job)
 		if !protected {
 			continue
 		}
-		numVictimTasks := getVictimCount(victimRepresentative, tasks)
-		currentlyRunning := victim.GetActivelyRunningTasksCount()
-		if victim.MinAvailable > currentlyRunning-numVictimTasks {
+		numVictimTasks := int32(len(victimInfo.Tasks))
+		currentlyRunning := victimInfo.Job.GetActivelyRunningTasksCount()
+		if victimInfo.Job.MinAvailable > currentlyRunning-numVictimTasks {
 			return false
 		}
 	}
@@ -217,14 +211,4 @@ func (mr *minruntimePlugin) cacheReclaimProtection(pendingJob *podgroup_info.Pod
 		mr.reclaimProtectionCache[pendingJob.UID] = make(map[common_info.PodGroupID]bool)
 	}
 	mr.reclaimProtectionCache[pendingJob.UID][victim.UID] = protected
-}
-
-func getVictimCount(victimRepresentative *podgroup_info.PodGroupInfo, victimTasks []*pod_info.PodInfo) int32 {
-	victimCount := int32(0)
-	for _, victimTask := range victimTasks {
-		if victimTask.Job == victimRepresentative.UID {
-			victimCount++
-		}
-	}
-	return victimCount
 }

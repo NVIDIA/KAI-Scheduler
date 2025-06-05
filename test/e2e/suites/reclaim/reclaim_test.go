@@ -257,7 +257,7 @@ var _ = Describe("Reclaim", Ordered, func() {
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimee)
 
 			reclaimer := createPod(ctx, testCtx, reclaimerQueue, 1)
-			wait.ForPodsWithConditionFor(ctx, testCtx.ControllerClient, func(event watch.Event) bool {
+			wait.ForPodsWithConditionSteadyState(ctx, testCtx.ControllerClient, func(event watch.Event) bool {
 				pods, ok := event.Object.(*v1.PodList)
 				if !ok {
 					return false

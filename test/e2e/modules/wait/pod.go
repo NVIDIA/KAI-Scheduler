@@ -131,9 +131,9 @@ func ForPodsWithCondition(
 	}
 }
 
-func ForPodsWithConditionFor(
+func ForPodsWithConditionSteadyState(
 	ctx context.Context, client runtimeClient.WithWatch, checkCondition checkCondition,
-	duration time.Duration, listOptions ...runtimeClient.ListOption) {
+	steadyStateDuration time.Duration, listOptions ...runtimeClient.ListOption) {
 	condition := func(event watch.Event) bool {
 		_, ok := event.Object.(*v1.PodList)
 		if !ok {
@@ -142,8 +142,9 @@ func ForPodsWithConditionFor(
 		return checkCondition(event)
 	}
 	pw := watcher.NewGenericWatcher[v1.PodList](client, condition, listOptions...)
-	if !watcher.ForEventCustomTimeout(ctx, client, pw, watcher.FlowTimeout+duration, duration) {
-		Fail(fmt.Sprintf("Failed to watch pods for condition for %s", duration))
+	timeout := watcher.FlowTimeout + steadyStateDuration
+	if !watcher.ForEventCustomTimeout(ctx, client, pw, timeout, steadyStateDuration) {
+		Fail(fmt.Sprintf("Failed to watch pods for condition for %s", timeout))
 	}
 }
 
