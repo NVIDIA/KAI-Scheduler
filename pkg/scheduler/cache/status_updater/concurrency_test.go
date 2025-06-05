@@ -37,7 +37,7 @@ func TestConcurrency(t *testing.T) {
 	RunSpecs(t, "Status Updater Concurrency Suite")
 }
 
-var _ = Describe("Status Updater Concurrency", func() {
+var _ = Describe("Status Updater Concurrency - large scale: increase queue size", func() {
 	var (
 		kubeClient        *fake.Clientset
 		kubeAiSchedClient *kubeaischedfake.Clientset
