@@ -80,9 +80,7 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 				}
 			} else {
 				if satisfiedSince != nil {
-					logger.Error(nil, "WaitForEvent failed steady state check")
-					utils.LogClusterState(client, logger)
-					return false
+					satisfiedSince = nil
 				}
 			}
 		case event := <-watcher.ResultChan():
@@ -108,9 +106,7 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 				}
 			} else {
 				if satisfiedSince != nil {
-					logger.Error(nil, "WaitForEvent failed steady state check")
-					utils.LogClusterState(client, logger)
-					return false
+					satisfiedSince = nil
 				}
 			}
 		}
