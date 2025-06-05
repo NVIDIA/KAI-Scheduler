@@ -29,7 +29,7 @@ type CheckCondition func(watch.Event) bool
 
 var (
 	FlowTimeout         = 5 * time.Minute
-	SteadyStateDuration = 10 * time.Second
+	SteadyStateDuration = 5 * time.Second
 )
 
 func ForEvent(ctx context.Context, client runtimeClient.WithWatch, eventWatcher Interface) bool {
