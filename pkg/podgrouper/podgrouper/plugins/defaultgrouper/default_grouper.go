@@ -71,7 +71,6 @@ func (dg *DefaultGrouper) CalcPodGroupAnnotations(topOwner *unstructured.Unstruc
 	if value, exists := pod.GetAnnotations()[constants.UserLabelKey]; exists {
 		pgAnnotations[constants.UserLabelKey] = value
 	}
-	pgAnnotations[constants.JobIdKey] = string(topOwner.GetUID())
 
 	topOwnerMetadata := topowner.GetTopOwnerMetadata(topOwner)
 	marshalledMetadata, err := topOwnerMetadata.MarshalYAML()

@@ -185,7 +185,6 @@ func Test_Podgrouper_Full_Flow(t *testing.T) {
 			},
 			expectedMetadata: &podgroup.Metadata{
 				Annotations: map[string]string{
-					"runai/job-id": "",
 					"run.ai/top-owner-metadata": `name: pod-job
 uid: ""
 group: ""
@@ -271,7 +270,6 @@ kind: Pod
 			},
 			expectedMetadata: &podgroup.Metadata{
 				Annotations: map[string]string{
-					"runai/job-id": "uid-pod",
 					"run.ai/top-owner-metadata": `name: argo-pod
 uid: uid-pod
 group: ""
