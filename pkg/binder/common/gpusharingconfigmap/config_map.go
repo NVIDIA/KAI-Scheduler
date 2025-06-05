@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	RunaiConfigMapGpu           = "runai-sh-gpu"
+	GPUSharingConfigMap         = "runai-sh-gpu"
 	DesiredConfigMapPrefixKey   = "runai/shared-gpu-configmap"
 	maxVolumeNameLength         = 63
 	configMapNameNumRandomChars = 7
@@ -128,7 +128,7 @@ func generateConfigMapNamePrefix(pod *v1.Pod, containerIndex int) string {
 	}
 	// volume name is the `${configMapName}-vol` and should be up to 63 bytes long,
 	// 4 for "-vol" , 7 random chars, and 2 hyphens - 13 in total
-	maxBaseNameLength := (maxVolumeNameLength - configMapNameExtraChars) - len(RunaiConfigMapGpu)
+	maxBaseNameLength := (maxVolumeNameLength - configMapNameExtraChars) - len(GPUSharingConfigMap)
 	// also remove from the max length for "-{containerIndex}" or "-i{initContainerIndex}" in the name
 	maxBaseNameLength = maxBaseNameLength - len(strconv.Itoa(containerIndex)) - 1
 	// also allow for appending "-evar" in case of envFrom config map
@@ -137,7 +137,7 @@ func generateConfigMapNamePrefix(pod *v1.Pod, containerIndex int) string {
 		baseName = baseName[:maxBaseNameLength]
 	}
 	return fmt.Sprintf("%v-%v-%v", baseName,
-		utilrand.String(configMapNameNumRandomChars), RunaiConfigMapGpu)
+		utilrand.String(configMapNameNumRandomChars), GPUSharingConfigMap)
 }
 
 func ExtractCapabilitiesConfigMapName(pod *v1.Pod, containerIndex int, containerType ContainerType) (string, error) {
@@ -182,7 +182,7 @@ func GetDesiredConfigMapNameBC(pod *v1.Pod) (string, error) {
 		}
 
 		possibleCmName := volume.ConfigMap.LocalObjectReference.Name
-		if strings.HasSuffix(possibleCmName, RunaiConfigMapGpu) {
+		if strings.HasSuffix(possibleCmName, GPUSharingConfigMap) {
 			if cmName != "" {
 				return "", fmt.Errorf("multiple desired gpu sharing configmap volumes detected for backwards "+
 					"compatibility pod %s/%s", pod.Namespace, pod.Name)

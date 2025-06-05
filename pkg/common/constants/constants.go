@@ -21,7 +21,7 @@ const (
 	GpuMemory                = "gpu-memory"
 	ReceivedResourceType     = "received-resource-type"
 	GpuFractionsNumDevices   = "gpu-fraction-num-devices"
-	RunaiGpuLimit            = "runai-gpu-limit"
+	GpuLimit                 = "runai-gpu-limit"
 	MpsAnnotation            = "mps"
 	StalePodgroupTimeStamp   = "kai.scheduler/stale-podgroup-timestamp"
 	LastStartTimeStamp       = "kai.scheduler/last-start-timestamp"
