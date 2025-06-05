@@ -55,7 +55,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	assert.Equal(t, "test_version", podGroupMetadata.Owner.APIVersion)
 	assert.Equal(t, "1", string(podGroupMetadata.Owner.UID))
 	assert.Equal(t, "test_name", podGroupMetadata.Owner.Name)
-	assert.Equal(t, 3, len(podGroupMetadata.Annotations))
+	assert.Equal(t, 2, len(podGroupMetadata.Annotations))
 	assert.Equal(t, 1, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
