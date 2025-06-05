@@ -97,7 +97,7 @@ func (ra *reclaimAction) attemptToReclaimForSpecificJob(
 	feasibleNodes := common.FeasibleNodesForJob(maps.Values(ssn.Nodes), reclaimer)
 	solver := solvers.NewJobsSolver(
 		feasibleNodes,
-		ssn.ReclaimScenarioValidator,
+		ssn.ReclaimScenarioValidatorFn,
 		getOrderedVictimsQueue(ssn, reclaimer),
 		framework.Reclaim)
 	return solver.Solve(ssn, reclaimer)
