@@ -86,6 +86,7 @@ func (mr *minruntimePlugin) OnSessionOpen(ssn *framework.Session) {
 }
 
 func (mr *minruntimePlugin) OnSessionClose(ssn *framework.Session) {
+	mr.podGroupInfos = nil
 	mr.queues = nil
 	mr.preemptProtectionCache = nil
 	mr.reclaimProtectionCache = nil
@@ -152,8 +153,8 @@ func (mr *minruntimePlugin) preemptScenarioValidatorFn(scenario api.ScenarioInfo
 }
 
 func (mr *minruntimePlugin) isReclaimMinRuntimeProtected(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
-	if mr.reclaimProtectionCache[pendingJob.UID][victim.UID] {
-		return true
+	if cached, ok := mr.reclaimProtectionCache[pendingJob.UID][victim.UID]; ok {
+		return cached
 	}
 	// Get the appropriate queue objects for both jobs
 	pendingQueue := mr.queues[pendingJob.Queue]
@@ -177,8 +178,8 @@ func (mr *minruntimePlugin) isReclaimMinRuntimeProtected(pendingJob *podgroup_in
 }
 
 func (mr *minruntimePlugin) isPreemptMinRuntimeProtected(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
-	if mr.preemptProtectionCache[pendingJob.UID][victim.UID] {
-		return true
+	if cached, ok := mr.preemptProtectionCache[pendingJob.UID][victim.UID]; ok {
+		return cached
 	}
 	// Get the victim's queue
 	victimQueue := mr.queues[victim.Queue]

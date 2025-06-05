@@ -24,6 +24,14 @@ func CreateDistributedJob(
 	ownerQueue *v2.Queue, count int, resources v1.ResourceRequirements,
 	priorityClassName string,
 ) (*v2alpha2.PodGroup, []*v1.Pod) {
+	return CreatePrefixedDistributedJob(ctx, clientset, k8sClient, ownerQueue, "", count, resources, priorityClassName)
+}
+
+func CreatePrefixedDistributedJob(
+	ctx context.Context, clientset *kubernetes.Clientset, k8sClient runtimeClient.WithWatch,
+	ownerQueue *v2.Queue, prefix string, count int, resources v1.ResourceRequirements,
+	priorityClassName string,
+) (*v2alpha2.PodGroup, []*v1.Pod) {
 	podGroup := Create(
 		queue.GetConnectedNamespaceToQueue(ownerQueue), "distributed-pod-group"+utils.GenerateRandomK8sName(10), ownerQueue.Name)
 	podGroup.Spec.PriorityClassName = priorityClassName
@@ -34,7 +42,7 @@ func CreateDistributedJob(
 	Expect(k8sClient.Create(ctx, podGroup)).To(Succeed())
 	for i := 0; i < count; i++ {
 		pod := rd.CreatePodObject(ownerQueue, resources)
-		pod.Name = "distributed-pod-" + utils.GenerateRandomK8sName(10)
+		pod.Name = prefix + "distributed-pod-" + utils.GenerateRandomK8sName(10)
 		pod.Annotations[PodGroupNameAnnotation] = podGroup.Name
 		pod.Labels[PodGroupNameAnnotation] = podGroup.Name
 		pod.Spec.PriorityClassName = priorityClassName
