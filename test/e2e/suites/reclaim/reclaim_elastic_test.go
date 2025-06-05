@@ -285,7 +285,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 			reclaimerQueue, 1, reclaimer2PodRequirements, "",
 		)
 		// should stay pending for at least 30 seconds, because of min runtime remaining for the protected elastic job
-		wait.ForPodsWithConditionFor(ctx, testCtx.ControllerClient, func(event watch.Event) bool {
+		wait.ForPodsWithConditionSteadyState(ctx, testCtx.ControllerClient, func(event watch.Event) bool {
 			pods, ok := event.Object.(*v1.PodList)
 			if !ok {
 				return false

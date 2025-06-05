@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -16,6 +17,19 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+type TestScenario struct {
+	Preemptor *podgroup_info.PodGroupInfo
+	Victims   map[common_info.PodGroupID]*api.VictimInfo
+}
+
+func (s *TestScenario) GetPreemptor() *podgroup_info.PodGroupInfo {
+	return s.Preemptor
+}
+
+func (s *TestScenario) GetVictims() map[common_info.PodGroupID]*api.VictimInfo {
+	return s.Victims
+}
 
 var _ = Describe("MinRuntime Plugin", func() {
 	var (
@@ -249,7 +263,11 @@ var _ = Describe("MinRuntime Plugin", func() {
 				tasks := []*pod_info.PodInfo{victimPod}
 
 				// Since minAvailable=1 and we have 3 pods total, preempting 1 pod should be fine
-				result := plugin.preemptScenarioValidatorFn(preemptor, []*podgroup_info.PodGroupInfo{victim}, tasks)
+				scenario := &TestScenario{
+					Preemptor: preemptor,
+					Victims:   map[common_info.PodGroupID]*api.VictimInfo{victim.UID: {Job: victim, Tasks: tasks}},
+				}
+				result := plugin.preemptScenarioValidatorFn(scenario)
 				Expect(result).To(BeTrue(), "Should allow preemption of one pod from elastic job")
 			})
 
@@ -277,7 +295,11 @@ var _ = Describe("MinRuntime Plugin", func() {
 				}
 
 				// Since minAvailable=2 and we have 3 pods total, preempting 2 pods shouldn't be allowed
-				result := plugin.preemptScenarioValidatorFn(preemptor, []*podgroup_info.PodGroupInfo{victim}, victimPods)
+				scenario := &TestScenario{
+					Preemptor: preemptor,
+					Victims:   map[common_info.PodGroupID]*api.VictimInfo{victim.UID: {Job: victim, Tasks: victimPods}},
+				}
+				result := plugin.preemptScenarioValidatorFn(scenario)
 				Expect(result).To(BeFalse(), "Should not allow preemption of too many pods from elastic job")
 			})
 		})
@@ -303,7 +325,11 @@ var _ = Describe("MinRuntime Plugin", func() {
 				tasks := []*pod_info.PodInfo{victimPod}
 
 				// Since minAvailable=1 and we have 3 pods total, reclaiming 1 pod should be fine
-				result := plugin.reclaimScenarioValidatorFn(reclaimer, []*podgroup_info.PodGroupInfo{victim}, tasks)
+				scenario := &TestScenario{
+					Preemptor: reclaimer,
+					Victims:   map[common_info.PodGroupID]*api.VictimInfo{victim.UID: {Job: victim, Tasks: tasks}},
+				}
+				result := plugin.reclaimScenarioValidatorFn(scenario)
 				Expect(result).To(BeTrue(), "Should allow reclaiming of one pod from elastic job")
 			})
 
@@ -334,7 +360,11 @@ var _ = Describe("MinRuntime Plugin", func() {
 				}
 
 				// Since minAvailable=2 and we have 3 pods total, reclaiming 2 pods shouldn't be allowed
-				result := plugin.reclaimScenarioValidatorFn(reclaimer, []*podgroup_info.PodGroupInfo{victim}, victimPods)
+				scenario := &TestScenario{
+					Preemptor: reclaimer,
+					Victims:   map[common_info.PodGroupID]*api.VictimInfo{victim.UID: {Job: victim, Tasks: victimPods}},
+				}
+				result := plugin.reclaimScenarioValidatorFn(scenario)
 				Expect(result).To(BeFalse(), "Should not allow reclaim of too many pods from elastic job")
 			})
 		})
