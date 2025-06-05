@@ -64,10 +64,6 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 			}
 			return false
 		case <-timer.C:
-			eventWatcher.sync(ctx)
-			if eventWatcher.satisfied() {
-				return true
-			}
 			logger.Error(nil, "WaitForEvent timed out")
 			utils.LogClusterState(client, logger)
 			return false
@@ -84,7 +80,9 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 				}
 			} else {
 				if satisfiedSince != nil {
-					satisfiedSince = nil
+					logger.Error(nil, "WaitForEvent failed steady state check")
+					utils.LogClusterState(client, logger)
+					return false
 				}
 			}
 		case event := <-watcher.ResultChan():
@@ -110,7 +108,9 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 				}
 			} else {
 				if satisfiedSince != nil {
-					satisfiedSince = nil
+					logger.Error(nil, "WaitForEvent failed steady state check")
+					utils.LogClusterState(client, logger)
+					return false
 				}
 			}
 		}
