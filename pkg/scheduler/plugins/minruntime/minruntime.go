@@ -113,17 +113,18 @@ func (mr *minruntimePlugin) preemptFilterFn(pendingJob *podgroup_info.PodGroupIn
 
 func (mr *minruntimePlugin) reclaimScenarioValidatorFn(scenario api.ScenarioInfo) bool {
 	reclaimer := scenario.GetPreemptor()
-	for _, victimInfo := range scenario.GetVictims() {
-		if !victimInfo.Job.IsElastic() {
+	for uid, victimInfo := range scenario.GetVictims() {
+		victim := mr.podGroupInfos[uid]
+		if !victim.IsElastic() {
 			continue
 		}
-		protected := mr.isReclaimMinRuntimeProtected(reclaimer, victimInfo.Job)
+		protected := mr.isReclaimMinRuntimeProtected(reclaimer, victim)
 		if !protected {
 			continue
 		}
 		numVictimTasks := int32(len(victimInfo.Tasks))
-		currentlyRunning := victimInfo.Job.GetActivelyRunningTasksCount()
-		if victimInfo.Job.MinAvailable > currentlyRunning-numVictimTasks {
+		currentlyRunning := victim.GetActivelyRunningTasksCount()
+		if victim.MinAvailable > currentlyRunning-numVictimTasks {
 			return false
 		}
 	}
@@ -132,17 +133,18 @@ func (mr *minruntimePlugin) reclaimScenarioValidatorFn(scenario api.ScenarioInfo
 
 func (mr *minruntimePlugin) preemptScenarioValidatorFn(scenario api.ScenarioInfo) bool {
 	preemptor := scenario.GetPreemptor()
-	for _, victimInfo := range scenario.GetVictims() {
-		if !victimInfo.Job.IsElastic() {
+	for uid, victimInfo := range scenario.GetVictims() {
+		victim := mr.podGroupInfos[uid]
+		if !victim.IsElastic() {
 			continue
 		}
-		protected := mr.isPreemptMinRuntimeProtected(preemptor, victimInfo.Job)
+		protected := mr.isPreemptMinRuntimeProtected(preemptor, victim)
 		if !protected {
 			continue
 		}
 		numVictimTasks := int32(len(victimInfo.Tasks))
-		currentlyRunning := victimInfo.Job.GetActivelyRunningTasksCount()
-		if victimInfo.Job.MinAvailable > currentlyRunning-numVictimTasks {
+		currentlyRunning := victim.GetActivelyRunningTasksCount()
+		if victim.MinAvailable > currentlyRunning-numVictimTasks {
 			return false
 		}
 	}
