@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixed pod status scheduled race condition between the scheduler and the pod binding
 - Removed redundant `replicas` key for binder from `values.yaml` as it is not used and not supported
 
+### Added
+ - Added [minruntime](docs/plugins/minruntime.md) plugin, allowing PodGroups to run for a configurable amount of time without being reclaimed/preempted.
+
 
 ## [v0.5.1] - 2025-05-20
 
