@@ -21,6 +21,7 @@ import (
 	pytorchplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/pytorch"
 	tensorflowlugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/tensorflow"
 	xgboostplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/xgboost"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/podgang"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/podjob"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/ray"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/runaijob"
@@ -84,6 +85,8 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 
 	sparkGrouper := spark.NewSparkGrouper(defaultGrouper)
 	podJobGrouper := podjob.NewPodJobGrouper(defaultGrouper, sparkGrouper)
+
+	podgangGrouper := podgang.NewPodGangGrouper(defaultGrouper)
 
 	table := map[metav1.GroupVersionKind]grouper.Grouper{
 		{
@@ -236,6 +239,11 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Version: "v1",
 			Kind:    "SPOTRequest",
 		}: spotrequest.NewSpotRequestGrouper(defaultGrouper),
+		{
+			Group:   "scheduler.grove.io",
+			Version: "v1alpha1",
+			Kind:    "PodGang",
+		}: podgangGrouper,
 	}
 
 	skipTopOwnerGrouper := skiptopowner.NewSkipTopOwnerGrouper(kubeClient, defaultGrouper, table)
