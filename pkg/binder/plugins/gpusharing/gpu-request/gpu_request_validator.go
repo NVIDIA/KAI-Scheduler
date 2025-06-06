@@ -21,7 +21,7 @@ func ValidateGpuRequests(pod *v1.Pod) error {
 	gpuFractionFromAnnotation, hasGpuFractionAnnotation := pod.Annotations[constants.GpuFraction]
 	gpuMemoryFromAnnotation, hasGpuMemoryAnnotation := pod.Annotations[constants.GpuMemory]
 	gpuFractionsCountFromAnnotation, hasGpuFractionsCount := pod.Annotations[constants.GpuFractionsNumDevices]
-	_, hasGpuLimitAnnotation := pod.Annotations[constants.RunaiGpuLimit]
+	_, hasGpuLimitAnnotation := pod.Annotations[constants.GpuLimit]
 	mpsFromAnnotation, hasMpsAnnotation := pod.Annotations[constants.MpsAnnotation]
 	_, hasGpuResourceRequest := container.Resources.Requests[constants.GpuResource]
 	gpuLimitQuantity, hasGpuResourceLimit := container.Resources.Limits[constants.GpuResource]
