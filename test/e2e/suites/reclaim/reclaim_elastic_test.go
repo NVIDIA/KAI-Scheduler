@@ -235,7 +235,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 		// reclaimer1: 2 GPUs, can reclaim 2 from reclaimee
 		// reclaimer2: 1 GPU, cannot reclaim from reclaimee until after min-runtime
 		testCtx = testcontext.GetConnectivity(ctx, Default)
-		parentQueue, reclaimeeQueue, reclaimerQueue = createQueues(3, 1, 2)
+		parentQueue, reclaimeeQueue, reclaimerQueue = createQueues(3, 0, 3)
 		reclaimeeQueue.Spec.Resources.GPU.OverQuotaWeight = 0
 		reclaimeeQueue.Spec.ReclaimMinRuntime = &metav1.Duration{Duration: 90 * time.Second}
 		testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
@@ -299,7 +299,6 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 		},
 			30*time.Second,
 		)
-		fmt.Println("pod stayed pending for at least 30 seconds, now it should schedule")
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimerNamespace, reclaimer2Pods)
 	})
 })
