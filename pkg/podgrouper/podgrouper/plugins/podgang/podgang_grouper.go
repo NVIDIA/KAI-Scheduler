@@ -47,25 +47,33 @@ func (pgg *PodGangGrouper) GetPodGroupMetadata(
 		metadata.PriorityClassName = priorityClassName
 	}
 
-	var minAvailable int64
-	pgslice, found, err := unstructured.NestedSlice(topOwner.Object, "spec", "podgroups")
+	var minAvailable int32
+	pgSlice, found, err := unstructured.NestedSlice(topOwner.Object, "spec", "podgroups")
 	if err != nil {
 		return nil, err
 	}
-	for _, v := range pgslice {
+	for _, v := range pgSlice {
 		pgr, ok := v.(map[string]interface{})
 		if !ok {
 			return nil, fmt.Errorf("invalid podgang structure")
+		}
+		podSlice, found, err := unstructured.NestedSlice(pgr, "podReferences")
+		if err != nil {
+			return nil, err
+		}
+		if !found {
+			return nil, fmt.Errorf("unexpected podgroup structure")
 		}
 		minReplicas, found, err := unstructured.NestedInt64(pgr, "minReplicas")
 		if err != nil {
 			return nil, err
 		}
-		if found {
-			minAvailable += minReplicas
+		if found && int(minReplicas) != len(podSlice) {
+			fmt.Printf("Unsupported minReplicas: expected: %v, found: %v", len(podSlice), minReplicas)
 		}
+		minAvailable += int32(len(podSlice))
 	}
-	metadata.MinAvailable = int32(minAvailable)
+	metadata.MinAvailable = minAvailable
 
 	return metadata, nil
 }

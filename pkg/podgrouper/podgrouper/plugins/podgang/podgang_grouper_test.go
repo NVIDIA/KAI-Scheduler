@@ -21,7 +21,7 @@ const (
 )
 
 func TestGetPodGroupMetadata(t *testing.T) {
-	podgang := &unstructured.Unstructured{
+	podgang1 := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"kind":       "PodGang",
 			"apiVersion": "scheduler.grove.io/v1alpha1",
@@ -115,16 +115,108 @@ func TestGetPodGroupMetadata(t *testing.T) {
 			Labels: map[string]string{
 				queueLabelKey: "test_queue",
 			},
-			UID: "3",
+			UID: "100",
 		},
 		Spec:   v1.PodSpec{},
 		Status: v1.PodStatus{},
 	}
 
 	grouper := NewPodGangGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
-	metadata, err := grouper.GetPodGroupMetadata(podgang, pod1)
-	assert.Nil(t, err)
-	assert.Equal(t, int32(12), metadata.MinAvailable)
-	assert.Equal(t, constants.InferencePriorityClass, metadata.PriorityClassName)
-	assert.Equal(t, "test_queue", metadata.Queue)
+	metadata1, err1 := grouper.GetPodGroupMetadata(podgang1, pod1)
+	assert.Nil(t, err1)
+	assert.Equal(t, int32(12), metadata1.MinAvailable)
+	assert.Equal(t, constants.InferencePriorityClass, metadata1.PriorityClassName)
+	assert.Equal(t, "test_queue", metadata1.Queue)
+
+	podgang2 := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs2",
+				"namespace": "test-ns",
+				"uid":       "2",
+				"labels": map[string]interface{}{
+					"test_label": "test_value",
+				},
+				"annotations": map[string]interface{}{
+					"test_annotation": "test_value",
+				},
+			},
+			"spec": map[string]interface{}{
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"podReferences": []interface{}{
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs2-pga1",
+							},
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs2-pga2",
+							},
+						},
+					},
+					map[string]interface{}{
+						"podReferences": []interface{}{
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs2-pgb1",
+							},
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs2-pgb2",
+							},
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs2-pgb3",
+							},
+						},
+					},
+					map[string]interface{}{
+						"podReferences": []interface{}{
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs2-pgc1",
+							},
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs2-pgc2",
+							},
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs2-pgc3",
+							},
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs2-pgc4",
+							},
+						},
+					},
+				},
+				"priorityClassName": "inference",
+			},
+		},
+	}
+
+	pod2 := &v1.Pod{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pgs2-pga1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				queueLabelKey: "test_queue",
+			},
+			UID: "200",
+		},
+		Spec:   v1.PodSpec{},
+		Status: v1.PodStatus{},
+	}
+
+	metadata2, err2 := grouper.GetPodGroupMetadata(podgang2, pod2)
+	assert.Nil(t, err2)
+	assert.Equal(t, int32(9), metadata2.MinAvailable)
+	assert.Equal(t, constants.InferencePriorityClass, metadata2.PriorityClassName)
+	assert.Equal(t, "test_queue", metadata2.Queue)
+
 }
