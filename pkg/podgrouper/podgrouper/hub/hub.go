@@ -85,6 +85,8 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 	sparkGrouper := spark.NewSparkGrouper(defaultGrouper)
 	podJobGrouper := podjob.NewPodJobGrouper(defaultGrouper, sparkGrouper)
 
+	podgangGrouper := podgang.NewPodGangGrouper(defaultGrouper)
+
 	table := map[metav1.GroupVersionKind]grouper.Grouper{
 		{
 			Group:   "apps",
@@ -236,6 +238,11 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Version: "v1",
 			Kind:    "SPOTRequest",
 		}: spotrequest.NewSpotRequestGrouper(defaultGrouper),
+		{
+			Group:   "scheduler.grove.io",
+			Version: "v1alpha1",
+			Kind:    "PodGang",
+		}: podgangGrouper,
 	}
 
 	skipTopOwnerGrouper := skiptopowner.NewSkipTopOwnerGrouper(kubeClient, defaultGrouper, table)
