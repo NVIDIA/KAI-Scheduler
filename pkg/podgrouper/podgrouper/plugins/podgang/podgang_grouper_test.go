@@ -42,19 +42,19 @@ func TestGetPodGroupMetadata(t *testing.T) {
 						"podReferences": []map[string]interface{}{
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pga1",
+								"name":      "pgs1-pga1",
 							},
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pga2",
+								"name":      "pgs1-pga2",
 							},
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pga3",
+								"name":      "pgs1-pga3",
 							},
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pga4",
+								"name":      "pgs1-pga4",
 							},
 						},
 						"minReplicas": 4,
@@ -63,15 +63,15 @@ func TestGetPodGroupMetadata(t *testing.T) {
 						"podReferences": []map[string]interface{}{
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pgb1",
+								"name":      "pgs1-pgb1",
 							},
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pgb2",
+								"name":      "pgs1-pgb2",
 							},
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pgb3",
+								"name":      "pgs1-pgb3",
 							},
 						},
 						"minReplicas": 3,
@@ -80,23 +80,23 @@ func TestGetPodGroupMetadata(t *testing.T) {
 						"podReferences": []map[string]interface{}{
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pgc1",
+								"name":      "pgs1-pgc1",
 							},
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pgc2",
+								"name":      "pgs1-pgc2",
 							},
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pgc3",
+								"name":      "pgs1-pgc3",
 							},
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pgc4",
+								"name":      "pgs1-pgc4",
 							},
 							{
 								"namespace": "test-ns",
-								"name": "pgs1-pgc5",
+								"name":      "pgs1-pgc5",
 							},
 						},
 						"minReplicas": 5,
@@ -124,7 +124,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	grouper := NewPodGangGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	metadata, err := grouper.GetPodGroupMetadata(podgang, pod1)
 	assert.Nil(t, err)
-	assert.Equal(t, 12, metadata.minAvailable)
+	assert.Equal(t, 12, metadata.MinAvailable)
 	assert.Equal(t, constants.InferencePriorityClass, metadata.PriorityClassName)
 	assert.Equal(t, "test_queue", metadata.Queue)
 }
