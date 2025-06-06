@@ -48,11 +48,11 @@ func (pgg *PodGangGrouper) GetPodGroupMetadata(
 	}
 
 	var minAvailable int64
-	pgs, found, err := unstructured.NestedSlice(topOwner.Object, "spec", "podgroups")
+	pgslice, found, err := unstructured.NestedSlice(topOwner.Object, "spec", "podgroups")
 	if err != nil {
 		return nil, err
 	}
-	for _, v := range pgs {
+	for _, v := range pgslice {
 		pgr, ok := v.(map[string]interface{})
 		if !ok {
 			return nil, fmt.Errorf("invalid podgang structure")

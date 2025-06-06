@@ -37,69 +37,69 @@ func TestGetPodGroupMetadata(t *testing.T) {
 				},
 			},
 			"spec": map[string]interface{}{
-				"podgroups": []map[string]interface{}{
-					{
-						"podReferences": []map[string]interface{}{
-							{
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"podReferences": []interface{}{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pga1",
 							},
-							{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pga2",
 							},
-							{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pga3",
 							},
-							{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pga4",
 							},
 						},
-						"minReplicas": 4,
+						"minReplicas": int64(4),
 					},
-					{
-						"podReferences": []map[string]interface{}{
-							{
+					map[string]interface{}{
+						"podReferences": []interface{}{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pgb1",
 							},
-							{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pgb2",
 							},
-							{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pgb3",
 							},
 						},
-						"minReplicas": 3,
+						"minReplicas": int64(3),
 					},
-					{
-						"podReferences": []map[string]interface{}{
-							{
+					map[string]interface{}{
+						"podReferences": []interface{}{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pgc1",
 							},
-							{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pgc2",
 							},
-							{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pgc3",
 							},
-							{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pgc4",
 							},
-							{
+							map[string]interface{}{
 								"namespace": "test-ns",
 								"name":      "pgs1-pgc5",
 							},
 						},
-						"minReplicas": 5,
+						"minReplicas": int64(5),
 					},
 				},
 				"priorityClassName": "inference",
@@ -124,7 +124,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	grouper := NewPodGangGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	metadata, err := grouper.GetPodGroupMetadata(podgang, pod1)
 	assert.Nil(t, err)
-	assert.Equal(t, 12, metadata.MinAvailable)
+	assert.Equal(t, int32(12), metadata.MinAvailable)
 	assert.Equal(t, constants.InferencePriorityClass, metadata.PriorityClassName)
 	assert.Equal(t, "test_queue", metadata.Queue)
 }
