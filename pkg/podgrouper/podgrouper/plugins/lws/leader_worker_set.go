@@ -39,9 +39,6 @@ func (lg *LwsGrouper) Name() string {
 	return "LwsGrouper"
 }
 
-// +kubebuilder:rbac:groups=leaderworkerset.x-k8s.io,resources=leaderworkersets,verbs=get;list;watch
-// +kubebuilder:rbac:groups=leaderworkerset.x-k8s.io,resources=leaderworkersets/status,verbs=get
-
 func (lg *LwsGrouper) GetPodGroupMetadata(
 	lwsJob *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {
