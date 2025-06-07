@@ -96,13 +96,9 @@ func (ssn *Session) ReclaimVictimFilter(reclaimer *podgroup_info.PodGroupInfo, v
 	return true
 }
 
-func (ssn *Session) ReclaimScenarioValidator(
-	reclaimer *podgroup_info.PodGroupInfo,
-	reclaimees []*podgroup_info.PodGroupInfo,
-	victimsTasks []*pod_info.PodInfo,
-) bool {
+func (ssn *Session) ReclaimScenarioValidatorFn(scenario api.ScenarioInfo) bool {
 	for _, rf := range ssn.ReclaimScenarioValidatorFns {
-		if !rf(reclaimer, reclaimees, victimsTasks) {
+		if !rf(scenario) {
 			return false
 		}
 	}
@@ -121,12 +117,10 @@ func (ssn *Session) PreemptVictimFilter(preemptor *podgroup_info.PodGroupInfo, v
 }
 
 func (ssn *Session) PreemptScenarioValidator(
-	preemptor *podgroup_info.PodGroupInfo,
-	victimJobs []*podgroup_info.PodGroupInfo,
-	victimTasks []*pod_info.PodInfo,
+	scenario api.ScenarioInfo,
 ) bool {
 	for _, pf := range ssn.PreemptScenarioValidatorFns {
-		if !pf(preemptor, victimJobs, victimTasks) {
+		if !pf(scenario) {
 			return false
 		}
 	}
