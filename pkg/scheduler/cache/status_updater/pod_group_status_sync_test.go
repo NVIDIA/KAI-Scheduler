@@ -194,12 +194,6 @@ var _ = Describe("Status Updater - Pod Groups Syncing", func() {
 			return true
 		})
 		Expect(appliedPodGroupUpdatesCount).To(Equal(0))
-		numberOfPodGroupInFlight := 0
-		statusUpdater.inFlightPodGroups.Range(func(key any, value any) bool {
-			numberOfPodGroupInFlight += 1
-			return true
-		})
-		Expect(numberOfPodGroupInFlight).To(Equal(0))
 
 		// check that the pods groups are now not updated anymore
 		statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsOriginals)
@@ -247,6 +241,20 @@ var _ = Describe("Status Updater - Pod Groups Syncing", func() {
 		}
 
 		statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsFromCluster)
+
+		// check that the inFlight and applied pod groups cache are empty - seen newer
+		appliedPodGroupUpdatesCount := 0
+		statusUpdater.appliedPodGroupUpdates.Range(func(key any, value any) bool {
+			appliedPodGroupUpdatesCount += 1
+			return true
+		})
+		Expect(appliedPodGroupUpdatesCount).To(Equal(0))
+		numberOfPodGroupInFlight := 0
+		statusUpdater.inFlightPodGroups.Range(func(key any, value any) bool {
+			numberOfPodGroupInFlight += 1
+			return true
+		})
+		Expect(numberOfPodGroupInFlight).To(Equal(0))
 
 		// check that the pods groups are now not updated anymore
 		statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsOriginals)
