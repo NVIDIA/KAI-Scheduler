@@ -76,6 +76,9 @@ To start scheduling workloads with KAI Scheduler, please continue to [Quick Star
 
 We’d love to hear from you! Here are the best ways to connect:
 
+### Slack
+Join the [CNCF Slack](https://communityinviter.com/apps/cloud-native/cncf) first and visit the [#kai-scheduler](https://cloud-native.slack.com/archives/kai-scheduler) channel.
+
 ### Bi-weekly Community Call  
 **When:** Every other Monday at 17:00 CEST  
 [Convert to your time zone](https://dateful.com/time-zone-converter?t=17&tz2=Germany) | [Add to your calendar](https://calendar.google.com/calendar/event?action=TEMPLATE&tmeid=N2Q2bjhoNXAzMGc0cWpnZTQ4OGtpdXFhanFfMjAyNTA2MDlUMTUwMDAwWiAxZjQ2OTZiOWVlM2JiMWE1ZWIzMTAwODBkNDZiZmMwMDZjNTUxYWFiZmU1YTM3ZGM2YTc0NTFhYmNhMmE1ODk0QGc&tmsrc=1f4696b9ee3bb1a5eb310080d46bfc006c551aabfe5a37dc6a7451abca2a5894%40group.calendar.google.com&scp=ALL)  | [Meeting notes & agenda](https://docs.google.com/document/d/13K7NGdPebOstlrsif1YLjGz1x-aJafMXeIgqbO7WghI/edit?usp=sharing)
@@ -85,11 +88,4 @@ Join the [kai-scheduler mailing list](https://groups.google.com/g/kai-scheduler)
 
 ### Technical Issues & Feature Requests  
 Please open a [GitHub issue](https://github.com/NVIDIA/KAI-Scheduler/issues/new/choose) for bugs, feature suggestions, or technical help. This helps us keep track of requests and respond effectively.
-
-### Broader Conversations
-For deeper discussions like roadmap planning, scheduling strategies, and working group coordination:  
-Join the [CNCF Slack](https://communityinviter.com/apps/cloud-native/cncf) and visit [#batch-wg](https://cloud-native.slack.com/archives/C02Q5DFF3MM).
-
-
-
 
