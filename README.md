@@ -86,9 +86,8 @@ Join the [kai-scheduler mailing list](https://groups.google.com/g/kai-scheduler)
 ### Technical Issues & Feature Requests  
 Please open a [GitHub issue](https://github.com/NVIDIA/KAI-Scheduler/issues/new/choose) for bugs, feature suggestions, or technical help. This helps us keep track of requests and respond effectively.
 
-### Broader Conversations
-For deeper discussions like roadmap planning, scheduling strategies, and working group coordination:  
-Join the [CNCF Slack](https://communityinviter.com/apps/cloud-native/cncf) and visit [#batch-wg](https://cloud-native.slack.com/archives/C02Q5DFF3MM).
+### Slack
+Join the [CNCF Slack](https://communityinviter.com/apps/cloud-native/cncf) first and visit the [#kai-scheduler](https://cloud-native.slack.com/archives/kai-scheduler) channel.
 
 
 
