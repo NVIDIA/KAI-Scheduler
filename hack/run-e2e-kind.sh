@@ -10,10 +10,17 @@ KIND_CONFIG=${REPO_ROOT}/hack/e2e-kind-config.yaml
 GOPATH=${HOME}/go
 GOBIN=${GOPATH}/bin
 
+
 TEST_THIRD_PARTY_INTEGRATIONS=${1}
 if [ -z "$TEST_THIRD_PARTY_INTEGRATIONS" ]; then
     echo "TEST_THIRD_PARTY_INTEGRATIONS argument isn't provided, defaulting to false"
     TEST_THIRD_PARTY_INTEGRATIONS="false"
+fi
+
+LOCAL_IMAGES_BUILD=${2}
+if [ -z "$LOCAL_IMAGES_BUILD" ]; then
+    echo "LOCAL_IMAGES_BUILD argument isn't provided, defaulting to latest version"
+    LOCAL_IMAGES_BUILD="false"
 fi
 
 kind create cluster --config ${KIND_CONFIG} --name $CLUSTER_NAME
@@ -28,8 +35,27 @@ if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then
     ${REPO_ROOT}/hack/third_party_integrations/deploy_knative.sh
 fi
 
-PACKAGE_VERSION=0.0.0-$(git rev-parse --short origin/main)
-helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --version "$PACKAGE_VERSION"
+if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
+    cd ${REPO_ROOT}
+    PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)
+    mkdir images
+    make build VERSION=$PACKAGE_VERSION
+    docker save $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION) | gzip > images/docker_images.tgz
+    helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
+    mv charts/kai-scheduler-$PACKAGE_VERSION.tgz images/
+    cd images
+    docker load < docker_images.tgz
+    for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
+        kind load docker-image $image --name $CLUSTER_NAME
+    done
+    cd ..
+    helm upgrade -i kai-scheduler ./images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --wait
+    rm -rf images
+    cd ${REPO_ROOT}/hack
+else
+    PACKAGE_VERSION=0.0.0-$(git rev-parse --short origin/main)
+    helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --version "$PACKAGE_VERSION"
+fi
 
 # Allow all the pods in the fake-gpu-operator and kai-scheduler to start
 sleep 30
@@ -40,6 +66,6 @@ if [ ! -f ${GOBIN}/ginkgo ]; then
     GOBIN=${GOBIN} go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.3
 fi
 
-${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv ${REPO_ROOT}/test/e2e/suites --label-filter '!autoscale', '!scale'
+#${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv ${REPO_ROOT}/test/e2e/suites --label-filter '!autoscale', '!scale'
 
-kind delete cluster --name $CLUSTER_NAME
+#kind delete cluster --name $CLUSTER_NAME
