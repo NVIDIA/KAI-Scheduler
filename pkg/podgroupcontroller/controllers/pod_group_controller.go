@@ -42,8 +42,9 @@ type PodGroupReconciler struct {
 }
 
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
-// +kubebuilder:rbac:groups="",resources=pods/status,verbs=get
-
+// +kubebuilder:rbac:groups="",resources=pods/status,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch
+// +kubebuilder:rbac:groups="scheduling.k8s.io",resources=priorityclasses,verbs=get;list;watch
 // +kubebuilder:rbac:groups="scheduling.run.ai",resources=podgroups,verbs=get;list;watch
 // +kubebuilder:rbac:groups="scheduling.run.ai",resources=podgroups/status,verbs=get;list;watch;update;patch
 

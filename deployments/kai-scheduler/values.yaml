@@ -25,6 +25,19 @@ podgrouper:
       cpu: "250m"
       memory: "128Mi"
 
+podgroupcontroller:
+  image:
+    name: podgroupcontroller
+    pullPolicy: IfNotPresent
+  additionalArgs: []
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+    requests:
+      cpu: "250m"
+      memory: "128Mi"
+
 binder:
   name: binder
   image:
