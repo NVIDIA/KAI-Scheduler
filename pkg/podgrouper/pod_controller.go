@@ -50,6 +50,9 @@ type Configs struct {
 	KnativeGangSchedule      bool
 	SchedulerName            string
 	SchedulingQueueLabelKey  string
+
+	DefaultPrioritiesConfigMapName      string
+	DefaultPrioritiesConfigMapNamespace string
 }
 
 // +kubebuilder:rbac:groups="",resources=pods,verbs=create;update;patch
