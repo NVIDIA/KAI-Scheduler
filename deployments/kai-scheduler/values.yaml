@@ -102,3 +102,16 @@ nodescaleadjuster:
     requests:
       cpu: "250m"
       memory: "128Mi"
+
+queuecontroller:
+  image:
+    name: queuecontroller
+    pullPolicy: IfNotPresent
+  additionalArgs: []
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+    requests:
+      cpu: "250m"
+      memory: "128Mi"
