@@ -49,6 +49,9 @@ func TestAddFlags(t *testing.T) {
 		NumOfStatusRecordingWorkers:       defaultNumOfStatusRecordingWorkers,
 		NodePoolLabelKey:                  defaultNodePoolLabelKey,
 		PluginServerPort:                  8081,
+		CPUWorkerNodeLabelKey:             defaultCPUWorkerNodeLabelKey,
+		GPUWorkerNodeLabelKey:             defaultGPUWorkerNodeLabelKey,
+		MIGWorkerNodeLabelKey:             defaultMIGWorkerNodeLabelKey,
 	}
 
 	if !reflect.DeepEqual(expected, s) {

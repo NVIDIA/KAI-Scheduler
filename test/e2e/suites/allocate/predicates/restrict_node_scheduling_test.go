@@ -32,8 +32,8 @@ import (
 )
 
 const (
-	cpuWorkerLabelName = "node-role.kubernetes.io/runai-cpu-worker"
-	gpuWorkerLabelName = "node-role.kubernetes.io/runai-gpu-worker"
+	cpuWorkerLabelName = "node-role.kubernetes.io/cpu-worker"
+	gpuWorkerLabelName = "node-role.kubernetes.io/gpu-worker"
 )
 
 var _ = Describe("Restrict node scheduling", Label(labels.Operated), Ordered, func() {

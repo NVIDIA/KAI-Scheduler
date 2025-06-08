@@ -15,6 +15,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
@@ -142,7 +143,8 @@ func getNodeResources(ssn *framework.Session, node *node_info.NodeInfo) rs.Resou
 		return nodeResource
 	}
 
-	_, found := node.Node.Labels[node_info.GpuWorkerNode]
+	gpuWorkerLabelKey := conf.GetConfig().GPUWorkerNodeLabelKey
+	_, found := node.Node.Labels[gpuWorkerLabelKey]
 	shouldIgnoreGPUs := ssn.IsRestrictNodeSchedulingEnabled() && !found
 	if shouldIgnoreGPUs {
 		nodeResource.Add(rs.NewResourceQuantities(node.Allocatable.Cpu(), node.Allocatable.Memory(), 0))

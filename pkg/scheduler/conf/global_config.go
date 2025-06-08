@@ -15,12 +15,18 @@ var (
 type GlobalConfig struct {
 	ResourceReservationAppLabelValue string
 	ScalingPodAppLabelValue          string
+	CPUWorkerNodeLabelKey            string
+	GPUWorkerNodeLabelKey            string
+	MIGWorkerNodeLabelKey            string
 }
 
 func newGlobalConfig() *GlobalConfig {
 	return &GlobalConfig{
-		ResourceReservationAppLabelValue: "kai-resource-reservation",
+		ResourceReservationAppLabelValue: "runai-reservation",
 		ScalingPodAppLabelValue:          "scaling-pod",
+		CPUWorkerNodeLabelKey:            "node-role.kubernetes.io/cpu-worker",
+		GPUWorkerNodeLabelKey:            "node-role.kubernetes.io/gpu-worker",
+		MIGWorkerNodeLabelKey:            "node-role.kubernetes.io/mig-enabled",
 	}
 }
 

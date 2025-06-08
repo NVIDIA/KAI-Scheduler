@@ -28,7 +28,6 @@ const (
 	// Labels
 	GPUGroup                 = "runai-gpu-group"
 	MultiGpuGroupLabelPrefix = GPUGroup + "/"
-	MigEnabledLabel          = "node-role.kubernetes.io/runai-mig-enabled"
 	MigStrategyLabel         = "nvidia.com/mig.strategy"
 	GpuCountLabel            = "nvidia.com/gpu.count"
 )

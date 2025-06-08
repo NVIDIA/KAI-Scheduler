@@ -132,6 +132,9 @@ func setupLogging(so *options.ServerOption) error {
 func setConfig(so *options.ServerOption) {
 	config := conf.GetConfig()
 	config.ResourceReservationAppLabelValue = so.ResourceReservationAppLabel
+	config.CPUWorkerNodeLabelKey = so.CPUWorkerNodeLabelKey
+	config.GPUWorkerNodeLabelKey = so.GPUWorkerNodeLabelKey
+	config.MIGWorkerNodeLabelKey = so.MIGWorkerNodeLabelKey
 }
 
 func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMux) error {

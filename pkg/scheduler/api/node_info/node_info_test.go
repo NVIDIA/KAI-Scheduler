@@ -27,7 +27,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storagecapacity_info"
 )
 
-const MibToMbScale = 1.048576
+const (
+	MibToMbScale       = 1.048576
+	migEnabledLabelKey = "node-role.kubernetes.io/mig-enabled"
+)
 
 func nodeInfoEqual(l, r *NodeInfo) bool {
 	l.PodAffinityInfo = nil
@@ -535,10 +538,10 @@ func TestIsTaskAllocatable(t *testing.T) {
 
 func TestIsTaskAllocatableOnReleasingOrIdle(t *testing.T) {
 	singleMigNode := common_info.BuildNode("single-mig", common_info.BuildResourceListWithGPU("2000m", "2G", "8"))
-	singleMigNode.Labels[commonconstants.MigEnabledLabel] = "true"
+	singleMigNode.Labels[migEnabledLabelKey] = "true"
 
 	mixedMigNode := common_info.BuildNode("mixed-mig", common_info.BuildResourceListWithGPU("2000m", "2G", "8"))
-	mixedMigNode.Labels[commonconstants.MigEnabledLabel] = "true"
+	mixedMigNode.Labels[migEnabledLabelKey] = "true"
 	mixedMigNode.Labels[commonconstants.GpuCountLabel] = "8"
 	mixedMigNode.Labels[GpuMemoryLabel] = "40"
 

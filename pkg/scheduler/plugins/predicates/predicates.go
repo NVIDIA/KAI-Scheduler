@@ -16,6 +16,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/predicates"
@@ -229,14 +230,16 @@ func (pp *predicatesPlugin) evaluateTaskOnPredicates(
 	}
 
 	if isRestrictNodeSchedulingEnabled() {
+		gpuWorkerLabelKey := conf.GetConfig().GPUWorkerNodeLabelKey
+		cpuWorkerLabelKey := conf.GetConfig().CPUWorkerNodeLabelKey
 		if task.IsRequireAnyKindOfGPU() {
-			if _, found := node.Node.Labels[node_info.GpuWorkerNode]; !found {
+			if _, found := node.Node.Labels[gpuWorkerLabelKey]; !found {
 				log.InfraLogger.V(6).Infof("Task <%s/%s> is a GPU job and will not be allocated to a non GPU <%s>",
 					task.Namespace, task.Name, node.Name)
 				return fmt.Errorf("gpu task: <%v/%v> can't run on non gpu nodes, node: <%v>", task.Namespace, task.Name, node.Name)
 			}
 		} else {
-			if _, found := node.Node.Labels[node_info.CpuWorkerNode]; !found {
+			if _, found := node.Node.Labels[cpuWorkerLabelKey]; !found {
 				log.InfraLogger.V(6).Infof("Task <%s/%s> is a CPU job and will not be allocated to a GPU node <%s>",
 					task.Namespace, task.Name, node.Name)
 				return fmt.Errorf("cpu task: <%v/%v> can't run on non cpu nodes, node: <%v>", task.Namespace, task.Name, node.Name)

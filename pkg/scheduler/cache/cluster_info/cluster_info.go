@@ -429,10 +429,12 @@ func getPodGroupPriority(
 }
 
 func filterUnmarkedNodes(nodes []*v1.Node) []*v1.Node {
+	cpuWorkerLabelKey := conf.GetConfig().CPUWorkerNodeLabelKey
+	gpuWorkerLabelKey := conf.GetConfig().GPUWorkerNodeLabelKey
 	markedNodes := []*v1.Node{}
 	for _, node := range nodes {
-		_, foundGpuNode := node.Labels[node_info.GpuWorkerNode]
-		_, foundCpuNode := node.Labels[node_info.CpuWorkerNode]
+		_, foundGpuNode := node.Labels[gpuWorkerLabelKey]
+		_, foundCpuNode := node.Labels[cpuWorkerLabelKey]
 		if foundGpuNode || foundCpuNode {
 			markedNodes = append(markedNodes, node)
 			log.InfraLogger.V(6).Infof("Node: <%v> is considered by cpu or gpu label", node.Name)
