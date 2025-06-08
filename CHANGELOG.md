@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Adding queue controller that will update queues statuses with allocation data.
+
 ### Fixes
 - Fixed pod status scheduled race condition between the scheduler and the pod binding
 - Removed redundant `replicas` key for binder from `values.yaml` as it is not used and not supported
