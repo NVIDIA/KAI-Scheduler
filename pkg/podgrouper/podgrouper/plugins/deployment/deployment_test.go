@@ -82,7 +82,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 		Status: v1.PodStatus{},
 	}
 
-	grouper := NewDeploymentGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	grouper := NewDeploymentGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil))
 	metadata, err := grouper.GetPodGroupMetadata(deployment, pod1)
 	assert.Nil(t, err)
 	assert.Equal(t, "pg-pod-1-3", metadata.Name)

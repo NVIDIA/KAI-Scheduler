@@ -47,7 +47,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	amlGrouper := NewAmlGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	amlGrouper := NewAmlGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil))
 	podGroupMetadata, err := amlGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -89,7 +89,7 @@ func TestGetPodGroupMetadataWithoutReplicas(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	amlGrouper := NewAmlGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	amlGrouper := NewAmlGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil))
 	_, err := amlGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.NotNil(t, err)

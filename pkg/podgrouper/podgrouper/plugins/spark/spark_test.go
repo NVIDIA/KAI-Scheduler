@@ -71,7 +71,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 		Object: rawObjectMap,
 	}
 
-	grouper := NewSparkGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	grouper := NewSparkGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(unstructuredPod, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, "spark-selector", podGroupMetadata.Name)
