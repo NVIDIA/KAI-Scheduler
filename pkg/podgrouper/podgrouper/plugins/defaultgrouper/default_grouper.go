@@ -162,8 +162,8 @@ func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstr
 
 // getDefaultPriorityClassNameForKind - returns the default priority class name for a given group kind.
 func (dg *DefaultGrouper) getDefaultPriorityClassNameForKind(groupKind *schema.GroupKind, defaultPriorityClassFallback string) string {
-	if groupKind == nil {
-		logger.V(3).Info("Unable to get default priority class name: GroupKind is nil, using default priority class fallback")
+	if groupKind == nil || groupKind.String() == "" || groupKind.Kind == "" {
+		logger.V(3).Info("Unable to get default priority class name: GroupKind is empty, using default priority class fallback")
 		return defaultPriorityClassFallback
 	}
 
