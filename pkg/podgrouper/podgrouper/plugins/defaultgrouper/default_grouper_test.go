@@ -338,8 +338,7 @@ func TestGetPodGroupMetadataOnPriorityClassDefaultsConfigMapOverrideFromPodSpec(
 				"namespace": "test_namespace",
 				"uid":       "1",
 				"labels": map[string]interface{}{
-					"test_label":        "test_value",
-					"priorityClassName": "my-priority-2",
+					"test_label": "test_value",
 				},
 			},
 		},
@@ -384,7 +383,11 @@ func TestGetPodGroupMetadataOnPriorityClassDefaultsConfigMapOverrideFromLabel(t 
 			},
 		},
 	}
-	pod := &v1.Pod{}
+	pod := &v1.Pod{
+		Spec: v1.PodSpec{
+			PriorityClassName: "my-priority",
+		},
+	}
 
 	defaultsConfigmap := &v1.ConfigMap{
 		ObjectMeta: v12.ObjectMeta{

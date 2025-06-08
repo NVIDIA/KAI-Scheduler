@@ -148,12 +148,12 @@ func (dg *DefaultGrouper) calculateQueueName(topOwner *unstructured.Unstructured
 
 func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstructured, pod *v1.Pod,
 	defaultPriorityClassForJob string) string {
-	if len(pod.Spec.PriorityClassName) != 0 {
-		return pod.Spec.PriorityClassName
-	} else if priorityClassName, found := topOwner.GetLabels()[constants.PriorityLabelKey]; found {
+	if priorityClassName, found := topOwner.GetLabels()[constants.PriorityLabelKey]; found {
 		return priorityClassName
 	} else if priorityClassName, found = pod.GetLabels()[constants.PriorityLabelKey]; found {
 		return priorityClassName
+	} else if len(pod.Spec.PriorityClassName) != 0 {
+		return pod.Spec.PriorityClassName
 	} else {
 		groupKind := topOwner.GroupVersionKind().GroupKind()
 		return dg.getDefaultPriorityClassNameForKind(&groupKind, defaultPriorityClassForJob)
