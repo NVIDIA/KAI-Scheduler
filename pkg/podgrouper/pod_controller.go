@@ -55,6 +55,7 @@ type Configs struct {
 	DefaultPrioritiesConfigMapNamespace string
 }
 
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods,verbs=create;update;patch
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch;update;get;list;watch
 // +kubebuilder:rbac:groups="scheduling.run.ai",resources=podgroups,verbs=create;update;patch;get;list;watch

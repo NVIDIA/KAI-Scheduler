@@ -9,6 +9,14 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - events
   - pods
   verbs:
@@ -26,14 +34,6 @@ rules:
   - create
   - patch
   - update
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - get
-  - list
-  - watch
 - apiGroups:
   - amlarc.azureml.com
   resources:
