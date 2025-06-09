@@ -50,6 +50,7 @@ var defaultKaiSchedulerPlugins = []tier{
 			{Name: "taskorder"},
 			{Name: "nominatednode"},
 			{Name: "dynamicresources"},
+			{Name: "minruntime"},
 		},
 	},
 }
