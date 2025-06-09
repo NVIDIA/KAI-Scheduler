@@ -114,15 +114,19 @@ func (s *BaseScenario) appendTasksAsVictimJob(tasks []*pod_info.PodInfo) {
 	s.victimsJobsTaskGroups[job.UID] = append(s.victimsJobsTaskGroups[job.UID], job)
 
 	victimTasks := make([]*pod_info.PodInfo, 0)
+	victimJobs := make([]*podgroup_info.PodGroupInfo, 0)
 	victim, found := s.victims[job.UID]
 	if found {
 		victimTasks = victim.Tasks
+		victimJobs = victim.RepresentativeJobs
 	}
 	victimTasks = append(victimTasks, tasks...)
+	victimJobs = append(victimJobs, job)
+
 	s.victims[job.UID] = &api.VictimInfo{
-		Job:               job,
-		RepresentativeJob: originalJob,
-		Tasks:             victimTasks,
+		Job:                originalJob,
+		RepresentativeJobs: victimJobs,
+		Tasks:              victimTasks,
 	}
 }
 

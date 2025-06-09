@@ -122,9 +122,11 @@ func (pp *proportionPlugin) reclaimableFn(
 }
 
 func (pp *proportionPlugin) getVictimResources(victim *api.VictimInfo) []*resource_info.Resource {
-	victimTasks := make([]*pod_info.PodInfo, 0, len(victim.RepresentativeJob.PodInfos))
-	for _, task := range victim.RepresentativeJob.PodInfos {
-		victimTasks = append(victimTasks, task)
+	var victimTasks []*pod_info.PodInfo
+	for _, job := range victim.RepresentativeJobs {
+		for _, task := range job.PodInfos {
+			victimTasks = append(victimTasks, task)
+		}
 	}
 
 	var victimResources []*resource_info.Resource
