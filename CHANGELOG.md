@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v0.4.10] - 2025-06-09
+
+### Fixed
+- Fix scheduler pod group status synchronization between incoming update and in-cluster data
+
 ## [v0.4.9] - 2025-05-27
 
 ### Fixed
