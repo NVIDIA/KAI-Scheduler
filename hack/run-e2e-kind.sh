@@ -10,18 +10,33 @@ KIND_CONFIG=${REPO_ROOT}/hack/e2e-kind-config.yaml
 GOPATH=${HOME}/go
 GOBIN=${GOPATH}/bin
 
+# Parse named parameters
+TEST_THIRD_PARTY_INTEGRATIONS="false"
+LOCAL_IMAGES_BUILD="false"
 
-TEST_THIRD_PARTY_INTEGRATIONS=${1}
-if [ -z "$TEST_THIRD_PARTY_INTEGRATIONS" ]; then
-    echo "TEST_THIRD_PARTY_INTEGRATIONS argument isn't provided, defaulting to false"
-    TEST_THIRD_PARTY_INTEGRATIONS="false"
-fi
-
-LOCAL_IMAGES_BUILD=${2}
-if [ -z "$LOCAL_IMAGES_BUILD" ]; then
-    echo "LOCAL_IMAGES_BUILD argument isn't provided, defaulting to latest version"
-    LOCAL_IMAGES_BUILD="false"
-fi
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --test-third-party-integrations)
+      TEST_THIRD_PARTY_INTEGRATIONS="true"
+      shift
+      ;;
+    --local-images-build)
+      LOCAL_IMAGES_BUILD="true"
+      shift
+      ;;
+    -h|--help)
+      echo "Usage: $0 [--test-third-party-integrations] [--local-images-build]"
+      echo "  --test-third-party-integrations: Install third party operators for compatibility testing"
+      echo "  --local-images-build: Build and use local images instead of pulling from registry"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option $1"
+      echo "Use --help for usage information"
+      exit 1
+      ;;
+  esac
+done
 
 kind create cluster --config ${KIND_CONFIG} --name $CLUSTER_NAME
 
