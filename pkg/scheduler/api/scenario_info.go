@@ -15,7 +15,10 @@ type ScenarioInfo interface {
 }
 
 type VictimInfo struct {
-	Job               *podgroup_info.PodGroupInfo
+	// Job is the original job that is being evicted, as it exists in the session
+	Job *podgroup_info.PodGroupInfo
+	// RepresentativeJob is a partial representation of the job that is being evicted. To be deprecated.
 	RepresentativeJob *podgroup_info.PodGroupInfo
-	Tasks             []*pod_info.PodInfo
+	// Tasks is the list of tasks that are being evicted.
+	Tasks []*pod_info.PodInfo
 }
