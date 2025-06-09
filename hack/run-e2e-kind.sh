@@ -81,6 +81,6 @@ if [ ! -f ${GOBIN}/ginkgo ]; then
     GOBIN=${GOBIN} go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.3
 fi
 
-#${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv ${REPO_ROOT}/test/e2e/suites --label-filter '!autoscale', '!scale'
+${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv ${REPO_ROOT}/test/e2e/suites --label-filter '!autoscale', '!scale'
 
-#kind delete cluster --name $CLUSTER_NAME
+kind delete cluster --name $CLUSTER_NAME
