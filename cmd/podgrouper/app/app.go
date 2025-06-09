@@ -7,12 +7,14 @@ import (
 	"flag"
 
 	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -53,6 +55,7 @@ func Run() error {
 				Unstructured: true,
 			},
 		},
+		Cache: getCacheOptions(opts),
 		Metrics: metricsserver.Options{
 			BindAddress: opts.MetricsAddr,
 		},
@@ -113,4 +116,21 @@ func getClientConfigOrDie(opts Options) *rest.Config {
 	clientConfig.Burst = opts.Burst
 
 	return clientConfig
+}
+
+func getCacheOptions(opts Options) cache.Options {
+	if opts.DefaultPrioritiesConfigMapName == "" || opts.DefaultPrioritiesConfigMapNamespace == "" {
+		return cache.Options{}
+	}
+
+	// limit configmap cache to the namespace that contains the configmap of default priorities for pod groups
+	return cache.Options{
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.ConfigMap{}: {
+				Namespaces: map[string]cache.Config{
+					opts.DefaultPrioritiesConfigMapNamespace: {},
+				},
+			},
+		},
+	}
 }
