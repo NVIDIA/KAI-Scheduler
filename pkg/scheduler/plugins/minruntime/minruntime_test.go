@@ -70,7 +70,6 @@ var _ = Describe("MinRuntime Plugin", func() {
 			}
 			pg.PodStatusIndex[pod_status.Running][podID] = podInfo
 		}
-		plugin.podGroupInfos[uid] = pg
 		return pg
 	}
 
@@ -83,7 +82,6 @@ var _ = Describe("MinRuntime Plugin", func() {
 		// Initialize the plugin
 		plugin = &minruntimePlugin{
 			queues:                   queues,
-			podGroupInfos:            make(map[common_info.PodGroupID]*podgroup_info.PodGroupInfo),
 			defaultPreemptMinRuntime: defaultPreemptDuration,
 			defaultReclaimMinRuntime: defaultReclaimDuration,
 			reclaimResolveMethod:     resolveMethodLCA,

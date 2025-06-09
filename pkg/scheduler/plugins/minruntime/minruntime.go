@@ -29,7 +29,6 @@ type minruntimePlugin struct {
 	defaultPreemptMinRuntime metav1.Duration
 	reclaimResolveMethod     string
 	queues                   map[common_info.QueueID]*queue_info.QueueInfo
-	podGroupInfos            map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
 
 	preemptProtectionCache map[common_info.PodGroupID]map[common_info.PodGroupID]bool
 	reclaimProtectionCache map[common_info.PodGroupID]map[common_info.PodGroupID]bool
@@ -76,7 +75,6 @@ func (mr *minruntimePlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddPreemptScenarioValidatorFn(mr.preemptScenarioValidatorFn)
 	// store session data used for lookups
 	mr.queues = ssn.Queues
-	mr.podGroupInfos = ssn.PodGroupInfos
 	// setup caches on session open
 	mr.preemptProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
 	mr.reclaimProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
@@ -86,7 +84,6 @@ func (mr *minruntimePlugin) OnSessionOpen(ssn *framework.Session) {
 }
 
 func (mr *minruntimePlugin) OnSessionClose(ssn *framework.Session) {
-	mr.podGroupInfos = nil
 	mr.queues = nil
 	mr.preemptProtectionCache = nil
 	mr.reclaimProtectionCache = nil
