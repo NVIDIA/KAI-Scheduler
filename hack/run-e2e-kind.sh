@@ -53,19 +53,13 @@ fi
 if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
     cd ${REPO_ROOT}
     PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)
-    mkdir images
     make build VERSION=$PACKAGE_VERSION
-    docker save $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION) | gzip > images/docker_images.tgz
-    helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
-    mv charts/kai-scheduler-$PACKAGE_VERSION.tgz images/
-    cd images
-    docker load < docker_images.tgz
     for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
         kind load docker-image $image --name $CLUSTER_NAME
     done
-    cd ..
-    helm upgrade -i kai-scheduler ./images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --wait
-    rm -rf images
+    helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
+    helm upgrade -i kai-scheduler ./charts/kai-scheduler-$PACKAGE_VERSION.tgz  -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --wait
+    rm -rf ./charts/kai-scheduler-$PACKAGE_VERSION.tgz 
     cd ${REPO_ROOT}/hack
 else
     PACKAGE_VERSION=0.0.0-$(git rev-parse --short origin/main)
