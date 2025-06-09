@@ -40,7 +40,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 		Object: rawObjectMap,
 	}
 
-	grouper := NewSpotRequestGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil))
+	grouper := NewSpotRequestGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(unstructuredPod, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, constants.InferencePriorityClass, podGroupMetadata.PriorityClassName)

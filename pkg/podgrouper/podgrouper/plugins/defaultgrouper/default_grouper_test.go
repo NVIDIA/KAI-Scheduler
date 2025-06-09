@@ -34,7 +34,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -69,7 +69,7 @@ func TestGetPodGroupMetadataOnQueueFromOwnerDefaultNP(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -103,7 +103,7 @@ func TestGetPodGroupMetadataInferQueueFromProjectNodepool(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -132,7 +132,7 @@ func TestGetPodGroupMetadataOnQueueFromOwner(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -165,7 +165,7 @@ func TestGetPodGroupMetadataOnQueueFromPod(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -193,7 +193,7 @@ func TestGetPodGroupMetadataOnPriorityClassFromOwner(t *testing.T) {
 	}
 	pod := &v1.Pod{}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -226,7 +226,7 @@ func TestGetPodGroupMetadataOnPriorityClassFromPod(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -257,7 +257,7 @@ func TestGetPodGroupMetadataOnPriorityClassFromPodSpec(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -289,7 +289,7 @@ func TestGetPodGroupMetadataOnPriorityClassFromDefaultsGroupKindConfigMap(t *tes
 	}
 	kubeClient := fake.NewFakeClient(defaultsConfigmap)
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "priorities-defaults", "test_namespace_1", kubeClient)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -321,7 +321,7 @@ func TestGetPodGroupMetadataOnPriorityClassFromDefaultsKindConfigMap(t *testing.
 	}
 	kubeClient := fake.NewFakeClient(defaultsConfigmap)
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "priorities-defaults", "test_namespace_1", kubeClient)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -360,7 +360,7 @@ func TestGetPodGroupMetadataOnPriorityClassDefaultsConfigMapOverrideFromPodSpec(
 	}
 	kubeClient := fake.NewFakeClient(defaultsConfigmap)
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "priorities-defaults", "test_namespace_1", kubeClient)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -400,7 +400,7 @@ func TestGetPodGroupMetadataOnPriorityClassDefaultsConfigMapOverrideFromLabel(t 
 	}
 	kubeClient := fake.NewFakeClient(defaultsConfigmap)
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "priorities-defaults", "test_namespace_1", kubeClient)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -433,19 +433,19 @@ func TestGetPodGroupMetadataOnPriorityClassFromDefaultsConfigMapTestNils(t *test
 	kubeClient := fake.NewFakeClient(defaultsConfigmap)
 
 	// sanity
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "priorities-defaults", "test_namespace_1", kubeClient)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 	assert.Nil(t, err)
 	assert.Equal(t, "high-priority", podGroupMetadata.PriorityClassName)
 
 	// nil kubeclient
-	defaultGrouper = NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "priorities-defaults", "test_namespace_1", nil)
+	defaultGrouper = NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err = defaultGrouper.GetPodGroupMetadata(owner, pod)
 	assert.Nil(t, err)
 	assert.Equal(t, constants.TrainPriorityClass, podGroupMetadata.PriorityClassName)
 
 	// unexisting configmap
-	defaultGrouper = NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "unexisting-cm", "test_namespace_1", kubeClient)
+	defaultGrouper = NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err = defaultGrouper.GetPodGroupMetadata(owner, pod)
 	assert.Nil(t, err)
 	assert.Equal(t, constants.TrainPriorityClass, podGroupMetadata.PriorityClassName)
@@ -462,7 +462,7 @@ func TestGetPodGroupMetadataOnPriorityClassFromDefaultsConfigMapTestNils(t *test
 			},
 		},
 	}
-	defaultGrouper = NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "priorities-defaults", "test_namespace_1", kubeClient)
+	defaultGrouper = NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err = defaultGrouper.GetPodGroupMetadata(owner, pod)
 	assert.Nil(t, err)
 	assert.Equal(t, constants.TrainPriorityClass, podGroupMetadata.PriorityClassName)
@@ -493,14 +493,14 @@ func TestGetPodGroupMetadataOnPriorityClassFromDefaultsConfigMapBadConfigmapData
 	}
 	kubeClient := fake.NewFakeClient(defaultsConfigmap)
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "priorities-defaults", "test_namespace_1", kubeClient)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 	assert.Nil(t, err)
 	assert.Equal(t, constants.TrainPriorityClass, podGroupMetadata.PriorityClassName)
 
 	defaultsConfigmap.Data = map[string]string{"different-key!!!!": `[{"typeName":"TestKind.apps","priorityName":"high-priority"},{"typeName":"TestKind","priorityName":"low-priority"}]`}
 	kubeClient = fake.NewFakeClient(defaultsConfigmap)
-	defaultGrouper = NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "priorities-defaults", "test_namespace_1", kubeClient)
+	defaultGrouper = NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err = defaultGrouper.GetPodGroupMetadata(owner, pod)
 	assert.Nil(t, err)
 	assert.Equal(t, constants.TrainPriorityClass, podGroupMetadata.PriorityClassName)
@@ -533,7 +533,7 @@ func TestGetPodGroupMetadata_OwnerUserOverridePodUser(t *testing.T) {
 		},
 	}
 
-	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil)
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)

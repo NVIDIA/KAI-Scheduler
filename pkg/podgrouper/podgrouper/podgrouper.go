@@ -42,12 +42,14 @@ type podGrouper struct {
 type GetPodGroupMetadataFunc func(topOwner *unstructured.Unstructured, pod *v1.Pod, otherOwners ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error)
 
 func NewPodgrouper(client client.Client, clientWithoutCache client.Client, searchForLegacyPodGroups,
-	gangScheduleKnative bool, queueLabelKey, nodePoolLabelKey string) *podGrouper {
+	gangScheduleKnative bool, queueLabelKey, nodePoolLabelKey string,
+	defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string) *podGrouper {
 	podGrouper := &podGrouper{
 		client:             client,
 		clientWithoutCache: clientWithoutCache,
 		pluginsHub: pluginshub.NewPluginsHub(
 			client, searchForLegacyPodGroups, gangScheduleKnative, queueLabelKey, nodePoolLabelKey,
+			defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace,
 		),
 	}
 

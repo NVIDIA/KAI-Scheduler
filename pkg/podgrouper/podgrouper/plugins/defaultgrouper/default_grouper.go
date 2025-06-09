@@ -36,15 +36,19 @@ type DefaultGrouper struct {
 	kubeReader                          client.Reader
 }
 
-func NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string,
-	kubeReader client.Reader) *DefaultGrouper {
+func NewDefaultGrouper(queueLabelKey, nodePoolLabelKey string) *DefaultGrouper {
 	return &DefaultGrouper{
-		queueLabelKey:                       queueLabelKey,
-		nodePoolLabelKey:                    nodePoolLabelKey,
-		defaultPrioritiesConfigMapName:      defaultPrioritiesConfigMapName,
-		defaultPrioritiesConfigMapNamespace: defaultPrioritiesConfigMapNamespace,
-		kubeReader:                          kubeReader,
+		queueLabelKey:    queueLabelKey,
+		nodePoolLabelKey: nodePoolLabelKey,
 	}
+}
+
+func (dg *DefaultGrouper) SetDefaultPrioritiesConfigMapParams(
+	defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string, kubeReader client.Reader,
+) {
+	dg.defaultPrioritiesConfigMapName = defaultPrioritiesConfigMapName
+	dg.defaultPrioritiesConfigMapNamespace = defaultPrioritiesConfigMapNamespace
+	dg.kubeReader = kubeReader
 }
 
 func (dg *DefaultGrouper) Name() string {

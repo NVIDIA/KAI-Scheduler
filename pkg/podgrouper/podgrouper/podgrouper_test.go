@@ -120,7 +120,7 @@ func TestNewPodgrouper(t *testing.T) {
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(resources...).Build()
 
 	grouper := podgrouper.NewPodgrouper(client, client, false, true,
-		queueLabelKey, nodePoolLabelKey)
+		queueLabelKey, nodePoolLabelKey, "", "")
 
 	topOwner, owners, err := grouper.GetPodOwners(context.Background(), &pod)
 	assert.Nil(t, err)
@@ -319,6 +319,8 @@ kind: Pod
 				tt.podGrouperOptions.gangScheduleKnative,
 				queueLabelKey,
 				nodePoolLabelKey,
+				"",
+				"",
 			)
 
 			topOwner, owners, err := grouper.GetPodOwners(context.Background(), tt.reconciledPod)

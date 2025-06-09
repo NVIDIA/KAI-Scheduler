@@ -34,7 +34,7 @@ var _ = Describe("SupportedTypes", func() {
 		BeforeEach(func() {
 			kubeClient = fake.NewFakeClient()
 			hub = NewPluginsHub(
-				kubeClient, false, false, queueLabelKey, nodePoolLabelKey,
+				kubeClient, false, false, queueLabelKey, nodePoolLabelKey, "", "",
 			)
 		})
 
@@ -70,7 +70,7 @@ var _ = Describe("SupportedTypes", func() {
 		BeforeEach(func() {
 			kubeClient = fake.NewFakeClient()
 			hub = NewPluginsHub(
-				kubeClient, false, false, queueLabelKey, nodePoolLabelKey,
+				kubeClient, false, false, queueLabelKey, nodePoolLabelKey, "", "",
 			)
 		})
 

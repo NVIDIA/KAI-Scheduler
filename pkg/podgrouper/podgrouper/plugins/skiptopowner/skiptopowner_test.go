@@ -57,7 +57,7 @@ var _ = Describe("SkipTopOwnerGrouper", func() {
 
 		BeforeEach(func() {
 			client = fake.NewFakeClient()
-			defaultGrouper = defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, "", "", nil)
+			defaultGrouper = defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
 			supportedTypes = map[metav1.GroupVersionKind]grouper.Grouper{
 				{Group: "", Version: "v1", Kind: "Pod"}: defaultGrouper,
 			}
