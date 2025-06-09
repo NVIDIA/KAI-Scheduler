@@ -185,6 +185,15 @@ var _ = Describe("Status Updater - Pod Groups Syncing", func() {
 			podGroupsFromCluster = append(podGroupsFromCluster, podGroup.DeepCopy())
 		}
 
+		Eventually(func() int {
+			numberOfPodGroupInFlight := 0
+			statusUpdater.inFlightPodGroups.Range(func(key any, value any) bool {
+				numberOfPodGroupInFlight += 1
+				return true
+			})
+			return numberOfPodGroupInFlight
+		}, time.Second*20, time.Millisecond*50).Should(Equal(0))
+
 		statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsFromCluster)
 
 		// check that the inFlight and applied pod groups cache are empty
