@@ -1,0 +1,8 @@
+global:
+  resourceReservation:
+    namespace: runai-reservation
+    serviceAccount: runai-reservation
+    appLabel: runai-reservation
+
+podgrouper:
+  queueLabelKey: runai/queue

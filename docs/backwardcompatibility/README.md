@@ -1,0 +1,2 @@
+# Backward compatibility and breaking changes
+In this section, we will describe API changes (or other breaking changes), describe the migration process and suggest backwards compatibility options for upgrades from earlier versions.

@@ -38,6 +38,8 @@ KAI Scheduler can be installed:
 - **From Production (Recommended)**
 - **From Source (Build it Yourself)**
 
+For API changes and backwards compatibility instructions, please refer to [Backward Compatibility](docs/backwardcompatibility/README.md)
+
 #### Install from Production
 Locate the latest release version in [releases](https://github.com/NVIDIA/KAI-Scheduler/releases) page.
 Run the following command after replacing `<VERSION>` with the desired release version:
