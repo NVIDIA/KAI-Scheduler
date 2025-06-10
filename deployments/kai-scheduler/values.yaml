@@ -28,6 +28,7 @@ podgrouper:
     requests:
       cpu: "250m"
       memory: "128Mi"
+  queueLabelKey: "kai.scheduler/queue"
 
 podgroupcontroller:
   image:
