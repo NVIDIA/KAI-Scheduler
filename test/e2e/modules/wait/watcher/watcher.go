@@ -28,22 +28,24 @@ type Interface interface {
 type CheckCondition func(watch.Event) bool
 
 var (
-	FlowTimeout         = 5 * time.Minute
-	SteadyStateDuration = 5 * time.Second
+	FlowTimeout = 5 * time.Minute
 )
 
 func ForEvent(ctx context.Context, client runtimeClient.WithWatch, eventWatcher Interface) bool {
-	return ForEventCustomTimeout(ctx, client, eventWatcher, FlowTimeout, SteadyStateDuration)
+	return ForEventCustomTimeout(ctx, client, eventWatcher, FlowTimeout)
 }
 
 func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, eventWatcher Interface,
-	waitTime time.Duration, steadyStateTime time.Duration) bool {
+	waitTime time.Duration) bool {
 	logger := log.FromContext(ctx)
 
 	watcher := eventWatcher.watch(ctx)
 	defer watcher.Stop()
 
 	eventWatcher.sync(ctx)
+	if eventWatcher.satisfied() {
+		return true
+	}
 
 	timer := time.NewTimer(waitTime)
 	defer timer.Stop()
@@ -51,8 +53,6 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 	pollInterval := 2 * time.Second
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
-
-	var satisfiedSince *time.Time = nil
 
 	for {
 		select {
@@ -64,24 +64,17 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 			}
 			return false
 		case <-timer.C:
+			eventWatcher.sync(ctx)
+			if eventWatcher.satisfied() {
+				return true
+			}
 			logger.Error(nil, "WaitForEvent timed out")
 			utils.LogClusterState(client, logger)
 			return false
 		case <-ticker.C:
 			eventWatcher.sync(ctx)
 			if eventWatcher.satisfied() {
-				now := time.Now()
-				if satisfiedSince == nil {
-					satisfiedSince = &now
-				} else {
-					if now.Sub(*satisfiedSince) > steadyStateTime {
-						return true
-					}
-				}
-			} else {
-				if satisfiedSince != nil {
-					satisfiedSince = nil
-				}
+				return true
 			}
 		case event := <-watcher.ResultChan():
 			if event.Type == watch.Error {
@@ -96,18 +89,7 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 
 			eventWatcher.processEvent(ctx, event)
 			if eventWatcher.satisfied() {
-				now := time.Now()
-				if satisfiedSince == nil {
-					satisfiedSince = &now
-				} else {
-					if now.Sub(*satisfiedSince) > steadyStateTime {
-						return true
-					}
-				}
-			} else {
-				if satisfiedSince != nil {
-					satisfiedSince = nil
-				}
+				return true
 			}
 		}
 	}

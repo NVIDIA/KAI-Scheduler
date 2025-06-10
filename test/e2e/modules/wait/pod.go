@@ -7,7 +7,6 @@ package wait
 import (
 	"context"
 	"fmt"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
@@ -128,23 +127,6 @@ func ForPodsWithCondition(
 	pw := watcher.NewGenericWatcher[v1.PodList](client, condition, listOptions...)
 	if !watcher.ForEvent(ctx, client, pw) {
 		Fail("Failed to watch pods for condition")
-	}
-}
-
-func ForPodsWithConditionSteadyState(
-	ctx context.Context, client runtimeClient.WithWatch, checkCondition checkCondition,
-	steadyStateDuration time.Duration, listOptions ...runtimeClient.ListOption) {
-	condition := func(event watch.Event) bool {
-		_, ok := event.Object.(*v1.PodList)
-		if !ok {
-			return false
-		}
-		return checkCondition(event)
-	}
-	pw := watcher.NewGenericWatcher[v1.PodList](client, condition, listOptions...)
-	timeout := watcher.FlowTimeout + steadyStateDuration
-	if !watcher.ForEventCustomTimeout(ctx, client, pw, timeout, steadyStateDuration) {
-		Fail(fmt.Sprintf("Failed to watch pods for condition for %s", timeout))
 	}
 }
 

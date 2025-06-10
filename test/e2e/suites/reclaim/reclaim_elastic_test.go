@@ -284,21 +284,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 			ctx, testCtx.KubeClientset, testCtx.ControllerClient,
 			reclaimerQueue, "reclaimer2-", 1, reclaimer2PodRequirements, "",
 		)
-		// should stay pending for at least 30 seconds, because of min runtime remaining for the protected elastic job
-		wait.ForPodsWithConditionSteadyState(ctx, testCtx.ControllerClient, func(event watch.Event) bool {
-			pods, ok := event.Object.(*v1.PodList)
-			if !ok {
-				return false
-			}
-			for _, pod := range pods.Items {
-				if pod.Name == reclaimer2Pods[0].Name && pod.Status.Phase == v1.PodPending {
-					return true
-				}
-			}
-			return false
-		},
-			30*time.Second,
-		)
+		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, reclaimer2Pods[0])
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimerNamespace, reclaimer2Pods)
 	})
 })

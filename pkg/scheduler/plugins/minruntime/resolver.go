@@ -59,17 +59,7 @@ func (r *resolver) resolvePreemptMinRuntime(
 			break
 		}
 
-		// Move to parent queue if it exists
-		if currentQueue.ParentQueue != "" {
-			parentQueue, found := r.queues[currentQueue.ParentQueue]
-			if found {
-				currentQueue = parentQueue
-				continue
-			}
-		}
-
-		// Break if no more parent queues
-		break
+		currentQueue = r.queues[currentQueue.ParentQueue]
 	}
 
 	// If no preempt-min-runtime is set in the queue tree, use default

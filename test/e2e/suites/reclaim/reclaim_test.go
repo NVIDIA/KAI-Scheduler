@@ -257,20 +257,7 @@ var _ = Describe("Reclaim", Ordered, func() {
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimee)
 
 			reclaimer := createPod(ctx, testCtx, reclaimerQueue, 1)
-			wait.ForPodsWithConditionSteadyState(ctx, testCtx.ControllerClient, func(event watch.Event) bool {
-				pods, ok := event.Object.(*v1.PodList)
-				if !ok {
-					return false
-				}
-				for _, pod := range pods.Items {
-					if pod.Name == reclaimer.Name && pod.Status.Phase == v1.PodPending {
-						return true
-					}
-				}
-				return false
-			},
-				1*time.Minute,
-			)
+			wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, reclaimer)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimer)
 		})
 

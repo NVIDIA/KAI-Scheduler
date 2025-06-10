@@ -85,7 +85,7 @@ var _ = Describe("MinRuntime Plugin", func() {
 			defaultPreemptMinRuntime: defaultPreemptDuration,
 			defaultReclaimMinRuntime: defaultReclaimDuration,
 			reclaimResolveMethod:     resolveMethodLCA,
-			preemptProtectionCache:   make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool),
+			preemptProtectionCache:   make(map[common_info.PodGroupID]bool),
 			reclaimProtectionCache:   make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool),
 			resolver:                 NewResolver(queues, defaultPreemptDuration, defaultReclaimDuration),
 		}
@@ -107,23 +107,6 @@ var _ = Describe("MinRuntime Plugin", func() {
 				// so it should be protected
 				result := plugin.preemptFilterFn(pendingJob, victim)
 				Expect(result).To(BeFalse(), "Job 'victim-job' should be protected from preemption")
-			})
-
-			It("should return true for elastic job but cache the result", func() {
-				// Create a pending job from dev-team1 queue
-				pendingJob := createPodGroup("pending-job", "dev-team1", nil, 1, 1)
-
-				// Create an elastic victim job (MinAvailable < running pods)
-				now := time.Now()
-				recentStart := now.Add(-10 * time.Second) // Started 10 seconds ago
-				victim := createPodGroup("elastic-victim", "prod-team2", &recentStart, 1, 3)
-
-				result := plugin.preemptFilterFn(pendingJob, victim)
-				Expect(result).To(BeTrue(), "Elastic job should allow preemption")
-
-				// Check that the victim was cached
-				Expect(plugin.preemptProtectionCache).To(HaveKey(pendingJob.UID))
-				Expect(plugin.preemptProtectionCache[pendingJob.UID]).To(HaveKey(victim.UID))
 			})
 		})
 
@@ -170,23 +153,6 @@ var _ = Describe("MinRuntime Plugin", func() {
 				// so it should be protected
 				result := plugin.reclaimFilterFn(pendingJob, victim)
 				Expect(result).To(BeFalse(), "Job 'victim-job' should be protected from reclaim")
-			})
-
-			It("should return true for elastic job but cache the result", func() {
-				// Create a pending job from dev-team1 queue
-				pendingJob := createPodGroup("pending-job", "dev-team1", nil, 1, 1)
-
-				// Create an elastic victim job (MinAvailable < running pods)
-				now := time.Now()
-				recentStart := now.Add(-20 * time.Second) // Started 20 seconds ago
-				victim := createPodGroup("elastic-victim", "prod-team2", &recentStart, 1, 3)
-
-				result := plugin.reclaimFilterFn(pendingJob, victim)
-				Expect(result).To(BeTrue(), "Elastic job should allow reclaim")
-
-				// Check that the victim was cached
-				Expect(plugin.reclaimProtectionCache).To(HaveKey(pendingJob.UID))
-				Expect(plugin.reclaimProtectionCache[pendingJob.UID]).To(HaveKey(victim.UID))
 			})
 		})
 
