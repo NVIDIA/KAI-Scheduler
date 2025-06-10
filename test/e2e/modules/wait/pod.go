@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	resourceReservationNamespace = "runai-reservation"
+	resourceReservationNamespace = "kai-resource-reservation"
 )
 
 type checkCondition func(watch.Event) bool

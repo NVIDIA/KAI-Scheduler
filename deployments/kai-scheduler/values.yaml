@@ -10,6 +10,10 @@ global:
   nodeSelector: {}
   affinity: {}
   tolerations: []
+  resourceReservation:
+    namespace: kai-resource-reservation
+    serviceAccount: kai-resource-reservation
+    appLabel: kai-resource-reservation
 
 
 podgrouper:
