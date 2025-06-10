@@ -61,7 +61,6 @@ func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.calculateResourcesProportion(ssn)
 	pp.taskOrderFunc = ssn.TaskOrderFn
 	pp.reclaimablePlugin = rec.New(ssn.IsInferencePreemptible(), pp.taskOrderFunc)
-
 	pp.isInferencePreemptible = ssn.IsInferencePreemptible()
 	capacityPolicy := cp.New(pp.queues, ssn.IsInferencePreemptible())
 	ssn.AddQueueOrderFn(pp.queueOrder)
