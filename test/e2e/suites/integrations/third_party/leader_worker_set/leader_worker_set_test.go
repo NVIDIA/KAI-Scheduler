@@ -166,7 +166,8 @@ func createExampleLWS(
 			Annotations: maps.Clone(sampleLeaderPod.Annotations),
 		},
 		Spec: lws.LeaderWorkerSetSpec{
-			Replicas: ptr.To(int32(numOfGroups)),
+			Replicas:      ptr.To(int32(numOfGroups)),
+			StartupPolicy: lws.LeaderCreatedStartupPolicy,
 			LeaderWorkerTemplate: lws.LeaderWorkerTemplate{
 				LeaderTemplate: &v1.PodTemplateSpec{
 					ObjectMeta: sampleLeaderPod.ObjectMeta,
