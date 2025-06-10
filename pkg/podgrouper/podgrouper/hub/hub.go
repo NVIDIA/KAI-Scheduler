@@ -243,7 +243,7 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Group:   "scheduler.grove.io",
 			Version: "v1alpha1",
 			Kind:    "PodGang",
-		}: podgangGrouper,
+		}: podGangGrouper,
 	}
 
 	skipTopOwnerGrouper := skiptopowner.NewSkipTopOwnerGrouper(kubeClient, defaultGrouper, table)
