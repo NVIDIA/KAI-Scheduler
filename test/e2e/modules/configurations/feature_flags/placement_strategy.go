@@ -53,5 +53,6 @@ func SetPlacementStrategy(
 			conf.PluginOption{Name: "gpusharingorder"},
 		)
 	}
-	updateKaiSchedulerConfigMap(ctx, testCtx, &config)
+
+	return updateKaiSchedulerConfigMap(ctx, testCtx, &config)
 }
