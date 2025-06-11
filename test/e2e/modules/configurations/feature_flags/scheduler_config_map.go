@@ -20,21 +20,13 @@ const (
 	schedulerConfigDataKey = "config.yaml"
 )
 
-type getSchedulerConfigMapData func() (*conf.SchedulerConfiguration, error)
-
-func updateKaiSchedulerConfigMap(ctx context.Context, testCtx *testContext.TestContext, getCmData getSchedulerConfigMapData) error {
+func updateKaiSchedulerConfigMap(ctx context.Context, testCtx *testContext.TestContext, config *conf.SchedulerConfiguration) error {
 	schedulerConfig, err := testCtx.KubeClientset.CoreV1().ConfigMaps(constant.SystemPodsNamespace).
 		Get(ctx, schedulerConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-
-	innerConfig, err := getCmData()
-	if err != nil {
-		return err
-	}
-
-	data, marshalErr := yaml.Marshal(&innerConfig)
+	data, marshalErr := yaml.Marshal(config)
 	if marshalErr != nil {
 		return marshalErr
 	}
