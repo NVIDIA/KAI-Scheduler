@@ -21,7 +21,7 @@ const (
 )
 
 func TestGetPodGroupMetadata(t *testing.T) {
-	podgang1 := &unstructured.Unstructured{
+	podgang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"kind":       "PodGang",
 			"apiVersion": "scheduler.grove.io/v1alpha1",
@@ -107,7 +107,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 		},
 	}
 
-	pod1 := &v1.Pod{
+	pod := &v1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pgs1-pga1",
@@ -122,9 +122,73 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	}
 
 	grouper := NewPodGangGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
-	metadata1, err1 := grouper.GetPodGroupMetadata(podgang1, pod1)
-	assert.Nil(t, err1)
-	assert.Equal(t, int32(12), metadata1.MinAvailable)
-	assert.Equal(t, constants.InferencePriorityClass, metadata1.PriorityClassName)
-	assert.Equal(t, "test_queue", metadata1.Queue)
+	metadata, err := grouper.GetPodGroupMetadata(podgang, pod)
+	assert.Nil(t, err)
+	assert.Equal(t, int32(12), metadata.MinAvailable)
+	assert.Equal(t, constants.InferencePriorityClass, metadata.PriorityClassName)
+	assert.Equal(t, "test_queue", metadata.Queue)
+}
+
+func TestErrorPodGroupMinReplicas(t *testing.T) {
+	podgang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+				"labels": map[string]interface{}{
+					"test_label": "test_value",
+				},
+				"annotations": map[string]interface{}{
+					"test_annotation": "test_value",
+				},
+			},
+			"spec": map[string]interface{}{
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"podReferences": []interface{}{
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs1-pga1",
+							},
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs1-pga2",
+							},
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs1-pga3",
+							},
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs1-pga4",
+							},
+						},
+						"minReplicas": int64(2),
+					},
+				},
+				"priorityClassName": "inference",
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pgs1-pga1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				queueLabelKey: "test_queue",
+			},
+			UID: "100",
+		},
+		Spec:   v1.PodSpec{},
+		Status: v1.PodStatus{},
+	}
+
+	grouper := NewPodGangGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	_, err := grouper.GetPodGroupMetadata(podgang, pod)
+	assert.EqualError(t, err, "Unsupported minReplicas: expected: 4, found: 2")
 }
