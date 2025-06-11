@@ -193,6 +193,10 @@ func (su *defaultStatusUpdater) RecordJobStatusEvent(job *podgroup_info.PodGroup
 		su.recordStaleJobEvent(job)
 	}
 
+	if job.GetNumPendingTasks() == 0 && job.GetNumGatedTasks() == 0 {
+		return nil
+	}
+
 	if !job.IsReadyForScheduling() {
 		su.recordJobNotReadyEvent(job)
 		return nil
