@@ -215,6 +215,22 @@ rules:
   - patch
   - update
 - apiGroups:
+  - scheduler.grove.io
+  resources:
+  - podgangs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - scheduler.grove.io
+  resources:
+  - podgangs/finalizers
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
   - scheduling.run.ai
   resources:
   - podgroups

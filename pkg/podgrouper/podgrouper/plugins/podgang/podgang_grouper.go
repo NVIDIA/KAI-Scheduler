@@ -69,7 +69,7 @@ func (pgg *PodGangGrouper) GetPodGroupMetadata(
 			return nil, err
 		}
 		if found && int(minReplicas) != len(podSlice) {
-			fmt.Printf("Unsupported minReplicas: expected: %v, found: %v", len(podSlice), minReplicas)
+			return nil, fmt.Errorf("Unsupported minReplicas: expected: %v, found: %v", len(podSlice), minReplicas)
 		}
 		minAvailable += int32(len(podSlice))
 	}
