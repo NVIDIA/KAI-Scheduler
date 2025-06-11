@@ -3,8 +3,6 @@
 
 package conf
 
-// GetDefaultSchedulerConfiguration returns the default scheduler configuration
-// that matches the YAML configuration defined in scheduler_conf_util.go
 func GetDefaultSchedulerConfiguration() *SchedulerConfiguration {
 	return &SchedulerConfiguration{
 		Actions: "allocate, consolidation, reclaim, preempt, stalegangeviction",
