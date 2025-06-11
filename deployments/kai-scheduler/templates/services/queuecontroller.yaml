@@ -20,6 +20,13 @@ spec:
         - name: queuecontroller
           image: "{{ .Values.global.registry }}/{{ .Values.queuecontroller.image.name }}:{{ .Chart.Version }}"
           imagePullPolicy: {{ .Values.queuecontroller.image.pullPolicy }}
+          ports:
+            - containerPort: 9443
+              name: webhook
+          volumeMounts:
+            - name: certs
+              readOnly: true
+              mountPath: "/tmp/k8s-webhook-server/serving-certs"
           {{- if .Values.queuecontroller.additionalArgs }}
           args:
             {{- toYaml .Values.queuecontroller.additionalArgs | nindent 12 }}
@@ -36,6 +43,11 @@ spec:
       imagePullSecrets:
         {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
       {{- end }}
+      volumes:
+        - name: certs
+          secret:
+            secretName: {{ .Values.queuecontroller.certSecretName }}
+            defaultMode: 420
       {{- if .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}

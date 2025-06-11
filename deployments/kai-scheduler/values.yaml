@@ -108,6 +108,7 @@ queuecontroller:
     name: queuecontroller
     pullPolicy: IfNotPresent
   additionalArgs: []
+  certSecretName: queuecontroller-webhook-tls-secret
   resources:
     limits:
       cpu: "500m"

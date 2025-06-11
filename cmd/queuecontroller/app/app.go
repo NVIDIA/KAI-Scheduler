@@ -30,6 +30,8 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
+// +kubebuilder:webhook:path=/validate--v1-queue,mutating=false,failurePolicy=fail,sideEffects=None,resources=queues.scheduling.run.ai,verbs=create;update,groups=core,versions=v2,name=queuecontroller.run.ai,admissionReviewVersions=v1
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
