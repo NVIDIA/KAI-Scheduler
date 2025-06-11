@@ -53,7 +53,7 @@ Follow the instructions [here](docs/developer/building-from-source.md)
 To start scheduling workloads with KAI Scheduler, please continue to [Quick Start example](docs/quickstart/README.md)
 
 ## Breaking Changes
-- **[v0.6.0](docs/migrationguides/v0.6.0/)** – Renamed namespace and scheduler label key.  
+- **[v0.6.0](docs/migrationguides/v0.6.0/)** – Renamed resource reservation namespace and scheduling queue label key.  
 
 ## Roadmap
 

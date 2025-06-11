@@ -6,7 +6,7 @@
   - **Old:** `runai-reservation`  
   - **New:** `kai-resource-reservation`
 
-  The name of the resource reservation namespace was changed from `runai-reservation` to `kai-resource-reservation`. 
+The name of the resource reservation namespace was changed from `runai-reservation` to `kai-resource-reservation`. 
 In order to safely migrate from the previous namespace, GPU sharing workloads must be deleted before the upgrade and reservation pods should not be found in `runai-reservation` namespace.
 
 The following command should return zero pods before you upgrade:
