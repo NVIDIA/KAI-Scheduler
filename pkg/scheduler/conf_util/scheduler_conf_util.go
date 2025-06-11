@@ -60,12 +60,9 @@ tiers:
 `
 
 func ResolveConfigurationFromFile(confPath string) (*conf.SchedulerConfiguration, error) {
-	schedulerConfStr, err := readSchedulerConf(confPath)
-	if err != nil {
-		return nil, err
-	}
+	defaultConfig := conf.GetDefaultSchedulerConfiguration()
 
-	defaultConfig, err := loadSchedulerConf(defaultSchedulerConf)
+	schedulerConfStr, err := readSchedulerConf(confPath)
 	if err != nil {
 		return nil, err
 	}
