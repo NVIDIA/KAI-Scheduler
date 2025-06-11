@@ -24,38 +24,35 @@ const (
 func SetPlacementStrategy(
 	ctx context.Context, testCtx *testContext.TestContext, strategy string,
 ) error {
-	return updateKaiSchedulerConfigMap(ctx, testCtx, func() (*conf.SchedulerConfiguration, error) {
-		placementArguments := map[string]string{
-			gpuResource: strategy, cpuResource: strategy,
-		}
+	placementArguments := map[string]string{
+		gpuResource: strategy, cpuResource: strategy,
+	}
 
-		innerConfig := conf.SchedulerConfiguration{}
+	config := conf.SchedulerConfiguration{}
 
-		actions := []string{"allocate"}
-		if placementArguments[gpuResource] != SpreadStrategy && placementArguments[cpuResource] != SpreadStrategy {
-			actions = append(actions, "consolidation")
-		}
-		actions = append(actions, []string{"reclaim", "preempt", "stalegangeviction"}...)
+	actions := []string{"allocate"}
+	if placementArguments[gpuResource] != SpreadStrategy && placementArguments[cpuResource] != SpreadStrategy {
+		actions = append(actions, "consolidation")
+	}
+	actions = append(actions, []string{"reclaim", "preempt", "stalegangeviction"}...)
 
-		innerConfig.Actions = strings.Join(actions, ", ")
+	config.Actions = strings.Join(actions, ", ")
 
-		innerConfig.Tiers = conf.GetDefaultSchedulerConfiguration().Tiers
-		innerConfig.Tiers[0].Plugins = append(
-			innerConfig.Tiers[0].Plugins,
-			conf.PluginOption{Name: fmt.Sprintf("gpu%s", strings.Replace(placementArguments[gpuResource], "bin", "", 1))},
-			conf.PluginOption{
-				Name:      "nodeplacement",
-				Arguments: placementArguments,
-			},
+	config.Tiers = conf.GetDefaultSchedulerConfiguration().Tiers
+	config.Tiers[0].Plugins = append(
+		config.Tiers[0].Plugins,
+		conf.PluginOption{Name: fmt.Sprintf("gpu%s", strings.Replace(placementArguments[gpuResource], "bin", "", 1))},
+		conf.PluginOption{
+			Name:      "nodeplacement",
+			Arguments: placementArguments,
+		},
+	)
+
+	if placementArguments[gpuResource] == binpackStrategy {
+		config.Tiers[0].Plugins = append(
+			config.Tiers[0].Plugins,
+			conf.PluginOption{Name: "gpusharingorder"},
 		)
-
-		if placementArguments[gpuResource] == binpackStrategy {
-			innerConfig.Tiers[0].Plugins = append(
-				innerConfig.Tiers[0].Plugins,
-				conf.PluginOption{Name: "gpusharingorder"},
-			)
-		}
-
-		return &innerConfig, nil
-	})
+	}
+	updateKaiSchedulerConfigMap(ctx, testCtx, &config)
 }
