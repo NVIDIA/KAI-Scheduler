@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// +kubebuilder:rbac:groups=scheduling,resources=queues,verbs=get;list;watch
-// +kubebuilder:rbac:groups=scheduling,resources=queues/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=scheduling.run.ai,resources=queues,verbs=get;list;watch
+// +kubebuilder:rbac:groups=scheduling.run.ai,resources=queues/status,verbs=get;update;patch
 
 type ResourceUpdater struct {
 	client.Client

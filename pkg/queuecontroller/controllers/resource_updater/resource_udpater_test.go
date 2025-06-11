@@ -19,6 +19,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+const (
+	queueLabelName = "kai/queue"
+)
+
 func TestUpdateQueue_PodGroupsOnly(t *testing.T) {
 	objects := []client.Object{
 		&v2alpha2.PodGroup{
@@ -26,7 +30,7 @@ func TestUpdateQueue_PodGroupsOnly(t *testing.T) {
 				Name:      "podgroup1",
 				Namespace: "runai-proj-1",
 				Labels: map[string]string{
-					"runai/queue": "queue-name",
+					queueLabelName: "queue-name",
 				},
 			},
 			Status: v2alpha2.PodGroupStatus{
@@ -54,7 +58,7 @@ func TestUpdateQueue_PodGroupsOnly(t *testing.T) {
 				Name:      "podgroup2",
 				Namespace: "runai-proj-1",
 				Labels: map[string]string{
-					"runai/queue": "queue-name",
+					queueLabelName: "queue-name",
 				},
 			},
 			Status: v2alpha2.PodGroupStatus{
@@ -79,7 +83,7 @@ func TestUpdateQueue_PodGroupsOnly(t *testing.T) {
 				Name:      "podgroup3",
 				Namespace: "runai-proj-1",
 				Labels: map[string]string{
-					"runai/queue": "not-queue-name",
+					queueLabelName: "not-queue-name",
 				},
 			},
 			Status: v2alpha2.PodGroupStatus{
@@ -127,6 +131,7 @@ func TestUpdateQueue_PodGroupsOnly(t *testing.T) {
 				return []string{queue.Spec.ParentQueue}
 			}).
 			WithObjects(objects...).Build(),
+		QueueLabelKey: queueLabelName,
 	}
 
 	err = updater.UpdateQueue(context.Background(), &queue)

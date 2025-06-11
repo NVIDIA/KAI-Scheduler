@@ -9,13 +9,28 @@ rules:
 - apiGroups:
   - scheduling.run.ai
   resources:
-  - queues
+  - podgroups
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - scheduling
+  - scheduling.run.ai
+  resources:
+  - queues
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - scheduling.run.ai
+  resources:
+  - queues/finalizers
+  verbs:
+  - update
+- apiGroups:
   - scheduling.run.ai
   resources:
   - queues/status
@@ -23,11 +38,3 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - scheduling.run.ai
-  resources:
-  - podgroups
-  verbs:
-  - get
-  - list
-  - watch
