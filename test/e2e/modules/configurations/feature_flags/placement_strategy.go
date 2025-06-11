@@ -7,9 +7,9 @@ package feature_flags
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	testContext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 )
 
@@ -24,12 +24,12 @@ const (
 func SetPlacementStrategy(
 	ctx context.Context, testCtx *testContext.TestContext, strategy string,
 ) error {
-	return updateKaiSchedulerConfigMap(ctx, testCtx, func() (*config, error) {
+	return updateKaiSchedulerConfigMap(ctx, testCtx, func() (*conf.SchedulerConfiguration, error) {
 		placementArguments := map[string]string{
 			gpuResource: strategy, cpuResource: strategy,
 		}
 
-		innerConfig := config{}
+		innerConfig := conf.SchedulerConfiguration{}
 
 		actions := []string{"allocate"}
 		if placementArguments[gpuResource] != SpreadStrategy && placementArguments[cpuResource] != SpreadStrategy {
@@ -39,11 +39,11 @@ func SetPlacementStrategy(
 
 		innerConfig.Actions = strings.Join(actions, ", ")
 
-		innerConfig.Tiers = slices.Clone(defaultKaiSchedulerPlugins)
+		innerConfig.Tiers = conf.GetDefaultSchedulerConfiguration().Tiers
 		innerConfig.Tiers[0].Plugins = append(
 			innerConfig.Tiers[0].Plugins,
-			plugin{Name: fmt.Sprintf("gpu%s", strings.Replace(placementArguments[gpuResource], "bin", "", 1))},
-			plugin{
+			conf.PluginOption{Name: fmt.Sprintf("gpu%s", strings.Replace(placementArguments[gpuResource], "bin", "", 1))},
+			conf.PluginOption{
 				Name:      "nodeplacement",
 				Arguments: placementArguments,
 			},
@@ -52,7 +52,7 @@ func SetPlacementStrategy(
 		if placementArguments[gpuResource] == binpackStrategy {
 			innerConfig.Tiers[0].Plugins = append(
 				innerConfig.Tiers[0].Plugins,
-				plugin{Name: "gpusharingorder"},
+				conf.PluginOption{Name: "gpusharingorder"},
 			)
 		}
 
