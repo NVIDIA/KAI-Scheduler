@@ -150,7 +150,7 @@ func (mr *minruntimePlugin) isReclaimMinRuntimeProtected(pendingJob *podgroup_in
 
 	minRuntime, err := mr.resolver.getReclaimMinRuntime(mr.reclaimResolveMethod, pendingQueue, victimQueue)
 	if err != nil {
-		log.InfraLogger.Errorf("Failed to get reclaim min runtime: %v", err)
+		log.InfraLogger.Errorf("Failed to get reclaim min runtime for pending job %v and victim %v: %v", pendingJob.GetIdent(), victim.GetIdent(), err)
 		minRuntime = mr.defaultReclaimMinRuntime
 	}
 
@@ -165,7 +165,7 @@ func (mr *minruntimePlugin) isReclaimMinRuntimeProtected(pendingJob *podgroup_in
 	return false
 }
 
-func (mr *minruntimePlugin) isPreemptMinRuntimeProtected(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
+func (mr *minruntimePlugin) isPreemptMinRuntimeProtected(_ *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool {
 	if cached, ok := mr.preemptProtectionCache[victim.UID]; ok {
 		return cached
 	}
@@ -173,7 +173,7 @@ func (mr *minruntimePlugin) isPreemptMinRuntimeProtected(pendingJob *podgroup_in
 
 	minRuntime, err := mr.resolver.getPreemptMinRuntime(victimQueue)
 	if err != nil {
-		log.InfraLogger.Errorf("Failed to get preempt min runtime: %v", err)
+		log.InfraLogger.Errorf("Failed to get preempt min runtime for victim %v: %v", victim.GetIdent(), err)
 		minRuntime = mr.defaultPreemptMinRuntime
 	}
 

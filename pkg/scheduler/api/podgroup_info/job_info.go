@@ -83,6 +83,7 @@ type PodGroupInfo struct {
 	tasksToAllocateInitResource *resource_info.Resource
 	PodStatusIndex              map[pod_status.PodStatus]pod_info.PodsMap
 	activeAllocatedCount        *int
+	identifier                  string
 }
 
 func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *PodGroupInfo {
@@ -132,11 +133,13 @@ func (podGroupInfo *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	podGroupInfo.PodGroup = pg
 	podGroupInfo.PodGroupUID = pg.UID
 
+	podGroupInfo.identifier = fmt.Sprintf("%s/%s", podGroupInfo.Namespace, podGroupInfo.Name)
+
 	if pg.Annotations[commonconstants.StalePodgroupTimeStamp] != "" {
 		staleTimeStamp, err := time.Parse(time.RFC3339, pg.Annotations[commonconstants.StalePodgroupTimeStamp])
 		if err != nil {
-			log.InfraLogger.V(7).Warnf("Failed to parse stale timestamp for podgroup <%s/%s> err: %v",
-				podGroupInfo.Namespace, podGroupInfo.Name, err)
+			log.InfraLogger.V(7).Warnf("Failed to parse stale timestamp for podgroup <%s> err: %v",
+				podGroupInfo.GetIdent(), err)
 		} else {
 			podGroupInfo.StalenessInfo.TimeStamp = &staleTimeStamp
 			podGroupInfo.StalenessInfo.Stale = true
@@ -146,8 +149,8 @@ func (podGroupInfo *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	if pg.Annotations[commonconstants.LastStartTimeStamp] != "" {
 		startTime, err := time.Parse(time.RFC3339, pg.Annotations[commonconstants.LastStartTimeStamp])
 		if err != nil {
-			log.InfraLogger.V(7).Warnf("Failed to parse start timestamp for podgroup <%s/%s> err: %v",
-				podGroupInfo.Namespace, podGroupInfo.Name, err)
+			log.InfraLogger.V(7).Warnf("Failed to parse start timestamp for podgroup <%s> err: %v",
+				podGroupInfo.GetIdent(), err)
 		} else {
 			podGroupInfo.LastStartTimestamp = &startTime
 		}
@@ -250,8 +253,8 @@ func (podGroupInfo *PodGroupInfo) GetActivelyRunningTasksCount() int32 {
 func (podGroupInfo *PodGroupInfo) DeleteTaskInfo(ti *pod_info.PodInfo) error {
 	task, found := podGroupInfo.PodInfos[ti.UID]
 	if !found {
-		return fmt.Errorf("failed to find task <%v/%v> in job <%v/%v>",
-			ti.Namespace, ti.Name, podGroupInfo.Namespace, podGroupInfo.Name)
+		return fmt.Errorf("failed to find task <%v/%v> in job <%v>",
+			ti.Namespace, ti.Name, podGroupInfo.GetIdent())
 	}
 
 	if pod_status.AllocatedStatus(task.Status) {
@@ -264,6 +267,10 @@ func (podGroupInfo *PodGroupInfo) DeleteTaskInfo(ti *pod_info.PodInfo) error {
 	podGroupInfo.PodInfos[taskClone.UID] = taskClone
 	return nil
 
+}
+
+func (podGroupInfo *PodGroupInfo) GetIdent() string {
+	return podGroupInfo.identifier
 }
 
 func (podGroupInfo *PodGroupInfo) GetNumAliveTasks() int {
