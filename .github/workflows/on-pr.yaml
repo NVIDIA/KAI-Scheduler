@@ -149,4 +149,4 @@ jobs:
 
       - name: Run e2e tests
         run: |
-          ginkgo -r --timeout 3h --keep-going --randomize-all --randomize-suites --trace -vv ./test/e2e/suites --label-filter '!autoscale', '!scale'
+          ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv ./test/e2e/suites --label-filter '!autoscale', '!scale'
