@@ -503,11 +503,12 @@ func (r *SimpleRecorder) AnnotatedEventf(object runtime.Object, annotations map[
 
 func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 	tests := []struct {
-		name                      string
-		job                       jobs_fake.TestJobBasic
-		expectedEventActions      []string
-		expectedInFlightPodGroups int
-		expectedInFlightPods      int
+		name                          string
+		job                           jobs_fake.TestJobBasic
+		numPodGroupStatusUpdateCalled int
+		expectedEventActions          []string
+		expectedInFlightPodGroups     int
+		expectedInFlightPods          int
 	}{
 		{
 			name: "Running job",
@@ -559,9 +560,10 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 					},
 				},
 			},
-			expectedEventActions:      []string{"Warning Unschedulable Unable to schedule pod", "Normal Unschedulable Unable to schedule podgroup"},
-			expectedInFlightPodGroups: 1,
-			expectedInFlightPods:      1,
+			numPodGroupStatusUpdateCalled: 1,
+			expectedEventActions:          []string{"Warning Unschedulable Unable to schedule pod", "Normal Unschedulable Unable to schedule podgroup"},
+			expectedInFlightPodGroups:     1,
+			expectedInFlightPods:          1,
 		},
 	}
 	for _, test := range tests {
@@ -571,6 +573,9 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 			recorder := record.NewFakeRecorder(100)
 			statusUpdater := New(kubeClient, kubeAiSchedClient, recorder, 1, false, nodePoolLabelKey)
 			wg := sync.WaitGroup{}
+			if test.numPodGroupStatusUpdateCalled > 0 {
+				wg.Add(test.numPodGroupStatusUpdateCalled)
+			}
 			finishUpdatesChan := make(chan struct{})
 			// wait with pod groups update until signal is given.
 			kubeAiSchedClient.SchedulingV2alpha2().(*fakeschedulingv2alpha2.FakeSchedulingV2alpha2).PrependReactor(
