@@ -247,7 +247,7 @@ var _ = Describe("Reclaim", Ordered, func() {
 			testCtx = testcontext.GetConnectivity(ctx, Default)
 			parentQueue, reclaimeeQueue, reclaimerQueue := createQueues(4, 1, 0)
 			reclaimerQueue.Spec.Priority = pointer.Int(constants.DefaultQueuePriority + 1)
-			reclaimeeQueue.Spec.ReclaimMinRuntime = &metav1.Duration{Duration: 90 * time.Second}
+			reclaimeeQueue.Spec.ReclaimMinRuntime = &metav1.Duration{Duration: 60 * time.Second}
 			testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 
 			pod := createPod(ctx, testCtx, reclaimeeQueue, 1)
