@@ -508,7 +508,6 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 		numPodGroupStatusUpdateCalled int
 		expectedEventActions          []string
 		expectedInFlightPodGroups     int
-		expectedInFlightPods          int
 	}{
 		{
 			name: "Running job",
@@ -526,7 +525,6 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 			},
 			expectedEventActions:      []string{},
 			expectedInFlightPodGroups: 0,
-			expectedInFlightPods:      0,
 		},
 		{
 			name: "No ready job",
@@ -544,7 +542,6 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 			},
 			expectedEventActions:      []string{"Normal NotReady Job is not ready for scheduling. Waiting for 2 pods, currently 1 exist, 0 are gated"},
 			expectedInFlightPodGroups: 0,
-			expectedInFlightPods:      0,
 		},
 		{
 			name: "Unscheduleable job",
@@ -563,7 +560,6 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 			numPodGroupStatusUpdateCalled: 1,
 			expectedEventActions:          []string{"Warning Unschedulable Unable to schedule pod", "Normal Unschedulable Unable to schedule podgroup"},
 			expectedInFlightPodGroups:     1,
-			expectedInFlightPods:          1,
 		},
 	}
 	for _, test := range tests {
@@ -605,12 +601,6 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 				return true
 			})
 			assert.Equal(t, test.expectedInFlightPodGroups, inFlightPodGroups)
-			inFlightPods := 0
-			statusUpdater.inFlightPods.Range(func(key, value any) bool {
-				inFlightPods += 1
-				return true
-			})
-			assert.Equal(t, test.expectedInFlightPods, inFlightPods)
 
 			close(finishUpdatesChan)
 			wg.Wait()
