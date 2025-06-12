@@ -23,7 +23,8 @@ spec:
           image: "{{ .Values.global.registry }}/{{ .Values.scheduler.image.name }}:{{ .Chart.Version }}"
           imagePullPolicy: {{ .Values.scheduler.image.pullPolicy }}
           args:
-            - --scheduler-conf=/etc/config/config.yaml
+            - "--scheduler-conf=/etc/config/config.yaml"
+            - "--resource-reservation-app-label={{ .Values.global.resourceReservation.appLabel }}"
           {{- if .Values.scheduler.additionalArgs }}
             {{- toYaml .Values.scheduler.additionalArgs | nindent 12 }}
           {{- end }}

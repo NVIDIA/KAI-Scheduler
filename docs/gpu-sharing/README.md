@@ -9,7 +9,7 @@ KAI Scheduler does not enforce memory allocation limit or performs memory isolat
 In order to make sure the pods share the GPU device nicely it is important that the running processes will allocate GPU memory up to the requested amount and not beyond that.
 In addition, note that pods sharing a single GPU device can reside in different namespaces.
 
-In order to reserve a GPU device, KAI Scheduler will run a reservation pod in `runai-reservation` namespace.
+In order to reserve a GPU device, KAI Scheduler will run a reservation pod in `kai-resource-reservation` namespace.
 
 
 ### Prerequisites

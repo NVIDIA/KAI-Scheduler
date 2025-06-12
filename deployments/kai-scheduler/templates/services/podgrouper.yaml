@@ -20,8 +20,9 @@ spec:
         - name: podgrouper
           image: "{{ .Values.global.registry }}/{{ .Values.podgrouper.image.name }}:{{ .Chart.Version }}"
           imagePullPolicy: {{ .Values.podgrouper.image.pullPolicy }}
-          {{- if .Values.podgrouper.additionalArgs }}
           args:
+            - "--queue-label-key={{ .Values.podgrouper.queueLabelKey }}"
+          {{- if .Values.podgrouper.additionalArgs }}
             {{- toYaml .Values.podgrouper.additionalArgs | nindent 12 }}
           {{- end }}
           {{- if .Values.podgrouper.resources }}

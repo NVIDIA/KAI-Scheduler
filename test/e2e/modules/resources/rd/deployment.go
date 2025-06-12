@@ -42,7 +42,7 @@ func CreateDeploymentObject(namespace, queueName string) *appsv1.Deployment {
 					Labels: map[string]string{
 						constants.AppLabelName: "engine-e2e",
 						DeploymentAppLabel:     matchLabelValue,
-						"runai/queue":          queueName,
+						"kai.scheduler/queue":  queueName,
 					},
 				},
 				Spec: v1.PodSpec{

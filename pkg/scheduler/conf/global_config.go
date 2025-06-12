@@ -22,7 +22,7 @@ type GlobalConfig struct {
 
 func newGlobalConfig() *GlobalConfig {
 	return &GlobalConfig{
-		ResourceReservationAppLabelValue: "runai-reservation",
+		ResourceReservationAppLabelValue: "kai-resource-reservation",
 		ScalingPodAppLabelValue:          "scaling-pod",
 		CPUWorkerNodeLabelKey:            "node-role.kubernetes.io/cpu-worker",
 		GPUWorkerNodeLabelKey:            "node-role.kubernetes.io/gpu-worker",

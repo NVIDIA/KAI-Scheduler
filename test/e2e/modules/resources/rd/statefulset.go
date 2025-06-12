@@ -44,7 +44,7 @@ func CreateStatefulSetObject(namespace, queueName string) *v1.StatefulSet {
 					Labels: map[string]string{
 						constants.AppLabelName: "engine-e2e",
 						StatefulSetAppLabel:    matchLabelValue,
-						"runai/queue":          queueName,
+						"kai.scheduler/queue":  queueName,
 					},
 				},
 				Spec: v12.PodSpec{

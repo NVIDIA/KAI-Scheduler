@@ -180,7 +180,7 @@ func createExampleRayJob(
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
 								constants.AppLabelName: "engine-e2e",
-								"runai/queue":          jobQueue.Name,
+								"kai.scheduler/queue":  jobQueue.Name,
 							},
 						},
 						Spec: v1.PodSpec{
@@ -248,7 +248,7 @@ func createExampleRayJob(
 							ObjectMeta: metav1.ObjectMeta{
 								Labels: map[string]string{
 									constants.AppLabelName: "engine-e2e",
-									"runai/queue":          jobQueue.Name,
+									"kai.scheduler/queue":  jobQueue.Name,
 								},
 							},
 							Spec: v1.PodSpec{

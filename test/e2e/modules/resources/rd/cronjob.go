@@ -42,7 +42,7 @@ func CreateCronJobObject(namespace, queueName string) *batchv1.CronJob {
 							Labels: map[string]string{
 								constants.AppLabelName: "engine-e2e",
 								CronJobAppLabel:        matchLabelValue,
-								"runai/queue":          queueName,
+								"kai.scheduler/queue":  queueName,
 							},
 						},
 						Spec: v1.PodSpec{

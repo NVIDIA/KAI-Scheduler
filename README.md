@@ -38,6 +38,8 @@ KAI Scheduler can be installed:
 - **From Production (Recommended)**
 - **From Source (Build it Yourself)**
 
+For API changes and migration guides, please refer to [Breaking Changes & Migration Guides](docs/migrationguides/README.md)
+
 #### Install from Production
 Locate the latest release version in [releases](https://github.com/NVIDIA/KAI-Scheduler/releases) page.
 Run the following command after replacing `<VERSION>` with the desired release version:
@@ -49,6 +51,9 @@ Follow the instructions [here](docs/developer/building-from-source.md)
 
 ## Quick Start
 To start scheduling workloads with KAI Scheduler, please continue to [Quick Start example](docs/quickstart/README.md)
+
+## Breaking Changes
+- **[v0.6.0](docs/migrationguides/v0.6.0/)** – Renamed resource reservation namespace and scheduling queue label key.  
 
 ## Roadmap
 
