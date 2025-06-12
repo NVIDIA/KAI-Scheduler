@@ -6,9 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Added
-- Adding queue controller that will update queues statuses with allocation data.
-
 ### Fixes
 - Fixed pod status scheduled race condition between the scheduler and the pod binding
 - Removed redundant `replicas` key for binder from `values.yaml` as it is not used and not supported
@@ -17,7 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Removed `runai-job-id` and `runai/job-id` annotations from pods and podgroups
 
 ### Added
- - Added [minruntime](docs/plugins/minruntime.md) plugin, allowing PodGroups to run for a configurable amount of time without being reclaimed/preempted.
+- Added [minruntime](docs/plugins/minruntime.md) plugin, allowing PodGroups to run for a configurable amount of time without being reclaimed/preempted.
+- Queue Controller that will update queues statuses with allocation data.
 
 
 ## [v0.5.1] - 2025-05-20

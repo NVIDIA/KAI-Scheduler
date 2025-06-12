@@ -17,6 +17,7 @@ import (
 
 // +kubebuilder:rbac:groups=scheduling.run.ai,resources=queues,verbs=get;list;watch
 // +kubebuilder:rbac:groups=scheduling.run.ai,resources=queues/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=scheduling.run.ai,resources=podgroups,verbs=get;list
 
 type ResourceUpdater struct {
 	client.Client
