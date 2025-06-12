@@ -107,3 +107,17 @@ nodescaleadjuster:
     requests:
       cpu: "250m"
       memory: "128Mi"
+
+queuecontroller:
+  image:
+    name: queuecontroller
+    pullPolicy: IfNotPresent
+  additionalArgs: []
+  certSecretName: queuecontroller-webhook-tls-secret
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+    requests:
+      cpu: "250m"
+      memory: "128Mi"

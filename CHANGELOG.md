@@ -17,6 +17,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Removed
 - Removed `runai-job-id` and `runai/job-id` annotations from pods and podgroups
 
+### Added
+- Added [minruntime](docs/plugins/minruntime.md) plugin, allowing PodGroups to run for a configurable amount of time without being reclaimed/preempted.
+- Queue Controller that will update queues statuses with allocation data.
+
+
 ## [v0.5.1] - 2025-05-20
 
 ### Added

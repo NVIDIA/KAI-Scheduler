@@ -19,7 +19,7 @@ type PredicateFn func(*pod_info.PodInfo, *podgroup_info.PodGroupInfo, *node_info
 type PrePredicateFn func(*pod_info.PodInfo, *podgroup_info.PodGroupInfo) error
 
 // CanReclaimResourcesFn is a function that determines if a reclaimer can get more resources
-type CanReclaimResourcesFn func(reclaimer *podgroup_info.PodGroupInfo) bool
+type CanReclaimResourcesFn func(pendingJob *podgroup_info.PodGroupInfo) bool
 
 // VictimFilterFn is a function which filters out jobs that cannot a victim candidate for a specific reclaimer/preemptor.
 type VictimFilterFn func(pendingJob *podgroup_info.PodGroupInfo, victim *podgroup_info.PodGroupInfo) bool

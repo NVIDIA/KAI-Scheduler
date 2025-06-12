@@ -38,6 +38,7 @@ tiers:
     arguments:
       cpu: binpack
       gpu: binpack
+  - name: minruntime
 `
 
 func ResolveConfigurationFromFile(confPath string) (*conf.SchedulerConfiguration, error) {

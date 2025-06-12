@@ -134,6 +134,7 @@ func BuildJobInfo(
 	if staleDuration != nil {
 		staleTime := time.Now().Add(-1 * *staleDuration)
 		result.StalenessInfo.TimeStamp = &staleTime
+		result.StalenessInfo.Stale = true
 	}
 	if result.LastStartTimestamp == nil && result.GetNumAllocatedTasks() > 0 {
 		startTime := time.Now().Add(-1 * time.Minute * 1)

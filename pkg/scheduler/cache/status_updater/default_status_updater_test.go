@@ -4,16 +4,26 @@
 package status_updater
 
 import (
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	faketesting "k8s.io/client-go/testing"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 
+	kubeaischedfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
+	fakeschedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v2alpha2/fake"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
 )
 
 type UpdatePodGroupConditionTest struct {
@@ -473,4 +483,133 @@ func getTimePointer(ts string) *time.Time {
 		panic(err)
 	}
 	return &t
+}
+
+type SimpleRecorder struct {
+	events []string
+}
+
+func (r *SimpleRecorder) Event(object runtime.Object, eventtype, reason, message string) {
+	r.events = append(r.events, eventtype+":"+reason+":"+message)
+}
+
+func (r *SimpleRecorder) Eventf(object runtime.Object, eventtype, reason, messageFmt string, args ...interface{}) {
+	r.events = append(r.events, eventtype+":"+reason+":"+messageFmt)
+}
+
+func (r *SimpleRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
+	r.events = append(r.events, eventtype+":"+reason+":"+messageFmt)
+}
+
+func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
+	tests := []struct {
+		name                      string
+		job                       jobs_fake.TestJobBasic
+		expectedEventActions      []string
+		expectedInFlightPodGroups int
+		expectedInFlightPods      int
+	}{
+		{
+			name: "Running job",
+			job: jobs_fake.TestJobBasic{
+				Name:         "test-job",
+				Namespace:    "test-ns",
+				QueueName:    "test-queue",
+				MinAvailable: ptr.To(int32(1)),
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{
+						Name:  "test-task",
+						State: pod_status.Running,
+					},
+				},
+			},
+			expectedEventActions:      []string{},
+			expectedInFlightPodGroups: 0,
+			expectedInFlightPods:      0,
+		},
+		{
+			name: "No ready job",
+			job: jobs_fake.TestJobBasic{
+				Name:         "test-job",
+				Namespace:    "test-ns",
+				QueueName:    "test-queue",
+				MinAvailable: ptr.To(int32(2)),
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{
+						Name:  "test-task",
+						State: pod_status.Pending,
+					},
+				},
+			},
+			expectedEventActions:      []string{"Normal NotReady Job is not ready for scheduling. Waiting for 2 pods, currently 1 exist, 0 are gated"},
+			expectedInFlightPodGroups: 0,
+			expectedInFlightPods:      0,
+		},
+		{
+			name: "Unscheduleable job",
+			job: jobs_fake.TestJobBasic{
+				Name:         "test-job",
+				Namespace:    "test-ns",
+				QueueName:    "test-queue",
+				MinAvailable: ptr.To(int32(1)),
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{
+						Name:  "test-task",
+						State: pod_status.Pending,
+					},
+				},
+			},
+			expectedEventActions:      []string{"Warning Unschedulable Unable to schedule pod", "Normal Unschedulable Unable to schedule podgroup"},
+			expectedInFlightPodGroups: 1,
+			expectedInFlightPods:      1,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			kubeClient := fake.NewSimpleClientset()
+			kubeAiSchedClient := kubeaischedfake.NewSimpleClientset()
+			recorder := record.NewFakeRecorder(100)
+			statusUpdater := New(kubeClient, kubeAiSchedClient, recorder, 1, false, nodePoolLabelKey)
+			wg := sync.WaitGroup{}
+			finishUpdatesChan := make(chan struct{})
+			// wait with pod groups update until signal is given.
+			kubeAiSchedClient.SchedulingV2alpha2().(*fakeschedulingv2alpha2.FakeSchedulingV2alpha2).PrependReactor(
+				"update", "podgroups", func(action faketesting.Action) (handled bool, ret runtime.Object, err error) {
+					<-finishUpdatesChan
+					wg.Done()
+					return false, nil, nil
+				},
+			)
+
+			stopCh := make(chan struct{})
+			statusUpdater.Run(stopCh)
+
+			jobsMap, _, _ := jobs_fake.BuildJobsAndTasksMaps([]*jobs_fake.TestJobBasic{&test.job})
+
+			statusUpdater.RecordJobStatusEvent(jobsMap["test-job"])
+
+			events := []string{}
+			close(recorder.Events)
+			for event := range recorder.Events {
+				events = append(events, event)
+			}
+			assert.Equal(t, test.expectedEventActions, events)
+			inFlightPodGroups := 0
+			statusUpdater.inFlightPodGroups.Range(func(key, value any) bool {
+				inFlightPodGroups += 1
+				return true
+			})
+			assert.Equal(t, test.expectedInFlightPodGroups, inFlightPodGroups)
+			inFlightPods := 0
+			statusUpdater.inFlightPods.Range(func(key, value any) bool {
+				inFlightPods += 1
+				return true
+			})
+			assert.Equal(t, test.expectedInFlightPods, inFlightPods)
+
+			close(finishUpdatesChan)
+			wg.Wait()
+			close(stopCh)
+		})
+	}
 }
