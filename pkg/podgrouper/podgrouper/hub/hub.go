@@ -21,6 +21,7 @@ import (
 	pytorchplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/pytorch"
 	tensorflowlugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/tensorflow"
 	xgboostplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/xgboost"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/lws"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/podjob"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/ray"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/runaijob"
@@ -30,12 +31,13 @@ import (
 )
 
 const (
-	apiGroupArgo            = "argoproj.io"
-	apiGroupRunai           = "run.ai"
-	kindTrainingWorkload    = "TrainingWorkload"
-	kindInteractiveWorkload = "InteractiveWorkload"
-	kindDistributedWorkload = "DistributedWorkload"
-	kindInferenceWorkload   = "InferenceWorkload"
+	apiGroupArgo                     = "argoproj.io"
+	apiGroupRunai                    = "run.ai"
+	kindTrainingWorkload             = "TrainingWorkload"
+	kindInteractiveWorkload          = "InteractiveWorkload"
+	kindDistributedWorkload          = "DistributedWorkload"
+	kindInferenceWorkload            = "InferenceWorkload"
+	kindDistributedInferenceWorkload = "DistributedInferenceWorkload"
 )
 
 // +kubebuilder:rbac:groups=apps,resources=replicasets;statefulsets,verbs=get;list;watch
@@ -51,6 +53,8 @@ const (
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns;taskruns,verbs=get;list;watch
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns/finalizers;taskruns/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=run.ai,resources=trainingworkloads;interactiveworkloads;distributedworkloads;inferenceworkloads,verbs=get;list;watch
+// +kubebuilder:rbac:groups=leaderworkerset.x-k8s.io,resources=leaderworkersets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=leaderworkerset.x-k8s.io,resources=leaderworkersets/finalizers,verbs=patch;update;create
 
 type PluginsHub struct {
 	defaultPlugin *defaultgrouper.DefaultGrouper
@@ -78,6 +82,7 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 
 	kubeFlowDistributedGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
 	mpiGrouper := mpi.NewMpiGrouper(kubeClient, kubeFlowDistributedGrouper)
+	lwsGrouper := lws.NewLwsGrouper(defaultGrouper)
 
 	rayGrouper := ray.NewRayGrouper(kubeClient, defaultGrouper)
 	rayClusterGrouper := ray.NewRayClusterGrouper(rayGrouper)
@@ -238,6 +243,11 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Version: "v1",
 			Kind:    "SPOTRequest",
 		}: spotrequest.NewSpotRequestGrouper(defaultGrouper),
+		{
+			Group:   "leaderworkerset.x-k8s.io",
+			Version: "v1",
+			Kind:    "LeaderWorkerSet",
+		}: lwsGrouper,
 	}
 
 	skipTopOwnerGrouper := skiptopowner.NewSkipTopOwnerGrouper(kubeClient, defaultGrouper, table)
@@ -247,7 +257,8 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 		Kind:    "Workflow",
 	}] = skipTopOwnerGrouper
 
-	for _, kind := range []string{kindInferenceWorkload, kindTrainingWorkload, kindDistributedWorkload, kindInteractiveWorkload} {
+	for _, kind := range []string{
+		kindInferenceWorkload, kindTrainingWorkload, kindDistributedWorkload, kindInteractiveWorkload, kindDistributedInferenceWorkload} {
 		table[metav1.GroupVersionKind{
 			Group:   apiGroupRunai,
 			Version: "*",
