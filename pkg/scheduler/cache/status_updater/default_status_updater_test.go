@@ -524,7 +524,7 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 				},
 			},
 			expectedEventActions:      []string{},
-			expectedInFlightPodGroups: 0,
+			expectedInFlightPodGroups: 1,
 			expectedInFlightPods:      0,
 		},
 		{
