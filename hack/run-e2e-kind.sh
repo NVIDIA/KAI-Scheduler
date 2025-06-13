@@ -13,6 +13,7 @@ GOBIN=${GOPATH}/bin
 # Parse named parameters
 TEST_THIRD_PARTY_INTEGRATIONS="false"
 LOCAL_IMAGES_BUILD="false"
+PRESERVE_CLUSTER="false"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -24,10 +25,15 @@ while [[ $# -gt 0 ]]; do
       LOCAL_IMAGES_BUILD="true"
       shift
       ;;
+    --preserve-cluster)
+      PRESERVE_CLUSTER="true"
+      shift
+      ;;
     -h|--help)
       echo "Usage: $0 [--test-third-party-integrations] [--local-images-build]"
       echo "  --test-third-party-integrations: Install third party operators for compatibility testing"
       echo "  --local-images-build: Build and use local images instead of pulling from registry"
+      echo "  --preserve-cluster: Keep the kind cluster after running the test suite"
       exit 0
       ;;
     *)
@@ -75,6 +81,8 @@ if [ ! -f ${GOBIN}/ginkgo ]; then
     GOBIN=${GOBIN} go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.3
 fi
 
-${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv ${REPO_ROOT}/test/e2e/suites --label-filter '!autoscale', '!scale'
+${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --label-filter '!autoscale && !scale' --trace -vv ${REPO_ROOT}/test/e2e/suites
 
-kind delete cluster --name $CLUSTER_NAME
+if [ "$PRESERVE_CLUSTER" != "true" ]; then
+    kind delete cluster --name $CLUSTER_NAME
+fi

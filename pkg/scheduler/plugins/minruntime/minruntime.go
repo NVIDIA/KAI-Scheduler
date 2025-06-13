@@ -38,6 +38,9 @@ type minruntimePlugin struct {
 
 func parseMinRuntime(arguments map[string]string, minRuntimeConfig string) metav1.Duration {
 	minRuntime := arguments[minRuntimeConfig]
+	if len(minRuntime) == 0 {
+		return metav1.Duration{Duration: 0 * time.Second}
+	}
 	duration, err := time.ParseDuration(minRuntime)
 	if err != nil {
 		log.InfraLogger.Errorf("Failed to parse %v (%v): %v, using default value 0s", minRuntimeConfig, minRuntime, err)
@@ -54,7 +57,10 @@ func New(arguments map[string]string) framework.Plugin {
 
 	validResolveMethods := []string{resolveMethodLCA, resolveMethodQueue}
 	plugin.reclaimResolveMethod = arguments[reclaimResolveMethod]
-	if len(plugin.reclaimResolveMethod) == 0 || !slices.Contains(validResolveMethods, plugin.reclaimResolveMethod) {
+	if len(plugin.reclaimResolveMethod) == 0 {
+		plugin.reclaimResolveMethod = resolveMethodLCA
+	}
+	if !slices.Contains(validResolveMethods, plugin.reclaimResolveMethod) {
 		log.InfraLogger.Errorf("Invalid reclaim resolve method %v, using default value %v", plugin.reclaimResolveMethod, resolveMethodLCA)
 		plugin.reclaimResolveMethod = resolveMethodLCA
 	}
