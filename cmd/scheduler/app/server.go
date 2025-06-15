@@ -41,8 +41,6 @@ const (
 	leaseDuration = 15 * time.Second
 	renewDeadline = 10 * time.Second
 	retryPeriod   = 5 * time.Second
-
-	lockObjectNamespace = ""
 )
 
 var logFlushFreq = pflag.Duration("log-flush-frequency", 5*time.Second, "Maximum number of seconds between log flushes")
@@ -174,7 +172,7 @@ func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMu
 
 	// Prepare event clients.
 	broadcaster := record.NewBroadcaster()
-	broadcaster.StartRecordingToSink(&corev1.EventSinkImpl{Interface: leaderElectionClient.CoreV1().Events(lockObjectNamespace)})
+	broadcaster.StartRecordingToSink(&corev1.EventSinkImpl{Interface: leaderElectionClient.CoreV1().Events(opt.Namspace)})
 	eventRecorder := broadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: opt.SchedulerName})
 
 	hostname, err := os.Hostname()
@@ -185,7 +183,7 @@ func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMu
 	id := hostname + "_" + string(uuid.NewUUID())
 
 	rl, err := resourcelock.New(resourcelock.LeasesResourceLock,
-		lockObjectNamespace,
+		opt.Namspace,
 		opt.SchedulerName,
 		leaderElectionClient.CoreV1(),
 		leaderElectionClient.CoordinationV1(),
