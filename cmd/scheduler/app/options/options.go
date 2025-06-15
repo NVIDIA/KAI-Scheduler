@@ -16,6 +16,7 @@ const (
 	defaultSchedulerName               = "kai-scheduler"
 	defaultResourceReservationAppLabel = "runai-reservation"
 	defaultMetricsNamespace            = "kai"
+	defaultNamespace                   = "kai"
 	defaultSchedulerPeriod             = time.Second
 	defaultStalenessGracePeriod        = 60 * time.Second
 	defaultListenAddress               = ":8080"
@@ -65,6 +66,7 @@ type ServerOption struct {
 	CPUWorkerNodeLabelKey             string
 	GPUWorkerNodeLabelKey             string
 	MIGWorkerNodeLabelKey             string
+	Namspace                          string
 
 	QPS   int
 	Burst int
@@ -114,6 +116,7 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.CPUWorkerNodeLabelKey, "cpu-worker-node-label-key", defaultCPUWorkerNodeLabelKey, "The label key for CPU worker nodes")
 	fs.StringVar(&s.GPUWorkerNodeLabelKey, "gpu-worker-node-label-key", defaultGPUWorkerNodeLabelKey, "The label key for GPU worker nodes")
 	fs.StringVar(&s.MIGWorkerNodeLabelKey, "mig-worker-node-label-key", defaultMIGWorkerNodeLabelKey, "The label key for MIG enabled worker nodes")
+	fs.StringVar(&s.Namspace, "namespace", defaultNamespace, "Service namespace")
 
 	utilfeature.DefaultMutableFeatureGate.AddFlag(fs)
 }
