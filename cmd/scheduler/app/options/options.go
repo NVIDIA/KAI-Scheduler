@@ -16,7 +16,7 @@ const (
 	defaultSchedulerName               = "kai-scheduler"
 	defaultResourceReservationAppLabel = "runai-reservation"
 	defaultMetricsNamespace            = "kai"
-	defaultNamespace                   = "kai"
+	defaultNamespace                   = "kai-scheduler"
 	defaultSchedulerPeriod             = time.Second
 	defaultStalenessGracePeriod        = 60 * time.Second
 	defaultListenAddress               = ":8080"
