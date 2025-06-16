@@ -82,6 +82,8 @@ func NewServerOption() *ServerOption {
 func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	// kai-scheduler will ignore pods with scheduler names other than specified with the option
 	fs.StringVar(&s.SchedulerName, "scheduler-name", defaultSchedulerName, "The scheduler name in pod spec that handled by this scheduler")
+	fs.StringVar(&s.Namspace, "namespace", defaultNamespace, "Scheduler service namespace")
+	fs.StringVar(&s.MetricsNamespace, "metrics-namespace", defaultMetricsNamespace, "Metrics namespace")
 	fs.StringVar(&s.ResourceReservationAppLabel, "resource-reservation-app-label", defaultResourceReservationAppLabel, "App label value of resource reservation pods")
 	fs.BoolVar(&s.RestrictSchedulingNodes, "restrict-node-scheduling", false, "kai-scheduler will allocate jobs only to restricted nodes")
 	fs.StringVar(&s.NodePoolLabelKey, "nodepool-label-key", defaultNodePoolLabelKey, "The label key by which to filter scheduling nodepool")
@@ -92,7 +94,6 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 		"Start a leader election client and gain leadership before "+
 			"executing the main loop. Enable this when running replicated kai-scheduler for high availability")
 	fs.BoolVar(&s.PrintVersion, "version", true, "Show version")
-	fs.StringVar(&s.MetricsNamespace, "metrics-namespace", defaultMetricsNamespace, "Metrics namespace")
 	fs.StringVar(&s.ListenAddress, "listen-address", defaultListenAddress, "The address to listen on for HTTP requests")
 	fs.BoolVar(&s.EnableProfiler, "enable-profiler", false, "Enable profiler")
 	fs.StringVar(&s.ProfilerApiPort, "profiler-port", defaultProfilerApiPort, "The port to listen for profiler api requests")
@@ -116,7 +117,6 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.CPUWorkerNodeLabelKey, "cpu-worker-node-label-key", defaultCPUWorkerNodeLabelKey, "The label key for CPU worker nodes")
 	fs.StringVar(&s.GPUWorkerNodeLabelKey, "gpu-worker-node-label-key", defaultGPUWorkerNodeLabelKey, "The label key for GPU worker nodes")
 	fs.StringVar(&s.MIGWorkerNodeLabelKey, "mig-worker-node-label-key", defaultMIGWorkerNodeLabelKey, "The label key for MIG enabled worker nodes")
-	fs.StringVar(&s.Namspace, "namespace", defaultNamespace, "Scheduler service namespace")
 
 	utilfeature.DefaultMutableFeatureGate.AddFlag(fs)
 }

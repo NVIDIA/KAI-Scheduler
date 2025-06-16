@@ -28,10 +28,11 @@ func TestAddFlags(t *testing.T) {
 	// This is a snapshot of expected options parsed by args.
 	expected := &ServerOption{
 		SchedulerName:                     defaultSchedulerName,
+		Namspace:                          defaultNamespace,
+		MetricsNamespace:                  defaultMetricsNamespace,
 		ResourceReservationAppLabel:       defaultResourceReservationAppLabel,
 		SchedulePeriod:                    5 * time.Minute,
 		PrintVersion:                      true,
-		MetricsNamespace:                  defaultMetricsNamespace,
 		ListenAddress:                     defaultListenAddress,
 		ProfilerApiPort:                   defaultProfilerApiPort,
 		Verbosity:                         defaultVerbosityLevel,
