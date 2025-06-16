@@ -88,11 +88,6 @@ To support topology awareness, the PodGroup CRD will be extended with the follow
 ```go
 // TopologyConstraint defines a constraint for topology-aware scheduling
 type TopologyConstraint struct {
-    // Type defines whether this constraint is required or preferred.
-    // Required constraints must be satisfied for scheduling to succeed.
-    // Preferred constraints influence scoring but don't prevent scheduling.
-    Type TopologyConstraintType `json:"type,omitempty"`
-
     // PreferredTopologyLevel defines the preferred level in the topology hierarchy
     // that this constraint applies to (e.g., "rack", "zone", "datacenter").
     // Jobs will be scheduled to maintain locality at this level when possible.
