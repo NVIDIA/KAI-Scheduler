@@ -46,6 +46,9 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	assert.Equal(t, 1, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
+	assert.Empty(t, podGroupMetadata.PreferredTopologyLevel)
+	assert.Empty(t, podGroupMetadata.RequiredTopologyLevel)
+	assert.Empty(t, podGroupMetadata.Topology)
 }
 
 func TestGetPodGroupMetadataOnQueueFromOwnerDefaultNP(t *testing.T) {
@@ -548,4 +551,36 @@ func TestGetPodGroupMetadata_OwnerUserOverridePodUser(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, "ownerUser", podGroupMetadata.Labels["user"])
+}
+
+func TestGetPodGroupMetadataWithTopology(t *testing.T) {
+	owner := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "test_kind",
+			"apiVersion": "test_version",
+			"metadata": map[string]interface{}{
+				"name":      "test_name",
+				"namespace": "test_namespace",
+				"uid":       "1",
+				"labels": map[string]interface{}{
+					"test_label": "test_value",
+				},
+				"annotations": map[string]interface{}{
+					"test_annotation": "test_value",
+					"kai.scheduler/topology-preferred-placement": "rack",
+					"kai.scheduler/topology-required-placement":  "zone",
+					"kai.scheduler/topology":                     "network",
+				},
+			},
+		},
+	}
+	pod := &v1.Pod{}
+
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
+
+	assert.Nil(t, err)
+	assert.Equal(t, "rack", podGroupMetadata.PreferredTopologyLevel)
+	assert.Equal(t, "zone", podGroupMetadata.RequiredTopologyLevel)
+	assert.Equal(t, "network", podGroupMetadata.Topology)
 }
