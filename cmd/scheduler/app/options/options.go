@@ -14,7 +14,7 @@ import (
 
 const (
 	defaultSchedulerName               = "kai-scheduler"
-	defaultResourceReservationAppLabel = "runai-reservation"
+	defaultResourceReservationAppLabel = "kai-resource-reservation"
 	defaultMetricsNamespace            = "kai"
 	defaultNamespace                   = "kai-scheduler"
 	defaultSchedulerPeriod             = time.Second

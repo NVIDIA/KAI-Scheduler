@@ -23,12 +23,15 @@ spec:
           image: "{{ .Values.global.registry }}/{{ .Values.binder.image.name }}:{{ .Chart.Version }}"
           imagePullPolicy: {{ .Values.binder.image.pullPolicy }}
           args:
-            - --webhook-addr={{ .Values.binder.ports.webhookPort }}
+            - "--webhook-addr={{ .Values.binder.ports.webhookPort }}"
             - "--health-probe-bind-address=:{{ .Values.binder.ports.probePort }}"
             - "--resource-reservation-pod-image={{ .Values.global.registry }}/{{ .Values.binder.resourceReservationImage.name }}:{{ .Chart.Version }}"
             - "--metrics-bind-address=:{{ .Values.binder.ports.metricsPort }}"
             - "--gpu-sharing-enabled={{ .Values.global.gpuSharing }}"
             - "--cdi-enabled={{ .Values.binder.cdi }}"
+            - "--resource-reservation-namespace={{ .Values.global.resourceReservation.namespace }}"
+            - "--resource-reservation-service-account={{ .Values.global.resourceReservation.serviceAccount }}"
+            - "--resource-reservation-app-label={{ .Values.global.resourceReservation.appLabel }}"
           {{- if .Values.binder.additionalArgs }}
             {{- toYaml .Values.binder.additionalArgs | nindent 12 }}
           {{- end }}

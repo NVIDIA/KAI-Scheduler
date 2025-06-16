@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -166,6 +167,7 @@ var _ = Describe("Consolidation", Ordered, func() {
 		// delete some jobs in order to create fragmentation
 		// delete one job from each GPU group
 		numDeletedJobs := int64(0)
+		var undeletedJobs []*batchv1.Job
 		var gpuGroups []string
 		for _, job := range fillerJobs {
 			pods := rd.GetJobPods(ctx, testCtx.KubeClientset, job)
@@ -184,6 +186,7 @@ var _ = Describe("Consolidation", Ordered, func() {
 			gpuGroup, found := pod.Labels[constants.GPUGroup]
 			Expect(found).To(BeTrue())
 			if slices.Contains(gpuGroups, gpuGroup) {
+				undeletedJobs = append(undeletedJobs, job)
 				continue
 			}
 			gpuGroups = append(gpuGroups, gpuGroup)
@@ -198,16 +201,16 @@ var _ = Describe("Consolidation", Ordered, func() {
 				constants.GpuResource: resource.MustParse("1"),
 			},
 		})
+		testedPod.Name = "consolidator-pod"
 		testedPod.Spec.NodeSelector = nodeSelector
 		testedPod, err = rd.CreatePod(ctx, testCtx.KubeClientset, testedPod)
 		Expect(err).To(Succeed())
 		wait.ForPodScheduled(ctx, testCtx.ControllerClient, testedPod)
 
 		// verify all jobs are running
-		jobs, err := testCtx.KubeClientset.BatchV1().Jobs(namespace).List(ctx, metav1.ListOptions{})
 		Expect(err).To(Succeed())
-		for _, job := range jobs.Items {
-			pods := rd.GetJobPods(ctx, testCtx.KubeClientset, &job)
+		for _, job := range undeletedJobs {
+			pods := rd.GetJobPods(ctx, testCtx.KubeClientset, job)
 			for _, pod := range pods {
 				wait.ForPodScheduled(ctx, testCtx.ControllerClient, &pod)
 			}

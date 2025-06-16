@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	queueLabelKey = "runai/queue"
+	queueLabelKey = "kai.scheduler/queue"
 )
 
 var _ = Describe("Scheduling of Pod with PVC", Ordered, func() {

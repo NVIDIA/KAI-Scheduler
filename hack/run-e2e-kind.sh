@@ -47,7 +47,8 @@ done
 kind create cluster --config ${KIND_CONFIG} --name $CLUSTER_NAME
 
 # Install the fake-gpu-operator to provide a fake GPU resources for the e2e tests
-helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.62 --set topology.nodePools.default.gpuCount=8 --wait
+helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.62 \
+    --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml --wait
 
 # install third party operators to check the compatibility with the kai-scheduler
 if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then
