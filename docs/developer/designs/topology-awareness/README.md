@@ -32,12 +32,12 @@ The pods then need to get some hints to their respective location in this intern
    - Support hierarchical topology representations (e.g., datacenter/rack/node/device)
 - Provide flexible configuration options for topology-based placement
 - Support both Required and Preferred topology constraint request
-- Checking more possible allocations than is possible for PodAffinity pod groups: When the scheduler tries to scheudler a pod group with multiple pods that have a pod affinity requirement it finds a suitable node for the  first pods and that node's label is then used to compare the pod affinity of the next pods in the pod group. If the rest of the pods can't be allocated with that node affinity then the first pod's allocation is not attempted on another node. We aim to fix this issue
+- Checking more possible allocations than is possible for PodAffinity pod groups: When the scheduler tries to schedule a pod group with multiple pods that have a pod affinity requirement it finds a suitable node for the  first pods and that node's label is then used to compare the pod affinity of the next pods in the pod group. If the rest of the pods can't be allocated with that node affinity then the first pod's allocation is not attempted on another node. We aim to fix this issue
 
 ## Non-Goals
 
 - Automatically detecting topology without user input
-- Ensure backward compatibility with existing scheduling mechanisms
+- Improve allocations found for jobs using PodAffinity.
 
 ## Design Details
 
@@ -120,17 +120,18 @@ type PodGroupSpec struct {
 ### Assumptions / Requirements From Pod Groups
 
 - All pods must have the same requirements and roles
-    -  orchestrator / leader pods should also act as workers and be scheduled with the rest.
+    - orchestrator / leader pods should also act as workers and be scheduled with the rest.
+    - This is planned to be solved as an issue when a hierarchy of pod groups is supported.
 - No order or rank is predefined on the pods.
 
-### Implementation Approaches
+### Implementation Stages
 
 We will consider two main implementation approaches:
 
-#### Approach 1: Plugin for node order / filter
+#### Stage 1: Plugin for node order / filter
 The plugin will maintain an internal topology tree with resource sums to estimate allocation probability and effect node order by task.
 
-Similar to Kueue, this approach involves:
+Similar to Kueue, this stage involves:
 
 1. Building a tree representation of all topology hierarchies in the cluster
   * This tree will be updated with each allocation / preemption that is done in simulations
@@ -185,17 +186,21 @@ graph TD
 * It will allow for soft/preferred constraints to still ensure it schedules pods "close" to the rest of the group even if the chosen topology can't accommodate the whole job.
 * For each job it will calculate bottom up the number of pods that can be allocated in each tree node, to improve precision.
 
-#### Approach 2: Simulation-based Evaluation
+#### Stage 2: Simulation-based Evaluation
 
-This approach involves:
+This stage extends the use of topology information in the allocation of jobs in all actions by iterating on the possible topologies and checking them against all available filters to verify that the allocation will succeed.
 
-1. Building a tree similar to Approach 1
-2. For each possible topology hierarchy that has enough resources:
-   a. Add a virtual node selector to the job and simulate allocation
+1. Add a new plugin point to get a list of possible nodes from the plugin (similar to the "FeasibleNodesForJob" function, that could also be moved to a plugin).
 
-* Changes will be made to the allocation logic and/or a new plugin point will be created to get a possible group of nodes for a job that will be attempted and if not chosen a next one will be attempted.
-* This will work best if the first approach is implemented first to sort the nodes by their topology location and the available resources in each topology.
-* Significant performance reduction in big clusters is expected here.
+    ```go
+    FeasibleNodes(PodGroupInfo) [][]*NodeInfo
+    ```
+
+    The order of the topology groups in the returned list should be determined by the spread/bin packing parameter.
+
+2. Iterate over all the groups of feasible nodes returned by the plugin, each group for a different suggested topology that should fit the job and attempt to allocate the job there.
+
+* Significant performance reduction in big clusters is expected here because this might lead to attempting many topologies that can't really get to run the job due to missing DRA/Volume or some other condition. On the other hand the first stage alone would not find the right allocation for those jobs.
 
 
 #### Topology Info struct
@@ -245,15 +250,18 @@ type TopologyDomainInfo struct {
     // Total allocated resources in this domain
     AllocatedResources v1.ResourceList
 
+    // Number of pods that can be allocated in this domain
+    AllocatablePods int
+
+    // List of resources requested by each pod in the job this tree is built for
+    RequestedResources v1.ResourceList
+
     // Depth in the tree from root (0 for root)
     Depth int
 }
 ```
 
-There are two possibilities as to where the struct should be built and kept:
-  * Plugin - We will use a plugin that will build it in `OnSessionOpen` and will use hooks similar to DRA plugin to keep tabs on all the changes made in the cluster.
-  * ClusterInfo - This can be done with TopologyInfo structs in the ClusterInfo package, the plugin will later read this from the cache to make node order decision and will update this struct with simulated allocations.
-Because this might be resource intensive we will leave users with the option to totally disable it and only reference it in the plugin.
+This struct will be built and updated in a dedicated topology plugin.
 
 #### Topology Awareness Plugin
 
@@ -261,7 +269,12 @@ Because this might be resource intensive we will leave users with the option to 
 Maintain topology tree with available resources using the Allocate/Deallocate event handlers (similar to the dynamicresources plugin)
 
 ##### Pre Process
-Register the PrePredicate function (Possibly change its name to PreFilter ? ) to create a job-specific and look for allocation in that tree.
+* Register the PrePredicate function to create a job-specific tree with the amount of allocatable pods filled for each tree node according to the resources requested by each pod in the job.
+  * Consider changing the name to PreFilter or PreProcess
+* Using this data we can then choose the best topology (represented by the tree nodes) for the job.
+* When multiple topologies are available, we can choose the one most fitting to the bin packing or spreading (For example if bin packing was requested than get the topology with the least resources)
+* The per-job preprocessed tree will be built from the base tree that is maintained by the plugin.
+* We will use here the assumption that all the pods have the same resource requirements to calculate for each tree node the amount of pods that can be allocated in it (using post order traverse).
 
 ####  Node Ordering and Filtering
 - This is currently called per task, so with the current setup it will have to cache the result in the plugin (Possibly also using the resources tree hash?)
@@ -270,7 +283,7 @@ Register the PrePredicate function (Possibly change its name to PreFilter ? ) to
 - NodeOrder will rank the selected node above all and then other nodes by distance. Use a factor that will make this plugin more dominant the any other (similar to pod affinity node order).
 - For future extensions: New plugin point for `BeforeBind` will allow to mutate the bind request / pod creating the bind request. It will be used to add rank labels to the pod in order to specify its chosen rank inside the job.
 
-#### Pod Grouper Implementation
+### Pod Grouper Implementation
 
 The pod-grouper component will be enhanced to:
 
@@ -278,8 +291,6 @@ The pod-grouper component will be enhanced to:
 2. Extract and validate topology constraint information
 3. Set the corresponding fields in the PodGroup that it creates
 4. Support both Required and Preferred constraints
-
-For pods that are part of the same job but have different topology requirements, the pod-grouper will use the most restrictive constraints to ensure all pods can be scheduled.
 
 ## Possible Extensions
 We can extend the suggested implementation to support job segmentation into blocks (similarly to SLURM's topology/block plugin) or to support hierarchy of pod groups (with new concepts like SuperPodGroup) by searching to allocate a whole subtree inside the internal topology tree.
