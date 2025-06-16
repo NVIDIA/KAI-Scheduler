@@ -58,7 +58,6 @@ func (r *resolver) resolvePreemptMinRuntime(
 			minRuntime = *currentQueue.PreemptMinRuntime
 			break
 		}
-
 		currentQueue = r.queues[currentQueue.ParentQueue]
 	}
 
@@ -107,18 +106,7 @@ func (r *resolver) resolveReclaimMinRuntimeQueue(
 			minRuntime = *currentQueue.ReclaimMinRuntime
 			break
 		}
-
-		// Move to parent queue if it exists
-		if currentQueue.ParentQueue != "" {
-			parentQueue, found := r.queues[currentQueue.ParentQueue]
-			if found {
-				currentQueue = parentQueue
-				continue
-			}
-		}
-
-		// Break if no more parent queues
-		break
+		currentQueue = r.queues[currentQueue.ParentQueue]
 	}
 
 	// If no reclaim-min-runtime is set in the queue tree, use default
@@ -180,7 +168,7 @@ func (r *resolver) resolveReclaimMinRuntimeLCA(
 		lcaIndex++
 	}
 
-	duration := r.defaultPreemptMinRuntime
+	duration := r.defaultReclaimMinRuntime
 
 	// From the current LCA or child of LCA, move up towards root and select first available override
 	for i := lcaIndex; i >= 0; i-- {
@@ -209,18 +197,7 @@ func (r *resolver) getQueueHierarchyPath(
 	for currentQueue != nil {
 		// Add current queue to the path (at beginning to maintain parent->child order)
 		hierarchyPath = append([]*queue_info.QueueInfo{currentQueue}, hierarchyPath...)
-
-		// If queue has a parent, add it to the path
-		if currentQueue.ParentQueue != "" {
-			parentQueue, found := r.queues[currentQueue.ParentQueue]
-			if found {
-				currentQueue = parentQueue
-				continue
-			}
-		}
-
-		// Break if no more parents (reached top-level)
-		break
+		currentQueue = r.queues[currentQueue.ParentQueue]
 	}
 
 	return hierarchyPath

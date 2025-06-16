@@ -38,7 +38,7 @@ func LogClusterState(client runtimeClient.WithWatch, logger logr.Logger) {
 	if err != nil {
 		return
 	}
-	logger.Info(fmt.Sprintf("Falied test cluster state - E2e pods: \n%v", podListPrinting(e2ePods)))
+	logger.Info(fmt.Sprintf("Failed test cluster state - E2e pods: \n%v", podListPrinting(e2ePods)))
 }
 
 func podListPrinting(podList *v1.PodList) string {
@@ -58,7 +58,7 @@ func podListPrinting(podList *v1.PodList) string {
 		for _, condition := range pod.Status.Conditions {
 			if condition.Type == v1.PodScheduled && condition.Status == v1.ConditionFalse {
 				podListRepresentationString.WriteString(
-					fmt.Sprintf("\tScheduling falied: %s\n", condition.Message),
+					fmt.Sprintf("\tScheduling failed: %s\n", condition.Message),
 				)
 			}
 		}

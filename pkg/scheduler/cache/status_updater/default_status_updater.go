@@ -193,20 +193,17 @@ func (su *defaultStatusUpdater) RecordJobStatusEvent(job *podgroup_info.PodGroup
 		su.recordStaleJobEvent(job)
 	}
 
-	if job.GetNumPendingTasks() == 0 && job.GetNumGatedTasks() == 0 {
-		return nil
+	updatePodgroupStatus := false
+	if job.GetNumPendingTasks() > 0 || job.GetNumGatedTasks() > 0 {
+		if !job.IsReadyForScheduling() {
+			su.recordJobNotReadyEvent(job)
+			return nil
+		}
+		if err := su.recordUnschedulablePodsEvents(job); err != nil {
+			return err
+		}
+		updatePodgroupStatus = su.recordUnschedulablePodGroup(job)
 	}
-
-	if !job.IsReadyForScheduling() {
-		su.recordJobNotReadyEvent(job)
-		return nil
-	}
-
-	if err := su.recordUnschedulablePodsEvents(job); err != nil {
-		return err
-	}
-
-	updatePodgroupStatus := su.recordUnschedulablePodGroup(job)
 
 	if len(patchData) > 0 || updatePodgroupStatus {
 		su.pushToUpdateQueue(
