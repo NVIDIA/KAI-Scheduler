@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/controllers/childqueues_updater"
@@ -51,7 +51,7 @@ func (r *QueueReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	logger.V(1).Info("Reconcile for queue", "queue name", req.Name)
 
-	queue := &enginev2.Queue{}
+	queue := &v2.Queue{}
 	err := r.Get(ctx, req.NamespacedName, queue)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -78,7 +78,7 @@ func (r *QueueReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *QueueReconciler) SetupWithManager(mgr ctrl.Manager, queueLabelKey string) error {
-	err := mgr.GetFieldIndexer().IndexField(context.Background(), &enginev2.Queue{}, common.ParentQueueIndexName,
+	err := mgr.GetFieldIndexer().IndexField(context.Background(), &v2.Queue{}, common.ParentQueueIndexName,
 		indexQueueByParent)
 	if err != nil {
 		return fmt.Errorf("failed to setup queue parent indexer: %v", err)
@@ -93,8 +93,8 @@ func (r *QueueReconciler) SetupWithManager(mgr ctrl.Manager, queueLabelKey strin
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&enginev2.Queue{}).
-		Watches(&enginev2.Queue{},
+		For(&v2.Queue{}).
+		Watches(&v2.Queue{},
 			handler.EnqueueRequestsFromMapFunc(enqueueQueue)).
 		Watches(&v2alpha2.PodGroup{},
 			handler.EnqueueRequestsFromMapFunc(enqueuePodGroup)).
@@ -102,7 +102,7 @@ func (r *QueueReconciler) SetupWithManager(mgr ctrl.Manager, queueLabelKey strin
 }
 
 func indexQueueByParent(object client.Object) []string {
-	queue := object.(*enginev2.Queue)
+	queue := object.(*v2.Queue)
 	if queue.Spec.ParentQueue == "" {
 		return []string{}
 	}
@@ -110,7 +110,7 @@ func indexQueueByParent(object client.Object) []string {
 }
 
 func enqueueQueue(_ context.Context, q client.Object) []reconcile.Request {
-	queue, ok := q.(*enginev2.Queue)
+	queue, ok := q.(*v2.Queue)
 	if !ok {
 		return []reconcile.Request{}
 	}

@@ -6,9 +6,10 @@ package app
 import (
 	"flag"
 
-	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
-	kubeAiSchedulerv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -35,8 +36,8 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(enginev2.AddToScheme(scheme))
-	utilruntime.Must(kubeAiSchedulerv2alpha2.AddToScheme(scheme))
+	utilruntime.Must(v2.AddToScheme(scheme))
+	utilruntime.Must(v2alpha2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -59,7 +60,7 @@ func Run() error {
 		return nil
 	}
 
-	if err = (&enginev2.Queue{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&v2.Queue{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook for queue v2", "webhook", "Queue")
 		return nil
 	}
