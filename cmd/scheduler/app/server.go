@@ -47,7 +47,8 @@ var logFlushFreq = pflag.Duration("log-flush-frequency", 5*time.Second, "Maximum
 
 func flushLogs() {
 	if err := log.InfraLogger.Sync(); err != nil &&
-		!errors.Is(err, syscall.ENOTTY) { // https://github.com/uber-go/zap/issues/991#issuecomment-962098428
+		!errors.Is(err, syscall.ENOTTY) && // https://github.com/uber-go/zap/issues/991#issuecomment-962098428
+		!errors.Is(err, syscall.EINVAL) { // https://github.com/uber-go/zap/issues/328
 		fmt.Fprintf(os.Stderr, "failed to flush logs: %v\n", err)
 	}
 }
