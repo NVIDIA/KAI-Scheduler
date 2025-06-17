@@ -7,17 +7,14 @@ import (
 	"context"
 	"fmt"
 
+	v1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/common"
-	v1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// +kubebuilder:rbac:groups=scheduling.run.ai,resources=queues,verbs=get;list;watch
-// +kubebuilder:rbac:groups=scheduling.run.ai,resources=queues/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=scheduling.run.ai,resources=podgroups,verbs=get;list
 
 type ResourceUpdater struct {
 	client.Client

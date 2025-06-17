@@ -7,11 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/common"
-	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/controllers/childqueues_updater"
-	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/controllers/resource_updater"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,6 +14,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/common"
+	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/controllers/childqueues_updater"
+	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/controllers/resource_updater"
 )
 
 // QueueReconciler reconciles a Queue object

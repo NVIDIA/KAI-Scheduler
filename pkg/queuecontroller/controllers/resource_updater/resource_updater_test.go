@@ -7,16 +7,16 @@ import (
 	"context"
 	"testing"
 
-	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/stretchr/testify/assert"
-	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 )
 
 const (
@@ -28,7 +28,7 @@ func TestUpdateQueue_PodGroupsOnly(t *testing.T) {
 		&v2alpha2.PodGroup{
 			ObjectMeta: v12.ObjectMeta{
 				Name:      "podgroup1",
-				Namespace: "runai-proj-1",
+				Namespace: "proj-1",
 				Labels: map[string]string{
 					queueLabelName: "queue-name",
 				},
@@ -56,7 +56,7 @@ func TestUpdateQueue_PodGroupsOnly(t *testing.T) {
 		&v2alpha2.PodGroup{
 			ObjectMeta: v12.ObjectMeta{
 				Name:      "podgroup2",
-				Namespace: "runai-proj-1",
+				Namespace: "proj-1",
 				Labels: map[string]string{
 					queueLabelName: "queue-name",
 				},
@@ -81,7 +81,7 @@ func TestUpdateQueue_PodGroupsOnly(t *testing.T) {
 		&v2alpha2.PodGroup{
 			ObjectMeta: v12.ObjectMeta{
 				Name:      "podgroup3",
-				Namespace: "runai-proj-1",
+				Namespace: "proj-1",
 				Labels: map[string]string{
 					queueLabelName: "not-queue-name",
 				},

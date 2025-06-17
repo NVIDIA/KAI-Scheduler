@@ -7,12 +7,13 @@ import (
 	"context"
 	"testing"
 
-	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 )
 
 func TestUpdateQueueChildren(t *testing.T) {
