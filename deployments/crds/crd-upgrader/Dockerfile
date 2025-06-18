@@ -5,13 +5,14 @@ RUN curl -o kubectl -L "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io
 && chmod +x kubectl && mv kubectl /usr/bin/kubectl
 
 COPY deployments/crds/definitions /crds
+RUN mkdir -p /external-crds
+# Download the kueue topology crd definitions, and remove all kueue helm installation parameters
 RUN curl -L https://raw.githubusercontent.com/kubernetes-sigs/kueue/refs/tags/v0.12.2/charts/kueue/templates/crd/kueue.x-k8s.io_topologies.yaml | \
-    sed -e '/^  labels:/,/}}/d' -e '/^  annotations:/,/v0.17.3/d' -e '/^  conversion:/,/v1/d' | \
-    sed 's/^metadata:/metadata:\n  labels:\n    kai-scheduler-installed: "true"/' > /crds/kueue.x-k8s.io_topologies.yaml
-RUN cat /crds/kueue.x-k8s.io_topologies.yaml
+    sed -e '/^  labels:/,/}}/d' -e '/^    {{- if/,/end }}/d' -e '/^  conversion:/,/v1/d' > /external-crds/kueue.x-k8s.io_topologies.yaml
 COPY NOTICE .
+COPY deployments/crds/crd-upgrader/apply-crds.sh /apply-crds.sh
+RUN chmod +x /apply-crds.sh
 
 USER 65532:65532
 
-# Using --force-conflicts to claim ownership of the CRDs from helm
-CMD ["kubectl", "apply", "--server-side=true", "--force-conflicts", "-f", "/crds"]
+CMD ["/apply-crds.sh"]

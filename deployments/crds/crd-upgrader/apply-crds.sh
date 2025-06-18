@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Using --force-conflicts to claim ownership of the CRDs from helm
+kubectl apply --server-side=true --force-conflicts -f /crds
+
+# Do not apply external crd if an equivelent crd is already installed
+kubectl apply --server-side=true -f /external-crds
