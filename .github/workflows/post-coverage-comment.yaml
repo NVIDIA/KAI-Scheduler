@@ -41,9 +41,13 @@ jobs:
             const prNumber = fs.readFileSync('pr_number.txt', 'utf8').trim();
             const reportBody = fs.readFileSync('coverage-report.txt', 'utf8');
 
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: reportBody
-            }); 
+            if (reportBody.trim()) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: reportBody
+              });
+            } else {
+              console.log('Coverage report body is empty. Skipping comment.');
+            }
