@@ -27,6 +27,7 @@ test: envtest-docker-go
 
 .PHONY: build
 build: $(SERVICE_NAMES)
+	$(MAKE) docker-build-crd-upgrader SERVICE_NAME=crd-upgrader
 
 $(SERVICE_NAMES):
 	$(MAKE) build-go SERVICE_NAME=$@
