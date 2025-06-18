@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package podgang
+package grove
 
 import (
 	"testing"
@@ -10,6 +10,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
@@ -113,7 +115,8 @@ func TestGetPodGroupMetadata(t *testing.T) {
 			Name:      "pgs1-pga1",
 			Namespace: "test-ns",
 			Labels: map[string]string{
-				queueLabelKey: "test_queue",
+				queueLabelKey:  "test_queue",
+				podGangNameKey: "pgs1",
 			},
 			UID: "100",
 		},
@@ -121,7 +124,8 @@ func TestGetPodGroupMetadata(t *testing.T) {
 		Status: v1.PodStatus{},
 	}
 
-	grouper := NewPodGangGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podgang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	metadata, err := grouper.GetPodGroupMetadata(podgang, pod)
 	assert.Nil(t, err)
 	assert.Equal(t, int32(12), metadata.MinAvailable)
@@ -135,9 +139,9 @@ func TestErrorPodGroupMinReplicas(t *testing.T) {
 			"kind":       "PodGang",
 			"apiVersion": "scheduler.grove.io/v1alpha1",
 			"metadata": map[string]interface{}{
-				"name":      "pgs1",
+				"name":      "pgs2",
 				"namespace": "test-ns",
-				"uid":       "1",
+				"uid":       "2",
 				"labels": map[string]interface{}{
 					"test_label": "test_value",
 				},
@@ -180,7 +184,8 @@ func TestErrorPodGroupMinReplicas(t *testing.T) {
 			Name:      "pgs1-pga1",
 			Namespace: "test-ns",
 			Labels: map[string]string{
-				queueLabelKey: "test_queue",
+				queueLabelKey:  "test_queue",
+				podGangNameKey: "pgs2",
 			},
 			UID: "100",
 		},
@@ -188,7 +193,8 @@ func TestErrorPodGroupMinReplicas(t *testing.T) {
 		Status: v1.PodStatus{},
 	}
 
-	grouper := NewPodGangGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podgang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	_, err := grouper.GetPodGroupMetadata(podgang, pod)
 	assert.EqualError(t, err, "Unsupported minReplicas: expected: 4, found: 2")
 }

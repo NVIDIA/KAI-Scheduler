@@ -113,6 +113,22 @@ rules:
   - patch
   - update
 - apiGroups:
+  - grove.io
+  resources:
+  - podgangset
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - grove.io
+  resources:
+  - podgangset/finalizers
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
   - kubeflow.org
   resources:
   - jaxjobs
