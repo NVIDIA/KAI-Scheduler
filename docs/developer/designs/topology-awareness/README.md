@@ -126,16 +126,17 @@ We will consider two main implementation approaches:
 #### Stage 1: Plugin for node order / filter
 The plugin will maintain an internal topology tree with resource sums to estimate allocation probability and effect node order by task.
 
-Similar to Kueue, this stage involves:
+This stage involves:
 
 1. Building a tree representation of all topology hierarchies in the cluster
   * This tree will be updated with each allocation / preemption that is done in simulations
   * We will need to save and restore it in simulation checkpoints
 2. Summing the resources in each topology tree node
-3. Choosing the topology with the tree node with the most resources that fits current pod group
-4. Ranking cluster nodes according to their topology grouping
-5. Prioritizing cluster nodes that form the most cohesive topology group for a workload
-6. Considering factors like:
+3. For each job creating a topology tree that also has the number of allocatable pods in each tree node
+4. Choosing the topology with the tree node that best fits the pod group
+5. Ranking cluster nodes according to their topology grouping
+6. Prioritizing cluster nodes that form the most cohesive topology group for a workload
+7. Considering factors like:
    - Number of resources available within each topology group
    - Distance in the tree from the chosen topology group for the Job
 
@@ -261,7 +262,7 @@ This struct will be built and updated in a dedicated topology plugin.
 #### Topology Awareness Plugin
 
 ##### Setup
-Maintain topology tree with available resources using the Allocate/Deallocate event handlers (similar to the dynamicresources plugin)
+Maintain all topology trees with available resources using the Allocate/Deallocate event handlers (similar to the dynamicresources plugin)
 
 ##### Pre Process
 * Register the PrePredicate function to create a job-specific tree with the amount of allocatable pods filled for each tree node according to the resources requested by each pod in the job.
