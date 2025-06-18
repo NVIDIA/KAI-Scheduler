@@ -47,7 +47,7 @@ Users will be able to:
 
 1. Define topology constraints in their workload specifications
 2. Define the way a job can be split into several topologies
-3. Set preferences for topology-aware placement - strict (Only schedule the job if it can get the topology requirements) or soft (Do your best, but I prefer to start running than to wait for the perfect setup)
+3. Set preferences for topology-aware placement - strict (Only schedule the job if it can get the topology requirements) or preferred (Do your best, but I prefer to start running than to wait for the perfect setup)
 4. View topology information for their running workloads
 
 ### Topology Representation
