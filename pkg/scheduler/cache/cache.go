@@ -279,8 +279,14 @@ func (sc *SchedulerCache) createBindRequest(podInfo *pod_info.PodInfo, nodeName 
 
 	bindRequest.Labels = labels.Merge(bindRequest.Labels, sc.schedulingNodePoolParams.GetLabels())
 
-	_, err := sc.kubeAiSchedulerClient.SchedulingV1alpha2().BindRequests(
+	createdBindRequest, err := sc.kubeAiSchedulerClient.SchedulingV1alpha2().BindRequests(
 		podInfo.Namespace).Create(context.TODO(), bindRequest, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = sc.kubeAiSchedulerInformerFactory.Scheduling().V1alpha2().BindRequests().Informer().
+		GetStore().Add(createdBindRequest)
 	return err
 }
 
