@@ -9,6 +9,7 @@ SUCCESS_MESSAGE_HANDLER=(${ECHO_COMMAND} ${GREEN_CONSOLE} "${CONSOLE_PREFIX} Suc
 
 DOCKER_SOCK_PATH=/var/run/docker.sock
 DOCKERFILE_PATH=./Dockerfile
+CRD_UPGRADER_DOCKERFILE_PATH=./deployments/crds/crd-upgrader/Dockerfile
 
 DOCKER_TAG?=0.0.0
 VERSION?=${DOCKER_TAG}
@@ -55,3 +56,7 @@ builder:
 docker-build-generic:
 	DOCKER_BUILDKIT=1 docker buildx build ${DOCKER_BUILD_ADDITIONAL_ARGS} --build-arg SERVICE_NAME=${SERVICE_NAME} -f ${DOCKERFILE_PATH} -t ${DOCKER_IMAGE_NAME} ${DOCKER_BUILDX_ADDITIONAL_ARGS} --platform ${DOCKER_BUILD_PLATFORM} .
 .PHONY: docker-build-generic
+
+docker-build-crd-upgrader:
+	DOCKER_BUILDKIT=1 docker buildx build --build-arg SERVICE_NAME=${SERVICE_NAME} -f ${CRD_UPGRADER_DOCKERFILE_PATH} -t ${DOCKER_IMAGE_NAME} ${DOCKER_BUILDX_ADDITIONAL_ARGS} --platform ${DOCKER_BUILD_PLATFORM} .
+.PHONY: docker-build-crd-upgrader
