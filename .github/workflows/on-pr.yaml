@@ -39,8 +39,6 @@ jobs:
     name: Code Coverage Report
     runs-on: ubuntu-latest
     needs: validate-and-test
-    outputs:
-      report: ${{ steps.coverage_reporter.outputs.coverage_report }}
     steps:
       - uses: fgrosse/go-coverage-report@8c1d1a09864211d258937b1b1a5b849f7e4f2682
         id: coverage_reporter
@@ -50,15 +48,9 @@ jobs:
           root-package: "github.com/NVIDIA/KAI-scheduler"
           github-baseline-workflow-ref: update-coverage-badge.yaml
           skip-comment: true
-
-  upload-report:
-    name: Upload Coverage Report For Commenting
-    runs-on: ubuntu-latest
-    needs: code-coverage-report
-    steps:
       - name: Save coverage report to file
         env:
-          REPORT_BODY: ${{ needs.code-coverage-report.outputs.report }}
+          REPORT_BODY: ${{ steps.coverage_reporter.outputs.coverage_report }}
         run: echo "$REPORT_BODY" > coverage-report.txt
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
