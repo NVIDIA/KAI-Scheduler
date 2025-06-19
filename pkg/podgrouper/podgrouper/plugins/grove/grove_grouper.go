@@ -45,13 +45,10 @@ func (gg *GroveGrouper) Name() string {
 func (gg *GroveGrouper) GetPodGroupMetadata(
 	_ *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {
-	if len(pod.Spec.SchedulingGates) > 0 {
-		return nil, fmt.Errorf("Ignoring pod %s/%s due to scheduling gates: %v",
-			pod.Namespace, pod.Name, pod.Spec.SchedulingGates)
-	}
 	if pod.Labels == nil {
 		return nil, fmt.Errorf("Labels map not found in pod %s/%s", pod.Namespace, pod.Name)
 	}
+
 	podGangName, ok := pod.Labels[podGangNameKey]
 	if !ok {
 		return nil, fmt.Errorf("Label for podgang name (key: %s) not found in pod %s/%s",
@@ -64,6 +61,7 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 		Kind:    "podgang",
 		Version: "v1alpha1",
 	})
+
 	err := gg.client.Get(context.Background(), client.ObjectKey{
 		Namespace: pod.Namespace,
 		Name:      podGangName,
