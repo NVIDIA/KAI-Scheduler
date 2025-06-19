@@ -9,6 +9,8 @@ KAI Scheduler supports the entire AI lifecycle, from small, interactive jobs tha
 It ensures optimal resource allocation while maintaining resource fairness between the different consumers.
 It can run alongside other schedulers installed on the cluster.
 
+
+
 ## Key Features
 * [Batch Scheduling](docs/batch/README.md): Ensure all pods in a group are scheduled simultaneously or not at all.
 * Bin Packing & Spread Scheduling: Optimize node usage either by minimizing fragmentation (bin-packing) or increasing resiliency and load balancing (spread scheduling).
