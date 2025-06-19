@@ -43,7 +43,7 @@ jobs:
             console.log(`reportBody: "${reportBody}"`);
             console.log(`prNumber: "${prNumber}"`);
             
-            if (prNumber && reportBody !== '' && reportBody !== '\\n') {
+            if (prNumber && reportBody.trim()) {
               github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
