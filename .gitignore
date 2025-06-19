@@ -5,3 +5,4 @@ cover.out
 .DS_Store
 coverage/
 *.test
+launch.json
