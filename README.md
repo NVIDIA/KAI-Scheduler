@@ -38,7 +38,7 @@ KAI Scheduler can be installed:
 - **From Production (Recommended)**
 - **From Source (Build it Yourself)**
 
-For API changes and migration guides, please refer to [Breaking Changes & Migration Guides](docs/migrationguides/README.md)
+⚠️ For API changes and migration guides, please refer to [Breaking Changes & Migration Guides](docs/migrationguides/README.md)
 
 #### Install from Production
 Locate the latest release version in [releases](https://github.com/NVIDIA/KAI-Scheduler/releases) page.

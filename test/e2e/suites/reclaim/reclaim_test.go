@@ -278,6 +278,10 @@ var _ = Describe("Reclaim", Ordered, func() {
 				},
 			})
 
+			nodes := rd.FindNodesWithExactGPUs(ctx, testCtx.ControllerClient, 8)
+			Expect(len(nodes)).To(BeNumerically(">", 0))
+			testNodeName := nodes[0].Name
+
 			parentQueue, reclaimee1Queue, reclaimee2Queue := createQueues(8, 1, 1)
 			reclaimee1Queue.Spec.Resources.GPU.OverQuotaWeight = 1
 			reclaimee2Queue.Spec.Resources.GPU.OverQuotaWeight = 2
@@ -302,6 +306,9 @@ var _ = Describe("Reclaim", Ordered, func() {
 						constants.GpuResource: resource.MustParse("1"),
 					},
 				})
+				job.Spec.Template.Spec.NodeSelector = map[string]string{
+					"kubernetes.io/hostname": testNodeName,
+				}
 				err := testCtx.ControllerClient.Create(ctx, job)
 				Expect(err).To(Succeed())
 			}
@@ -312,6 +319,9 @@ var _ = Describe("Reclaim", Ordered, func() {
 						constants.GpuResource: resource.MustParse("1"),
 					},
 				})
+				job.Spec.Template.Spec.NodeSelector = map[string]string{
+					"kubernetes.io/hostname": testNodeName,
+				}
 				err := testCtx.ControllerClient.Create(ctx, job)
 				Expect(err).To(Succeed())
 			}
@@ -338,6 +348,9 @@ var _ = Describe("Reclaim", Ordered, func() {
 					constants.GpuResource: resource.MustParse("3"),
 				},
 			})
+			reclaimerPod.Spec.NodeSelector = map[string]string{
+				"kubernetes.io/hostname": testNodeName,
+			}
 			reclaimerPod, err = rd.CreatePod(ctx, testCtx.KubeClientset, reclaimerPod)
 			Expect(err).To(Succeed())
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimerPod)

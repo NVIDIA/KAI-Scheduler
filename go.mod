@@ -52,7 +52,7 @@ require (
 	k8s.io/kube-controller-manager v0.32.4
 	k8s.io/kube-proxy v0.32.4
 	k8s.io/kubectl v0.32.4
-	k8s.io/kubernetes v1.32.4
+	k8s.io/kubernetes v1.32.6
 	k8s.io/metrics v0.32.4
 	k8s.io/mount-utils v0.32.4
 	k8s.io/pod-security-admission v0.32.4

@@ -7,7 +7,6 @@ on:
   push:
     branches:
       - "main"
-  workflow_dispatch:
 
 jobs:
   update-coverage:
@@ -15,7 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout code
