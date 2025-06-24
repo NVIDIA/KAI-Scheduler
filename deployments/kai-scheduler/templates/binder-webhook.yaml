@@ -17,12 +17,21 @@ webhooks:
   failurePolicy: Fail
   name: binder.run.ai
   namespaceSelector:
+    {{- if .Values.global.namespaceLabelSelector }}
+    matchLabels:
+      {{- toYaml .Values.global.namespaceLabelSelector | nindent 6 }}
+    {{- end }}
     matchExpressions:
     - key: kubernetes.io/metadata.name
       operator: NotIn
       values:
       - kube-system
       - '{{ .Release.Namespace }}'
+  {{- if .Values.global.podLabelSelector }}
+  objectSelector:
+    matchLabels:
+      {{- toYaml .Values.global.podLabelSelector | nindent 6 }}
+  {{- end }}
   reinvocationPolicy: IfNeeded
   rules:
   - apiGroups:
@@ -51,12 +60,21 @@ webhooks:
   failurePolicy: Fail
   name: binder.run.ai
   namespaceSelector:
+    {{- if .Values.global.namespaceLabelSelector }}
+    matchLabels:
+      {{- toYaml .Values.global.namespaceLabelSelector | nindent 6 }}
+    {{- end }}
     matchExpressions:
     - key: kubernetes.io/metadata.name
       operator: NotIn
       values:
       - kube-system
       - '{{ .Release.Namespace }}'
+  {{- if .Values.global.podLabelSelector }}
+  objectSelector:
+    matchLabels:
+      {{- toYaml .Values.global.podLabelSelector | nindent 6 }}
+  {{- end }}
   rules:
   - apiGroups:
     - ""

@@ -5,23 +5,25 @@ package app
 
 import (
 	"flag"
+	"strings"
 
 	controllers "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper"
 )
 
 type Options struct {
-	MetricsAddr              string
-	ProbeAddr                string
-	EnableLeaderElection     bool
-	NodePoolLabelKey         string
-	QPS                      int
-	Burst                    int
-	MaxConcurrentReconciles  int
-	SearchForLegacyPodGroups bool
-	KnativeGangSchedule      bool
-	SchedulerName            string
-	SchedulingQueueLabelKey  string
-
+	MetricsAddr                         string
+	ProbeAddr                           string
+	EnableLeaderElection                bool
+	NodePoolLabelKey                    string
+	QPS                                 int
+	Burst                               int
+	MaxConcurrentReconciles             int
+	SearchForLegacyPodGroups            bool
+	KnativeGangSchedule                 bool
+	SchedulerName                       string
+	SchedulingQueueLabelKey             string
+	PodLabelSelectorStr                 string
+	NamespaceLabelSelectorStr           string
 	DefaultPrioritiesConfigMapName      string
 	DefaultPrioritiesConfigMapNamespace string
 }
@@ -40,6 +42,8 @@ func (o *Options) AddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&o.SchedulingQueueLabelKey, "queue-label-key", "kai.scheduler/queue", "Scheduling queue label key name")
 	fs.StringVar(&o.DefaultPrioritiesConfigMapName, "default-priorities-configmap-name", "", "The name of the configmap that contains default priorities for pod groups")
 	fs.StringVar(&o.DefaultPrioritiesConfigMapNamespace, "default-priorities-configmap-namespace", "", "The namespace of the configmap that contains default priorities for pod groups")
+	flag.StringVar(&o.PodLabelSelectorStr, "pod-label-selector", "", "Pod label selector in key=value comma-separated format")
+	flag.StringVar(&o.NamespaceLabelSelectorStr, "namespace-label-selector", "", "Namespace label selector in key=value comma-separated format")
 }
 
 func (o *Options) Configs() controllers.Configs {
@@ -50,7 +54,24 @@ func (o *Options) Configs() controllers.Configs {
 		KnativeGangSchedule:                 o.KnativeGangSchedule,
 		SchedulerName:                       o.SchedulerName,
 		SchedulingQueueLabelKey:             o.SchedulingQueueLabelKey,
+		PodLabelSelector:                    parseLabelSelector(o.PodLabelSelectorStr),
+		NamespaceLabelSelector:              parseLabelSelector(o.NamespaceLabelSelectorStr),
 		DefaultPrioritiesConfigMapName:      o.DefaultPrioritiesConfigMapName,
 		DefaultPrioritiesConfigMapNamespace: o.DefaultPrioritiesConfigMapNamespace,
 	}
+}
+
+func parseLabelSelector(labelStr string) map[string]string {
+	labels := map[string]string{}
+	if labelStr == "" {
+		return labels
+	}
+	pairs := strings.Split(labelStr, ",")
+	for _, pair := range pairs {
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) == 2 {
+			labels[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+		}
+	}
+	return labels
 }

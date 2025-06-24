@@ -76,7 +76,7 @@ func TestIsOrphanPodWithPodGroup(t *testing.T) {
 		Status: v1.PodStatus{},
 	}
 
-	assert.True(t, isOrphanPodWithPodGroup(context.Background(), &pod))
+	assert.True(t, isOrphanPodWithPodGroup(&pod))
 
 	pod.OwnerReferences = []metav1.OwnerReference{
 		{
@@ -86,7 +86,7 @@ func TestIsOrphanPodWithPodGroup(t *testing.T) {
 			UID:        "1",
 		},
 	}
-	assert.False(t, isOrphanPodWithPodGroup(context.Background(), &pod))
+	assert.False(t, isOrphanPodWithPodGroup(&pod))
 }
 
 func TestEventOnFailure(t *testing.T) {

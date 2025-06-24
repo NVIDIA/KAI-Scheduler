@@ -114,4 +114,11 @@ spec:
       tolerations:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
       {{- end }}
-{{- end -}} 
+{{- end -}}
+{{- define "render.selector" -}}
+{{- $items := list }}{{/* initializes an empty list */}}
+{{- range $k, $v := . }}
+  {{- $items = append $items (printf "%s=%s" $k $v) }}
+{{- end }}
+{{- join "," $items }}
+{{- end }}
