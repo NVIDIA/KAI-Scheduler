@@ -4,6 +4,7 @@
 package status_updater
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 
@@ -156,7 +158,7 @@ func (su *defaultStatusUpdater) Pipelined(pod *v1.Pod, message string) {
 	su.recorder.Eventf(pod, v1.EventTypeNormal, "Pipelined", message)
 }
 
-func (su *defaultStatusUpdater) PatchPodLabels(pod *v1.Pod, labels map[string]any) {
+func (su *defaultStatusUpdater) PatchPodLabels(pod *v1.Pod, labels map[string]any) error {
 	log.InfraLogger.V(6).Infof("Patching pod labels for %s/%s", pod.Namespace, pod.Name)
 
 	patchBytes, err := json.Marshal(map[string]any{
@@ -168,19 +170,14 @@ func (su *defaultStatusUpdater) PatchPodLabels(pod *v1.Pod, labels map[string]an
 	if err != nil {
 		log.InfraLogger.Errorf("Failed to create patch for pod labels <%s/%s>: %v",
 			pod.Namespace, pod.Name, err)
-		return
+		return err
 	}
 
-	su.pushToUpdateQueue(
-		&updatePayload{
-			key:        su.keyForPodLabelsPayload(pod.Name, pod.Namespace, pod.UID),
-			objectType: podType,
-		},
-		&inflightUpdate{
-			object:    pod,
-			patchData: patchBytes,
-		},
+	_, err = su.kubeClient.CoreV1().Pods(pod.Namespace).Patch(
+		context.Background(), pod.Name, types.JSONPatchType, patchBytes, metav1.PatchOptions{},
 	)
+
+	return err
 }
 
 func (su *defaultStatusUpdater) RecordJobStatusEvent(job *podgroup_info.PodGroupInfo) error {

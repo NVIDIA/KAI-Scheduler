@@ -21,7 +21,7 @@ type Interface interface {
 	PreBind(pod *v1.Pod)
 	Bound(pod *v1.Pod, hostname string, bindError error, nodePoolName string) error
 	Pipelined(pod *v1.Pod, message string)
-	PatchPodLabels(pod *v1.Pod, labels map[string]interface{})
+	PatchPodLabels(pod *v1.Pod, labels map[string]interface{}) error
 	RecordJobStatusEvent(job *podgroup_info.PodGroupInfo) error
 
 	Run(stopCh <-chan struct{})

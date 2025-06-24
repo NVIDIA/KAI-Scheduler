@@ -228,16 +228,20 @@ func (sc *SchedulerCache) Bind(taskInfo *pod_info.PodInfo, hostname string) erro
 	defer metrics.UpdateTaskBindDuration(startTime)
 	sc.StatusUpdater.PreBind(taskInfo.Pod)
 
+	labelsPatch := sc.nodePoolLabelsChange(taskInfo.Pod.Labels)
+	if len(labelsPatch) > 0 {
+		err := sc.StatusUpdater.PatchPodLabels(taskInfo.Pod, labelsPatch)
+		if err != nil {
+			return fmt.Errorf("failed to update pod's nodepool label <%s/%s>: %v",
+				taskInfo.Namespace, taskInfo.Name, err)
+		}
+	}
+
 	log.InfraLogger.V(3).Infof(
 		"Creating bind request for task <%v/%v> to node <%v> gpuGroup: <%v>, requires: <%v> GPUs",
 		taskInfo.Namespace, taskInfo.Name, hostname, taskInfo.GPUGroups, taskInfo.ResReq)
 	if bindRequestError := sc.createBindRequest(taskInfo, hostname); bindRequestError != nil {
 		return sc.StatusUpdater.Bound(taskInfo.Pod, hostname, bindRequestError, sc.getNodPoolName())
-	}
-
-	labelsPatch := sc.nodePoolLabelsChange(taskInfo.Pod.Labels)
-	if len(labelsPatch) > 0 {
-		sc.StatusUpdater.PatchPodLabels(taskInfo.Pod, labelsPatch)
 	}
 
 	return sc.StatusUpdater.Bound(taskInfo.Pod, hostname, nil, sc.getNodPoolName())
