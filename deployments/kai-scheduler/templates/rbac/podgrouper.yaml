@@ -115,7 +115,8 @@ rules:
 - apiGroups:
   - grove.io
   resources:
-  - podgangset
+  - podcliques
+  - podgangsets
   verbs:
   - get
   - list
@@ -123,7 +124,8 @@ rules:
 - apiGroups:
   - grove.io
   resources:
-  - podgangset/finalizers
+  - podcliques/finalizers
+  - podgangsets/finalizers
   verbs:
   - create
   - patch
