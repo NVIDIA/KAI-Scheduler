@@ -27,6 +27,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/skiptopowner"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/spark"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/spotrequest"
+	leaderworkset "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/leader_worker_set"
 )
 
 const (
@@ -238,6 +239,11 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Version: "v1",
 			Kind:    "SPOTRequest",
 		}: spotrequest.NewSpotRequestGrouper(defaultGrouper),
+		{
+			Group:   "lws.k8s.io",
+			Version: "v1alpha1",
+			Kind:    "LeaderWorkset",
+		}: leaderworkset.NewLwsGrouper(defaultGrouper),
 	}
 
 	skipTopOwnerGrouper := skiptopowner.NewSkipTopOwnerGrouper(kubeClient, defaultGrouper, table)
