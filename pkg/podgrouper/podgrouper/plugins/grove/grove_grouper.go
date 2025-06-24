@@ -37,8 +37,10 @@ func (gg *GroveGrouper) Name() string {
 	return "Grove Grouper"
 }
 
-// +kubebuilder:rbac:groups=grove.io,resources=podgangset,verbs=get;list;watch
-// +kubebuilder:rbac:groups=grove.io,resources=podgangset/finalizers,verbs=patch;update;create
+// +kubebuilder:rbac:groups=grove.io,resources=podgangsets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=grove.io,resources=podgangsets/finalizers,verbs=patch;update;create
+// +kubebuilder:rbac:groups=grove.io,resources=podcliques,verbs=get;list;watch
+// +kubebuilder:rbac:groups=grove.io,resources=podcliques/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=scheduler.grove.io,resources=podgangs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=scheduler.grove.io,resources=podgangs/finalizers,verbs=patch;update;create
 
