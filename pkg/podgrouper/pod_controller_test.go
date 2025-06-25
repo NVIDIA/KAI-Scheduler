@@ -136,3 +136,68 @@ func (*fakePodGrouper) GetPGMetadata(ctx context.Context, pod *v1.Pod, topOwner 
 func (*fakePodGrouper) GetPodOwners(ctx context.Context, pod *v1.Pod) (*unstructured.Unstructured, []*metav1.PartialObjectMetadata, error) {
 	return nil, nil, fmt.Errorf("failed")
 }
+
+func TestLabelsMatch(t *testing.T) {
+	tests := []struct {
+		name     string
+		labels   map[string]string
+		selector map[string]string
+		expected bool
+	}{
+		{
+			name:     "empty labels and empty selector",
+			labels:   map[string]string{},
+			selector: map[string]string{},
+			expected: true,
+		},
+		{
+			name:     "non-empty labels and empty selector",
+			labels:   map[string]string{"key1": "value1", "key2": "value2"},
+			selector: map[string]string{},
+			expected: true,
+		},
+		{
+			name:     "matching single label",
+			labels:   map[string]string{"key1": "value1"},
+			selector: map[string]string{"key1": "value1"},
+			expected: true,
+		},
+		{
+			name:     "matching multiple labels",
+			labels:   map[string]string{"key1": "value1", "key2": "value2", "key3": "value3"},
+			selector: map[string]string{"key1": "value1", "key2": "value2"},
+			expected: true,
+		},
+		{
+			name:     "missing label key",
+			labels:   map[string]string{"key1": "value1"},
+			selector: map[string]string{"key2": "value2"},
+			expected: false,
+		},
+		{
+			name:     "label value mismatch",
+			labels:   map[string]string{"key1": "value1"},
+			selector: map[string]string{"key1": "different-value"},
+			expected: false,
+		},
+		{
+			name:     "nil labels",
+			labels:   nil,
+			selector: map[string]string{"key1": "value1"},
+			expected: false,
+		},
+		{
+			name:     "nil selector",
+			labels:   map[string]string{"key1": "value1"},
+			selector: nil,
+			expected: true, // matches the behavior of the function where nil selector is treated as empty
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := labelsMatch(tt.labels, tt.selector)
+			assert.Equal(t, tt.expected, result, "labelsMatch() = %v, want %v", result, tt.expected)
+		})
+	}
+}
