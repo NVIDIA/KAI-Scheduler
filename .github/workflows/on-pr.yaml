@@ -110,6 +110,7 @@ jobs:
           cp charts/kai-scheduler-$PACKAGE_VERSION.tgz images/
 
 
+
   e2e-tests:
     name: Run E2E Tests
     needs: [ build ]

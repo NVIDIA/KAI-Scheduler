@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/rand"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -249,7 +248,7 @@ func (sc *SchedulerCache) Bind(taskInfo *pod_info.PodInfo, hostname string) erro
 func (sc *SchedulerCache) createBindRequest(podInfo *pod_info.PodInfo, nodeName string) error {
 	bindRequest := &schedulingv1alpha2.BindRequest{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", podInfo.Pod.Name, rand.String(10)),
+			Name:      podInfo.Pod.Name,
 			Namespace: podInfo.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				{
