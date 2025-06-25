@@ -201,6 +201,9 @@ func isOrphanPodWithPodGroup(pod *v1.Pod) bool {
 
 func eventFilterFn(mgr ctrl.Manager, configs Configs) func(obj client.Object) bool {
 	return func(obj client.Object) bool {
+		if len(configs.NamespaceLabelSelector) == 0 {
+			return true
+		}
 		pod := obj.(*v1.Pod)
 		namespace := &v1.Namespace{}
 		if err := mgr.GetClient().Get(context.TODO(),
@@ -214,7 +217,7 @@ func eventFilterFn(mgr ctrl.Manager, configs Configs) func(obj client.Object) bo
 }
 func labelsMatch(labels, selector map[string]string) bool {
 	for key, val := range selector {
-		if podVal, ok := labels[key]; !ok || podVal != val {
+		if labelVal, found := labels[key]; !found || labelVal != val {
 			return false
 		}
 	}

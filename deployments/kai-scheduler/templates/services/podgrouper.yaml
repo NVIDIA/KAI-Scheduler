@@ -23,10 +23,10 @@ spec:
           args:
             - "--queue-label-key={{ .Values.podgrouper.queueLabelKey }}"
           {{- if .Values.global.podLabelSelector }}
-            - "--pod-label-selector={{ include "render.selector" .Values.global.podLabelSelector }}"
+            - "--pod-label-selector={{ include "render.map" .Values.global.podLabelSelector }}"
           {{- end }}
           {{- if .Values.global.namespaceLabelSelector }}
-            - "--namespace-label-selector={{ include "render.selector" .Values.global.namespaceLabelSelector }}"
+            - "--namespace-label-selector={{ include "render.map" .Values.global.namespaceLabelSelector }}"
           {{- end }}
           {{- if .Values.podgrouper.additionalArgs }}
             {{- toYaml .Values.podgrouper.additionalArgs | nindent 12 }}

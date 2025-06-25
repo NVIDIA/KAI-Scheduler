@@ -115,7 +115,10 @@ spec:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
       {{- end }}
 {{- end -}}
-{{- define "render.selector" -}}
+{{/*
+Renders a map into a comma separated list of key=value pairs
+*/}}
+{{- define "render.map" -}}
 {{- $items := list }}{{/* initializes an empty list */}}
 {{- range $k, $v := . }}
   {{- $items = append $items (printf "%s=%s" $k $v) }}
