@@ -145,7 +145,7 @@ func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager, configs Configs) erro
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.Pod{}).
-		WithEventFilter(predicate.NewPredicateFuncs(eventFilterFn(mgr, configs))).
+		WithEventFilter(predicate.NewPredicateFuncs(eventFilterFn(mgr.GetClient(), configs))).
 		WithOptions(
 			controller.Options{
 				MaxConcurrentReconciles: r.configs.MaxConcurrentReconciles,
@@ -199,14 +199,14 @@ func isOrphanPodWithPodGroup(pod *v1.Pod) bool {
 
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
 
-func eventFilterFn(mgr ctrl.Manager, configs Configs) func(obj client.Object) bool {
+func eventFilterFn(k8sClient client.Client, configs Configs) func(obj client.Object) bool {
 	return func(obj client.Object) bool {
 		if len(configs.NamespaceLabelSelector) == 0 {
 			return true
 		}
 		pod := obj.(*v1.Pod)
 		namespace := &v1.Namespace{}
-		if err := mgr.GetClient().Get(context.TODO(),
+		if err := k8sClient.Get(context.TODO(),
 			types.NamespacedName{Name: pod.Namespace},
 			namespace,
 		); err != nil {

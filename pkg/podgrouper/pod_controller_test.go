@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -135,6 +136,88 @@ func (*fakePodGrouper) GetPGMetadata(ctx context.Context, pod *v1.Pod, topOwner 
 
 func (*fakePodGrouper) GetPodOwners(ctx context.Context, pod *v1.Pod) (*unstructured.Unstructured, []*metav1.PartialObjectMetadata, error) {
 	return nil, nil, fmt.Errorf("failed")
+}
+
+func TestEventFilterFn(t *testing.T) {
+	// Setup test cases
+	tests := []struct {
+		name            string
+		podNamespace    string
+		namespaceLabels map[string]string
+		selector        map[string]string
+		expectedResult  bool
+		expectError     bool
+	}{
+		{
+			name:            "empty selector should allow all pods",
+			podNamespace:    "test-ns",
+			namespaceLabels: map[string]string{"environment": "test"},
+			selector:        nil,
+			expectedResult:  true,
+			expectError:     false,
+		},
+		{
+			name:            "matching namespace labels",
+			podNamespace:    "test-ns",
+			namespaceLabels: map[string]string{"environment": "test", "team": "ai"},
+			selector:        map[string]string{"environment": "test", "team": "ai"},
+			expectedResult:  true,
+			expectError:     false,
+		},
+		{
+			name:            "non-matching namespace labels",
+			podNamespace:    "test-ns",
+			namespaceLabels: map[string]string{"environment": "test"},
+			selector:        map[string]string{"environment": "production"},
+			expectedResult:  false,
+			expectError:     false,
+		},
+		{
+			name:            "partial match should fail",
+			podNamespace:    "test-ns",
+			namespaceLabels: map[string]string{"environment": "test", "team": "ai"},
+			selector:        map[string]string{"environment": "test", "team": "ml"},
+			expectedResult:  false,
+			expectError:     false,
+		},
+		{
+			name:            "missing namespace should return false",
+			podNamespace:    "non-existent-ns",
+			namespaceLabels: map[string]string{"environment": "test"},
+			selector:        map[string]string{"environment": "test"},
+			expectedResult:  false,
+			expectError:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var objs []client.Object
+			if !tt.expectError {
+				objs = append(objs,
+					&v1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   tt.podNamespace,
+							Labels: tt.namespaceLabels,
+						},
+					})
+			}
+
+			fakeClient := fake.NewClientBuilder().WithObjects(objs...).Build()
+			pod := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: tt.podNamespace,
+				},
+			}
+
+			filter := eventFilterFn(fakeClient, Configs{
+				NamespaceLabelSelector: tt.selector,
+			})
+			result := filter(pod)
+			assert.Equal(t, tt.expectedResult, result, "eventFilterFn() = %v, want %v", result, tt.expectedResult)
+		})
+	}
 }
 
 func TestLabelsMatch(t *testing.T) {
