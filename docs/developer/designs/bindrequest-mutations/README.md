@@ -1,8 +1,8 @@
-# BindRequest Annotations and Labels Mutation Plugin Point
+# BindRequest Annotations Mutation Plugin Point
 
 ## Summary
 
-This design document outlines a new plugin point in the KAI-Scheduler that allows scheduler plugins to modify BindRequest annotations and labels before they are created. This enhancement addresses synchronization issues between the scheduler and binder components.
+This design document outlines a new plugin point in the KAI-Scheduler that allows scheduler plugins to modify BindRequest annotations before they are created. This enhancement addresses synchronization issues between the scheduler and binder components.
 
 ## Motivation
 
@@ -10,7 +10,7 @@ The current architecture of KAI-Scheduler separates the scheduling and binding p
 
 We need a more open and flexible API that allows plugins in the scheduler to communicate additional information to plugins in the binder without requiring changes to the BindRequest CRD for each new use case. This will enable more sophisticated scheduling and binding behaviors while maintaining a clean separation between components.
 
-By allowing scheduler plugins to add annotations and labels to BindRequests that can be interpreted by corresponding binder plugins, we create an extensible communication channel that can evolve without API changes. This approach preserves backward compatibility while enabling new functionality through plugins.
+By allowing scheduler plugins to add annotations to BindRequests that can be interpreted by corresponding binder plugins, we create an extensible communication channel that can evolve without API changes. This approach preserves backward compatibility while enabling new functionality through plugins.
 
 ## Usage Stories
 
@@ -28,7 +28,7 @@ Device management plugins can transfer parameters between the scheduler and bind
 
 ## Goals
 
-- Enable scheduler plugins to modify BindRequest annotations and labels before creation
+- Enable scheduler plugins to modify BindRequest annotations before creation
 - Create a flexible interface for transferring information from scheduler plugins to binder plugins
 - Maintain backward compatibility with existing scheduler and binder behavior
 
@@ -36,12 +36,12 @@ Device management plugins can transfer parameters between the scheduler and bind
 
 ### Extension Point Definition
 
-Following the scheduler's plugin extension conventions, we introduce a function type for mutating BindRequest annotations and labels:
+Following the scheduler's plugin extension conventions, we introduce a function type for mutating BindRequest annotations:
 
 ```go
 // In pkg/scheduler/api/types.go
-// BindRequestMutateFn allows plugins to mutate annotations and labels before BindRequest creation.
-type BindRequestMutateFn func(pod *pod_info.PodInfo, nodeName string, annotations, labels map[string]string) (map[string]string, map[string]string)
+// BindRequestMutateFn allows plugins to mutate annotations before BindRequest creation.
+type BindRequestMutateFn func(pod *pod_info.PodInfo, nodeName string) map[string]string
 ```
 
 A slice of these functions is added to the `Session` struct, and a registration method is provided:
@@ -66,10 +66,10 @@ func (p *MyPlugin) OnSessionOpen(ssn *framework.Session) {
     ssn.AddBindRequestMutateFn(p.MyBindRequestMutateFn)
 }
 
-func (p *MyPlugin) MyBindRequestMutateFn(pod *pod_info.PodInfo, nodeName string, annotations, labels map[string]string) (map[string]string, map[string]string) {
-    // Add or modify annotations/labels as needed
+func (p *MyPlugin) MyBindRequestMutateFn(pod *pod_info.PodInfo, nodeName string) map[string]string {
+    annotations := map[string]string{}
     annotations["my-plugin.kai.scheduler/some-key"] = "some-value"
-    return annotations, labels
+    return annotations
 }
 ```
 
@@ -80,17 +80,16 @@ When creating a BindRequest, the scheduler will call all registered mutate funct
 ```go
 // In createBindRequest (simplified):
 annotations := make(map[string]string)
-labels := make(map[string]string)
 
 for _, fn := range ssn.BindRequestMutateFns {
-    annotations, labels = fn(podInfo, nodeName, annotations, labels)
+    annotations = maps.Copy(fn(podInfo, nodeName), annotations)
 }
-// ... proceed to create the BindRequest with these annotations/labels
+// ... proceed to create the BindRequest with these annotations
 ```
 
 ### Binder Plugin Access
 
-Binder plugins already have access to the BindRequest object during the PreBind and PostBind phases, so they can read the annotations and labels added by scheduler plugins:
+Binder plugins already have access to the BindRequest object during the PreBind and PostBind phases, so they can read the annotations added by scheduler plugins:
 
 ```go
 func (p *MyBinderPlugin) PreBind(ctx context.Context, pod *v1.Pod, node *v1.Node, 
