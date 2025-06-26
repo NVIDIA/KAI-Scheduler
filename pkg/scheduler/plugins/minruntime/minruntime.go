@@ -4,6 +4,7 @@
 package minruntime
 
 import (
+	"github.com/xhit/go-str2duration/v2"
 	"slices"
 	"time"
 
@@ -41,7 +42,7 @@ func parseMinRuntime(arguments map[string]string, minRuntimeConfig string) metav
 	if len(minRuntime) == 0 {
 		return metav1.Duration{Duration: 0 * time.Second}
 	}
-	duration, err := time.ParseDuration(minRuntime)
+	duration, err := str2duration.ParseDuration(minRuntime)
 	if err != nil {
 		log.InfraLogger.Errorf("Failed to parse %v (%v): %v, using default value 0s", minRuntimeConfig, minRuntime, err)
 		duration = 0 * time.Second
