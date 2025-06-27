@@ -14,4 +14,8 @@ type Metadata struct {
 	Name              string
 	MinAvailable      int32
 	Owner             metav1.OwnerReference
+
+	PreferredTopologyLevel string
+	RequiredTopologyLevel  string
+	Topology               string
 }

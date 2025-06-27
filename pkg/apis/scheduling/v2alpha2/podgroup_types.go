@@ -47,6 +47,9 @@ type PodGroupSpec struct {
 
 	// The number of scheduling cycles to try before marking the pod group as UnschedulableOnNodePool. Currently only supporting -1 and 1
 	SchedulingBackoff *int32 `json:"schedulingBackoff,omitempty" protobuf:"bytes,8,opt,name=schedulingBackoff"`
+
+	// TopologyConstraint defines the topology constraints for this PodGroup
+	TopologyConstraint TopologyConstraint `json:"topologyConstraint,omitempty"`
 }
 
 // PodGroupStatus defines the observed state of PodGroup
@@ -282,4 +285,21 @@ func (e UnschedulableExplanations) String() string {
 
 func init() {
 	SchemeBuilder.Register(&PodGroup{}, &PodGroupList{})
+}
+
+type TopologyConstraint struct {
+	// PreferredTopologyLevel defines the preferred level in the topology hierarchy
+	// that this constraint applies to (e.g., "rack", "zone", "datacenter").
+	// Jobs will be scheduled to maintain locality at this level when possible.
+	PreferredTopologyLevel string `json:"preferredTopologyLevel,omitempty"`
+
+	// RequiredTopologyLevel defines the maximal level in the topology hierarchy
+	// that all pods must be scheduled within.
+	// If set, all pods of the job must be scheduled within a single domain at this level.
+	RequiredTopologyLevel string `json:"requiredTopologyLevel,omitempty"`
+
+	// Topology specifies the name of the topology CRD that defines the
+	// physical layout to use for this constraint. This allows for supporting
+	// multiple different topology configurations in the same cluster.
+	Topology string `json:"topology,omitempty"`
 }

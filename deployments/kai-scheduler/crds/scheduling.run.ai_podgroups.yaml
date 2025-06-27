@@ -87,6 +87,29 @@ spec:
                   -1 and 1
                 format: int32
                 type: integer
+              topologyConstraint:
+                description: TopologyConstraint defines the topology constraints for
+                  this PodGroup
+                properties:
+                  preferredTopologyLevel:
+                    description: |-
+                      PreferredTopologyLevel defines the preferred level in the topology hierarchy
+                      that this constraint applies to (e.g., "rack", "zone", "datacenter").
+                      Jobs will be scheduled to maintain locality at this level when possible.
+                    type: string
+                  requiredTopologyLevel:
+                    description: |-
+                      RequiredTopologyLevel defines the maximal level in the topology hierarchy
+                      that all pods must be scheduled within.
+                      If set, all pods of the job must be scheduled within a single domain at this level.
+                    type: string
+                  topology:
+                    description: |-
+                      Topology specifies the name of the topology CRD that defines the
+                      physical layout to use for this constraint. This allows for supporting
+                      multiple different topology configurations in the same cluster.
+                    type: string
+                type: object
             type: object
           status:
             description: PodGroupStatus defines the observed state of PodGroup

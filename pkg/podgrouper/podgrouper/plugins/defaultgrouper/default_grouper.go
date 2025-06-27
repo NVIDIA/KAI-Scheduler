@@ -72,6 +72,11 @@ func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructure
 		MinAvailable:      1,
 	}
 
+	annotations := topOwner.GetAnnotations()
+	podGroupMetadata.PreferredTopologyLevel = annotations["kai.scheduler/topology-preferred-placement"]
+	podGroupMetadata.RequiredTopologyLevel = annotations["kai.scheduler/topology-required-placement"]
+	podGroupMetadata.Topology = annotations["kai.scheduler/topology"]
+
 	return &podGroupMetadata, nil
 }
 
