@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.6.4] - 2025-06-27
+
+### Fixes
+- Fix: pod group controller fails on missing priority class
+
 ## [v0.6.0] - 2025-06-16
 
 ### Changed
