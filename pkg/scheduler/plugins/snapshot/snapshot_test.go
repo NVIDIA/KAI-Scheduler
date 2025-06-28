@@ -24,6 +24,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
+	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
 )
 
 const (
@@ -34,6 +36,7 @@ const (
 func TestSnapshotPlugin(t *testing.T) {
 	fakeKubeClient := fake.NewSimpleClientset()
 	fakeKubeAISchedulerClient := kubeaischedulerver.NewSimpleClientset()
+	fakeKueueClient := kueuefake.NewSimpleClientset()
 
 	testPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -117,6 +120,12 @@ func TestSnapshotPlugin(t *testing.T) {
 		},
 	}
 
+	testTopology := &kueuev1alpha1.Topology{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-topology",
+		},
+	}
+
 	schedulerConfig := &conf.SchedulerConfiguration{
 		Actions: "allocate",
 		Tiers: []conf.Tier{
@@ -141,6 +150,7 @@ func TestSnapshotPlugin(t *testing.T) {
 	schedulerCache := cache.New(&cache.SchedulerCacheParams{
 		KubeClient:                  fakeKubeClient,
 		KAISchedulerClient:          fakeKubeAISchedulerClient,
+		KueueClient:                 fakeKueueClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      false,
@@ -166,6 +176,9 @@ func TestSnapshotPlugin(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = fakeKubeAISchedulerClient.SchedulingV2alpha2().PodGroups("default").Create(ctx, testPodGroup, metav1.CreateOptions{})
+	assert.NoError(t, err)
+
+	_, err = fakeKueueClient.KueueV1alpha1().Topologies().Create(ctx, testTopology, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	schedulerCache.Run(ctx.Done())
@@ -234,5 +247,10 @@ func TestSnapshotPlugin(t *testing.T) {
 	if len(snapshot.RawObjects.PodGroups) > 0 {
 		assert.Equal(t, testPodGroup.Name, snapshot.RawObjects.PodGroups[0].Name)
 		assert.Equal(t, testPodGroup.Namespace, snapshot.RawObjects.PodGroups[0].Namespace)
+	}
+
+	assert.Len(t, snapshot.RawObjects.Topologies, 1)
+	if len(snapshot.RawObjects.Topologies) > 0 {
+		assert.Equal(t, testTopology.Name, snapshot.RawObjects.Topologies[0].Name)
 	}
 }

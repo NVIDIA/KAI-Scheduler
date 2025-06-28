@@ -27,6 +27,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
+	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
 )
 
 func main() {
@@ -59,11 +60,12 @@ func main() {
 	actions.InitDefaultActions()
 	plugins.InitDefaultPlugins()
 
-	kubeClient, kaiClient := loadClientsWithSnapshot(snapshot.RawObjects)
+	kubeClient, kaiClient, kueueClient := loadClientsWithSnapshot(snapshot.RawObjects)
 
 	schedulerCacheParams := &cache.SchedulerCacheParams{
 		KubeClient:                  kubeClient,
 		KAISchedulerClient:          kaiClient,
+		KueueClient:                 kueueClient,
 		SchedulerName:               snapshot.SchedulerParams.SchedulerName,
 		NodePoolParams:              snapshot.SchedulerParams.PartitionParams,
 		RestrictNodeScheduling:      snapshot.SchedulerParams.RestrictSchedulingNodes,
@@ -126,9 +128,10 @@ func loadSnapshot(filename string) (*snapshot.Snapshot, error) {
 	return nil, os.ErrNotExist
 }
 
-func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.Clientset, *kaischedulerfake.Clientset) {
+func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.Clientset, *kaischedulerfake.Clientset, *kueuefake.Clientset) {
 	kubeClient := fake.NewSimpleClientset()
 	kaiClient := kaischedulerfake.NewSimpleClientset()
+	kueueClient := kueuefake.NewSimpleClientset()
 
 	for _, pod := range rawObjects.Pods {
 		_, err := kubeClient.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, v1.CreateOptions{})
@@ -235,5 +238,5 @@ func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.C
 		}
 	}
 
-	return kubeClient, kaiClient
+	return kubeClient, kaiClient, kueueClient
 }

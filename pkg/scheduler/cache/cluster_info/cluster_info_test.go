@@ -45,6 +45,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info/data_lister"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
+	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kueueclient "sigs.k8s.io/kueue/client-go/clientset/versioned"
+	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
+	kueueinformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
 )
 
 const (
@@ -57,6 +61,7 @@ func TestSnapshot(t *testing.T) {
 	tests := map[string]struct {
 		kubeObjects          []runtime.Object
 		kaiSchedulerObjects  []runtime.Object
+		kueueObjects         []runtime.Object
 		expectedNodes        int
 		expectedDepartments  int
 		expectedQueues       int
@@ -141,7 +146,7 @@ func TestSnapshot(t *testing.T) {
 
 	for name, test := range tests {
 		t.Logf("Running test %s", name)
-		clusterInfo := newClusterInfoTests(t, test.kubeObjects, test.kaiSchedulerObjects)
+		clusterInfo := newClusterInfoTests(t, test.kubeObjects, test.kaiSchedulerObjects, test.kueueObjects)
 		snapshot, err := clusterInfo.Snapshot()
 		assert.Equal(t, nil, err)
 		assert.Equal(t, test.expectedNodes, len(snapshot.Nodes))
@@ -312,7 +317,7 @@ func TestSnapshotNodes(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			clusterInfo := newClusterInfoTestsInner(
-				t, test.objs, []runtime.Object{},
+				t, test.objs, []runtime.Object{}, []runtime.Object{},
 				&conf.SchedulingNodePoolParams{
 					NodePoolLabelKey:   defaultNodePoolName,
 					NodePoolLabelValue: test.nodePoolName,
@@ -383,6 +388,7 @@ func TestBindRequests(t *testing.T) {
 	tests := map[string]struct {
 		kubeObjects             []runtime.Object
 		kaiSchedulerObjects     []runtime.Object
+		kueueObjects            []runtime.Object
 		expectedProcessing      int
 		expectedStale           int
 		expectedForDeletedNodes int
@@ -748,7 +754,7 @@ func TestBindRequests(t *testing.T) {
 
 	for name, test := range tests {
 		t.Logf("Running test %s", name)
-		clusterInfo := newClusterInfoTests(t, test.kubeObjects, test.kaiSchedulerObjects)
+		clusterInfo := newClusterInfoTests(t, test.kubeObjects, test.kaiSchedulerObjects, test.kueueObjects)
 		snapshot, err := clusterInfo.Snapshot()
 		assert.Equal(t, nil, err)
 
@@ -796,9 +802,10 @@ func TestBindRequests(t *testing.T) {
 
 func TestSnapshotPodGroups(t *testing.T) {
 	tests := map[string]struct {
-		objs     []runtime.Object
-		kubeObjs []runtime.Object
-		results  []*podgroup_info.PodGroupInfo
+		objs      []runtime.Object
+		kubeObjs  []runtime.Object
+		kueueObjs []runtime.Object
+		results   []*podgroup_info.PodGroupInfo
 	}{
 		"BasicUsage": {
 			objs: []runtime.Object{
@@ -988,7 +995,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		clusterInfo := newClusterInfoTests(t, test.kubeObjs, test.objs)
+		clusterInfo := newClusterInfoTests(t, test.kubeObjs, test.objs, test.kueueObjs)
 		predefinedQueue := &queue_info.QueueInfo{Name: "queue-0"}
 		existingPods := map[common_info.PodID]*pod_info.PodInfo{}
 		// TODO
@@ -1048,8 +1055,9 @@ func TestSnapshotQueues(t *testing.T) {
 		},
 	}
 	kubeObjs := []runtime.Object{}
+	kueueObjs := []runtime.Object{}
 
-	clusterInfo := newClusterInfoTests(t, kubeObjs, objs)
+	clusterInfo := newClusterInfoTests(t, kubeObjs, objs, kueueObjs)
 	snapshot, err := clusterInfo.Snapshot()
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(snapshot.Queues))
@@ -1110,7 +1118,7 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 	params := &conf.SchedulingNodePoolParams{
 		NodePoolLabelKey:   nodePoolNameLabel,
 		NodePoolLabelValue: "nodepool-a"}
-	clusterInfo := newClusterInfoTestsInner(t, []runtime.Object{}, objects, params, false)
+	clusterInfo := newClusterInfoTestsInner(t, []runtime.Object{}, objects, []runtime.Object{}, params, false)
 
 	snapshot, err := clusterInfo.Snapshot()
 	assert.Nil(t, err)
@@ -1162,7 +1170,7 @@ func TestGetPodGroupPriority(t *testing.T) {
 		},
 	}
 
-	clusterInfo := newClusterInfoTests(t, kubeObjects, []runtime.Object{})
+	clusterInfo := newClusterInfoTests(t, kubeObjects, []runtime.Object{}, []runtime.Object{})
 
 	priority := getPodGroupPriority(podGroup, 1, clusterInfo.dataLister)
 	assert.Equal(t, int32(2), priority)
@@ -1267,7 +1275,15 @@ func TestSnapshotStorageObjects(t *testing.T) {
 		},
 	}
 
-	clusterInfo := newClusterInfoTests(t, kubeObjects, kubeAiSchedOjbs)
+	kueueObjects := []runtime.Object{
+		&kueuev1alpha1.Topology{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "topology-0",
+			},
+		},
+	}
+
+	clusterInfo := newClusterInfoTests(t, kubeObjects, kubeAiSchedOjbs, kueueObjects)
 
 	snapshot, err := clusterInfo.Snapshot()
 	assert.Nil(t, err)
@@ -1317,7 +1333,7 @@ func TestGetPodGroupPriorityNotExistingPriority(t *testing.T) {
 		},
 	}
 
-	clusterInfo := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{})
+	clusterInfo := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{}, []runtime.Object{})
 
 	priority := getPodGroupPriority(podGroup, 123, clusterInfo.dataLister)
 	assert.Equal(t, int32(123), priority)
@@ -1334,7 +1350,7 @@ func TestGetDefaultPriority(t *testing.T) {
 		},
 	}
 
-	clusterInfo := newClusterInfoTests(t, kubeObjects, []runtime.Object{})
+	clusterInfo := newClusterInfoTests(t, kubeObjects, []runtime.Object{}, []runtime.Object{})
 
 	priority, err := getDefaultPriority(clusterInfo.dataLister)
 	assert.Equal(t, nil, err)
@@ -1350,14 +1366,14 @@ func TestGetDefaultPriorityNotExists(t *testing.T) {
 			Value: 2,
 		},
 	}
-	clusterInfo := newClusterInfoTests(t, kubeObjects, []runtime.Object{})
+	clusterInfo := newClusterInfoTests(t, kubeObjects, []runtime.Object{}, []runtime.Object{})
 	priority, err := getDefaultPriority(clusterInfo.dataLister)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, int32(50), priority)
 }
 
 func TestGetDefaultPriorityWithError(t *testing.T) {
-	clusterInfo := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{})
+	clusterInfo := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{}, []runtime.Object{})
 	priority, err := getDefaultPriority(clusterInfo.dataLister)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, int32(50), priority)
@@ -1373,7 +1389,7 @@ func TestPodGroupWithIndex(t *testing.T) {
 		PodGroupUID: "ABC",
 	}
 
-	clusterInfo := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{})
+	clusterInfo := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{}, []runtime.Object{})
 	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
 }
 
@@ -1387,7 +1403,7 @@ func TestPodGroupWithIndexNonMatching(t *testing.T) {
 		PodGroupUID: "MyTest",
 	}
 
-	clusterInfo := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{})
+	clusterInfo := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{}, []runtime.Object{})
 	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
 }
 
@@ -1481,7 +1497,7 @@ func TestIsPodGroupUpForScheduler(t *testing.T) {
 	for _, testData := range testCases {
 		pg := createFakePodGroup("test-pg", testData.schedulingBackoff, testData.nodePoolName,
 			testData.lastSchedulingCondition)
-		ci := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{})
+		ci := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{}, []runtime.Object{})
 		result := ci.isPodGroupUpForScheduler(pg)
 		assert.Equal(t, result, testData.expectedResult,
 			"Test: <%s>, expected pod group to be up for scheduler <%t>", testData.testName,
@@ -1594,7 +1610,7 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 		},
 	}
 
-	clusterInfo := newClusterInfoTests(t, append(kubeObjects, pvc), kubeAiSchedOjbs)
+	clusterInfo := newClusterInfoTests(t, append(kubeObjects, pvc), kubeAiSchedOjbs, []runtime.Object{})
 	snapshot, err := clusterInfo.Snapshot()
 	assert.Equal(t, nil, err)
 	node := snapshot.Nodes["node-1"]
@@ -1603,7 +1619,7 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 
 	pvc.OwnerReferences = nil
 
-	clusterInfo = newClusterInfoTests(t, append(kubeObjects, pvc), kubeAiSchedOjbs)
+	clusterInfo = newClusterInfoTests(t, append(kubeObjects, pvc), kubeAiSchedOjbs, []runtime.Object{})
 	snapshot, err = clusterInfo.Snapshot()
 	assert.Equal(t, nil, err)
 	node = snapshot.Nodes["node-1"]
@@ -1764,7 +1780,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 	for name, test := range tests {
 		t.Logf("Running test: %s", name)
 		dl := data_lister.NewMockDataLister(ctrl)
-		clusterInfo := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{})
+		clusterInfo := newClusterInfoTests(t, []runtime.Object{}, []runtime.Object{}, []runtime.Object{})
 		test.install(dl)
 		clusterInfo.dataLister = dl
 		_, err := clusterInfo.Snapshot()
@@ -1773,9 +1789,10 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 }
 
 func TestNewClusterInfoErrorPartitionSelector(t *testing.T) {
-	kubeFakeClient, kubeAiFakeClient := newFakeClients([]runtime.Object{}, []runtime.Object{})
+	kubeFakeClient, kubeAiFakeClient, kueueFakeClient := newFakeClients([]runtime.Object{}, []runtime.Object{}, []runtime.Object{})
 	informerFactory := informers.NewSharedInformerFactory(kubeFakeClient, 0)
 	kubeAiSchedulerInformerFactory := kubeAiSchedulerInfo.NewSharedInformerFactory(kubeAiFakeClient, 0)
+	kueueInformerFactory := kueueinformer.NewSharedInformerFactory(kueueFakeClient, 0)
 
 	controller := gomock.NewController(t)
 	clusterPodAffinityInfo := pod_affinity.NewMockClusterPodAffinityInfo(controller)
@@ -1786,7 +1803,7 @@ func TestNewClusterInfoErrorPartitionSelector(t *testing.T) {
 		NodePoolLabelKey:   "@!A",
 		NodePoolLabelValue: "!@#",
 	}
-	_, err := New(informerFactory, kubeAiSchedulerInformerFactory, params, false, clusterPodAffinityInfo, false, true, nil)
+	_, err := New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, params, false, clusterPodAffinityInfo, false, true, nil)
 
 	assert.NotNil(t, err)
 }
@@ -1796,9 +1813,10 @@ func fakeIndexFunc(obj interface{}) ([]string, error) {
 }
 
 func TestNewClusterInfoAddIndexerFails(t *testing.T) {
-	kubeFakeClient, kubeAiSchedulerFakeClient := newFakeClients([]runtime.Object{}, []runtime.Object{})
+	kubeFakeClient, kubeAiSchedulerFakeClient, kueueFakeClient := newFakeClients([]runtime.Object{}, []runtime.Object{}, []runtime.Object{})
 	informerFactory := informers.NewSharedInformerFactory(kubeFakeClient, 0)
 	kubeAiSchedulerInformerFactory := kubeAiSchedulerInfo.NewSharedInformerFactory(kubeAiSchedulerFakeClient, 0)
+	kueueInformerFactory := kueueinformer.NewSharedInformerFactory(kueueFakeClient, 0)
 	podInformer := informerFactory.Core().V1().Pods()
 	go podInformer.Informer().Run(nil)
 	for !podInformer.Informer().HasSynced() {
@@ -1816,31 +1834,32 @@ func TestNewClusterInfoAddIndexerFails(t *testing.T) {
 	clusterPodAffinityInfo.EXPECT().UpdateNodeAffinity(gomock.Any()).AnyTimes()
 	clusterPodAffinityInfo.EXPECT().AddNode(gomock.Any(), gomock.Any()).AnyTimes()
 
-	_, err = New(informerFactory, kubeAiSchedulerInformerFactory, nil, false,
+	_, err = New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, nil, false,
 		clusterPodAffinityInfo, false, true, nil)
 	assert.NotNil(t, err, "Expected error for conflicting indexers")
 }
 
-func newClusterInfoTests(t *testing.T, kubeObjects, kaiSchedulerObjects []runtime.Object) *ClusterInfo {
+func newClusterInfoTests(t *testing.T, kubeObjects, kaiSchedulerObjects, kueueObjects []runtime.Object) *ClusterInfo {
 	params := &conf.SchedulingNodePoolParams{
 		NodePoolLabelKey:   nodePoolNameLabel,
 		NodePoolLabelValue: "",
 	}
-	return newClusterInfoTestsInner(t, kubeObjects, kaiSchedulerObjects, params, true)
+	return newClusterInfoTestsInner(t, kubeObjects, kaiSchedulerObjects, kueueObjects, params, true)
 }
 
-func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects []runtime.Object,
+func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects, kueueObjects []runtime.Object,
 	nodePoolParams *conf.SchedulingNodePoolParams, fullHierarchyFairness bool) *ClusterInfo {
-	kubeFakeClient, kubeAiSchedulerFakeClient := newFakeClients(kubeObjects, kaiSchedulerObjects)
+	kubeFakeClient, kubeAiSchedulerFakeClient, kueueFakeClient := newFakeClients(kubeObjects, kaiSchedulerObjects, kueueObjects)
 	informerFactory := informers.NewSharedInformerFactory(kubeFakeClient, 0)
 	kubeAiSchedulerInformerFactory := kubeAiSchedulerInfo.NewSharedInformerFactory(kubeAiSchedulerFakeClient, 0)
+	kueueInformerFactory := kueueinformer.NewSharedInformerFactory(kueueFakeClient, 0)
 
 	controller := gomock.NewController(t)
 	clusterPodAffinityInfo := pod_affinity.NewMockClusterPodAffinityInfo(controller)
 	clusterPodAffinityInfo.EXPECT().UpdateNodeAffinity(gomock.Any()).AnyTimes()
 	clusterPodAffinityInfo.EXPECT().AddNode(gomock.Any(), gomock.Any()).AnyTimes()
 
-	clusterInfo, _ := New(informerFactory, kubeAiSchedulerInformerFactory, nodePoolParams, false,
+	clusterInfo, _ := New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, nodePoolParams, false,
 		clusterPodAffinityInfo, true, fullHierarchyFairness, nil)
 
 	stopCh := context.Background().Done()
@@ -1848,12 +1867,14 @@ func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects []r
 	informerFactory.WaitForCacheSync(stopCh)
 	kubeAiSchedulerInformerFactory.Start(stopCh)
 	kubeAiSchedulerInformerFactory.WaitForCacheSync(stopCh)
+	kueueInformerFactory.Start(stopCh)
+	kueueInformerFactory.WaitForCacheSync(stopCh)
 
 	return clusterInfo
 }
 
-func newFakeClients(kubernetesObjects, kaiSchedulerObjects []runtime.Object) (kubernetes.Interface, kubeAiSchedulerClient.Interface) {
-	return fake.NewSimpleClientset(kubernetesObjects...), kubeAiSchedulerClientFake.NewSimpleClientset(kaiSchedulerObjects...)
+func newFakeClients(kubernetesObjects, kaiSchedulerObjects, kueueObjects []runtime.Object) (kubernetes.Interface, kubeAiSchedulerClient.Interface, kueueclient.Interface) {
+	return fake.NewSimpleClientset(kubernetesObjects...), kubeAiSchedulerClientFake.NewSimpleClientset(kaiSchedulerObjects...), kueuefake.NewSimpleClientset(kueueObjects...)
 }
 
 func TestSnapshotPodsInPartition(t *testing.T) {
@@ -1900,6 +1921,7 @@ func TestSnapshotPodsInPartition(t *testing.T) {
 
 	clusterInfo := newClusterInfoTestsInner(
 		t, clusterObjects,
+		[]runtime.Object{},
 		[]runtime.Object{},
 		&conf.SchedulingNodePoolParams{
 			NodePoolLabelKey:   nodePoolNameLabel,
