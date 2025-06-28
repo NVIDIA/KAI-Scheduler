@@ -79,7 +79,7 @@ var _ = Describe("Cache", func() {
 
 				taskInfo := pod_info.NewTaskInfo(pod)
 
-				err := cache.Bind(taskInfo, "node-1")
+				err := cache.Bind(taskInfo, "node-1", map[string]string{})
 				Expect(err).To(HaveOccurred())
 			})
 		})
