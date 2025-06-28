@@ -12,7 +12,6 @@ import (
 	"go.uber.org/multierr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
@@ -222,7 +221,7 @@ func (sc *SchedulerCache) WaitForWorkers(stopCh <-chan struct{}) {
 }
 
 // Bind binds task to the target host.
-func (sc *SchedulerCache) Bind(taskInfo *pod_info.PodInfo, hostname string) error {
+func (sc *SchedulerCache) Bind(taskInfo *pod_info.PodInfo, hostname string, bindRequestAnnotations map[string]string) error {
 	startTime := time.Now()
 	defer metrics.UpdateTaskBindDuration(startTime)
 	sc.StatusUpdater.PreBind(taskInfo.Pod)
@@ -230,7 +229,7 @@ func (sc *SchedulerCache) Bind(taskInfo *pod_info.PodInfo, hostname string) erro
 	log.InfraLogger.V(3).Infof(
 		"Creating bind request for task <%v/%v> to node <%v> gpuGroup: <%v>, requires: <%v> GPUs",
 		taskInfo.Namespace, taskInfo.Name, hostname, taskInfo.GPUGroups, taskInfo.ResReq)
-	if bindRequestError := sc.createBindRequest(taskInfo, hostname); bindRequestError != nil {
+	if bindRequestError := sc.createBindRequest(taskInfo, hostname, bindRequestAnnotations); bindRequestError != nil {
 		return sc.StatusUpdater.Bound(taskInfo.Pod, hostname, bindRequestError, sc.getNodPoolName())
 	}
 
@@ -245,23 +244,29 @@ func (sc *SchedulerCache) Bind(taskInfo *pod_info.PodInfo, hostname string) erro
 // +kubebuilder:rbac:groups="scheduling.run.ai",resources=bindrequests,verbs=create;update;patch
 // +kubebuilder:rbac:groups="",resources=pods/finalizers,verbs=create;delete;update;patch;get;list
 
-func (sc *SchedulerCache) createBindRequest(podInfo *pod_info.PodInfo, nodeName string) error {
+func (sc *SchedulerCache) createBindRequest(podInfo *pod_info.PodInfo, nodeName string, bindRequestAnnotations map[string]string) error {
+	labels := map[string]string{
+		"pod-name":      podInfo.Pod.Name,
+		"selected-node": nodeName,
+	}
+
+	// Merge with node pool params labels
+	for k, v := range sc.schedulingNodePoolParams.GetLabels() {
+		labels[k] = v
+	}
+
 	bindRequest := &schedulingv1alpha2.BindRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podInfo.Pod.Name,
 			Namespace: podInfo.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "v1",
-					Kind:       "Pod",
-					Name:       podInfo.Pod.Name,
-					UID:        podInfo.Pod.UID,
-				},
-			},
-			Labels: map[string]string{
-				"pod-name":      podInfo.Pod.Name,
-				"selected-node": nodeName,
-			},
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: "v1",
+				Kind:       "Pod",
+				Name:       podInfo.Pod.Name,
+				UID:        podInfo.Pod.UID,
+			}},
+			Annotations: bindRequestAnnotations,
+			Labels:      labels,
 		},
 		Spec: schedulingv1alpha2.BindRequestSpec{
 			PodName:              podInfo.Name,
@@ -275,8 +280,6 @@ func (sc *SchedulerCache) createBindRequest(podInfo *pod_info.PodInfo, nodeName 
 			ResourceClaimAllocations: podInfo.ResourceClaimInfo,
 		},
 	}
-
-	bindRequest.Labels = labels.Merge(bindRequest.Labels, sc.schedulingNodePoolParams.GetLabels())
 
 	_, err := sc.kubeAiSchedulerClient.SchedulingV1alpha2().BindRequests(
 		podInfo.Namespace).Create(context.TODO(), bindRequest, metav1.CreateOptions{})

@@ -61,6 +61,7 @@ type Session struct {
 	IsTaskAllocationOnNodeOverCapacityFns []api.IsTaskAllocationOverCapacityFn
 	PrePredicateFns                       []api.PrePredicateFn
 	PredicateFns                          []api.PredicateFn
+	BindRequestMutateFns                  []api.BindRequestMutateFn
 
 	Config          *conf.SchedulerConfiguration
 	plugins         map[string]Plugin
@@ -88,7 +89,8 @@ func (ssn *Session) GetK8sStateForPod(uid types.UID) k8s_internal.SessionState {
 }
 
 func (ssn *Session) BindPod(pod *pod_info.PodInfo) error {
-	if err := ssn.Cache.Bind(pod, pod.NodeName); err != nil {
+	bindRequestAnnotations := ssn.MutateBindRequestAnnotations(pod, pod.NodeName)
+	if err := ssn.Cache.Bind(pod, pod.NodeName, bindRequestAnnotations); err != nil {
 		return err
 	}
 
