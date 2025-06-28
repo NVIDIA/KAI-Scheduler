@@ -21,7 +21,7 @@ type Cache interface {
 	Run(stopCh <-chan struct{})
 	Snapshot() (*api.ClusterInfo, error)
 	WaitForCacheSync(stopCh <-chan struct{})
-	Bind(podInfo *pod_info.PodInfo, hostname string) error
+	Bind(podInfo *pod_info.PodInfo, hostname string, bindRequestAnnotations map[string]string) error
 	Evict(ssnPod *v1.Pod, job *podgroup_info.PodGroupInfo, evictionMetadata eviction_info.EvictionMetadata, message string) error
 	RecordJobStatusEvent(job *podgroup_info.PodGroupInfo) error
 	TaskPipelined(task *pod_info.PodInfo, message string)
