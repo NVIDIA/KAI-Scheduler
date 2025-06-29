@@ -45,7 +45,7 @@ var _ = BeforeSuite(func(ctx context.Context) {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "deployments", "kai-scheduler", "crds")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "deployments", "crds", "definitions")},
 		ErrorIfCRDPathMissing: true,
 	}
 	testEnv.ControlPlane.GetAPIServer().Configure().Append("feature-gates", "DynamicResourceAllocation=true")
