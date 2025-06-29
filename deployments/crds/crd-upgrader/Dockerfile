@@ -1,3 +1,6 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
 FROM registry.access.redhat.com/ubi9/ubi-minimal
 ARG TARGETARCH
 ENV TARGETARCH=$TARGETARCH
