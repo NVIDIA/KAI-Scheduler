@@ -70,10 +70,6 @@ manifests: controller-gen kustomize ## Generate ClusterRole and CustomResourceDe
 	$(KUSTOMIZE) build deployments/kustomization/webhookmanager-clusterrole >  deployments/kai-scheduler/templates/rbac/webhookmanager.yaml
 	rm -rf deployments/kustomization/webhookmanager-clusterrole/resource.yaml
 
-	$(CONTROLLER_GEN) webhook:headerFile="./hack/boilerplate.yaml.txt" paths="./cmd/binder/..." output:stdout > deployments/kustomization/binder-webhook/resource.yaml
-	$(KUSTOMIZE) build deployments/kustomization/binder-webhook >  deployments/kai-scheduler/templates/binder-webhook.yaml
-	rm -rf deployments/kustomization/binder-webhook/resource.yaml
-
 	$(MAKE) gen-license
 
 .PHONY: clients

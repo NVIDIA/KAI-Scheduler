@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Added optional pod and namespace label selectors to limit the scope of monitored pods
+
+
 ## [v0.6.0] - 2025-06-16
 
 ### Changed

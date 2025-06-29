@@ -105,8 +105,8 @@ func TestIsPreemptibleJob(t *testing.T) {
 					},
 				},
 			},
-			false,
 			true,
+			false,
 		},
 		{
 			"Custom preemptable class",

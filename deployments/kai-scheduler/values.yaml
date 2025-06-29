@@ -10,6 +10,8 @@ global:
   nodeSelector: {}
   affinity: {}
   tolerations: []
+  namespaceLabelSelector: {}
+  podLabelSelector: {}
   resourceReservation:
     namespace: kai-resource-reservation
     serviceAccount: kai-resource-reservation

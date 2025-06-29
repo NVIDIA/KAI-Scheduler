@@ -8,6 +8,8 @@ import (
 
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -27,7 +29,10 @@ import (
 	// +kubebuilder:scaffold:imports
 )
 
-const port = 9443
+const (
+	port               = 9443
+	schedulerNameField = "spec.schedulerName"
+)
 
 var (
 	scheme   = runtime.NewScheme()
@@ -48,6 +53,7 @@ func Run() error {
 
 	initLogger()
 
+	configs := opts.Configs()
 	mgr, err := ctrl.NewManager(getClientConfigOrDie(opts), ctrl.Options{
 		Scheme: scheme,
 		Client: client.Options{
@@ -55,7 +61,7 @@ func Run() error {
 				Unstructured: true,
 			},
 		},
-		Cache: getCacheOptions(opts),
+		Cache: getCacheOptions(configs),
 		Metrics: metricsserver.Options{
 			BindAddress: opts.MetricsAddr,
 		},
@@ -84,7 +90,7 @@ func Run() error {
 	if err = (&controllers.PodReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr, opts.Configs()); err != nil {
+	}).SetupWithManager(mgr, configs); err != nil {
 		return err
 	}
 	// +kubebuilder:scaffold:builder
@@ -118,19 +124,27 @@ func getClientConfigOrDie(opts Options) *rest.Config {
 	return clientConfig
 }
 
-func getCacheOptions(opts Options) cache.Options {
-	if opts.DefaultPrioritiesConfigMapName == "" || opts.DefaultPrioritiesConfigMapNamespace == "" {
-		return cache.Options{}
+func getCacheOptions(configs controllers.Configs) cache.Options {
+	podByObject := cache.ByObject{
+		Field: fields.Set{schedulerNameField: configs.SchedulerName}.AsSelector(),
+	}
+	if len(configs.PodLabelSelector) > 0 {
+		podByObject.Label = labels.Set(configs.PodLabelSelector).AsSelector()
+	}
+
+	cacheOptions := cache.Options{}
+	cacheOptions.ByObject = map[client.Object]cache.ByObject{
+		&corev1.Pod{}: podByObject,
 	}
 
 	// limit configmap cache to the namespace that contains the configmap of default priorities for pod groups
-	return cache.Options{
-		ByObject: map[client.Object]cache.ByObject{
-			&corev1.ConfigMap{}: {
-				Namespaces: map[string]cache.Config{
-					opts.DefaultPrioritiesConfigMapNamespace: {},
-				},
+	if configs.DefaultPrioritiesConfigMapName != "" && configs.DefaultPrioritiesConfigMapNamespace != "" {
+		cacheOptions.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
+			Namespaces: map[string]cache.Config{
+				configs.DefaultPrioritiesConfigMapNamespace: {},
 			},
-		},
+		}
 	}
+
+	return cacheOptions
 }
