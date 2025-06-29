@@ -99,7 +99,7 @@ func TestIsPreemptibleJob(t *testing.T) {
 				[]client.Object{
 					&schedulingv1.PriorityClass{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: "c2",
+							Name: "c3",
 						},
 						Value: 125,
 					},
