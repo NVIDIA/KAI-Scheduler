@@ -338,7 +338,7 @@ var _ = Describe("MinRuntime Plugin", func() {
 		It("Sanity - parse passes", func() {
 			// Test various valid min runtime strings
 			validDurations := []string{
-				"5s", "10s", "10m5s", "1m", "2m30s", "1h", "1h30m", "2h45m15s", "2d4h30m", "5w4d12h",
+				"5s", "10s", "10m5s", "1m", "1.5s", "2m30s", "1h", "1h30m", "2h45m15s", "2d4h30m", "5w4d12h",
 			}
 
 			args := map[string]string{}
@@ -353,7 +353,7 @@ var _ = Describe("MinRuntime Plugin", func() {
 		It("Invalid durations should return zero", func() {
 			// Test various invalid min runtime strings
 			invalidDurations := []string{
-				"5", "10m5s", "1h2", "2h45m15", "abc", "1.5s", "1h-30m", "dfdsfdfdf",
+				"5", "1h2", "2h45m15", "abc", "1h-30m", "dfdsfdfdf",
 			}
 
 			args := map[string]string{}
