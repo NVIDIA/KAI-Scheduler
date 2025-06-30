@@ -493,7 +493,7 @@ func TestPreFilter(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Annotations: map[string]string{
-						sharedGPUConfigMapNamePrefix: "shared-gpu-configmap",
+						sharedGPUConfigMapAnnotation: "shared-gpu-configmap",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -563,7 +563,7 @@ func TestPreFilter(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Annotations: map[string]string{
-						sharedGPUConfigMapNamePrefix: "shared-gpu-configmap",
+						sharedGPUConfigMapAnnotation: "shared-gpu-configmap",
 					},
 				},
 				Spec: v1.PodSpec{
