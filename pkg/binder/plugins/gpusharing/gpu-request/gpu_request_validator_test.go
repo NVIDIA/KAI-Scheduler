@@ -125,24 +125,6 @@ func TestValidateGpuRequests(t *testing.T) {
 			name: "forbid fraction limit annotation without fraction request",
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						constants.GpuLimit: "1",
-					},
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							Resources: v1.ResourceRequirements{},
-						},
-					},
-				},
-			},
-			error: fmt.Errorf("cannot have GPU limit annotation without GPU fraction request"),
-		},
-		{
-			name: "forbid fraction limit annotation without fraction request",
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{},
 				},
 				Spec: v1.PodSpec{

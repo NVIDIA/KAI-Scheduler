@@ -21,7 +21,7 @@ func ValidateGpuRequests(pod *v1.Pod) error {
 	gpuFractionFromAnnotation, hasGpuFractionAnnotation := pod.Annotations[constants.GpuFraction]
 	gpuMemoryFromAnnotation, hasGpuMemoryAnnotation := pod.Annotations[constants.GpuMemory]
 	gpuFractionsCountFromAnnotation, hasGpuFractionsCount := pod.Annotations[constants.GpuFractionsNumDevices]
-	_, hasGpuLimitAnnotation := pod.Annotations[constants.GpuLimit]
+
 	mpsFromAnnotation, hasMpsAnnotation := pod.Annotations[constants.MpsAnnotation]
 	_, hasGpuResourceRequest := container.Resources.Requests[constants.GpuResource]
 	gpuLimitQuantity, hasGpuResourceLimit := container.Resources.Limits[constants.GpuResource]
@@ -44,10 +44,6 @@ func ValidateGpuRequests(pod *v1.Pod) error {
 
 	if hasGpuResourceRequest && !hasGpuResourceLimit {
 		return fmt.Errorf("GPU is not not listed in resource limits")
-	}
-
-	if hasGpuLimitAnnotation && !isFractional {
-		return fmt.Errorf("cannot have GPU limit annotation without GPU fraction request")
 	}
 
 	if hasGpuResourceLimit && !isGpuFractionValid(hasWholeGPULimit, gpuLimitQuantity) {
