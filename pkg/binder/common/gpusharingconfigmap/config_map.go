@@ -17,11 +17,11 @@ import (
 )
 
 const (
-	DesiredConfigMapPrefixKey   = "runai/shared-gpu-configmap"
-	gpuSharingConfigMap         = "shared-gpu"
-	maxVolumeNameLength         = 63
-	configMapNameNumRandomChars = 7
-	configMapNameExtraChars     = configMapNameNumRandomChars + 6
+	gpuSharingConfigMapAnnotation = "runai/shared-gpu-configmap"
+	gpuSharingConfigMap           = "shared-gpu"
+	maxVolumeNameLength           = 63
+	configMapNameNumRandomChars   = 7
+	configMapNameExtraChars       = configMapNameNumRandomChars + 6
 )
 
 func UpsertJobConfigMap(ctx context.Context,
@@ -106,7 +106,7 @@ func patchConfigMap(
 }
 
 func SetGpuCapabilitiesConfigMapName(pod *v1.Pod, containerIndex int, containerType ContainerType) string {
-	namePrefix, found := pod.Annotations[DesiredConfigMapPrefixKey]
+	namePrefix, found := pod.Annotations[gpuSharingConfigMapAnnotation]
 	if !found {
 		namePrefix = generateConfigMapNamePrefix(pod, containerIndex)
 		setConfigMapNameAnnotation(pod, namePrefix)
@@ -145,7 +145,7 @@ func ExtractCapabilitiesConfigMapName(pod *v1.Pod, containerIndex int, container
 		containerIndexStr = "i" + containerIndexStr
 	}
 
-	namePrefix, found := pod.Annotations[DesiredConfigMapPrefixKey]
+	namePrefix, found := pod.Annotations[gpuSharingConfigMapAnnotation]
 	if !found {
 		return "", fmt.Errorf("no desired configmap name found in pod %s/%s annotations", pod.Namespace, pod.Name)
 	}
@@ -165,7 +165,7 @@ func setConfigMapNameAnnotation(pod *v1.Pod, name string) {
 	if pod.Annotations == nil {
 		pod.Annotations = map[string]string{}
 	}
-	pod.Annotations[DesiredConfigMapPrefixKey] = name
+	pod.Annotations[gpuSharingConfigMapAnnotation] = name
 }
 
 // ownerReferencesDifferent compares two OwnerReferences and returns true if they are not the same

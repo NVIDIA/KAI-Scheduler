@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	sharedGPUConfigMapNamePrefix = "runai/shared-gpu-configmap"
+	sharedGPUConfigMapAnnotation = "runai/shared-gpu-configmap"
 )
 
 type ConfigMapPredicate struct {
@@ -116,7 +116,7 @@ func getAllRequiredConfigMapNames(pod *v1.Pod) []string {
 }
 
 func isSharedGPUConfigMap(pod *v1.Pod, configMapName string) bool {
-	sharedGPUConfigMapPrefix, found := pod.Annotations[sharedGPUConfigMapNamePrefix]
+	sharedGPUConfigMapPrefix, found := pod.Annotations[sharedGPUConfigMapAnnotation]
 	if !found {
 		return false
 	}

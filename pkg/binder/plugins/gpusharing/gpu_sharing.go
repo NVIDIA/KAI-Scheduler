@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	fractionContainerIndex = 0
-	CdiDeviceNameBase      = "k8s.device-plugin.nvidia.com/gpu=%s"
+	fractionContainerIndex        = 0
+	gpuSharingConfigMapAnnotation = "runai/shared-gpu-configmap"
+	CdiDeviceNameBase             = "k8s.device-plugin.nvidia.com/gpu=%s"
 )
 
 type GPUSharing struct {
@@ -120,7 +121,7 @@ func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, p
 	legacyPod := false
 	var capabilitiesConfigMapName string
 	var err error
-	_, found := pod.Annotations[gpusharingconfigmap.DesiredConfigMapPrefixKey]
+	_, found := pod.Annotations[gpuSharingConfigMapAnnotation]
 	if found {
 		capabilitiesConfigMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod,
 			fractionContainerIndex, gpusharingconfigmap.RegularContainer)

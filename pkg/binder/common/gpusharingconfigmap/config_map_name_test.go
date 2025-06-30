@@ -35,7 +35,7 @@ func TestGetDesiredConfigMapName(t *testing.T) {
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						DesiredConfigMapPrefixKey: "config-map-name",
+						gpuSharingConfigMapAnnotation: "config-map-name",
 					},
 				},
 			},
