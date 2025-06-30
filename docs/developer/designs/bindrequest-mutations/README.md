@@ -67,24 +67,31 @@ func (p *MyPlugin) OnSessionOpen(ssn *framework.Session) {
 }
 
 func (p *MyPlugin) MyBindRequestMutateFn(pod *pod_info.PodInfo, nodeName string) map[string]string {
-    annotations := map[string]string{}
-    annotations["my-plugin.kai.scheduler/some-key"] = "some-value"
-    return annotations
+    bindRequestAnnotations := map[string]string{}
+    bindRequestAnnotations["my-plugin.kai.scheduler/some-key"] = "some-value"
+    return bindRequestAnnotations
 }
 ```
 
+### Annotation Merging and Session Responsibility
+
+The session is responsible for collecting and merging all plugin-provided annotations before passing them to the cache for BindRequest creation. This is done by calling all registered `BindRequestMutateFn` functions and merging their results into a single map named `bindRequestAnnotations`.
+
+If multiple plugins provide the same annotation key, the value from the last plugin registered will overwrite previous values for that key.
+
 ### Usage in the Scheduler
 
-When creating a BindRequest, the scheduler will call all registered mutate functions:
+When creating a BindRequest, the scheduler will call all registered mutate functions and merge their results:
 
 ```go
-// In createBindRequest (simplified):
-annotations := make(map[string]string)
-
+// In session_plugins.go:
+bindRequestAnnotations := map[string]string{}
 for _, fn := range ssn.BindRequestMutateFns {
-    annotations = maps.Copy(fn(podInfo, nodeName), annotations)
+    for k, v := range fn(pod, nodeName) {
+        bindRequestAnnotations[k] = v
+    }
 }
-// ... proceed to create the BindRequest with these annotations
+// ... pass bindRequestAnnotations to the cache for BindRequest creation
 ```
 
 ### Binder Plugin Access

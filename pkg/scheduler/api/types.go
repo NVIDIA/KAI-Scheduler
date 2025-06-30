@@ -49,6 +49,9 @@ type NodePreOrderFn func(*pod_info.PodInfo, []*node_info.NodeInfo) error
 // OnJobSolutionStartFn is used for notifying on job solution (and scenario simulations) start
 type OnJobSolutionStartFn func()
 
+// BindRequestMutateFn allows plugins to add annotations before BindRequest creation.
+type BindRequestMutateFn func(pod *pod_info.PodInfo, nodeName string) map[string]string
+
 type SchedulableResult struct {
 	IsSchedulable bool
 	Reason        v2alpha2.UnschedulableReason
