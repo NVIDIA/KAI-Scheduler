@@ -111,7 +111,7 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 				idx, pod.Namespace, podGangName, err)
 		}
 		if found && int(minReplicas) != len(podSlice) {
-			return nil, fmt.Errorf("Unsupported minReplicas in spec.podgroup[%v] of PodGang %s/%s : expected: %v, found: %v",
+			return nil, fmt.Errorf("unsupported minReplicas in spec.podgroup[%v] of PodGang %s/%s : expected: %v, found: %v",
 				idx, pod.Namespace, podGangName, len(podSlice), minReplicas)
 		}
 		minAvailable += int32(len(podSlice))
