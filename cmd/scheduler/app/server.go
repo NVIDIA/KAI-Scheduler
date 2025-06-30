@@ -41,15 +41,14 @@ const (
 	leaseDuration = 15 * time.Second
 	renewDeadline = 10 * time.Second
 	retryPeriod   = 5 * time.Second
-
-	lockObjectNamespace = ""
 )
 
 var logFlushFreq = pflag.Duration("log-flush-frequency", 5*time.Second, "Maximum number of seconds between log flushes")
 
 func flushLogs() {
 	if err := log.InfraLogger.Sync(); err != nil &&
-		!errors.Is(err, syscall.ENOTTY) { // https://github.com/uber-go/zap/issues/991#issuecomment-962098428
+		!errors.Is(err, syscall.ENOTTY) && // https://github.com/uber-go/zap/issues/991#issuecomment-962098428
+		!errors.Is(err, syscall.EINVAL) { // https://github.com/uber-go/zap/issues/328
 		fmt.Fprintf(os.Stderr, "failed to flush logs: %v\n", err)
 	}
 }
@@ -132,6 +131,9 @@ func setupLogging(so *options.ServerOption) error {
 func setConfig(so *options.ServerOption) {
 	config := conf.GetConfig()
 	config.ResourceReservationAppLabelValue = so.ResourceReservationAppLabel
+	config.CPUWorkerNodeLabelKey = so.CPUWorkerNodeLabelKey
+	config.GPUWorkerNodeLabelKey = so.GPUWorkerNodeLabelKey
+	config.MIGWorkerNodeLabelKey = so.MIGWorkerNodeLabelKey
 }
 
 func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMux) error {
@@ -171,7 +173,7 @@ func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMu
 
 	// Prepare event clients.
 	broadcaster := record.NewBroadcaster()
-	broadcaster.StartRecordingToSink(&corev1.EventSinkImpl{Interface: leaderElectionClient.CoreV1().Events(lockObjectNamespace)})
+	broadcaster.StartRecordingToSink(&corev1.EventSinkImpl{Interface: leaderElectionClient.CoreV1().Events(opt.Namspace)})
 	eventRecorder := broadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: opt.SchedulerName})
 
 	hostname, err := os.Hostname()
@@ -182,7 +184,7 @@ func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMu
 	id := hostname + "_" + string(uuid.NewUUID())
 
 	rl, err := resourcelock.New(resourcelock.LeasesResourceLock,
-		lockObjectNamespace,
+		opt.Namspace,
 		opt.SchedulerName,
 		leaderElectionClient.CoreV1(),
 		leaderElectionClient.CoordinationV1(),

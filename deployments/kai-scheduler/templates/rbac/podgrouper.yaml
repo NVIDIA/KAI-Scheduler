@@ -9,6 +9,15 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - events
   - pods
   verbs:

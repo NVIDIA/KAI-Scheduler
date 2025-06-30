@@ -115,7 +115,7 @@ type updateBCPodTest struct {
 }
 
 func TestUpdateBCPod(t *testing.T) {
-	desiredCmName := fmt.Sprintf("configmap-name-%s", RunaiConfigMapGpu)
+	desiredCmName := fmt.Sprintf("configmap-name-%s", GPUSharingConfigMap)
 	tests := []updateBCPodTest{
 		{
 			name: "legacy pod with no config map annotation",

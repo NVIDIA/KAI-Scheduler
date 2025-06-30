@@ -125,8 +125,7 @@ func calcJobNumOfPods(topOwner *unstructured.Unstructured) (int32, error) {
 		return 0, err
 	}
 	if !minReplicasFound || len(workerGroupSpecs) == 0 {
-		return 0, fmt.Errorf(
-			"ray-clusters can't have 0 workerGroupsSpecs pods. Please fix the replicas field")
+		return minAvailableReplicas, nil
 	}
 
 	for groupIndex, groupSpec := range workerGroupSpecs {
@@ -149,8 +148,7 @@ func getReplicaCountersForWorkerGroup(groupSpec interface{}, groupIndex int) (in
 		return 0, err
 	}
 	if !found || workerGroupReplicas == 0 {
-		return 0, fmt.Errorf("ray-cluster sworkerGroupsSpec can't have 0 replicas."+
-			" Please fix the replicas field for group number %v", groupIndex)
+		return 0, nil
 	}
 
 	workerGroupMinReplicas, found, err := unstructured.NestedInt64(workerGroupSpec, "minReplicas")
@@ -159,7 +157,7 @@ func getReplicaCountersForWorkerGroup(groupSpec interface{}, groupIndex int) (in
 	}
 	if !found || workerGroupMinReplicas > workerGroupReplicas {
 		return 0, fmt.Errorf(
-			"ray-cluster replicas for a sworkerGroupsSpec can't be less than minReplicas. "+
+			"ray-cluster replicas for a workerGroupsSpec can't be less than minReplicas. "+
 				"Given %v replicas and %v minReplicas. Please fix the replicas field for group number %v",
 			workerGroupReplicas, workerGroupMinReplicas, groupIndex)
 	}

@@ -9,18 +9,18 @@ There are multiple ways to enable MPS in a Kubernetes cluster. This README focus
 ### Prerequisites
 To use GPU sharing, ensure the following requirements are met:
 * KAI Scheduler is installed and running in your cluster, with gpu-sharing feature enabled.
-2. MPS server is running on all GPU-enabled hosts (`nvidia-cuda-mps-control`), with the `CUDA_MPS_PIPE_DIRECTORY` environment variable set to `/tmp/nvidia-mps`.
+* MPS server is running on all GPU-enabled hosts (`nvidia-cuda-mps-control`), with the `CUDA_MPS_PIPE_DIRECTORY` environment variable set to `/tmp/nvidia-mps`.
 
-### MPS Enabled PODs
+### MPS Enabled Pods
 To submit a pod that can share a GPU device and connect to the MPS server, run the following command:
 ```
 kubectl apply -f gpu-sharing-with-mps.yaml
 ```
 
-In the gpu-sharing-with-mps.yaml file, the pod defines an MPS volume using a hostPath set to /tmp/nvidia-smp, which is mounted to the same path within the container.
+In the `gpu-sharing-with-mps.yaml` file, the Pod defines an MPS volume using a hostPath set to `/tmp/nvidia-mps`, which is mounted to the same path within the container.
 
 ### Configuring MPS
-If the MPS server on the host is configured with a custom `CUDA_MPS_PIPE_DIRECTORY` (e.g., `/other/path`), make sure the same path is mounted in the pod yaml.
+If the MPS server on the host is configured with a custom `CUDA_MPS_PIPE_DIRECTORY` (e.g., `/other/path`), make sure the same path is mounted in the Pod YAML.
 
 For additional MPS-related environment variables, refer to the [NVIDIA MPS documentation](https://docs.nvidia.com/deploy/mps/index.html#environment-variables).
 

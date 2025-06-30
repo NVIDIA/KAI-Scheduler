@@ -6,6 +6,7 @@ package constants
 const (
 	AppLabelName              = "app"
 	GpuResource               = "nvidia.com/gpu"
+	NvidiaGpuMemory           = "nvidia.com/gpu.memory"
 	UnlimitedResourceQuantity = float64(-1)
 	DefaultQueuePriority      = 100
 	DefaultNodePoolName       = "default"
@@ -20,7 +21,7 @@ const (
 	GpuMemory                = "gpu-memory"
 	ReceivedResourceType     = "received-resource-type"
 	GpuFractionsNumDevices   = "gpu-fraction-num-devices"
-	RunaiGpuLimit            = "runai-gpu-limit"
+	GpuLimit                 = "runai-gpu-limit"
 	MpsAnnotation            = "mps"
 	StalePodgroupTimeStamp   = "kai.scheduler/stale-podgroup-timestamp"
 	LastStartTimeStamp       = "kai.scheduler/last-start-timestamp"
@@ -28,7 +29,6 @@ const (
 	// Labels
 	GPUGroup                 = "runai-gpu-group"
 	MultiGpuGroupLabelPrefix = GPUGroup + "/"
-	MigEnabledLabel          = "node-role.kubernetes.io/runai-mig-enabled"
 	MigStrategyLabel         = "nvidia.com/mig.strategy"
 	GpuCountLabel            = "nvidia.com/gpu.count"
 )

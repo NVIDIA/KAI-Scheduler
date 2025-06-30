@@ -8,11 +8,12 @@ const (
 	ProjectLabelKey    = "project"
 	PriorityLabelKey   = "priorityClassName"
 	UserLabelKey       = "user"
-	JobIdKey           = "runai/job-id"
 
 	BuildPriorityClass     = "build"
 	TrainPriorityClass     = "train"
 	InferencePriorityClass = "inference"
+
+	DefaultPrioritiesConfigMapTypesKey = "types"
 
 	DefaultQueueName = "default-queue"
 )

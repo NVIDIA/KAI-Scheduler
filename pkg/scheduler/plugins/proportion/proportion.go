@@ -7,6 +7,7 @@ import (
 	"math"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -15,6 +16,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
@@ -36,10 +38,11 @@ type proportionPlugin struct {
 	queues              map[common_info.QueueID]*rs.QueueAttributes
 	jobSimulationQueues map[common_info.QueueID]*rs.QueueAttributes
 	// Arguments given for the plugin
-	pluginArguments        map[string]string
-	taskOrderFunc          common_info.LessFn
-	reclaimablePlugin      *rec.Reclaimable
-	isInferencePreemptible bool
+	pluginArguments           map[string]string
+	taskOrderFunc             common_info.LessFn
+	reclaimablePlugin         *rec.Reclaimable
+	isInferencePreemptible    bool
+	allowConsolidatingReclaim bool
 }
 
 func New(arguments map[string]string) framework.Plugin {
@@ -58,7 +61,6 @@ func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.calculateResourcesProportion(ssn)
 	pp.taskOrderFunc = ssn.TaskOrderFn
 	pp.reclaimablePlugin = rec.New(ssn.IsInferencePreemptible(), pp.taskOrderFunc)
-
 	pp.isInferencePreemptible = ssn.IsInferencePreemptible()
 	capacityPolicy := cp.New(pp.queues, ssn.IsInferencePreemptible())
 	ssn.AddQueueOrderFn(pp.queueOrder)
@@ -78,6 +80,7 @@ func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddGetQueueAllocatedResourcesFn(pp.getQueueAllocatedResourceFn)
 	ssn.AddGetQueueDeservedResourcesFn(pp.getQueueDeservedResourcesFn)
 	ssn.AddGetQueueFairShareFn(pp.getQueueFairShareFn)
+	pp.allowConsolidatingReclaim = ssn.AllowConsolidatingReclaim()
 }
 
 func (pp *proportionPlugin) OnSessionClose(*framework.Session) {
@@ -98,25 +101,73 @@ func (pp *proportionPlugin) CanReclaimResourcesFn(reclaimer *podgroup_info.PodGr
 }
 
 func (pp *proportionPlugin) reclaimableFn(
-	reclaimer *podgroup_info.PodGroupInfo,
-	reclaimees []*podgroup_info.PodGroupInfo,
-	_ []*pod_info.PodInfo,
+	scenario api.ScenarioInfo,
 ) bool {
-	reclaimerInfo := pp.buildReclaimerInfo(reclaimer)
+	reclaimerInfo := pp.buildReclaimerInfo(scenario.GetPreemptor())
 	totalVictimsResources := make(map[common_info.QueueID][]*resource_info.Resource)
-	for _, jobTaskGroup := range reclaimees {
-		totalJobResources := resource_info.EmptyResource()
-		for _, task := range jobTaskGroup.PodInfos {
-			totalJobResources.AddResourceRequirements(task.AcceptedResource)
+	victims := scenario.GetVictims()
+	for _, victim := range victims {
+		totalJobResources := pp.getVictimResources(victim)
+		if len(totalJobResources) == 0 {
+			continue
 		}
 
-		totalVictimsResources[jobTaskGroup.Queue] = append(
-			totalVictimsResources[jobTaskGroup.Queue],
-			totalJobResources,
+		totalVictimsResources[victim.Job.Queue] = append(
+			totalVictimsResources[victim.Job.Queue],
+			totalJobResources...,
 		)
 	}
 
 	return pp.reclaimablePlugin.Reclaimable(pp.jobSimulationQueues, reclaimerInfo, totalVictimsResources)
+}
+
+func (pp *proportionPlugin) getVictimResources(victim *api.VictimInfo) []*resource_info.Resource {
+	var victimTasks []*pod_info.PodInfo
+	for _, job := range victim.RepresentativeJobs {
+		for _, task := range job.PodInfos {
+			victimTasks = append(victimTasks, task)
+		}
+	}
+
+	var victimResources []*resource_info.Resource
+	if len(victimTasks) > int(victim.Job.MinAvailable) {
+		elasticTasks := victimTasks[victim.Job.MinAvailable:]
+		for _, task := range elasticTasks {
+			resources := getResources(pp.allowConsolidatingReclaim, task)
+			if resources == nil {
+				continue
+			}
+			victimResources = append(victimResources, resources)
+		}
+	}
+
+	resources := getResources(pp.allowConsolidatingReclaim, victimTasks[:victim.Job.MinAvailable]...)
+	if resources != nil {
+		victimResources = append(victimResources, resources)
+	}
+
+	return victimResources
+}
+
+func getResources(ignoreReallocatedTasks bool, pods ...*pod_info.PodInfo) *resource_info.Resource {
+	resources := make([]*resource_info.ResourceRequirements, 0, len(pods))
+	for _, task := range pods {
+		if ignoreReallocatedTasks && pod_status.IsActiveAllocatedStatus(task.Status) {
+			continue
+		}
+		resources = append(resources, task.AcceptedResource)
+	}
+
+	if len(resources) == 0 {
+		return nil
+	}
+
+	totalResources := resource_info.EmptyResource()
+	for _, resource := range resources {
+		totalResources.AddResourceRequirements(resource)
+	}
+
+	return totalResources
 }
 
 func (pp *proportionPlugin) calculateResourcesProportion(ssn *framework.Session) {
@@ -142,7 +193,8 @@ func getNodeResources(ssn *framework.Session, node *node_info.NodeInfo) rs.Resou
 		return nodeResource
 	}
 
-	_, found := node.Node.Labels[node_info.GpuWorkerNode]
+	gpuWorkerLabelKey := conf.GetConfig().GPUWorkerNodeLabelKey
+	_, found := node.Node.Labels[gpuWorkerLabelKey]
 	shouldIgnoreGPUs := ssn.IsRestrictNodeSchedulingEnabled() && !found
 	if shouldIgnoreGPUs {
 		nodeResource.Add(rs.NewResourceQuantities(node.Allocatable.Cpu(), node.Allocatable.Memory(), 0))

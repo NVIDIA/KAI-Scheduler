@@ -507,7 +507,7 @@ func TestPodByNodeScenario_VictimsTasksFromNodes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bns := NewByNodeScenario(tt.fields.session, tt.fields.pendingTasksAsJob, tt.fields.potentialVictimsTasks,
+			bns := NewByNodeScenario(tt.fields.session, tt.fields.pendingTasksAsJob, tt.fields.pendingTasksAsJob, tt.fields.potentialVictimsTasks,
 				tt.fields.recordedVictimsJobs)
 			if tt.args.tasks != nil {
 				bns.AddPotentialVictimsTasks(tt.args.tasks)

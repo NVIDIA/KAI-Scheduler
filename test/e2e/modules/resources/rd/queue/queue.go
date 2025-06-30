@@ -113,7 +113,7 @@ func CreateQueueObjectWithGpuResource(name string, gpuResource v2.QueueResource,
 }
 
 func GetConnectedNamespaceToQueue(q *v2.Queue) string {
-	return "runai-" + q.Name
+	return "kai-" + q.Name
 }
 
 func ConnectQueuesWithSharedParent(parentQueue *v2.Queue, childrenQueues ...*v2.Queue) {

@@ -10,6 +10,12 @@ global:
   nodeSelector: {}
   affinity: {}
   tolerations: []
+  namespaceLabelSelector: {}
+  podLabelSelector: {}
+  resourceReservation:
+    namespace: kai-resource-reservation
+    serviceAccount: kai-resource-reservation
+    appLabel: kai-resource-reservation
 
 
 podgrouper:
@@ -24,10 +30,23 @@ podgrouper:
     requests:
       cpu: "250m"
       memory: "128Mi"
+  queueLabelKey: "kai.scheduler/queue"
+
+podgroupcontroller:
+  image:
+    name: podgroupcontroller
+    pullPolicy: IfNotPresent
+  additionalArgs: []
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+    requests:
+      cpu: "250m"
+      memory: "128Mi"
 
 binder:
   name: binder
-  replicas: 1
   image:
     name: binder
     pullPolicy: IfNotPresent
@@ -46,6 +65,7 @@ binder:
     requests:
       cpu: "250m"
       memory: "128Mi"
+  cdi: false
 
 scheduler:
   image:
@@ -82,6 +102,20 @@ nodescaleadjuster:
   scalingPodImage:
     name: scalingpod
   additionalArgs: []
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+    requests:
+      cpu: "250m"
+      memory: "128Mi"
+
+queuecontroller:
+  image:
+    name: queuecontroller
+    pullPolicy: IfNotPresent
+  additionalArgs: []
+  certSecretName: queuecontroller-webhook-tls-secret
   resources:
     limits:
       cpu: "500m"

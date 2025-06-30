@@ -24,6 +24,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	sc_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storagecapacity_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
@@ -31,8 +32,6 @@ const (
 	DefaultGpuMemory = 100 // The default value is 100 because it allows all the calculation of (memory = fractional * GpuMemory) to work, if it was 0 the result will always be zero too
 	GpuMemoryLabel   = "nvidia.com/gpu.memory"
 	GpuCountLabel    = "nvidia.com/gpu.count"
-	CpuWorkerNode    = "node-role.kubernetes.io/runai-cpu-worker"
-	GpuWorkerNode    = "node-role.kubernetes.io/runai-gpu-worker"
 	MbToBRatio       = 1000000
 	BitToMib         = 1024 * 1024
 	TibInMib         = 1024 * 1024
@@ -633,7 +632,8 @@ func (ni *NodeInfo) IsCPUOnlyNode() bool {
 }
 
 func (ni *NodeInfo) IsMIGEnabled() bool {
-	enabled, found := ni.Node.Labels[commonconstants.MigEnabledLabel]
+	migWorkerLabelKey := conf.GetConfig().MIGWorkerNodeLabelKey
+	enabled, found := ni.Node.Labels[migWorkerLabelKey]
 	if found {
 		isMig, err := strconv.ParseBool(enabled)
 		return err == nil && isMig

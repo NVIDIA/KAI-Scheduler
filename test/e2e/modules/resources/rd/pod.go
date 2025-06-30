@@ -140,7 +140,7 @@ func CreatePodObject(podQueue *v2.Queue, resources v1.ResourceRequirements) *v1.
 			Annotations: map[string]string{},
 			Labels: map[string]string{
 				constants.AppLabelName: "engine-e2e",
-				"runai/queue":          podQueue.Name,
+				"kai.scheduler/queue":  podQueue.Name,
 			},
 		},
 		Spec: v1.PodSpec{

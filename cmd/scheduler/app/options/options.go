@@ -14,8 +14,9 @@ import (
 
 const (
 	defaultSchedulerName               = "kai-scheduler"
-	defaultResourceReservationAppLabel = "runai-reservation"
+	defaultResourceReservationAppLabel = "kai-resource-reservation"
 	defaultMetricsNamespace            = "kai"
+	defaultNamespace                   = "kai-scheduler"
 	defaultSchedulerPeriod             = time.Second
 	defaultStalenessGracePeriod        = 60 * time.Second
 	defaultListenAddress               = ":8080"
@@ -27,6 +28,9 @@ const (
 	DefaultPyroscopeBlockProfilerRate  = 5
 	defaultNumOfStatusRecordingWorkers = 5
 	defaultNodePoolLabelKey            = ""
+	defaultCPUWorkerNodeLabelKey       = "node-role.kubernetes.io/cpu-worker"
+	defaultGPUWorkerNodeLabelKey       = "node-role.kubernetes.io/gpu-worker"
+	defaultMIGWorkerNodeLabelKey       = "node-role.kubernetes.io/mig-enabled"
 )
 
 // ServerOption is the main context object for the controller manager.
@@ -59,6 +63,10 @@ type ServerOption struct {
 	NumOfStatusRecordingWorkers       int
 	GlobalDefaultStalenessGracePeriod time.Duration
 	PluginServerPort                  int
+	CPUWorkerNodeLabelKey             string
+	GPUWorkerNodeLabelKey             string
+	MIGWorkerNodeLabelKey             string
+	Namspace                          string
 
 	QPS   int
 	Burst int
@@ -74,6 +82,8 @@ func NewServerOption() *ServerOption {
 func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	// kai-scheduler will ignore pods with scheduler names other than specified with the option
 	fs.StringVar(&s.SchedulerName, "scheduler-name", defaultSchedulerName, "The scheduler name in pod spec that handled by this scheduler")
+	fs.StringVar(&s.Namspace, "namespace", defaultNamespace, "Scheduler service namespace")
+	fs.StringVar(&s.MetricsNamespace, "metrics-namespace", defaultMetricsNamespace, "Metrics namespace")
 	fs.StringVar(&s.ResourceReservationAppLabel, "resource-reservation-app-label", defaultResourceReservationAppLabel, "App label value of resource reservation pods")
 	fs.BoolVar(&s.RestrictSchedulingNodes, "restrict-node-scheduling", false, "kai-scheduler will allocate jobs only to restricted nodes")
 	fs.StringVar(&s.NodePoolLabelKey, "nodepool-label-key", defaultNodePoolLabelKey, "The label key by which to filter scheduling nodepool")
@@ -84,7 +94,6 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 		"Start a leader election client and gain leadership before "+
 			"executing the main loop. Enable this when running replicated kai-scheduler for high availability")
 	fs.BoolVar(&s.PrintVersion, "version", true, "Show version")
-	fs.StringVar(&s.MetricsNamespace, "metrics-namespace", defaultMetricsNamespace, "Metrics namespace")
 	fs.StringVar(&s.ListenAddress, "listen-address", defaultListenAddress, "The address to listen on for HTTP requests")
 	fs.BoolVar(&s.EnableProfiler, "enable-profiler", false, "Enable profiler")
 	fs.StringVar(&s.ProfilerApiPort, "profiler-port", defaultProfilerApiPort, "The port to listen for profiler api requests")
@@ -105,6 +114,9 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&s.NumOfStatusRecordingWorkers, "num-of-status-recording-workers", defaultNumOfStatusRecordingWorkers, "specifies the max number of go routines spawned to update pod and podgroups conditions and events. Defaults to 5")
 	fs.DurationVar(&s.GlobalDefaultStalenessGracePeriod, "default-staleness-grace-period", defaultStalenessGracePeriod, "Global default staleness grace period duration. Negative values means infinite. Defaults to 60s")
 	fs.IntVar(&s.PluginServerPort, "plugin-server-port", 8081, "The port to bind for plugin server requests")
+	fs.StringVar(&s.CPUWorkerNodeLabelKey, "cpu-worker-node-label-key", defaultCPUWorkerNodeLabelKey, "The label key for CPU worker nodes")
+	fs.StringVar(&s.GPUWorkerNodeLabelKey, "gpu-worker-node-label-key", defaultGPUWorkerNodeLabelKey, "The label key for GPU worker nodes")
+	fs.StringVar(&s.MIGWorkerNodeLabelKey, "mig-worker-node-label-key", defaultMIGWorkerNodeLabelKey, "The label key for MIG enabled worker nodes")
 
 	utilfeature.DefaultMutableFeatureGate.AddFlag(fs)
 }

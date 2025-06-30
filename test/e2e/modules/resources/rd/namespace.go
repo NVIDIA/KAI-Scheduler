@@ -22,7 +22,7 @@ func CreateNamespaceObject(name, queueName string) *corev1.Namespace {
 			Name: name,
 			Labels: map[string]string{
 				"project":              queueName,
-				"runai/queue":          queueName,
+				"kai.scheduler/queue":  queueName,
 				constants.AppLabelName: "engine-e2e",
 			},
 		},

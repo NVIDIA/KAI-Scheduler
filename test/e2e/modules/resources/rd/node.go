@@ -119,6 +119,23 @@ func FindNodesWithEnoughGPUs(ctx context.Context, client runtimeClient.Client, n
 	return gpuNodes
 }
 
+func FindNodesWithExactGPUs(ctx context.Context, client runtimeClient.Client, numFreeGPUs int64) []*corev1.Node {
+	allNodes := corev1.NodeList{}
+	var gpuNodes []*corev1.Node
+	Expect(client.List(ctx, &allNodes)).To(Succeed())
+	for index, node := range allNodes.Items {
+		gpusQty, found := node.Status.Allocatable[constants.GpuResource]
+		if !found || gpusQty.IsZero() {
+			continue
+		}
+		desiredQty := resource.NewQuantity(numFreeGPUs, resource.DecimalSI)
+		if gpusQty.Cmp(*desiredQty) == 0 {
+			gpuNodes = append(gpuNodes, &allNodes.Items[index])
+		}
+	}
+	return gpuNodes
+}
+
 func GetNodeGpuDeviceMemory(ctx context.Context, client runtimeClient.Client, nodeName string) int64 {
 	node := &v1.Node{}
 	err := client.Get(ctx, runtimeClient.ObjectKey{Name: nodeName}, node)

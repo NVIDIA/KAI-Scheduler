@@ -26,7 +26,6 @@ func TestHandleReclaim(t *testing.T) {
 	defer controller.Finish()
 	defer gock.Off()
 	testsMetadata := getTestsMetadata()
-
 	for testNumber, testMetadata := range testsMetadata {
 		t.Logf("Running test number: %v, test name: %v,", testNumber, testMetadata.TestTopologyBasic.Name)
 		ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
@@ -2513,7 +2512,7 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		},
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
-				Name: "queue1 is under deserved quota, queue0 has exactly deserved quota - should not reclaim",
+				Name: "queue1 is under deserved quota, queue0 has exactly deserved quota - should consolidate q0 to node0 and pipeline q1 to node1",
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
 						Name:                "q0_job0",

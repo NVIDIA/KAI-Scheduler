@@ -120,7 +120,7 @@ func TestNewPodgrouper(t *testing.T) {
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(resources...).Build()
 
 	grouper := podgrouper.NewPodgrouper(client, client, false, true,
-		queueLabelKey, nodePoolLabelKey)
+		queueLabelKey, nodePoolLabelKey, "", "")
 
 	topOwner, owners, err := grouper.GetPodOwners(context.Background(), &pod)
 	assert.Nil(t, err)
@@ -185,7 +185,6 @@ func Test_Podgrouper_Full_Flow(t *testing.T) {
 			},
 			expectedMetadata: &podgroup.Metadata{
 				Annotations: map[string]string{
-					"runai/job-id": "",
 					"run.ai/top-owner-metadata": `name: pod-job
 uid: ""
 group: ""
@@ -271,7 +270,6 @@ kind: Pod
 			},
 			expectedMetadata: &podgroup.Metadata{
 				Annotations: map[string]string{
-					"runai/job-id": "uid-pod",
 					"run.ai/top-owner-metadata": `name: argo-pod
 uid: uid-pod
 group: ""
@@ -319,6 +317,8 @@ kind: Pod
 				tt.podGrouperOptions.gangScheduleKnative,
 				queueLabelKey,
 				nodePoolLabelKey,
+				"",
+				"",
 			)
 
 			topOwner, owners, err := grouper.GetPodOwners(context.Background(), tt.reconciledPod)

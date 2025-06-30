@@ -7,6 +7,7 @@ package reclaim
 import (
 	"context"
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -226,5 +227,64 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 			Expect(err).To(Succeed())
 			return len(pods.Items) == 1
 		})
+	})
+	It("Reclaim elastic job with min runtime protecting", func(ctx context.Context) {
+
+		// 3 GPUs in total
+		// reclaimee: 3 GPUs, 1 protected by min runtime (MinAvailable=1)
+		// reclaimer1: 2 GPUs, can reclaim 2 from reclaimee
+		// reclaimer2: 1 GPU, cannot reclaim from reclaimee until after min-runtime
+		testCtx = testcontext.GetConnectivity(ctx, Default)
+		parentQueue, reclaimeeQueue, reclaimerQueue = createQueues(3, 0, 3)
+		reclaimeeQueue.Spec.Resources.GPU.OverQuotaWeight = 0
+		reclaimeeQueue.Spec.ReclaimMinRuntime = &metav1.Duration{Duration: 90 * time.Second}
+		testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
+		reclaimeeNamespace = queue.GetConnectedNamespaceToQueue(reclaimeeQueue)
+
+		// reclaimee job
+		reclaimeePodRequirements := v1.ResourceRequirements{
+			Limits: map[v1.ResourceName]resource.Quantity{
+				constants.GpuResource: resource.MustParse("1"),
+			},
+		}
+		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
+			"elastic-reclaimee-job", reclaimeeQueue, 3, nil,
+			reclaimeePodRequirements)
+		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimeeNamespace, reclaimeePods)
+
+		// reclaimer 1 job
+		reclaimer1PodRequirements := v1.ResourceRequirements{
+			Limits: map[v1.ResourceName]resource.Quantity{
+				constants.GpuResource: resource.MustParse("1"),
+			},
+		}
+		_, reclaimer1Pods := pod_group.CreatePrefixedDistributedJob(
+			ctx, testCtx.KubeClientset, testCtx.ControllerClient,
+			reclaimerQueue, "reclaimer1-", 2, reclaimer1PodRequirements, "",
+		)
+		reclaimerNamespace := queue.GetConnectedNamespaceToQueue(reclaimerQueue)
+		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimerNamespace, reclaimer1Pods)
+
+		// verify results
+		wait.ForPodsWithCondition(ctx, testCtx.ControllerClient, func(watch.Event) bool {
+			pods, err := testCtx.KubeClientset.CoreV1().Pods(reclaimeeNamespace).List(ctx, metav1.ListOptions{
+				LabelSelector: fmt.Sprintf("%s=%s", podGroupLabelName, reclaimeePodGroup.Name),
+			})
+			Expect(err).To(Succeed())
+			return len(pods.Items) == 1
+		})
+
+		// reclaimer 2 job
+		reclaimer2PodRequirements := v1.ResourceRequirements{
+			Limits: map[v1.ResourceName]resource.Quantity{
+				constants.GpuResource: resource.MustParse("1"),
+			},
+		}
+		_, reclaimer2Pods := pod_group.CreatePrefixedDistributedJob(
+			ctx, testCtx.KubeClientset, testCtx.ControllerClient,
+			reclaimerQueue, "reclaimer2-", 1, reclaimer2PodRequirements, "",
+		)
+		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, reclaimer2Pods[0])
+		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimerNamespace, reclaimer2Pods)
 	})
 })

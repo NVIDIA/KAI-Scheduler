@@ -28,6 +28,7 @@ const (
 	memoryOverall       = "30G"
 	cpuMilliAllocatable = "20000"
 	memoryAllocatable   = "20G"
+	migEnabledLabelKey  = "node-role.kubernetes.io/mig-enabled"
 )
 
 type TestClusterTopology struct {
@@ -116,7 +117,7 @@ func buildNodeInfo(
 	node.Labels = map[string]string{
 		commonconstants.GpuCountLabel:    nodeGpuCount,
 		node_info.GpuMemoryLabel:         strconv.Itoa(node_info.DefaultGpuMemory),
-		commonconstants.MigEnabledLabel:  migEnabledLabel,
+		migEnabledLabelKey:               migEnabledLabel,
 		commonconstants.MigStrategyLabel: string(nodeMetadata.MigStrategy),
 		tasks_fake.NodeAffinityKey:       nodeName,
 	}

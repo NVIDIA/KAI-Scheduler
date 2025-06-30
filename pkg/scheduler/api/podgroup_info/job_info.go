@@ -49,8 +49,9 @@ type PodGroupInfos struct {
 type PodGroupInfo struct {
 	UID common_info.PodGroupID
 
-	Name      string
-	Namespace string
+	Name           string
+	Namespace      string
+	NamespacedName string
 
 	Queue common_info.QueueID
 
@@ -126,6 +127,7 @@ func (podGroupInfo *PodGroupInfo) IsPreemptibleJob(isInferencePreemptible bool) 
 func (podGroupInfo *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	podGroupInfo.Name = pg.Name
 	podGroupInfo.Namespace = pg.Namespace
+	podGroupInfo.NamespacedName = fmt.Sprintf("%s/%s", podGroupInfo.Namespace, podGroupInfo.Name)
 	podGroupInfo.MinAvailable = pg.Spec.MinMember
 	podGroupInfo.Queue = common_info.QueueID(pg.Spec.Queue)
 	podGroupInfo.CreationTimestamp = pg.GetCreationTimestamp()
@@ -135,8 +137,8 @@ func (podGroupInfo *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	if pg.Annotations[commonconstants.StalePodgroupTimeStamp] != "" {
 		staleTimeStamp, err := time.Parse(time.RFC3339, pg.Annotations[commonconstants.StalePodgroupTimeStamp])
 		if err != nil {
-			log.InfraLogger.V(7).Warnf("Failed to parse stale timestamp for podgroup <%s/%s> err: %v",
-				podGroupInfo.Namespace, podGroupInfo.Name, err)
+			log.InfraLogger.V(7).Warnf("Failed to parse stale timestamp for podgroup <%s> err: %v",
+				podGroupInfo.NamespacedName, err)
 		} else {
 			podGroupInfo.StalenessInfo.TimeStamp = &staleTimeStamp
 			podGroupInfo.StalenessInfo.Stale = true
@@ -146,8 +148,8 @@ func (podGroupInfo *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	if pg.Annotations[commonconstants.LastStartTimeStamp] != "" {
 		startTime, err := time.Parse(time.RFC3339, pg.Annotations[commonconstants.LastStartTimeStamp])
 		if err != nil {
-			log.InfraLogger.V(7).Warnf("Failed to parse start timestamp for podgroup <%s/%s> err: %v",
-				podGroupInfo.Namespace, podGroupInfo.Name, err)
+			log.InfraLogger.V(7).Warnf("Failed to parse start timestamp for podgroup <%s> err: %v",
+				podGroupInfo.NamespacedName, err)
 		} else {
 			podGroupInfo.LastStartTimestamp = &startTime
 		}
@@ -250,8 +252,8 @@ func (podGroupInfo *PodGroupInfo) GetActivelyRunningTasksCount() int32 {
 func (podGroupInfo *PodGroupInfo) DeleteTaskInfo(ti *pod_info.PodInfo) error {
 	task, found := podGroupInfo.PodInfos[ti.UID]
 	if !found {
-		return fmt.Errorf("failed to find task <%v/%v> in job <%v/%v>",
-			ti.Namespace, ti.Name, podGroupInfo.Namespace, podGroupInfo.Name)
+		return fmt.Errorf("failed to find task <%v/%v> in job <%v>",
+			ti.Namespace, ti.Name, podGroupInfo.NamespacedName)
 	}
 
 	if pod_status.AllocatedStatus(task.Status) {
@@ -340,6 +342,10 @@ func (podGroupInfo *PodGroupInfo) GetTasksActiveAllocatedReqResource() *resource
 func (podGroupInfo *PodGroupInfo) IsReadyForScheduling() bool {
 	validTasks := podGroupInfo.GetNumAliveTasks() - podGroupInfo.GetNumGatedTasks()
 	return int32(validTasks) >= podGroupInfo.MinAvailable
+}
+
+func (podGroupInfo *PodGroupInfo) IsElastic() bool {
+	return podGroupInfo.MinAvailable < int32(len(podGroupInfo.PodInfos))
 }
 
 func (podGroupInfo *PodGroupInfo) IsPodGroupStale() bool {

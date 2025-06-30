@@ -1,52 +1,7 @@
 # Copyright 2025 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
 
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: post-install-hook
-  labels:
-    app: post-install-hook
-  annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-weight: "0"
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
-spec:
-  template:
-    spec:
-      serviceAccountName: webhookmanager
-      restartPolicy: Never
-      containers:
-        - name: post-install-hook
-          image: "{{ .Values.global.registry }}/{{ .Values.webhookmanager.image.name }}:{{ .Chart.Version }}"
-          imagePullPolicy: {{ .Values.webhookmanager.image.pullPolicy }}
-          {{- if .Values.webhookmanager.resources }}
-          resources:
-            {{- toYaml .Values.webhookmanager.resources | nindent 12 }}
-          {{- end }}
-          {{- if .Values.global.securityContext }}
-          securityContext:
-            {{- toYaml .Values.global.securityContext | nindent 12 }}
-          {{- end }}
-          args:
-            - --namespace={{ .Release.Namespace }}
-            - --patch-webhooks
-            - --secret-name={{ .Values.binder.certSecretName }}
-            - --validating-webhook-name=kai-binder
-            - --mutating-webhook-name=kai-binder
-      {{- if .Values.global.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
-      {{- end }}
-      {{- if .Values.global.nodeSelector }}
-      nodeSelector:
-        {{- toYaml .Values.global.nodeSelector | nindent 8 }}
-      {{- end }}
-      {{- if .Values.global.affinity }}
-      affinity:
-        {{- toYaml .Values.global.affinity | nindent 8 }}
-      {{- end }}
-      {{- if .Values.global.tolerations }}
-      tolerations:
-        {{- toYaml .Values.global.tolerations | nindent 8 }}
-      {{- end }}
+{{ include "kai-scheduler.webhookJob" (dict "jobName" "binder-webhook-job" "secretName" .Values.binder.certSecretName "validatingWebhookName" "kai-binder" "mutatingWebhookName" "kai-binder" "weight" "0" "Values" .Values "Chart" .Chart "Release" .Release) }}
+
+---
+{{ include "kai-scheduler.webhookJob" (dict "jobName" "queuecontroller-webhook-job" "secretName" .Values.queuecontroller.certSecretName "validatingWebhookName" "kai-queuecontroller" "weight" "1" "Values" .Values "Chart" .Chart "Release" .Release) }}
