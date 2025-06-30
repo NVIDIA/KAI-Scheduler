@@ -23,6 +23,7 @@ require (
 	github.com/run-ai/kwok-operator v0.0.0-20240926063032-05b6364bc7c7
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
+	github.com/xhit/go-str2duration/v2 v2.1.0
 	github.com/xyproto/randomstring v1.2.0
 	go.uber.org/mock v0.5.0
 	go.uber.org/multierr v1.11.0

@@ -333,4 +333,51 @@ var _ = Describe("MinRuntime Plugin", func() {
 			})
 		})
 	})
+
+	Describe("parseMinRuntime", func() {
+		It("Sanity - parse passes", func() {
+			// Test various valid min runtime strings
+			validDurations := []string{
+				"5s", "10s", "10m5s", "1m", "1.5s", "2m30s", "1h", "1h30m", "2h45m15s", "2d4h30m", "5w4d12h",
+			}
+
+			args := map[string]string{}
+
+			for _, durationStr := range validDurations {
+				args[defaultReclaimMinRuntimeConfig] = durationStr
+				duration := parseMinRuntime(args, defaultReclaimMinRuntimeConfig)
+				Expect(duration).ToNot(BeZero(), fmt.Sprintf("Expected non-zero duration for %s", durationStr))
+			}
+		})
+
+		It("Invalid durations should return zero", func() {
+			// Test various invalid min runtime strings
+			invalidDurations := []string{
+				"5", "1h2", "2h45m15", "abc", "1h-30m", "dfdsfdfdf",
+			}
+
+			args := map[string]string{}
+
+			for _, durationStr := range invalidDurations {
+				args[defaultPreemptMinRuntimeConfig] = durationStr
+				duration := parseMinRuntime(args, defaultPreemptMinRuntimeConfig)
+				Expect(duration).To(BeZero(), fmt.Sprintf("Expected zero duration for invalid %s", durationStr))
+			}
+		})
+
+		It("Invalid negative durations", func() {
+			// Test negative durations
+			negativeDurations := []string{
+				"-5s", "-10m", "-1h", "-2d", "-3w",
+			}
+
+			args := map[string]string{}
+
+			for _, durationStr := range negativeDurations {
+				args[defaultReclaimMinRuntimeConfig] = durationStr
+				duration := parseMinRuntime(args, defaultReclaimMinRuntimeConfig)
+				Expect(duration).To(BeZero(), fmt.Sprintf("Expected zero duration for negative %s", durationStr))
+			}
+		})
+	})
 })
