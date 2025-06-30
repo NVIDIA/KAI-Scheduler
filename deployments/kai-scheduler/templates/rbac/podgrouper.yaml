@@ -122,6 +122,24 @@ rules:
   - patch
   - update
 - apiGroups:
+  - grove.io
+  resources:
+  - podcliques
+  - podgangsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - grove.io
+  resources:
+  - podcliques/finalizers
+  - podgangsets/finalizers
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
   - kubeflow.org
   resources:
   - jaxjobs
@@ -219,6 +237,22 @@ rules:
   - run.ai
   resources:
   - runaijobs/finalizers
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
+  - scheduler.grove.io
+  resources:
+  - podgangs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - scheduler.grove.io
+  resources:
+  - podgangs/finalizers
   verbs:
   - create
   - patch
