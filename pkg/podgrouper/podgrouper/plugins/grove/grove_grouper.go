@@ -77,7 +77,7 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 
 	priorityClassName, found, err := unstructured.NestedString(podGang.Object, "spec", "priorityClassName")
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get spec.priorityClassName from PodGang %s/%s : %w",
+		return nil, fmt.Errorf("failed to get spec.priorityClassName from PodGang %s/%s : %w",
 			pod.Namespace, podGangName, err)
 	}
 	if found {
