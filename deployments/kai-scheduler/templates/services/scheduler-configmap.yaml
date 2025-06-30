@@ -27,6 +27,7 @@ data:
               cpu: {{ .Values.scheduler.placementStrategy }}
               gpu: {{ .Values.scheduler.placementStrategy }}
           - name: minruntime
+          - name: topology
 kind: ConfigMap
 metadata:
   labels:

@@ -39,6 +39,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/resourcetype"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/taskorder"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/topology"
 )
 
 func InitDefaultPlugins() {
@@ -58,6 +59,7 @@ func InitDefaultPlugins() {
 	framework.RegisterPluginBuilder("ray", ray.New)
 	framework.RegisterPluginBuilder("taskorder", taskorder.New)
 	framework.RegisterPluginBuilder("dynamicresources", dynamicresources.New)
+	framework.RegisterPluginBuilder("topology", topology.New)
 
 	// Plugins for Queues
 	framework.RegisterPluginBuilder("proportion", proportion.New)

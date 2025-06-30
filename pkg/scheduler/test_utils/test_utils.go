@@ -31,6 +31,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/dra_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
+	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 var SchedulerVerbosity = flag.String("vv", "", "Scheduler's verbosity")
@@ -48,6 +49,7 @@ type TestTopologyBasic struct {
 	Mocks                  *TestMock
 
 	dra_fake.TestDRAObjects
+	Topologies []*kueuev1alpha1.Topology
 }
 
 type TestMock struct {
