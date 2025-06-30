@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	podGangNameKey = "grove.io/podgang"
+	labelKeyPodGangName = "grove.io/podgang"
 )
 
 type GroveGrouper struct {
@@ -47,20 +47,16 @@ func (gg *GroveGrouper) Name() string {
 func (gg *GroveGrouper) GetPodGroupMetadata(
 	_ *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {
-	if pod.Labels == nil {
-		return nil, fmt.Errorf("Labels map not found in pod %s/%s", pod.Namespace, pod.Name)
-	}
-
-	podGangName, ok := pod.Labels[podGangNameKey]
+	podGangName, ok := pod.Labels[labelKeyPodGangName]
 	if !ok {
 		return nil, fmt.Errorf("Label for podgang name (key: %s) not found in pod %s/%s",
-			podGangNameKey, pod.Namespace, pod.Name)
+			labelKeyPodGangName, pod.Namespace, pod.Name)
 	}
 
 	podGang := &unstructured.Unstructured{}
 	podGang.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "scheduler.grove.io",
-		Kind:    "podgang",
+		Kind:    "PodGang",
 		Version: "v1alpha1",
 	})
 
@@ -69,17 +65,20 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 		Name:      podGangName,
 	}, podGang)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get PodGang %s/%s : %w",
+			pod.Namespace, podGangName, err)
 	}
 
 	metadata, err := gg.DefaultGrouper.GetPodGroupMetadata(podGang, pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get DefaultGrouper metadata for PodGang %s/%s : %w",
+			pod.Namespace, podGangName, err)
 	}
 
 	priorityClassName, found, err := unstructured.NestedString(podGang.Object, "spec", "priorityClassName")
 	if err != nil {
-		return nil, err
+		return nil, nil, fmt.Errorf("failed to get spec.priorityClassName from PodGang %s/%s : %w",
+			pod.Namespace, podGangName, err)
 	}
 	if found {
 		metadata.PriorityClassName = priorityClassName
@@ -88,26 +87,32 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 	var minAvailable int32
 	pgSlice, found, err := unstructured.NestedSlice(podGang.Object, "spec", "podgroups")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get spec.podgroups from PodGang %s/%s : %w",
+			pod.Namespace, podGangName, err)
 	}
-	for _, v := range pgSlice {
+	for idx, v := range pgSlice {
 		pgr, ok := v.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("invalid podgang structure")
+			return nil, fmt.Errorf("invalid structure of spec.podgroup[%v] in PodGang %s/%s",
+				idx, pod.Namespace, podGangName)
 		}
 		podSlice, found, err := unstructured.NestedSlice(pgr, "podReferences")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get podReferences from spec.podgroup[%v] of PodGang %s/%s : %w",
+				idx, pod.Namespace, podGangName, err)
 		}
 		if !found {
-			return nil, fmt.Errorf("unexpected podgroup structure")
+			return nil, fmt.Errorf("missing podReferences in spec.podgroup[%v] of PodGang %s/%s",
+				idx, pod.Namespace, podGangName)
 		}
 		minReplicas, found, err := unstructured.NestedInt64(pgr, "minReplicas")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get minReplicas from spec.podgroup[%v] of PodGang %s/%s : %w",
+				idx, pod.Namespace, podGangName, err)
 		}
 		if found && int(minReplicas) != len(podSlice) {
-			return nil, fmt.Errorf("Unsupported minReplicas: expected: %v, found: %v", len(podSlice), minReplicas)
+			return nil, fmt.Errorf("Unsupported minReplicas in spec.podgroup[%v] of PodGang %s/%s : expected: %v, found: %v",
+				idx, pod.Namespace, podGangName, len(podSlice), minReplicas)
 		}
 		minAvailable += int32(len(podSlice))
 	}
