@@ -65,7 +65,7 @@ func Run() error {
 	cacheOptions := cache.Options{}
 	cacheOptions.ByObject = map[client.Object]cache.ByObject{
 		&v1.Pod{}:                     {Field: schedulerSelector},
-		&v1.Node{}:                    {}, // TODO: filter by strict/non-strict runai nodes
+		&v1.Node{}:                    {},
 		&schedulingv1.PriorityClass{}: {},
 		&v2alpha2.PodGroup{}:          {},
 	}

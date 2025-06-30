@@ -249,7 +249,7 @@ var _ = Describe("K8S Native object integrations", Ordered, func() {
 })
 
 func countSharedConfigmaps(ctx context.Context, kubeClient client.Client, namespace string) int {
-	shardConfigMapNamePart := "runai-sh-gpu"
+	shardConfigMapNamePart := "shared-gpu"
 
 	configMapList := &v1.ConfigMapList{}
 	Expect(kubeClient.List(ctx, configMapList, client.InNamespace(namespace))).To(Succeed())
