@@ -107,7 +107,7 @@ func (s *JobSolver) solvePartialJob(ssn *framework.Session, state *solvingState,
 		scenarioSolver := newByPodSolver(feasibleNodeMap, s.solutionValidator, ssn.AllowConsolidatingReclaim(),
 			s.actionType)
 
-		log.InfraLogger.V(5).Infof("Trying to solve scenario: %s", scenarioToSolve.String())
+		log.InfraLogger.V(5).Infof("Trying to solve scenario: %s", scenarioToSolve)
 		metrics.IncScenarioSimulatedByAction()
 
 		result := scenarioSolver.solve(ssn, scenarioToSolve)
