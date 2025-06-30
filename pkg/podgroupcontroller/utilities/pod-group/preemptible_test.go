@@ -41,15 +41,13 @@ func TestIsPreemptibleJob(t *testing.T) {
 				[]client.Object{
 					&schedulingv1.PriorityClass{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "c1",
-							Namespace: "n1",
+							Name: "c1",
 						},
 						Value: 75,
 					},
 					&schedulingv1.PriorityClass{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "c2",
-							Namespace: "n1",
+							Name: "c2",
 						},
 						Value: 125,
 					},
@@ -72,15 +70,13 @@ func TestIsPreemptibleJob(t *testing.T) {
 				[]client.Object{
 					&schedulingv1.PriorityClass{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "c1",
-							Namespace: "n1",
+							Name: "c1",
 						},
 						Value: 75,
 					},
 					&schedulingv1.PriorityClass{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "c2",
-							Namespace: "n1",
+							Name: "c2",
 						},
 						Value: 125,
 					},
@@ -103,8 +99,7 @@ func TestIsPreemptibleJob(t *testing.T) {
 				[]client.Object{
 					&schedulingv1.PriorityClass{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "c2",
-							Namespace: "n1",
+							Name: "c3",
 						},
 						Value: 125,
 					},
@@ -127,8 +122,7 @@ func TestIsPreemptibleJob(t *testing.T) {
 				[]client.Object{
 					&schedulingv1.PriorityClass{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "c3",
-							Namespace: "n1",
+							Name: "c3",
 						},
 						Value: 83,
 					},
@@ -151,8 +145,7 @@ func TestIsPreemptibleJob(t *testing.T) {
 				[]client.Object{
 					&schedulingv1.PriorityClass{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "c3",
-							Namespace: "n1",
+							Name: "c3",
 						},
 						Value: 200,
 					},

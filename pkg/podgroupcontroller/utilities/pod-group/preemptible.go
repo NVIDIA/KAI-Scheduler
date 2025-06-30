@@ -42,7 +42,7 @@ func getPodGroupPriority(ctx context.Context, podGroup *v2alpha2.PodGroup, kubeC
 	priorityClass := schedulingv1.PriorityClass{}
 	err := kubeClient.Get(
 		ctx,
-		types.NamespacedName{Namespace: podGroup.Namespace, Name: podGroup.Spec.PriorityClassName},
+		types.NamespacedName{Name: podGroup.Spec.PriorityClassName},
 		&priorityClass,
 	)
 	if err != nil {
