@@ -196,5 +196,5 @@ func TestErrorPodGroupMinReplicas(t *testing.T) {
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podgang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
 	_, err := grouper.GetPodGroupMetadata(podgang, pod)
-	assert.EqualError(t, err, "Unsupported minReplicas in spec.podgroup[0] of PodGang test-ns/pgs2 : expected: 4, found: 2")
+	assert.EqualError(t, err, "unsupported minReplicas in spec.podgroup[0] of PodGang test-ns/pgs2 : expected: 4, found: 2")
 }
