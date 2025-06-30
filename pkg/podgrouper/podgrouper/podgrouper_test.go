@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	commonconsts "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper"
 )
@@ -185,7 +186,7 @@ func Test_Podgrouper_Full_Flow(t *testing.T) {
 			},
 			expectedMetadata: &podgroup.Metadata{
 				Annotations: map[string]string{
-					"run.ai/top-owner-metadata": `name: pod-job
+					commonconsts.TopOwnerMetadataKey: `name: pod-job
 uid: ""
 group: ""
 version: v1
@@ -270,7 +271,7 @@ kind: Pod
 			},
 			expectedMetadata: &podgroup.Metadata{
 				Annotations: map[string]string{
-					"run.ai/top-owner-metadata": `name: argo-pod
+					commonconsts.TopOwnerMetadataKey: `name: argo-pod
 uid: uid-pod
 group: ""
 version: v1
