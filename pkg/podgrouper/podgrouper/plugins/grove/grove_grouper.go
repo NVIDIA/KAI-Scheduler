@@ -49,7 +49,7 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 ) (*podgroup.Metadata, error) {
 	podGangName, ok := pod.Labels[labelKeyPodGangName]
 	if !ok {
-		return nil, fmt.Errorf("Label for podgang name (key: %s) not found in pod %s/%s",
+		return nil, fmt.Errorf("label for podgang name (key: %s) not found in pod %s/%s",
 			labelKeyPodGangName, pod.Namespace, pod.Name)
 	}
 
