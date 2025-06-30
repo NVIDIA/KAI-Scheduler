@@ -110,7 +110,7 @@ func (g *KnativeGrouper) getPodGroupFromRevision(revision *unstructured.Unstruct
 	return &podgroup.Metadata{
 		Annotations:       g.CalcPodGroupAnnotations(revision, pod),
 		Labels:            g.CalcPodGroupLabels(revision, pod),
-		PriorityClassName: constants.InferencePriorityClass,
+		PriorityClassName: g.CalcPodGroupPriorityClass(revision, pod, constants.InferencePriorityClass),
 		Queue:             g.CalcPodGroupQueue(revision, pod),
 		Namespace:         revision.GetNamespace(),
 		Name:              calcPodGroupName(revision),

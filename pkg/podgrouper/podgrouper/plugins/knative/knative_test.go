@@ -205,7 +205,7 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 		podGroups             []*v2alpha2.PodGroup
 		expectedError         bool
 		expectedPodGroupName  string
-		expextedPriorityClass *string // defaults to inference
+		expectedPriorityClass *string // defaults to inference
 		expectedMinAvailable  int32
 	}
 
@@ -575,6 +575,76 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 			expectedMinAvailable: 1,
 			expectedPodGroupName: "pg-pod-podUID",
 		},
+		{
+			name: "priority class name set in pod",
+			service: &knative.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serviceName,
+					Namespace: namespace,
+				},
+			},
+			revisions: []*knative.Revision{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "revision",
+						Namespace: namespace,
+						UID:       "revUID",
+					},
+				},
+			},
+			pods: []*v1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pod",
+						Namespace: namespace,
+						Labels: map[string]string{
+							knativeRevisionLabel:       "revision",
+							constants.PriorityLabelKey: "very-high",
+						},
+					},
+				},
+			},
+			expectedError:         false,
+			expectedPodGroupName:  "pg-revision-revUID",
+			expectedMinAvailable:  1,
+			expectedPriorityClass: ptr.To("very-high"),
+		},
+		{
+			name: "priority class name set in top owner",
+			service: &knative.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serviceName,
+					Namespace: namespace,
+				},
+			},
+			revisions: []*knative.Revision{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "revision",
+						Namespace: namespace,
+						UID:       "revUID",
+						Labels: map[string]string{
+							constants.PriorityLabelKey: "high",
+						},
+					},
+				},
+			},
+			pods: []*v1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pod",
+						Namespace: namespace,
+						Labels: map[string]string{
+							knativeRevisionLabel: "revision",
+						},
+					},
+				},
+			},
+			expectedError:         false,
+			expectedPodGroupName:  "pg-revision-revUID",
+			expectedMinAvailable:  1,
+			expectedPriorityClass: ptr.To("high"),
+		},
 	}
 
 	for _, test := range tests {
@@ -619,8 +689,8 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 				assert.Nil(t, err, "unexpected error")
 				assert.Equal(t, test.expectedPodGroupName, metadata.Name, "unexpected pod group name")
 				expectedPriorityClass := constants.InferencePriorityClass
-				if test.expextedPriorityClass != nil {
-					expectedPriorityClass = *test.expextedPriorityClass
+				if test.expectedPriorityClass != nil {
+					expectedPriorityClass = *test.expectedPriorityClass
 				}
 				assert.Equal(t, expectedPriorityClass, metadata.PriorityClassName, "unexpected priority class")
 				assert.Equal(t, test.expectedMinAvailable, metadata.MinAvailable, "unexpected min available")
