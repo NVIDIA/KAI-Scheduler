@@ -51,14 +51,14 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 		}
 
 		for _, nodeInfo := range ssn.Nodes {
-			t.addNodeDataDfsPath(topologyTree, singleTopology, nodeInfo)
+			t.addNodeDataToTopology(topologyTree, singleTopology, nodeInfo)
 		}
 
 		t.TopologyTrees[singleTopology.Name] = topologyTree
 	}
 }
 
-func (*topologyPlugin) addNodeDataDfsPath(topologyTree *TopologyInfo, singleTopology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
+func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, singleTopology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
 	var previousDomainInfo *TopologyDomainInfo
 	for levelIndex := len(singleTopology.Spec.Levels) - 1; levelIndex >= 0; levelIndex-- {
 		level := singleTopology.Spec.Levels[levelIndex]
@@ -85,20 +85,20 @@ func (*topologyPlugin) addNodeDataDfsPath(topologyTree *TopologyInfo, singleTopo
 }
 
 func (t *topologyPlugin) handleAllocate(ssn *framework.Session) func(event *framework.Event) {
-	return t.genericDfsEventHandler(ssn, func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo) {
+	return t.actTopologyChangesGivenpodEvent(ssn, func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo) {
 		domainInfo.AllocatedResources.AddResourceRequirements(podInfo.AcceptedResource)
 		domainInfo.AllocatedPods = domainInfo.AllocatedPods + 1
 	})
 }
 
 func (t *topologyPlugin) handleDeallocate(ssn *framework.Session) func(event *framework.Event) {
-	return t.genericDfsEventHandler(ssn, func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo) {
+	return t.actTopologyChangesGivenpodEvent(ssn, func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo) {
 		domainInfo.AllocatedResources.SubResourceRequirements(podInfo.AcceptedResource)
 		domainInfo.AllocatedPods = domainInfo.AllocatedPods - 1
 	})
 }
 
-func (t *topologyPlugin) genericDfsEventHandler(
+func (t *topologyPlugin) actTopologyChangesGivenpodEvent(
 	ssn *framework.Session,
 	action func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo),
 ) func(event *framework.Event) {
