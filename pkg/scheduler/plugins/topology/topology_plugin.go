@@ -59,7 +59,7 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 }
 
 func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, singleTopology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
-	var previousDomainInfo *TopologyDomainInfo
+	var nodeContainingChildDomain *TopologyDomainInfo
 	for levelIndex := len(singleTopology.Spec.Levels) - 1; levelIndex >= 0; levelIndex-- {
 		level := singleTopology.Spec.Levels[levelIndex]
 
@@ -76,32 +76,33 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, singleT
 		}
 		domainInfo.AddNode(nodeInfo)
 
-		if previousDomainInfo != nil {
-			previousDomainInfo.Parent = domainInfo
+		// Connect the child domain to the current domain. The current node gives us the link
+		if nodeContainingChildDomain != nil {
+			nodeContainingChildDomain.Parent = domainInfo
 		}
-		previousDomainInfo = domainInfo
+		nodeContainingChildDomain = domainInfo
 	}
-	previousDomainInfo.Parent = topologyTree.Root
+	nodeContainingChildDomain.Parent = topologyTree.Root
 	topologyTree.Root.AddNode(nodeInfo)
 }
 
 func (t *topologyPlugin) handleAllocate(ssn *framework.Session) func(event *framework.Event) {
-	return t.actTopologyChangesGivenpodEvent(ssn, func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo) {
+	return t.updateTopologyGivenPodEvent(ssn, func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo) {
 		domainInfo.AllocatedResources.AddResourceRequirements(podInfo.AcceptedResource)
 		domainInfo.AllocatedPods = domainInfo.AllocatedPods + 1
 	})
 }
 
 func (t *topologyPlugin) handleDeallocate(ssn *framework.Session) func(event *framework.Event) {
-	return t.actTopologyChangesGivenpodEvent(ssn, func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo) {
+	return t.updateTopologyGivenPodEvent(ssn, func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo) {
 		domainInfo.AllocatedResources.SubResourceRequirements(podInfo.AcceptedResource)
 		domainInfo.AllocatedPods = domainInfo.AllocatedPods - 1
 	})
 }
 
-func (t *topologyPlugin) actTopologyChangesGivenpodEvent(
+func (t *topologyPlugin) updateTopologyGivenPodEvent(
 	ssn *framework.Session,
-	action func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo),
+	domainUpdater func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo),
 ) func(event *framework.Event) {
 	return func(event *framework.Event) {
 		pod := event.Task.Pod
@@ -113,7 +114,7 @@ func (t *topologyPlugin) actTopologyChangesGivenpodEvent(
 			leafDomainId := calcLeafDomainId(topologyTree.TopologyResource, node.Labels)
 			domainInfo := topologyTree.Domains[leafDomainId]
 			for domainInfo != nil {
-				action(domainInfo, podInfo)
+				domainUpdater(domainInfo, podInfo)
 
 				if domainInfo.Nodes[nodeName] != nil {
 					break
