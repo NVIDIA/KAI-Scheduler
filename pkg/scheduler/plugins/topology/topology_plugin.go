@@ -82,6 +82,7 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, singleT
 		previousDomainInfo = domainInfo
 	}
 	previousDomainInfo.Parent = topologyTree.Root
+	topologyTree.Root.AddNode(nodeInfo)
 }
 
 func (t *topologyPlugin) handleAllocate(ssn *framework.Session) func(event *framework.Event) {
