@@ -8737,3 +8737,7 @@ This project includes components from kube-batch, which is licensed under the Ap
 Copyright (c) The Kubernetes Authors.
 This project includes components derived from kube-batch, originally developed by The Kubernetes Authors.
 
+This project includes components from kueue, which is licensed under the Apache License, Version 2.0.
+Copyright (c) The Kubernetes Authors.
+This project includes components derived from kueue, originally developed by The Kubernetes Authors.
+
