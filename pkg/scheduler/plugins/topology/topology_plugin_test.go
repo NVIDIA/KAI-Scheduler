@@ -169,7 +169,7 @@ func TestTopologyPlugin(t *testing.T) {
 			testNodes[2].Name: {
 				Node:        testNodes[2],
 				Allocatable: resource_info.ResourceFromResourceList(testNodes[2].Status.Allocatable),
-				Used:        resource_info.NewResource(1, 0, 3),
+				Used:        resource_info.NewResource(1000, 0, 3),
 			},
 		},
 	}
@@ -187,27 +187,37 @@ func TestTopologyPlugin(t *testing.T) {
 	assert.Equal(t, 1, testTopologyObj.Domains["test-block-1"].Depth)
 	assert.Equal(t, "CPU: 2 (cores), memory: 0 (GB), Gpus: 2",
 		testTopologyObj.Domains["test-block-1"].AvailableResources.String())
+	assert.Equal(t, "CPU: 1 (cores), memory: 0 (GB), Gpus: 1",
+		testTopologyObj.Domains["test-block-1"].AllocatedResources.String())
 
 	assert.Equal(t, "test-rack-1", testTopologyObj.Domains["test-block-1.test-rack-1"].Name)
 	assert.Equal(t, "test-block-1", testTopologyObj.Domains["test-block-1.test-rack-1"].Parent.Name)
 	assert.Equal(t, 2, testTopologyObj.Domains["test-block-1.test-rack-1"].Depth)
 	assert.Equal(t, "CPU: 1 (cores), memory: 0 (GB), Gpus: 1",
 		testTopologyObj.Domains["test-block-1.test-rack-1"].AvailableResources.String())
+	assert.Equal(t, "CPU: 0.5 (cores), memory: 0 (GB), Gpus: 1",
+		testTopologyObj.Domains["test-block-1.test-rack-1"].AllocatedResources.String())
 
 	assert.Equal(t, "test-rack-2", testTopologyObj.Domains["test-block-1.test-rack-2"].Name)
 	assert.Equal(t, "test-block-1", testTopologyObj.Domains["test-block-1.test-rack-2"].Parent.Name)
 	assert.Equal(t, 2, testTopologyObj.Domains["test-block-1.test-rack-2"].Depth)
 	assert.Equal(t, "CPU: 1 (cores), memory: 0 (GB), Gpus: 1",
 		testTopologyObj.Domains["test-block-1.test-rack-2"].AvailableResources.String())
+	assert.Equal(t, "CPU: 0.5 (cores), memory: 0 (GB), Gpus: 0",
+		testTopologyObj.Domains["test-block-1.test-rack-2"].AllocatedResources.String())
 
 	assert.Equal(t, "test-block-2", testTopologyObj.Domains["test-block-2"].Name)
 	assert.Equal(t, 1, testTopologyObj.Domains["test-block-2"].Depth)
 	assert.Equal(t, "CPU: 1 (cores), memory: 0 (GB), Gpus: 3",
 		testTopologyObj.Domains["test-block-2"].AvailableResources.String())
+	assert.Equal(t, "CPU: 1 (cores), memory: 0 (GB), Gpus: 3",
+		testTopologyObj.Domains["test-block-2"].AllocatedResources.String())
 
 	assert.Equal(t, "test-rack-1", testTopologyObj.Domains["test-block-2.test-rack-1"].Name)
 	assert.Equal(t, "test-block-2", testTopologyObj.Domains["test-block-2.test-rack-1"].Parent.Name)
 	assert.Equal(t, 2, testTopologyObj.Domains["test-block-2.test-rack-1"].Depth)
 	assert.Equal(t, "CPU: 1 (cores), memory: 0 (GB), Gpus: 3",
 		testTopologyObj.Domains["test-block-2.test-rack-1"].AvailableResources.String())
+	assert.Equal(t, "CPU: 1 (cores), memory: 0 (GB), Gpus: 3",
+		testTopologyObj.Domains["test-block-2.test-rack-1"].AllocatedResources.String())
 }
