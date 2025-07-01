@@ -18,8 +18,15 @@ go mod vendor
 SDK_HACK_DIR="$(cd "$(dirname "$(readlink "$0" || echo "$0")")"; pwd)"
 source ${SDK_HACK_DIR}/../vendor/k8s.io/code-generator/kube_codegen.sh
 kube::codegen::gen_client \
-  --boilerplate ${SDK_HACK_DIR}/boilerplate.go.txt --with-watch \
-  --output-dir ${SDK_HACK_DIR}/../pkg/apis/client --output-pkg github.com/NVIDIA/KAI-scheduler/pkg/apis/client \
+  --boilerplate ${SDK_HACK_DIR}/boilerplate.go.kb.txt \
+  --with-watch \
+  --output-dir ${SDK_HACK_DIR}/../pkg/apis/client \
+  --output-pkg github.com/NVIDIA/KAI-scheduler/pkg/apis/client \
   ${SDK_HACK_DIR}/../pkg/apis
 
 rm -f generate-dep.go && rm -r vendor && go mod tidy
+
+changed_files=$(git diff --name-only | grep v1alpha2)
+${SDK_HACK_DIR}/replace_headers.sh \
+  ${SDK_HACK_DIR}/boilerplate.go.txt \
+  ${changed_files}
