@@ -15,12 +15,16 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common/gpusharingconfigmap"
 )
 
+const (
+	visibleDevicesBC = "RUNAI-VISIBLE-DEVICES" // Deprecated, this value was replaced with NVIDIA_VISIBLE_DEVICES
+)
+
 func AddVisibleDevicesEnvVars(container *v1.Container, sharedGpuConfigMapName string) {
 	AddEnvVarToContainer(container, v1.EnvVar{
 		Name: NvidiaVisibleDevices,
 		ValueFrom: &v1.EnvVarSource{
 			ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-				Key: VisibleDevices,
+				Key: NvidiaVisibleDevices,
 				LocalObjectReference: v1.LocalObjectReference{
 					Name: sharedGpuConfigMapName,
 				},
@@ -59,7 +63,10 @@ func SetNvidiaVisibleDevices(
 	if nvidiaVisibleDevicesDefinedInSpec {
 		configMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
 		updateFunc = func(data map[string]string) error {
-			data[VisibleDevices] = visibleDevicesValue
+			if _, found := data[visibleDevicesBC]; found {
+					data[visibleDevicesBC] = visibleDevicesValue
+				}
+				data[NvidiaVisibleDevices] = visibleDevicesValue
 			return nil
 		}
 	} else {

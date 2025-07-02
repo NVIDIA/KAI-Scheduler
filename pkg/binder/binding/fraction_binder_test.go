@@ -216,7 +216,7 @@ var _ = Describe("FractionBinder", func() {
 				if err := fakeClient.Get(context.TODO(), client.ObjectKeyFromObject(configMap), configMap); err != nil {
 					Fail(fmt.Sprintf("Failed to read configmap: %v", err))
 				} else {
-					Expect(configMap.Data[common.VisibleDevices]).To(Equal(testData.gpuIndexByGroupIndex))
+					Expect(configMap.Data[common.NvidiaVisibleDevices]).To(Equal(testData.gpuIndexByGroupIndex))
 					Expect(configMap.Data[common.NumOfGpusEnvVar]).To(Equal("0.5"))
 				}
 			})
