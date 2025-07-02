@@ -18,6 +18,10 @@ import (
 const (
 	startupPolicyLeaderReady   = "LeaderReady"
 	startupPolicyLeaderCreated = "LeaderCreated"
+
+	// LWS annotation and label keys
+	lwsSizeAnnotation  = "leaderworkerset.sigs.k8s.io/size"
+	lwsGroupIndexLabel = "leaderworkerset.sigs.k8s.io/group-index"
 )
 
 type LwsGrouper struct {
@@ -66,8 +70,10 @@ func (lwsGrouper *LwsGrouper) GetPodGroupMetadata(
 		return nil, fmt.Errorf("unknown startupPolicy: %s", startupPolicy)
 	}
 
-	if groupIndex, ok := pod.Labels["leaderworkerset.x-k8s.io/group-index"]; ok {
-		podGroupMetadata.Name = fmt.Sprintf("%s-group-%s", podGroupMetadata.Name, groupIndex)
+	if groupIndexStr, ok := pod.Labels[lwsGroupIndexLabel]; ok {
+		if groupIndex, err := strconv.Atoi(groupIndexStr); err == nil {
+			podGroupMetadata.Name = fmt.Sprintf("%s-group-%d", podGroupMetadata.Name, groupIndex)
+		}
 	}
 
 	podGroupMetadata.Owner = metav1.OwnerReference{
@@ -82,7 +88,7 @@ func (lwsGrouper *LwsGrouper) GetPodGroupMetadata(
 
 func getLwsJobReplicas(lwsJob *unstructured.Unstructured) (int32, error) {
 	lwsJobReplicas, found, err :=
-		unstructured.NestedInt64(lwsJob.Object, "spec", "leaderWorkerTemplate", "spec")
+		unstructured.NestedInt64(lwsJob.Object, "spec", "replicas")
 	if !found || err != nil {
 		return 0, fmt.Errorf("error retrieving LWS replicas count from spec: %w", err)
 	}
@@ -91,14 +97,14 @@ func getLwsJobReplicas(lwsJob *unstructured.Unstructured) (int32, error) {
 
 func handleLeaderReadyPolicy(pod *v1.Pod, podGroupMetadata *podgroup.Metadata, fallbackSize int32) error {
 	groupSize := fallbackSize
-	if sizeStr, ok := pod.Annotations["leaderworkerset.sigs.k8s.io/size"]; ok {
+	if sizeStr, ok := pod.Annotations[lwsSizeAnnotation]; ok {
 		if parsed, err := strconv.Atoi(sizeStr); err == nil {
 			groupSize = int32(parsed)
 		}
 	}
 
 	// Leader has no group-index label
-	_, hasGroupIndex := pod.Labels["leaderworkerset.sigs.k8s.io/group-index"]
+	_, hasGroupIndex := pod.Labels[lwsGroupIndexLabel]
 	isLeader := !hasGroupIndex
 	isScheduled := pod.Spec.NodeName != ""
 
