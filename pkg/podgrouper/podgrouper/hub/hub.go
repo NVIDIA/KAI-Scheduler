@@ -12,6 +12,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/deployment"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/grouper"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/grove"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/job"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/knative"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow"
@@ -87,6 +88,8 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 
 	sparkGrouper := spark.NewSparkGrouper(defaultGrouper)
 	podJobGrouper := podjob.NewPodJobGrouper(defaultGrouper, sparkGrouper)
+
+	groveGrouper := grove.NewGroveGrouper(kubeClient, defaultGrouper)
 
 	table := map[metav1.GroupVersionKind]grouper.Grouper{
 		{
@@ -244,6 +247,11 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Version: "v1alpha1",
 			Kind:    "LeaderWorkset",
 		}: leader_worker_set.NewLwsGrouper(defaultGrouper),
+    {
+			Group:   "grove.io",
+			Version: "v1alpha1",
+			Kind:    "PodGangSet",
+		}: groveGrouper,
 	}
 
 	skipTopOwnerGrouper := skiptopowner.NewSkipTopOwnerGrouper(kubeClient, defaultGrouper, table)

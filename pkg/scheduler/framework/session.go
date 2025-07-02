@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
@@ -61,6 +77,7 @@ type Session struct {
 	IsTaskAllocationOnNodeOverCapacityFns []api.IsTaskAllocationOverCapacityFn
 	PrePredicateFns                       []api.PrePredicateFn
 	PredicateFns                          []api.PredicateFn
+	BindRequestMutateFns                  []api.BindRequestMutateFn
 
 	Config          *conf.SchedulerConfiguration
 	plugins         map[string]Plugin
@@ -88,7 +105,8 @@ func (ssn *Session) GetK8sStateForPod(uid types.UID) k8s_internal.SessionState {
 }
 
 func (ssn *Session) BindPod(pod *pod_info.PodInfo) error {
-	if err := ssn.Cache.Bind(pod, pod.NodeName); err != nil {
+	bindRequestAnnotations := ssn.MutateBindRequestAnnotations(pod, pod.NodeName)
+	if err := ssn.Cache.Bind(pod, pod.NodeName, bindRequestAnnotations); err != nil {
 		return err
 	}
 

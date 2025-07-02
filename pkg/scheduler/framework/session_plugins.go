@@ -1,9 +1,26 @@
+/*
+Copyright 2018 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
 package framework
 
 import (
+	"maps"
 	"net/http"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
@@ -76,6 +93,10 @@ func (ssn *Session) AddPreemptScenarioValidatorFn(rf api.ScenarioValidatorFn) {
 
 func (ssn *Session) AddReclaimVictimFilterFn(rf api.VictimFilterFn) {
 	ssn.ReclaimVictimFilterFns = append(ssn.ReclaimVictimFilterFns, rf)
+}
+
+func (ssn *Session) AddBindRequestMutateFn(fn api.BindRequestMutateFn) {
+	ssn.BindRequestMutateFns = append(ssn.BindRequestMutateFns, fn)
 }
 
 func (ssn *Session) CanReclaimResources(reclaimer *podgroup_info.PodGroupInfo) bool {
@@ -340,4 +361,12 @@ func (ssn *Session) NodeOrderFn(task *pod_info.PodInfo, node *node_info.NodeInfo
 
 func (ssn *Session) IsRestrictNodeSchedulingEnabled() bool {
 	return ssn.SchedulerParams.RestrictSchedulingNodes
+}
+
+func (ssn *Session) MutateBindRequestAnnotations(pod *pod_info.PodInfo, nodeName string) map[string]string {
+	annotations := map[string]string{}
+	for _, fn := range ssn.BindRequestMutateFns {
+		maps.Copy(fn(pod, nodeName), annotations)
+	}
+	return annotations
 }
