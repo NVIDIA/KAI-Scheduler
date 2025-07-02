@@ -13,7 +13,7 @@ const (
 
 	// Pod Groups
 	PodGrouperWarning   = "PodGrouperWarning"
-	TopOwnerMetadataKey = "run.ai/top-owner-metadata"
+	TopOwnerMetadataKey = "kai.scheduler/top-owner-metadata"
 
 	// Annotations
 	PodGroupAnnotationForPod = "pod-group-name"
