@@ -33,7 +33,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/controllers"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing"
-	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/k8s-plugins"
+	k8s_plugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/k8s-plugins"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -66,9 +66,12 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "..", "deployments", "kai-scheduler", "crds")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "..", "deployments", "crds", "internal")},
 		ErrorIfCRDPathMissing: true,
 	}
+
+	// Add the kueue crd to the test environment
+	testEnv.CRDDirectoryPaths = append(testEnv.CRDDirectoryPaths, filepath.Join("..", "..", "..", "..", "deployments", "crds", "external"))
 
 	var err error
 	// cfg is defined in this file globally.

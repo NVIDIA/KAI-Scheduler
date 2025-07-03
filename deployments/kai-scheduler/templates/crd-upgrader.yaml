@@ -1,0 +1,21 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: crd-upgrader
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "2"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    spec:
+      serviceAccountName: kai-scheduler-crd-manager
+      containers:
+      - name: upgrader
+        image: "{{ .Values.global.registry }}/{{ .Values.crdupgrader.image.name }}:{{ .Chart.Version }}"
+        imagePullPolicy: {{ .Values.crdupgrader.image.pullPolicy }}
+      restartPolicy: OnFailure
