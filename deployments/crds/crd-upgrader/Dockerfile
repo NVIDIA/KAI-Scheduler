@@ -2,6 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal
+ARG TARGETARCH
+ENV TARGETARCH=$TARGETARCH
+RUN curl -o kubectl -L "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$TARGETARCH/kubectl" \
+&& chmod +x kubectl && mv kubectl /usr/bin/kubectl
+
 
 COPY deployments/crds/internal /internal-crds
 COPY deployments/crds/external /external-crds
