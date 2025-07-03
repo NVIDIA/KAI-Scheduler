@@ -117,11 +117,9 @@ func attemptToConsolidatePreemptor(
 
 func allPodsReallocated(scenario api.ScenarioInfo) bool {
 	for _, victim := range scenario.GetVictims() {
-		for _, job := range victim.RepresentativeJobs {
-			for _, task := range job.PodInfos {
-				if task.Status == pod_status.Releasing {
-					return false
-				}
+		for _, task := range victim.Tasks {
+			if task.Status == pod_status.Releasing {
+				return false
 			}
 		}
 	}
