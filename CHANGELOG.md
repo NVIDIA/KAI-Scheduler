@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.6.5] - 2025-07-03
+
+### Fixes
+- Fixed cases where reclaim validation operated on outdated info, allowing invalid reclaim scenarios
+
 ## [v0.6.4] - 2025-06-27
 
 ### Fixes
