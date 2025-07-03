@@ -138,16 +138,9 @@ func (pp *proportionPlugin) reclaimableFn(
 }
 
 func (pp *proportionPlugin) getVictimResources(victim *api.VictimInfo) []*resource_info.Resource {
-	var victimTasks []*pod_info.PodInfo
-	for _, job := range victim.RepresentativeJobs {
-		for _, task := range job.PodInfos {
-			victimTasks = append(victimTasks, task)
-		}
-	}
-
 	var victimResources []*resource_info.Resource
-	if len(victimTasks) > int(victim.Job.MinAvailable) {
-		elasticTasks := victimTasks[victim.Job.MinAvailable:]
+	if len(victim.Tasks) > int(victim.Job.MinAvailable) {
+		elasticTasks := victim.Tasks[victim.Job.MinAvailable:]
 		for _, task := range elasticTasks {
 			resources := getResources(pp.allowConsolidatingReclaim, task)
 			if resources == nil {
@@ -157,7 +150,7 @@ func (pp *proportionPlugin) getVictimResources(victim *api.VictimInfo) []*resour
 		}
 	}
 
-	resources := getResources(pp.allowConsolidatingReclaim, victimTasks[:victim.Job.MinAvailable]...)
+	resources := getResources(pp.allowConsolidatingReclaim, victim.Tasks[:victim.Job.MinAvailable]...)
 	if resources != nil {
 		victimResources = append(victimResources, resources)
 	}
