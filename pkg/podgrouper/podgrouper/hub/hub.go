@@ -22,6 +22,7 @@ import (
 	pytorchplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/pytorch"
 	tensorflowlugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/tensorflow"
 	xgboostplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/xgboost"
+	leader_worker_set "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/leaderworkerset"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/podjob"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/ray"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/runaijob"
@@ -242,6 +243,11 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Kind:    "SPOTRequest",
 		}: spotrequest.NewSpotRequestGrouper(defaultGrouper),
 		{
+			Group:   "lws.k8s.io",
+			Version: "v1alpha1",
+			Kind:    "LeaderWorkset",
+		}: leader_worker_set.NewLwsGrouper(defaultGrouper),
+    {
 			Group:   "grove.io",
 			Version: "v1alpha1",
 			Kind:    "PodGangSet",
