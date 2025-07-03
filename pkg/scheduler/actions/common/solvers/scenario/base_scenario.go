@@ -180,5 +180,11 @@ func (s *BaseScenario) GetPreemptor() *podgroup_info.PodGroupInfo {
 }
 
 func (s *BaseScenario) GetVictims() map[common_info.PodGroupID]*api.VictimInfo {
+	for _, victim := range s.victims {
+		for i, task := range victim.Tasks {
+			ogTask := s.getJobForTask(task).PodInfos[task.UID]
+			victim.Tasks[i] = ogTask
+		}
+	}
 	return s.victims
 }
