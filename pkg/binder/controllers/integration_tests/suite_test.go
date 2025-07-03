@@ -66,12 +66,12 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "deployments", "crds", "internal"),
-			filepath.Join("..", "..", "deployments", "crds", "external"),
-		},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "..", "deployments", "crds", "internal")},
 		ErrorIfCRDPathMissing: true,
 	}
+
+	// Add the kueue crd to the test environment
+	testEnv.CRDDirectoryPaths = append(testEnv.CRDDirectoryPaths, filepath.Join("..", "..", "..", "..", "deployments", "crds", "external"))
 
 	var err error
 	// cfg is defined in this file globally.
