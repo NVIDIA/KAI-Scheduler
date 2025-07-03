@@ -86,14 +86,7 @@ var happyFlowObjects = []runtime.Object{
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
 				{
-					VolumeMounts: []v1.VolumeMount{
-						{
-							MountPath: "/etc/ld.so.preload",
-							Name:      "my-configmap-vol",
-							SubPath:   "ld.so.preload-key",
-							ReadOnly:  true,
-						},
-					},
+					Name: "my-container",
 				},
 			},
 			Volumes: []v1.Volume{

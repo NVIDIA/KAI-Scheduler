@@ -13,32 +13,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const (
-	ldPreloadVolumeMountSubPath = "ld.so.preload-key"
-)
-
 func GetConfigMapName(pod *v1.Pod, container *v1.Container) (string, error) {
 	if mapName := getConfigMapNameByEnvVar(container); mapName != "" {
 		return mapName, nil
 	}
-	if mapName := getConfigMapByMounts(pod, container); mapName != "" {
-		return mapName, nil
-	}
 	return "", fmt.Errorf("failed to find configmap for pod %s/%s, container %s",
 		pod.Namespace, pod.Name, container.Name)
-}
-
-func getConfigMapByMounts(pod *v1.Pod, container *v1.Container) string {
-	for _, volumeMount := range container.VolumeMounts {
-		if volumeMount.SubPath == ldPreloadVolumeMountSubPath && volumeMount.Name != "" {
-			for _, volume := range pod.Spec.Volumes {
-				if volume.Name == volumeMount.Name && volume.ConfigMap != nil {
-					return volume.ConfigMap.Name
-				}
-			}
-		}
-	}
-	return ""
 }
 
 func getConfigMapNameByEnvVar(container *v1.Container) string {
