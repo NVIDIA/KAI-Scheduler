@@ -366,7 +366,7 @@ func (ssn *Session) IsRestrictNodeSchedulingEnabled() bool {
 func (ssn *Session) MutateBindRequestAnnotations(pod *pod_info.PodInfo, nodeName string) map[string]string {
 	annotations := map[string]string{}
 	for _, fn := range ssn.BindRequestMutateFns {
-		maps.Copy(fn(pod, nodeName), annotations)
+		maps.Copy(annotations, fn(pod, nodeName))
 	}
 	return annotations
 }
