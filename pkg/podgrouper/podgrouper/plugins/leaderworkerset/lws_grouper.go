@@ -20,8 +20,9 @@ const (
 	startupPolicyLeaderCreated = "LeaderCreated"
 
 	// LWS annotation and label keys
-	lwsSizeAnnotation  = "leaderworkerset.sigs.k8s.io/size"
-	lwsGroupIndexLabel = "leaderworkerset.sigs.k8s.io/group-index"
+	lwsSizeAnnotation   = "leaderworkerset.sigs.k8s.io/size"
+	lwsGroupIndexLabel  = "leaderworkerset.sigs.k8s.io/group-index"
+	lwsWorkerIndexLabel = "leaderworkerset.sigs.k8s.io/worker-index"
 )
 
 type LwsGrouper struct {
@@ -49,23 +50,24 @@ func (lwsGrouper *LwsGrouper) GetPodGroupMetadata(
 		return nil, err
 	}
 
-	replicas, err := getLwsJobReplicas(lwsJob)
+	groupSize, err := lwsGrouper.getLwsGroupSize(lwsJob)
 	if err != nil {
 		return nil, err
 	}
 
-	startupPolicy := startupPolicyLeaderCreated
-	if policy, found, err := unstructured.NestedString(lwsJob.Object, "spec", "startupPolicy"); err == nil && found {
-		startupPolicy = policy
+	startupPolicy, err := lwsGrouper.getStartupPolicy(lwsJob)
+	if err != nil {
+		return nil, err
 	}
 
+	// Initialize podGroupMetadata with the group size
 	switch startupPolicy {
 	case startupPolicyLeaderReady:
-		if err := handleLeaderReadyPolicy(pod, podGroupMetadata, replicas); err != nil {
+		if err := handleLeaderReadyPolicy(pod, podGroupMetadata, groupSize); err != nil {
 			return nil, fmt.Errorf("error handling leader ready policy: %w", err)
 		}
 	case startupPolicyLeaderCreated:
-		podGroupMetadata.MinAvailable = replicas
+		podGroupMetadata.MinAvailable = groupSize
 	default:
 		return nil, fmt.Errorf("unknown startupPolicy: %s", startupPolicy)
 	}
@@ -76,41 +78,57 @@ func (lwsGrouper *LwsGrouper) GetPodGroupMetadata(
 		}
 	}
 
-	podGroupMetadata.Owner = metav1.OwnerReference{
-		APIVersion: lwsJob.GetAPIVersion(),
-		Kind:       lwsJob.GetKind(),
-		Name:       lwsJob.GetName(),
-		UID:        lwsJob.GetUID(),
-	}
-
 	return podGroupMetadata, nil
 }
 
-func getLwsJobReplicas(lwsJob *unstructured.Unstructured) (int32, error) {
-	lwsJobReplicas, found, err :=
-		unstructured.NestedInt64(lwsJob.Object, "spec", "replicas")
-	if !found || err != nil {
-		return 0, fmt.Errorf("error retrieving LWS replicas count from spec: %w", err)
+func (lwsGrouper *LwsGrouper) getLwsGroupSize(lwsJob *unstructured.Unstructured) (int32, error) {
+	size, found, err := unstructured.NestedInt64(lwsJob.Object, "spec", "leaderWorkerTemplate", "size")
+	if err != nil {
+		return 0, fmt.Errorf("failed to get leaderWorkerTemplate.size from LWS %s/%s with error: %w",
+			lwsJob.GetNamespace(), lwsJob.GetName(), err)
 	}
-	return int32(lwsJobReplicas), nil
+	if !found {
+		return 0, fmt.Errorf("leaderWorkerTemplate.size not found in LWS %s/%s", lwsJob.GetNamespace(), lwsJob.GetName())
+	}
+	if size <= 0 {
+		return 0, fmt.Errorf("invalid leaderWorkerTemplate.size %d in LWS %s/%s", size, lwsJob.GetNamespace(), lwsJob.GetName())
+	}
+	return int32(size), nil
+}
+
+// getStartupPolicy extracts the startup policy from the LWS object
+func (lwsGrouper *LwsGrouper) getStartupPolicy(lwsJob *unstructured.Unstructured) (string, error) {
+	policy, found, err := unstructured.NestedString(lwsJob.Object, "spec", "startupPolicy")
+	if err != nil {
+		return "", fmt.Errorf("failed to get startupPolicy from LWS %s/%s: %w",
+			lwsJob.GetNamespace(), lwsJob.GetName(), err)
+	}
+	if !found {
+		// Default to LeaderCreated if not specified
+		return startupPolicyLeaderCreated, nil
+	}
+	return policy, nil
 }
 
 func handleLeaderReadyPolicy(pod *v1.Pod, podGroupMetadata *podgroup.Metadata, fallbackSize int32) error {
 	groupSize := fallbackSize
+
+	// Check for the size annotation on the pod
 	if sizeStr, ok := pod.Annotations[lwsSizeAnnotation]; ok {
 		if parsed, err := strconv.Atoi(sizeStr); err == nil {
 			groupSize = int32(parsed)
 		}
 	}
 
-	// Leader has no group-index label
-	_, hasGroupIndex := pod.Labels[lwsGroupIndexLabel]
-	isLeader := !hasGroupIndex
+	workerIndex, hasWorkerIndex := pod.Labels[lwsWorkerIndexLabel]
+	isLeader := hasWorkerIndex && workerIndex == "0"
 	isScheduled := pod.Spec.NodeName != ""
 
 	if isLeader && !isScheduled {
+		// Leader pod not yet scheduled, only need leader to be available
 		podGroupMetadata.MinAvailable = 1
 	} else {
+		// Either worker pod or leader is already scheduled
 		podGroupMetadata.MinAvailable = groupSize
 	}
 
