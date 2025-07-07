@@ -240,12 +240,12 @@ rules:
 - apiGroups:
   - run.ai
   resources:
+  - distributedinferenceworkloads
   - distributedworkloads
   - inferenceworkloads
   - interactiveworkloads
   - runaijobs
   - trainingworkloads
-  - distributedinferenceworkloads
   verbs:
   - get
   - list
