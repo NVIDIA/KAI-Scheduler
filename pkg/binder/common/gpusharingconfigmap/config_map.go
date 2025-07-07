@@ -205,11 +205,3 @@ func compareObjectOwners(lOwners, rOwners []metav1.OwnerReference) (bool, string
 
 	return different, reason
 }
-
-func AddDataConfigField(data map[string]string, key, value string) {
-	if foundValue, found := data[key]; !found || len(foundValue) == 0 {
-		data[key] = value
-	} else {
-		data[key] += fmt.Sprintf("\n%v", value)
-	}
-}

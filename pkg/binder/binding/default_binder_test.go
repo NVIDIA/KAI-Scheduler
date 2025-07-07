@@ -25,11 +25,18 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/test_utils"
 )
 
+const (
+	gpuSharingConfigMapAnnotation = "runai/shared-gpu-configmap"
+)
+
 func TestBind(t *testing.T) {
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "my-ns",
 			Name:      "my-pod",
+			Annotations: map[string]string{
+				gpuSharingConfigMapAnnotation: "my-configmap-shared-gpu",
+			},
 		},
 	}
 	kubeObjects := []runtime.Object{
@@ -74,6 +81,9 @@ func TestBindApplyResourceReceivedType(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "my-ns",
 			Name:      "my-pod",
+			Annotations: map[string]string{
+				gpuSharingConfigMapAnnotation: "my-config",
+			},
 		},
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
@@ -85,7 +95,7 @@ func TestBindApplyResourceReceivedType(t *testing.T) {
 								ConfigMapKeyRef: &v1.ConfigMapKeySelector{
 									Key: common.VisibleDevices,
 									LocalObjectReference: v1.LocalObjectReference{
-										Name: "my-config",
+										Name: "my-config-0",
 									},
 								},
 							},
@@ -96,7 +106,7 @@ func TestBindApplyResourceReceivedType(t *testing.T) {
 								ConfigMapKeyRef: &v1.ConfigMapKeySelector{
 									Key: common.NumOfGpusEnvVar,
 									LocalObjectReference: v1.LocalObjectReference{
-										Name: "my-config",
+										Name: "my-config-0",
 									},
 								},
 							},

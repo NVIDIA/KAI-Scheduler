@@ -37,12 +37,15 @@ var happyFlowObjectsBc = []runtime.Object{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "my-ns",
 			Name:      "my-pod",
+			Annotations: map[string]string{
+				gpuSharingConfigMapAnnotation: "my-configmap-shared-gpu",
+			},
 		},
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{{
 				Env: []v1.EnvVar{
 					{
-						Name: common.NumOfGpusEnvVar,
+						Name: common.NvidiaVisibleDevices,
 						ValueFrom: &v1.EnvVarSource{
 							ConfigMapKeyRef: &v1.ConfigMapKeySelector{
 								LocalObjectReference: v1.LocalObjectReference{
@@ -82,6 +85,9 @@ var happyFlowObjects = []runtime.Object{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "my-ns",
 			Name:      "my-pod",
+			Annotations: map[string]string{
+				gpuSharingConfigMapAnnotation: "my-configmap-shared-gpu",
+			},
 		},
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
@@ -202,7 +208,7 @@ var _ = Describe("FractionBinder", func() {
 
 				configMap := &v1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-configmap-shared-gpu",
+						Name:      "my-configmap-shared-gpu-0",
 						Namespace: "my-ns",
 					},
 				}

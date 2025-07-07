@@ -22,9 +22,8 @@ import (
 )
 
 const (
-	fractionContainerIndex        = 0
-	gpuSharingConfigMapAnnotation = "runai/shared-gpu-configmap"
-	CdiDeviceNameBase             = "k8s.device-plugin.nvidia.com/gpu=%s"
+	fractionContainerIndex = 0
+	CdiDeviceNameBase      = "k8s.device-plugin.nvidia.com/gpu=%s"
 )
 
 type GPUSharing struct {
@@ -94,48 +93,36 @@ func (p *GPUSharing) PreBind(
 		}
 	}
 
-	err, legacyPod := p.createCapabilitiesConfigMapIfMissing(ctx, pod)
+	err := p.createCapabilitiesConfigMapIfMissing(ctx, pod)
 	if err != nil {
 		return fmt.Errorf("failed to create capabilities configmap: %w", err)
 	}
 
-	if !legacyPod {
-		err = p.createDirectEnvMapIfMissing(ctx, pod)
-		if err != nil {
-			return fmt.Errorf("failed to create env configmap: %w", err)
-		}
+	err = p.createDirectEnvMapIfMissing(ctx, pod)
+	if err != nil {
+		return fmt.Errorf("failed to create env configmap: %w", err)
 	}
 
-	fractionContainer := &pod.Spec.Containers[fractionContainerIndex]
 	nVisibleDevicesStr := strings.Join(reservedGPUIds, ",")
-	err = common.SetNvidiaVisibleDevices(ctx, p.kubeClient, pod, fractionContainer, nVisibleDevicesStr)
+	err = common.SetNvidiaVisibleDevices(ctx, p.kubeClient, pod, fractionContainerIndex, nVisibleDevicesStr)
 	if err != nil {
 		return err
 	}
 
 	numOfGPUDevices := fmt.Sprintf("%v", bindRequest.Spec.ReceivedGPU.Portion)
-	return common.SetNumOfGPUDevices(ctx, p.kubeClient, pod, fractionContainer, numOfGPUDevices)
+	return common.SetNumOfGPUDevices(ctx, p.kubeClient, pod, fractionContainerIndex, numOfGPUDevices)
 }
 
-func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, pod *v1.Pod) (error, bool) {
-	legacyPod := false
+func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, pod *v1.Pod) error {
 	var capabilitiesConfigMapName string
 	var err error
-	_, found := pod.Annotations[gpuSharingConfigMapAnnotation]
-	if found {
-		capabilitiesConfigMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod,
-			fractionContainerIndex, gpusharingconfigmap.RegularContainer)
-	} else {
-		legacyPod = true
-		fractionContainer := &pod.Spec.Containers[fractionContainerIndex]
-		capabilitiesConfigMapName, err = common.GetConfigMapName(pod, fractionContainer)
-	}
-
+	capabilitiesConfigMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod,
+		fractionContainerIndex, gpusharingconfigmap.RegularContainer)
 	if err != nil {
-		return fmt.Errorf("failed to get capabilities configmap name: %w", err), false
+		return fmt.Errorf("failed to get capabilities configmap name: %w", err)
 	}
 	err = gpusharingconfigmap.UpsertJobConfigMap(ctx, p.kubeClient, pod, capabilitiesConfigMapName, map[string]string{})
-	return err, legacyPod
+	return err
 }
 
 func (p *GPUSharing) createDirectEnvMapIfMissing(ctx context.Context, pod *v1.Pod) error {
