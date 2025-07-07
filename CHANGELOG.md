@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.7.2] - 2025-07-07
+### Added
+- Added LeaderWorkerSet support in the podGrouper. Each replica will be given a separate podGroup.
+
 ## [v0.7.1] - 2025-07-07
 
 ### Added
