@@ -32,12 +32,13 @@ import (
 )
 
 const (
-	apiGroupArgo            = "argoproj.io"
-	apiGroupRunai           = "run.ai"
-	kindTrainingWorkload    = "TrainingWorkload"
-	kindInteractiveWorkload = "InteractiveWorkload"
-	kindDistributedWorkload = "DistributedWorkload"
-	kindInferenceWorkload   = "InferenceWorkload"
+	apiGroupArgo                     = "argoproj.io"
+	apiGroupRunai                    = "run.ai"
+	kindTrainingWorkload             = "TrainingWorkload"
+	kindInteractiveWorkload          = "InteractiveWorkload"
+	kindDistributedWorkload          = "DistributedWorkload"
+	kindInferenceWorkload            = "InferenceWorkload"
+	kindDistributedInferenceWorkload = "DistributedInferenceWorkload"
 )
 
 // +kubebuilder:rbac:groups=apps,resources=replicasets;statefulsets,verbs=get;list;watch
@@ -261,7 +262,13 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 		Kind:    "Workflow",
 	}] = skipTopOwnerGrouper
 
-	for _, kind := range []string{kindInferenceWorkload, kindTrainingWorkload, kindDistributedWorkload, kindInteractiveWorkload} {
+	for _, kind := range []string{
+		kindInferenceWorkload,
+		kindTrainingWorkload,
+		kindDistributedWorkload,
+		kindInteractiveWorkload,
+		kindDistributedInferenceWorkload,
+	} {
 		table[metav1.GroupVersionKind{
 			Group:   apiGroupRunai,
 			Version: "*",
