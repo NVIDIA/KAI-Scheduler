@@ -42,11 +42,11 @@ func AddVisibleDevicesEnvVars(container *v1.Container, sharedGpuConfigMapName st
 }
 
 func SetNvidiaVisibleDevices(
-	ctx context.Context, kubeClient client.Client, pod *v1.Pod, containerIndex int, visibleDevicesValue string,
+	ctx context.Context, kubeClient client.Client, pod *v1.Pod, containerRef *gpusharingconfigmap.PodContainerRef,
+	visibleDevicesValue string,
 ) error {
 	nvidiaVisibleDevicesDefinedInSpec := false
-	container := &pod.Spec.Containers[containerIndex]
-	for _, envVar := range container.Env {
+	for _, envVar := range containerRef.Container.Env {
 		if envVar.Name == NvidiaVisibleDevices && envVar.ValueFrom != nil &&
 			envVar.ValueFrom.ConfigMapKeyRef != nil {
 			nvidiaVisibleDevicesDefinedInSpec = true
@@ -57,15 +57,13 @@ func SetNvidiaVisibleDevices(
 	var err error
 	var updateFunc func(data map[string]string) error
 	if nvidiaVisibleDevicesDefinedInSpec {
-		capabilitiesMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(
-			pod, containerIndex, gpusharingconfigmap.RegularContainer)
+		capabilitiesMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
 		updateFunc = func(data map[string]string) error {
 			data[VisibleDevices] = visibleDevicesValue
 			return nil
 		}
 	} else {
-		capabilitiesMapName, err = gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(
-			pod, containerIndex, gpusharingconfigmap.RegularContainer)
+		capabilitiesMapName, err = gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
 		updateFunc = func(data map[string]string) error {
 			data[NvidiaVisibleDevices] = visibleDevicesValue
 			return nil
@@ -83,14 +81,14 @@ func SetNvidiaVisibleDevices(
 }
 
 func SetNumOfGPUDevices(
-	ctx context.Context, kubeClient client.Client, pod *v1.Pod, containerIndex int, numOfGPUs string,
+	ctx context.Context, kubeClient client.Client, pod *v1.Pod, containerRef *gpusharingconfigmap.PodContainerRef,
+	numOfGPUs string,
 ) error {
 	updateFunc := func(data map[string]string) error {
 		data[NumOfGpusEnvVar] = numOfGPUs
 		return nil
 	}
-	capabilitiesMapName, err := gpusharingconfigmap.ExtractCapabilitiesConfigMapName(
-		pod, containerIndex, gpusharingconfigmap.RegularContainer)
+	capabilitiesMapName, err := gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
 	if err != nil {
 		return err
 	}

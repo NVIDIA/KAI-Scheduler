@@ -63,18 +63,20 @@ func (p *GPUSharing) Mutate(pod *v1.Pod) error {
 		return nil
 	}
 
-	capabilitiesConfigMapName := gpusharingconfigmap.SetGpuCapabilitiesConfigMapName(pod, fractionContainerIndex,
-		gpusharingconfigmap.RegularContainer)
-	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, fractionContainerIndex,
-		gpusharingconfigmap.RegularContainer)
+	containerRef := &gpusharingconfigmap.PodContainerRef{
+		Container: &pod.Spec.Containers[fractionContainerIndex],
+		Index:     fractionContainerIndex,
+		Type:      gpusharingconfigmap.RegularContainer,
+	}
+	capabilitiesConfigMapName := gpusharingconfigmap.SetGpuCapabilitiesConfigMapName(pod, containerRef)
+	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
 	if err != nil {
 		return err
 	}
 
-	fractionContainer := &pod.Spec.Containers[fractionContainerIndex]
-	common.AddVisibleDevicesEnvVars(fractionContainer, capabilitiesConfigMapName)
+	common.AddVisibleDevicesEnvVars(containerRef.Container, capabilitiesConfigMapName)
 	common.SetConfigMapVolume(pod, capabilitiesConfigMapName)
-	common.AddDirectEnvVarsConfigMapSource(fractionContainer, directEnvVarsMapName)
+	common.AddDirectEnvVarsConfigMapSource(containerRef.Container, directEnvVarsMapName)
 
 	return nil
 }
@@ -104,20 +106,30 @@ func (p *GPUSharing) PreBind(
 	}
 
 	nVisibleDevicesStr := strings.Join(reservedGPUIds, ",")
-	err = common.SetNvidiaVisibleDevices(ctx, p.kubeClient, pod, fractionContainerIndex, nVisibleDevicesStr)
+	containerRef := &gpusharingconfigmap.PodContainerRef{
+		Container: &pod.Spec.Containers[fractionContainerIndex],
+		Index:     fractionContainerIndex,
+		Type:      gpusharingconfigmap.RegularContainer,
+	}
+	err = common.SetNvidiaVisibleDevices(ctx, p.kubeClient, pod, containerRef, nVisibleDevicesStr)
 	if err != nil {
 		return err
 	}
 
 	numOfGPUDevices := fmt.Sprintf("%v", bindRequest.Spec.ReceivedGPU.Portion)
-	return common.SetNumOfGPUDevices(ctx, p.kubeClient, pod, fractionContainerIndex, numOfGPUDevices)
+	return common.SetNumOfGPUDevices(ctx, p.kubeClient, pod, containerRef, numOfGPUDevices)
 }
 
 func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, pod *v1.Pod) error {
 	var capabilitiesConfigMapName string
 	var err error
-	capabilitiesConfigMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod,
-		fractionContainerIndex, gpusharingconfigmap.RegularContainer)
+
+	containerRef := &gpusharingconfigmap.PodContainerRef{
+		Container: &pod.Spec.Containers[fractionContainerIndex],
+		Index:     fractionContainerIndex,
+		Type:      gpusharingconfigmap.RegularContainer,
+	}
+	capabilitiesConfigMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
 	if err != nil {
 		return fmt.Errorf("failed to get capabilities configmap name: %w", err)
 	}
@@ -126,8 +138,12 @@ func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, p
 }
 
 func (p *GPUSharing) createDirectEnvMapIfMissing(ctx context.Context, pod *v1.Pod) error {
-	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod,
-		fractionContainerIndex, gpusharingconfigmap.RegularContainer)
+	containerRef := &gpusharingconfigmap.PodContainerRef{
+		Container: &pod.Spec.Containers[fractionContainerIndex],
+		Index:     fractionContainerIndex,
+		Type:      gpusharingconfigmap.RegularContainer,
+	}
+	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
 	if err != nil {
 		return err
 	}

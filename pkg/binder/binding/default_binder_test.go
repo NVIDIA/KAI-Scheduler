@@ -38,6 +38,20 @@ func TestBind(t *testing.T) {
 				gpuSharingConfigMapAnnotation: "my-configmap-shared-gpu",
 			},
 		},
+		Spec: v1.PodSpec{
+			Volumes: []v1.Volume{
+				{
+					Name: "my-configmap-vol",
+					VolumeSource: v1.VolumeSource{
+						ConfigMap: &v1.ConfigMapVolumeSource{
+							LocalObjectReference: v1.LocalObjectReference{
+								Name: "my-configmap-shared-gpu-0",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	kubeObjects := []runtime.Object{
 		pod,
@@ -109,6 +123,18 @@ func TestBindApplyResourceReceivedType(t *testing.T) {
 										Name: "my-config-0",
 									},
 								},
+							},
+						},
+					},
+				},
+			},
+			Volumes: []v1.Volume{
+				{
+					Name: "my-configmap-vol",
+					VolumeSource: v1.VolumeSource{
+						ConfigMap: &v1.ConfigMapVolumeSource{
+							LocalObjectReference: v1.LocalObjectReference{
+								Name: "my-config-0",
 							},
 						},
 					},

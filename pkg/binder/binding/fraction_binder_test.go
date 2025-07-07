@@ -49,7 +49,7 @@ var happyFlowObjectsBc = []runtime.Object{
 						ValueFrom: &v1.EnvVarSource{
 							ConfigMapKeyRef: &v1.ConfigMapKeySelector{
 								LocalObjectReference: v1.LocalObjectReference{
-									Name: "my-configmap-shared-gpu",
+									Name: "my-configmap-shared-gpu-0",
 								},
 							},
 						},
@@ -61,7 +61,7 @@ var happyFlowObjectsBc = []runtime.Object{
 					VolumeSource: v1.VolumeSource{
 						ConfigMap: &v1.ConfigMapVolumeSource{
 							LocalObjectReference: v1.LocalObjectReference{
-								Name: "my-configmap-shared-gpu",
+								Name: "my-configmap-shared-gpu-0",
 							},
 						},
 					},
@@ -101,7 +101,7 @@ var happyFlowObjects = []runtime.Object{
 					VolumeSource: v1.VolumeSource{
 						ConfigMap: &v1.ConfigMapVolumeSource{
 							LocalObjectReference: v1.LocalObjectReference{
-								Name: "my-configmap-shared-gpu",
+								Name: "my-configmap-shared-gpu-0",
 							},
 						},
 					},
