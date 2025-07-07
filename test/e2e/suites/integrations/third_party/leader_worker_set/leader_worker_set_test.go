@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	lwsCrdName    = "leaderworkerset.x-k8s.io"
+	lwsCrdName    = "leaderworkersets.leaderworkerset.x-k8s.io"
 	lwsCrdVersion = "v1"
 )
 
