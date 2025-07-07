@@ -243,9 +243,9 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Kind:    "SPOTRequest",
 		}: spotrequest.NewSpotRequestGrouper(defaultGrouper),
 		{
-			Group:   "lws.k8s.io",
-			Version: "v1alpha1",
-			Kind:    "LeaderWorkset",
+			Group:   "leaderworkerset.x-k8s.io",
+			Version: "v1",
+			Kind:    "LeaderWorkerSet",
 		}: leader_worker_set.NewLwsGrouper(defaultGrouper),
     {
 			Group:   "grove.io",
