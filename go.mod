@@ -63,6 +63,7 @@ require (
 	knative.dev/serving v0.44.0
 	sigs.k8s.io/controller-runtime v0.20.0
 	sigs.k8s.io/karpenter v1.2.0
+	sigs.k8s.io/lws v0.5.1
 )
 
 require (
