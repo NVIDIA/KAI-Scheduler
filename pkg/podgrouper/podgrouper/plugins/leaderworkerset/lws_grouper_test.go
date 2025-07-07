@@ -26,7 +26,7 @@ func baseOwner(name string, startupPolicy string, replicas int64) *unstructured.
 			"spec": map[string]interface{}{
 				"startupPolicy": startupPolicy,
 				"leaderWorkerTemplate": map[string]interface{}{
-					"spec": replicas,
+					"size": replicas,
 				},
 			},
 		},
@@ -58,10 +58,8 @@ func TestGetPodGroupMetadata_LeaderReady_LeaderPod(t *testing.T) {
 
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"leaderworkerset.sigs.k8s.io/size": "5",
-			},
-			Labels: map[string]string{},
+			Annotations: map[string]string{},
+			Labels:      map[string]string{},
 		},
 		Spec: v1.PodSpec{
 			NodeName: "", // not scheduled => simulate leader
@@ -72,7 +70,7 @@ func TestGetPodGroupMetadata_LeaderReady_LeaderPod(t *testing.T) {
 	podGroupMetadata, err := lwsGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
-	assert.Equal(t, int32(1), podGroupMetadata.MinAvailable)
+	assert.Equal(t, int32(5), podGroupMetadata.MinAvailable)
 }
 
 func TestGetPodGroupMetadata_LeaderReady_WorkerPod(t *testing.T) {
@@ -105,7 +103,7 @@ func TestGetPodGroupMetadata_GroupIndex_Label(t *testing.T) {
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				"leaderworkerset.x-k8s.io/group-index": "1",
+				"leaderworkerset.sigs.k8s.io/group-index": "1",
 			},
 		},
 	}
