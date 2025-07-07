@@ -105,15 +105,6 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 			return nil, fmt.Errorf("missing podReferences in spec.podgroup[%v] of PodGang %s/%s",
 				idx, pod.Namespace, podGangName)
 		}
-		minReplicas, found, err := unstructured.NestedInt64(pgr, "minReplicas")
-		if err != nil {
-			return nil, fmt.Errorf("failed to get minReplicas from spec.podgroup[%v] of PodGang %s/%s : %w",
-				idx, pod.Namespace, podGangName, err)
-		}
-		if found && int(minReplicas) != len(podSlice) {
-			return nil, fmt.Errorf("unsupported minReplicas in spec.podgroup[%v] of PodGang %s/%s : expected: %v, found: %v",
-				idx, pod.Namespace, podGangName, len(podSlice), minReplicas)
-		}
 		minAvailable += int32(len(podSlice))
 	}
 	metadata.MinAvailable = minAvailable

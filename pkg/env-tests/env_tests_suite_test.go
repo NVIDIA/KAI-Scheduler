@@ -45,9 +45,12 @@ var _ = BeforeSuite(func(ctx context.Context) {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "deployments", "kai-scheduler", "crds")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "deployments", "crds", "internal")},
 		ErrorIfCRDPathMissing: true,
 	}
+
+	// Add the kueue crd to the test environment
+	testEnv.CRDDirectoryPaths = append(testEnv.CRDDirectoryPaths, filepath.Join("..", "..", "deployments", "crds", "external"))
 	testEnv.ControlPlane.GetAPIServer().Configure().Append("feature-gates", "DynamicResourceAllocation=true")
 	testEnv.ControlPlane.GetAPIServer().Configure().Append("runtime-config", "api/all=true")
 	featuregate.SetFeatureGateDuringTest(tt, utilfeature.DefaultFeatureGate,
