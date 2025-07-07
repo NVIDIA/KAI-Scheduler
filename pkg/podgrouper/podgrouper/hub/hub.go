@@ -247,7 +247,7 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Version: "v1",
 			Kind:    "LeaderWorkerSet",
 		}: leader_worker_set.NewLwsGrouper(defaultGrouper),
-    {
+		{
 			Group:   "grove.io",
 			Version: "v1alpha1",
 			Kind:    "PodGangSet",
