@@ -31,12 +31,13 @@ import (
 )
 
 const (
-	apiGroupArgo            = "argoproj.io"
-	apiGroupRunai           = "run.ai"
-	kindTrainingWorkload    = "TrainingWorkload"
-	kindInteractiveWorkload = "InteractiveWorkload"
-	kindDistributedWorkload = "DistributedWorkload"
-	kindInferenceWorkload   = "InferenceWorkload"
+	apiGroupArgo                     = "argoproj.io"
+	apiGroupRunai                    = "run.ai"
+	kindTrainingWorkload             = "TrainingWorkload"
+	kindInteractiveWorkload          = "InteractiveWorkload"
+	kindDistributedWorkload          = "DistributedWorkload"
+	kindInferenceWorkload            = "InferenceWorkload"
+	kindDistributedInferenceWorkload = "DistributedInferenceWorkload"
 )
 
 // +kubebuilder:rbac:groups=apps,resources=replicasets;statefulsets,verbs=get;list;watch
@@ -51,7 +52,7 @@ const (
 // +kubebuilder:rbac:groups=argoproj.io,resources=workflows/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns;taskruns,verbs=get;list;watch
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns/finalizers;taskruns/finalizers,verbs=patch;update;create
-// +kubebuilder:rbac:groups=run.ai,resources=trainingworkloads;interactiveworkloads;distributedworkloads;inferenceworkloads,verbs=get;list;watch
+// +kubebuilder:rbac:groups=run.ai,resources=trainingworkloads;interactiveworkloads;distributedworkloads;inferenceworkloads;distributedinferenceworkloads,verbs=get;list;watch
 
 type PluginsHub struct {
 	defaultPlugin *defaultgrouper.DefaultGrouper
@@ -253,7 +254,13 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 		Kind:    "Workflow",
 	}] = skipTopOwnerGrouper
 
-	for _, kind := range []string{kindInferenceWorkload, kindTrainingWorkload, kindDistributedWorkload, kindInteractiveWorkload} {
+	for _, kind := range []string{
+		kindInferenceWorkload,
+		kindTrainingWorkload,
+		kindDistributedWorkload,
+		kindInteractiveWorkload,
+		kindDistributedInferenceWorkload,
+	} {
 		table[metav1.GroupVersionKind{
 			Group:   apiGroupRunai,
 			Version: "*",
