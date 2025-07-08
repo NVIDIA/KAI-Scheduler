@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Changed RUNAI-VISIBLE-DEVICES key in GPU sharing configmap to NVIDIA_VISIBLE_DEVICES
 
+## [v0.7.3] - 2025-07-08
+
 ### Removed
 - Removed GPU sharing configmap name resolution from env vars and volumes
 

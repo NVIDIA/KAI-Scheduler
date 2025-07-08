@@ -62,22 +62,18 @@ func SetNvidiaVisibleDevices(
 	var updateFunc func(data map[string]string) error
 	if nvidiaVisibleDevicesDefinedInSpec {
 		configMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
-		updateFunc = func(data map[string]string) error {
-			if _, found := data[visibleDevicesBC]; found {
-					data[visibleDevicesBC] = visibleDevicesValue
-				}
-				data[NvidiaVisibleDevices] = visibleDevicesValue
-			return nil
-		}
 	} else {
 		configMapName, err = gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
-		updateFunc = func(data map[string]string) error {
-			data[NvidiaVisibleDevices] = visibleDevicesValue
-			return nil
-		}
 	}
 	if err != nil {
 		return err
+	}
+	updateFunc = func(data map[string]string) error {
+		if _, found := data[visibleDevicesBC]; found {
+			data[visibleDevicesBC] = visibleDevicesValue
+		}
+		data[NvidiaVisibleDevices] = visibleDevicesValue
+		return nil
 	}
 	err = UpdateConfigMapEnvironmentVariable(ctx, kubeClient, pod, configMapName, updateFunc)
 	if err != nil {
