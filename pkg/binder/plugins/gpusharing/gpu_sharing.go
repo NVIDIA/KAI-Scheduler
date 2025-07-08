@@ -95,22 +95,22 @@ func (p *GPUSharing) PreBind(
 		}
 	}
 
-	err := p.createCapabilitiesConfigMapIfMissing(ctx, pod)
-	if err != nil {
-		return fmt.Errorf("failed to create capabilities configmap: %w", err)
-	}
-
-	err = p.createDirectEnvMapIfMissing(ctx, pod)
-	if err != nil {
-		return fmt.Errorf("failed to create env configmap: %w", err)
-	}
-
-	nVisibleDevicesStr := strings.Join(reservedGPUIds, ",")
 	containerRef := &gpusharingconfigmap.PodContainerRef{
 		Container: &pod.Spec.Containers[fractionContainerIndex],
 		Index:     fractionContainerIndex,
 		Type:      gpusharingconfigmap.RegularContainer,
 	}
+	err := p.createCapabilitiesConfigMapIfMissing(ctx, pod, containerRef)
+	if err != nil {
+		return fmt.Errorf("failed to create capabilities configmap: %w", err)
+	}
+
+	err = p.createDirectEnvMapIfMissing(ctx, pod, containerRef)
+	if err != nil {
+		return fmt.Errorf("failed to create env configmap: %w", err)
+	}
+
+	nVisibleDevicesStr := strings.Join(reservedGPUIds, ",")
 	err = common.SetNvidiaVisibleDevices(ctx, p.kubeClient, pod, containerRef, nVisibleDevicesStr)
 	if err != nil {
 		return err
@@ -120,16 +120,9 @@ func (p *GPUSharing) PreBind(
 	return common.SetNumOfGPUDevices(ctx, p.kubeClient, pod, containerRef, numOfGPUDevices)
 }
 
-func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, pod *v1.Pod) error {
-	var capabilitiesConfigMapName string
-	var err error
-
-	containerRef := &gpusharingconfigmap.PodContainerRef{
-		Container: &pod.Spec.Containers[fractionContainerIndex],
-		Index:     fractionContainerIndex,
-		Type:      gpusharingconfigmap.RegularContainer,
-	}
-	capabilitiesConfigMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
+func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, pod *v1.Pod,
+	containerRef *gpusharingconfigmap.PodContainerRef) error {
+	capabilitiesConfigMapName, err := gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
 	if err != nil {
 		return fmt.Errorf("failed to get capabilities configmap name: %w", err)
 	}
@@ -137,12 +130,8 @@ func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, p
 	return err
 }
 
-func (p *GPUSharing) createDirectEnvMapIfMissing(ctx context.Context, pod *v1.Pod) error {
-	containerRef := &gpusharingconfigmap.PodContainerRef{
-		Container: &pod.Spec.Containers[fractionContainerIndex],
-		Index:     fractionContainerIndex,
-		Type:      gpusharingconfigmap.RegularContainer,
-	}
+func (p *GPUSharing) createDirectEnvMapIfMissing(ctx context.Context, pod *v1.Pod,
+	containerRef *gpusharingconfigmap.PodContainerRef) error {
 	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
 	if err != nil {
 		return err

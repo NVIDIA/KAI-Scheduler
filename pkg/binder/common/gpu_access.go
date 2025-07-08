@@ -53,17 +53,17 @@ func SetNvidiaVisibleDevices(
 		}
 	}
 
-	capabilitiesMapName := ""
+	var configMapName string
 	var err error
 	var updateFunc func(data map[string]string) error
 	if nvidiaVisibleDevicesDefinedInSpec {
-		capabilitiesMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
+		configMapName, err = gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
 		updateFunc = func(data map[string]string) error {
 			data[VisibleDevices] = visibleDevicesValue
 			return nil
 		}
 	} else {
-		capabilitiesMapName, err = gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
+		configMapName, err = gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
 		updateFunc = func(data map[string]string) error {
 			data[NvidiaVisibleDevices] = visibleDevicesValue
 			return nil
@@ -72,10 +72,10 @@ func SetNvidiaVisibleDevices(
 	if err != nil {
 		return err
 	}
-	err = UpdateConfigMapEnvironmentVariable(ctx, kubeClient, pod, capabilitiesMapName, updateFunc)
+	err = UpdateConfigMapEnvironmentVariable(ctx, kubeClient, pod, configMapName, updateFunc)
 	if err != nil {
-		return fmt.Errorf("failed to update gpu sharing configmap for pod <%s/%s>: %v",
-			pod.Namespace, pod.Name, err)
+		return fmt.Errorf("failed to update gpu sharing configmap %s for pod <%s/%s>: %v",
+			configMapName, pod.Namespace, pod.Name, err)
 	}
 	return nil
 }

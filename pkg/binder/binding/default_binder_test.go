@@ -39,6 +39,9 @@ func TestBind(t *testing.T) {
 			},
 		},
 		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{},
+			},
 			Volumes: []v1.Volume{
 				{
 					Name: "my-configmap-vol",
