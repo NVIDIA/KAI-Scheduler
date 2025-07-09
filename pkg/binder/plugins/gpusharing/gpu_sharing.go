@@ -74,7 +74,7 @@ func (p *GPUSharing) Mutate(pod *v1.Pod) error {
 		return err
 	}
 
-	common.AddVisibleDevicesEnvVars(containerRef.Container, capabilitiesConfigMapName)
+	common.AddGPUSharingEnvVars(containerRef.Container, capabilitiesConfigMapName)
 	common.SetConfigMapVolume(pod, capabilitiesConfigMapName)
 	common.AddDirectEnvVarsConfigMapSource(containerRef.Container, directEnvVarsMapName)
 
@@ -116,8 +116,11 @@ func (p *GPUSharing) PreBind(
 		return err
 	}
 
-	numOfGPUDevices := fmt.Sprintf("%v", bindRequest.Spec.ReceivedGPU.Portion)
-	return common.SetNumOfGPUDevices(ctx, p.kubeClient, pod, containerRef, numOfGPUDevices)
+	err = common.SetGPUPortion(ctx, p.kubeClient, pod, containerRef, bindRequest.Spec.ReceivedGPU.Portion)
+	if err != nil {
+		return err
+	}
+	return common.SetGPUMemoryLimit(ctx, p.kubeClient, pod, containerRef, bindRequest.Spec.ReceivedGPU.GPUMemory)
 }
 
 func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, pod *v1.Pod,

@@ -37,9 +37,12 @@ type ReceivedGPU struct {
 	// Count is the amount of GPUs devices that were received
 	Count int `json:"count,omitempty"`
 
-	// This is the portion size that the pod will receive from each connected gpu device
+	// This is the portion size that the pod will receive from each connected GPU device
 	// This is a serialized float that should be written as a decimal point number.
 	Portion string `json:"portion,omitempty"`
+
+	// GPU memory amount for the pod on each GPU device (in Mib)
+	GPUMemory string `json:"gpuMemory,omitempty"`
 }
 
 type ResourceClaimAllocation struct {

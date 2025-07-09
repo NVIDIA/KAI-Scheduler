@@ -54,9 +54,13 @@ spec:
                   count:
                     description: Count is the amount of GPUs devices that were received
                     type: integer
+                  gpuMemory:
+                    description: GPU memory amount for the pod on each GPU device
+                      (in Mib)
+                    type: string
                   portion:
                     description: |-
-                      This is the portion size that the pod will receive from each connected gpu device
+                      This is the portion size that the pod will receive from each connected GPU device
                       This is a serialized float that should be written as a decimal point number.
                     type: string
                 type: object
