@@ -9,6 +9,7 @@
     - [Story 1](#story-1-proportional-time-sharing-of-resoucres)
     - [Story 2](#story-2-burst-access-to-resources)
     - [Story 3](#story-3-time-aware-fairness-with-guaranteed-resources)
+    - [Story 4](#story-4-no-over-usage-open-for-debate)
   - [Notes/Constraints/Caveats (Optional)](#notesconstraintscaveats)
   - [Risks and Mitigations](#risks-and-mitigations)
 - [Design Details](#design-details)
@@ -75,6 +76,9 @@ In a busy cluster with several queues used mainly for training job, one unpriori
 In a heterogeneous cluster combining interactive, critical inference, and training use cases, different users with different queues require reliable access to deserved resources, while time-sharing over-quota resources for training jobs. Admin assigns deserved quota for each queue based on the users' needs, allowing them to run inference and some interactive workloads for use cases such as data exploration and small-scale experiments with jupyter notebooks and similar tools.  
 Users can rely on guaranteed resources for non-preemptible interactive & inference workloads, while queueing train jobs. Time-aware fairness will ensure fair access to resources, roughly proportional to the weight assigned to the different queues. Interactive and inference workloads will not be interrupted due to the usage of in-quota resources & non-preemptible properties.
 
+#### Story 4: No over-usage (open for debate)
+In a cluster with no deserved quotas, N queues are weighted arbitrarily (W_i for i in N is queue `i`'s weight, Ẃ_i = W_i/∑W_j for i,j in N is the normalized weight). If no queue ever goes above it's relative share - should they be penalized for their usage? On one hand, it's not intuitively fair to be penalized for usage of one's relative share. On the other, this could cause any queue with a pending job that requires more than it's relative share to be starved. For example, SDRF doesn't count in-share usage as "Commitment".
+
 ### Notes/Constraints/Caveats
 
 #### Data storage constraints
@@ -111,6 +115,8 @@ Where:
 - **w** is the weight for a specific queue
 - **∑w** is the sum of weights across all competing queues
 
+
+### Option 1:
 One way to achieve time-aware fairness is to add the usage as a factor:
 
 $$\text{F} = C \cdot \frac{w}{\sum{w}} \cdot \frac{1}{1 + u}$$
@@ -126,3 +132,26 @@ Where:
 - **α** represents the significance factor for historical usage impact
 
 In this case, when `α=10`, when `u=1` the penalty will be `1/11`, and for `u=2` it will be `1/21`, which is closer to the linear result. This could also be a potential control for the impact of the historical usage.
+
+### Option 2: SDRF-Inspired Approach
+
+This option adapts the Start-time Dominant Resource Fairness (SDRF) algorithm to account for different queue weights and guaranteed quotas, which the original SDRF does not consider.  
+
+#### Overusage Definition
+
+We define "overusage" as the cumulative excess resource consumption beyond a queue's fair share over time. For each resource type, the overusage for queue $i$ at time $t$ is calculated as:
+
+$$\text{O}_i(t) = \int_0^t \left[ \text{U}_i(\tau) - \text{D}_i - \text{NC}(\tau) \cdot \frac{w_i}{\sum_{j} w_j} \right] d\tau$$
+
+Where:
+- **O<sub>i</sub>(t)** is the overusage for queue $i$ at time $t$
+- **U<sub>i</sub>(τ)** is the actual resource usage by queue $i$ at time $\tau$
+- **D<sub>i</sub>** is the deserved quota for queue $i$
+- **NC(τ)** is the non-committed capacity at time $\tau$ (total capacity minus sum of all deserved quotas)
+- **w<sub>i</sub>** is the weight of queue $i$
+- **∑w<sub>i</sub>** is the sum of weights across all competing queues
+
+This formulation ensures that:
+1. Queues are only penalized for usage beyond their guaranteed quota and fair share
+2. The penalty is proportional to the queue's weight in the over-quota allocation
+3. The historical usage is accumulated over time with appropriate decay
