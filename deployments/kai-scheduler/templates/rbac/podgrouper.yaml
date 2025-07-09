@@ -125,6 +125,7 @@ rules:
   - grove.io
   resources:
   - podcliques
+  - podcliquescalinggroups
   - podgangsets
   verbs:
   - get
@@ -134,6 +135,7 @@ rules:
   - grove.io
   resources:
   - podcliques/finalizers
+  - podcliquescalinggroups/finalizers
   - podgangsets/finalizers
   verbs:
   - create

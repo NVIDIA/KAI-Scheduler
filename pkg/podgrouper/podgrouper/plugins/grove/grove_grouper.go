@@ -41,6 +41,8 @@ func (gg *GroveGrouper) Name() string {
 // +kubebuilder:rbac:groups=grove.io,resources=podgangsets/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=grove.io,resources=podcliques,verbs=get;list;watch
 // +kubebuilder:rbac:groups=grove.io,resources=podcliques/finalizers,verbs=patch;update;create
+// +kubebuilder:rbac:groups=grove.io,resources=podcliquescalinggroups,verbs=get;list;watch
+// +kubebuilder:rbac:groups=grove.io,resources=podcliquescalinggroups/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=scheduler.grove.io,resources=podgangs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=scheduler.grove.io,resources=podgangs/finalizers,verbs=patch;update;create
 
