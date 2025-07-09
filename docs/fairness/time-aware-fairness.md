@@ -120,6 +120,7 @@ Where:
 One way to achieve time-aware fairness is to add the usage as a factor:
 
 $$\text{F} = C \cdot \frac{w}{\sum{w}} \cdot \frac{1}{1 + u}$$
+
 Where:
 - **U** represents the usage for the queue
 
@@ -128,6 +129,7 @@ On one hand, this has the advantage of reverting to the current result for `u=0`
 This result can be approximated by introducing a factor to multiply the usage by. A large value for this factor will result in a more linear penalty:
 
 $$\text{F} = C \cdot \frac{w}{\sum{w}} \cdot \frac{1}{1 + \alpha \cdot u}$$
+
 Where:
 - **α** represents the significance factor for historical usage impact
 
