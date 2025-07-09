@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Changed RUNAI-VISIBLE-DEVICES key in GPU sharing configmap to NVIDIA_VISIBLE_DEVICES
 
+### Fixed
+- Fixed a miscalculation where cpu/memory releasing resources were considered idle when requesting GPU fraction/memory
+
 ## [v0.7.3] - 2025-07-08
 
 ### Removed
