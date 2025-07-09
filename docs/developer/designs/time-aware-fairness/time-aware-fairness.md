@@ -103,7 +103,7 @@ The resource division formula for over-quota resource can be found in proportion
 ```Go
 fairShare := amountToGiveInCurrentRound * (overQuotaWeight / totalWeights)
 ```
-This calculation is run for each resource type.
+This calculation is done for each resource type.
 
 For convenience, we'll write it out as a formula:
 
@@ -134,26 +134,3 @@ Where:
 - **α** represents the significance factor for historical usage impact
 
 In this case, when `α=10`, when `u=1` the penalty will be `1/11`, and for `u=2` it will be `1/21`, which is closer to the linear result. This could also be a potential control for the impact of the historical usage.
-
-### Option 2: SDRF-Inspired Approach
-
-This option adapts the Start-time Dominant Resource Fairness (SDRF) algorithm to account for different queue weights and guaranteed quotas, which the original SDRF does not consider.  
-
-#### Overusage Definition
-
-We define "overusage" as the cumulative excess resource consumption beyond a queue's fair share over time. For each resource type, the overusage for queue $i$ at time $t$ is calculated as:
-
-$$\text{O}_i(t) = \int_0^t \left[ \text{U}_i(\tau) - \text{D}_i - \text{NC}(\tau) \cdot \frac{w_i}{\sum_{j} w_j} \right] d\tau$$
-
-Where:
-- **O<sub>i</sub>(t)** is the overusage for queue $i$ at time $t$
-- **U<sub>i</sub>(τ)** is the actual resource usage by queue $i$ at time $\tau$
-- **D<sub>i</sub>** is the deserved quota for queue $i$
-- **NC(τ)** is the non-committed capacity at time $\tau$ (total capacity minus sum of all deserved quotas)
-- **w<sub>i</sub>** is the weight of queue $i$
-- **∑w<sub>i</sub>** is the sum of weights across all competing queues
-
-This formulation ensures that:
-1. Queues are only penalized for usage beyond their guaranteed quota and fair share
-2. The penalty is proportional to the queue's weight in the over-quota allocation
-3. The historical usage is accumulated over time with appropriate decay
