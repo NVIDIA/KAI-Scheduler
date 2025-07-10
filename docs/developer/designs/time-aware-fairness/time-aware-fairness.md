@@ -153,7 +153,7 @@ We can then mean-center the usage values:
 
 $$\~U_i = U'_i - m$$
 Where m is the mean U', which gives the following properties:
-* $\~U$ is in the range [-1, 1], where queues with exactly mean usage will get the value 0, queues with > mean will get values in the range (0,1], and queues below mean will get values in the range [1, 0)
+* $\~U$ is in the range [-1, 1], where queues with exactly mean usage will get the value 0, queues with > mean will get values in the range (0,1], and queues below mean will get values in the range [-1, 0)
 
 We can furthermore consider the **unallocated** resources in the cluster. If we go back to the definition of $U'_i$, we can add:
 $$U'_i = \frac{U_i}{\sum{U} + V}$$
@@ -161,12 +161,15 @@ where V (vacant) represents the **unallocated** resources for the considered tim
 
 Now, we can plug in $\~U_i$ to our fair share calculation:
 
-$$F_i = C \cdot (w_i - ~U_i)$$
+$$F_i = C \cdot (w'_i - \~U_i)$$
 
 Which will give us the following:
 * When usage is zero for all queues, we revert back to the current calculation
-* Decreased fair share for overusing queues ($U_i > 0$)
+* Decreased fair share for queues that are using more than average ($U_i > 0$)
+* Queues that their relative **usage** is bigger than their relative **share** will get a negative value
 
 Since we don't want to assign negative fair share, we will max this expression with 0:
 
-$$F_i = \max{\{C \cdot (w_i - ~U_i), 0\}}$$
+$$F_i = \max{\{C \cdot (w'_i - \~U_i), 0\}}$$
+
+If there are still unclaimed resources, the relative weights and usage values will be re-calculated in the next round - allowing even very over-using queues to get access to resources, if they are left unclaimed by all other queues
