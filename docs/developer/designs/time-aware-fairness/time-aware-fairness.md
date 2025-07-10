@@ -13,6 +13,8 @@
   - [Notes/Constraints/Caveats (Optional)](#notesconstraintscaveats)
   - [Risks and Mitigations](#risks-and-mitigations)
 - [Design Details](#design-details)
+  - [Option 1](#option-1)
+  - [Option 2](#option-2-mean-centered-usage-penalty)
 <!-- /toc -->
 
 ## Summary
@@ -103,7 +105,7 @@ The resource division formula for over-quota resource can be found in proportion
 ```Go
 fairShare := amountToGiveInCurrentRound * (overQuotaWeight / totalWeights)
 ```
-This calculation is done for each resource type.
+This calculation is done for each resource type. The result of this calculation is later capped with the requested resource of the queue, so each round of this calculation for all queues could result in remaining capcacity to divide - this is run in rounds, each time with the updated remaining unsatisfied queues, untill all resources are divided or all queues get their request.
 
 For convenience, we'll write it out as a formula:
 
@@ -115,11 +117,15 @@ Where:
 - **w** is the weight for a specific queue
 - **∑w** is the sum of weights across all competing queues
 
+Let's also mark the normalized weight as:
+
+$$w'_i = \frac{w_i}{\sum{w}}$$
+
 
 ### Option 1:
 One way to achieve time-aware fairness is to add the usage as a factor:
 
-$$\text{F} = C \cdot \frac{w}{\sum{w}} \cdot \frac{1}{1 + u}$$
+$$\text{F} = C \cdot w'_i \cdot \frac{1}{1 + u}$$
 
 Where:
 - **U** represents the usage for the queue
@@ -128,9 +134,39 @@ On one hand, this has the advantage of reverting to the current result for `u=0`
 
 This result can be approximated by introducing a factor to multiply the usage by. A large value for this factor will result in a more linear penalty:
 
-$$\text{F} = C \cdot \frac{w}{\sum{w}} \cdot \frac{1}{1 + \alpha \cdot u}$$
+$$\text{F} = C \cdot w'_ \cdot \frac{1}{1 + \alpha \cdot u}$$
 
 Where:
 - **α** represents the significance factor for historical usage impact
 
 In this case, when `α=10`, when `u=1` the penalty will be `1/11`, and for `u=2` it will be `1/21`, which is closer to the linear result. This could also be a potential control for the impact of the historical usage.
+
+### Option 2: Mean-centered usage penalty
+
+First, we'll define a normalized "usage" score for each queue and resource:
+
+$$U'_i = \frac{U_i}{\sum{U}}$$
+
+This puts U'<sub>i</sub> in the range [0,1]
+
+We can then mean-center the usage values:
+
+$$\~U_i = U'_i - m$$
+Where m is the mean U', which gives the following properties:
+* $\~U$ is in the range [-1, 1], where queues with exactly mean usage will get the value 0, queues with > mean will get values in the range (0,1], and queues below mean will get values in the range [1, 0)
+
+We can furthermore consider the **unallocated** resources in the cluster. If we go back to the definition of $U'_i$, we can add:
+$$U'_i = \frac{U_i}{\sum{U} + V}$$
+where V (vacant) represents the **unallocated** resources for the considered time period. This will add the benefit of reduced penalty for usages that were relatively small compared to free resources in the cluster - otherwise, for example, a usage of a single gpu*second in an empty cluster will severely punishing queues that utilized small amounts of clusters when there was no contention.
+
+Now, we can plug in $\~U_i$ to our fair share calculation:
+
+$$F_i = C \cdot (w_i - ~U_i)$$
+
+Which will give us the following:
+* When usage is zero for all queues, we revert back to the current calculation
+* Decreased fair share for overusing queues ($U_i > 0$)
+
+Since we don't want to assign negative fair share, we will max this expression with 0:
+
+$$F_i = \max{\{C \cdot (w_i - ~U_i), 0\}}$$
