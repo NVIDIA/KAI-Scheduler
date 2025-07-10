@@ -290,9 +290,8 @@ func (sc *SchedulerCache) createBindRequest(podInfo *pod_info.PodInfo, nodeName 
 			SelectedGPUGroups:    podInfo.GPUGroups,
 			ReceivedResourceType: string(podInfo.ResourceReceivedType),
 			ReceivedGPU: &schedulingv1alpha2.ReceivedGPU{
-				Count:     int(podInfo.AcceptedResource.GetNumOfGpuDevices()),
-				Portion:   fmt.Sprintf("%.2f", podInfo.AcceptedResource.GpuFractionalPortion()),
-				GPUMemory: fmt.Sprintf("%d", podInfo.AcceptedResource.GpuMemory()),
+				Count:   int(podInfo.AcceptedResource.GetNumOfGpuDevices()),
+				Portion: fmt.Sprintf("%.2f", podInfo.AcceptedResource.GpuFractionalPortion()),
 			},
 			ResourceClaimAllocations: podInfo.ResourceClaimInfo,
 		},

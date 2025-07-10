@@ -187,9 +187,8 @@ var _ = Describe("FractionBinder", func() {
 						SelectedNode:         "my-node",
 						ReceivedResourceType: common.ReceivedTypeFraction,
 						ReceivedGPU: &v1alpha2.ReceivedGPU{
-							Count:     1,
-							Portion:   "0.5",
-							GPUMemory: "2000",
+							Count:   1,
+							Portion: "0.5",
 						},
 						SelectedGPUGroups: []string{fakeGPUGroup},
 					},
@@ -220,7 +219,6 @@ var _ = Describe("FractionBinder", func() {
 					Expect(configMap.Data[common.NvidiaVisibleDevices]).To(Equal(testData.gpuIndexByGroupIndex))
 					Expect(configMap.Data[common.NumOfGpusEnvVarBC]).To(Equal("0.5"))
 					Expect(configMap.Data[common.GPUPortion]).To(Equal("0.5"))
-					Expect(configMap.Data[common.GPUMemoryLimit]).To(Equal("2000"))
 				}
 			})
 		}

@@ -6,7 +6,6 @@ package common
 const (
 	NvidiaVisibleDevices = "NVIDIA_VISIBLE_DEVICES"
 	GPUPortion           = "GPU_PORTION"
-	GPUMemoryLimit       = "GPU_MEMORY_LIMIT"
 	ReceivedTypeFraction = "Fraction"
 	ReceivedTypeRegular  = "Regular"
 )

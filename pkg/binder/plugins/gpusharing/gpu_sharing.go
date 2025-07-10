@@ -116,11 +116,7 @@ func (p *GPUSharing) PreBind(
 		return err
 	}
 
-	err = common.SetGPUPortion(ctx, p.kubeClient, pod, containerRef, bindRequest.Spec.ReceivedGPU.Portion)
-	if err != nil {
-		return err
-	}
-	return common.SetGPUMemoryLimit(ctx, p.kubeClient, pod, containerRef, bindRequest.Spec.ReceivedGPU.GPUMemory)
+	return common.SetGPUPortion(ctx, p.kubeClient, pod, containerRef, bindRequest.Spec.ReceivedGPU.Portion)
 }
 
 func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, pod *v1.Pod,

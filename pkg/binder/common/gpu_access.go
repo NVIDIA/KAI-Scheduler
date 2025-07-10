@@ -56,18 +56,6 @@ func AddGPUSharingEnvVars(container *v1.Container, sharedGpuConfigMapName string
 			},
 		},
 	})
-
-	AddEnvVarToContainer(container, v1.EnvVar{
-		Name: GPUMemoryLimit,
-		ValueFrom: &v1.EnvVarSource{
-			ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-				Key: GPUMemoryLimit,
-				LocalObjectReference: v1.LocalObjectReference{
-					Name: sharedGpuConfigMapName,
-				},
-			},
-		},
-	})
 }
 
 func SetNvidiaVisibleDevices(
@@ -127,27 +115,6 @@ func SetGPUPortion(
 	err = UpdateConfigMapEnvironmentVariable(ctx, kubeClient, pod, capabilitiesMapName, updateFunc)
 	if err != nil {
 		return fmt.Errorf("failed to update GPU_PORTION value in gpu sharing configmap for pod <%s/%s>: %v",
-			pod.Namespace, pod.Name, err)
-	}
-	return nil
-}
-
-func SetGPUMemoryLimit(
-	ctx context.Context, kubeClient client.Client, pod *v1.Pod, containerRef *gpusharingconfigmap.PodContainerRef,
-	gpuMemoryLimitStr string,
-) error {
-	updateFunc := func(data map[string]string) error {
-		data[GPUMemoryLimit] = gpuMemoryLimitStr
-		return nil
-	}
-	capabilitiesMapName, err := gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
-	if err != nil {
-		return err
-	}
-
-	err = UpdateConfigMapEnvironmentVariable(ctx, kubeClient, pod, capabilitiesMapName, updateFunc)
-	if err != nil {
-		return fmt.Errorf("failed to update GPU_MEMORY_LIMIT value in gpu sharing configmap for pod <%s/%s>: %v",
 			pod.Namespace, pod.Name, err)
 	}
 	return nil

@@ -128,17 +128,6 @@ func TestBindApplyResourceReceivedType(t *testing.T) {
 								},
 							},
 						},
-						{
-							Name: common.GPUMemoryLimit,
-							ValueFrom: &v1.EnvVarSource{
-								ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-									Key: common.GPUMemoryLimit,
-									LocalObjectReference: v1.LocalObjectReference{
-										Name: "my-config-0",
-									},
-								},
-							},
-						},
 					},
 				},
 			},
@@ -171,9 +160,8 @@ func TestBindApplyResourceReceivedType(t *testing.T) {
 			ReceivedResourceType: common.ReceivedTypeFraction,
 			SelectedGPUGroups:    []string{"group1"},
 			ReceivedGPU: &v1alpha2.ReceivedGPU{
-				Count:     1,
-				Portion:   "1",
-				GPUMemory: "2000",
+				Count:   1,
+				Portion: "1",
 			},
 		},
 	}
