@@ -7,8 +7,12 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+)
+
+const (
+	topologyPluginName = "topology"
+	noNodeName         = ""
 )
 
 type topologyPlugin struct {
@@ -24,15 +28,11 @@ func New(pluginArgs map[string]string) framework.Plugin {
 }
 
 func (t *topologyPlugin) Name() string {
-	return "topology"
+	return topologyPluginName
 }
 
 func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
-	topologies, err := ssn.Cache.GetDataLister().ListTopologies()
-	if err != nil {
-		log.InfraLogger.Errorf("failed to list topologies", err)
-		return
-	}
+	topologies := ssn.Topologies
 	t.initializeTopologyTree(topologies, ssn)
 
 	ssn.AddEventHandler(&framework.EventHandler{
@@ -107,6 +107,9 @@ func (t *topologyPlugin) updateTopologyGivenPodEvent(
 	return func(event *framework.Event) {
 		pod := event.Task.Pod
 		nodeName := event.Task.NodeName
+		if nodeName == noNodeName {
+			return
+		}
 		node := ssn.Nodes[nodeName].Node
 		podInfo := ssn.Nodes[nodeName].PodInfos[pod_info.PodKey(pod)]
 

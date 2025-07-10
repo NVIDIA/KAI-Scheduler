@@ -175,6 +175,7 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 				Used:        resource_info.NewResource(1000, 0, 3),
 			},
 		},
+		Topologies: []*kueuev1alpha1.Topology{testTopology},
 	}
 
 	plugin := New(nil)

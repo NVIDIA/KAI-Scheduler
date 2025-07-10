@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
+	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -56,6 +57,7 @@ type Session struct {
 	Nodes         map[string]*node_info.NodeInfo
 	Queues        map[common_info.QueueID]*queue_info.QueueInfo
 	ConfigMaps    map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
+	Topologies    []*kueuev1alpha1.Topology
 
 	GpuOrderFns                           []api.GpuOrderFn
 	NodePreOrderFns                       []api.NodePreOrderFn
@@ -340,6 +342,7 @@ func openSession(cache cache.Cache, sessionId types.UID, schedulerParams conf.Sc
 		PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{},
 		Nodes:         map[string]*node_info.NodeInfo{},
 		Queues:        map[common_info.QueueID]*queue_info.QueueInfo{},
+		Topologies:    []*kueuev1alpha1.Topology{},
 
 		plugins:         map[string]Plugin{},
 		SchedulerParams: schedulerParams,
@@ -357,6 +360,7 @@ func openSession(cache cache.Cache, sessionId types.UID, schedulerParams conf.Sc
 	ssn.Nodes = snapshot.Nodes
 	ssn.Queues = snapshot.Queues
 	ssn.ConfigMaps = snapshot.ConfigMaps
+	ssn.Topologies = snapshot.Topologies
 
 	log.InfraLogger.V(2).Infof("Session %v with <%d> Jobs, <%d> Queues and <%d> Nodes",
 		ssn.UID, len(ssn.PodGroupInfos), len(ssn.Queues), len(ssn.Nodes))
