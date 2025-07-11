@@ -329,10 +329,6 @@ func (ni *NodeInfo) getGpuMemoryFractionalOnNode(memory int64) float64 {
 	return math.Ceil(exactFraction*100) / 100
 }
 
-func (ni *NodeInfo) taskAllocatableOnNonAllocatedNonGPUResources(pod *pod_info.PodInfo) bool {
-	return pod.ResReq.BaseResource.LessEqual(&ni.NonAllocatedResources().BaseResource)
-}
-
 func (ni *NodeInfo) fractionTaskGpusAllocatableDeviceCount(pod *pod_info.PodInfo) int64 {
 	matchingGpuGroupsCount := int64(0)
 	for gpuGroup := range ni.UsedSharedGPUsMemory {

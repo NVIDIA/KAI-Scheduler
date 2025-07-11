@@ -41,6 +41,8 @@ func (gg *GroveGrouper) Name() string {
 // +kubebuilder:rbac:groups=grove.io,resources=podgangsets/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=grove.io,resources=podcliques,verbs=get;list;watch
 // +kubebuilder:rbac:groups=grove.io,resources=podcliques/finalizers,verbs=patch;update;create
+// +kubebuilder:rbac:groups=grove.io,resources=podcliquescalinggroups,verbs=get;list;watch
+// +kubebuilder:rbac:groups=grove.io,resources=podcliquescalinggroups/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=scheduler.grove.io,resources=podgangs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=scheduler.grove.io,resources=podgangs/finalizers,verbs=patch;update;create
 
@@ -104,15 +106,6 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 		if !found {
 			return nil, fmt.Errorf("missing podReferences in spec.podgroup[%v] of PodGang %s/%s",
 				idx, pod.Namespace, podGangName)
-		}
-		minReplicas, found, err := unstructured.NestedInt64(pgr, "minReplicas")
-		if err != nil {
-			return nil, fmt.Errorf("failed to get minReplicas from spec.podgroup[%v] of PodGang %s/%s : %w",
-				idx, pod.Namespace, podGangName, err)
-		}
-		if found && int(minReplicas) != len(podSlice) {
-			return nil, fmt.Errorf("unsupported minReplicas in spec.podgroup[%v] of PodGang %s/%s : expected: %v, found: %v",
-				idx, pod.Namespace, podGangName, len(podSlice), minReplicas)
 		}
 		minAvailable += int32(len(podSlice))
 	}

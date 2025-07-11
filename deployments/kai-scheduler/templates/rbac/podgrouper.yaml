@@ -125,6 +125,7 @@ rules:
   - grove.io
   resources:
   - podcliques
+  - podcliquescalinggroups
   - podgangsets
   verbs:
   - get
@@ -134,6 +135,7 @@ rules:
   - grove.io
   resources:
   - podcliques/finalizers
+  - podcliquescalinggroups/finalizers
   - podgangsets/finalizers
   verbs:
   - create
@@ -186,6 +188,22 @@ rules:
   - patch
   - update
 - apiGroups:
+  - leaderworkerset.x-k8s.io
+  resources:
+  - leaderworkersets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - leaderworkerset.x-k8s.io
+  resources:
+  - leaderworkersets/finalizers
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
   - machinelearning.seldon.io
   resources:
   - seldondeployments
@@ -224,6 +242,7 @@ rules:
 - apiGroups:
   - run.ai
   resources:
+  - distributedinferenceworkloads
   - distributedworkloads
   - inferenceworkloads
   - interactiveworkloads

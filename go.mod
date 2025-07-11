@@ -64,6 +64,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/karpenter v1.2.0
 	sigs.k8s.io/kueue v0.12.3
+	sigs.k8s.io/lws v0.5.1
 )
 
 require (

@@ -315,7 +315,7 @@ func (ni *NodeInfo) isTaskAllocatableOnNonAllocatedResources(
 		return ni.lessEqualTaskToNodeResources(task.ResReq, nodeNonAllocatedResources)
 	}
 
-	if !ni.taskAllocatableOnNonAllocatedNonGPUResources(task) {
+	if !task.ResReq.BaseResource.LessEqual(&nodeNonAllocatedResources.BaseResource) {
 		return false
 	}
 

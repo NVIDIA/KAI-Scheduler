@@ -24,6 +24,12 @@ const (
 	configMapNameExtraChars       = configMapNameNumRandomChars + 6
 )
 
+type PodContainerRef struct {
+	Container *v1.Container
+	Index     int
+	Type      ContainerType
+}
+
 func UpsertJobConfigMap(ctx context.Context,
 	kubeClient client.Client, pod *v1.Pod, configMapName string, data map[string]string) (err error) {
 	logger := log.FromContext(ctx)
@@ -105,18 +111,17 @@ func patchConfigMap(
 	return nil
 }
 
-func SetGpuCapabilitiesConfigMapName(pod *v1.Pod, containerIndex int, containerType ContainerType) string {
+func SetGpuCapabilitiesConfigMapName(pod *v1.Pod, containerRef *PodContainerRef) string {
 	namePrefix, found := pod.Annotations[gpuSharingConfigMapAnnotation]
 	if !found {
-		namePrefix = generateConfigMapNamePrefix(pod, containerIndex)
+		namePrefix = generateConfigMapNamePrefix(pod, containerRef.Index)
 		setConfigMapNameAnnotation(pod, namePrefix)
 	}
-	containerIndexStr := strconv.Itoa(containerIndex)
-	if containerType == InitContainer {
+	containerIndexStr := strconv.Itoa(containerRef.Index)
+	if containerRef.Type == InitContainer {
 		containerIndexStr = "i" + containerIndexStr
 	}
 	capabilitiesConfigMapName := fmt.Sprintf("%s-%s", namePrefix, containerIndexStr)
-
 	return capabilitiesConfigMapName
 }
 
@@ -139,9 +144,9 @@ func generateConfigMapNamePrefix(pod *v1.Pod, containerIndex int) string {
 		utilrand.String(configMapNameNumRandomChars), gpuSharingConfigMap)
 }
 
-func ExtractCapabilitiesConfigMapName(pod *v1.Pod, containerIndex int, containerType ContainerType) (string, error) {
-	containerIndexStr := strconv.Itoa(containerIndex)
-	if containerType == InitContainer {
+func ExtractCapabilitiesConfigMapName(pod *v1.Pod, containerRef *PodContainerRef) (string, error) {
+	containerIndexStr := strconv.Itoa(containerRef.Index)
+	if containerRef.Type == InitContainer {
 		containerIndexStr = "i" + containerIndexStr
 	}
 
@@ -153,8 +158,8 @@ func ExtractCapabilitiesConfigMapName(pod *v1.Pod, containerIndex int, container
 	return capabilitiesConfigMapName, nil
 }
 
-func ExtractDirectEnvVarsConfigMapName(pod *v1.Pod, containerIndex int, containerType ContainerType) (string, error) {
-	configNameBase, err := ExtractCapabilitiesConfigMapName(pod, containerIndex, containerType)
+func ExtractDirectEnvVarsConfigMapName(pod *v1.Pod, containerRef *PodContainerRef) (string, error) {
+	configNameBase, err := ExtractCapabilitiesConfigMapName(pod, containerRef)
 	if err != nil {
 		return "", err
 	}
@@ -204,12 +209,4 @@ func compareObjectOwners(lOwners, rOwners []metav1.OwnerReference) (bool, string
 	}
 
 	return different, reason
-}
-
-func AddDataConfigField(data map[string]string, key, value string) {
-	if foundValue, found := data[key]; !found || len(foundValue) == 0 {
-		data[key] = value
-	} else {
-		data[key] += fmt.Sprintf("\n%v", value)
-	}
 }

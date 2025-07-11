@@ -6,12 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Changed RUNAI-VISIBLE-DEVICES key in GPU sharing configmap to NVIDIA_VISIBLE_DEVICES
+
+### Fixed
+- Fixed a miscalculation where cpu/memory releasing resources were considered idle when requesting GPU fraction/memory
+
+## [v0.7.3] - 2025-07-08
+
+### Removed
+- Removed GPU sharing configmap name resolution from env vars and volumes
+
+## [v0.7.2] - 2025-07-07
+### Added
+- Added LeaderWorkerSet support in the podGrouper. Each replica will be given a separate podGroup.
+
+## [v0.7.1] - 2025-07-07
+
+### Added
+- Added kueue topology CRD to kai installations
+
+### Fixed
+- Fixed cases where reclaim validation operated on outdated info, allowing invalid reclaim scenarios
+
+## [v0.7.0] - 2025-07-02
+
 ### Added
 - Added optional pod and namespace label selectors to limit the scope of monitored pods
-- Added a plugin extension point for scheduler plugins to add annotations to BindRequests.
+- Added a plugin extension point for scheduler plugins to add annotations to BindRequests
+- Added support for Grove
 
-### Fixes
-- Fixed cases where reclaim validation operated on outdated info, allowing invalid reclaim scenarios
+### Changed
+- Changed `run.ai/top-owner-metadata` to `kai.scheduler/top-owner-matadata`
 
 ## [v0.6.0] - 2025-06-16
 
@@ -19,7 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Changed `runai-reservation` namespace to `kai-resource-reservation`. For migration guide, refer to this [doc](docs/migrationguides/README.md)
 - Changed `runai/queue` label key to `kai.scheduler/queue`. For migration guide, refer to [doc](docs/migrationguides/README.md)
 
-### Fixes
+### Fixed
 - Fixed pod status scheduled race condition between the scheduler and the pod binding
 - Removed redundant `replicas` key for binder from `values.yaml` as it is not used and not supported
 
@@ -43,6 +69,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Queue order function now takes into account potential victims, resulting in better reclaim scenarios.
 
-### Fixes
+### Fixed
 - Fixed preempt/reclaim of elastic workloads only taking one pod.
 - Scheduler now doesn't label pods' nodepool when nodepool label value is empty
