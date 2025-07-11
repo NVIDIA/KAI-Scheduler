@@ -378,7 +378,7 @@ func (c *ClusterInfo) getNodeToPodInfosMap(allPods []*v1.Pod, bindRequests bindr
 	nodeReservationPodInfosMap := map[string][]*pod_info.PodInfo{}
 	for _, pod := range allPods {
 		podBindRequest := bindRequests.GetBindRequestForPod(pod)
-		podInfo := pod_info.NewTaskInfoWithBindRequest(pod.DeepCopy(), podBindRequest)
+		podInfo := pod_info.NewTaskInfoWithBindRequest(pod, podBindRequest)
 
 		if pod_info.IsResourceReservationTask(podInfo.Pod) {
 			podInfos := nodeReservationPodInfosMap[podInfo.NodeName]
