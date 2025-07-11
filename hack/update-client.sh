@@ -26,7 +26,7 @@ kube::codegen::gen_client \
 
 rm -f generate-dep.go && rm -r vendor && go mod tidy
 
-changed_files=$(git diff --name-only | grep v1alpha2)
+changed_files=$(git diff --name-only | grep pkg/apis/client | grep v1alpha2)
 ${SDK_HACK_DIR}/replace_headers.sh \
   ${SDK_HACK_DIR}/boilerplate.go.txt \
   ${changed_files}

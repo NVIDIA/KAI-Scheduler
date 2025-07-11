@@ -16,10 +16,11 @@ import (
 )
 
 const (
-	visibleDevicesBC = "RUNAI-VISIBLE-DEVICES" // Deprecated, this value was replaced with NVIDIA_VISIBLE_DEVICES
+	visibleDevicesBC  = "RUNAI-VISIBLE-DEVICES" // Deprecated, this value was replaced with NVIDIA_VISIBLE_DEVICES
+	NumOfGpusEnvVarBC = "RUNAI_NUM_OF_GPUS"     // Deprecated, please use GPU_PORTION env var instead
 )
 
-func AddVisibleDevicesEnvVars(container *v1.Container, sharedGpuConfigMapName string) {
+func AddGPUSharingEnvVars(container *v1.Container, sharedGpuConfigMapName string) {
 	AddEnvVarToContainer(container, v1.EnvVar{
 		Name: NvidiaVisibleDevices,
 		ValueFrom: &v1.EnvVarSource{
@@ -33,10 +34,22 @@ func AddVisibleDevicesEnvVars(container *v1.Container, sharedGpuConfigMapName st
 	})
 
 	AddEnvVarToContainer(container, v1.EnvVar{
-		Name: NumOfGpusEnvVar,
+		Name: NumOfGpusEnvVarBC,
 		ValueFrom: &v1.EnvVarSource{
 			ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-				Key: NumOfGpusEnvVar,
+				Key: NumOfGpusEnvVarBC,
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: sharedGpuConfigMapName,
+				},
+			},
+		},
+	})
+
+	AddEnvVarToContainer(container, v1.EnvVar{
+		Name: GPUPortion,
+		ValueFrom: &v1.EnvVarSource{
+			ConfigMapKeyRef: &v1.ConfigMapKeySelector{
+				Key: GPUPortion,
 				LocalObjectReference: v1.LocalObjectReference{
 					Name: sharedGpuConfigMapName,
 				},
@@ -69,6 +82,8 @@ func SetNvidiaVisibleDevices(
 		return err
 	}
 	updateFunc = func(data map[string]string) error {
+		// BC for pods that were created with NVIDIA_VISIBLE_DEVICES env var
+		// with value from RUNAI-VISIBLE-DEVICES entry in GPU sharing configmap
 		if _, found := data[visibleDevicesBC]; found {
 			data[visibleDevicesBC] = visibleDevicesValue
 		}
@@ -83,12 +98,13 @@ func SetNvidiaVisibleDevices(
 	return nil
 }
 
-func SetNumOfGPUDevices(
+func SetGPUPortion(
 	ctx context.Context, kubeClient client.Client, pod *v1.Pod, containerRef *gpusharingconfigmap.PodContainerRef,
-	numOfGPUs string,
+	gpuPortionStr string,
 ) error {
 	updateFunc := func(data map[string]string) error {
-		data[NumOfGpusEnvVar] = numOfGPUs
+		data[NumOfGpusEnvVarBC] = gpuPortionStr
+		data[GPUPortion] = gpuPortionStr
 		return nil
 	}
 	capabilitiesMapName, err := gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
@@ -98,7 +114,7 @@ func SetNumOfGPUDevices(
 
 	err = UpdateConfigMapEnvironmentVariable(ctx, kubeClient, pod, capabilitiesMapName, updateFunc)
 	if err != nil {
-		return fmt.Errorf("failed to update gpu sharing configmap for pod <%s/%s>: %v",
+		return fmt.Errorf("failed to update GPU_PORTION value in gpu sharing configmap for pod <%s/%s>: %v",
 			pod.Namespace, pod.Name, err)
 	}
 	return nil
