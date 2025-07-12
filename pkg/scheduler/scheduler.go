@@ -37,6 +37,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins"
+
+	kueue "sigs.k8s.io/kueue/client-go/clientset/versioned"
 )
 
 type Scheduler struct {
@@ -54,10 +56,11 @@ func NewScheduler(
 	schedulerParams *conf.SchedulerParams,
 	mux *http.ServeMux,
 ) (*Scheduler, error) {
-	kubeClient, kubeAiSchedulerClient := newClients(config)
+	kubeClient, kubeAiSchedulerClient, kueueClient := newClients(config)
 	schedulerCacheParams := &schedcache.SchedulerCacheParams{
 		KubeClient:                  kubeClient,
 		KAISchedulerClient:          kubeAiSchedulerClient,
+		KueueClient:                 kueueClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      schedulerParams.RestrictSchedulingNodes,
@@ -127,11 +130,11 @@ func (s *Scheduler) runOnce() {
 	log.InfraLogger.RemoveActionLogger()
 }
 
-func newClients(config *rest.Config) (kubernetes.Interface, kubeaischedulerver.Interface) {
+func newClients(config *rest.Config) (kubernetes.Interface, kubeaischedulerver.Interface, kueue.Interface) {
 	k8cClientConfig := rest.CopyConfig(config)
 
 	// Force protobuf serialization for k8s built-in resources
 	k8cClientConfig.AcceptContentTypes = "application/vnd.kubernetes.protobuf"
 	k8cClientConfig.ContentType = "application/vnd.kubernetes.protobuf"
-	return kubernetes.NewForConfigOrDie(k8cClientConfig), kubeaischedulerver.NewForConfigOrDie(config)
+	return kubernetes.NewForConfigOrDie(k8cClientConfig), kubeaischedulerver.NewForConfigOrDie(config), kueue.NewForConfigOrDie(config)
 }

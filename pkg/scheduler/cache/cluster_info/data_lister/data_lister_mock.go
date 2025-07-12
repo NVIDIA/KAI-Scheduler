@@ -20,6 +20,7 @@ import (
 	v10 "k8s.io/api/policy/v1"
 	v11 "k8s.io/api/scheduling/v1"
 	v12 "k8s.io/api/storage/v1"
+	v1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 // MockDataLister is a mock of DataLister interface.
@@ -254,4 +255,19 @@ func (m *MockDataLister) ListStorageClasses() ([]*v12.StorageClass, error) {
 func (mr *MockDataListerMockRecorder) ListStorageClasses() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStorageClasses", reflect.TypeOf((*MockDataLister)(nil).ListStorageClasses))
+}
+
+// ListTopologies mocks base method.
+func (m *MockDataLister) ListTopologies() ([]*v1alpha1.Topology, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTopologies")
+	ret0, _ := ret[0].([]*v1alpha1.Topology)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTopologies indicates an expected call of ListTopologies.
+func (mr *MockDataListerMockRecorder) ListTopologies() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTopologies", reflect.TypeOf((*MockDataLister)(nil).ListTopologies))
 }

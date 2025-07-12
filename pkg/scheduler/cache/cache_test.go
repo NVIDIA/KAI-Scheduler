@@ -40,6 +40,7 @@ import (
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
+	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
 )
 
 func TestCache(t *testing.T) {
@@ -242,10 +243,12 @@ var _ = Describe("Cache", func() {
 func setupCacheWithObjects(snapshot bool, objects []runtime.Object, kaiSchedulerObjects ...runtime.Object) (Cache, chan struct{}) {
 	kubeClient := fake.NewSimpleClientset(objects...)
 	kubeAiSchedulerClient := kubeaischedulerfake.NewSimpleClientset(kaiSchedulerObjects...)
+	kueueClient := kueuefake.NewSimpleClientset()
 
 	cache := New(&SchedulerCacheParams{
 		KubeClient:            kubeClient,
 		KAISchedulerClient:    kubeAiSchedulerClient,
+		KueueClient:           kueueClient,
 		NodePoolParams:        &conf.SchedulingNodePoolParams{},
 		FullHierarchyFairness: true,
 	})

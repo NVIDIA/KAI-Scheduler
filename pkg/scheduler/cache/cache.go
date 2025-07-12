@@ -57,6 +57,9 @@ import (
 	k8splugins "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
+
+	kueueclient "sigs.k8s.io/kueue/client-go/clientset/versioned"
+	kueue "sigs.k8s.io/kueue/client-go/informers/externalversions"
 )
 
 func init() {
@@ -78,6 +81,7 @@ type SchedulerCacheParams struct {
 	RestrictNodeScheduling      bool
 	KubeClient                  kubernetes.Interface
 	KAISchedulerClient          kubeaischedulerver.Interface
+	KueueClient                 kueueclient.Interface
 	DetailedFitErrors           bool
 	ScheduleCSIStorage          bool
 	FullHierarchyFairness       bool
@@ -90,8 +94,10 @@ type SchedulerCache struct {
 	workersWaitGroup               sync.WaitGroup
 	kubeClient                     kubernetes.Interface
 	kubeAiSchedulerClient          kubeaischedulerver.Interface
+	kueueClient                    kueueclient.Interface
 	informerFactory                informers.SharedInformerFactory
 	kubeAiSchedulerInformerFactory kubeaischedulerinfo.SharedInformerFactory
+	kueueInformerFactory           kueue.SharedInformerFactory
 	podLister                      listv1.PodLister
 	podGroupLister                 enginelisters.PodGroupLister
 	clusterInfo                    *cluster_info.ClusterInfo
@@ -120,6 +126,7 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 		fullHierarchyFairness:    schedulerCacheParams.FullHierarchyFairness,
 		kubeClient:               schedulerCacheParams.KubeClient,
 		kubeAiSchedulerClient:    schedulerCacheParams.KAISchedulerClient,
+		kueueClient:              schedulerCacheParams.KueueClient,
 	}
 
 	schedulerName := schedulerCacheParams.SchedulerName
@@ -141,13 +148,14 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 
 	sc.informerFactory = informers.NewSharedInformerFactory(sc.kubeClient, 0)
 	sc.kubeAiSchedulerInformerFactory = kubeaischedulerinfo.NewSharedInformerFactory(sc.kubeAiSchedulerClient, 0)
+	sc.kueueInformerFactory = kueue.NewSharedInformerFactory(sc.kueueClient, 0)
 
 	sc.internalPlugins = k8splugins.InitializeInternalPlugins(sc.kubeClient, sc.informerFactory, sc.SnapshotSharedLister())
 
 	sc.podLister = sc.informerFactory.Core().V1().Pods().Lister()
 	sc.podGroupLister = sc.kubeAiSchedulerInformerFactory.Scheduling().V2alpha2().PodGroups().Lister()
 
-	clusterInfo, err := cluster_info.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.schedulingNodePoolParams,
+	clusterInfo, err := cluster_info.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, sc.schedulingNodePoolParams,
 		sc.restrictNodeScheduling, &sc.K8sClusterPodAffinityInfo, sc.scheduleCSIStorage, sc.fullHierarchyFairness, sc.StatusUpdater)
 
 	if err != nil {
@@ -178,12 +186,14 @@ func (sc *SchedulerCache) Snapshot() (*api.ClusterInfo, error) {
 func (sc *SchedulerCache) Run(stopCh <-chan struct{}) {
 	sc.informerFactory.Start(stopCh)
 	sc.kubeAiSchedulerInformerFactory.Start(stopCh)
+	sc.kueueInformerFactory.Start(stopCh)
 	sc.StatusUpdater.Run(stopCh)
 }
 
 func (sc *SchedulerCache) WaitForCacheSync(stopCh <-chan struct{}) {
 	sc.informerFactory.WaitForCacheSync(stopCh)
 	sc.kubeAiSchedulerInformerFactory.WaitForCacheSync(stopCh)
+	sc.kueueInformerFactory.WaitForCacheSync(stopCh)
 }
 
 func (sc *SchedulerCache) Evict(evictedPod *v1.Pod, evictedPodGroup *podgroup_info.PodGroupInfo,
@@ -411,5 +421,5 @@ func (sc *SchedulerCache) GetDataLister() data_lister.DataLister {
 		log.InfraLogger.Errorf("Failed to get label selector: %v", err)
 		return nil
 	}
-	return data_lister.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, selector)
+	return data_lister.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, selector)
 }

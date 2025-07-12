@@ -22,6 +22,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 const (
@@ -45,6 +46,7 @@ type RawKubernetesObjects struct {
 	ResourceClaims         []*resourceapi.ResourceClaim       `json:"resourceClaims"`
 	ResourceSlices         []*resourceapi.ResourceSlice       `json:"resourceSlices"`
 	DeviceClasses          []*resourceapi.DeviceClass         `json:"deviceClasses"`
+	Topologies             []*kueue.Topology                  `json:"topologies"`
 }
 
 type Snapshot struct {
@@ -145,6 +147,12 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 	if err != nil {
 		log.InfraLogger.Errorf("Error getting raw CSI drivers: %v", err)
 		rawObjects.CSIDrivers = []*storage.CSIDriver{}
+	}
+
+	rawObjects.Topologies, err = dataLister.ListTopologies()
+	if err != nil {
+		log.InfraLogger.Errorf("Error getting raw topologies: %v", err)
+		rawObjects.Topologies = []*kueue.Topology{}
 	}
 
 	fwork := sp.session.InternalK8sPlugins().FrameworkHandle

@@ -23,6 +23,10 @@ import (
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+
+	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kueueInformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
+	kueueLister "sigs.k8s.io/kueue/client-go/listers/kueue/v1alpha1"
 )
 
 type k8sLister struct {
@@ -42,6 +46,8 @@ type k8sLister struct {
 
 	bindRequestLister scheudlinglistv1alpha2.BindRequestLister
 
+	kueueTopologyLister kueueLister.TopologyLister
+
 	partitionSelector labels.Selector
 }
 
@@ -49,6 +55,7 @@ type k8sLister struct {
 
 func New(
 	informerFactory informers.SharedInformerFactory, kubeAiSchedulerInformerFactory kubeAiSchedulerInfo.SharedInformerFactory,
+	kueueInformerFactory kueueInformer.SharedInformerFactory,
 	partitionSelector labels.Selector,
 ) *k8sLister {
 	return &k8sLister{
@@ -67,6 +74,8 @@ func New(
 		csiDriverLister:       informerFactory.Storage().V1().CSIDrivers().Lister(),
 
 		bindRequestLister: kubeAiSchedulerInformerFactory.Scheduling().V1alpha2().BindRequests().Lister(),
+
+		kueueTopologyLister: kueueInformerFactory.Kueue().V1alpha1().Topologies().Lister(),
 
 		partitionSelector: partitionSelector,
 	}
@@ -150,4 +159,10 @@ func (k *k8sLister) ListBindRequests() ([]*schedulingv1alpha2.BindRequest, error
 
 func (k *k8sLister) ListConfigMaps() ([]*v1.ConfigMap, error) {
 	return k.cmLister.List(labels.Everything())
+}
+
+// +kubebuilder:rbac:groups="kueue.x-k8s.io",resources=topologies,verbs=get;list;watch
+
+func (k *k8sLister) ListTopologies() ([]*kueue.Topology, error) {
+	return k.kueueTopologyLister.List(labels.Everything())
 }

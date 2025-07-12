@@ -25,6 +25,7 @@ import (
 	kaiv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	kaiv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	kaiv2v2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 var (
@@ -67,6 +68,7 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	kaiv1alpha2.AddToScheme(scheme.Scheme)
 	kaiv2v2alpha2.AddToScheme(scheme.Scheme)
 	resourcev1beta1.AddToScheme(scheme.Scheme)
+	kueuev1alpha1.AddToScheme(scheme.Scheme)
 	// +kubebuilder:scaffold:scheme
 
 	ctrlClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
