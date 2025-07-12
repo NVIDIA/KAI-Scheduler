@@ -56,7 +56,7 @@ spec:
                     type: integer
                   portion:
                     description: |-
-                      This is the portion size that the pod will receive from each connected gpu device
+                      This is the portion size that the pod will receive from each connected GPU device
                       This is a serialized float that should be written as a decimal point number.
                     type: string
                 type: object
