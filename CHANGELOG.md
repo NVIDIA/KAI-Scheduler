@@ -6,7 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.6.8] - 2025-07-13
+
+### Fixed
+- Fixed a miscalculation where cpu/memory releasing resources were considered idle when requesting GPU fraction/memory
+
 ## [v0.6.7] - 2025-07-07
+
 ### Added
 - Added LeaderWorkerSet support in the podGrouper. Each replica will be given a separate podGroup.
 
