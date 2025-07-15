@@ -4,6 +4,7 @@
 package metrics
 
 import (
+	"sort"
 	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -30,10 +31,6 @@ var (
 	queueLabelToDefaultMetricValue map[string]string
 )
 
-func init() {
-	InitMetrics("", map[string]string{}, map[string]string{})
-}
-
 // InitMetrics initializes the metrics for the queue controller.
 // params:
 //
@@ -48,11 +45,18 @@ func init() {
 // queueLabelToMetricLabelMap        = map[string]string{"priority": "queue_priority"}
 // queueLabelToDefaultMetricValueMap = map[string]string{"priority": "normal"}
 func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefaultMetricValueMap map[string]string) {
-	additionalMetricLabels := make([]string, 0, len(queueLabelToMetricLabelMap))
+	// Sort the keys to ensure consistent order
+	sortedQueueLabelKeys := make([]string, 0, len(queueLabelToMetricLabelMap))
+	for key := range queueLabelToMetricLabelMap {
+		sortedQueueLabelKeys = append(sortedQueueLabelKeys, key)
+	}
+	sort.Strings(sortedQueueLabelKeys)
 
-	for queueLabelKey, metricLabel := range queueLabelToMetricLabelMap {
+	additionalMetricLabelKeys := make([]string, 0, len(queueLabelToMetricLabelMap))
+	for _, queueLabelKey := range sortedQueueLabelKeys {
+		metricLabelKey := queueLabelToMetricLabelMap[queueLabelKey]
 		additionalQueueLabelKeys = append(additionalQueueLabelKeys, queueLabelKey)
-		additionalMetricLabels = append(additionalMetricLabels, metricLabel)
+		additionalMetricLabelKeys = append(additionalMetricLabelKeys, metricLabelKey)
 	}
 
 	queueLabelToDefaultMetricValue = queueLabelToDefaultMetricValueMap
@@ -62,7 +66,7 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Namespace: namespace,
 			Name:      "queue_info",
 			Help:      "Queues info",
-		}, append([]string{queueNameLabel, "gpu_guaranteed_quota", "cpu_quota", "memory_quota"}, additionalMetricLabels...),
+		}, append([]string{queueNameLabel, "gpu_guaranteed_quota", "cpu_quota", "memory_quota"}, additionalMetricLabelKeys...),
 	)
 
 	queueDeservedGPUs = promauto.NewGaugeVec(
@@ -70,7 +74,7 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Namespace: namespace,
 			Name:      "queue_deserved_gpus",
 			Help:      "Queue deserved GPUs",
-		}, append([]string{queueNameLabel}, additionalMetricLabels...),
+		}, append([]string{queueNameLabel}, additionalMetricLabelKeys...),
 	)
 
 	queueQuotaCPU = promauto.NewGaugeVec(
@@ -78,7 +82,7 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Namespace: namespace,
 			Name:      "queue_quota_cpu_cores",
 			Help:      "Queue quota CPU",
-		}, append([]string{queueNameLabel}, additionalMetricLabels...),
+		}, append([]string{queueNameLabel}, additionalMetricLabelKeys...),
 	)
 
 	queueQuotaMemory = promauto.NewGaugeVec(
@@ -86,7 +90,7 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Namespace: namespace,
 			Name:      "queue_quota_memory_bytes",
 			Help:      "Queue quota memory",
-		}, append([]string{queueNameLabel}, additionalMetricLabels...),
+		}, append([]string{queueNameLabel}, additionalMetricLabelKeys...),
 	)
 }
 
