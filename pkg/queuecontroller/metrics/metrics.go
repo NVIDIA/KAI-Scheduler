@@ -160,7 +160,7 @@ func getMemoryQuota(queueSpecResources *v2.QueueResources) float64 {
 func getAdditionalMetricLabelValues(queueLabels map[string]string) []string {
 	labelValues := make([]string, len(additionalQueueLabelKeys))
 
-	// we already added the additional metric labels to each metric using the original order,
+	// we already added the additional metric label keys to each metric using the original order,
 	// so we can just iterate over the additionalQueueLabelKeys - they should have the same order.
 
 	for i, queueLabelKey := range additionalQueueLabelKeys {
