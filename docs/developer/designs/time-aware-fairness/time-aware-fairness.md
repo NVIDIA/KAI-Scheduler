@@ -141,35 +141,59 @@ Where:
 
 In this case, when `α=10`, when `u=1` the penalty will be `1/11`, and for `u=2` it will be `1/21`, which is closer to the linear result. This could also be a potential control for the impact of the historical usage.
 
-### Option 2: Mean-centered usage penalty
+### Option 2: Vacant-adjusted normalized usage
 
 First, we'll define a normalized "usage" score for each queue and resource:
 
 $$U'_i = \frac{U_i}{\sum{U}}$$
 
-This puts U'<sub>i</sub> in the range [0,1]
-
-We can then mean-center the usage values:
-
-$$\~U_i = U'_i - m$$
-Where m is the mean U', which gives the following properties:
-* $\~U$ is in the range [-1, 1], where queues with exactly mean usage will get the value 0, queues with > mean will get values in the range (0,1], and queues below mean will get values in the range [-1, 0)
-
 We can furthermore consider the **unallocated** resources in the cluster. If we go back to the definition of $U'_i$, we can add:
 $$U'_i = \frac{U_i}{\sum{U} + V}$$
-where V (vacant) represents the **unallocated** resources for the considered time period. This will add the benefit of reduced penalty for usages that were relatively small compared to free resources in the cluster - otherwise, for example, a usage of a single gpu*second in an empty cluster will severely punishing queues that utilized small amounts of clusters when there was no contention.
+where V (vacant) represents the **unallocated** resources for the considered time period. This will add the benefit of reduced penalty for usages that were relatively small compared to free resources in the cluster - otherwise, for example, a usage of a single GPU*second in an empty cluster will severely punishing queues that utilized small amounts of clusters when there was no contention.
 
-Now, we can plug in $\~U_i$ to our fair share calculation:
+Now, we can plug in $U'_i$ to our fair share calculation:
 
-$$F_i = C \cdot (w'_i - \~U_i)$$
+$$F_i = C \cdot (w'_i - U'_i)$$
 
 Which will give us the following:
 * When usage is zero for all queues, we revert back to the current calculation
-* Decreased fair share for queues that are using more than average ($U_i > 0$)
-* Queues that their relative **usage** is bigger than their relative **share** will get a negative value
-
-Since we don't want to assign negative fair share, we will max this expression with 0:
-
-$$F_i = \max{\{C \cdot (w'_i - \~U_i), 0\}}$$
+* Decreased fair share for queues that are using relatively more resources, while still giving more "breathing room" for queues with larger weights
+* Queues that their relative **usage** is bigger than their relative **share** will get a negative value. This needs to be addressed somehow, maybe flooring it with 0 or normalizing the $(w'_i-U'_i)$ values - needs further thought
 
 If there are still unclaimed resources, the relative weights and usage values will be re-calculated in the next round - allowing even very over-using queues to get access to resources, if they are left unclaimed by all other queues
+
+#### Considering vacant resources:
+There are a few potential upsides for considering vacant resources when calculating normalized usages. First, we can demonstrate the value with an example:
+
+First, it's easy to see that in a buys cluster, as $V$ approaches 0 relative to $\sum{U}$, the normalized usage approaches what it would be if we didn't consider $V$ at all: in other words, in busy clusters, it doesn't really matter if we vacancy-adjust our usages or not.
+
+Now, let's consider what happens when the cluster is relatively empty:
+
+Consider a cluster with 100 GPUs. We have one queue, $Q_1$, with weight of 50. We also have 50 smaller queues with weight of 1 each.
+This gives us a normalized weight for $Q_1$ of 0.5.
+
+Now, let's say that the cluster is completely empty, and $Q_1$ used a small amount of resources: say, 0.1 GPU-hours. In a cluster of 100 GPUs, this is obviously not a significant amount.
+
+If we don't vacant-adjust our usage, the normalized usage of Q1 will be $U'_1 = 1$, which will severely punish it: in fact, the the previously proposed equasion, it will result in a negative value:
+
+$$F_1 = C \cdot (w'_1 - U'_1) = C \cdot (0.5 - 1) = -0.5 \cdot C$$
+
+*Wether we floor the value with 0 or normalize the result -* $F_1$ *will still be 0*
+
+$Q_1$, the most prioritized queue in the cluster by far, will be severely punished for a minute amount of resources allocated from an empty cluster.
+
+On the other hand - if we consider vacant resources, we get the following:
+
+$$U'_1 = \frac{U_1}{\sum{U} + V} = \frac{0.1}{0.1 + 99.9}$$
+
+*Assuming that we're looking at a time period of 1h, and that the units for usage are GPU-hours*
+
+The value of $U'_1$ approaches 0, reflecting it's actual usage of cluster resources. The 0.1 GPU-hours will not result in significant penalty. 
+
+However, if it used 50 GPUs for that duration, it will be 0.5. Plugged to the resource division equation, we will get:
+
+$$U'_1 = \frac{U_1}{\sum{U} + V} = \frac{50}{50 + 50} = 0.5$$
+
+$$F_1 = C \cdot (w'_1 - U'_1) = C \cdot (0.5 - 0.5) = 0 \cdot C$$
+
+Which means that it will get no fair share if it used half the cluster resources for the relevant period.
