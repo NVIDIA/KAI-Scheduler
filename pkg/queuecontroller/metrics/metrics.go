@@ -16,6 +16,8 @@ const (
 	milliCpuToCpuDivider       = 1000
 	megabytesToBytesMultiplier = 1000000
 	unlimitedQuota             = float64(-1)
+
+	queueNameLabel = "queue_name"
 )
 
 var (
@@ -60,7 +62,7 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Namespace: namespace,
 			Name:      "queue_info",
 			Help:      "Queues info",
-		}, append([]string{"queue_name", "gpu_guaranteed_quota", "cpu_quota", "memory_quota"}, additionalMetricLabels...),
+		}, append([]string{queueNameLabel, "gpu_guaranteed_quota", "cpu_quota", "memory_quota"}, additionalMetricLabels...),
 	)
 
 	queueDeservedGPUs = promauto.NewGaugeVec(
@@ -68,7 +70,7 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Namespace: namespace,
 			Name:      "queue_deserved_gpus",
 			Help:      "Queue deserved GPUs",
-		}, append([]string{"queue_name"}, additionalMetricLabels...),
+		}, append([]string{queueNameLabel}, additionalMetricLabels...),
 	)
 
 	queueQuotaCPU = promauto.NewGaugeVec(
@@ -76,7 +78,7 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Namespace: namespace,
 			Name:      "queue_quota_cpu_cores",
 			Help:      "Queue quota CPU",
-		}, append([]string{"queue_name"}, additionalMetricLabels...),
+		}, append([]string{queueNameLabel}, additionalMetricLabels...),
 	)
 
 	queueQuotaMemory = promauto.NewGaugeVec(
@@ -84,7 +86,7 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Namespace: namespace,
 			Name:      "queue_quota_memory_bytes",
 			Help:      "Queue quota memory",
-		}, append([]string{"queue_name"}, additionalMetricLabels...),
+		}, append([]string{queueNameLabel}, additionalMetricLabels...),
 	)
 }
 
@@ -92,6 +94,8 @@ func SetQueueMetrics(queue *v2.Queue) {
 	if queue == nil {
 		return
 	}
+
+	ResetQueueMetrics(queue.Name)
 
 	additionalMetricLabelValues := getAdditionalMetricLabelValues(queue.Labels)
 
@@ -110,7 +114,14 @@ func SetQueueMetrics(queue *v2.Queue) {
 	queueDeservedGPUs.WithLabelValues(queueQuotaMetricValues...).Set(gpuQuota)
 	queueQuotaCPU.WithLabelValues(queueQuotaMetricValues...).Set(cpuQuota)
 	queueQuotaMemory.WithLabelValues(queueQuotaMetricValues...).Set(memoryQuota)
+}
 
+func ResetQueueMetrics(queueName string) {
+	queueLabelIdentifier := prometheus.Labels{queueNameLabel: queueName}
+	queueInfo.DeletePartialMatch(queueLabelIdentifier)
+	queueDeservedGPUs.DeletePartialMatch(queueLabelIdentifier)
+	queueQuotaCPU.DeletePartialMatch(queueLabelIdentifier)
+	queueQuotaMemory.DeletePartialMatch(queueLabelIdentifier)
 }
 
 func getGpuQuota(queueSpecResources *v2.QueueResources) float64 {

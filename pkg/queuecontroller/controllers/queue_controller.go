@@ -55,7 +55,12 @@ func (r *QueueReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	queue := &v2.Queue{}
 	err := r.Get(ctx, req.NamespacedName, queue)
 	if err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		ignoreNotFoundErr := client.IgnoreNotFound(err)
+		if ignoreNotFoundErr == nil {
+			// If the queue is not found, reset its metrics
+			metrics.ResetQueueMetrics(queue.Name)
+		}
+		return ctrl.Result{}, ignoreNotFoundErr
 	}
 	originalQueue := queue.DeepCopy()
 
