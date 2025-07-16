@@ -256,7 +256,7 @@ func TestTopologyPlugin_HandleAllocate(t *testing.T) {
 				domainInfo := NewTopologyDomainInfo("zone1", "zone1", "zone", 1)
 				domainInfo.AvailableResources = resource_info.NewResource(4000, 0, 0)
 				domainInfo.AllocatedResources = resource_info.EmptyResource()
-				domainInfo.AllocatedPods = 0
+				domainInfo.AllocatedResources.BaseResource.ScalarResources()["pods"] = 0
 
 				// Create topology tree
 				topologyTree := &TopologyInfo{
@@ -319,12 +319,12 @@ func TestTopologyPlugin_HandleAllocate(t *testing.T) {
 				zoneDomain := NewTopologyDomainInfo("zone1", "zone1", "zone", 1)
 				zoneDomain.AvailableResources = resource_info.NewResource(8, 16, 0)
 				zoneDomain.AllocatedResources = resource_info.EmptyResource()
-				zoneDomain.AllocatedPods = 0
+				zoneDomain.AllocatedResources.BaseResource.ScalarResources()["pods"] = 0
 
 				rackDomain := NewTopologyDomainInfo("zone1.rack1", "rack1", "rack", 2)
 				rackDomain.AvailableResources = resource_info.NewResource(4, 8, 0)
 				rackDomain.AllocatedResources = resource_info.EmptyResource()
-				rackDomain.AllocatedPods = 0
+				rackDomain.AllocatedResources.BaseResource.ScalarResources()["pods"] = 0
 
 				// Create topology tree
 				topologyTree := &TopologyInfo{
@@ -390,7 +390,7 @@ func TestTopologyPlugin_HandleAllocate(t *testing.T) {
 				domain1 := NewTopologyDomainInfo("zone1", "zone1", "zone", 1)
 				domain1.AvailableResources = resource_info.NewResource(4, 8, 0)
 				domain1.AllocatedResources = resource_info.EmptyResource()
-				domain1.AllocatedPods = 0
+				domain1.AllocatedResources.BaseResource.ScalarResources()["pods"] = 0
 
 				topologyTree1 := &TopologyInfo{
 					Name:             "topology-1",
@@ -413,7 +413,7 @@ func TestTopologyPlugin_HandleAllocate(t *testing.T) {
 				domain2 := NewTopologyDomainInfo("region1", "region1", "region", 1)
 				domain2.AvailableResources = resource_info.NewResource(8, 16, 0)
 				domain2.AllocatedResources = resource_info.EmptyResource()
-				domain2.AllocatedPods = 0
+				domain2.AllocatedResources.BaseResource.ScalarResources()["pods"] = 0
 
 				topologyTree2 := &TopologyInfo{
 					Name:             "topology-2",
@@ -499,7 +499,7 @@ func TestTopologyPlugin_HandleAllocate(t *testing.T) {
 					assert.True(t, exists, "Domain %s should exist in topology %s", domainID, topologyName)
 					assert.Equal(t, expectedCPU, int64(domainInfo.AllocatedResources.Cpu()),
 						"Expected %d CPU allocation in domain %s of topology %s", expectedCPU, domainID, topologyName)
-					assert.Equal(t, 1, domainInfo.AllocatedPods,
+					assert.Equal(t, int64(1), domainInfo.AllocatedResources.BaseResource.ScalarResources()["pods"],
 						"Expected 1 allocated pod in domain %s of topology %s", domainID, topologyName)
 				}
 			}
@@ -538,7 +538,7 @@ func TestTopologyPlugin_HandleDeallocate(t *testing.T) {
 				domainInfo := NewTopologyDomainInfo("zone1", "zone1", "zone", 1)
 				domainInfo.AvailableResources = resource_info.NewResource(4000, 0, 0)
 				domainInfo.AllocatedResources = resource_info.NewResource(1000, 0, 0)
-				domainInfo.AllocatedPods = 1
+				domainInfo.AllocatedResources.BaseResource.ScalarResources()["pods"] = 1
 
 				// Create topology tree
 				topologyTree := &TopologyInfo{
@@ -606,12 +606,12 @@ func TestTopologyPlugin_HandleDeallocate(t *testing.T) {
 				zoneDomain := NewTopologyDomainInfo("zone1", "zone1", "zone", 1)
 				zoneDomain.AvailableResources = resource_info.NewResource(8, 16, 0)
 				zoneDomain.AllocatedResources = resource_info.NewResource(3000, 0, 0)
-				zoneDomain.AllocatedPods = 2
+				zoneDomain.AllocatedResources.BaseResource.ScalarResources()["pods"] = 2
 
 				rackDomain := NewTopologyDomainInfo("zone1.rack1", "rack1", "rack", 2)
 				rackDomain.AvailableResources = resource_info.NewResource(4, 8, 0)
 				rackDomain.AllocatedResources = resource_info.NewResource(2000, 0, 0)
-				rackDomain.AllocatedPods = 1
+				rackDomain.AllocatedResources.BaseResource.ScalarResources()["pods"] = 1
 
 				// Create topology tree
 				topologyTree := &TopologyInfo{
@@ -683,7 +683,7 @@ func TestTopologyPlugin_HandleDeallocate(t *testing.T) {
 				domain1 := NewTopologyDomainInfo("zone1", "zone1", "zone", 1)
 				domain1.AvailableResources = resource_info.NewResource(4, 8, 0)
 				domain1.AllocatedResources = resource_info.NewResource(2000, 0, 0)
-				domain1.AllocatedPods = 5
+				domain1.AllocatedResources.BaseResource.ScalarResources()["pods"] = 5
 
 				topologyTree1 := &TopologyInfo{
 					Name:             "topology-1",
@@ -706,7 +706,7 @@ func TestTopologyPlugin_HandleDeallocate(t *testing.T) {
 				domain2 := NewTopologyDomainInfo("region1", "region1", "region", 1)
 				domain2.AvailableResources = resource_info.NewResource(8, 16, 0)
 				domain2.AllocatedResources = resource_info.NewResource(1000, 0, 0)
-				domain2.AllocatedPods = 2
+				domain2.AllocatedResources.BaseResource.ScalarResources()["pods"] = 2
 
 				topologyTree2 := &TopologyInfo{
 					Name:             "topology-2",
@@ -811,7 +811,7 @@ func TestTopologyPlugin_HandleDeallocate(t *testing.T) {
 				for domainID, expectedPodsNum := range expectedDomains {
 					domainInfo, exists := topologyTree.Domains[TopologyDomainID(domainID)]
 					assert.True(t, exists, "Domain %s should exist in topology %s", domainID, topologyName)
-					assert.Equal(t, expectedPodsNum, domainInfo.AllocatedPods,
+					assert.Equal(t, int64(expectedPodsNum), domainInfo.AllocatedResources.BaseResource.ScalarResources()["pods"],
 						"Expected 1 allocated pod in domain %s of topology %s", domainID, topologyName)
 				}
 			}

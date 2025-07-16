@@ -55,8 +55,8 @@ type TopologyDomainInfo struct {
 	// Total allocated resources in this domain
 	AllocatedResources *resource_info.Resource
 
-	// Number of pods that can be allocated in this domain
-	AllocatedPods int
+	// Number of pods that can be allocated in this domain for the job
+	AllocatablePods int
 
 	// List of resources requested by each pod in the job this tree is built for
 	RequestedResources *resource_info.ResourceRequirements
@@ -75,7 +75,6 @@ func NewTopologyDomainInfo(id TopologyDomainID, name, level string, depth int) *
 		Nodes:              map[string]*node_info.NodeInfo{},
 		AvailableResources: resource_info.EmptyResource(),
 		AllocatedResources: resource_info.EmptyResource(),
-		AllocatedPods:      0,
 		RequestedResources: nil,
 		Depth:              depth,
 	}
@@ -103,5 +102,6 @@ func (t *TopologyDomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
 	t.AvailableResources.Add(nodeInfo.Allocatable)
 	t.AllocatedResources.Add(nodeInfo.Used)
 	// TODO: do not take into account fractional gpus
-	t.AllocatedPods = t.AllocatedPods + len(nodeInfo.PodInfos)
+	t.AllocatedResources.BaseResource.ScalarResources()["pods"] =
+		t.AllocatedResources.BaseResource.ScalarResources()["pods"] + int64(len(nodeInfo.PodInfos))
 }

@@ -89,14 +89,16 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, singleT
 func (t *topologyPlugin) handleAllocate(ssn *framework.Session) func(event *framework.Event) {
 	return t.updateTopologyGivenPodEvent(ssn, func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo) {
 		domainInfo.AllocatedResources.AddResourceRequirements(podInfo.AcceptedResource)
-		domainInfo.AllocatedPods = domainInfo.AllocatedPods + 1
+		domainInfo.AllocatedResources.BaseResource.ScalarResources()["pods"] =
+			domainInfo.AllocatedResources.BaseResource.ScalarResources()["pods"] + 1
 	})
 }
 
 func (t *topologyPlugin) handleDeallocate(ssn *framework.Session) func(event *framework.Event) {
 	return t.updateTopologyGivenPodEvent(ssn, func(domainInfo *TopologyDomainInfo, podInfo *pod_info.PodInfo) {
 		domainInfo.AllocatedResources.SubResourceRequirements(podInfo.AcceptedResource)
-		domainInfo.AllocatedPods = domainInfo.AllocatedPods - 1
+		domainInfo.AllocatedResources.BaseResource.ScalarResources()["pods"] =
+			domainInfo.AllocatedResources.BaseResource.ScalarResources()["pods"] - 1
 	})
 }
 
