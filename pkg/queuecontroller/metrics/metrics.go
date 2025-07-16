@@ -175,3 +175,19 @@ func getAdditionalMetricLabelValues(queueLabels map[string]string) []string {
 	return labelValues
 
 }
+
+func GetQueueInfoMetric() *prometheus.GaugeVec {
+	return queueInfo
+}
+
+func GetQueueDeservedGPUsMetric() *prometheus.GaugeVec {
+	return queueDeservedGPUs
+}
+
+func GetQueueQuotaCPUMetric() *prometheus.GaugeVec {
+	return queueQuotaCPU
+}
+
+func GetQueueQuotaMemoryMetric() *prometheus.GaugeVec {
+	return queueQuotaMemory
+}

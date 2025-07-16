@@ -58,7 +58,7 @@ func (r *QueueReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		ignoreNotFoundErr := client.IgnoreNotFound(err)
 		if ignoreNotFoundErr == nil {
 			// If the queue is not found, reset its metrics
-			metrics.ResetQueueMetrics(queue.Name)
+			metrics.ResetQueueMetrics(req.Name)
 		}
 		return ctrl.Result{}, ignoreNotFoundErr
 	}
