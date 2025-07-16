@@ -13,8 +13,7 @@
   - [Notes/Constraints/Caveats (Optional)](#notesconstraintscaveats)
   - [Risks and Mitigations](#risks-and-mitigations)
 - [Design Details](#design-details)
-  - [Option 1](#option-1)
-  - [Option 2](#option-2-mean-centered-usage-penalty)
+  - [Vacant-adjusted normalized usage](#vacant-adjusted-normalized-usage)
 <!-- /toc -->
 
 ## Summary
@@ -109,7 +108,7 @@ This calculation is done for each resource type. The result of this calculation 
 
 For convenience, we'll write it out as a formula:
 
-$$\text{F} = C \cdot \frac{w}{\sum{w}}$$
+$$\text{F} = C \cdot \frac{W}{\sum{W}}$$
 
 Where:
 - **F** is the fair share allocated to a specific queue in the current round
@@ -119,48 +118,37 @@ Where:
 
 Let's also mark the normalized weight as:
 
-$$w'_i = \frac{w_i}{\sum{w}}$$
+$$W'_i = \frac{W_i}{\sum{W}}$$
 
 
-### Option 1:
-One way to achieve time-aware fairness is to add the usage as a factor:
-
-$$\text{F} = C \cdot w'_i \cdot \frac{1}{1 + u}$$
-
-Where:
-- **U** represents the usage for the queue
-
-On one hand, this has the advantage of reverting to the current result for `u=0`. On the other hand, intuitively, `2*u` should result in half the fair share, where in this case it will be `1/3`.
-
-This result can be approximated by introducing a factor to multiply the usage by. A large value for this factor will result in a more linear penalty:
-
-$$\text{F} = C \cdot w'_ \cdot \frac{1}{1 + \alpha \cdot u}$$
-
-Where:
-- **α** represents the significance factor for historical usage impact
-
-In this case, when `α=10`, when `u=1` the penalty will be `1/11`, and for `u=2` it will be `1/21`, which is closer to the linear result. This could also be a potential control for the impact of the historical usage.
-
-### Option 2: Vacant-adjusted normalized usage
+### Vacant-adjusted normalized usage
 
 First, we'll define a normalized "usage" score for each queue and resource:
 
 $$U'_i = \frac{U_i}{\sum{U}}$$
 
 We can furthermore consider the **unallocated** resources in the cluster. If we go back to the definition of $U'_i$, we can add:
+
 $$U'_i = \frac{U_i}{\sum{U} + V}$$
+
 where V (vacant) represents the **unallocated** resources for the considered time period. This will add the benefit of reduced penalty for usages that were relatively small compared to free resources in the cluster - otherwise, for example, a usage of a single GPU*second in an empty cluster will severely punishing queues that utilized small amounts of clusters when there was no contention.
 
 Now, we can plug in $U'_i$ to our fair share calculation:
 
-$$F_i = C \cdot (w'_i - U'_i)$$
+$$F_i = C \cdot (W'_i - U'_i)$$
 
 Which will give us the following:
 * When usage is zero for all queues, we revert back to the current calculation
 * Decreased fair share for queues that are using relatively more resources, while still giving more "breathing room" for queues with larger weights
-* Queues that their relative **usage** is bigger than their relative **share** will get a negative value. This needs to be addressed somehow, maybe flooring it with 0 or normalizing the $(w'_i-U'_i)$ values - needs further thought
+* Queues that their relative **usage** is bigger than their relative **share** will get a negative value. This needs to be addressed somehow, maybe flooring it with 0 or normalizing the $(W'_i-U'_i)$ values - needs further thought
 
-If there are still unclaimed resources, the relative weights and usage values will be re-calculated in the next round - allowing even very over-using queues to get access to resources, if they are left unclaimed by all other queues
+If there are still unclaimed resources, the relative weights and usage values will be re-calculated in the next round - allowing even very over-using queues to get access to resources, if they are left unclaimed by all other queues.
+
+To simplify this concept, we will define $U'_i$ as the relative usage to the entire cluster's capacity for the relevant time period:
+
+$$U'_i = \frac{U_i}{\sum{U} + V} = \frac{U_i}{T} $$
+
+Where T is the total amount of resources in the cluster for the relevant period. In a busy cluster with no free resources, $\sum{U}=T$
 
 #### Considering vacant resources:
 There are a few potential upsides for considering vacant resources when calculating normalized usages. First, we can demonstrate the value with an example:
@@ -176,7 +164,7 @@ Now, let's say that the cluster is completely empty, and $Q_1$ used a small amou
 
 If we don't vacant-adjust our usage, the normalized usage of Q1 will be $U'_1 = 1$, which will severely punish it: in fact, the the previously proposed equasion, it will result in a negative value:
 
-$$F_1 = C \cdot (w'_1 - U'_1) = C \cdot (0.5 - 1) = -0.5 \cdot C$$
+$$F_1 = C \cdot (W'_1 - U'_1) = C \cdot (0.5 - 1) = -0.5 \cdot C$$
 
 *Wether we floor the value with 0 or normalize the result -* $F_1$ *will still be 0*
 
@@ -184,7 +172,7 @@ $Q_1$, the most prioritized queue in the cluster by far, will be severely punish
 
 On the other hand - if we consider vacant resources, we get the following:
 
-$$U'_1 = \frac{U_1}{\sum{U} + V} = \frac{0.1}{0.1 + 99.9}$$
+$$U'_1 = \frac{U_1}{\sum{U} + V} = \frac{U_1}{T} = \frac{0.1}{100}$$
 
 *Assuming that we're looking at a time period of 1h, and that the units for usage are GPU-hours*
 
@@ -192,8 +180,40 @@ The value of $U'_1$ approaches 0, reflecting it's actual usage of cluster resour
 
 However, if it used 50 GPUs for that duration, it will be 0.5. Plugged to the resource division equation, we will get:
 
-$$U'_1 = \frac{U_1}{\sum{U} + V} = \frac{50}{50 + 50} = 0.5$$
+$$U'_1 = \frac{U_1}{T} = \frac{50}{100} = 0.5$$
 
-$$F_1 = C \cdot (w'_1 - U'_1) = C \cdot (0.5 - 0.5) = 0 \cdot C$$
+$$F_1 = C \cdot (W'_1 - U'_1) = C \cdot (0.5 - 0.5) = 0 \cdot C$$
 
 Which means that it will get no fair share if it used half the cluster resources for the relevant period.
+
+#### Normalizing usage
+
+Let's take another look at our resource division equation:
+
+$$F_i = C \cdot (W'_i - U'_i)$$
+
+Since $W'_i$ is normalized, $\sum{W} = 1$. This is convenient since it means that we can potentially divide the entire cluster capacity, marked here as $C$, in one round. The result of this calculation is later capped by the queue request, so the calculation repeats until no resources are left, or until all queues get their requested resources.
+
+However, now, when $U'_i$ will start receiving positive values, we will get cases where:
+
+$$\sum{F} = C \cdot\sum{(W'-U')} < C$$
+
+One way to address this is to run more rounds, but it will be easier to just normalize the factor.
+
+Another issue to consider is that we can't divide negative resources - therefore, we need to apply $\max{\{(W'-U'), 0\}}$ before normalizing.
+
+Let's mark $P$ for "portion" and define:
+
+$$P_i = \max{\{W'_i - U'_i, 0\}}$$
+
+$$P'_i = \frac{P_i}{\sum{P}}$$
+
+*Where* $\sum{P}$ *considers only queues that participate in the current resource division round*
+
+Which gives us:
+
+$$\sum{P'} = 1$$
+
+$$0<=P'_i<=1$$
+
+For each resource division round, which makes it simpler to divide resources.
