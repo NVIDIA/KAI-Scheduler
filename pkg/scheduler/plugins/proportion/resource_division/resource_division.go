@@ -25,16 +25,16 @@ type remainingRequestedResource struct {
 
 func SetResourcesShare(totalResource rs.ResourceQuantities, queues map[common_info.QueueID]*rs.QueueAttributes) {
 	for _, resource := range rs.AllResources {
-		setResourceShare(totalResource[resource], resource, queues)
+		setResourceShare(totalResource[resource], 0, resource, queues)
 	}
 	reportDivisionResult(queues)
 }
 
-func setResourceShare(totalAmount float64, resourceName rs.ResourceName, queues map[common_info.QueueID]*rs.QueueAttributes) float64 {
+func setResourceShare(totalAmount, totalUsageCapacity float64, resourceName rs.ResourceName, queues map[common_info.QueueID]*rs.QueueAttributes) float64 {
 	log.InfraLogger.V(6).Infof("About to start calculating %v fairShare, totalAmount: <%v>", resourceName, totalAmount)
 	remainingAmount := setDeservedResource(totalAmount, queues, resourceName)
 	if remainingAmount > 0 {
-		remainingAmount = divideOverQuotaResource(remainingAmount, queues, resourceName)
+		remainingAmount = divideOverQuotaResource(remainingAmount, totalUsageCapacity, queues, resourceName)
 	} else {
 		remainingAmount = 0
 	}
@@ -95,7 +95,7 @@ func setDeservedResource(
 	return remainingAmount
 }
 
-func divideOverQuotaResource(totalResourceAmount float64, queues map[common_info.QueueID]*rs.QueueAttributes,
+func divideOverQuotaResource(totalResourceAmount, totalUsageCapacity float64, queues map[common_info.QueueID]*rs.QueueAttributes,
 	resourceName rs.ResourceName) (remainingAmount float64) {
 	queuesByPriority, priorities := getQueuesByPriority(queues)
 	remainingRequested := make(map[int]map[common_info.QueueID]*remainingRequestedResource)
@@ -103,7 +103,7 @@ func divideOverQuotaResource(totalResourceAmount float64, queues map[common_info
 
 	for _, priority := range priorities {
 		var newRemainingRequested map[common_info.QueueID]*remainingRequestedResource
-		remainingAmount, newRemainingRequested = divideUpToFairShare(remainingAmount, queuesByPriority[priority], resourceName)
+		remainingAmount, newRemainingRequested = divideUpToFairShare(remainingAmount, totalUsageCapacity, queuesByPriority[priority], resourceName)
 		if remainingRequested[priority] == nil {
 			remainingRequested[priority] = make(map[common_info.QueueID]*remainingRequestedResource)
 		}
@@ -148,15 +148,41 @@ func getQueuesByPriority(queues map[common_info.QueueID]*rs.QueueAttributes) (ma
 	return queuesByPriority, priorities
 }
 
-func divideUpToFairShare(totalResourceAmount float64, queues map[common_info.QueueID]*rs.QueueAttributes,
+func divideUpToFairShare(totalResourceAmount, totalUsageCapacity float64, queues map[common_info.QueueID]*rs.QueueAttributes,
 	resourceName rs.ResourceName) (remainingAmount float64, remainingRequested map[common_info.QueueID]*remainingRequestedResource) {
 	remainingRequested = map[common_info.QueueID]*remainingRequestedResource{}
+
+	// Calculate the vacant adjusted usage for each queue
+	for _, queue := range queues {
+		if totalUsageCapacity == 0 {
+			break // no need to calculate vacant adjusted usage if totalUsageCapacity is 0, leave it as 0
+		}
+
+		vacantAdjustedUsage := queue.ResourceShare(resourceName).GetAbsoluteUsage() / totalUsageCapacity
+		queue.ResourceShare(resourceName).VacantAdjustedUsage = vacantAdjustedUsage
+	}
+
 	for {
 		shouldRunAnotherRound := false
 		amountToGiveInCurrentRound := totalResourceAmount
 		totalWeights := getTotalWeightsForUnsatisfied(queues, resourceName)
 		if totalWeights == 0 {
 			break
+		}
+
+		totalPortions := float64(0)
+
+		for _, queue := range queues {
+			remainingRequested := getRemainingRequested(queue, resourceName)
+			if remainingRequested <= 0 {
+				continue
+			}
+
+			resourceShare := queue.ResourceShare(resourceName)
+			overQuotaWeight := resourceShare.OverQuotaWeight
+			normalizedShare := overQuotaWeight / totalWeights
+			portion := math.Max(normalizedShare-resourceShare.GetVacantAdjustedUsage(), 0)
+			totalPortions += portion
 		}
 
 		for _, queue := range queues {
@@ -175,11 +201,14 @@ func divideUpToFairShare(totalResourceAmount float64, queues map[common_info.Que
 			if overQuotaWeight == 0 {
 				continue
 			}
+			normalizedShare := overQuotaWeight / totalWeights
+			portion := math.Max(normalizedShare-resourceShare.GetVacantAdjustedUsage(), 0)
+			normalizedPortion := portion / totalPortions
 
 			log.InfraLogger.V(6).Infof("calculating %v resource fair share for %v: deserved: %v, "+
 				"remaining requested: %v, fairShare: %v",
 				resourceName, queue.Name, resourceShare.Deserved, requested, resourceShare.FairShare)
-			fairShare := amountToGiveInCurrentRound * (overQuotaWeight / totalWeights)
+			fairShare := amountToGiveInCurrentRound * normalizedPortion
 			resourceToGive := getResourceToGiveInCurrentRound(fairShare, requested, queue, remainingRequested)
 			if resourceToGive == 0 {
 				continue
