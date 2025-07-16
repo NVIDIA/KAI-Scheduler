@@ -6,6 +6,8 @@ package flags
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"golang.org/x/exp/slices"
+	"strings"
 	"testing"
 )
 
@@ -61,9 +63,7 @@ var _ = Describe("StringMapFlag", func() {
 
 // Helper to reverse the order of pairs in a comma-separated string
 func reversePairs(s string) string {
-	pairs := []rune(s)
-	for i, j := 0, len(pairs)-1; i < j; i, j = i+1, j-1 {
-		pairs[i], pairs[j] = pairs[j], pairs[i]
-	}
-	return string(pairs)
+	pairs := strings.Split(s, ",")
+	slices.Reverse(pairs)
+	return strings.Join(pairs, ",")
 }
