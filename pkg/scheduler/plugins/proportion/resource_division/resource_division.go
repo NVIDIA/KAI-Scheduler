@@ -23,9 +23,9 @@ type remainingRequestedResource struct {
 	remainingAmount float64
 }
 
-func SetResourcesShare(totalResource rs.ResourceQuantities, queues map[common_info.QueueID]*rs.QueueAttributes) {
+func SetResourcesShare(totalResource rs.ResourceQuantities, totalUsageCapacity map[rs.ResourceName]float64, queues map[common_info.QueueID]*rs.QueueAttributes) {
 	for _, resource := range rs.AllResources {
-		setResourceShare(totalResource[resource], 0, resource, queues)
+		setResourceShare(totalResource[resource], totalUsageCapacity[resource], resource, queues)
 	}
 	reportDivisionResult(queues)
 }
