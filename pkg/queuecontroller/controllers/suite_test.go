@@ -337,11 +337,6 @@ var _ = Describe("QueueController", Ordered, func() {
 			Expect(k8sClient.Delete(ctx, queue)).Should(Succeed())
 
 			Eventually(func(q gomega.Gomega) {
-				expectMetricValue(q, metrics.GetQueueInfoMetric(), append([]string{"test-queue", "2", "2", "4000000"}, labels[1:]...), 0)
-				expectMetricValue(q, metrics.GetQueueDeservedGPUsMetric(), labels, 0)
-				expectMetricValue(q, metrics.GetQueueQuotaCPUMetric(), labels, 0)
-				expectMetricValue(q, metrics.GetQueueQuotaMemoryMetric(), labels, 0)
-
 				gathered := testutil.CollectAndCount(metrics.GetQueueInfoMetric())
 				q.Expect(gathered).To(Equal(0))
 				gathered = testutil.CollectAndCount(metrics.GetQueueDeservedGPUsMetric())
