@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -60,7 +59,8 @@ func (r *PodGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	podGroup, err := r.getPodGroupObject(ctx, req)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return handleReconcilePodGroup(logger, req)
+			logger.Info(fmt.Sprintf("PodGroup %v not found, it might have been deleted.", req))
+			return ctrl.Result{}, nil
 		} else {
 			logger.Error(err, fmt.Sprintf("Failed to get pod group for request %s/%s", req.Namespace, req.Name))
 			return ctrl.Result{}, err
@@ -119,9 +119,4 @@ func mapPodEventToPodGroup(ctx context.Context, p client.Object) []reconcile.Req
 			NamespacedName: types.NamespacedName{Name: mappedPodGroupName, Namespace: p.GetNamespace()},
 		},
 	}
-}
-
-func handleReconcilePodGroup(logger logr.Logger, req ctrl.Request) (ctrl.Result, error) {
-	logger.Info(fmt.Sprintf("PodGroup %v not found, it might have been deleted.", req))
-	return ctrl.Result{}, nil
 }
