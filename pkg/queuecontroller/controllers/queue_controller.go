@@ -20,6 +20,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/controllers/childqueues_updater"
 	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/controllers/resource_updater"
+	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/metrics"
 )
 
 // QueueReconciler reconciles a Queue object
@@ -54,7 +55,12 @@ func (r *QueueReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	queue := &v2.Queue{}
 	err := r.Get(ctx, req.NamespacedName, queue)
 	if err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		ignoreNotFoundErr := client.IgnoreNotFound(err)
+		if ignoreNotFoundErr == nil {
+			// If the queue is not found, reset its metrics
+			metrics.ResetQueueMetrics(req.Name)
+		}
+		return ctrl.Result{}, ignoreNotFoundErr
 	}
 	originalQueue := queue.DeepCopy()
 
@@ -72,6 +78,8 @@ func (r *QueueReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to patch status for queue %s, error: %v", queue.Name, err)
 	}
+
+	metrics.SetQueueMetrics(queue)
 
 	return ctrl.Result{}, err
 }
