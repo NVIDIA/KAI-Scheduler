@@ -354,7 +354,13 @@ func (pp *proportionPlugin) setFairShareForQueues(totalResources rs.ResourceQuan
 		return
 	}
 
-	resource_division.SetResourcesShare(totalResources, queues)
+	resource_division.SetResourcesShare(totalResources,
+		// TODO: get total usage capacity from historical usage
+		map[rs.ResourceName]float64{
+			rs.GpuResource:    0,
+			rs.CpuResource:    0,
+			rs.MemoryResource: 0,
+		}, queues)
 	for _, queue := range queues {
 		childQueues := pp.getChildQueues(queue)
 		resources := queue.GetFairShare()
