@@ -53,7 +53,9 @@ func getNodePreferableGpuForSharing(fittingGPUsOnNode []string, node *node_info.
 			}
 		} else {
 			nodeGpusSharing.IsReleasing =
-				nodeGpusSharing.IsReleasing || !node.EnoughIdleResourcesOnGpu(pod.ResReq, gpuIdx)
+				nodeGpusSharing.IsReleasing ||
+					!node.EnoughIdleResourcesOnGpu(pod.ResReq, gpuIdx) ||
+					!node.IsTaskAllocatable(pod)
 			nodeGpusSharing.Groups = append(nodeGpusSharing.Groups, gpuIdx)
 		}
 
