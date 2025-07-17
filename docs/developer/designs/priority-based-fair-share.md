@@ -73,7 +73,7 @@ for each priorityBucket in PB {            # Highest priority first
 
   ----------------------------- Phase 1: Deserved Quota -----------------------------
   for q in priorityBucket {
-      grant = min(q.deserved, Remaining)
+      grant = min(q.deserved, Remaining, q.request)
       FairShare(q) = grant
       Remaining    -= grant
   }
@@ -201,7 +201,7 @@ These scenarios illustrate:
 | Risk | Impact | Mitigation |
 |------|--------|-----------|
 | Starvation of low-priority queues | Low-priority queues may never reach `Deserved` quota | Leave feature opt-in; cluster admins must size `Deserved` appropriately |
-| Increased scheduling churn | More aggressive resource reclamation | Keep reclaim rate-limiting unchanged; monitor with existing metrics |
+| Increased scheduling churn | More aggressive resource reclamation | Leave feature opt-in; monitor with existing metrics |
 
 ---
 
