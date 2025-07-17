@@ -64,15 +64,7 @@ func allocateTask(ssn *framework.Session, stmt *framework.Statement, nodes []*no
 		if !ssn.FittingNode(task, node, !isPipelineOnly) {
 			continue
 		}
-
-		if task.IsFractionRequest() {
-			success = gpu_sharing.AllocateFractionalGPUTaskToNode(ssn, stmt, task, node, isPipelineOnly)
-		} else if task.IsMemoryRequest() {
-			success = allocateGpuMemoryTaskToNode(ssn, stmt, task, node, isPipelineOnly)
-		} else {
-			success = allocateTaskToNode(ssn, stmt, task, node, isPipelineOnly)
-		}
-
+		success = allocateTaskToNode(ssn, stmt, task, node, isPipelineOnly)
 		if success {
 			break
 		}
@@ -91,14 +83,14 @@ func allocateTask(ssn *framework.Session, stmt *framework.Statement, nodes []*no
 }
 
 func allocateTaskToNode(ssn *framework.Session, stmt *framework.Statement, task *pod_info.PodInfo, node *node_info.NodeInfo, isPipelineOnly bool) bool {
+	if task.IsFractionRequest() || task.IsMemoryRequest() {
+		return gpu_sharing.AllocateFractionalGPUTaskToNode(ssn, stmt, task, node, isPipelineOnly)
+	}
+
 	if taskAllocatable := node.IsTaskAllocatable(task); !isPipelineOnly && taskAllocatable {
 		return bindTaskToNode(ssn, stmt, task, node)
 	}
 	return pipelineTaskToNode(ssn, stmt, task, node, !isPipelineOnly)
-}
-
-func allocateGpuMemoryTaskToNode(ssn *framework.Session, stmt *framework.Statement, task *pod_info.PodInfo, node *node_info.NodeInfo, isPipelineOnly bool) bool {
-	return gpu_sharing.AllocateFractionalGPUTaskToNode(ssn, stmt, task, node, isPipelineOnly)
 }
 
 func bindTaskToNode(ssn *framework.Session, stmt *framework.Statement, task *pod_info.PodInfo, node *node_info.NodeInfo) bool {

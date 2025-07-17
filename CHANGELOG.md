@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v0.4.12] - 2025-07-18
+
+### Fixed
+- Fixed a scenario where only GPU resources where checked for job and node, causing it to be bound instead of being pipelined
+
 ## [v0.4.11] - 2025-07-13
 
 ### Fixed
