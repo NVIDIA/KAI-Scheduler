@@ -327,7 +327,7 @@ var _ = Describe("QueueController", Ordered, func() {
 			labels := []string{"test-queue", "high", ""}
 
 			Eventually(func(q gomega.Gomega) {
-				expectMetricValue(q, metrics.GetQueueInfoMetric(), append([]string{"test-queue", "2", "2", "4000000"}, labels[1:]...), 1)
+				expectMetricValue(q, metrics.GetQueueInfoMetric(), labels, 1)
 				expectMetricValue(q, metrics.GetQueueDeservedGPUsMetric(), labels, 2)
 				expectMetricValue(q, metrics.GetQueueQuotaCPUMetric(), labels, 2)
 				expectMetricValue(q, metrics.GetQueueQuotaMemoryMetric(), labels, 4000000)

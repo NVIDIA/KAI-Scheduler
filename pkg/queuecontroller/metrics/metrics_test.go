@@ -52,7 +52,7 @@ var _ = Describe("Queue Metrics", Ordered, func() {
 		labels := []string{"test-queue", "high", "value"}
 
 		// Use the helper for all metrics
-		expectMetricValue(queueInfo, append([]string{"test-queue", "2", "0.5", "4000000"}, labels[1:]...), 1)
+		expectMetricValue(queueInfo, labels, 1)
 		expectMetricValue(queueDeservedGPUs, labels, 2)
 		expectMetricValue(queueQuotaCPU, labels, 0.5)
 		expectMetricValue(queueQuotaMemory, labels, 4000000)
@@ -75,7 +75,7 @@ var _ = Describe("Queue Metrics", Ordered, func() {
 
 		labels := []string{"test-queue", "normal", ""}
 
-		expectMetricValue(queueInfo, append([]string{"test-queue", "0.7", "1", "2000000"}, labels[1:]...), 1)
+		expectMetricValue(queueInfo, labels, 1)
 		expectMetricValue(queueDeservedGPUs, labels, 0.7)
 		expectMetricValue(queueQuotaCPU, labels, 1)
 		expectMetricValue(queueQuotaMemory, labels, 2000000)
@@ -98,7 +98,7 @@ var _ = Describe("Queue Metrics", Ordered, func() {
 
 		labels := []string{"test-queue", "normal", ""}
 
-		expectMetricValue(queueInfo, append([]string{"test-queue", "1", "1", "2000000"}, labels[1:]...), 1)
+		expectMetricValue(queueInfo, labels, 1)
 		expectMetricValue(queueDeservedGPUs, labels, 1)
 		expectMetricValue(queueQuotaCPU, labels, 1)
 		expectMetricValue(queueQuotaMemory, labels, 2000000)

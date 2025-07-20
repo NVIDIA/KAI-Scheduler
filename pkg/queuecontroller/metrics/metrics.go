@@ -4,11 +4,9 @@
 package metrics
 
 import (
-	"sort"
-	"strconv"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto" // auto-registry collectors in default registry
+	"sort"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 )
@@ -61,12 +59,14 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 
 	queueLabelToDefaultMetricValue = queueLabelToDefaultMetricValueMap
 
+	queueMetricsLabels := append([]string{queueNameLabel}, additionalMetricLabelKeys...)
+
 	queueInfo = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: namespace,
 			Name:      "queue_info",
 			Help:      "Queues info",
-		}, append([]string{queueNameLabel, "gpu_guaranteed_quota", "cpu_quota", "memory_quota"}, additionalMetricLabelKeys...),
+		}, queueMetricsLabels,
 	)
 
 	queueDeservedGPUs = promauto.NewGaugeVec(
@@ -74,7 +74,7 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Namespace: namespace,
 			Name:      "queue_deserved_gpus",
 			Help:      "Queue deserved GPUs",
-		}, append([]string{queueNameLabel}, additionalMetricLabelKeys...),
+		}, queueMetricsLabels,
 	)
 
 	queueQuotaCPU = promauto.NewGaugeVec(
@@ -82,7 +82,7 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Namespace: namespace,
 			Name:      "queue_quota_cpu_cores",
 			Help:      "Queue quota CPU",
-		}, append([]string{queueNameLabel}, additionalMetricLabelKeys...),
+		}, queueMetricsLabels,
 	)
 
 	queueQuotaMemory = promauto.NewGaugeVec(
@@ -90,7 +90,7 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Namespace: namespace,
 			Name:      "queue_quota_memory_bytes",
 			Help:      "Queue quota memory",
-		}, append([]string{queueNameLabel}, additionalMetricLabelKeys...),
+		}, queueMetricsLabels,
 	)
 }
 
@@ -108,13 +108,9 @@ func SetQueueMetrics(queue *v2.Queue) {
 	cpuQuota := getCpuQuota(queue.Spec.Resources)
 	memoryQuota := getMemoryQuota(queue.Spec.Resources)
 
-	queueInfoMetricValues := append([]string{queueName,
-		strconv.FormatFloat(gpuQuota, 'f', -1, 64),
-		strconv.FormatFloat(cpuQuota, 'f', -1, 64),
-		strconv.FormatInt(int64(memoryQuota), 10)}, additionalMetricLabelValues...)
 	queueQuotaMetricValues := append([]string{queueName}, additionalMetricLabelValues...)
 
-	queueInfo.WithLabelValues(queueInfoMetricValues...).Set(1)
+	queueInfo.WithLabelValues(queueQuotaMetricValues...).Set(1)
 	queueDeservedGPUs.WithLabelValues(queueQuotaMetricValues...).Set(gpuQuota)
 	queueQuotaCPU.WithLabelValues(queueQuotaMetricValues...).Set(cpuQuota)
 	queueQuotaMemory.WithLabelValues(queueQuotaMetricValues...).Set(memoryQuota)
