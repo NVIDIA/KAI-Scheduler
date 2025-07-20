@@ -15,13 +15,14 @@ import (
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 
+	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
-	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 const (
@@ -44,7 +45,7 @@ type RawKubernetesObjects struct {
 	ResourceClaims         []*resourceapi.ResourceClaim      `json:"resourceClaims"`
 	ResourceSlices         []*resourceapi.ResourceSlice      `json:"resourceSlices"`
 	DeviceClasses          []*resourceapi.DeviceClass        `json:"deviceClasses"`
-	Topologies             []*kueue.Topology                  `json:"topologies"`
+	Topologies             []*kueue.Topology                 `json:"topologies"`
 }
 
 type Snapshot struct {
