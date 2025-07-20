@@ -168,13 +168,6 @@ func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.C
 		}
 	}
 
-	for _, podDisruptionBudget := range rawObjects.PodDisruptionBudgets {
-		_, err := kubeClient.PolicyV1().PodDisruptionBudgets(podDisruptionBudget.Namespace).Create(context.TODO(), podDisruptionBudget, v1.CreateOptions{})
-		if err != nil {
-			log.InfraLogger.Errorf("Failed to create pod disruption budget: %v", err)
-		}
-	}
-
 	for _, priorityClass := range rawObjects.PriorityClasses {
 		_, err := kubeClient.SchedulingV1().PriorityClasses().Create(context.TODO(), priorityClass, v1.CreateOptions{})
 		if err != nil {

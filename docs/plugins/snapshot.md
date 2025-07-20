@@ -17,7 +17,6 @@ The snapshot plugin is a framework plugin that provides an HTTP endpoint to capt
   - Queues
   - PodGroups
   - BindRequests
-  - PodDisruptionBudgets
   - PriorityClasses
   - ConfigMaps
   - PersistentVolumeClaims

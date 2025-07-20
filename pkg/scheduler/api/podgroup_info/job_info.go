@@ -27,7 +27,6 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	v1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -87,9 +86,6 @@ type PodGroupInfo struct {
 	LastStartTimestamp *time.Time
 	PodGroup           *enginev2alpha2.PodGroup
 	PodGroupUID        types.UID
-
-	// TODO(k82cn): keep backward compatibility, removed it when v1alpha1 finalized.
-	PDB *policyv1.PodDisruptionBudget
 
 	StalenessInfo
 
@@ -174,17 +170,6 @@ func (podGroupInfo *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	log.InfraLogger.V(7).Infof(
 		"SetPodGroup. podGroupName=<%s>, PodGroupUID=<%s> podGroupInfo.PodGroupIndex=<%d>",
 		podGroupInfo.Name, podGroupInfo.PodGroupUID)
-}
-
-func (podGroupInfo *PodGroupInfo) SetPDB(pdb *policyv1.PodDisruptionBudget) {
-	podGroupInfo.Name = pdb.Name
-	if pdb.Spec.MinAvailable != nil {
-		podGroupInfo.MinAvailable = pdb.Spec.MinAvailable.IntVal
-	}
-	podGroupInfo.Namespace = pdb.Namespace
-
-	podGroupInfo.CreationTimestamp = pdb.GetCreationTimestamp()
-	podGroupInfo.PDB = pdb
 }
 
 func (podGroupInfo *PodGroupInfo) addTaskIndex(ti *pod_info.PodInfo) {
@@ -408,7 +393,6 @@ func (podGroupInfo *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *Pod
 		JobFitErrors:   make(enginev2alpha2.UnschedulableExplanations, 0),
 		NodesFitErrors: make(map[common_info.PodID]*common_info.FitErrors),
 
-		PDB:         podGroupInfo.PDB,
 		PodGroup:    podGroupInfo.PodGroup,
 		PodGroupUID: podGroupInfo.PodGroupUID,
 

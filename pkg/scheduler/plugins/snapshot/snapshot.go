@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
-	k8spolicyv1 "k8s.io/api/policy/v1"
 	resourceapi "k8s.io/api/resource/v1beta1"
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
@@ -31,21 +30,20 @@ const (
 
 // RawKubernetesObjects contains the raw Kubernetes objects from the cluster
 type RawKubernetesObjects struct {
-	Pods                   []*v1.Pod                          `json:"pods"`
-	Nodes                  []*v1.Node                         `json:"nodes"`
-	Queues                 []*enginev2.Queue                  `json:"queues"`
-	PodGroups              []*enginev2alpha2.PodGroup         `json:"podGroups"`
-	BindRequests           []*schedulingv1alpha2.BindRequest  `json:"bindRequests"`
-	PodDisruptionBudgets   []*k8spolicyv1.PodDisruptionBudget `json:"podDisruptionBudgets"`
-	PriorityClasses        []*v14.PriorityClass               `json:"priorityClasses"`
-	ConfigMaps             []*v1.ConfigMap                    `json:"configMaps"`
-	PersistentVolumeClaims []*v1.PersistentVolumeClaim        `json:"persistentVolumeClaims"`
-	CSIStorageCapacities   []*storage.CSIStorageCapacity      `json:"csiStorageCapacities"`
-	StorageClasses         []*storage.StorageClass            `json:"storageClasses"`
-	CSIDrivers             []*storage.CSIDriver               `json:"csiDrivers"`
-	ResourceClaims         []*resourceapi.ResourceClaim       `json:"resourceClaims"`
-	ResourceSlices         []*resourceapi.ResourceSlice       `json:"resourceSlices"`
-	DeviceClasses          []*resourceapi.DeviceClass         `json:"deviceClasses"`
+	Pods                   []*v1.Pod                         `json:"pods"`
+	Nodes                  []*v1.Node                        `json:"nodes"`
+	Queues                 []*enginev2.Queue                 `json:"queues"`
+	PodGroups              []*enginev2alpha2.PodGroup        `json:"podGroups"`
+	BindRequests           []*schedulingv1alpha2.BindRequest `json:"bindRequests"`
+	PriorityClasses        []*v14.PriorityClass              `json:"priorityClasses"`
+	ConfigMaps             []*v1.ConfigMap                   `json:"configMaps"`
+	PersistentVolumeClaims []*v1.PersistentVolumeClaim       `json:"persistentVolumeClaims"`
+	CSIStorageCapacities   []*storage.CSIStorageCapacity     `json:"csiStorageCapacities"`
+	StorageClasses         []*storage.StorageClass           `json:"storageClasses"`
+	CSIDrivers             []*storage.CSIDriver              `json:"csiDrivers"`
+	ResourceClaims         []*resourceapi.ResourceClaim      `json:"resourceClaims"`
+	ResourceSlices         []*resourceapi.ResourceSlice      `json:"resourceSlices"`
+	DeviceClasses          []*resourceapi.DeviceClass        `json:"deviceClasses"`
 	Topologies             []*kueue.Topology                  `json:"topologies"`
 }
 
@@ -105,12 +103,6 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 	if err != nil {
 		log.InfraLogger.Errorf("Error getting raw bind requests: %v", err)
 		rawObjects.BindRequests = []*schedulingv1alpha2.BindRequest{}
-	}
-
-	rawObjects.PodDisruptionBudgets, err = dataLister.ListPodDisruptionBudgets()
-	if err != nil {
-		log.InfraLogger.Errorf("Error getting raw pod disruption budgets: %v", err)
-		rawObjects.PodDisruptionBudgets = []*k8spolicyv1.PodDisruptionBudget{}
 	}
 
 	rawObjects.PriorityClasses, err = dataLister.ListPriorityClasses()
