@@ -51,6 +51,7 @@ var defaultKaiSchedulerPlugins = []tier{
 			{Name: "nominatednode"},
 			{Name: "dynamicresources"},
 			{Name: "minruntime"},
+			{Name: "topology"},
 		},
 	},
 }
