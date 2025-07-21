@@ -24,10 +24,7 @@ import (
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
@@ -335,11 +332,6 @@ func (c *ClusterInfo) snapshotPodGroups(
 		result[common_info.PodGroupID(podGroup.Name)] = podGroupInfo
 	}
 
-	err = c.updatePodDisruptionBudgets(result)
-	if err != nil {
-		return nil, err
-	}
-
 	return result, nil
 }
 
@@ -358,23 +350,6 @@ func (c *ClusterInfo) getPodInfo(
 		existingPods[common_info.PodID(pod.UID)] = podInfo
 	}
 	return podInfo
-}
-
-func (c *ClusterInfo) updatePodDisruptionBudgets(podGroups map[common_info.PodGroupID]*podgroup_info.PodGroupInfo) error {
-	pdbs, err := c.dataLister.ListPodDisruptionBudgets()
-	if err != nil {
-		return err
-	}
-	for _, pdb := range pdbs {
-		podGroupId := common_info.PodGroupID(getController(pdb))
-		podGroup, found := podGroups[podGroupId]
-		if !found {
-			continue
-		}
-		podGroup.SetPDB(pdb)
-	}
-
-	return nil
 }
 
 func (c *ClusterInfo) setPodGroupWithIndex(podGroup *enginev2alpha2.PodGroup, podGroupInfo *podgroup_info.PodGroupInfo) {
@@ -508,18 +483,4 @@ func (c *ClusterInfo) isPodGroupUpForScheduler(podGroup *enginev2alpha2.PodGroup
 	}
 
 	return false
-}
-
-func getController(obj interface{}) types.UID {
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return ""
-	}
-
-	controllerRef := metav1.GetControllerOf(accessor)
-	if controllerRef != nil {
-		return controllerRef.UID
-	}
-
-	return ""
 }

@@ -5,7 +5,6 @@ package data_lister
 
 import (
 	v1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	scheduling "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"sigs.k8s.io/kueue/apis/kueue/v1alpha1"
@@ -20,7 +19,6 @@ type DataLister interface {
 	ListPodGroups() ([]*schedulingv2alpha2.PodGroup, error)
 	ListNodes() ([]*v1.Node, error)
 	ListQueues() ([]*schedulingv2.Queue, error)
-	ListPodDisruptionBudgets() ([]*policyv1.PodDisruptionBudget, error)
 	ListPriorityClasses() ([]*scheduling.PriorityClass, error)
 	GetPriorityClassByName(name string) (*scheduling.PriorityClass, error)
 	ListPodByIndex(index, value string) ([]interface{}, error)

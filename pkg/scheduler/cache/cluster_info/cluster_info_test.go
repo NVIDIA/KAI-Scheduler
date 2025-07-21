@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	v1core "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	v12 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -827,43 +826,6 @@ func TestSnapshotPodGroups(t *testing.T) {
 						},
 					},
 				},
-				&policyv1.PodDisruptionBudget{
-					ObjectMeta: v1.ObjectMeta{
-						Name: "pdb-0",
-					},
-				},
-			},
-			results: []*podgroup_info.PodGroupInfo{
-				{
-					Name: "podGroup-0",
-				},
-			},
-		},
-		"WithPDB": {
-			objs: []runtime.Object{
-				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
-						Name: "",
-						UID:  "ABC",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						Queue: "queue-0",
-					},
-				},
-			},
-			kubeObjs: []runtime.Object{
-				&v1core.Pod{
-					ObjectMeta: v1.ObjectMeta{
-						Annotations: map[string]string{
-							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
-						},
-					},
-				},
-				&policyv1.PodDisruptionBudget{
-					ObjectMeta: v1.ObjectMeta{
-						Name: "pdb-0",
-					},
-				},
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				{
@@ -889,11 +851,6 @@ func TestSnapshotPodGroups(t *testing.T) {
 						Annotations: map[string]string{
 							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
 						},
-					},
-				},
-				&policyv1.PodDisruptionBudget{
-					ObjectMeta: v1.ObjectMeta{
-						Name: "pdb-0",
 					},
 				},
 			},
@@ -1753,17 +1710,6 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				}, nil)
 				mdl.EXPECT().GetPriorityClassByName(gomock.Any()).Return(nil, fmt.Errorf(successErrorMsg))
 				mdl.EXPECT().ListPodByIndex(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf(successErrorMsg))
-			},
-		},
-		"listPodDisruptionBudgets": {
-			func(mdl *data_lister.MockDataLister) {
-				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
-				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
-				mdl.EXPECT().ListNodes().Return([]*v1core.Node{}, nil)
-				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
-				mdl.EXPECT().ListPriorityClasses().Return([]*v12.PriorityClass{}, nil)
-				mdl.EXPECT().ListPodGroups().Return([]*enginev2alpha2.PodGroup{}, nil)
-				mdl.EXPECT().ListPodDisruptionBudgets().Return(nil, fmt.Errorf(successErrorMsg))
 			},
 		},
 		"ListBindRequests": {
