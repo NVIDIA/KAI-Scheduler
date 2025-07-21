@@ -61,6 +61,7 @@ type Configs struct {
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods,verbs=create;update;patch
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch;update;get;list;watch
+// +kubebuilder:rbac:groups="scheduling.k8s.io",resources=priorityclasses,verbs=get;list;watch
 // +kubebuilder:rbac:groups="scheduling.run.ai",resources=podgroups,verbs=create;update;patch;get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
