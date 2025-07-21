@@ -10,6 +10,7 @@ const (
 	UnlimitedResourceQuantity = float64(-1)
 	DefaultQueuePriority      = 100
 	DefaultNodePoolName       = "default"
+	DefaultMetricsNamespace   = "kai"
 
 	// Pod Groups
 	PodGrouperWarning   = "PodGrouperWarning"

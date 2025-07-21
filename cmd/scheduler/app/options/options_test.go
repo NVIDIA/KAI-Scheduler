@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/diff"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -45,7 +47,7 @@ func TestAddFlags(t *testing.T) {
 	expected := &ServerOption{
 		SchedulerName:                     defaultSchedulerName,
 		Namspace:                          defaultNamespace,
-		MetricsNamespace:                  defaultMetricsNamespace,
+		MetricsNamespace:                  constants.DefaultMetricsNamespace,
 		ResourceReservationAppLabel:       defaultResourceReservationAppLabel,
 		SchedulePeriod:                    5 * time.Minute,
 		PrintVersion:                      true,

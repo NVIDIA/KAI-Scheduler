@@ -25,13 +25,13 @@ import (
 	"github.com/spf13/pflag"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
 const (
 	defaultSchedulerName               = "kai-scheduler"
 	defaultResourceReservationAppLabel = "kai-resource-reservation"
-	defaultMetricsNamespace            = "kai"
 	defaultNamespace                   = "kai-scheduler"
 	defaultSchedulerPeriod             = time.Second
 	defaultStalenessGracePeriod        = 60 * time.Second
@@ -99,7 +99,7 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	// kai-scheduler will ignore pods with scheduler names other than specified with the option
 	fs.StringVar(&s.SchedulerName, "scheduler-name", defaultSchedulerName, "The scheduler name in pod spec that handled by this scheduler")
 	fs.StringVar(&s.Namspace, "namespace", defaultNamespace, "Scheduler service namespace")
-	fs.StringVar(&s.MetricsNamespace, "metrics-namespace", defaultMetricsNamespace, "Metrics namespace")
+	fs.StringVar(&s.MetricsNamespace, "metrics-namespace", constants.DefaultMetricsNamespace, "Metrics namespace")
 	fs.StringVar(&s.ResourceReservationAppLabel, "resource-reservation-app-label", defaultResourceReservationAppLabel, "App label value of resource reservation pods")
 	fs.BoolVar(&s.RestrictSchedulingNodes, "restrict-node-scheduling", false, "kai-scheduler will allocate jobs only to restricted nodes")
 	fs.StringVar(&s.NodePoolLabelKey, "nodepool-label-key", defaultNodePoolLabelKey, "The label key by which to filter scheduling nodepool")
