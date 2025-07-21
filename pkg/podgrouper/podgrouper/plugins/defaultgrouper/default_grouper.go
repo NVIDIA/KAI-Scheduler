@@ -37,19 +37,17 @@ type DefaultGrouper struct {
 	kubeReader                          client.Reader
 }
 
-func NewDefaultGrouper(queueLabelKey, nodePoolLabelKey string) *DefaultGrouper {
+func NewDefaultGrouper(queueLabelKey, nodePoolLabelKey string, kubeReader client.Reader) *DefaultGrouper {
 	return &DefaultGrouper{
 		queueLabelKey:    queueLabelKey,
 		nodePoolLabelKey: nodePoolLabelKey,
+		kubeReader:       kubeReader,
 	}
 }
 
-func (dg *DefaultGrouper) SetDefaultPrioritiesConfigMapParams(
-	defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string, kubeReader client.Reader,
-) {
+func (dg *DefaultGrouper) SetDefaultPrioritiesConfigMapParams(defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string) {
 	dg.defaultPrioritiesConfigMapName = defaultPrioritiesConfigMapName
 	dg.defaultPrioritiesConfigMapNamespace = defaultPrioritiesConfigMapNamespace
-	dg.kubeReader = kubeReader
 }
 
 func (dg *DefaultGrouper) Name() string {
@@ -185,7 +183,7 @@ func (dg *DefaultGrouper) calcPodGroupPriorityClass(topOwner *unstructured.Unstr
 }
 
 func (dg *DefaultGrouper) validatePriorityClassExists(priorityClassName string) bool {
-	if priorityClassName == "" {
+	if priorityClassName == "" || dg.kubeReader == nil {
 		return false
 	}
 

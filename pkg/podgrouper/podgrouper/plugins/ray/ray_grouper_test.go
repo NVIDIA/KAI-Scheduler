@@ -61,7 +61,7 @@ func TestGetPodGroupMetadata_RayCluster(t *testing.T) {
 	pod := &v1.Pod{}
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayCluster).Build()
-	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	grouper := NewRayClusterGrouper(rayGrouper)
 
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(rayCluster, pod)
@@ -103,7 +103,7 @@ func TestGetPodGroupMetadata_RayJob(t *testing.T) {
 	pod := &v1.Pod{}
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayCluster).Build()
-	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	grouper := NewRayJobGrouper(rayGrouper)
 
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(owner, pod)
@@ -148,7 +148,7 @@ func TestGetPodGroupMetadata_RayJob_v1(t *testing.T) {
 	rayClusterCopy.SetAPIVersion("ray.io/v1")
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayClusterCopy).Build()
-	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	grouper := NewRayJobGrouper(rayGrouper)
 
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(owner, pod)
@@ -210,7 +210,7 @@ func TestGetPodGroupMetadata_RayService(t *testing.T) {
 	})
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayClusterCopy).Build()
-	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	grouper := NewRayServiceGrouper(rayGrouper)
 
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(rayService, pod)

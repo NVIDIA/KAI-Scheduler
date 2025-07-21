@@ -11,6 +11,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func baseOwner(name string, startupPolicy string, replicas int64) *unstructured.Unstructured {
@@ -42,7 +43,7 @@ func TestGetPodGroupMetadata_LeaderCreated(t *testing.T) {
 		},
 	}
 
-	lwsGrouper := NewLwsGrouper(defaultgrouper.NewDefaultGrouper("", ""))
+	lwsGrouper := NewLwsGrouper(defaultgrouper.NewDefaultGrouper("", "", fake.NewFakeClient()))
 	podGroupMetadata, err := lwsGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -66,7 +67,7 @@ func TestGetPodGroupMetadata_LeaderReady_LeaderPod(t *testing.T) {
 		},
 	}
 
-	lwsGrouper := NewLwsGrouper(defaultgrouper.NewDefaultGrouper("", ""))
+	lwsGrouper := NewLwsGrouper(defaultgrouper.NewDefaultGrouper("", "", fake.NewFakeClient()))
 	podGroupMetadata, err := lwsGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -90,7 +91,7 @@ func TestGetPodGroupMetadata_LeaderReady_WorkerPod(t *testing.T) {
 		},
 	}
 
-	lwsGrouper := NewLwsGrouper(defaultgrouper.NewDefaultGrouper("", ""))
+	lwsGrouper := NewLwsGrouper(defaultgrouper.NewDefaultGrouper("", "", fake.NewFakeClient()))
 	podGroupMetadata, err := lwsGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)
@@ -108,7 +109,7 @@ func TestGetPodGroupMetadata_GroupIndex_Label(t *testing.T) {
 		},
 	}
 
-	lwsGrouper := NewLwsGrouper(defaultgrouper.NewDefaultGrouper("", ""))
+	lwsGrouper := NewLwsGrouper(defaultgrouper.NewDefaultGrouper("", "", fake.NewFakeClient()))
 	podGroupMetadata, err := lwsGrouper.GetPodGroupMetadata(owner, pod)
 
 	assert.Nil(t, err)

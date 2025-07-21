@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
@@ -40,7 +41,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 		Object: rawObjectMap,
 	}
 
-	grouper := NewSpotRequestGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	grouper := NewSpotRequestGrouper(defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient()))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(unstructuredPod, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, constants.InferencePriorityClass, podGroupMetadata.PriorityClassName)

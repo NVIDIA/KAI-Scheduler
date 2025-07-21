@@ -125,7 +125,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podgang).Build()
-	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	metadata, err := grouper.GetPodGroupMetadata(podgang, pod)
 	assert.Nil(t, err)
 	assert.Equal(t, int32(12), metadata.MinAvailable)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -95,9 +96,13 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	assert.Nil(t, err)
 	err = v1.AddToScheme(scheme)
 	assert.Nil(t, err)
+	err = schedulingv1.AddToScheme(scheme)
+	assert.Nil(t, err)
 
-	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(rev).Build()
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
+	inferencePriorityClass := priorityClassObj(constants.InferencePriorityClass, 1000)
+
+	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(rev, inferencePriorityClass).Build()
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client)
 	grouper := NewKnativeGrouper(client, defaultGrouper, true)
 
 	metadata, err := grouper.GetPodGroupMetadata(service, pod)
@@ -178,9 +183,13 @@ func TestGetPodGroupMetadata_MinScale(t *testing.T) {
 	assert.Nil(t, err)
 	err = v1.AddToScheme(scheme)
 	assert.Nil(t, err)
+	err = schedulingv1.AddToScheme(scheme)
+	assert.Nil(t, err)
 
-	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(rev).Build()
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
+	inferencePriorityClass := priorityClassObj(constants.InferencePriorityClass, 1000)
+
+	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(rev, inferencePriorityClass).Build()
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client)
 	grouper := NewKnativeGrouper(client, defaultGrouper, true)
 
 	metadata, err := grouper.GetPodGroupMetadata(service, pod)
@@ -203,6 +212,7 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 		revisions             []*knative.Revision
 		pods                  []*v1.Pod
 		podGroups             []*v2alpha2.PodGroup
+		priorityClass         *schedulingv1.PriorityClass
 		expectedError         bool
 		expectedPodGroupName  string
 		expectedPriorityClass *string // defaults to inference
@@ -604,6 +614,7 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 					},
 				},
 			},
+			priorityClass:         priorityClassObj("very-high", 125),
 			expectedError:         false,
 			expectedPodGroupName:  "pg-revision-revUID",
 			expectedMinAvailable:  1,
@@ -640,6 +651,7 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 					},
 				},
 			},
+			priorityClass:         priorityClassObj("high", 100),
 			expectedError:         false,
 			expectedPodGroupName:  "pg-revision-revUID",
 			expectedMinAvailable:  1,
@@ -653,6 +665,7 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 			assert.Nil(t, knative.AddToScheme(scheme))
 			assert.Nil(t, v1.AddToScheme(scheme))
 			assert.Nil(t, v2alpha2.AddToScheme(scheme))
+			assert.Nil(t, schedulingv1.AddToScheme(scheme))
 
 			var runtimeObjects []runtime.Object
 			runtimeObjects = append(runtimeObjects, test.service)
@@ -665,6 +678,11 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 			for _, podGroup := range test.podGroups {
 				runtimeObjects = append(runtimeObjects, podGroup)
 			}
+			inferencePriorityClass := priorityClassObj(constants.InferencePriorityClass, 1000)
+			runtimeObjects = append(runtimeObjects, inferencePriorityClass)
+			if test.priorityClass != nil {
+				runtimeObjects = append(runtimeObjects, test.priorityClass)
+			}
 
 			client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(runtimeObjects...).Build()
 
@@ -672,7 +690,7 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 			if test.gangSchedule != nil {
 				gangSchedule = *test.gangSchedule
 			}
-			defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
+			defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client)
 			grouper := NewKnativeGrouper(client, defaultGrouper, gangSchedule)
 
 			unstructuredService, err := runtime.DefaultUnstructuredConverter.ToUnstructured(test.service)
@@ -696,5 +714,14 @@ func TestGetPodGroupMetadataBackwardsCompatibility(t *testing.T) {
 				assert.Equal(t, test.expectedMinAvailable, metadata.MinAvailable, "unexpected min available")
 			}
 		})
+	}
+}
+
+func priorityClassObj(name string, value int32) *schedulingv1.PriorityClass {
+	return &schedulingv1.PriorityClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Value: value,
 	}
 }
