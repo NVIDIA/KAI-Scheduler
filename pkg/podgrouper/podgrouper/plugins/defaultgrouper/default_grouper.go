@@ -160,13 +160,18 @@ func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstr
 		return priorityClassName
 	}
 
+	if priorityClassName != "" {
+		logger.V(2).Info("priorityClassName from pod or owner labels is not valid, falling back to default",
+			"priorityClassName", priorityClassName, "topOwner", topOwner.GetName(), "pod", pod.GetName())
+	}
+
 	groupKind := topOwner.GroupVersionKind().GroupKind()
 	priorityClassName = dg.getDefaultPriorityClassNameForKind(&groupKind)
 	if dg.validatePriorityClassExists(priorityClassName) {
 		return priorityClassName
 	}
 
-	logger.V(4).Info("No default priority class found for group kind, using default fallback",
+	logger.V(2).Info("No default priority class found for group kind, using default fallback",
 		"groupKind", groupKind.String(), "defaultFallback", defaultPriorityClassForJob)
 	return defaultPriorityClassForJob
 }
