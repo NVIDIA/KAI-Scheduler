@@ -42,9 +42,9 @@ This proposal extends the PodGroup CRD and scheduling flow to introduce SubGroup
     - The PodGroup is scheduled atomically (gang scheduling) to guarantee coordinated workload orchestration and execution consistency.
     - SubGroups enable fine-grained placement and policy specification while maintaining atomicity; partial execution of the workload is not permitted.
 - SubGroup - A logical subset within a PodGroup, enabling scoped placement and scheduling requirements:
-  - name: Unique identifier within the parent PodGroup. 
-  - podSelector: Identifies pods belonging to the SubGroup via labels. 
+  - name: Unique identifier within the parent PodGroup.  
   - minMember: Specifies the minimum number of pods required within the SubGroup to satisfy scheduling constraints.
+  - Pods are assigned to SubGroups with `kai.scheduler/subgroup-name` label, where the value is the name of the respective SubGroup.
 - TopologyConstraints – Provides hierarchical placement control across three levels:
   - A global constraint applied to all pods in the PodGroup when no more specific constraint is defined. 
   - Specific constraints applied to explicitly named SubGroups for targeted placement control. 
@@ -88,9 +88,6 @@ type PodGroupSpec struct {
 type SubGroup struct {
     // Name uniquely identifies the SubGroup within the parent PodGroup. 
     Name string `json:"name"`
-    
-    // PodSelector identifies the pods belonging to this SubGroup by matching labels. 
-    PodSelector *metav1.LabelSelector `json:"podSelector,omitempty"`
     
     // MinMember defines the minimal number of members/tasks to run this SubGroup;
     // if there's not enough resources to start all tasks, the scheduler will not start anyone.
@@ -164,15 +161,9 @@ spec:
   minMember: 5 # 4 (decoders) + 1 (prefills), ensuring the gang scheduling invariant
   subGroups:
   - name: decoders
-    podSelector:
-      matchLabels:
-        role: decode
     minMember: 4
 
   - name: prefills
-    podSelector:
-      matchLabels:
-        role: prefill
     minMember: 1
       
   topologyConstraints:
@@ -210,27 +201,15 @@ spec:
   minMember: 10
   subGroups:
     - name: decode-workers
-      podSelector:
-        matchLabels:
-          role: decode-worker
       minMember: 4
 
     - name: decode-leaders
-      podSelector:
-        matchLabels:
-          role: decode-leader
       minMember: 1
 
     - name: prefill-workers
-      podSelector:
-        matchLabels:
-          role: prefill-worker
       minMember: 4
 
     - name: prefill-leaders
-      podSelector:
-        matchLabels:
-          role: prefill-leader
       minMember: 1
 
   topologyConstraints:
@@ -261,7 +240,7 @@ spec:
 To ensure a controlled and backward-compatible rollout of PodGroup SubGroups with fine-grained scheduling, the following phased development plan is proposed:
 
 ### Phase 1: API Definition and Validation
-- Extend the PodGroup [CRD](https://github.com/NVIDIA/KAI-Scheduler/blob/main/pkg/apis/scheduling/v2alpha2/podgroup_types.go) to support SubGroups with name, podSelector and minMember.
+- Extend the PodGroup [CRD](https://github.com/NVIDIA/KAI-Scheduler/blob/main/pkg/apis/scheduling/v2alpha2/podgroup_types.go) to support SubGroups with name and minMember.
 - (Optional) Implement optional validation to ensure:
     - Unique SubGroup names within a PodGroup.
     - minMember consistency with global level.
