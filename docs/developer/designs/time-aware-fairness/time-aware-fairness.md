@@ -5,15 +5,20 @@
   - [Goals](#goals)
   - [Non-Goals](#non-goals)
 - [Proposal](#proposal)
-  - [User Stories (Optional)](#user-stories-optional)
-    - [Story 1](#story-1-proportional-time-sharing-of-resoucres)
+  - [Interaction with existing guarantees](#interaction-with-existing-guarantees)
+  - [User Stories](#user-stories)
+    - [Story 1](#story-1-proportional-time-sharing-of-resources)
     - [Story 2](#story-2-burst-access-to-resources)
     - [Story 3](#story-3-time-aware-fairness-with-guaranteed-resources)
     - [Story 4](#story-4-no-over-usage-open-for-debate)
-  - [Notes/Constraints/Caveats (Optional)](#notesconstraintscaveats)
+  - [Notes/Constraints/Caveats](#notesconstraintscaveats)
+    - [Data storage constraints](#data-storage-constraints)
+    - [Intuitive understanding of fairness over time](#intuitive-understanding-of-fairness-over-time)
   - [Risks and Mitigations](#risks-and-mitigations)
 - [Design Details](#design-details)
-  - [Vacant-adjusted normalized usage](#vacant-adjusted-normalized-usage)
+  - [Explanation of the formula](#explanation-of-the-formula)
+  - [Cluster-capacity normalized usage](#cluster-capacity-normalized-usage)
+  - [Penalizing queues with historical usage](#penalizing-queues-with-historical-usage)
 <!-- /toc -->
 
 ## Summary
@@ -39,24 +44,16 @@ Time-aware fairness is a desirable behavior for many use cases, as evident by th
 
 ## Proposal
 
-Track usage data of resources by queues over time, with a configurable decay formula and reset period. Use this usage data in DRF calculations when allocating resources: per resource, 
-<!--
-This is where we get down to the specifics of what the proposal actually is.
-This should have enough detail that reviewers can understand exactly what
-you're proposing, but should not include things like API designs or
-implementation. What is the desired outcome and how do we measure success?.
-The "Design Details" section below is for the real
-nitty-gritty.
--->
+Track usage data of resources by queues over time, with a configurable decay formula and reset period. Use this usage data in DRF calculations when allocating resources: per resource, penalize queues with relatively higher historical usage of the resource, compared to queues which received less. Allocation over time should trend towards the relative weight of the queue for the relevant resource.
+
+### Interaction with existing guarantees
+
+The over-time fairness is an enhancement to the current over-quota weight mechanism, and will take the same priority in the algorithm. Meaning:
+- Over-time fairness will not override **deserved resources**: queues will get their deserved resources regardless of historical usage
+- Over-time fairness will not override **queue priority**: over-quota resources will be divided by priority first, and within each priority, quota will be divided based on over-quota weight and historical usage
+
 
 ### User Stories
-
-<!--
-Detail the things that people will be able to do if this KEP is implemented.
-Include as much detail as possible so that people can understand the "how" of
-the system. The goal here is to make this feel real for users without getting
-bogged down.
--->
 
 #### Story 1: Proportional time sharing of resources
 Assume an admin manages a cluster with X GPUs. Two users share the cluster, each wants to run an infinite series batch jobs, each requiring X GPUs allocated for an hour. The admin assigns no deserved quota and identical over-quota weight to each users' queue.  
@@ -99,121 +96,90 @@ ToDo
 > **⚠️ Work in Progress**  
 > This design is currently under development. The mathematical formulation and implementation details are an initial proposal for further discussion. Feedback and suggestions are welcome.
 
-Accounting service will provide the scheduler with data for each cycle about the usage of resources per queue per resource. A vector will represent the usage of each queue per resource type.  
+Let's consider the following formula for calculating the fair share of resources, adjuster for historical usage:
+
+$$F_i = C \cdot P'_i$$
+
+Where:
+- **$F_i$** is the fair share allocated to a specific queue in the current round
+- **$C$** is the remaining capacity (max amount to give in current round)
+- **$P'_i$** is the normalized portion for queue i, defined as:
+
+$$P_i = \max{\{W'_i - k \cdot (W'_i - U'_i), 0\}}$$
+
+$$P'_i = \frac{P_i}{\sum{P}}$$
+
+Where:
+- $W'_i$ is the over-quota weight of the queue, normalized to the sum of non-satisfied queues' over-quota weight for the round
+- $\sum{P}$ considers only queues that participate in the current resource division round
+- $U'_i$ is the historical usage for the queue, normalized to the capacity of the cluster
+- $k$ is set by the admin and controls the "significance" of historical usage
+- Applying $\max{\{,0\}}$ to the result floors negative values to 0
+
+This ensures that:
+
+$\sum{P'} = 1$
+
+$0<=P'_i<=1$
+
+For each resource division round, which makes it simpler to divide resources.
+
+### Explanation of the Formula
+
+The accounting service will provide the scheduler with data for each cycle about the usage of resources per queue per resource. A vector will represent the usage of each queue per resource type.  
 The resource division formula for over-quota resource can be found in proportion plugin, resource_division.go:
 ```Go
 fairShare := amountToGiveInCurrentRound * (overQuotaWeight / totalWeights)
 ```
-This calculation is done for each resource type. The result of this calculation is later capped with the requested resource of the queue, so each round of this calculation for all queues could result in remaining capcacity to divide - this is run in rounds, each time with the updated remaining unsatisfied queues, untill all resources are divided or all queues get their request.
+This calculation is done for each resource type. The result of this calculation is later capped with the requested resource of the queue, so each round of this calculation for all queues could result in remaining capacity to divide - this is run in rounds, each time with the updated remaining unsatisfied queues, until all resources are divided or all queues get their request.
 
 For convenience, we'll write it out as a formula:
 
 $$\text{F} = C \cdot \frac{W}{\sum{W}}$$
 
 Where:
-- **F** is the fair share allocated to a specific queue in the current round
-- **C** is the remaining capacity (max amount to give in current round)
-- **w** is the weight for a specific queue
-- **∑w** is the sum of weights across all competing queues
+- **$F$** is the fair share allocated to a specific queue in the current round
+- **$C$** is the remaining capacity (max amount to give in current round)
+- **$w$** is the weight for a specific queue
+- **$∑w$** is the sum of weights across all competing queues
 
 Let's also mark the normalized weight as:
 
 $$W'_i = \frac{W_i}{\sum{W}}$$
 
-
-### Vacant-adjusted normalized usage
+### Cluster-capacity normalized usage
 
 First, we'll define a normalized "usage" score for each queue and resource:
 
-$$U'_i = \frac{U_i}{\sum{U}}$$
+$$U'_i = \frac{U_i}{T}$$
 
-We can furthermore consider the **unallocated** resources in the cluster. If we go back to the definition of $U'_i$, we can add:
+Where $T$ is the total potential resource capacity for the cluster in the relevant time period. For a cluster that is fully occupied, $\sum{U_i} = T$.
 
-$$U'_i = \frac{U_i}{\sum{U} + V}$$
+This works better than a naive normalization ($U'_i = \frac{U_i}{\sum{U}}$), because it doesn't result in heavy penalty when total usage ($\sum{U_i}$) is relatively low: in other words, queues are not penalized heavily for utilizing uncontended resources.
 
-where V (vacant) represents the **unallocated** resources for the considered time period. This will add the benefit of reduced penalty for usages that were relatively small compared to free resources in the cluster - otherwise, for example, a usage of a single GPU*second in an empty cluster will severely punishing queues that utilized small amounts of clusters when there was no contention.
 
-Now, we can plug in $U'_i$ to our fair share calculation:
+### Penalizing queues with historical usage
 
-$$F_i = C \cdot (W'_i - U'_i)$$
+Now, we can adjust our fair-share calculation for resources to consider historical usage. Let's define:
 
-Which will give us the following:
-* When usage is zero for all queues, we revert back to the current calculation
-* Decreased fair share for queues that are using relatively more resources, while still giving more "breathing room" for queues with larger weights
-* Queues that their relative **usage** is bigger than their relative **share** will get a negative value. This needs to be addressed somehow, maybe flooring it with 0 or normalizing the $(W'_i-U'_i)$ values - needs further thought
+$$F_i = C \cdot P'_i$$
 
-If there are still unclaimed resources, the relative weights and usage values will be re-calculated in the next round - allowing even very over-using queues to get access to resources, if they are left unclaimed by all other queues.
+Where:
+- **$F_i$** is the fair share allocated to a specific queue in the current round
+- **$C$** is the remaining capacity (max amount to give in current round)
+- **$P'_i$** is the normalized portion for queue i, defined as:
 
-To simplify this concept, we will define $U'_i$ as the relative usage to the entire cluster's capacity for the relevant time period:
-
-$$U'_i = \frac{U_i}{\sum{U} + V} = \frac{U_i}{T} $$
-
-Where T is the total amount of resources in the cluster for the relevant period. In a busy cluster with no free resources, $\sum{U}=T$
-
-#### Considering vacant resources:
-There are a few potential upsides for considering vacant resources when calculating normalized usages. First, we can demonstrate the value with an example:
-
-First, it's easy to see that in a buys cluster, as $V$ approaches 0 relative to $\sum{U}$, the normalized usage approaches what it would be if we didn't consider $V$ at all: in other words, in busy clusters, it doesn't really matter if we vacancy-adjust our usages or not.
-
-Now, let's consider what happens when the cluster is relatively empty:
-
-Consider a cluster with 100 GPUs. We have one queue, $Q_1$, with weight of 50. We also have 50 smaller queues with weight of 1 each.
-This gives us a normalized weight for $Q_1$ of 0.5.
-
-Now, let's say that the cluster is completely empty, and $Q_1$ used a small amount of resources: say, 0.1 GPU-hours. In a cluster of 100 GPUs, this is obviously not a significant amount.
-
-If we don't vacant-adjust our usage, the normalized usage of Q1 will be $U'_1 = 1$, which will severely punish it: in fact, the the previously proposed equasion, it will result in a negative value:
-
-$$F_1 = C \cdot (W'_1 - U'_1) = C \cdot (0.5 - 1) = -0.5 \cdot C$$
-
-*Wether we floor the value with 0 or normalize the result -* $F_1$ *will still be 0*
-
-$Q_1$, the most prioritized queue in the cluster by far, will be severely punished for a minute amount of resources allocated from an empty cluster.
-
-On the other hand - if we consider vacant resources, we get the following:
-
-$$U'_1 = \frac{U_1}{\sum{U} + V} = \frac{U_1}{T} = \frac{0.1}{100}$$
-
-*Assuming that we're looking at a time period of 1h, and that the units for usage are GPU-hours*
-
-The value of $U'_1$ approaches 0, reflecting it's actual usage of cluster resources. The 0.1 GPU-hours will not result in significant penalty. 
-
-However, if it used 50 GPUs for that duration, it will be 0.5. Plugged to the resource division equation, we will get:
-
-$$U'_1 = \frac{U_1}{T} = \frac{50}{100} = 0.5$$
-
-$$F_1 = C \cdot (W'_1 - U'_1) = C \cdot (0.5 - 0.5) = 0 \cdot C$$
-
-Which means that it will get no fair share if it used half the cluster resources for the relevant period.
-
-#### Normalizing usage
-
-Let's take another look at our resource division equation:
-
-$$F_i = C \cdot (W'_i - U'_i)$$
-
-Since $W'_i$ is normalized, $\sum{W} = 1$. This is convenient since it means that we can potentially divide the entire cluster capacity, marked here as $C$, in one round. The result of this calculation is later capped by the queue request, so the calculation repeats until no resources are left, or until all queues get their requested resources.
-
-However, now, when $U'_i$ will start receiving positive values, we will get cases where:
-
-$$\sum{F} = C \cdot\sum{(W'-U')} < C$$
-
-One way to address this is to run more rounds, but it will be easier to just normalize the factor.
-
-Another issue to consider is that we can't divide negative resources - therefore, we need to apply $\max{\{(W'-U'), 0\}}$ before normalizing.
-
-Let's mark $P$ for "portion" and define:
-
-$$P_i = \max{\{W'_i - U'_i, 0\}}$$
+$$P_i = \max{\{W'_i - k \cdot (W'_i - U'_i), 0\}}$$
 
 $$P'_i = \frac{P_i}{\sum{P}}$$
 
-*Where* $\sum{P}$ *considers only queues that participate in the current resource division round*
+Where:
+- $W'_i$ is the over-quota weight of the queue, normalized to the sum of non-satisfied queues' over-quota weight for the round
+- $\sum{P}$ considers only queues that participate in the current resource division round
+- $U'_i$ is the historical usage for the queue, normalized to the capacity of the cluster
+- $k$ is set by the admin and controls the "significance" of historical usage
+- Applying $\max{\{,0\}}$ to the result floors negative values to 0
 
-Which gives us:
-
-$$\sum{P'} = 1$$
-
-$$0<=P'_i<=1$$
-
-For each resource division round, which makes it simpler to divide resources.
+Which gives us the following properties:
+- 0 historical usage across the board will effectively revert to the current formula
+- $k$ can be adjusted by the admin to configure the "significance" of historical usage: higher $k$ values will result in more aggressive correction of fair share according to historical usage
