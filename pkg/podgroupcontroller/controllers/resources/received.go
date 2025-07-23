@@ -6,6 +6,8 @@ package resources
 import (
 	"context"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -27,6 +29,6 @@ func ExtractGPUSharingReceivedResources(ctx context.Context, pod *v1.Pod, kubeCl
 	}
 
 	fractionResource, err := calculateAllocatedFraction(ctx, pod, kubeClient)
-	resources[gpuFractionResourceName] = fractionResource
+	resources[constants.GpuResource] = fractionResource
 	return resources, err
 }

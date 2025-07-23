@@ -13,8 +13,7 @@ import (
 )
 
 const (
-	gpuMemoryResourceName   = "run.ai/gpu.memory"
-	gpuFractionResourceName = "nvidia.com/gpu"
+	gpuMemoryResourceName = "run.ai/gpu.memory"
 )
 
 func ExtractGPUSharingRequestedResources(pod *v1.Pod) (v1.ResourceList, error) {
@@ -53,7 +52,7 @@ func ExtractGPUSharingRequestedResources(pod *v1.Pod) (v1.ResourceList, error) {
 					"Please check resource.Quantity restrictions. fraction <%s>, count: %d",
 					gpuFractionStr, fractionsCount)
 		}
-		resources[v1.ResourceName(gpuFractionResourceName)] = quantity
+		resources[v1.ResourceName(constants.GpuResource)] = quantity
 	}
 
 	gpuMemoryStr, hasAnnotation := pod.Annotations[constants.GpuMemory]

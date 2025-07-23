@@ -67,7 +67,7 @@ func Test_extractReceivedResources(t *testing.T) {
 				},
 				&v1.Node{},
 			},
-			v1.ResourceList{gpuFractionResourceName: resource.MustParse("0.4")},
+			v1.ResourceList{constants.GpuResource: resource.MustParse("0.4")},
 			false,
 		},
 	}
