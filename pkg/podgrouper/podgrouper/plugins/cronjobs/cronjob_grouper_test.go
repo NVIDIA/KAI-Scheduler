@@ -67,7 +67,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	assert.Nil(t, err)
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(job).Build()
-	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(cronjob, pod)
 
 	assert.Nil(t, err)
@@ -105,7 +105,7 @@ func TestGetPodGroupMetadataJobOwnerNotFound(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(cronjob).Build()
-	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(cronjob, pod)
 
 	assert.NotNil(t, err)
@@ -144,7 +144,7 @@ func TestGetPodGroupMetadataJobNotExists(t *testing.T) {
 	assert.Nil(t, err)
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(cronjob).Build()
-	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey))
+	grouper := NewCronJobGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	podGroupMetadata, err := grouper.GetPodGroupMetadata(cronjob, pod)
 	assert.NotNil(t, err)
 	assert.Equal(t, fmt.Sprintf("jobs.batch \"%s\" not found", jobName), err.Error())

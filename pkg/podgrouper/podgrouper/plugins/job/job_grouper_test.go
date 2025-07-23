@@ -71,7 +71,7 @@ func TestGetPodGroupMetadata_Hpo(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects().Build()
 
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client)
 	jobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
 
 	podGroupMetadata, err := jobGrouper.GetPodGroupMetadata(owner, pod)
@@ -148,7 +148,7 @@ func TestGetPodGroupMetadata_LegacyPodGroup(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testResources...).Build()
 
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client)
 	jobGrouper := NewK8sJobGrouper(client, defaultGrouper, true)
 
 	podGroupMetadata, err := jobGrouper.GetPodGroupMetadata(owner, pod)
@@ -221,7 +221,7 @@ func TestGetPodGroupMetadata_LegacyDisabledPodGroup(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testResources...).Build()
 
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client)
 	jobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
 
 	podGroupMetadata, err := jobGrouper.GetPodGroupMetadata(owner, pod)
@@ -278,7 +278,7 @@ func TestGetPodGroupMetadata_LegacyNotFound(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testResources...).Build()
 
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client)
 	jobGrouper := NewK8sJobGrouper(client, defaultGrouper, true)
 
 	podGroupMetadata, err := jobGrouper.GetPodGroupMetadata(owner, pod)
@@ -333,7 +333,7 @@ func TestGetPodGroupMetadata_RegularPodGroup(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects().Build()
 
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey)
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client)
 	jobGrouper := NewK8sJobGrouper(client, defaultGrouper, false)
 
 	podGroupMetadata, err := jobGrouper.GetPodGroupMetadata(owner, pod)

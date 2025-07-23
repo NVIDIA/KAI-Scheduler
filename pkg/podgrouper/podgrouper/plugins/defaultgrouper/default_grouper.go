@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,19 +37,17 @@ type DefaultGrouper struct {
 	kubeReader                          client.Reader
 }
 
-func NewDefaultGrouper(queueLabelKey, nodePoolLabelKey string) *DefaultGrouper {
+func NewDefaultGrouper(queueLabelKey, nodePoolLabelKey string, kubeReader client.Reader) *DefaultGrouper {
 	return &DefaultGrouper{
 		queueLabelKey:    queueLabelKey,
 		nodePoolLabelKey: nodePoolLabelKey,
+		kubeReader:       kubeReader,
 	}
 }
 
-func (dg *DefaultGrouper) SetDefaultPrioritiesConfigMapParams(
-	defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string, kubeReader client.Reader,
-) {
+func (dg *DefaultGrouper) SetDefaultPrioritiesConfigMapParams(defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string) {
 	dg.defaultPrioritiesConfigMapName = defaultPrioritiesConfigMapName
 	dg.defaultPrioritiesConfigMapNamespace = defaultPrioritiesConfigMapNamespace
-	dg.kubeReader = kubeReader
 }
 
 func (dg *DefaultGrouper) Name() string {
@@ -151,29 +150,63 @@ func (dg *DefaultGrouper) calculateQueueName(topOwner *unstructured.Unstructured
 
 func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstructured, pod *v1.Pod,
 	defaultPriorityClassForJob string) string {
+	priorityClassName := dg.calcPodGroupPriorityClass(topOwner, pod)
+	if dg.validatePriorityClassExists(priorityClassName) {
+		return priorityClassName
+	}
+
+	if priorityClassName != "" {
+		logger.V(2).Info("priorityClassName from pod or owner labels is not valid, falling back to default",
+			"priorityClassName", priorityClassName, "topOwner", topOwner.GetName(), "pod", pod.GetName())
+	}
+
+	groupKind := topOwner.GroupVersionKind().GroupKind()
+	priorityClassName = dg.getDefaultPriorityClassNameForKind(&groupKind)
+	if dg.validatePriorityClassExists(priorityClassName) {
+		return priorityClassName
+	}
+
+	logger.V(2).Info("No default priority class found for group kind, using default fallback",
+		"groupKind", groupKind.String(), "defaultFallback", defaultPriorityClassForJob)
+	return defaultPriorityClassForJob
+}
+
+func (dg *DefaultGrouper) calcPodGroupPriorityClass(topOwner *unstructured.Unstructured, pod *v1.Pod) string {
 	if priorityClassName, found := topOwner.GetLabels()[constants.PriorityLabelKey]; found {
 		return priorityClassName
 	} else if priorityClassName, found = pod.GetLabels()[constants.PriorityLabelKey]; found {
 		return priorityClassName
 	} else if len(pod.Spec.PriorityClassName) != 0 {
 		return pod.Spec.PriorityClassName
-	} else {
-		groupKind := topOwner.GroupVersionKind().GroupKind()
-		return dg.getDefaultPriorityClassNameForKind(&groupKind, defaultPriorityClassForJob)
 	}
+	return ""
+}
+
+func (dg *DefaultGrouper) validatePriorityClassExists(priorityClassName string) bool {
+	if priorityClassName == "" || dg.kubeReader == nil {
+		return false
+	}
+
+	priorityClass := &schedulingv1.PriorityClass{}
+	err := dg.kubeReader.Get(context.Background(), client.ObjectKey{Name: priorityClassName}, priorityClass)
+	if err != nil {
+		logger.V(1).Error(err, "Failed to get priority class", "priorityClassName", priorityClassName)
+		return false
+	}
+	return true
 }
 
 // getDefaultPriorityClassNameForKind - returns the default priority class name for a given group kind.
-func (dg *DefaultGrouper) getDefaultPriorityClassNameForKind(groupKind *schema.GroupKind, defaultPriorityClassFallback string) string {
+func (dg *DefaultGrouper) getDefaultPriorityClassNameForKind(groupKind *schema.GroupKind) string {
 	if groupKind == nil || groupKind.String() == "" || groupKind.Kind == "" {
 		logger.V(3).Info("Unable to get default priority class name: GroupKind is empty, using default priority class fallback")
-		return defaultPriorityClassFallback
+		return ""
 	}
 
 	defaultPriorities, err := dg.getDefaultPrioritiesPerTypeMapping()
 	if err != nil {
 		logger.V(1).Error(err, "Unable to get default priorities mapping")
-		return defaultPriorityClassFallback
+		return ""
 	}
 
 	// Check if the groupKind is in the default priorities map.
@@ -187,9 +220,7 @@ func (dg *DefaultGrouper) getDefaultPriorityClassNameForKind(groupKind *schema.G
 		return priorityClassName
 	}
 
-	logger.V(4).Info("No default priority class found for group kind, using default fallback",
-		"groupKind", groupKind.String(), "defaultFallback", defaultPriorityClassFallback)
-	return defaultPriorityClassFallback
+	return ""
 }
 
 // getDefaultPrioritiesPerTypeMapping - returns a map of workload type to default priority class name.
