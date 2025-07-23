@@ -118,7 +118,6 @@ func (qo *QueueOverrides) ToQueueAttributes() *rs.QueueAttributes {
 		if err == nil {
 			qa.CreationTimestamp = metav1.Time{Time: t}
 		} else {
-			// handle error, perhaps log or default
 			qa.CreationTimestamp = metav1.Now()
 		}
 	} else {
