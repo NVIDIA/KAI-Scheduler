@@ -18,7 +18,6 @@ type ResourceShare struct {
 	AllocatedNotPreemptible float64
 	Request                 float64
 	AbsoluteUsage           float64
-	VacantAdjustedUsage     float64
 }
 
 func EmptyResource() ResourceShare {
@@ -35,7 +34,6 @@ func (rs *ResourceShare) Clone() *ResourceShare {
 		AllocatedNotPreemptible: rs.AllocatedNotPreemptible,
 		Request:                 rs.Request,
 		AbsoluteUsage:           rs.AbsoluteUsage,
-		VacantAdjustedUsage:     rs.VacantAdjustedUsage,
 	}
 }
 
@@ -64,8 +62,4 @@ func (rs *ResourceShare) GetAllocatableShare() float64 {
 
 func (rs *ResourceShare) GetAbsoluteUsage() float64 {
 	return rs.AbsoluteUsage
-}
-
-func (rs *ResourceShare) GetVacantAdjustedUsage() float64 {
-	return rs.VacantAdjustedUsage
 }
