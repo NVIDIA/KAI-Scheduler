@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -49,14 +50,21 @@ func simulateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	err := json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
 
 func main() {
 	var port = flag.Int("port", 8080, "Port to listen on")
 	flag.Parse()
 	http.HandleFunc("/simulate", simulateHandler)
-	http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
+	if err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
 
 func SimulateSetResourcesShare(totalResource rs.ResourceQuantities, queueOverrides []resource_division.QueueOverrides) map[common_info.QueueID]*rs.QueueAttributes {

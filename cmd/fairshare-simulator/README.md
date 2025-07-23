@@ -7,7 +7,7 @@ This is a simple HTTP server that simulates the fair share resource division alg
 Build the simulator:
 
 ```bash
-go build ./cmd/fairshare-simulator
+go build .
 ```
 
 Run it:
@@ -85,3 +85,29 @@ The response is a JSON object with fair share values for each queue:
 (Note: Actual values depend on the input parameters and the simulation logic.)
 
 This simulator uses the `SetResourcesShare` function from the proportion plugin to compute the fair shares. 
+
+## Using the Jupyter Notebook Example
+
+An interactive example is provided in `example.ipynb`. To run it:
+
+1. Make sure you have Python with the required packages:
+```bash
+pip install requests pandas matplotlib jupyter
+```
+
+2. Start the simulator:
+```bash
+./fairshare-simulator -port=8080
+```
+
+3. In a new terminal, start Jupyter:
+```bash
+jupyter notebook example.ipynb
+```
+
+4. Run the notebook cells to:
+   - Send example requests to the simulator
+   - View the fair share results in a DataFrame
+   - Visualize the resource allocation with bar charts
+
+You can modify the `request_data` dictionary in the notebook to experiment with different configurations and see how they affect resource allocation. 
