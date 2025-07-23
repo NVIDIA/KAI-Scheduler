@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	podmutator "github.com/NVIDIA/KAI-scheduler/pkg/binder/admission/pod-mutator"
+	admissionhooks "github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/podhooks"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -33,11 +33,11 @@ import (
 
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 
-	podvalidator "github.com/NVIDIA/KAI-scheduler/pkg/binder/admission/pod-validator"
+	admissionplugins "github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/controllers"
-	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
+	bindingplugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
 )
 
 var (
@@ -60,7 +60,8 @@ type App struct {
 	manager          manager.Manager
 	rrs              resourcereservation.Interface
 	reconcilerParams *controllers.ReconcilerParams
-	plugins          *plugins.BinderPlugins
+	admissionPlugins *admissionplugins.KaiAdmissionPlugins
+	bindingPlugins   *bindingplugins.BinderPlugins
 }
 
 // +kubebuilder:webhook:path=/mutate--v1-pod,mutating=true,failurePolicy=fail,sideEffects=None,resources=pods,verbs=create,groups=core,versions=v1,name=binder.run.ai,admissionReviewVersions=v1,reinvocationPolicy=IfNeeded
@@ -151,8 +152,9 @@ func New() (*App, error) {
 	return app, nil
 }
 
-func (app *App) RegisterPlugins(plugins *plugins.BinderPlugins) {
-	app.plugins = plugins
+func (app *App) RegisterPlugins(admissionPlugins *admissionplugins.KaiAdmissionPlugins, bindingPlugins *bindingplugins.BinderPlugins) {
+	app.admissionPlugins = admissionPlugins
+	app.bindingPlugins = bindingPlugins
 }
 
 func (app *App) Run() error {
@@ -178,13 +180,13 @@ func (app *App) Run() error {
 	}
 
 	if err = ctrl.NewWebhookManagedBy(app.manager).For(&corev1.Pod{}).
-		WithDefaulter(podmutator.NewPodMutator(app.manager.GetClient(), app.plugins, app.Options.SchedulerName)).
-		WithValidator(podvalidator.NewPodValidator(app.manager.GetClient(), app.plugins, app.Options.SchedulerName)).Complete(); err != nil {
+		WithDefaulter(admissionhooks.NewPodMutator(app.manager.GetClient(), app.admissionPlugins, app.Options.SchedulerName)).
+		WithValidator(admissionhooks.NewPodValidator(app.manager.GetClient(), app.admissionPlugins, app.Options.SchedulerName)).Complete(); err != nil {
 		setupLog.Error(err, "unable to create pod webhooks", "webhook", "Pod")
 		return err
 	}
 
-	binder := binding.NewBinder(app.Client, app.rrs, app.plugins)
+	binder := binding.NewBinder(app.Client, app.rrs, app.bindingPlugins)
 
 	stopCh := make(chan struct{})
 	app.InformerFactory.Start(stopCh)
