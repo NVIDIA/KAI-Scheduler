@@ -1,0 +1,49 @@
+POST http://localhost:8080/simulate HTTP/1.1
+content-type: application/json
+
+{
+"totalResource": {
+      "GPU": 100,
+      "CPU": 16000,
+      "Memory": 32000000
+    },
+    "totalUsageCapacity": {
+      "GPU": 100,
+      "CPU": 10000,
+      "Memory": 24000000
+    },
+    "kValue": 1.0,
+    "queues": [
+      {
+        "uid": "queue1",
+        "name": "test-queue",
+        "parentQueue": "",
+        "childQueues": [],
+        "creationTimestamp": "2023-10-01T12:00:00Z",
+        "priority": 0,
+        "resourceShare": {
+          "gpu": {
+            "deserved": 5,
+            "request": 100,
+            "overQuotaWeight": 2,
+            "absoluteUsage": 50
+          }
+        }
+      },
+      {
+        "uid": "queue2",
+        "name": "test-queue2",
+        "parentQueue": "",
+        "childQueues": [],
+        "creationTimestamp": "2023-10-01T12:00:00Z",
+        "priority": 0,
+        "resourceShare": {
+          "gpu": {
+            "deserved": 5,
+            "request": 100,
+            "overQuotaWeight": 1
+          }
+        }
+      }
+    ] 
+}

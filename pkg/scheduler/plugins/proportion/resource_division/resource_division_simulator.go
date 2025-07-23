@@ -1,7 +1,12 @@
 package resource_division
 
 import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	consts "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	common_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	rs "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/resource_share"
 	"knative.dev/pkg/ptr"
 )
@@ -11,15 +16,15 @@ const (
 )
 
 type ResourceShareOverrides struct {
-	Deserved                *float64
-	FairShare               *float64
-	MaxAllowed              *float64
-	OverQuotaWeight         *float64
-	Allocated               *float64
-	AllocatedNotPreemptible *float64
-	Request                 *float64
-	AbsoluteUsage           *float64
-	VacantAdjustedUsage     *float64
+	Deserved                *float64 `json:"deserved"`
+	FairShare               *float64 `json:"fairShare"`
+	MaxAllowed              *float64 `json:"maxAllowed"`
+	OverQuotaWeight         *float64 `json:"overQuotaWeight"`
+	Allocated               *float64 `json:"allocated"`
+	AllocatedNotPreemptible *float64 `json:"allocatedNotPreemptible"`
+	Request                 *float64 `json:"request"`
+	AbsoluteUsage           *float64 `json:"absoluteUsage"`
+	VacantAdjustedUsage     *float64 `json:"vacantAdjustedUsage"`
 }
 
 func (r *ResourceShareOverrides) ResourceShare() *rs.ResourceShare {
@@ -61,9 +66,9 @@ func (r *ResourceShareOverrides) ResourceShare() *rs.ResourceShare {
 }
 
 type QueueResourceShareOverrides struct {
-	GPU    *ResourceShareOverrides
-	CPU    *ResourceShareOverrides
-	Memory *ResourceShareOverrides
+	GPU    *ResourceShareOverrides `json:"gpu"`
+	CPU    *ResourceShareOverrides `json:"cpu"`
+	Memory *ResourceShareOverrides `json:"memory"`
 }
 
 func (q QueueResourceShareOverrides) ResourceShare() rs.QueueResourceShare {
@@ -86,4 +91,43 @@ func (q QueueResourceShareOverrides) ResourceShare() rs.QueueResourceShare {
 		Memory: *q.Memory.ResourceShare(),
 	}
 	return rs
+}
+
+type QueueOverrides struct {
+	UID               common_info.QueueID         `json:"uid"`
+	Name              string                      `json:"name"`
+	ParentQueue       common_info.QueueID         `json:"parentQueue"`
+	ChildQueues       []common_info.QueueID       `json:"childQueues"`
+	CreationTimestamp *string                     `json:"creationTimestamp"`
+	Priority          *int                        `json:"priority"`
+	ResourceShare     QueueResourceShareOverrides `json:"resourceShare"`
+}
+
+func (qo *QueueOverrides) ToQueueAttributes() *rs.QueueAttributes {
+	qa := &rs.QueueAttributes{
+		UID:                qo.UID,
+		Name:               qo.Name,
+		ParentQueue:        qo.ParentQueue,
+		ChildQueues:        qo.ChildQueues,
+		Priority:           0,
+		QueueResourceShare: qo.ResourceShare.ResourceShare(),
+	}
+
+	if qo.Priority != nil {
+		qa.Priority = *qo.Priority
+	}
+
+	if qo.CreationTimestamp != nil {
+		t, err := time.Parse(time.RFC3339, *qo.CreationTimestamp)
+		if err == nil {
+			qa.CreationTimestamp = metav1.Time{Time: t}
+		} else {
+			// handle error, perhaps log or default
+			qa.CreationTimestamp = metav1.Now()
+		}
+	} else {
+		qa.CreationTimestamp = metav1.Now()
+	}
+
+	return qa
 }
