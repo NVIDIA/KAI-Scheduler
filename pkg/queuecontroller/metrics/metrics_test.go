@@ -11,6 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -46,6 +48,13 @@ var _ = Describe("Queue Metrics", Ordered, func() {
 					Memory: v2.QueueResource{Quota: 4},
 				},
 			},
+			Status: v2.QueueStatus{
+				Allocated: map[v1.ResourceName]resource.Quantity{
+					"nvidia.com/gpu":  resource.MustParse("1.5"),
+					v1.ResourceCPU:    resource.MustParse("250m"),
+					v1.ResourceMemory: resource.MustParse("2Gi"),
+				},
+			},
 		}
 		SetQueueMetrics(queue)
 
@@ -56,6 +65,9 @@ var _ = Describe("Queue Metrics", Ordered, func() {
 		expectMetricValue(queueDeservedGPUs, labels, 2)
 		expectMetricValue(queueQuotaCPU, labels, 0.5)
 		expectMetricValue(queueQuotaMemory, labels, 4000000)
+		expectMetricValue(queueAllocatedGpus, labels, 1.5)
+		expectMetricValue(queueAllocatedCpus, labels, 0.25)
+		expectMetricValue(queueAllocatedMemory, labels, 2147483648)
 	})
 
 	It("should use default label value if label is missing", func() {
@@ -70,6 +82,13 @@ var _ = Describe("Queue Metrics", Ordered, func() {
 					Memory: v2.QueueResource{Quota: 2},
 				},
 			},
+			Status: v2.QueueStatus{
+				Allocated: map[v1.ResourceName]resource.Quantity{
+					"somethingelse/gpu": resource.MustParse("0.3"),
+					v1.ResourceCPU:      resource.MustParse("500m"),
+					v1.ResourceMemory:   resource.MustParse("1Gi"),
+				},
+			},
 		}
 		SetQueueMetrics(queue)
 
@@ -79,6 +98,9 @@ var _ = Describe("Queue Metrics", Ordered, func() {
 		expectMetricValue(queueDeservedGPUs, labels, 0.7)
 		expectMetricValue(queueQuotaCPU, labels, 1)
 		expectMetricValue(queueQuotaMemory, labels, 2000000)
+		expectMetricValue(queueAllocatedGpus, labels, 0.3)
+		expectMetricValue(queueAllocatedCpus, labels, 0.5)
+		expectMetricValue(queueAllocatedMemory, labels, 1073741824)
 	})
 
 	It("should use empty string if label and default are missing", func() {
@@ -93,6 +115,9 @@ var _ = Describe("Queue Metrics", Ordered, func() {
 					Memory: v2.QueueResource{Quota: 2},
 				},
 			},
+			Status: v2.QueueStatus{
+				Allocated: map[v1.ResourceName]resource.Quantity{},
+			},
 		}
 		SetQueueMetrics(queue)
 
@@ -102,6 +127,9 @@ var _ = Describe("Queue Metrics", Ordered, func() {
 		expectMetricValue(queueDeservedGPUs, labels, 1)
 		expectMetricValue(queueQuotaCPU, labels, 1)
 		expectMetricValue(queueQuotaMemory, labels, 2000000)
+		expectMetricValue(queueAllocatedGpus, labels, 0)
+		expectMetricValue(queueAllocatedCpus, labels, 0)
+		expectMetricValue(queueAllocatedMemory, labels, 0)
 	})
 
 	It("should delete metrics when queue is deleted", func() {
@@ -117,6 +145,13 @@ var _ = Describe("Queue Metrics", Ordered, func() {
 					Memory: v2.QueueResource{Quota: 4},
 				},
 			},
+			Status: v2.QueueStatus{
+				Allocated: map[v1.ResourceName]resource.Quantity{
+					"nvidia.com/gpu":  resource.MustParse("1"),
+					v1.ResourceCPU:    resource.MustParse("1000m"),
+					v1.ResourceMemory: resource.MustParse("2Gi"),
+				},
+			},
 		}
 		SetQueueMetrics(queue)
 		ResetQueueMetrics("test-queue")
@@ -129,6 +164,12 @@ var _ = Describe("Queue Metrics", Ordered, func() {
 		gathered = testutil.CollectAndCount(queueQuotaCPU)
 		Expect(gathered).To(Equal(0))
 		gathered = testutil.CollectAndCount(queueQuotaMemory)
+		Expect(gathered).To(Equal(0))
+		gathered = testutil.CollectAndCount(queueAllocatedGpus)
+		Expect(gathered).To(Equal(0))
+		gathered = testutil.CollectAndCount(queueAllocatedCpus)
+		Expect(gathered).To(Equal(0))
+		gathered = testutil.CollectAndCount(queueAllocatedMemory)
 		Expect(gathered).To(Equal(0))
 	})
 })
