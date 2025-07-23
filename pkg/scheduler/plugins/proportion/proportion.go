@@ -360,7 +360,7 @@ func (pp *proportionPlugin) setFairShareForQueues(totalResources rs.ResourceQuan
 			rs.GpuResource:    0,
 			rs.CpuResource:    0,
 			rs.MemoryResource: 0,
-		}, queues)
+		}, 1, queues)
 	for _, queue := range queues {
 		childQueues := pp.getChildQueues(queue)
 		resources := queue.GetFairShare()
