@@ -26,7 +26,25 @@ type QueueFairShare struct {
 	Memory float64 `json:"memory"`
 }
 
-func simulateHandler(w http.ResponseWriter, r *http.Request) {
+type server struct {
+	enableCors bool
+}
+
+func (s *server) enableCorsHeaders(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+func (s *server) simulateHandler(w http.ResponseWriter, r *http.Request) {
+	if s.enableCors {
+		s.enableCorsHeaders(&w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}
+
 	if r.Method != "POST" {
 		http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
 		return
@@ -59,8 +77,15 @@ func simulateHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	var port = flag.Int("port", 8080, "Port to listen on")
+	var enableCors = flag.Bool("enable-cors", false, "Enable CORS headers for cross-origin requests")
 	flag.Parse()
-	http.HandleFunc("/simulate", simulateHandler)
+
+	s := &server{
+		enableCors: *enableCors,
+	}
+
+	http.HandleFunc("/simulate", s.simulateHandler)
+	log.Printf("Starting server on port %d (CORS enabled: %v)...", *port, *enableCors)
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
