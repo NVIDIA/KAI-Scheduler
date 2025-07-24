@@ -78,6 +78,51 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 	return nil
 }
 
+func (t *topologyPlugin) getJobTopology(job *podgroup_info.PodGroupInfo) (*TopologyInfo, error) {
+	jobTopologyName := job.PodGroup.Annotations[topologyAnnotationKey]
+	if jobTopologyName == "" {
+		return nil, nil
+	}
+	topologyTree := t.TopologyTrees[jobTopologyName]
+	if topologyTree == nil {
+		return nil, fmt.Errorf("matching topology tree haven't been found for job %s, workload topology name: %s",
+			job.PodGroup.Name, jobTopologyName)
+	}
+	return topologyTree, nil
+}
+
+func (t *topologyPlugin) calcTreeAlocationData(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo) {
+	taskToAllocateCount, leafDomains := t.calcAllocationsForLeafDomains(job, topologyTree)
+
+	// Run from leafs to root updating distances and allocated pods
+	latestUpdatedDomains := leafDomains
+	currentlyUpdatedDomains := map[TopologyDomainID]*TopologyDomainInfo{}
+	for len(latestUpdatedDomains) > 0 {
+		for _, domain := range latestUpdatedDomains {
+			if domain.Parent != nil {
+				// TODO: subsetsum on allocateablePods, from them find min distance
+				if domain.Parent.AllocatablePods < taskToAllocateCount {
+					// If the parent domain has less allocateable pods than the tasks to allocate,
+					// we need to update the parent domain with the current domain's allocateable pods
+					if domain.AllocatablePods < taskToAllocateCount {
+						domain.Parent.Distance += domain.Distance
+						domain.Parent.AllocatablePods += domain.AllocatablePods
+					} else {
+						domain.Parent.Distance = domain.Distance
+						domain.Parent.AllocatablePods = domain.AllocatablePods
+					}
+				} else if domain.Parent.Distance > domain.Distance {
+					domain.Parent.Distance = domain.Distance
+					domain.Parent.AllocatablePods = domain.AllocatablePods
+				}
+				currentlyUpdatedDomains[domain.Parent.ID] = domain.Parent
+			}
+		}
+		latestUpdatedDomains = currentlyUpdatedDomains
+		currentlyUpdatedDomains = map[TopologyDomainID]*TopologyDomainInfo{}
+	}
+}
+
 func (t *topologyPlugin) getBestjobAllocateableDomains(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo) ([]*TopologyDomainInfo, error) {
 	relevantLevels, err := t.calculateRelevantDomainLevels(job, topologyTree.Name, topologyTree)
 	if err != nil {
@@ -111,35 +156,6 @@ func (t *topologyPlugin) getBestjobAllocateableDomains(job *podgroup_info.PodGro
 	return jobAllocateableDomain, nil
 }
 
-func (t *topologyPlugin) calcTreeAlocationData(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo) {
-	taskToAllocateCount, leafDomains := t.calcAllocationsForLeafDomains(job, topologyTree)
-
-	// Run from leafs to root updating distances and allocated pods
-	latestUpdatedDomains := leafDomains
-	currentlyUpdatedDomains := map[TopologyDomainID]*TopologyDomainInfo{}
-	for len(latestUpdatedDomains) > 0 {
-		for _, domain := range latestUpdatedDomains {
-			if domain.Parent != nil {
-				if domain.Parent.AllocatablePods < taskToAllocateCount {
-					if domain.AllocatablePods < taskToAllocateCount {
-						domain.Parent.Distance += domain.Distance
-						domain.Parent.AllocatablePods += domain.AllocatablePods
-					} else {
-						domain.Parent.Distance = domain.Distance
-						domain.Parent.AllocatablePods = domain.AllocatablePods
-					}
-				} else if domain.Parent.Distance > domain.Distance {
-					domain.Parent.Distance = domain.Distance
-					domain.Parent.AllocatablePods = domain.AllocatablePods
-				}
-				currentlyUpdatedDomains[domain.Parent.ID] = domain.Parent
-			}
-		}
-		latestUpdatedDomains = currentlyUpdatedDomains
-		currentlyUpdatedDomains = map[TopologyDomainID]*TopologyDomainInfo{}
-	}
-}
-
 func (t *topologyPlugin) calcAllocationsForLeafDomains(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo) (int, map[TopologyDomainID]*TopologyDomainInfo) {
 	maxPodResources := resource_info.NewResourceRequirements(0, 0, 0)
 	for _, podInfo := range job.PodInfos {
@@ -158,12 +174,8 @@ func (t *topologyPlugin) calcAllocationsForLeafDomains(job *podgroup_info.PodGro
 		domainInfo := topologyTree.Domains[leafDomainId]
 		if domainInfo != nil {
 			if allocateablePodsCount > 0 && domainInfo.AllocatablePods < taskToAllocateCount {
-				nodeDistance := 1
-				if len(domainInfo.Nodes) == 1 {
-					nodeDistance = 0
-				}
-				domainInfo.Distance += nodeDistance
-				domainInfo.AllocatablePods += allocateablePodsCount
+				domainInfo.Distance += 1
+				domainInfo.AllocatablePods = min(domainInfo.AllocatablePods+allocateablePodsCount, taskToAllocateCount)
 			}
 			leafDomains[leafDomainId] = domainInfo
 		}
@@ -217,19 +229,6 @@ func calcNextAllocationTestPodResources(previousTestResources, maxPodResources *
 		nPlus1Resources.GpuResourceRequirement = *updatedGpuResource
 	}
 	return nPlus1Resources
-}
-
-func (t *topologyPlugin) getJobTopology(job *podgroup_info.PodGroupInfo) (*TopologyInfo, error) {
-	jobTopologyName := job.PodGroup.Annotations[topologyAnnotationKey]
-	if jobTopologyName == "" {
-		return nil, nil
-	}
-	topologyTree := t.TopologyTrees[jobTopologyName]
-	if topologyTree == nil {
-		return nil, fmt.Errorf("matching topology tree haven't been found for job %s, workload topology name: %s",
-			job.PodGroup.Name, jobTopologyName)
-	}
-	return topologyTree, nil
 }
 
 func (*topologyPlugin) calculateRelevantDomainLevels(
