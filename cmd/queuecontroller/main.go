@@ -13,6 +13,7 @@ import (
 func main() {
 	if err := app.Run(); err != nil {
 		fmt.Printf("Error while running the app: %v", err)
+
 		os.Exit(1)
 	}
 }
