@@ -16,7 +16,7 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 
 # Space seperated list of services to build by default
 # SERVICE_NAMES := service1 service2 service3
-SERVICE_NAMES := podgrouper scheduler binder webhookmanager resourcereservation snapshot-tool scalingpod nodescaleadjuster podgroupcontroller queuecontroller
+SERVICE_NAMES := podgrouper scheduler binder webhookmanager resourcereservation snapshot-tool scalingpod nodescaleadjuster podgroupcontroller queuecontroller fairshare-simulator
 
 
 lint: fmt-go vet-go lint-go
