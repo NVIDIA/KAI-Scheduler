@@ -1,4 +1,4 @@
-package resource_division
+package resource_share
 
 import (
 	"time"
@@ -7,7 +7,6 @@ import (
 
 	consts "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	common_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
-	rs "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/resource_share"
 	"knative.dev/pkg/ptr"
 )
 
@@ -27,8 +26,8 @@ type ResourceShareOverrides struct {
 	VacantAdjustedUsage     *float64 `json:"vacantAdjustedUsage"`
 }
 
-func (r *ResourceShareOverrides) ResourceShare() *rs.ResourceShare {
-	rs := rs.ResourceShare{
+func (r *ResourceShareOverrides) ResourceShare() *ResourceShare {
+	rs := ResourceShare{
 		Deserved:                0,
 		FairShare:               0,
 		MaxAllowed:              consts.UnlimitedResourceQuantity,
@@ -67,7 +66,7 @@ type QueueResourceShareOverrides struct {
 	Memory *ResourceShareOverrides `json:"memory"`
 }
 
-func (q QueueResourceShareOverrides) ResourceShare() rs.QueueResourceShare {
+func (q QueueResourceShareOverrides) ResourceShare() QueueResourceShare {
 	if q.GPU == nil {
 		q.GPU = &ResourceShareOverrides{}
 	}
@@ -81,7 +80,7 @@ func (q QueueResourceShareOverrides) ResourceShare() rs.QueueResourceShare {
 			Deserved: ptr.Float64(consts.UnlimitedResourceQuantity),
 		}
 	}
-	rs := rs.QueueResourceShare{
+	rs := QueueResourceShare{
 		GPU:    *q.GPU.ResourceShare(),
 		CPU:    *q.CPU.ResourceShare(),
 		Memory: *q.Memory.ResourceShare(),
@@ -99,8 +98,8 @@ type QueueOverrides struct {
 	ResourceShare     QueueResourceShareOverrides `json:"resourceShare"`
 }
 
-func (qo *QueueOverrides) ToQueueAttributes() *rs.QueueAttributes {
-	qa := &rs.QueueAttributes{
+func (qo *QueueOverrides) ToQueueAttributes() *QueueAttributes {
+	qa := &QueueAttributes{
 		UID:                qo.UID,
 		Name:               qo.Name,
 		ParentQueue:        qo.ParentQueue,
