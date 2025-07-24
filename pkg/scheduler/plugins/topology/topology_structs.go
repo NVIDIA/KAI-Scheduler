@@ -58,6 +58,9 @@ type TopologyDomainInfo struct {
 	// Number of pods that can be allocated in this domain for the job
 	AllocatablePods int
 
+	// Pods allocated distance from each other in the topology
+	Distance int
+
 	// List of resources requested by each pod in the job this tree is built for
 	RequestedResources *resource_info.ResourceRequirements
 

@@ -9,5 +9,6 @@ const (
 	Availability   = 100
 	GpuSharing     = 1000
 	K8sPlugins     = 10000
+	Topology       = 10000
 	NominatedNode  = 100000
 )
