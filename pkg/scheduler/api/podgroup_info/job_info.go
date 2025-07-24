@@ -86,6 +86,7 @@ type PodGroupInfo struct {
 	LastStartTimestamp *time.Time
 	PodGroup           *enginev2alpha2.PodGroup
 	PodGroupUID        types.UID
+	SubGroups          map[string]*SubGroupInfo
 
 	StalenessInfo
 
@@ -114,6 +115,8 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 			TimeStamp: nil,
 			Stale:     false,
 		},
+
+		SubGroups: map[string]*SubGroupInfo{},
 
 		LastStartTimestamp:   nil,
 		activeAllocatedCount: ptr.To(0),
@@ -145,6 +148,11 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.CreationTimestamp = pg.GetCreationTimestamp()
 	pgi.PodGroup = pg
 	pgi.PodGroupUID = pg.UID
+
+	for _, sg := range pg.Spec.SubGroups {
+		subGroupInfo := FromSubGroup(&sg)
+		pgi.SubGroups[subGroupInfo.Name] = subGroupInfo
+	}
 
 	if pg.Annotations[commonconstants.StalePodgroupTimeStamp] != "" {
 		staleTimeStamp, err := time.Parse(time.RFC3339, pg.Annotations[commonconstants.StalePodgroupTimeStamp])
@@ -187,6 +195,10 @@ func (pgi *PodGroupInfo) addTaskIndex(ti *pod_info.PodInfo) {
 
 func (pgi *PodGroupInfo) AddTaskInfo(ti *pod_info.PodInfo) {
 	pgi.PodInfos[ti.UID] = ti
+	subGroup, found := pgi.SubGroups[ti.SubGroupName]
+	if found {
+		subGroup.AddTaskInfo(ti)
+	}
 	pgi.addTaskIndex(ti)
 
 	if pod_status.AllocatedStatus(ti.Status) {
@@ -397,6 +409,7 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 
 		PodGroup:    pgi.PodGroup,
 		PodGroupUID: pgi.PodGroupUID,
+		SubGroups:   map[string]*SubGroupInfo{},
 
 		PodStatusIndex:       map[pod_status.PodStatus]pod_info.PodsMap{},
 		PodInfos:             pod_info.PodsMap{},
@@ -404,6 +417,10 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 	}
 
 	pgi.CreationTimestamp.DeepCopyInto(&info.CreationTimestamp)
+
+	for _, subGroup := range pgi.SubGroups {
+		info.SubGroups[subGroup.Name] = NewSubGroupInfo(subGroup.Name, subGroup.MinAvailable)
+	}
 
 	for _, task := range tasks {
 		info.AddTaskInfo(task.Clone())

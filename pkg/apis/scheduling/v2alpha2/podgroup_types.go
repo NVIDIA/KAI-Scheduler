@@ -66,6 +66,18 @@ type PodGroupSpec struct {
 
 	// TopologyConstraint defines the topology constraints for this PodGroup
 	TopologyConstraint TopologyConstraint `json:"topologyConstraint,omitempty"`
+
+	// SubGroups defines finer-grained subsets of pods within the PodGroup with individual scheduling constraints
+	SubGroups []SubGroup `json:"subGroups,omitempty"`
+}
+
+type SubGroup struct {
+	// Name uniquely identifies the SubGroup within the parent PodGroup.
+	Name string `json:"name"`
+
+	// MinMember defines the minimal number of members/tasks to run this SubGroup;
+	// if there's not enough resources to start all tasks, the scheduler will not start anyone.
+	MinMember int32 `json:"minMember,omitempty"`
 }
 
 // PodGroupStatus defines the observed state of PodGroup

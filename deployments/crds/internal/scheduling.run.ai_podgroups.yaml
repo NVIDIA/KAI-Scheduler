@@ -87,6 +87,25 @@ spec:
                   -1 and 1
                 format: int32
                 type: integer
+              subGroups:
+                description: SubGroups defines finer-grained subsets of pods within
+                  the PodGroup with individual scheduling constraints
+                items:
+                  properties:
+                    minMember:
+                      description: |-
+                        MinMember defines the minimal number of members/tasks to run this SubGroup;
+                        if there's not enough resources to start all tasks, the scheduler will not start anyone.
+                      format: int32
+                      type: integer
+                    name:
+                      description: Name uniquely identifies the SubGroup within the
+                        parent PodGroup.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               topologyConstraint:
                 description: TopologyConstraint defines the topology constraints for
                   this PodGroup
