@@ -16,8 +16,8 @@ import (
 )
 
 type SimulateRequest struct {
-	TotalResource rs.ResourceQuantities              `json:"totalResource"`
-	Queues        []resource_division.QueueOverrides `json:"queues"`
+	TotalResource rs.ResourceQuantities `json:"totalResource"`
+	Queues        []rs.QueueOverrides   `json:"queues"`
 }
 
 type QueueFairShare struct {
@@ -67,7 +67,7 @@ func main() {
 	}
 }
 
-func SimulateSetResourcesShare(totalResource rs.ResourceQuantities, queueOverrides []resource_division.QueueOverrides) map[common_info.QueueID]*rs.QueueAttributes {
+func SimulateSetResourcesShare(totalResource rs.ResourceQuantities, queueOverrides []rs.QueueOverrides) map[common_info.QueueID]*rs.QueueAttributes {
 	queues := make(map[common_info.QueueID]*rs.QueueAttributes)
 	for _, qo := range queueOverrides {
 		qa := qo.ToQueueAttributes()
