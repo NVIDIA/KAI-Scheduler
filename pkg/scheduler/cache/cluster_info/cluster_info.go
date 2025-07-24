@@ -306,10 +306,6 @@ func (c *ClusterInfo) snapshotPodGroups(
 			continue
 		}
 
-		if podGroupInfo.MinAvailable == 0 {
-			podGroupInfo.MinAvailable = 1
-		}
-
 		podGroupInfo.Priority = getPodGroupPriority(podGroup, defaultPriority, c.dataLister)
 		log.InfraLogger.V(7).Infof("The priority of job <%s/%s> is <%s/%d>", podGroup.Namespace, podGroup.Name,
 			podGroup.Spec.PriorityClassName, podGroupInfo.Priority)
