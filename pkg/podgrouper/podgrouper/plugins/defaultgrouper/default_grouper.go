@@ -161,7 +161,7 @@ func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstr
 	}
 
 	if priorityClassName != "" {
-		logger.V(2).Info("priorityClassName from pod or owner labels is not valid, falling back to default",
+		logger.V(1).Info("priorityClassName from pod or owner labels is not valid, falling back to default",
 			"priorityClassName", priorityClassName, "topOwner", topOwner.GetName(), "pod", pod.GetName())
 	}
 
@@ -171,7 +171,7 @@ func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstr
 		return priorityClassName
 	}
 
-	logger.V(2).Info("No default priority class found for group kind, using default fallback",
+	logger.V(1).Info("No default priority class found for group kind, using default fallback",
 		"groupKind", groupKind.String(), "defaultFallback", defaultPriorityClassForJob)
 	return defaultPriorityClassForJob
 }
@@ -195,7 +195,7 @@ func (dg *DefaultGrouper) validatePriorityClassExists(priorityClassName string) 
 	priorityClass := &schedulingv1.PriorityClass{}
 	err := dg.kubeReader.Get(context.Background(), client.ObjectKey{Name: priorityClassName}, priorityClass)
 	if err != nil {
-		logger.V(1).Error(err, "Failed to get priority class", "priorityClassName", priorityClassName)
+		logger.V(1).Info("Failed to get priority class", "priorityClassName", priorityClassName, "error", err.Error())
 		return false
 	}
 	return true

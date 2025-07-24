@@ -298,6 +298,11 @@ var _ = Describe("QueueController", Ordered, func() {
 				q.Expect(updatedQueue.Status.Requested["cpu"]).To(Equal(resource.MustParse("5")))
 				q.Expect(updatedQueue.Status.Requested["memory"]).To(Equal(resource.MustParse("10Gi")))
 				q.Expect(updatedQueue.Status.Requested["nvidia.com/gpu"]).To(Equal(resource.MustParse("2")))
+
+				labels := []string{"resource-queue", "normal", ""}
+				expectMetricValue(q, metrics.GetQueueAllocatedGPUsMetric(), labels, 2)
+				expectMetricValue(q, metrics.GetQueueAllocatedCPUMetric(), labels, 5)
+				expectMetricValue(q, metrics.GetQueueAllocatedMemoryMetric(), labels, 10737418240)
 				return true
 			}, timeout, interval).Should(BeTrue())
 		})
@@ -345,6 +350,12 @@ var _ = Describe("QueueController", Ordered, func() {
 				q.Expect(gathered).To(Equal(0))
 				gathered = testutil.CollectAndCount(metrics.GetQueueQuotaMemoryMetric())
 				q.Expect(gathered).To(Equal(0))
+				gathered = testutil.CollectAndCount(metrics.GetQueueAllocatedGPUsMetric())
+				q.Expect(gathered).To(Equal(0))
+				gathered = testutil.CollectAndCount(metrics.GetQueueAllocatedCPUMetric())
+				q.Expect(gathered).To(Equal(0))
+				gathered = testutil.CollectAndCount(metrics.GetQueueAllocatedMemoryMetric())
+				q.Expect(gathered).To(Equal(0))
 			}, timeout, interval).Should(Succeed())
 		})
 	})
@@ -352,9 +363,9 @@ var _ = Describe("QueueController", Ordered, func() {
 
 func expectMetricValue(q gomega.Gomega, gauge *prometheus.GaugeVec, labels []string, expected float64) {
 	metricGauge, err := gauge.GetMetricWithLabelValues(labels...)
-	q.Expect(err).To(BeNil())
-	q.Expect(metricGauge).ToNot(BeNil())
-	q.Expect(testutil.ToFloat64(metricGauge)).To(BeEquivalentTo(expected))
+	q.ExpectWithOffset(1, err).To(BeNil())
+	q.ExpectWithOffset(1, metricGauge).ToNot(BeNil())
+	q.ExpectWithOffset(1, testutil.ToFloat64(metricGauge)).To(BeEquivalentTo(expected))
 }
 
 func deleteQueue(ctx context.Context, k8sClient client.Client, queueName string) {
