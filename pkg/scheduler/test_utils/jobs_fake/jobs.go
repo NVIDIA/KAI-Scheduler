@@ -117,6 +117,7 @@ func BuildJobInfo(
 		Queue:             queueUID,
 		CreationTimestamp: metav1.Time{Time: jobCreationTime},
 		MinAvailable:      minAvailable,
+		SubGroups:         map[string]*podgroup_info.SubGroupInfo{},
 		PodGroup: &enginev2alpha2.PodGroup{
 			ObjectMeta: metav1.ObjectMeta{
 				UID:               types.UID(uid),

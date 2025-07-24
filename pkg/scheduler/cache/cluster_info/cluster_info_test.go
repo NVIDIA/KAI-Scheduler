@@ -24,6 +24,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/ptr"
 
+	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kueueclient "sigs.k8s.io/kueue/client-go/clientset/versioned"
+	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
+	kueueinformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
+
 	kubeAiSchedulerClient "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	kubeAiSchedulerClientFake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	kubeAiSchedulerInfo "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/informers/externalversions"
@@ -44,10 +49,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info/data_lister"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
-	kueueclient "sigs.k8s.io/kueue/client-go/clientset/versioned"
-	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
-	kueueinformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
 )
 
 const (
@@ -829,7 +830,9 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				{
-					Name: "podGroup-0",
+					Name:         "podGroup-0",
+					Queue:        "queue-0",
+					MinAvailable: 1,
 				},
 			},
 		},
@@ -878,7 +881,9 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				{
-					Name: "podGroup-0",
+					Name:         "podGroup-0",
+					Queue:        "queue-0",
+					MinAvailable: 1,
 				},
 			},
 		},
@@ -897,7 +902,9 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				{
-					Name: "podGroup-0",
+					Name:         "podGroup-0",
+					Queue:        "queue-0",
+					MinAvailable: 1,
 				},
 			},
 		},
@@ -923,7 +930,9 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				{
-					Name: "podGroup-0",
+					Name:         "podGroup-0",
+					Queue:        "queue-0",
+					MinAvailable: 1,
 				},
 			},
 		},
@@ -949,20 +958,130 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{},
 		},
+		"With sub groups": {
+			objs: []runtime.Object{
+				&enginev2alpha2.PodGroup{
+					ObjectMeta: v1.ObjectMeta{
+						Name: "podGroup-0",
+						UID:  "ABC",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						Queue:     "queue-0",
+						MinMember: 3,
+						SubGroups: []enginev2alpha2.SubGroup{
+							{
+								Name:      "SubGroup-0",
+								MinMember: 1,
+							},
+							{
+								Name:      "SubGroup-1",
+								MinMember: 2,
+							},
+						},
+					},
+					Status: enginev2alpha2.PodGroupStatus{},
+				},
+			},
+			kubeObjs: []runtime.Object{
+				&v1core.Pod{
+					ObjectMeta: v1.ObjectMeta{
+						Namespace: testNamespace,
+						Name:      "pod-0",
+						Annotations: map[string]string{
+							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
+							pod_info.SubGroupLabelKey:                "SubGroup-0",
+						},
+					},
+				},
+				&v1core.Pod{
+					ObjectMeta: v1.ObjectMeta{
+						Namespace: testNamespace,
+						Name:      "pod-1",
+						Annotations: map[string]string{
+							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
+							pod_info.SubGroupLabelKey:                "SubGroup-1",
+						},
+					},
+				},
+				&v1core.Pod{
+					ObjectMeta: v1.ObjectMeta{
+						Namespace: testNamespace,
+						Name:      "pod-2",
+						Annotations: map[string]string{
+							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
+							pod_info.SubGroupLabelKey:                "SubGroup-1",
+						},
+					},
+				},
+			},
+			results: []*podgroup_info.PodGroupInfo{
+				{
+					Name:         "podGroup-0",
+					Queue:        "queue-0",
+					MinAvailable: 3,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						"SubGroup-0": {
+							Name:         "SubGroup-0",
+							MinAvailable: 1,
+							PodInfos: pod_info.PodsMap{
+								"pod-0": {
+									SubGroupName: "SubGroup-0",
+								},
+							},
+						},
+						"SubGroup-1": {
+							Name:         "SubGroup-1",
+							MinAvailable: 2,
+							PodInfos: pod_info.PodsMap{
+								"pod-1": {
+									SubGroupName: "SubGroup-1",
+								},
+								"pod-2": {
+									SubGroupName: "SubGroup-1",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, test := range tests {
 		clusterInfo := newClusterInfoTests(t, test.kubeObjs, test.objs, test.kueueObjs)
 		predefinedQueue := &queue_info.QueueInfo{Name: "queue-0"}
 		existingPods := map[common_info.PodID]*pod_info.PodInfo{}
-		// TODO
 		podGroups, err := clusterInfo.snapshotPodGroups(
 			map[common_info.QueueID]*queue_info.QueueInfo{"queue-0": predefinedQueue},
 			existingPods)
 		if err != nil {
 			assert.FailNow(t, fmt.Sprintf("SnapshotNode got error in test %v", name), err)
 		}
+
 		assert.Equal(t, len(test.results), len(podGroups))
+		for _, expected := range test.results {
+			pg, found := podGroups[common_info.PodGroupID(expected.Name)]
+			assert.True(t, found, "PodGroup not found", expected.Name)
+
+			assert.Equal(t, expected.Name, pg.Name)
+			assert.Equal(t, expected.Queue, pg.Queue)
+			assert.Equal(t, expected.MinAvailable, pg.MinAvailable)
+
+			assert.Equal(t, len(expected.SubGroups), len(pg.SubGroups))
+			for _, expectedSubGroup := range expected.SubGroups {
+				for _, subGroup := range pg.SubGroups {
+					if expectedSubGroup.Name != subGroup.Name {
+						continue
+					}
+					assert.Equal(t, expectedSubGroup.MinAvailable, subGroup.MinAvailable)
+					assert.Equal(t, len(expectedSubGroup.PodInfos), int(subGroup.MinAvailable))
+					for _, podInfo := range subGroup.PodInfos {
+						assert.Equal(t, subGroup.Name, podInfo.SubGroupName)
+					}
+				}
+			}
+		}
+
 	}
 }
 
