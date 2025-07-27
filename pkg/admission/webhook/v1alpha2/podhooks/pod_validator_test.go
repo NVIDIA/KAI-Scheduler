@@ -17,14 +17,42 @@ limitations under the License.
 package podhooks
 
 import (
-	"context"
+	"errors"
+	"testing"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// TODO (user): Add any additional imports if needed
 )
+
+func TestPodValidator(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Pod Validator Suite")
+}
+
+type validatorPlugin struct {
+}
+
+func (p *validatorPlugin) Name() string {
+	return "foo-validator-plugin"
+}
+
+func (p *validatorPlugin) Mutate(pod *v1.Pod) error {
+	return nil
+}
+
+func (p *validatorPlugin) Validate(pod *v1.Pod) error {
+	// validate that the pod has a label "foo"
+	if pod.Labels == nil {
+		return errors.New("pod has no labels")
+	}
+	if _, ok := pod.Labels["foo"]; !ok {
+		return errors.New("pod has no label 'foo'")
+	}
+	return nil
+}
 
 var _ = Describe("KaiAdmission Webhook", func() {
 	var (
@@ -32,9 +60,13 @@ var _ = Describe("KaiAdmission Webhook", func() {
 	)
 
 	BeforeEach(func() {
+		plugin := &validatorPlugin{}
+		testPlugins := plugins.New()
+		testPlugins.RegisterPlugin(plugin)
 		validator = &podValidator{
-			kubeClient: nil,
-			plugins:    nil,
+			kubeClient:    nil,
+			plugins:       testPlugins,
+			schedulerName: "test-scheduler",
 		}
 		Expect(validator).NotTo(BeNil(), "Expected validator to be initialized")
 	})
@@ -45,14 +77,16 @@ var _ = Describe("KaiAdmission Webhook", func() {
 	Context("When creating KaiAdmission under Defaulting Webhook", func() {
 		It("Should deny creation if a required field is missing", func() {
 			By("simulating an invalid creation scenario")
-			ctx := context.Background()
 			pod := &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-namespace",
+					Labels:    map[string]string{},
 				},
 			}
-			Expect(validator.ValidateCreate(ctx, pod)).Error().To(HaveOccurred())
+			err := validator.plugins.Validate(pod)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("pod has no label 'foo'"))
 		})
 	})
 

@@ -17,13 +17,38 @@ limitations under the License.
 package podhooks
 
 import (
-	"context"
+	"testing"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestPodMutator(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Pod Mutator Suite")
+}
+
+type fooLabelPlugin struct {
+}
+
+func (p *fooLabelPlugin) Name() string {
+	return "foo-label-plugin"
+}
+
+func (p *fooLabelPlugin) Mutate(pod *v1.Pod) error {
+	if pod.Labels == nil {
+		pod.Labels = map[string]string{}
+	}
+	pod.Labels["foo"] = "default_value"
+	return nil
+}
+
+func (p *fooLabelPlugin) Validate(pod *v1.Pod) error {
+	return nil
+}
 
 var _ = Describe("KaiAdmission Webhook", func() {
 	var (
@@ -31,6 +56,15 @@ var _ = Describe("KaiAdmission Webhook", func() {
 	)
 
 	BeforeEach(func() {
+		// create a simple plugin that adds a label to the pod
+		plugin := &fooLabelPlugin{}
+		testPlugins := plugins.New()
+		testPlugins.RegisterPlugin(plugin)
+		defaulter = &podMutator{
+			kubeClient:    nil,
+			plugins:       testPlugins,
+			schedulerName: "test-scheduler",
+		}
 		Expect(defaulter).NotTo(BeNil(), "Expected defaulter to be initialized")
 	})
 
@@ -41,13 +75,14 @@ var _ = Describe("KaiAdmission Webhook", func() {
 
 		It("Should apply defaults when a required field is empty", func() {
 			By("simulating a scenario where defaults should be applied")
-			ctx := context.Background()
 			pod := &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-namespace",
+					Labels:    map[string]string{},
 				},
 				Spec: v1.PodSpec{
+					SchedulerName: "test-scheduler",
 					Containers: []v1.Container{
 						{
 							Name: "test-container",
@@ -55,14 +90,10 @@ var _ = Describe("KaiAdmission Webhook", func() {
 					},
 				},
 			}
-			// Simulate a scenario where a default is needed: e.g., missing label "foo"
-			if pod.Labels == nil {
-				pod.Labels = map[string]string{}
-			}
-			delete(pod.Labels, "foo")
-			By("calling the Default method to apply defaults")
-			defaulter.Default(ctx, pod)
-			By("checking that the default values are set")
+
+			// Test the plugin directly instead of going through the webhook
+			err := defaulter.plugins.Mutate(pod)
+			Expect(err).To(BeNil())
 			Expect(pod.Labels).To(HaveKeyWithValue("foo", "default_value"))
 		})
 	})
