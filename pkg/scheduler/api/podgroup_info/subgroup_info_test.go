@@ -52,7 +52,7 @@ func TestAddTaskInfoToSubGroup(t *testing.T) {
 		Status: pod_status.Pending,
 	}
 
-	sgi.AddTaskInfo(podInfo)
+	sgi.AssignTask(podInfo)
 	if len(sgi.PodInfos) != 1 {
 		t.Errorf("Expected 1 pod info object, got %d", len(sgi.PodInfos))
 	}
@@ -64,7 +64,7 @@ func TestAddTaskInfoToSubGroup(t *testing.T) {
 		UID:    "pod-2",
 		Status: pod_status.Pending,
 	}
-	sgi.AddTaskInfo(podInfo2)
+	sgi.AssignTask(podInfo2)
 	if len(sgi.PodInfos) != 2 {
 		t.Errorf("Expected 2 pod info objects, got %d", len(sgi.PodInfos))
 	}
