@@ -4,11 +4,13 @@
 package metrics
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto" // auto-registry collectors in default registry
 	"sort"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto" // auto-registry collectors in default registry
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 const (
@@ -92,6 +94,8 @@ func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefau
 			Help:      "Queue quota memory",
 		}, queueMetricsLabels,
 	)
+
+	metrics.Registry.MustRegister(queueInfo, queueDeservedGPUs, queueQuotaCPU, queueQuotaMemory)
 }
 
 func SetQueueMetrics(queue *v2.Queue) {
