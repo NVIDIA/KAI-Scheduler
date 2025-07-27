@@ -16,8 +16,10 @@ import (
 )
 
 type SimulateRequest struct {
-	TotalResource rs.ResourceQuantities `json:"totalResource"`
-	Queues        []rs.QueueOverrides   `json:"queues"`
+	TotalResource rs.ResourceQuantities       `json:"totalResource"`
+	Queues        []rs.QueueOverrides         `json:"queues"`
+	TotalUsage    map[rs.ResourceName]float64 `json:"totalUsage"`
+	K             float64                     `json:"k"`
 }
 
 type QueueFairShare struct {
@@ -56,7 +58,7 @@ func (s *server) simulateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queues := SimulateSetResourcesShare(req.TotalResource, req.Queues)
+	queues := SimulateSetResourcesShare(req.TotalResource, req.TotalUsage, req.K, req.Queues)
 
 	resp := make(map[string]QueueFairShare)
 	for id, qa := range queues {
@@ -92,12 +94,12 @@ func main() {
 	}
 }
 
-func SimulateSetResourcesShare(totalResource rs.ResourceQuantities, queueOverrides []rs.QueueOverrides) map[common_info.QueueID]*rs.QueueAttributes {
+func SimulateSetResourcesShare(totalResource rs.ResourceQuantities, totalUsage map[rs.ResourceName]float64, k float64, queueOverrides []rs.QueueOverrides) map[common_info.QueueID]*rs.QueueAttributes {
 	queues := make(map[common_info.QueueID]*rs.QueueAttributes)
 	for _, qo := range queueOverrides {
 		qa := qo.ToQueueAttributes()
 		queues[qa.UID] = qa
 	}
-	resource_division.SetResourcesShare(totalResource, queues)
+	resource_division.SetResourcesShare(totalResource, totalUsage, k, queues)
 	return queues
 }
