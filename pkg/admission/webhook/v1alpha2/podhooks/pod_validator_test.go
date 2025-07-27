@@ -29,7 +29,6 @@ import (
 
 func TestPodValidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Pod Validator Suite")
 }
 
 type validatorPlugin struct {
