@@ -195,8 +195,8 @@ func (pgi *PodGroupInfo) AddTaskInfo(ti *pod_info.PodInfo) {
 }
 
 func (pgi *PodGroupInfo) UpdateTaskStatus(task *pod_info.PodInfo, status pod_status.PodStatus) error {
-	// Remove the task from the task list firstly
-	if err := pgi.DeleteTaskInfo(task); err != nil {
+	// Reset the task state
+	if err := pgi.resetTaskState(task); err != nil {
 		return err
 	}
 
@@ -250,7 +250,7 @@ func (pgi *PodGroupInfo) GetActivelyRunningTasksCount() int32 {
 	return tasksCount
 }
 
-func (pgi *PodGroupInfo) DeleteTaskInfo(ti *pod_info.PodInfo) error {
+func (pgi *PodGroupInfo) resetTaskState(ti *pod_info.PodInfo) error {
 	task, found := pgi.PodInfos[ti.UID]
 	if !found {
 		return fmt.Errorf("failed to find task <%v/%v> in job <%v>",
@@ -262,9 +262,6 @@ func (pgi *PodGroupInfo) DeleteTaskInfo(ti *pod_info.PodInfo) error {
 	}
 
 	pgi.deleteTaskIndex(ti)
-	taskClone := task.Clone()
-	taskClone.Status = pod_status.Deleted
-	pgi.PodInfos[taskClone.UID] = taskClone
 	return nil
 
 }
