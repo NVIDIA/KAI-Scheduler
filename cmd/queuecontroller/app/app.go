@@ -5,6 +5,7 @@ package app
 
 import (
 	"flag"
+	"fmt"
 
 	"go.uber.org/zap/zapcore"
 
@@ -50,6 +51,7 @@ func Run() error {
 	initLogger()
 
 	metrics.InitMetrics(opts.MetricsNamespace, opts.QueueLabelToMetricLabel.Get(), opts.QueueLabelToDefaultMetricValue.Get())
+	setupLog.Info(fmt.Sprintf("Queue metrics initialized and registered with namespace: %s", opts.MetricsNamespace))
 
 	var err error
 	options := ctrl.Options{

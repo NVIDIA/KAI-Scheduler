@@ -13,5 +13,9 @@ spec:
     targetPort: 9443
     protocol: TCP
     name: webhook
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: metrics
   selector:
-    app: queuecontroller 
+    app: queuecontroller

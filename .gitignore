@@ -6,3 +6,6 @@ cover.out
 coverage/
 *.test
 launch.json
+
+cmd/fairshare-simulator/fairshare-simulator
+cmd/snapshot-tool/snapshot-tool

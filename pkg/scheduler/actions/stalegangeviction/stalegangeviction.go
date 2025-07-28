@@ -30,7 +30,7 @@ func (action *staleGangEviction) Execute(ssn *framework.Session) {
 	log.InfraLogger.V(2).Infof("Enter StaleGangEviction ...")
 	defer log.InfraLogger.V(2).Infof("Leaving StaleGangEviction ...")
 	for _, job := range ssn.PodGroupInfos {
-		if job.IsPodGroupStale() {
+		if job.IsStale() {
 			handleStaleJob(ssn, job)
 		} else {
 			handleNonStaleJob(job)

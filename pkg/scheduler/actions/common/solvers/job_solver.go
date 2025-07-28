@@ -80,7 +80,7 @@ func (s *JobSolver) Solve(
 	}
 
 	numActiveTasks := pendingJob.GetNumActiveUsedTasks()
-	jobSolved := numActiveTasks >= int(pendingJob.MinAvailable)
+	jobSolved := pendingJob.IsGangSatisfied()
 	if originalNumActiveTasks >= numActiveTasks {
 		jobSolved = false
 	}

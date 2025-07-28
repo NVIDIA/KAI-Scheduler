@@ -74,6 +74,7 @@ func TestAddTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case01_uid,
 				Allocated: common_info.BuildResource("4000m", "4G"),
+				SubGroups: map[string]*SubGroupInfo{},
 				PodInfos: pod_info.PodsMap{
 					case01_task1.UID: case01_task1,
 					case01_task2.UID: case01_task2,
@@ -128,8 +129,6 @@ func TestDeleteTaskInfo(t *testing.T) {
 	case01_task2 := pod_info.NewTaskInfo(case01_pod2)
 	case01_pod3 := common_info.BuildPod(case01_ns, "p3", "n1", v1.PodRunning, common_info.BuildResourceList("3000m", "3G"), []metav1.OwnerReference{case01_owner}, make(map[string]string), runningPodAnnotations)
 	case01_task3 := pod_info.NewTaskInfo(case01_pod3)
-
-	case01_task2.Status = pod_status.Deleted
 	// case2
 	case02_uid := common_info.PodGroupID("owner2")
 	case02_ns := "c2"
@@ -141,8 +140,6 @@ func TestDeleteTaskInfo(t *testing.T) {
 	case02_task2 := pod_info.NewTaskInfo(case02_pod2)
 	case02_pod3 := common_info.BuildPod(case02_ns, "p3", "n1", v1.PodRunning, common_info.BuildResourceList("3000m", "3G"), []metav1.OwnerReference{case02_owner}, make(map[string]string), runningPodAnnotations)
 	case02_task3 := pod_info.NewTaskInfo(case02_pod3)
-
-	case02_task2.Status = pod_status.Deleted
 
 	tests := []struct {
 		name     string
@@ -159,6 +156,7 @@ func TestDeleteTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case01_uid,
 				Allocated: common_info.BuildResource("3000m", "3G"),
+				SubGroups: map[string]*SubGroupInfo{},
 				PodInfos: pod_info.PodsMap{
 					case01_task1.UID: case01_task1,
 					case01_task2.UID: case01_task2,
@@ -181,6 +179,7 @@ func TestDeleteTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case02_uid,
 				Allocated: common_info.BuildResource("3000m", "3G"),
+				SubGroups: map[string]*SubGroupInfo{},
 				PodInfos: pod_info.PodsMap{
 					case02_task1.UID: case02_task1,
 					case02_task2.UID: case02_task2,
@@ -212,7 +211,7 @@ func TestDeleteTaskInfo(t *testing.T) {
 		for _, pod := range test.rmPods {
 			pi := pod_info.NewTaskInfo(pod)
 			//nolint:golint,errcheck
-			ps.DeleteTaskInfo(pi)
+			ps.resetTaskState(pi)
 		}
 
 		if !jobInfoEqual(ps, test.expected) {

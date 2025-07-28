@@ -42,6 +42,7 @@ const (
 	GPUGroup                           = "runai-gpu-group"
 	ReceivedResourceTypeAnnotationName = "received-resource-type"
 	WholeGpuIndicator                  = "-2"
+	SubGroupLabelKey                   = "kai.scheduler/subgroup-name"
 )
 
 type ResourceRequestType string
@@ -70,6 +71,8 @@ type PodInfo struct {
 
 	Name      string
 	Namespace string
+
+	SubGroupName string
 
 	ResourceRequestType  ResourceRequestType
 	ResourceReceivedType ResourceReceivedType
@@ -175,6 +178,7 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 		Job:                            getPodGroupID(pod),
 		Name:                           pod.Name,
 		Namespace:                      pod.Namespace,
+		SubGroupName:                   pod.Labels[SubGroupLabelKey],
 		NodeName:                       nodeName,
 		Status:                         getTaskStatus(pod, bindRequest),
 		IsVirtualStatus:                false,
