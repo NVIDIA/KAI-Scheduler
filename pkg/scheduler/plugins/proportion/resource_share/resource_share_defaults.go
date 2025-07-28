@@ -60,6 +60,9 @@ func (r *ResourceShareOverrides) ResourceShare() *ResourceShare {
 	if r.Request != nil {
 		rs.Request = *r.Request
 	}
+	if r.AbsoluteUsage != nil {
+		rs.AbsoluteUsage = *r.AbsoluteUsage
+	}
 	return &rs
 }
 

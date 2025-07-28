@@ -12,7 +12,7 @@ content-type: application/json
       "CPU": 1000,
       "Memory": 10000000
     },
-    "k": 1,
+    "k": 1000,
     "queues": [
       {
         "uid": "queue1",
@@ -23,7 +23,7 @@ content-type: application/json
             "deserved": 10,
             "request": 100,
             "overQuotaWeight": 3,
-            "absoluteUsage": 20
+            "absoluteUsage": 75
           }
         }
       },
@@ -35,7 +35,8 @@ content-type: application/json
           "gpu": {
             "deserved": 10,
             "request": 100,
-            "overQuotaWeight": 1
+            "overQuotaWeight": 1,
+            "absoluteUsage": 0
           }
         }
       }
