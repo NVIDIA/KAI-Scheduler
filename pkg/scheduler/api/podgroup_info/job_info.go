@@ -150,7 +150,7 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.PodGroupUID = pg.UID
 
 	for _, sg := range pg.Spec.SubGroups {
-		subGroupInfo := FromSubGroup(&sg)
+		subGroupInfo := fromSubGroup(&sg)
 		pgi.SubGroups[subGroupInfo.Name] = subGroupInfo
 	}
 
@@ -419,7 +419,7 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 	pgi.CreationTimestamp.DeepCopyInto(&info.CreationTimestamp)
 
 	for _, subGroup := range pgi.SubGroups {
-		info.SubGroups[subGroup.Name] = NewSubGroupInfo(subGroup.Name, subGroup.MinAvailable)
+		info.SubGroups[subGroup.Name] = newSubGroupInfo(subGroup.Name, subGroup.MinAvailable)
 	}
 
 	for _, task := range tasks {

@@ -14,7 +14,7 @@ import (
 func TestNewSubGroupInfo(t *testing.T) {
 	name := "my-subgroup"
 	minAvailable := int32(4)
-	sgi := NewSubGroupInfo(name, minAvailable)
+	sgi := newSubGroupInfo(name, minAvailable)
 
 	if sgi.Name != name {
 		t.Errorf("Expected Name %s, got %s", name, sgi.Name)
@@ -33,7 +33,7 @@ func TestFromSubGroup(t *testing.T) {
 		MinMember: 3,
 	}
 
-	sgi := FromSubGroup(subGroup)
+	sgi := fromSubGroup(subGroup)
 	if sgi.Name != subGroup.Name {
 		t.Errorf("Expected name %s, got %s", subGroup.Name, sgi.Name)
 	}
@@ -46,7 +46,7 @@ func TestFromSubGroup(t *testing.T) {
 }
 
 func TestAddTaskInfoToSubGroup(t *testing.T) {
-	sgi := NewSubGroupInfo("test", 1)
+	sgi := newSubGroupInfo("test", 1)
 	podInfo := &pod_info.PodInfo{
 		UID:    "pod-1",
 		Status: pod_status.Pending,

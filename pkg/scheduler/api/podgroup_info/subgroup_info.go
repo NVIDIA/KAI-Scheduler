@@ -14,7 +14,7 @@ type SubGroupInfo struct {
 	PodInfos     pod_info.PodsMap
 }
 
-func NewSubGroupInfo(name string, minAvailable int32) *SubGroupInfo {
+func newSubGroupInfo(name string, minAvailable int32) *SubGroupInfo {
 	return &SubGroupInfo{
 		Name:         name,
 		MinAvailable: minAvailable,
@@ -22,8 +22,8 @@ func NewSubGroupInfo(name string, minAvailable int32) *SubGroupInfo {
 	}
 }
 
-func FromSubGroup(subGroup *v2alpha2.SubGroup) *SubGroupInfo {
-	return NewSubGroupInfo(subGroup.Name, subGroup.MinMember)
+func fromSubGroup(subGroup *v2alpha2.SubGroup) *SubGroupInfo {
+	return newSubGroupInfo(subGroup.Name, subGroup.MinMember)
 }
 
 func (sgi *SubGroupInfo) assignTask(ti *pod_info.PodInfo) {
