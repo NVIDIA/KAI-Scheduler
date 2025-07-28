@@ -24,6 +24,8 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
+	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/configmap_info"
@@ -34,7 +36,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storagecapacity_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclass_info"
-	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 // ClusterInfo is a snapshot of cluster by cache.
@@ -93,9 +94,14 @@ func (ci ClusterInfo) String() string {
 			str = str + fmt.Sprintf("\t Job(%s) name(%s) minAvailable(%v)\n",
 				job.UID, job.Name, job.MinAvailable)
 
+			for _, subGroup := range job.SubGroups {
+				str = str + fmt.Sprintf("\t\t subGroup(%s), minAvailable(%v)\n",
+					subGroup.Name, subGroup.MinAvailable)
+			}
+
 			i := 0
 			for _, task := range job.PodInfos {
-				str = str + fmt.Sprintf("\t\t %d: %v\n", i, task)
+				str = str + fmt.Sprintf("\t\t task %d: %v\n", i, task)
 				i++
 			}
 		}

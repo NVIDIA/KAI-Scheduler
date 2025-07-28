@@ -43,6 +43,7 @@ type TestJobBasic struct {
 	JobNotReadyForSsn                   bool
 	MinAvailable                        *int32
 	Tasks                               []*tasks_fake.TestTaskBasic
+	SubGroups                           map[string]*podgroup_info.SubGroupInfo
 	StaleDuration                       *time.Duration
 }
 
@@ -79,8 +80,8 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic) (
 		}
 
 		jobInfo := BuildJobInfo(
-			jobName, job.Namespace, jobUID, jobAllocatedResource, taskInfos, job.Priority, queueUID, jobCreationTime,
-			*job.MinAvailable, job.StaleDuration,
+			jobName, job.Namespace, jobUID, jobAllocatedResource, job.SubGroups, taskInfos, job.Priority, queueUID,
+			jobCreationTime, *job.MinAvailable, job.StaleDuration,
 		)
 		jobsInfoMap[common_info.PodGroupID(job.Name)] = jobInfo
 	}
@@ -90,8 +91,9 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic) (
 
 func BuildJobInfo(
 	name, namespace string,
-	uid common_info.PodGroupID, allocatedResource *resource_info.Resource, taskInfos []*pod_info.PodInfo,
-	priority int32, queueUID common_info.QueueID, jobCreationTime time.Time, minAvailable int32, staleDuration *time.Duration,
+	uid common_info.PodGroupID, allocatedResource *resource_info.Resource,
+	subGroups map[string]*podgroup_info.SubGroupInfo, taskInfos []*pod_info.PodInfo, priority int32,
+	queueUID common_info.QueueID, jobCreationTime time.Time, minAvailable int32, staleDuration *time.Duration,
 ) *podgroup_info.PodGroupInfo {
 	allTasks := pod_info.PodsMap{}
 	taskStatusIndex := map[pod_status.PodStatus]pod_info.PodsMap{}
@@ -117,7 +119,7 @@ func BuildJobInfo(
 		Queue:             queueUID,
 		CreationTimestamp: metav1.Time{Time: jobCreationTime},
 		MinAvailable:      minAvailable,
-		SubGroups:         map[string]*podgroup_info.SubGroupInfo{},
+		SubGroups:         subGroups,
 		PodGroup: &enginev2alpha2.PodGroup{
 			ObjectMeta: metav1.ObjectMeta{
 				UID:               types.UID(uid),

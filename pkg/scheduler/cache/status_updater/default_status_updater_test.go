@@ -21,7 +21,10 @@ import (
 	fakeschedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v2alpha2/fake"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
 )
@@ -541,6 +544,57 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 				},
 			},
 			expectedEventActions:      []string{"Normal NotReady Job is not ready for scheduling. Waiting for 2 pods, currently 1 exist, 0 are gated"},
+			expectedInFlightPodGroups: 0,
+		},
+		{
+			name: "No ready job - with subgroups",
+			job: jobs_fake.TestJobBasic{
+				Name:         "test-job",
+				Namespace:    "test-ns",
+				QueueName:    "test-queue",
+				MinAvailable: ptr.To(int32(3)),
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{
+						Name:  "test-task-1",
+						State: pod_status.Pending,
+					},
+					{
+						Name:  "test-task-2",
+						State: pod_status.Pending,
+					},
+					{
+						Name:  "test-task-3",
+						State: pod_status.Pending,
+					},
+				},
+				SubGroups: map[string]*podgroup_info.SubGroupInfo{
+					"sub-group-1": {
+						Name:         "sub-group-1",
+						MinAvailable: 1,
+						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+							"test-task-1": {
+								Name:   "test-task-1",
+								Status: pod_status.Pending,
+							},
+							"test-task-2": {
+								Name:   "test-task-2",
+								Status: pod_status.Pending,
+							},
+						},
+					},
+					"sub-group-2": {
+						Name:         "sub-group-2",
+						MinAvailable: 2,
+						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+							"test-task-3": {
+								Name:   "test-task-3",
+								Status: pod_status.Pending,
+							},
+						},
+					},
+				},
+			},
+			expectedEventActions:      []string{"Normal NotReady Job is not ready for scheduling. Waiting for 2 pods for SubGroup sub-group-2, currently 1 exist, 0 are gated."},
 			expectedInFlightPodGroups: 0,
 		},
 		{
