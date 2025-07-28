@@ -2,6 +2,10 @@
 
 This is a simple HTTP server that simulates the fair share resource division algorithm used in the KAI Scheduler's proportion plugin.
 
+## Motivation
+
+The fairshare simulator provides users and administrators with a transparent way to understand KAI-scheduler's resource division logic. This tool enables users to experiment with different queue configurations and parameters to optimize resource allocation and achieve desired scheduling outcomes before implementing changes in production environments.
+
 ## Building and Running
 
 Build the simulator:
