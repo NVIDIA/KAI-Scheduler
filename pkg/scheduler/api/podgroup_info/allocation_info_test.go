@@ -123,11 +123,10 @@ func Test_getMaxNumOfTasksToAllocate(t *testing.T) {
 			pg.MinAvailable = tt.args.minAvailable
 			for i, pod := range tt.args.pods {
 				pi := pod_info.NewTaskInfo(pod)
-				pg.AddTaskInfo(pi)
-
 				if tt.args.overridingStatus != nil {
 					pi.Status = tt.args.overridingStatus[i]
 				}
+				pg.AddTaskInfo(pi)
 			}
 
 			if got := getNumOfTasksToAllocate(pg, tt.args.podsWantingToAllocate); got != tt.want {
@@ -222,7 +221,7 @@ func Test_getNumOfAllocatedTasks(t *testing.T) {
 				}
 			}
 
-			if got := getNumOfAllocatedTasks(pg); got != tt.want {
+			if got := pg.GetActiveAllocatedTasksCount(); got != tt.want {
 				t.Errorf("getNumOfAllocatedTasks() = %v, want %v", got, tt.want)
 			}
 		})
