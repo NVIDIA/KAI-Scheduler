@@ -11,8 +11,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/cmd/binder/app"
 
 	admissionplugins "github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
+	gpusharing "github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/gpusharing"
 	bindingplugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
-	gpusharing "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing"
 	k8s_plugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/k8s-plugins"
 )
 
@@ -52,7 +52,7 @@ func registerPlugins(app *app.App) error {
 
 	gpuSharingPlugin := gpusharing.New(app.Client,
 		app.Options.GpuCdiEnabled, app.Options.GPUSharingEnabled)
-	binderPlugins.RegisterPlugin(gpuSharingPlugin)
+	admissionPlugins.RegisterPlugin(gpuSharingPlugin)
 
 	app.RegisterPlugins(admissionPlugins, binderPlugins)
 	return nil

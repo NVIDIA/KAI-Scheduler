@@ -18,10 +18,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/gpusharing"
 	rrmock "github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation/mock"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
-	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/test_utils"
 )
 
@@ -221,11 +221,11 @@ func TestBindFail(t *testing.T) {
 
 	kubeClient := fake.NewClientBuilder().WithRuntimeObjects(kubeObjects...).WithInterceptorFuncs(test_utils.EmptyBind).Build()
 
-	binderPlugins := plugins.New()
+	admissionPlugins := plugins.New()
 	gpuSharingPlugin := gpusharing.New(kubeClient, false, true)
-	binderPlugins.RegisterPlugin(gpuSharingPlugin)
+	admissionPlugins.RegisterPlugin(gpuSharingPlugin)
 
-	binder := NewBinder(kubeClient, rrs, binderPlugins)
+	binder := NewBinder(kubeClient, rrs, admissionPlugins)
 
 	err := binder.Bind(context.TODO(), pod, &v1.Node{ObjectMeta: metav1.ObjectMeta{
 		Name: "my-node",

@@ -17,10 +17,10 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/gpusharing"
 	rrmock "github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation/mock"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
-	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/test_utils"
 
 	. "github.com/onsi/ginkgo/v2"
