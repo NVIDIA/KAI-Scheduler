@@ -14,8 +14,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/scheduler_util"
 )
 
-func HasTasksToAllocate(pgi *PodGroupInfo, isRealAllocation bool) bool {
-	for _, task := range pgi.PodInfos {
+func HasTasksToAllocate(podGroupInfo *PodGroupInfo, isRealAllocation bool) bool {
+	for _, task := range podGroupInfo.PodInfos {
 		if task.ShouldAllocate(isRealAllocation) {
 			return true
 		}
@@ -24,14 +24,14 @@ func HasTasksToAllocate(pgi *PodGroupInfo, isRealAllocation bool) bool {
 }
 
 func GetTasksToAllocate(
-	pgi *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
+	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) []*pod_info.PodInfo {
-	if pgi.tasksToAllocate != nil {
-		return pgi.tasksToAllocate
+	if podGroupInfo.tasksToAllocate != nil {
+		return podGroupInfo.tasksToAllocate
 	}
 
-	taskPriorityQueue := getTasksToAllocateQueue(pgi, taskOrderFn, isRealAllocation)
-	maxNumOfTasksToAllocate := getNumOfTasksToAllocate(pgi, taskPriorityQueue.Len())
+	taskPriorityQueue := getTasksToAllocateQueue(podGroupInfo, taskOrderFn, isRealAllocation)
+	maxNumOfTasksToAllocate := getNumOfTasksToAllocate(podGroupInfo, taskPriorityQueue.Len())
 
 	var tasksToAllocate []*pod_info.PodInfo
 	for !taskPriorityQueue.Empty() && (len(tasksToAllocate) < maxNumOfTasksToAllocate) {
@@ -39,16 +39,16 @@ func GetTasksToAllocate(
 		tasksToAllocate = append(tasksToAllocate, nextPod)
 	}
 
-	pgi.tasksToAllocate = tasksToAllocate
+	podGroupInfo.tasksToAllocate = tasksToAllocate
 	return tasksToAllocate
 }
 
 func GetTasksToAllocateRequestedGPUs(
-	pgi *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
+	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) (float64, int64) {
 	tasksTotalRequestedGPUs := float64(0)
 	tasksTotalRequestedGpuMemory := int64(0)
-	for _, task := range GetTasksToAllocate(pgi, taskOrderFn, isRealAllocation) {
+	for _, task := range GetTasksToAllocate(podGroupInfo, taskOrderFn, isRealAllocation) {
 		tasksTotalRequestedGPUs += task.ResReq.GPUs()
 		tasksTotalRequestedGpuMemory += task.ResReq.GpuMemory()
 
@@ -67,31 +67,31 @@ func GetTasksToAllocateRequestedGPUs(
 }
 
 func GetTasksToAllocateInitResource(
-	pgi *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
+	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) *resource_info.Resource {
-	if pgi == nil {
+	if podGroupInfo == nil {
 		return resource_info.EmptyResource()
 	}
-	if pgi.tasksToAllocateInitResource != nil {
-		return pgi.tasksToAllocateInitResource
+	if podGroupInfo.tasksToAllocateInitResource != nil {
+		return podGroupInfo.tasksToAllocateInitResource
 	}
 
 	tasksTotalRequestedResource := resource_info.EmptyResource()
-	for _, task := range GetTasksToAllocate(pgi, taskOrderFn, isRealAllocation) {
+	for _, task := range GetTasksToAllocate(podGroupInfo, taskOrderFn, isRealAllocation) {
 		if task.ShouldAllocate(isRealAllocation) {
 			tasksTotalRequestedResource.AddResourceRequirements(task.ResReq)
 		}
 	}
 
-	pgi.tasksToAllocateInitResource = tasksTotalRequestedResource
+	podGroupInfo.tasksToAllocateInitResource = tasksTotalRequestedResource
 	return tasksTotalRequestedResource
 }
 
 func getTasksToAllocateQueue(
-	pgi *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
+	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) *scheduler_util.PriorityQueue {
 	podPriorityQueue := scheduler_util.NewPriorityQueue(taskOrderFn, scheduler_util.QueueCapacityInfinite)
-	for _, task := range pgi.PodInfos {
+	for _, task := range podGroupInfo.PodInfos {
 		if task.ShouldAllocate(isRealAllocation) {
 			podPriorityQueue.Push(task)
 		}
@@ -99,14 +99,14 @@ func getTasksToAllocateQueue(
 	return podPriorityQueue
 }
 
-func getNumOfTasksToAllocate(pgi *PodGroupInfo, numOfTasksWaitingAllocation int) int {
-	allocatedTasks := int32(pgi.GetActiveAllocatedTasksCount())
+func getNumOfTasksToAllocate(podGroupInfo *PodGroupInfo, numOfTasksWaitingAllocation int) int {
+	allocatedTasks := int32(podGroupInfo.GetActiveAllocatedTasksCount())
 
 	var maxTasksToAllocate int32
-	if allocatedTasks >= pgi.MinAvailable {
+	if allocatedTasks >= podGroupInfo.MinAvailable {
 		maxTasksToAllocate = 1
 	} else {
-		maxTasksToAllocate = pgi.MinAvailable
+		maxTasksToAllocate = podGroupInfo.MinAvailable
 	}
 
 	return int(math.Min(float64(maxTasksToAllocate), float64(numOfTasksWaitingAllocation)))
