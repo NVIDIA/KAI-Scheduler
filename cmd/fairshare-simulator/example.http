@@ -12,7 +12,7 @@ content-type: application/json
       "CPU": 1000,
       "Memory": 10000000
     },
-    "k": 1000,
+    "k": 1,
     "queues": [
       {
         "uid": "queue1",
