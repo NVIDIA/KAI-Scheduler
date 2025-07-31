@@ -17,10 +17,10 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/gpusharing"
 	rrmock "github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation/mock"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
+	bindinggpusharing "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/test_utils"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -175,8 +175,8 @@ var _ = Describe("FractionBinder", func() {
 					testData.kubeObjects...).WithInterceptorFuncs(testData.clientInterceptFuncs).Build()
 
 				binderPlugins := plugins.New()
-				gpuSharingPlugin := gpusharing.New(fakeClient, false, true)
-				binderPlugins.RegisterPlugin(gpuSharingPlugin)
+				bindingGpuSharingPlugin := bindinggpusharing.New(fakeClient, false, true)
+				binderPlugins.RegisterPlugin(bindingGpuSharingPlugin)
 
 				testedBinder := NewBinder(fakeClient, rrs, binderPlugins)
 
@@ -237,8 +237,8 @@ var _ = Describe("FractionBinder", func() {
 			happyFlowObjects...).WithInterceptorFuncs(clientInterceptFuncs).Build()
 
 		binderPlugins := plugins.New()
-		gpuSharingPlugin := gpusharing.New(fakeClient, false, true)
-		binderPlugins.RegisterPlugin(gpuSharingPlugin)
+		bindingGpuSharingPlugin := bindinggpusharing.New(fakeClient, false, true)
+		binderPlugins.RegisterPlugin(bindingGpuSharingPlugin)
 
 		testedBinder := NewBinder(fakeClient, rrs, binderPlugins)
 
