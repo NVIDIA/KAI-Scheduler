@@ -27,11 +27,15 @@ func New() *KaiAdmissionPlugins {
 }
 
 func (bp *KaiAdmissionPlugins) RegisterPlugin(plugin Plugin) {
+	logger := log.FromContext(context.Background())
+	logger.Info("registering plugin", "plugin", plugin.Name())
 	bp.plugins = append(bp.plugins, plugin)
 }
 
 func (bp *KaiAdmissionPlugins) Validate(pod *v1.Pod) error {
+	logger := log.FromContext(context.Background())
 	for _, p := range bp.plugins {
+		logger.Info("validating pod", "pod", pod.Name, "plugin", p.Name())
 		err := p.Validate(pod)
 		if err != nil {
 			logger := log.FromContext(context.Background())
@@ -44,7 +48,9 @@ func (bp *KaiAdmissionPlugins) Validate(pod *v1.Pod) error {
 }
 
 func (bp *KaiAdmissionPlugins) Mutate(pod *v1.Pod) error {
+	logger := log.FromContext(context.Background())
 	for _, p := range bp.plugins {
+		logger.Info("mutating pod", "pod", pod.Name, "plugin", p.Name())
 		err := p.Mutate(pod)
 		if err != nil {
 			logger := log.FromContext(context.Background())
