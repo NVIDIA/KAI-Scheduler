@@ -43,20 +43,6 @@ func (m *MockPlugin) EXPECT() *MockPluginMockRecorder {
 	return m.recorder
 }
 
-// Mutate mocks base method.
-func (m *MockPlugin) Mutate(arg0 *v1.Pod) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Mutate", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Mutate indicates an expected call of Mutate.
-func (mr *MockPluginMockRecorder) Mutate(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Mutate", reflect.TypeOf((*MockPlugin)(nil).Mutate), arg0)
-}
-
 // Name mocks base method.
 func (m *MockPlugin) Name() string {
 	m.ctrl.T.Helper()
@@ -95,18 +81,4 @@ func (m *MockPlugin) PreBind(ctx context.Context, pod *v1.Pod, node *v1.Node, bi
 func (mr *MockPluginMockRecorder) PreBind(ctx, pod, node, bindRequest, state any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreBind", reflect.TypeOf((*MockPlugin)(nil).PreBind), ctx, pod, node, bindRequest, state)
-}
-
-// Validate mocks base method.
-func (m *MockPlugin) Validate(arg0 *v1.Pod) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Validate", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Validate indicates an expected call of Validate.
-func (mr *MockPluginMockRecorder) Validate(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockPlugin)(nil).Validate), arg0)
 }
