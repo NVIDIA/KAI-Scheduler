@@ -46,17 +46,17 @@ A **background Usage-Query routine embedded inside the Scheduler pod** acts as a
 ### Interaction Flow
 1. **Collection** – Metric exporters in the Queue & PodGroup controllers publish resource-usage metrics.
 2. **Polling & Aggregation** – The scheduler’s background routine runs PromQL every *Δt* to compute `sum by (queue,resource)(usage_seconds)`.
-3. **Decay & Windowing** – For each poll:
-   * Apply exponential decay `u ← u·e^(−λΔt)`.
-   * Add the new sample.
-   * Drop data older than *windowSize* (for a sliding window) or reset when crossing the next tumbling boundary.
-4. **Scheduling Cycle** – The main loop reads the cached vector, orders queues, and places pods.
-5. **Metrics Exposure** – Scheduler exports gauges such as `kai_queue_historical_usage{queue="q1",resource="gpu"}=0.73`.
+    2.1. **Decay & Windowing** – For each poll:
+       * Apply exponential decay `u ← u·e^(−λΔt)`.
+       * Add the new sample.
+       * Drop data older than *windowSize* (for a sliding window) or reset when crossing the next tumbling boundary.
+3. **Scheduling Cycle** – The main loop reads the cached vector, orders queues, and places pods.
+4. **Metrics Exposure** – Scheduler exports gauges such as `kai_queue_historical_usage{queue="q1",resource="gpu"}=0.73`.
 
 ## 3. Configuration Parameters
 | Field | Example | Description |
 |-------|---------|-------------|
-| `decayHalfLife` | `24h` | Exponential decay half-life. |
+| `decayHalfLife` | `24h` | Exponential decay half-life. 0 will disable the decay and negative values are not allowed. |
 | `windowSize` | `2w` | Window duration. |
 | `windowType` | `sliding` | `sliding` (moving window) or `tumbling` (fixed windows). |
 | `tumblingWindowAnchor` | `2024-01-01T00:00:00Z` | RFC-3339 timestamp that anchors tumbling windows; ignored for sliding windows. |
@@ -66,7 +66,7 @@ A **background Usage-Query routine embedded inside the Scheduler pod** acts as a
 | `maxStaleness` | `5m` | Max age of cached data before scheduler marks itself degraded. |
 
 ## 4. Failure Modes & Fallbacks
-* **TSDB unavailable** – Scheduler keeps using cached vector up to `maxStaleness`; then emits degraded metric/event but continues scheduling with last known data.
+* **TSDB unavailable** – Scheduler keeps using cached vector up to `maxStaleness`; Then the scheduler will treat the usage history as unavailable.
 * **Exporter gaps** – Missing metrics reduce calculated usage; system self-corrects as soon as exporters resume.
 
 ---
