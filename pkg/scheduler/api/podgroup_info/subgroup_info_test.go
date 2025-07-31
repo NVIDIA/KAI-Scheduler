@@ -123,6 +123,123 @@ func TestIsReadyForScheduling(t *testing.T) {
 	}
 }
 
+func TestIsGangSatisfied(t *testing.T) {
+	tests := []struct {
+		name         string
+		minAvailable int32
+		pods         []*pod_info.PodInfo
+		expected     bool
+	}{
+		{
+			name:         "satisfied with exact minimum",
+			minAvailable: 2,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Running},
+				{UID: "2", Status: pod_status.Running},
+			},
+			expected: true,
+		},
+		{
+			name:         "not satisfied with insufficient active pods",
+			minAvailable: 2,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Running},
+				{UID: "2", Status: pod_status.Failed},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sgi := newSubGroupInfo("test", tt.minAvailable)
+			for _, pod := range tt.pods {
+				sgi.assignTask(pod)
+			}
+			if got := sgi.IsGangSatisfied(); got != tt.expected {
+				t.Errorf("IsGangSatisfied() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetNumAliveTasks(t *testing.T) {
+	sgi := newSubGroupInfo("test", 2)
+	pods := []*pod_info.PodInfo{
+		{UID: "1", Status: pod_status.Running},
+		{UID: "2", Status: pod_status.Pending},
+		{UID: "3", Status: pod_status.Failed},
+		{UID: "4", Status: pod_status.Succeeded},
+	}
+
+	for _, pod := range pods {
+		sgi.assignTask(pod)
+	}
+
+	expected := 2 // Running and Pending are alive statuses
+	if got := sgi.GetNumAliveTasks(); got != expected {
+		t.Errorf("GetNumAliveTasks() = %v, want %v", got, expected)
+	}
+}
+
+func TestGetNumActiveUsedTasks(t *testing.T) {
+	sgi := newSubGroupInfo("test", 2)
+	pods := []*pod_info.PodInfo{
+		{UID: "1", Status: pod_status.Running},
+		{UID: "2", Status: pod_status.Pipelined},
+		{UID: "3", Status: pod_status.Failed},
+		{UID: "4", Status: pod_status.Succeeded},
+	}
+
+	for _, pod := range pods {
+		sgi.assignTask(pod)
+	}
+
+	expected := 2 // Running and Pipelined are active allocated statuses
+	if got := sgi.GetNumActiveAllocatedTasks(); got != expected {
+		t.Errorf("GetNumAliveTasks() = %v, want %v", got, expected)
+	}
+}
+
+func TestGetNumGatedTasks(t *testing.T) {
+	sgi := newSubGroupInfo("test", 2)
+	pods := []*pod_info.PodInfo{
+		{UID: "1", Status: pod_status.Gated},
+		{UID: "2", Status: pod_status.Running},
+		{UID: "3", Status: pod_status.Gated},
+		{UID: "4", Status: pod_status.Pending},
+	}
+
+	for _, pod := range pods {
+		sgi.assignTask(pod)
+	}
+
+	expected := 2 // Two Gated pods
+	if got := sgi.GetNumGatedTasks(); got != expected {
+		t.Errorf("GetNumGatedTasks() = %v, want %v", got, expected)
+	}
+}
+
+func TestGetNumPendingTasks(t *testing.T) {
+	sgi := newSubGroupInfo("test", 2)
+	pods := []*pod_info.PodInfo{
+		{UID: "1", Status: pod_status.Pending},
+		{UID: "2", Status: pod_status.Running},
+		{UID: "3", Status: pod_status.Pending},
+		{UID: "4", Status: pod_status.Gated},
+		{UID: "5", Status: pod_status.Pending},
+	}
+
+	for _, pod := range pods {
+		sgi.assignTask(pod)
+	}
+
+	expected := 3 // Three Pending pods
+	if got := sgi.GetNumPendingTasks(); got != expected {
+		t.Errorf("GetNumPendingTasks() = %v, want %v", got, expected)
+	}
+}
+
 func TestGetNumActiveAllocatedTasks(t *testing.T) {
 	tests := []struct {
 		name     string

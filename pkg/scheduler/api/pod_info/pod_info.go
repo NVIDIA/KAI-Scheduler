@@ -205,6 +205,7 @@ func (pi *PodInfo) Clone() *PodInfo {
 		Job:                  pi.Job,
 		Name:                 pi.Name,
 		Namespace:            pi.Namespace,
+		SubGroupName:         pi.SubGroupName,
 		NodeName:             pi.NodeName,
 		Status:               pi.Status,
 		Pod:                  pi.Pod,
