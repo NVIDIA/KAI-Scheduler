@@ -301,6 +301,7 @@ The implementation will proceed in phases:
 3. Implementation of Approach 1 in a topology plugin (can be the same plugin from step 2.)
 
 
+
 ## Alternatives Considered
 
 - Using existing Kubernetes topology mechanisms like topology spread constraints, pod affinity
