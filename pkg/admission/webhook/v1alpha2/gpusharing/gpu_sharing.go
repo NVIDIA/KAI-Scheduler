@@ -6,19 +6,16 @@ package gpusharing
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"golang.org/x/exp/slices"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common/gpusharingconfigmap"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common"
 	gpurequesthandler "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing/gpu-request"
-	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/state"
 )
 
 const (
@@ -26,25 +23,27 @@ const (
 	CdiDeviceNameBase      = "k8s.device-plugin.nvidia.com/gpu=%s"
 )
 
-type GPUSharing struct {
+type AdmissionGPUSharing struct {
 	kubeClient             client.Client
 	gpuDevicePluginUsesCdi bool
 	gpuSharingEnabled      bool
 }
 
-func New(kubeClient client.Client, gpuDevicePluginUsesCdi bool, gpuSharingEnabled bool) *GPUSharing {
-	return &GPUSharing{
+func New(kubeClient client.Client, gpuDevicePluginUsesCdi bool, gpuSharingEnabled bool) *AdmissionGPUSharing {
+	return &AdmissionGPUSharing{
 		kubeClient:             kubeClient,
 		gpuDevicePluginUsesCdi: gpuDevicePluginUsesCdi,
 		gpuSharingEnabled:      gpuSharingEnabled,
 	}
 }
 
-func (p *GPUSharing) Name() string {
+func (p *AdmissionGPUSharing) Name() string {
 	return "gpusharing"
 }
 
-func (p *GPUSharing) Validate(pod *v1.Pod) error {
+func (p *AdmissionGPUSharing) Validate(pod *v1.Pod) error {
+	logger := log.FromContext(context.Background())
+	logger.Info("gpusharing validating pod", "pod", pod.Name, "plugin", p.Name())
 	if !p.gpuSharingEnabled && resources.RequestsGPUFraction(pod) {
 		return fmt.Errorf(
 			"attempting to create a pod %s/%s with gpu sharing request, while GPU sharing is disabled",
@@ -54,7 +53,7 @@ func (p *GPUSharing) Validate(pod *v1.Pod) error {
 	return gpurequesthandler.ValidateGpuRequests(pod)
 }
 
-func (p *GPUSharing) Mutate(pod *v1.Pod) error {
+func (p *AdmissionGPUSharing) Mutate(pod *v1.Pod) error {
 	if len(pod.Spec.Containers) == 0 {
 		return nil
 	}
@@ -68,6 +67,8 @@ func (p *GPUSharing) Mutate(pod *v1.Pod) error {
 		Index:     fractionContainerIndex,
 		Type:      gpusharingconfigmap.RegularContainer,
 	}
+	logger := log.FromContext(context.Background())
+	logger.Info("gpusharing mutating pod", "pod", pod.Name, "plugin", p.Name(), "container", containerRef, "index", containerRef.Index)
 	capabilitiesConfigMapName := gpusharingconfigmap.SetGpuCapabilitiesConfigMapName(pod, containerRef)
 	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
 	if err != nil {
@@ -79,67 +80,4 @@ func (p *GPUSharing) Mutate(pod *v1.Pod) error {
 	common.AddDirectEnvVarsConfigMapSource(containerRef.Container, directEnvVarsMapName)
 
 	return nil
-}
-
-func (p *GPUSharing) PreBind(
-	ctx context.Context, pod *v1.Pod, _ *v1.Node, bindRequest *v1alpha2.BindRequest, state *state.BindingState,
-) error {
-	if !common.IsSharedGPUAllocation(bindRequest) {
-		return nil
-	}
-
-	reservedGPUIds := slices.Clone(state.ReservedGPUIds)
-	if p.gpuDevicePluginUsesCdi {
-		for index, gpuIndex := range reservedGPUIds {
-			reservedGPUIds[index] = fmt.Sprintf(CdiDeviceNameBase, gpuIndex)
-		}
-	}
-
-	containerRef := &gpusharingconfigmap.PodContainerRef{
-		Container: &pod.Spec.Containers[fractionContainerIndex],
-		Index:     fractionContainerIndex,
-		Type:      gpusharingconfigmap.RegularContainer,
-	}
-	err := p.createCapabilitiesConfigMapIfMissing(ctx, pod, containerRef)
-	if err != nil {
-		return fmt.Errorf("failed to create capabilities configmap: %w", err)
-	}
-
-	err = p.createDirectEnvMapIfMissing(ctx, pod, containerRef)
-	if err != nil {
-		return fmt.Errorf("failed to create env configmap: %w", err)
-	}
-
-	nVisibleDevicesStr := strings.Join(reservedGPUIds, ",")
-	err = common.SetNvidiaVisibleDevices(ctx, p.kubeClient, pod, containerRef, nVisibleDevicesStr)
-	if err != nil {
-		return err
-	}
-
-	return common.SetGPUPortion(ctx, p.kubeClient, pod, containerRef, bindRequest.Spec.ReceivedGPU.Portion)
-}
-
-func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, pod *v1.Pod,
-	containerRef *gpusharingconfigmap.PodContainerRef) error {
-	capabilitiesConfigMapName, err := gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
-	if err != nil {
-		return fmt.Errorf("failed to get capabilities configmap name: %w", err)
-	}
-	err = gpusharingconfigmap.UpsertJobConfigMap(ctx, p.kubeClient, pod, capabilitiesConfigMapName, map[string]string{})
-	return err
-}
-
-func (p *GPUSharing) createDirectEnvMapIfMissing(ctx context.Context, pod *v1.Pod,
-	containerRef *gpusharingconfigmap.PodContainerRef) error {
-	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
-	if err != nil {
-		return err
-	}
-	directEnvVars := make(map[string]string)
-	return gpusharingconfigmap.UpsertJobConfigMap(ctx, p.kubeClient, pod, directEnvVarsMapName, directEnvVars)
-}
-
-func (p *GPUSharing) PostBind(
-	context.Context, *v1.Pod, *v1.Node, *v1alpha2.BindRequest, *state.BindingState,
-) {
 }
