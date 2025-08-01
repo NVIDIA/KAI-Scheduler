@@ -6,6 +6,7 @@ package env_tests
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kaiv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
@@ -24,6 +26,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/dynamicresource"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/scheduler"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 )
 
 var _ = Describe("Scheduler", Ordered, func() {
@@ -58,7 +61,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 		Expect(ctrlClient.Create(ctx, testNode)).To(Succeed(), "Failed to create test node")
 
 		stopCh = make(chan struct{})
-		err := scheduler.RunScheduler(cfg, stopCh)
+		err := scheduler.RunScheduler(cfg, stopCh, nil)
 		Expect(err).NotTo(HaveOccurred(), "Failed to run scheduler")
 	})
 
@@ -336,6 +339,130 @@ var _ = Describe("Scheduler", Ordered, func() {
 			}
 
 			Expect(podMap).To(HaveLen(deviceNum), "Expected exactly %d pods to be scheduled", deviceNum)
+		})
+	})
+
+	Context("priority based fair share", func() {
+		var priorityBasedFairShareSchedulerConf = &conf.SchedulerConfiguration{
+			Actions: "allocate, consolidation, reclaim, preempt, stalegangeviction",
+			Tiers: []conf.Tier{
+				{
+					Plugins: []conf.PluginOption{
+						{Name: "predicates"},
+						{Name: "proportion", Arguments: map[string]string{"priorityBasedFairShare": "true"}},
+						{Name: "priority"},
+						{Name: "elastic"},
+						{Name: "kubeflow"},
+						{Name: "ray"},
+						{Name: "nodeavailability"},
+						{Name: "gpusharingorder"},
+						{Name: "gpupack"},
+						{Name: "resourcetype"},
+						{Name: "taskorder"},
+						{Name: "nominatednode"},
+						{Name: "dynamicresources"},
+						{Name: "nodeplacement", Arguments: map[string]string{
+							"cpu":            "binpack",
+							"nvidia.com/gpu": "binpack",
+						}},
+						{Name: "minruntime"},
+					},
+				},
+			},
+		}
+
+		BeforeEach(func(ctx context.Context) {
+			testNamespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-" + randomstring.HumanFriendlyEnglishString(10),
+				},
+			}
+			Expect(ctrlClient.Create(ctx, testNamespace)).To(Succeed())
+
+			err := ctrlClient.Get(ctx, client.ObjectKey{Name: testNode.Name}, testNode)
+			Expect(err).NotTo(HaveOccurred(), "Failed to get test node")
+
+			testNode.Status.Capacity = corev1.ResourceList{
+				"nvidia.com/gpu": resource.MustParse("4"),
+			}
+			testNode.Status.Allocatable = testNode.Status.Capacity
+
+			err = ctrlClient.Update(ctx, testNode)
+			Expect(err).NotTo(HaveOccurred(), "Failed to update test node")
+
+			lowPriorityQueue := CreateQueueObject("low-priority-queue", testDepartment.Name)
+			lowPriorityQueue.Spec.Priority = ptr.To(0)
+			Expect(ctrlClient.Create(ctx, lowPriorityQueue)).To(Succeed(), "Failed to create low priority queue")
+
+			highPriorityQueue := CreateQueueObject("high-priority-queue", testDepartment.Name)
+			highPriorityQueue.Spec.Priority = ptr.To(1)
+			Expect(ctrlClient.Create(ctx, highPriorityQueue)).To(Succeed(), "Failed to create high priority queue")
+
+			close(stopCh)
+			stopCh = make(chan struct{})
+			err = scheduler.RunScheduler(cfg, stopCh, priorityBasedFairShareSchedulerConf)
+			Expect(err).NotTo(HaveOccurred(), "Failed to run scheduler")
+		})
+
+		AfterEach(func(ctx context.Context) {
+			err := DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
+				&corev1.Pod{},
+				&schedulingv2alpha2.PodGroup{},
+				&resourcev1beta1.ResourceClaim{},
+				&kaiv1alpha2.BindRequest{},
+			)
+			Expect(err).NotTo(HaveOccurred(), "Failed to delete test resources")
+
+			err = WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, interval,
+				&corev1.PodList{},
+				&schedulingv2alpha2.PodGroupList{},
+				&resourcev1beta1.ResourceClaimList{},
+				&kaiv1alpha2.BindRequestList{},
+			)
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test resources to be deleted")
+		})
+
+		It("Should allow high priority queue to reclaim from low priority queue", func(ctx context.Context) {
+			for i := range 3 {
+				lowPriorityPod := CreatePodObject(testNamespace.Name, fmt.Sprintf("low-priority-pod-%d", i), corev1.ResourceRequirements{
+					Limits: corev1.ResourceList{
+						"nvidia.com/gpu": resource.MustParse("1"),
+					},
+				})
+				Expect(ctrlClient.Create(ctx, lowPriorityPod)).To(Succeed(), "Failed to create low priority pod")
+
+				err := GroupPods(ctx, ctrlClient, "low-priority-queue", fmt.Sprintf("low-priority-group-%d", i), []*corev1.Pod{lowPriorityPod}, 1)
+				Expect(err).NotTo(HaveOccurred(), "Failed to group low priority pods")
+
+				err = WaitForPodScheduled(ctx, ctrlClient, lowPriorityPod.Name, testNamespace.Name, defaultTimeout, interval)
+				Expect(err).NotTo(HaveOccurred(), "Failed to wait for low priority pod to be scheduled", "pod name", lowPriorityPod.Name)
+			}
+
+			highPriorityPod := CreatePodObject(testNamespace.Name, "high-priority-pod", corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					"nvidia.com/gpu": resource.MustParse("2"),
+				},
+			})
+			Expect(ctrlClient.Create(ctx, highPriorityPod)).To(Succeed(), "Failed to create high priority pod")
+
+			err := GroupPods(ctx, ctrlClient, "high-priority-queue", "high-priority-group", []*corev1.Pod{highPriorityPod}, 1)
+			Expect(err).NotTo(HaveOccurred(), "Failed to group high priority pods")
+
+			err = WaitForPodScheduled(ctx, ctrlClient, highPriorityPod.Name, testNamespace.Name, defaultTimeout, interval)
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for high priority pod to be scheduled")
+
+			var lowPriorityPods corev1.PodList
+			err = ctrlClient.List(ctx, &lowPriorityPods, client.InNamespace(testNamespace.Name))
+			Expect(err).NotTo(HaveOccurred(), "Failed to list low priority pods")
+
+			remainingLowPriorityPods := 0
+			for _, pod := range lowPriorityPods.Items {
+				GinkgoLogr.Info("Running Pod", "name", pod.Name)
+				if strings.HasPrefix(pod.Name, "low-priority") {
+					remainingLowPriorityPods++
+				}
+			}
+			Expect(remainingLowPriorityPods).To(Equal(2))
 		})
 	})
 })
