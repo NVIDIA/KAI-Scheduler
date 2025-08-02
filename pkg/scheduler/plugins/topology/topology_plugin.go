@@ -13,7 +13,6 @@ import (
 
 const (
 	topologyPluginName = "topology"
-	noNodeName         = ""
 )
 
 type topologyPlugin struct {
@@ -41,6 +40,9 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	t.sessionStateGetter = ssn
 	t.nodesInfos = ssn.Nodes
 	t.initializeTopologyTree(topologies, ssn)
+
+	//pre-predicate to generate the whole topology tree and store per workload
+	ssn.AddPrePredicateFn(t.prePredicateFn)
 }
 
 func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, ssn *framework.Session) {
