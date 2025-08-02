@@ -80,6 +80,7 @@ type Session struct {
 	PrePredicateFns                       []api.PrePredicateFn
 	PredicateFns                          []api.PredicateFn
 	BindRequestMutateFns                  []api.BindRequestMutateFn
+	CleanAllocationAttemptCacheFns        []api.CleanAllocationAttemptCacheFn
 
 	Config          *conf.SchedulerConfiguration
 	plugins         map[string]Plugin
@@ -94,7 +95,7 @@ func (ssn *Session) Statement() *Statement {
 	return &Statement{ssn: ssn, sessionUID: ssn.UID}
 }
 
-func (ssn *Session) GetK8sStateForPod(uid types.UID) k8s_internal.SessionState {
+func (ssn *Session) GetSessionStateForResource(uid types.UID) k8s_internal.SessionState {
 	if ssn.k8sPodState == nil {
 		ssn.k8sPodState = make(map[types.UID]k8s_internal.SessionState)
 	}

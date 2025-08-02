@@ -47,6 +47,8 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddPredicateFn(t.predicateFn)
 	//node order to sort the nodes according to topology nodes score - this is for "prefer" use only
 	ssn.AddNodeOrderFn(t.nodeOrderFn)
+	//clean cycle cache after an allocation attempt for a job
+	ssn.AddCleanAllocationAttemptCacheFn(t.cleanAllocationAttemptCache)
 }
 
 func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, ssn *framework.Session) {

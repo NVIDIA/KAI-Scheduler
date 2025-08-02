@@ -73,6 +73,8 @@ func allocateTask(ssn *framework.Session, stmt *framework.Statement, nodes []*no
 			task.Namespace, task.Name, node.Name)
 	}
 
+	ssn.CleanAllocationAttemptCache(job)
+
 	if success {
 		log.InfraLogger.V(6).Infof("Allocation succeeded for task: <%v/%v>", task.Namespace, task.Name)
 	} else {
