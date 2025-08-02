@@ -58,5 +58,5 @@ type SessionScoreFns struct {
 type SessionState *k8sframework.CycleState
 
 type SessionStateProvider interface {
-	GetK8sStateForPod(podUID types.UID) SessionState
+	GetSessionStateForResource(podUID types.UID) SessionState
 }

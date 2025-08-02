@@ -45,6 +45,16 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 		return nil
 	}
 
+	// Check in cache if the job has already been allocated to a domain
+	jobAllocateableDomains, err := t.loadAllocateableDomainsFromCache(types.UID(job.PodGroupUID))
+	if err != nil {
+		return err
+	}
+	if len(jobAllocateableDomains) > 0 {
+		// Cache is already populated, no need to calculate anything
+		return nil
+	}
+
 	// Calc tree job allocation data
 	maxAllocatablePods, err := t.calcTreeAllocatable(job, topologyTree)
 	if err != nil {
@@ -73,7 +83,7 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 	}
 
 	//Save results to cycle cache
-	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetK8sStateForPod(job.PodGroupUID))
+	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetSessionStateForResource(job.PodGroupUID))
 	cycleJobState.Write(
 		k8sframework.StateKey(topologyPluginName),
 		&topologyStateData{relevantDomains: jobAllocateableDomain},
@@ -340,7 +350,7 @@ func (t *topologyPlugin) nodeOrderFn(pod *pod_info.PodInfo, node *node_info.Node
 }
 
 func (t *topologyPlugin) loadAllocateableDomainsFromCache(podGroupUID types.UID) ([]*TopologyDomainInfo, error) {
-	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetK8sStateForPod(podGroupUID))
+	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetSessionStateForResource(podGroupUID))
 	if cycleJobState == nil {
 		return nil, nil
 	}
@@ -353,4 +363,17 @@ func (t *topologyPlugin) loadAllocateableDomainsFromCache(podGroupUID types.UID)
 	}
 	jobAllocateableDomains := jobTopologyStateData.(*topologyStateData).relevantDomains
 	return jobAllocateableDomains, nil
+}
+
+func (t *topologyPlugin) cleanAllocationAttemptCache(job *podgroup_info.PodGroupInfo) error {
+	if job.PodGroup.Spec.TopologyConstraint.Topology == "" {
+		return nil
+	}
+
+	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetSessionStateForResource(job.PodGroupUID))
+	if cycleJobState == nil {
+		return nil
+	}
+	cycleJobState.Delete(k8sframework.StateKey(topologyPluginName))
+	return nil
 }

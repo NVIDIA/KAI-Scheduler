@@ -68,6 +68,9 @@ type OnJobSolutionStartFn func()
 // BindRequestMutateFn allows plugins to add annotations before BindRequest creation.
 type BindRequestMutateFn func(pod *pod_info.PodInfo, nodeName string) map[string]string
 
+// CleanAllocationAttemptCacheFn is used to clean the cycle cache after an allocation attempt for a job.
+type CleanAllocationAttemptCacheFn func(job *podgroup_info.PodGroupInfo) error
+
 type SchedulableResult struct {
 	IsSchedulable bool
 	Reason        v2alpha2.UnschedulableReason

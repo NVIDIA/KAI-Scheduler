@@ -52,7 +52,7 @@ func FitPrePredicateConverter(
 	nodePreFilter NodePreFilter,
 ) FitPredicatePreFilter {
 	return func(pod *v1.Pod) (sets.Set[string], *k8sframework.Status) {
-		state := stateProvider.GetK8sStateForPod(pod.UID)
+		state := stateProvider.GetSessionStateForResource(pod.UID)
 		result, status := nodePreFilter.PreFilter(context.Background(), state, pod)
 		if status != nil {
 			return nil, status
@@ -69,7 +69,7 @@ func FitPredicateConverter(
 	nodeFilter NodeFilter,
 ) FitPredicateFilter {
 	return func(pod *v1.Pod, nodeInfo *k8sframework.NodeInfo) (bool, []string, error) {
-		state := stateProvider.GetK8sStateForPod(pod.UID)
+		state := stateProvider.GetSessionStateForResource(pod.UID)
 		result := nodeFilter.Filter(context.Background(), state, pod, nodeInfo)
 		if result == nil {
 			return true, nil, nil
@@ -83,7 +83,7 @@ func PreScorePluginConverter(
 	nodeScorer ExtendedNodeScorer,
 ) PreScoreFn {
 	return func(pod *v1.Pod, fittingNodes []*k8sframework.NodeInfo) *k8sframework.Status {
-		state := stateProvider.GetK8sStateForPod(pod.UID)
+		state := stateProvider.GetSessionStateForResource(pod.UID)
 		status := nodeScorer.PreScore(context.Background(), state, pod, fittingNodes)
 		return status
 	}
@@ -94,7 +94,7 @@ func ScorePluginConverter(
 	nodeScorer NodeScorer,
 ) ScorePredicate {
 	return func(pod *v1.Pod, nodeInfo *k8sframework.NodeInfo) (int64, []string, error) {
-		state := stateProvider.GetK8sStateForPod(pod.UID)
+		state := stateProvider.GetSessionStateForResource(pod.UID)
 
 		score, result := nodeScorer.Score(context.Background(), state, pod, nodeInfo.Node().Name)
 		if result == nil {
