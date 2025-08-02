@@ -4,16 +4,31 @@
 package topology
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/scores"
+	"k8s.io/apimachinery/pkg/types"
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 )
+
+type topologyStateData struct {
+	relevantDomains []*TopologyDomainInfo
+}
+
+func (t *topologyStateData) Clone() k8sframework.StateData {
+	return &topologyStateData{
+		relevantDomains: t.relevantDomains,
+	}
+}
 
 type jobAllocationMetaData struct {
 	maxPodResources    *resource_info.ResourceRequirements
@@ -56,6 +71,13 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 		log.InfraLogger.V(6).Infof("no relevant domains found for job %s, workload topology name: %s",
 			job.PodGroup.Name, topologyTree.Name)
 	}
+
+	//Save results to cycle cache
+	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetK8sStateForPod(job.PodGroupUID))
+	cycleJobState.Write(
+		k8sframework.StateKey(topologyPluginName),
+		&topologyStateData{relevantDomains: jobAllocateableDomain},
+	)
 
 	return nil
 }
@@ -274,4 +296,61 @@ func getJobAllocateableChildrenSubset(domain *TopologyDomainInfo, taskToAllocate
 		}
 	}
 	return childDomainSubset
+}
+
+func (t *topologyPlugin) predicateFn(pod *pod_info.PodInfo, job *podgroup_info.PodGroupInfo, node *node_info.NodeInfo) error {
+	jobAllocateableDomains, err := t.loadAllocateableDomainsFromCache(job.PodGroupUID)
+	if err != nil {
+		return err
+	}
+
+	if len(jobAllocateableDomains) > 0 {
+		jobDomainsNames := []string{}
+		for _, domain := range jobAllocateableDomains {
+			if domain.Nodes[node.Node.Name] != nil {
+				return nil
+			}
+			jobDomainsNames = append(jobDomainsNames, domain.Name)
+		}
+		return fmt.Errorf("the node %s is not part of the chosen topology domain for the job %s. The chosen domains are %s",
+			node.Node.Name, job.PodGroup.Name, strings.Join(jobDomainsNames, ", "))
+	}
+
+	return nil
+}
+
+func (t *topologyPlugin) nodeOrderFn(pod *pod_info.PodInfo, node *node_info.NodeInfo) (float64, error) {
+	score := 0.0
+
+	jobAllocateableDomains, err := t.loadAllocateableDomainsFromCache(types.UID(pod.Job))
+	if err != nil {
+		return score, err
+	}
+
+	if len(jobAllocateableDomains) > 0 {
+		for _, domain := range jobAllocateableDomains {
+			if domain.Nodes[node.Node.Name] != nil {
+				score = scores.Topology
+				break
+			}
+		}
+	}
+
+	return score, nil
+}
+
+func (t *topologyPlugin) loadAllocateableDomainsFromCache(podGroupUID types.UID) ([]*TopologyDomainInfo, error) {
+	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetK8sStateForPod(podGroupUID))
+	if cycleJobState == nil {
+		return nil, nil
+	}
+	jobTopologyStateData, err := cycleJobState.Read(k8sframework.StateKey(topologyPluginName))
+	if err != nil {
+		if errors.Is(err, k8sframework.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	jobAllocateableDomains := jobTopologyStateData.(*topologyStateData).relevantDomains
+	return jobAllocateableDomains, nil
 }

@@ -43,6 +43,10 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 
 	//pre-predicate to generate the whole topology tree and store per workload
 	ssn.AddPrePredicateFn(t.prePredicateFn)
+	//predicate to filter nodes that are related to parts of the tree that cannot accommodate the workload - this is for "required" use only
+	ssn.AddPredicateFn(t.predicateFn)
+	//node order to sort the nodes according to topology nodes score - this is for "prefer" use only
+	ssn.AddNodeOrderFn(t.nodeOrderFn)
 }
 
 func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, ssn *framework.Session) {
