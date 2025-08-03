@@ -48,7 +48,7 @@ func TestSubGroupOrderFn(t *testing.T) {
 			lAllocated:    1,
 			rMinAvailable: 4,
 			rAllocated:    2,
-			want:          0,
+			want:          equalPrioritization,
 		},
 		{
 			name:          "left below, right above minAvailable",
@@ -56,7 +56,7 @@ func TestSubGroupOrderFn(t *testing.T) {
 			lAllocated:    1,
 			rMinAvailable: 3,
 			rAllocated:    5,
-			want:          -1,
+			want:          lPrioritized,
 		},
 		{
 			name:          "right below, left above minAvailable",
@@ -64,7 +64,7 @@ func TestSubGroupOrderFn(t *testing.T) {
 			lAllocated:    5,
 			rMinAvailable: 3,
 			rAllocated:    1,
-			want:          1,
+			want:          rPrioritized,
 		},
 		{
 			name:          "both above minAvailable, left lower allocation ratio",
@@ -72,7 +72,7 @@ func TestSubGroupOrderFn(t *testing.T) {
 			lAllocated:    4,
 			rMinAvailable: 4,
 			rAllocated:    9,
-			want:          -1,
+			want:          lPrioritized,
 		},
 		{
 			name:          "both above minAvailable, right lower allocation ratio",
@@ -80,7 +80,7 @@ func TestSubGroupOrderFn(t *testing.T) {
 			lAllocated:    10,
 			rMinAvailable: 4,
 			rAllocated:    9,
-			want:          1,
+			want:          rPrioritized,
 		},
 		{
 			name:          "both above minAvailable, equal allocation ratio",
@@ -88,7 +88,7 @@ func TestSubGroupOrderFn(t *testing.T) {
 			lAllocated:    4,
 			rMinAvailable: 4,
 			rAllocated:    8,
-			want:          0,
+			want:          equalPrioritization,
 		},
 	}
 

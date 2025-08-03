@@ -8,6 +8,12 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
 
+const (
+	lPrioritized        = -1
+	rPrioritized        = 1
+	equalPrioritization = 0
+)
+
 type subGroupOrderPlugin struct {
 	// Arguments given for the plugin
 	pluginArguments map[string]string
@@ -36,26 +42,26 @@ func SubGroupOrderFn(l, r interface{}) int {
 	lGangSatisfied := lNumActiveTasks >= int(lv.MinAvailable)
 	rGangSatisfied := rNumActiveTasks >= int(rv.MinAvailable)
 	if !lGangSatisfied && !rGangSatisfied {
-		return 0
+		return equalPrioritization
 	}
 
 	if !lGangSatisfied {
-		return -1
+		return lPrioritized
 	}
 	if !rGangSatisfied {
-		return 1
+		return rPrioritized
 	}
 
 	// Above minAvailable prioritize SubGroup with lower allocation ratio
 	lAllocationRatio := float64(lNumActiveTasks) / float64(lv.MinAvailable)
 	rAllocationRatio := float64(rNumActiveTasks) / float64(rv.MinAvailable)
 	if lAllocationRatio < rAllocationRatio {
-		return -1
+		return lPrioritized
 	}
 	if rAllocationRatio < lAllocationRatio {
-		return 1
+		return rPrioritized
 	}
-	return 0
+	return equalPrioritization
 }
 
 func (sgop *subGroupOrderPlugin) OnSessionClose(_ *framework.Session) {}
