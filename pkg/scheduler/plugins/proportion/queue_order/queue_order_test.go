@@ -10,6 +10,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/resource_share"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/subgrouporder"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/taskorder"
 )
 
@@ -194,7 +195,15 @@ func TestGetQueueOrderResult(t *testing.T) {
 				}
 				return false
 			}
-			result := GetQueueOrderResult(test.lqueue, test.rqueue, test.lJobInfo, test.rJobInfo, nil, nil, taskOrderFn, resource_share.ResourceQuantities{})
+
+			subGroupOrderFn := func(l, r interface{}) bool {
+				if comparison := subgrouporder.SubGroupOrderFn(l, r); comparison != 0 {
+					return comparison < 0
+				}
+				return false
+			}
+			result := GetQueueOrderResult(test.lqueue, test.rqueue, test.lJobInfo, test.rJobInfo, nil, nil,
+				subGroupOrderFn, taskOrderFn, resource_share.ResourceQuantities{})
 			assert.Equal(t, test.expectedResult, result)
 		})
 	}

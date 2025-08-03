@@ -66,7 +66,7 @@ func (t *topologyPlugin) calcTreeAllocatable(job *podgroup_info.PodGroupInfo, to
 }
 
 func initJobAllocationMetadataStruct(job *podgroup_info.PodGroupInfo, t *topologyPlugin) (*jobAllocationMetaData, error) {
-	tasksToAllocate := podgroup_info.GetTasksToAllocate(job, t.taskOrderFunc, true)
+	tasksToAllocate := podgroup_info.GetTasksToAllocate(job, t.subGroupOrderFunc, t.taskOrderFunc, true)
 	maxPodResources := resource_info.NewResourceRequirements(0, 0, 0)
 	for _, podInfo := range tasksToAllocate {
 		err := maxPodResources.SetMaxResource(podInfo.ResReq)

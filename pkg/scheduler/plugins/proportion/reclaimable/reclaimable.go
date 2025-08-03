@@ -16,11 +16,10 @@ import (
 
 type Reclaimable struct {
 	isInferencePreemptible bool
-	taskOrderFunc          common_info.LessFn
 }
 
-func New(isInferencePreemptible bool, taskOrderFunc common_info.LessFn) *Reclaimable {
-	return &Reclaimable{isInferencePreemptible, taskOrderFunc}
+func New(isInferencePreemptible bool) *Reclaimable {
+	return &Reclaimable{isInferencePreemptible}
 }
 
 func (r *Reclaimable) CanReclaimResources(

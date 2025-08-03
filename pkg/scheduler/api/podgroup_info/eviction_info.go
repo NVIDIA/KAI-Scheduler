@@ -10,7 +10,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/scheduler_util"
 )
 
-func GetTasksToEvict(job *PodGroupInfo, taskOrderFn common_info.LessFn) ([]*pod_info.PodInfo, bool) {
+func GetTasksToEvict(job *PodGroupInfo, _, taskOrderFn common_info.LessFn) ([]*pod_info.PodInfo, bool) {
 	reverseTaskOrderFn := func(l interface{}, r interface{}) bool {
 		return taskOrderFn(r, l)
 	}

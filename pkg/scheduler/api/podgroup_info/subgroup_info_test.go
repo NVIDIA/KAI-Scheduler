@@ -122,3 +122,56 @@ func TestIsReadyForScheduling(t *testing.T) {
 		})
 	}
 }
+
+func TestGetNumActiveAllocatedTasks(t *testing.T) {
+	tests := []struct {
+		name     string
+		pods     []*pod_info.PodInfo
+		expected int
+	}{
+		{
+			name:     "no pods",
+			pods:     nil,
+			expected: 0,
+		},
+		{
+			name: "all pods not active/allocated",
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Pending},
+				{UID: "2", Status: pod_status.Gated},
+			},
+			expected: 0,
+		},
+		{
+			name: "one active allocated",
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Allocated},
+				{UID: "2", Status: pod_status.Pending},
+			},
+			expected: 1,
+		},
+		{
+			name: "multiple active allocated",
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Allocated},
+				{UID: "2", Status: pod_status.Running},
+				{UID: "3", Status: pod_status.Gated},
+				{UID: "4", Status: pod_status.Allocated},
+			},
+			expected: 3, // Allocated and Running are assumed active allocated
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sgi := newSubGroupInfo("test", 1)
+			for _, pod := range tt.pods {
+				sgi.assignTask(pod)
+			}
+			got := sgi.GetNumActiveAllocatedTasks()
+			if got != tt.expected {
+				t.Errorf("GetNumActiveAllocatedTasks() = %d, want %d", got, tt.expected)
+			}
+		})
+	}
+}
