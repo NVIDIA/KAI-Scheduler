@@ -44,6 +44,7 @@ import (
 const (
 	OverCapacity        = "OverCapacity"
 	PodSchedulingErrors = "PodSchedulingErrors"
+	DefaultSubGroup     = "default"
 )
 
 type JobRequirement struct {
@@ -72,8 +73,6 @@ type PodGroupInfo struct {
 
 	Priority int32
 
-	MinAvailable int32
-
 	JobFitErrors   enginev2alpha2.UnschedulableExplanations
 	NodesFitErrors map[common_info.PodID]*common_info.FitErrors
 
@@ -101,9 +100,8 @@ type PodGroupInfo struct {
 
 func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *PodGroupInfo {
 	podGroupInfo := &PodGroupInfo{
-		UID:          uid,
-		MinAvailable: 0,
-		Allocated:    resource_info.EmptyResource(),
+		UID:       uid,
+		Allocated: resource_info.EmptyResource(),
 
 		JobFitErrors:   make(enginev2alpha2.UnschedulableExplanations, 0),
 		NodesFitErrors: make(map[common_info.PodID]*common_info.FitErrors),
@@ -116,7 +114,9 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 			Stale:     false,
 		},
 
-		SubGroups: map[string]*SubGroupInfo{},
+		SubGroups: map[string]*SubGroupInfo{
+			DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 0),
+		},
 
 		LastStartTimestamp:   nil,
 		activeAllocatedCount: ptr.To(0),
@@ -143,7 +143,7 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.Name = pg.Name
 	pgi.Namespace = pg.Namespace
 	pgi.NamespacedName = fmt.Sprintf("%s/%s", pgi.Namespace, pgi.Name)
-	pgi.MinAvailable = max(pg.Spec.MinMember, 1)
+	pgi.SubGroups[DefaultSubGroup].MinAvailable = max(pg.Spec.MinMember, 1)
 	pgi.Queue = common_info.QueueID(pg.Spec.Queue)
 	pgi.CreationTimestamp = pg.GetCreationTimestamp()
 	pgi.PodGroup = pg
@@ -194,6 +194,7 @@ func (pgi *PodGroupInfo) addTaskIndex(ti *pod_info.PodInfo) {
 }
 
 func (pgi *PodGroupInfo) AddTaskInfo(ti *pod_info.PodInfo) {
+	pgi.SubGroups[DefaultSubGroup].assignTask(ti)
 	pgi.PodInfos[ti.UID] = ti
 	subGroup, found := pgi.SubGroups[ti.SubGroupName]
 	if found {
@@ -351,7 +352,7 @@ func (pgi *PodGroupInfo) GetTasksActiveAllocatedReqResource() *resource_info.Res
 
 func (pgi *PodGroupInfo) IsReadyForScheduling() bool {
 	validTasks := pgi.GetNumAliveTasks() - pgi.GetNumGatedTasks()
-	if int32(validTasks) < pgi.MinAvailable {
+	if int32(validTasks) < pgi.SubGroups[DefaultSubGroup].MinAvailable {
 		return false
 	}
 	for _, subGroup := range pgi.SubGroups {
@@ -363,7 +364,7 @@ func (pgi *PodGroupInfo) IsReadyForScheduling() bool {
 }
 
 func (pgi *PodGroupInfo) IsElastic() bool {
-	return pgi.MinAvailable < int32(len(pgi.PodInfos))
+	return pgi.SubGroups[DefaultSubGroup].MinAvailable < int32(len(pgi.PodInfos))
 }
 
 func (pgi *PodGroupInfo) IsStale() bool {
@@ -372,12 +373,12 @@ func (pgi *PodGroupInfo) IsStale() bool {
 	}
 
 	activeUsedTasks := int32(pgi.GetNumActiveUsedTasks())
-	return activeUsedTasks > 0 && activeUsedTasks < pgi.MinAvailable
+	return activeUsedTasks > 0 && activeUsedTasks < pgi.SubGroups[DefaultSubGroup].MinAvailable
 }
 
 func (pgi *PodGroupInfo) IsGangSatisfied() bool {
 	numActiveTasks := pgi.GetNumActiveUsedTasks()
-	return numActiveTasks >= int(pgi.MinAvailable)
+	return numActiveTasks >= int(pgi.SubGroups[DefaultSubGroup].MinAvailable)
 }
 
 func (pgi *PodGroupInfo) ShouldPipelineJob() bool {
@@ -394,7 +395,7 @@ func (pgi *PodGroupInfo) ShouldPipelineJob() bool {
 	}
 	// If the job has already MinAvailable tasks active allocated (but not pipelined),
 	//  then we shouldn't convert non-pipelined tasks to pipeline.
-	return hasPipelinedTask && activeAllocatedTasksCount < int(pgi.MinAvailable)
+	return hasPipelinedTask && activeAllocatedTasksCount < int(pgi.SubGroups[DefaultSubGroup].MinAvailable)
 }
 
 func (pgi *PodGroupInfo) Clone() *PodGroupInfo {
@@ -409,8 +410,7 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 		Queue:     pgi.Queue,
 		Priority:  pgi.Priority,
 
-		MinAvailable: pgi.MinAvailable,
-		Allocated:    resource_info.EmptyResource(),
+		Allocated: resource_info.EmptyResource(),
 
 		JobFitErrors:   make(enginev2alpha2.UnschedulableExplanations, 0),
 		NodesFitErrors: make(map[common_info.PodID]*common_info.FitErrors),
@@ -452,7 +452,7 @@ func (pgi *PodGroupInfo) String() string {
 	}
 
 	return fmt.Sprintf("Job (%v): namespace %v (%v), name %v, minAvailable %d, podGroup %+v",
-		pgi.UID, pgi.Namespace, pgi.Queue, pgi.Name, pgi.MinAvailable, pgi.PodGroup) + res
+		pgi.UID, pgi.Namespace, pgi.Queue, pgi.Name, pgi.SubGroups[DefaultSubGroup].MinAvailable, pgi.PodGroup) + res
 }
 
 func (pgi *PodGroupInfo) SetTaskFitError(task *pod_info.PodInfo, fitErrors *common_info.FitErrors) {

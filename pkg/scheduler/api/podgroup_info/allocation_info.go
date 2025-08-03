@@ -103,10 +103,10 @@ func getNumOfTasksToAllocate(podGroupInfo *PodGroupInfo, numOfTasksWaitingAlloca
 	allocatedTasks := int32(podGroupInfo.GetActiveAllocatedTasksCount())
 
 	var maxTasksToAllocate int32
-	if allocatedTasks >= podGroupInfo.MinAvailable {
+	if allocatedTasks >= podGroupInfo.SubGroups[DefaultSubGroup].MinAvailable {
 		maxTasksToAllocate = 1
 	} else {
-		maxTasksToAllocate = podGroupInfo.MinAvailable
+		maxTasksToAllocate = podGroupInfo.SubGroups[DefaultSubGroup].MinAvailable
 	}
 
 	return int(math.Min(float64(maxTasksToAllocate), float64(numOfTasksWaitingAllocation)))

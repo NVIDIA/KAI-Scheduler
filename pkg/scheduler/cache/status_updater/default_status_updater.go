@@ -243,14 +243,14 @@ func (su *defaultStatusUpdater) markTaskUnschedulable(pod *v1.Pod, message strin
 func (su *defaultStatusUpdater) recordStaleJobEvent(job *podgroup_info.PodGroupInfo) {
 	su.recorder.Eventf(job.PodGroup, v1.EventTypeNormal, "StaleJob",
 		fmt.Sprintf("Job is stale. %d pods are active, minMember is %d",
-			job.GetNumActiveUsedTasks(), job.MinAvailable))
+			job.GetNumActiveUsedTasks(), job.SubGroups[podgroup_info.DefaultSubGroup].MinAvailable))
 }
 
 func (su *defaultStatusUpdater) recordJobNotReadyEvent(job *podgroup_info.PodGroupInfo) {
 	message := "Job is not ready for scheduling."
 	if len(job.SubGroups) == 0 {
 		message = message + fmt.Sprintf(" Waiting for %d pods, currently %d exist, %d are gated",
-			job.MinAvailable, job.GetNumAliveTasks(), job.GetNumGatedTasks())
+			job.SubGroups[podgroup_info.DefaultSubGroup].MinAvailable, job.GetNumAliveTasks(), job.GetNumGatedTasks())
 	} else {
 		for _, subGroup := range job.SubGroups {
 			if !subGroup.IsReadyForScheduling() {

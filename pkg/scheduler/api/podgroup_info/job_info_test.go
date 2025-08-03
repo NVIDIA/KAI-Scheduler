@@ -525,8 +525,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 		{
 			name: "job with subgroups - all ready",
 			job: &PodGroupInfo{
-				UID:          "test-pg",
-				MinAvailable: 3,
+				UID: "test-pg",
 				PodInfos: pod_info.PodsMap{
 					"111": pod_info.NewTaskInfo(
 						&v1.Pod{
@@ -615,8 +614,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 		{
 			name: "job with subgroups - some already running",
 			job: &PodGroupInfo{
-				UID:          "test-pg",
-				MinAvailable: 3,
+				UID: "test-pg",
 				PodInfos: pod_info.PodsMap{
 					"111": pod_info.NewTaskInfo(
 						&v1.Pod{
@@ -705,8 +703,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 		{
 			name: "job with subgroups - more then minAvailable",
 			job: &PodGroupInfo{
-				UID:          "test-pg",
-				MinAvailable: 3,
+				UID: "test-pg",
 				PodInfos: pod_info.PodsMap{
 					"111": pod_info.NewTaskInfo(
 						&v1.Pod{
@@ -817,8 +814,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 		{
 			name: "job with subgroups - one is not ready",
 			job: &PodGroupInfo{
-				UID:          "test-pg",
-				MinAvailable: 3,
+				UID: "test-pg",
 				PodInfos: pod_info.PodsMap{
 					"111": pod_info.NewTaskInfo(
 						&v1.Pod{
@@ -897,7 +893,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 
 	for _, test := range tests {
 		if test.minAvailable != nil {
-			test.job.MinAvailable = *test.minAvailable
+			test.job.SubGroups[DefaultSubGroup].MinAvailable = *test.minAvailable
 		}
 		result := test.job.IsReadyForScheduling()
 		if result != test.expected {

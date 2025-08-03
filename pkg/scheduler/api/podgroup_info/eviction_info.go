@@ -25,7 +25,7 @@ func GetTasksToEvict(job *PodGroupInfo, taskOrderFn common_info.LessFn) ([]*pod_
 		return []*pod_info.PodInfo{}, false
 	}
 
-	if int(job.MinAvailable) < podPriorityQueue.Len() {
+	if int(job.SubGroups[DefaultSubGroup].MinAvailable) < podPriorityQueue.Len() {
 		task := podPriorityQueue.Pop().(*pod_info.PodInfo)
 		return []*pod_info.PodInfo{task}, true
 	}

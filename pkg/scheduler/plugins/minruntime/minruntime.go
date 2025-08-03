@@ -128,7 +128,7 @@ func (mr *minruntimePlugin) reclaimScenarioValidatorFn(scenario api.ScenarioInfo
 		}
 		numVictimTasks := int32(len(victimInfo.Tasks))
 		currentlyRunning := victimInfo.Job.GetActivelyRunningTasksCount()
-		if victimInfo.Job.MinAvailable > currentlyRunning-numVictimTasks {
+		if victimInfo.Job.SubGroups[podgroup_info.DefaultSubGroup].MinAvailable > currentlyRunning-numVictimTasks {
 			return false
 		}
 	}
@@ -147,7 +147,7 @@ func (mr *minruntimePlugin) preemptScenarioValidatorFn(scenario api.ScenarioInfo
 		}
 		numVictimTasks := int32(len(victimInfo.Tasks))
 		currentlyRunning := victimInfo.Job.GetActivelyRunningTasksCount()
-		if victimInfo.Job.MinAvailable > currentlyRunning-numVictimTasks {
+		if victimInfo.Job.SubGroups[podgroup_info.DefaultSubGroup].MinAvailable > currentlyRunning-numVictimTasks {
 			return false
 		}
 	}

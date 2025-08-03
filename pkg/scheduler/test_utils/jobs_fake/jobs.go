@@ -106,6 +106,11 @@ func BuildJobInfo(
 		taskStatusIndex[taskInfo.Status][taskInfo.UID] = taskInfo
 	}
 
+	subGroups[podgroup_info.DefaultSubGroup] = &podgroup_info.SubGroupInfo{
+		Name:         podgroup_info.DefaultSubGroup,
+		MinAvailable: minAvailable,
+	}
+
 	result := &podgroup_info.PodGroupInfo{
 		UID:               uid,
 		Name:              name,
@@ -118,7 +123,6 @@ func BuildJobInfo(
 		NodesFitErrors:    map[common_info.PodID]*common_info.FitErrors{},
 		Queue:             queueUID,
 		CreationTimestamp: metav1.Time{Time: jobCreationTime},
-		MinAvailable:      minAvailable,
 		SubGroups:         subGroups,
 		PodGroup: &enginev2alpha2.PodGroup{
 			ObjectMeta: metav1.ObjectMeta{

@@ -71,7 +71,7 @@ func handleStaleJob(ssn *framework.Session, job *podgroup_info.PodGroupInfo) {
 		Preemptor:        nil,
 	}
 	for _, task := range tasksToEvict {
-		reason := api.GetGangEvictionMessage(task.Namespace, task.Name, job.MinAvailable)
+		reason := api.GetGangEvictionMessage(task.Namespace, task.Name, job.SubGroups[podgroup_info.DefaultSubGroup].MinAvailable)
 		if err := ssn.Evict(task, reason, evictionMetadata); err != nil {
 			log.InfraLogger.Errorf("Failed to evict task: <%s/%s> of job <%s> err: %v",
 				task.Namespace, task.Name, job.Name, err)

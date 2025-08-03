@@ -120,7 +120,7 @@ func Test_getMaxNumOfTasksToAllocate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pg := NewPodGroupInfo("u1")
-			pg.MinAvailable = tt.args.minAvailable
+			pg.SubGroups[DefaultSubGroup].MinAvailable = tt.args.minAvailable
 			for i, pod := range tt.args.pods {
 				pi := pod_info.NewTaskInfo(pod)
 				if tt.args.overridingStatus != nil {
