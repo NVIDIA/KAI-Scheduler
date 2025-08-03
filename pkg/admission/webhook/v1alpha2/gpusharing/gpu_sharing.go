@@ -23,25 +23,25 @@ const (
 	CdiDeviceNameBase      = "k8s.device-plugin.nvidia.com/gpu=%s"
 )
 
-type AdmissionGPUSharing struct {
+type GPUSharing struct {
 	kubeClient             client.Client
 	gpuDevicePluginUsesCdi bool
 	gpuSharingEnabled      bool
 }
 
-func New(kubeClient client.Client, gpuDevicePluginUsesCdi bool, gpuSharingEnabled bool) *AdmissionGPUSharing {
-	return &AdmissionGPUSharing{
+func New(kubeClient client.Client, gpuDevicePluginUsesCdi bool, gpuSharingEnabled bool) *GPUSharing {
+	return &GPUSharing{
 		kubeClient:             kubeClient,
 		gpuDevicePluginUsesCdi: gpuDevicePluginUsesCdi,
 		gpuSharingEnabled:      gpuSharingEnabled,
 	}
 }
 
-func (p *AdmissionGPUSharing) Name() string {
+func (p *GPUSharing) Name() string {
 	return "gpusharing"
 }
 
-func (p *AdmissionGPUSharing) Validate(pod *v1.Pod) error {
+func (p *GPUSharing) Validate(pod *v1.Pod) error {
 	logger := log.FromContext(context.Background())
 	logger.Info("gpusharing validating pod", "pod", pod.Name, "plugin", p.Name())
 	if !p.gpuSharingEnabled && resources.RequestsGPUFraction(pod) {
@@ -53,7 +53,7 @@ func (p *AdmissionGPUSharing) Validate(pod *v1.Pod) error {
 	return gpurequesthandler.ValidateGpuRequests(pod)
 }
 
-func (p *AdmissionGPUSharing) Mutate(pod *v1.Pod) error {
+func (p *GPUSharing) Mutate(pod *v1.Pod) error {
 	if len(pod.Spec.Containers) == 0 {
 		return nil
 	}
