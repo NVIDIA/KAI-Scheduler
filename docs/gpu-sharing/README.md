@@ -18,6 +18,11 @@ GPU sharing is disabled by default. To enable it, add the following flag to the 
 --set "global.gpuSharing=true"
 ```
 
+### RuntimeClass Requirement
+KAI Scheduler requires the use of a specific RuntimeClass for GPU sharing. The recommended RuntimeClass is `nvidia`.
+
+KAI explicitly sets `runtimeClassName: "nvidia"` in the resource reservation pod spec. Ensure that your cluster has the `nvidia` RuntimeClass configured — this is typically provided by the NVIDIA device plugin.
+
 ### GPU Sharing Pod
 To submit a pod that can share a GPU device, run this command:
 ```
