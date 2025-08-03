@@ -22,13 +22,15 @@ func GetDefaultSchedulerConfiguration() *SchedulerConfiguration {
 					{Name: "taskorder"},
 					{Name: "nominatednode"},
 					{Name: "dynamicresources"},
-					{
-						Name: "nodeplacement",
-						Arguments: map[string]string{
-							"cpu": "binpack",
-							"gpu": "binpack",
-						},
-					},
+					// {
+					// 	Name: "nodeplacement",
+					// 	Arguments: map[string]string{
+					// 		"cpu": "binpack",
+					// 		"gpu": "binpack",
+					// 	},
+					// },
+					{Name: "minruntime"},
+					{Name: "topology"},
 				},
 			},
 		},
