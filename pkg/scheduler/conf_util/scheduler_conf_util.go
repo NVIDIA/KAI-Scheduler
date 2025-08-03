@@ -30,35 +30,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
 
-/*
-defaultSchedulerConf is the default conf, unless overridden from the operator (in the scheduler configmap).
-*/
-const defaultSchedulerConf = `
-actions: "allocate, consolidation, reclaim, preempt, stalegangeviction"
-tiers:
-- plugins:
-  - name: predicates
-  - name: proportion
-  - name: priority
-  - name: elastic
-  - name: kubeflow
-  - name: ray
-  - name: nodeavailability
-  - name: gpusharingorder
-  - name: gpupack
-  - name: resourcetype
-  - name: subgrouporder
-  - name: taskorder
-  - name: nominatednode
-  - name: dynamicresources
-  - name: nodeplacement
-    arguments:
-      cpu: binpack
-      gpu: binpack
-  - name: minruntime
-  - name: topology
-`
-
 func ResolveConfigurationFromFile(confPath string) (*conf.SchedulerConfiguration, error) {
 	defaultConfig := conf.GetDefaultSchedulerConfiguration()
 
