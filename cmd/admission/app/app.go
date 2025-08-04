@@ -31,9 +31,7 @@ import (
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 
 	admissionplugins "github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
-	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/controllers"
-	bindingplugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
 )
 
 var (
@@ -54,14 +52,12 @@ type App struct {
 	InformerFactory  informers.SharedInformerFactory
 	Options          *Options
 	manager          manager.Manager
-	rrs              resourcereservation.Interface
 	reconcilerParams *controllers.ReconcilerParams
 	admissionPlugins *admissionplugins.KaiAdmissionPlugins
-	bindingPlugins   *bindingplugins.BinderPlugins
 }
 
-// +kubebuilder:webhook:path=/mutate--v1-pod,mutating=true,failurePolicy=fail,sideEffects=None,resources=pods,verbs=create,groups=core,versions=v1,name=binder.run.ai,admissionReviewVersions=v1,reinvocationPolicy=IfNeeded
-// +kubebuilder:webhook:path=/validate--v1-pod,mutating=false,failurePolicy=fail,sideEffects=None,resources=pods,verbs=create;update,groups=core,versions=v1,name=binder.run.ai,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate--v1-pod,mutating=true,failurePolicy=fail,sideEffects=None,resources=pods,verbs=create,groups=core,versions=v1,name=admission.run.ai,admissionReviewVersions=v1,reinvocationPolicy=IfNeeded
+// +kubebuilder:webhook:path=/validate--v1-pod,mutating=false,failurePolicy=fail,sideEffects=None,resources=pods,verbs=create;update,groups=core,versions=v1,name=admission.run.ai,admissionReviewVersions=v1
 
 func New() (*App, error) {
 	options := InitOptions()
@@ -146,23 +142,9 @@ func (app *App) Run() error {
 	var err error
 	go func() {
 		app.manager.GetCache().WaitForCacheSync(context.Background())
-		setupLog.Info("syncing resource reservation")
-		err := app.rrs.Sync(context.Background())
-		if err != nil {
-			setupLog.Error(err, "unable to sync resource reservation")
-			panic(err)
-		}
 	}()
 
-	if err = (&controllers.PodReconciler{
-		Client:              app.manager.GetClient(),
-		Scheme:              app.manager.GetScheme(),
-		ResourceReservation: app.rrs,
-		SchedulerName:       app.Options.SchedulerName,
-	}).SetupWithManager(app.manager, app.reconcilerParams); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Pod")
-		return err
-	}
+	// +kubebuilder:scaffold:builder
 
 	if err = ctrl.NewWebhookManagedBy(app.manager).For(&corev1.Pod{}).
 		WithDefaulter(admissionhooks.NewPodMutator(app.manager.GetClient(), app.admissionPlugins, app.Options.SchedulerName)).
@@ -174,8 +156,6 @@ func (app *App) Run() error {
 	stopCh := make(chan struct{})
 	app.InformerFactory.Start(stopCh)
 	app.InformerFactory.WaitForCacheSync(stopCh)
-
-	// +kubebuilder:scaffold:builder
 
 	if err = app.manager.AddHealthzCheck("healthz", app.manager.GetWebhookServer().StartedChecker()); err != nil {
 		setupLog.Error(err, "unable to set up health check")
