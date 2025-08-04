@@ -64,9 +64,6 @@ type App struct {
 	bindingPlugins   *bindingplugins.BinderPlugins
 }
 
-// +kubebuilder:webhook:path=/mutate--v1-pod,mutating=true,failurePolicy=fail,sideEffects=None,resources=pods,verbs=create,groups=core,versions=v1,name=binder.run.ai,admissionReviewVersions=v1,reinvocationPolicy=IfNeeded
-// +kubebuilder:webhook:path=/validate--v1-pod,mutating=false,failurePolicy=fail,sideEffects=None,resources=pods,verbs=create;update,groups=core,versions=v1,name=binder.run.ai,admissionReviewVersions=v1
-
 func New() (*App, error) {
 	options := InitOptions()
 	opts := zap.Options{
@@ -152,8 +149,7 @@ func New() (*App, error) {
 	return app, nil
 }
 
-func (app *App) RegisterPlugins(admissionPlugins *admissionplugins.KaiAdmissionPlugins, bindingPlugins *bindingplugins.BinderPlugins) {
-	app.admissionPlugins = admissionPlugins
+func (app *App) RegisterPlugins(bindingPlugins *bindingplugins.BinderPlugins) {
 	app.bindingPlugins = bindingPlugins
 }
 
