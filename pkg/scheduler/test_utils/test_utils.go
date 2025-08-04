@@ -302,6 +302,9 @@ func GetTestCacheMock(controller *Controller, testMocks *TestMock, additionalObj
 	cacheRequirements := &CacheMocking{}
 	if testMocks != nil {
 		cacheRequirements = testMocks.CacheRequirements
+		if cacheRequirements == nil {
+			cacheRequirements = &CacheMocking{}
+		}
 	}
 
 	if cacheRequirements.NumberOfCacheBinds != 0 {
