@@ -73,3 +73,52 @@ func TestAddTaskInfoToSubGroup(t *testing.T) {
 		t.Error("Pod info 2 not properly stored in map")
 	}
 }
+
+func TestIsReadyForScheduling(t *testing.T) {
+	tests := []struct {
+		name         string
+		minAvailable int32
+		pods         []*pod_info.PodInfo
+		expected     bool
+	}{
+		{
+			name:         "ready with exact minimum",
+			minAvailable: 2,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Pending},
+				{UID: "2", Status: pod_status.Pending},
+			},
+			expected: true,
+		},
+		{
+			name:         "ready with more than minimum",
+			minAvailable: 1,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Pending},
+				{UID: "2", Status: pod_status.Pending},
+			},
+			expected: true,
+		},
+		{
+			name:         "not ready with gated pods",
+			minAvailable: 2,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Pending},
+				{UID: "2", Status: pod_status.Gated},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sgi := newSubGroupInfo("test", tt.minAvailable)
+			for _, pod := range tt.pods {
+				sgi.assignTask(pod)
+			}
+			if got := sgi.IsReadyForScheduling(); got != tt.expected {
+				t.Errorf("IsReadyForScheduling() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}

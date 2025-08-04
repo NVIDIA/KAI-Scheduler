@@ -351,7 +351,15 @@ func (pgi *PodGroupInfo) GetTasksActiveAllocatedReqResource() *resource_info.Res
 
 func (pgi *PodGroupInfo) IsReadyForScheduling() bool {
 	validTasks := pgi.GetNumAliveTasks() - pgi.GetNumGatedTasks()
-	return int32(validTasks) >= pgi.MinAvailable
+	if int32(validTasks) < pgi.MinAvailable {
+		return false
+	}
+	for _, subGroup := range pgi.SubGroups {
+		if !subGroup.IsReadyForScheduling() {
+			return false
+		}
+	}
+	return true
 }
 
 func (pgi *PodGroupInfo) IsElastic() bool {
@@ -432,9 +440,14 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 func (pgi *PodGroupInfo) String() string {
 	res := ""
 
+	for _, subGroup := range pgi.SubGroups {
+		res = res + fmt.Sprintf("\t\t subGroup %s: minAvailable(%v)\n",
+			subGroup.Name, subGroup.MinAvailable)
+	}
+
 	i := 0
 	for _, task := range pgi.PodInfos {
-		res = res + fmt.Sprintf("\n\t %d: %v", i, task)
+		res = res + fmt.Sprintf("\n\t task %d: %v", i, task)
 		i++
 	}
 

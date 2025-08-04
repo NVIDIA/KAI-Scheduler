@@ -55,31 +55,21 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 		return nil
 	}
 
-	// Calc tree job allocation data
+	defer t.treeAllocateableCleanup(topologyTree)
 	maxAllocatablePods, err := t.calcTreeAllocatable(job, topologyTree)
 	if err != nil {
 		return err
 	}
 
-	// Get best domains for the job
-	var jobAllocateableDomain []*TopologyDomainInfo
-	if maxAllocatablePods >= len(podgroup_info.GetTasksToAllocate(job, t.taskOrderFunc, true)) {
-		jobAllocateableDomain, err = t.getBestjobAllocateableDomains(job, topologyTree)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Clean allocation data from the tree
-	for _, levelDomains := range topologyTree.DomainsByLevel {
-		for _, domain := range levelDomains {
-			domain.AllocatablePods = 0
-		}
-	}
-
-	if len(jobAllocateableDomain) == 0 {
+	if maxAllocatablePods < len(podgroup_info.GetTasksToAllocate(job, t.taskOrderFunc, true)) {
 		log.InfraLogger.V(6).Infof("no relevant domains found for job %s, workload topology name: %s",
 			job.PodGroup.Name, topologyTree.Name)
+		return nil
+	}
+
+	jobAllocateableDomain, err := t.getBestJobAllocateableDomains(job, topologyTree)
+	if err != nil {
+		return err
 	}
 
 	//Save results to cycle cache
@@ -141,7 +131,7 @@ func (t *topologyPlugin) calcSubTreeAllocatable(jobAllocationData *jobAllocation
 
 	if len(rootDomain.Children) == 0 {
 		for _, node := range rootDomain.Nodes {
-			rootDomain.AllocatablePods += calcNodeAccomedation(jobAllocationData, node)
+			rootDomain.AllocatablePods += calcNodeAccommodation(jobAllocationData, node)
 		}
 		return rootDomain.AllocatablePods, nil
 	}
@@ -156,7 +146,7 @@ func (t *topologyPlugin) calcSubTreeAllocatable(jobAllocationData *jobAllocation
 	return rootDomain.AllocatablePods, nil
 }
 
-func calcNodeAccomedation(jobAllocationMetaData *jobAllocationMetaData, node *node_info.NodeInfo) int {
+func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *node_info.NodeInfo) int {
 	allocateablePodsCount := 0
 	for _, resourceRepresentorPod := range jobAllocationMetaData.allocationTestPods {
 		if node.IsTaskAllocatable(resourceRepresentorPod) {
@@ -194,7 +184,7 @@ func calcNextAllocationTestPodResources(previousTestResources, maxPodResources *
 		}
 	} else {
 		updatedGpuResource := resource_info.NewGpuResourceRequirementWithMultiFraction(
-			nPlus1Resources.GetNumOfGpuDevices(),
+			nPlus1Resources.GetNumOfGpuDevices()+maxPodResources.GetNumOfGpuDevices(),
 			nPlus1Resources.GpuFractionalPortion(),
 			nPlus1Resources.GpuMemory())
 		nPlus1Resources.GpuResourceRequirement = *updatedGpuResource
@@ -202,7 +192,7 @@ func calcNextAllocationTestPodResources(previousTestResources, maxPodResources *
 	return nPlus1Resources
 }
 
-func (t *topologyPlugin) getBestjobAllocateableDomains(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo) ([]*TopologyDomainInfo, error) {
+func (t *topologyPlugin) getBestJobAllocateableDomains(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo) ([]*TopologyDomainInfo, error) {
 	relevantLevels, err := t.calculateRelevantDomainLevels(job, topologyTree.Name, topologyTree)
 	if err != nil {
 		return nil, err
@@ -223,11 +213,20 @@ func (t *topologyPlugin) getBestjobAllocateableDomains(job *podgroup_info.PodGro
 		}
 	}
 
-	if job.PodGroup.Spec.TopologyConstraint.PreferredTopologyLevel != "" {
-		return t.improveChoiseForPreference(maxDepthDomains, job)
+	if len(maxDepthDomains) == 0 {
+		return nil, fmt.Errorf("no domains found for the job %s, workload topology name: %s",
+			job.PodGroup.Name, topologyTree.Name)
 	}
 
-	return maxDepthDomains, nil
+	if job.PodGroup.Spec.TopologyConstraint.PreferredTopologyLevel != "" &&
+		maxDepthDomains[0].Level != job.PodGroup.Spec.TopologyConstraint.PreferredTopologyLevel {
+		// If Preferred is defined and we couldn't find a domain on the prefered level,
+		// return a children subset and not a single domain
+		return t.improveChoiceForPreference(maxDepthDomains, job)
+	}
+
+	// For stage 1, return a single domain
+	return []*TopologyDomainInfo{maxDepthDomains[0]}, nil
 }
 
 func (*topologyPlugin) calculateRelevantDomainLevels(
@@ -272,14 +271,10 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 	return relevantLevels, nil
 }
 
-func (t *topologyPlugin) improveChoiseForPreference(maxDepthDomains []*TopologyDomainInfo, job *podgroup_info.PodGroupInfo) ([]*TopologyDomainInfo, error) {
-	// if Preferred is defined and we found a domain on the prefered level, return it
+func (t *topologyPlugin) improveChoiceForPreference(maxDepthDomains []*TopologyDomainInfo, job *podgroup_info.PodGroupInfo) ([]*TopologyDomainInfo, error) {
 	taskToAllocateCount := len(podgroup_info.GetTasksToAllocate(job, t.taskOrderFunc, true))
-	if maxDepthDomains[0].Level == job.PodGroup.Spec.TopologyConstraint.PreferredTopologyLevel {
-		return []*TopologyDomainInfo{maxDepthDomains[0]}, nil
-	}
-
-	// else, look for a subgroup of children domains that allows the job to be allocated
+	// Look for a subgroup of children domains that allows the job to be allocated
+	// and return the one with the least number of domains required for the allocation
 	bestChildrenSubset := []*TopologyDomainInfo{}
 	for _, domain := range maxDepthDomains {
 		childDomainSubset := getJobAllocateableChildrenSubset(domain, taskToAllocateCount)
@@ -306,6 +301,14 @@ func getJobAllocateableChildrenSubset(domain *TopologyDomainInfo, taskToAllocate
 		}
 	}
 	return childDomainSubset
+}
+
+func (*topologyPlugin) treeAllocateableCleanup(topologyTree *TopologyInfo) {
+	for _, levelDomains := range topologyTree.DomainsByLevel {
+		for _, domain := range levelDomains {
+			domain.AllocatablePods = 0
+		}
+	}
 }
 
 func (t *topologyPlugin) predicateFn(pod *pod_info.PodInfo, job *podgroup_info.PodGroupInfo, node *node_info.NodeInfo) error {

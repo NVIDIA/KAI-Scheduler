@@ -42,6 +42,8 @@ const (
 	unknownGpuIndicator            = "-1"
 )
 
+var runtimeClassName = "nvidia"
+
 type service struct {
 	fakeGPuNodes        bool
 	kubeClient          client.WithWatch
@@ -449,6 +451,7 @@ func (rsc *service) createResourceReservationPod(
 		},
 		Spec: v1.PodSpec{
 			NodeName:           nodeName,
+			RuntimeClassName:   &runtimeClassName,
 			ServiceAccountName: rsc.serviceAccountName,
 			Containers: []v1.Container{
 				{

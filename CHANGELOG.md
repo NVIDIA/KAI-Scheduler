@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.7.12] - 2025-08-04
+
 ### Fixed
 - Fixed container env var overwrite to cover possible cases where env var with Value is replaced with ValueFrom or the other way
 
