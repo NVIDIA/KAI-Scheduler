@@ -16,6 +16,7 @@ data:
           - name: elastic
           - name: kubeflow
           - name: ray
+          - name: subgrouporder
           - name: taskorder
           - name: nominatednode
           - name: dynamicresources

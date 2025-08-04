@@ -55,6 +55,7 @@ type proportionPlugin struct {
 	jobSimulationQueues map[common_info.QueueID]*rs.QueueAttributes
 	// Arguments given for the plugin
 	pluginArguments           map[string]string
+	subGroupOrderFn           common_info.LessFn
 	taskOrderFunc             common_info.LessFn
 	reclaimablePlugin         *rec.Reclaimable
 	isInferencePreemptible    bool
@@ -75,8 +76,9 @@ func (pp *proportionPlugin) Name() string {
 
 func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.calculateResourcesProportion(ssn)
+	pp.subGroupOrderFn = ssn.SubGroupOrderFn
 	pp.taskOrderFunc = ssn.TaskOrderFn
-	pp.reclaimablePlugin = rec.New(ssn.IsInferencePreemptible(), pp.taskOrderFunc)
+	pp.reclaimablePlugin = rec.New(ssn.IsInferencePreemptible())
 	pp.isInferencePreemptible = ssn.IsInferencePreemptible()
 	capacityPolicy := cp.New(pp.queues, ssn.IsInferencePreemptible())
 	ssn.AddQueueOrderFn(pp.queueOrder)
@@ -251,7 +253,7 @@ func (pp *proportionPlugin) buildReclaimerInfo(reclaimer *podgroup_info.PodGroup
 		Queue:         reclaimer.Queue,
 		IsPreemptable: reclaimer.IsPreemptibleJob(pp.isInferencePreemptible),
 		RequiredResources: podgroup_info.GetTasksToAllocateInitResource(
-			reclaimer, pp.taskOrderFunc, false),
+			reclaimer, pp.subGroupOrderFn, pp.taskOrderFunc, false),
 	}
 }
 
@@ -442,7 +444,8 @@ func (pp *proportionPlugin) queueOrder(lQ, rQ *queue_info.QueueInfo, lJob, rJob 
 		return -1
 	}
 
-	return queue_order.GetQueueOrderResult(lQueueAttributes, rQueueAttributes, lJob, rJob, lVictims, rVictims, pp.taskOrderFunc, pp.totalResource)
+	return queue_order.GetQueueOrderResult(lQueueAttributes, rQueueAttributes, lJob, rJob, lVictims, rVictims,
+		pp.subGroupOrderFn, pp.taskOrderFunc, pp.totalResource)
 }
 
 func (pp *proportionPlugin) getQueueDeservedResourcesFn(queue *queue_info.QueueInfo) *resource_info.ResourceRequirements {

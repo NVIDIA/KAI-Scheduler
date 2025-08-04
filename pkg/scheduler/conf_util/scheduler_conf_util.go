@@ -47,6 +47,7 @@ tiers:
   - name: gpusharingorder
   - name: gpupack
   - name: resourcetype
+  - name: subgrouporder
   - name: taskorder
   - name: nominatednode
   - name: dynamicresources

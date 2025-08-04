@@ -9,10 +9,11 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	testContext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -48,6 +49,7 @@ var defaultKaiSchedulerPlugins = []tier{
 			{Name: "kubeflow"},
 			{Name: "ray"},
 			{Name: "taskorder"},
+			{Name: "subgrouporder"},
 			{Name: "nominatednode"},
 			{Name: "dynamicresources"},
 			{Name: "minruntime"},
