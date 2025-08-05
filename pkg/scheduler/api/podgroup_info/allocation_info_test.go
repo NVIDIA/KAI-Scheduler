@@ -60,7 +60,7 @@ func Test_HasTasksToAllocate(t *testing.T) {
 
 func Test_GetTasksToAllocate(t *testing.T) {
 	pg := NewPodGroupInfo("pg")
-	pg.MinAvailable = 1
+	pg.SetDefaultMinAvailable(1)
 	task := simpleTask("pA", "", pod_status.Pending)
 	pg.AddTaskInfo(task)
 	result := GetTasksToAllocate(pg, subGroupOrderFn, tasksOrderFn, true)
@@ -71,7 +71,7 @@ func Test_GetTasksToAllocate(t *testing.T) {
 
 func Test_GetTaskToAllocateWithSubGroups(t *testing.T) {
 	pg := NewPodGroupInfo("pg")
-	pg.MinAvailable = 2
+	pg.SetDefaultMinAvailable(2)
 	pg.SubGroups["sub"] = NewSubGroupInfo("sub", 2)
 
 	pg.AddTaskInfo(simpleTask("pA", "sub", pod_status.Pending))
@@ -85,7 +85,7 @@ func Test_GetTaskToAllocateWithSubGroups(t *testing.T) {
 
 func Test_GetTasksToAllocateRequestedGPUs(t *testing.T) {
 	pg := NewPodGroupInfo("test-podgroup")
-	pg.MinAvailable = 1
+	pg.SetDefaultMinAvailable(1)
 	task := simpleTask("p1", "", pod_status.Pending)
 	// manually set up a fake ResReq that returns 2 for GPUs and 1000 for GpuMemory
 	task.ResReq = resource_info.NewResourceRequirements(2, 1000, 2000)
@@ -104,7 +104,7 @@ func Test_GetTasksToAllocateInitResource(t *testing.T) {
 		t.Error("empty resource expected for nil pg")
 	}
 
-	pg.MinAvailable = 1
+	pg.SetDefaultMinAvailable(1)
 	task := simpleTask("p", "", pod_status.Pending)
 	task.ResReq = resource_info.NewResourceRequirements(0, 5000, 0)
 	pg.AddTaskInfo(task)
@@ -159,7 +159,7 @@ func Test_getTasksPriorityQueuePerSubGroup(t *testing.T) {
 
 func Test_getNumOfTasksToAllocate(t *testing.T) {
 	pg := NewPodGroupInfo("n")
-	pg.MinAvailable = 2
+	pg.SetDefaultMinAvailable(2)
 	// None allocated, 2 pending
 	pg.AddTaskInfo(simpleTask("p1", "", pod_status.Pending))
 	pg.AddTaskInfo(simpleTask("p2", "", pod_status.Allocated))
@@ -272,7 +272,7 @@ func Test_getMaxNumOfTasksToAllocate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pg := NewPodGroupInfo("u1")
-			pg.MinAvailable = tt.args.minAvailable
+			pg.SetDefaultMinAvailable(tt.args.minAvailable)
 			for i, pod := range tt.args.pods {
 				pi := pod_info.NewTaskInfo(pod)
 				if tt.args.overridingStatus != nil {

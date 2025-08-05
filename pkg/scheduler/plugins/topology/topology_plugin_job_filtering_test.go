@@ -1383,8 +1383,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 		{
 			name: "single domain with minimum distance",
 			job: &podgroup_info.PodGroupInfo{
-				Name:         "test-job",
-				MinAvailable: 2,
+				Name:            "test-job",
+				DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2),
 				PodGroup: &enginev2alpha2.PodGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-job",
@@ -1452,8 +1452,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 		{
 			name: "no domains can allocate the job",
 			job: &podgroup_info.PodGroupInfo{
-				Name:         "test-job",
-				MinAvailable: 2,
+				Name:            "test-job",
+				DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2),
 				PodGroup: &enginev2alpha2.PodGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-job",
@@ -1507,8 +1507,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 		{
 			name: "no relevant domain levels",
 			job: &podgroup_info.PodGroupInfo{
-				Name:         "test-job",
-				MinAvailable: 1,
+				Name:            "test-job",
+				DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
 				PodGroup: &enginev2alpha2.PodGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-job",
@@ -1554,8 +1554,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 		{
 			name: "complex topology with multiple levels",
 			job: &podgroup_info.PodGroupInfo{
-				Name:         "test-job",
-				MinAvailable: 3,
+				Name:            "test-job",
+				DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 3),
 				PodGroup: &enginev2alpha2.PodGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-job",
@@ -1634,8 +1634,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 		{
 			name: "mixed task statuses - some pending, some running",
 			job: &podgroup_info.PodGroupInfo{
-				Name:         "test-job",
-				MinAvailable: 2,
+				Name:            "test-job",
+				DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2),
 				PodGroup: &enginev2alpha2.PodGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-job",
@@ -1688,8 +1688,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 		{
 			name: "Return children subset",
 			job: &podgroup_info.PodGroupInfo{
-				Name:         "test-job",
-				MinAvailable: 4,
+				Name:            "test-job",
+				DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 4),
 				PodGroup: &enginev2alpha2.PodGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-job",

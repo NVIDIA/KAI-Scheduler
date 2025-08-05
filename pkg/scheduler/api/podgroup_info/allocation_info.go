@@ -153,10 +153,10 @@ func getSubGroupsPriorityQueue(subGroups map[string]*SubGroupInfo,
 
 func getNumTasksToAllocate(podGroupInfo *PodGroupInfo) int {
 	numAllocatedTasks := podGroupInfo.GetActiveAllocatedTasksCount()
-	if numAllocatedTasks >= int(podGroupInfo.MinAvailable) {
+	if numAllocatedTasks >= int(podGroupInfo.GetDefaultMinAvailable()) {
 		return 1
 	}
-	return int(podGroupInfo.MinAvailable) - numAllocatedTasks
+	return int(podGroupInfo.GetDefaultMinAvailable()) - numAllocatedTasks
 }
 
 func getNumTasksToAllocatePerSubGroup(podGroupInfo *PodGroupInfo, isRealAllocation bool) map[string]int {
