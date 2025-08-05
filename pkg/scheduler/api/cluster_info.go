@@ -102,7 +102,7 @@ func (ci ClusterInfo) String() string {
 			}
 
 			i := 0
-			for _, task := range job.PodInfos {
+			for _, task := range job.GetAllPodsMap() {
 				str = str + fmt.Sprintf("\t\t task %d: %v\n", i, task)
 				i++
 			}

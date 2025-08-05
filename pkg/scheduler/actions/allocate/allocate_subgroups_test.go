@@ -4,21 +4,20 @@
 package allocate_test
 
 import (
-	"testing"
-
-	. "go.uber.org/mock/gomock"
-	"k8s.io/utils/pointer"
-	"k8s.io/utils/ptr"
-
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/allocate"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
+	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
+	"testing"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/allocate"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
+	. "go.uber.org/mock/gomock"
 )
 
 func TestHandleSubGroupsAllocation(t *testing.T) {

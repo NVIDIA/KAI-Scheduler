@@ -77,7 +77,7 @@ func (drap *draPlugin) OnSessionOpen(ssn *framework.Session) {
 
 func (drap *draPlugin) assumePendingClaims(ssn *framework.Session) {
 	for _, podGroup := range ssn.PodGroupInfos {
-		for _, pod := range podGroup.PodInfos {
+		for _, pod := range podGroup.GetAllPodsMap() {
 			if pod.BindRequest == nil {
 				continue
 			}

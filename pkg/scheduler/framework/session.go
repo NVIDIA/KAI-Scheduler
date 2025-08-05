@@ -269,7 +269,7 @@ func (ssn *Session) isTaskAllocatableOnNode(task *pod_info.PodInfo, job *podgrou
 			task.Namespace, task.Name, task.ResReq, node.Name, node.Releasing, node.Idle)
 		if writeFittingDelta {
 			if taskAllocatable := node.IsTaskAllocatable(task); !taskAllocatable {
-				fitError = node.FittingError(task, len(job.PodInfos) > 1)
+				fitError = node.FittingError(task, len(job.GetAllPodsMap()) > 1)
 			}
 		}
 	}

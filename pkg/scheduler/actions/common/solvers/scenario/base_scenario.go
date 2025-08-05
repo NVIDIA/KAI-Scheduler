@@ -44,7 +44,7 @@ func NewBaseScenario(
 		victimsJobsTaskGroups: make(map[common_info.PodGroupID][]*podgroup_info.PodGroupInfo),
 	}
 
-	for _, task := range pendingTasksAsJob.PodInfos {
+	for _, task := range pendingTasksAsJob.GetAllPodsMap() {
 		s.pendingTasks = append(s.pendingTasks, task)
 	}
 	for _, task := range victimsTasks {
@@ -53,7 +53,7 @@ func NewBaseScenario(
 	for index, recordedVictimJob := range recordedVictimsJobs {
 		s.recordedVictimsJobs[index] = recordedVictimJob
 		var tasks []*pod_info.PodInfo
-		for _, podInfo := range recordedVictimJob.PodInfos {
+		for _, podInfo := range recordedVictimJob.GetAllPodsMap() {
 			tasks = append(tasks, podInfo)
 		}
 		s.appendTasksAsVictimJob(tasks)
@@ -75,7 +75,7 @@ func (s *BaseScenario) RecordedVictimsTasks() []*pod_info.PodInfo {
 
 	var recordedVictimsTasks []*pod_info.PodInfo
 	for _, victimJob := range s.recordedVictimsJobs {
-		for _, podInfo := range victimJob.PodInfos {
+		for _, podInfo := range victimJob.GetAllPodsMap() {
 			recordedVictimsTasks = append(recordedVictimsTasks, podInfo)
 		}
 	}
@@ -129,7 +129,7 @@ func (s *BaseScenario) appendTasksAsVictimJob(tasks []*pod_info.PodInfo) {
 func (s *BaseScenario) GetVictimJobRepresentativeById(victimPodInfo *pod_info.PodInfo) *podgroup_info.PodGroupInfo {
 	jobsWithMatchingId := s.victimsJobsTaskGroups[victimPodInfo.Job]
 	for _, jobRepresentative := range jobsWithMatchingId {
-		for _, podFromRepresentative := range jobRepresentative.PodInfos {
+		for _, podFromRepresentative := range jobRepresentative.GetAllPodsMap() {
 			if victimPodInfo.UID == podFromRepresentative.UID {
 				return jobRepresentative
 			}
@@ -178,7 +178,7 @@ func (s *BaseScenario) GetPreemptor() *podgroup_info.PodGroupInfo {
 func (s *BaseScenario) GetVictims() map[common_info.PodGroupID]*api.VictimInfo {
 	for _, victim := range s.victims {
 		for i, task := range victim.Tasks {
-			ogTask := s.getJobForTask(task).PodInfos[task.UID]
+			ogTask := s.getJobForTask(task).GetAllPodsMap()[task.UID]
 			victim.Tasks[i] = ogTask
 		}
 	}
