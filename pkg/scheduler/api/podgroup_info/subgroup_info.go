@@ -27,7 +27,15 @@ func fromSubGroup(subGroup *v2alpha2.SubGroup) *SubGroupInfo {
 	return newSubGroupInfo(subGroup.Name, subGroup.MinMember)
 }
 
+func (sgi *SubGroupInfo) WithPodInfos(podInfos pod_info.PodsMap) *SubGroupInfo {
+	sgi.PodInfos = podInfos
+	return sgi
+}
+
 func (sgi *SubGroupInfo) assignTask(ti *pod_info.PodInfo) {
+	if sgi.PodInfos == nil {
+		sgi.PodInfos = pod_info.PodsMap{}
+	}
 	sgi.PodInfos[ti.UID] = ti
 }
 

@@ -74,7 +74,12 @@ func TestAddTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case01_uid,
 				Allocated: common_info.BuildResource("4000m", "4G"),
-				SubGroups: map[string]*SubGroupInfo{DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 0)},
+				SubGroups: map[string]*SubGroupInfo{DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+					case01_task1.UID: case01_task1,
+					case01_task2.UID: case01_task2,
+					case01_task3.UID: case01_task3,
+					case01_task4.UID: case01_task4,
+				})},
 				PodInfos: pod_info.PodsMap{
 					case01_task1.UID: case01_task1,
 					case01_task2.UID: case01_task2,
@@ -156,7 +161,11 @@ func TestDeleteTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case01_uid,
 				Allocated: common_info.BuildResource("3000m", "3G"),
-				SubGroups: map[string]*SubGroupInfo{DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 0)},
+				SubGroups: map[string]*SubGroupInfo{DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+					case01_task1.UID: case01_task1,
+					case01_task2.UID: case01_task2,
+					case01_task3.UID: case01_task3,
+				})},
 				PodInfos: pod_info.PodsMap{
 					case01_task1.UID: case01_task1,
 					case01_task2.UID: case01_task2,
@@ -179,7 +188,11 @@ func TestDeleteTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case02_uid,
 				Allocated: common_info.BuildResource("3000m", "3G"),
-				SubGroups: map[string]*SubGroupInfo{DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 0)},
+				SubGroups: map[string]*SubGroupInfo{DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+					case02_task1.UID: case02_task1,
+					case02_task2.UID: case02_task2,
+					case02_task3.UID: case02_task3,
+				})},
 				PodInfos: pod_info.PodsMap{
 					case02_task1.UID: case02_task1,
 					case02_task2.UID: case02_task2,

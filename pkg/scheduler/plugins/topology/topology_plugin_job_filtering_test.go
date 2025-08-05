@@ -896,6 +896,10 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					podgroup_info.DefaultSubGroup: {
 						Name:         podgroup_info.DefaultSubGroup,
 						MinAvailable: 2,
+						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {Name: "pod1", Status: pod_status.Pending},
+							"pod2": {Name: "pod2", Status: pod_status.Pending},
+						},
 					},
 				},
 				PodGroup: &enginev2alpha2.PodGroup{
@@ -970,6 +974,10 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					podgroup_info.DefaultSubGroup: {
 						Name:         podgroup_info.DefaultSubGroup,
 						MinAvailable: 2,
+						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {Name: "pod1", Status: pod_status.Pending},
+							"pod2": {Name: "pod2", Status: pod_status.Pending},
+						},
 					},
 				},
 				PodGroup: &enginev2alpha2.PodGroup{
@@ -1030,6 +1038,9 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					podgroup_info.DefaultSubGroup: {
 						Name:         podgroup_info.DefaultSubGroup,
 						MinAvailable: 1,
+						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {Name: "pod1", Status: pod_status.Pending},
+						},
 					},
 				},
 				PodGroup: &enginev2alpha2.PodGroup{
@@ -1082,6 +1093,11 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					podgroup_info.DefaultSubGroup: {
 						Name:         podgroup_info.DefaultSubGroup,
 						MinAvailable: 3,
+						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {Name: "pod1", Status: pod_status.Pending},
+							"pod2": {Name: "pod2", Status: pod_status.Pending},
+							"pod3": {Name: "pod3", Status: pod_status.Pending},
+						},
 					},
 				},
 				PodGroup: &enginev2alpha2.PodGroup{
@@ -1167,6 +1183,11 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					podgroup_info.DefaultSubGroup: {
 						Name:         podgroup_info.DefaultSubGroup,
 						MinAvailable: 2,
+						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {Name: "pod1", Status: pod_status.Running},
+							"pod2": {Name: "pod2", Status: pod_status.Pending},
+							"pod3": {Name: "pod3", Status: pod_status.Pending},
+						},
 					},
 				},
 				PodGroup: &enginev2alpha2.PodGroup{
@@ -1226,6 +1247,12 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					podgroup_info.DefaultSubGroup: {
 						Name:         podgroup_info.DefaultSubGroup,
 						MinAvailable: 4,
+						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {Name: "pod1", Status: pod_status.Pending},
+							"pod2": {Name: "pod2", Status: pod_status.Pending},
+							"pod3": {Name: "pod3", Status: pod_status.Pending},
+							"pod4": {Name: "pod4", Status: pod_status.Pending},
+						},
 					},
 				},
 				PodGroup: &enginev2alpha2.PodGroup{
