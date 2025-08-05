@@ -42,12 +42,14 @@ var _ = Describe("MinRuntime Plugin", func() {
 	// Helper function to create a PodGroupInfo with a specific last start timestamp
 	createPodGroup := func(uid common_info.PodGroupID, queue common_info.QueueID, lastStartTime *time.Time, minAvailable int32, podsCount int) *podgroup_info.PodGroupInfo {
 		pg := &podgroup_info.PodGroupInfo{
-			UID:             uid,
-			Queue:           queue,
-			DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable),
-			PodInfos:        make(pod_info.PodsMap),
-			PodStatusIndex:  make(map[pod_status.PodStatus]pod_info.PodsMap),
-			NodesFitErrors:  make(map[common_info.PodID]*common_info.FitErrors),
+			UID:   uid,
+			Queue: queue,
+			SubGroups: map[string]*podgroup_info.SubGroupInfo{
+				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable),
+			},
+			PodInfos:       make(pod_info.PodsMap),
+			PodStatusIndex: make(map[pod_status.PodStatus]pod_info.PodsMap),
+			NodesFitErrors: make(map[common_info.PodID]*common_info.FitErrors),
 		}
 
 		if lastStartTime != nil {
