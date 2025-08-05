@@ -69,6 +69,7 @@ func NewScheduler(
 		FullHierarchyFairness:       schedulerParams.FullHierarchyFairness,
 		NodeLevelScheduler:          schedulerParams.NodeLevelScheduler,
 		NumOfStatusRecordingWorkers: schedulerParams.NumOfStatusRecordingWorkers,
+		EnableUsageDataFetcher:      schedulerParams.EnableUsageDataFetcher,
 	}
 
 	scheduler := &Scheduler{

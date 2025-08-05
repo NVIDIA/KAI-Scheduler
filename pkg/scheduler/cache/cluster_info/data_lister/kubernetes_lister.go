@@ -4,6 +4,8 @@
 package data_lister
 
 import (
+	"fmt"
+
 	v1 "k8s.io/api/core/v1"
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
@@ -109,6 +111,10 @@ func (k *k8sLister) ListQueues() ([]*enginev2.Queue, error) {
 }
 
 func (k *k8sLister) ListResourceUsage() (*queue_info.ClusterUsage, error) {
+	if k.usageLister == nil {
+		return nil, fmt.Errorf("usage lister is not set")
+	}
+
 	usage, err := k.usageLister.GetResourceUsage()
 	if err != nil {
 		return nil, err
