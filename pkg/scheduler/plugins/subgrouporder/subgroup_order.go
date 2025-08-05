@@ -39,8 +39,8 @@ func SubGroupOrderFn(l, r interface{}) int {
 	rNumActiveTasks := rv.GetNumActiveAllocatedTasks()
 
 	// Prioritize SubGroup below minAvailable
-	lGangSatisfied := lNumActiveTasks >= int(lv.MinAvailable)
-	rGangSatisfied := rNumActiveTasks >= int(rv.MinAvailable)
+	lGangSatisfied := lNumActiveTasks >= int(lv.GetMinAvailable())
+	rGangSatisfied := rNumActiveTasks >= int(rv.GetMinAvailable())
 	if !lGangSatisfied && !rGangSatisfied {
 		return equalPrioritization
 	}
@@ -53,8 +53,8 @@ func SubGroupOrderFn(l, r interface{}) int {
 	}
 
 	// Above minAvailable prioritize SubGroup with lower allocation ratio
-	lAllocationRatio := float64(lNumActiveTasks) / float64(lv.MinAvailable)
-	rAllocationRatio := float64(rNumActiveTasks) / float64(rv.MinAvailable)
+	lAllocationRatio := float64(lNumActiveTasks) / float64(lv.GetMinAvailable())
+	rAllocationRatio := float64(rNumActiveTasks) / float64(rv.GetMinAvailable())
 	if lAllocationRatio < rAllocationRatio {
 		return lPrioritized
 	}

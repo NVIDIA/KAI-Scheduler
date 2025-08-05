@@ -22,13 +22,10 @@ func makeAllocatedPodInfo(subGroupName string, taskIndex int) *pod_info.PodInfo 
 }
 
 func makeSubGroupInfoWithAllocated(minAvailable int32, numAllocated int, name string) *podgroup_info.SubGroupInfo {
-	sg := &podgroup_info.SubGroupInfo{
-		MinAvailable: minAvailable,
-		PodInfos:     pod_info.PodsMap{},
-	}
+	sg := podgroup_info.NewSubGroupInfo(name, minAvailable)
 	for i := 0; i < numAllocated; i++ {
 		pod := makeAllocatedPodInfo(name, i)
-		sg.PodInfos[pod.UID] = pod
+		sg.AssignTask(pod)
 	}
 	return sg
 }

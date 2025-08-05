@@ -255,7 +255,7 @@ func (su *defaultStatusUpdater) recordJobNotReadyEvent(job *podgroup_info.PodGro
 		for _, subGroup := range job.SubGroups {
 			if !subGroup.IsReadyForScheduling() {
 				message += fmt.Sprintf(" Waiting for %d pods for SubGroup %s, currently %d exist, %d are gated.",
-					subGroup.MinAvailable, subGroup.Name, subGroup.GetNumAliveTasks(), subGroup.GetNumGatedTasks())
+					subGroup.GetMinAvailable(), subGroup.GetName(), subGroup.GetNumAliveTasks(), subGroup.GetNumGatedTasks())
 			}
 		}
 	}

@@ -137,7 +137,7 @@ func getPartialJobRepresentative(
 			)
 			continue
 		}
-		subGroup.MinAvailable = int32(minAvailable)
+		subGroup.SetMinAvailable(int32(minAvailable))
 	}
 
 	return jobRepresentative

@@ -564,9 +564,9 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 				},
 				SubGroups: map[string]*SubGroupInfo{
 					"sb-1": {
-						Name:         "sb-1",
-						MinAvailable: 2,
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						name:         "sb-1",
+						minAvailable: 2,
+						podInfos: map[common_info.PodID]*pod_info.PodInfo{
 							"111": pod_info.NewTaskInfo(
 								&v1.Pod{
 									ObjectMeta: metav1.ObjectMeta{
@@ -592,9 +592,9 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						},
 					},
 					"sb-2": {
-						Name:         "sb-2",
-						MinAvailable: 1,
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						name:         "sb-2",
+						minAvailable: 1,
+						podInfos: map[common_info.PodID]*pod_info.PodInfo{
 							"333": pod_info.NewTaskInfo(
 								&v1.Pod{
 									ObjectMeta: metav1.ObjectMeta{
@@ -654,9 +654,9 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 				},
 				SubGroups: map[string]*SubGroupInfo{
 					"sb-1": {
-						Name:         "sb-1",
-						MinAvailable: 2,
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						name:         "sb-1",
+						minAvailable: 2,
+						podInfos: map[common_info.PodID]*pod_info.PodInfo{
 							"111": pod_info.NewTaskInfo(
 								&v1.Pod{
 									ObjectMeta: metav1.ObjectMeta{
@@ -682,9 +682,9 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						},
 					},
 					"sb-2": {
-						Name:         "sb-2",
-						MinAvailable: 1,
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						name:         "sb-2",
+						minAvailable: 1,
+						podInfos: map[common_info.PodID]*pod_info.PodInfo{
 							"333": pod_info.NewTaskInfo(
 								&v1.Pod{
 									ObjectMeta: metav1.ObjectMeta{
@@ -755,9 +755,9 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 				},
 				SubGroups: map[string]*SubGroupInfo{
 					"sb-1": {
-						Name:         "sb-1",
-						MinAvailable: 2,
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						name:         "sb-1",
+						minAvailable: 2,
+						podInfos: map[common_info.PodID]*pod_info.PodInfo{
 							"111": pod_info.NewTaskInfo(
 								&v1.Pod{
 									ObjectMeta: metav1.ObjectMeta{
@@ -794,9 +794,9 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						},
 					},
 					"sb-2": {
-						Name:         "sb-2",
-						MinAvailable: 1,
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						name:         "sb-2",
+						minAvailable: 1,
+						podInfos: map[common_info.PodID]*pod_info.PodInfo{
 							"444": pod_info.NewTaskInfo(
 								&v1.Pod{
 									ObjectMeta: metav1.ObjectMeta{
@@ -856,9 +856,9 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 				},
 				SubGroups: map[string]*SubGroupInfo{
 					"sb-1": {
-						Name:         "sb-1",
-						MinAvailable: 2,
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						name:         "sb-1",
+						minAvailable: 2,
+						podInfos: map[common_info.PodID]*pod_info.PodInfo{
 							"111": pod_info.NewTaskInfo(
 								&v1.Pod{
 									ObjectMeta: metav1.ObjectMeta{
@@ -873,9 +873,9 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						},
 					},
 					"sb-2": {
-						Name:         "sb-2",
-						MinAvailable: 1,
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+						name:         "sb-2",
+						minAvailable: 1,
+						podInfos: map[common_info.PodID]*pod_info.PodInfo{
 							"333": pod_info.NewTaskInfo(
 								&v1.Pod{
 									ObjectMeta: metav1.ObjectMeta{

@@ -256,7 +256,7 @@ func (ssn *Session) SubGroupOrderFn(l, r interface{}) bool {
 			return comparison < 0
 		}
 	}
-	return lSubGroup.Name < rSubGroup.Name
+	return lSubGroup.GetName() < rSubGroup.GetName()
 }
 
 func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo) bool {
