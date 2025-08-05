@@ -72,9 +72,10 @@ func TestAddTaskInfo(t *testing.T) {
 			uid:  case01_uid,
 			pods: []*v1.Pod{case01_pod1, case01_pod2, case01_pod3, case01_pod4},
 			expected: &PodGroupInfo{
-				UID:       case01_uid,
-				Allocated: common_info.BuildResource("4000m", "4G"),
-				SubGroups: map[string]*SubGroupInfo{},
+				UID:             case01_uid,
+				DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 0),
+				Allocated:       common_info.BuildResource("4000m", "4G"),
+				SubGroups:       map[string]*SubGroupInfo{},
 				PodInfos: pod_info.PodsMap{
 					case01_task1.UID: case01_task1,
 					case01_task2.UID: case01_task2,
@@ -154,9 +155,10 @@ func TestDeleteTaskInfo(t *testing.T) {
 			pods:   []*v1.Pod{case01_pod1, case01_pod2, case01_pod3},
 			rmPods: []*v1.Pod{case01_pod2},
 			expected: &PodGroupInfo{
-				UID:       case01_uid,
-				Allocated: common_info.BuildResource("3000m", "3G"),
-				SubGroups: map[string]*SubGroupInfo{},
+				UID:             case01_uid,
+				DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 0),
+				Allocated:       common_info.BuildResource("3000m", "3G"),
+				SubGroups:       map[string]*SubGroupInfo{},
 				PodInfos: pod_info.PodsMap{
 					case01_task1.UID: case01_task1,
 					case01_task2.UID: case01_task2,
@@ -177,9 +179,10 @@ func TestDeleteTaskInfo(t *testing.T) {
 			pods:   []*v1.Pod{case02_pod1, case02_pod2, case02_pod3},
 			rmPods: []*v1.Pod{case02_pod2},
 			expected: &PodGroupInfo{
-				UID:       case02_uid,
-				Allocated: common_info.BuildResource("3000m", "3G"),
-				SubGroups: map[string]*SubGroupInfo{},
+				UID:             case02_uid,
+				DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 0),
+				Allocated:       common_info.BuildResource("3000m", "3G"),
+				SubGroups:       map[string]*SubGroupInfo{},
 				PodInfos: pod_info.PodsMap{
 					case02_task1.UID: case02_task1,
 					case02_task2.UID: case02_task2,
@@ -525,8 +528,8 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 		{
 			name: "job with subgroups - all ready",
 			job: &PodGroupInfo{
-				UID:          "test-pg",
-				MinAvailable: 3,
+				UID:             "test-pg",
+				DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 3),
 				PodInfos: pod_info.PodsMap{
 					"111": pod_info.NewTaskInfo(
 						&v1.Pod{
@@ -615,8 +618,8 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 		{
 			name: "job with subgroups - some already running",
 			job: &PodGroupInfo{
-				UID:          "test-pg",
-				MinAvailable: 3,
+				UID:             "test-pg",
+				DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 3),
 				PodInfos: pod_info.PodsMap{
 					"111": pod_info.NewTaskInfo(
 						&v1.Pod{
@@ -705,8 +708,8 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 		{
 			name: "job with subgroups - more then minAvailable",
 			job: &PodGroupInfo{
-				UID:          "test-pg",
-				MinAvailable: 3,
+				UID:             "test-pg",
+				DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 3),
 				PodInfos: pod_info.PodsMap{
 					"111": pod_info.NewTaskInfo(
 						&v1.Pod{
@@ -817,8 +820,8 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 		{
 			name: "job with subgroups - one is not ready",
 			job: &PodGroupInfo{
-				UID:          "test-pg",
-				MinAvailable: 3,
+				UID:             "test-pg",
+				DefaultSubGroup: newSubGroupInfo(DefaultSubGroup, 3),
 				PodInfos: pod_info.PodsMap{
 					"111": pod_info.NewTaskInfo(
 						&v1.Pod{
@@ -897,7 +900,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 
 	for _, test := range tests {
 		if test.minAvailable != nil {
-			test.job.MinAvailable = *test.minAvailable
+			test.job.SetDefaultMinAvailable(*test.minAvailable)
 		}
 		result := test.job.IsReadyForScheduling()
 		if result != test.expected {
