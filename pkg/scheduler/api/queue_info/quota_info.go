@@ -9,6 +9,8 @@ type QueueQuota struct {
 	Memory ResourceQuota `json:"memory,omitempty"`
 }
 
+type QueueUsage QueueQuota
+
 type ResourceQuota struct {
 	// +optional
 	Quota float64 `json:"deserved"`

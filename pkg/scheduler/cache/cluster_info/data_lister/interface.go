@@ -12,6 +12,8 @@ import (
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 )
 
 type DataLister interface {
@@ -29,4 +31,5 @@ type DataLister interface {
 	ListBindRequests() ([]*schedulingv1alpha2.BindRequest, error)
 	ListConfigMaps() ([]*v1.ConfigMap, error)
 	ListTopologies() ([]*v1alpha1.Topology, error)
+	ListResourceUsage() (map[common_info.QueueID]*queue_info.QueueUsage, error)
 }
