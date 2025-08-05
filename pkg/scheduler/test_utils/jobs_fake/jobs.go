@@ -128,7 +128,7 @@ func BuildJobInfo(
 		NodesFitErrors:    map[common_info.PodID]*common_info.FitErrors{},
 		Queue:             queueUID,
 		CreationTimestamp: metav1.Time{Time: jobCreationTime},
-		MinAvailable:      minAvailable,
+		DefaultSubGroup:   podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable),
 		SubGroups:         subGroups,
 		PodGroup: &enginev2alpha2.PodGroup{
 			ObjectMeta: metav1.ObjectMeta{
