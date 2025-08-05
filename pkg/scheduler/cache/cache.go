@@ -90,6 +90,7 @@ type SchedulerCacheParams struct {
 	NodeLevelScheduler          bool
 	AllowConsolidatingReclaim   bool
 	NumOfStatusRecordingWorkers int
+	EnableUsageDataFetcher      bool
 }
 
 type SchedulerCache struct {
@@ -160,7 +161,9 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 	sc.podLister = sc.informerFactory.Core().V1().Pods().Lister()
 	sc.podGroupLister = sc.kubeAiSchedulerInformerFactory.Scheduling().V2alpha2().PodGroups().Lister()
 
-	sc.usageLister = usagedb.NewUsageLister(sc.usageDBClient, nil, nil)
+	if schedulerCacheParams.EnableUsageDataFetcher {
+		sc.usageLister = usagedb.NewUsageLister(sc.usageDBClient, nil, nil)
+	}
 
 	clusterInfo, err := cluster_info.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, sc.usageLister, sc.schedulingNodePoolParams,
 		sc.restrictNodeScheduling, &sc.K8sClusterPodAffinityInfo, sc.scheduleCSIStorage, sc.fullHierarchyFairness, sc.StatusUpdater)
@@ -195,14 +198,20 @@ func (sc *SchedulerCache) Run(stopCh <-chan struct{}) {
 	sc.kubeAiSchedulerInformerFactory.Start(stopCh)
 	sc.kueueInformerFactory.Start(stopCh)
 	sc.StatusUpdater.Run(stopCh)
-	sc.usageLister.Start(stopCh)
+
+	if sc.usageLister != nil {
+		sc.usageLister.Start(stopCh)
+	}
 }
 
 func (sc *SchedulerCache) WaitForCacheSync(stopCh <-chan struct{}) {
 	sc.informerFactory.WaitForCacheSync(stopCh)
 	sc.kubeAiSchedulerInformerFactory.WaitForCacheSync(stopCh)
 	sc.kueueInformerFactory.WaitForCacheSync(stopCh)
-	sc.usageLister.WaitForCacheSync(stopCh)
+
+	if sc.usageLister != nil {
+		sc.usageLister.WaitForCacheSync(stopCh)
+	}
 }
 
 func (sc *SchedulerCache) Evict(evictedPod *v1.Pod, evictedPodGroup *podgroup_info.PodGroupInfo,

@@ -75,6 +75,7 @@ func main() {
 		NodeLevelScheduler:          snapshot.SchedulerParams.NodeLevelScheduler,
 		AllowConsolidatingReclaim:   snapshot.SchedulerParams.AllowConsolidatingReclaim,
 		NumOfStatusRecordingWorkers: snapshot.SchedulerParams.NumOfStatusRecordingWorkers,
+		EnableUsageDataFetcher:      snapshot.SchedulerParams.EnableUsageDataFetcher,
 	}
 
 	schedulerCache := cache.New(schedulerCacheParams)
