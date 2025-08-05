@@ -31,16 +31,33 @@ func GetTasksToAllocate(
 		return podGroupInfo.tasksToAllocate
 	}
 
-	taskPriorityQueue := getTasksPriorityQueue(podGroupInfo, taskOrderFn, isRealAllocation)
-	maxNumOfTasksToAllocate := getNumOfTasksToAllocate(podGroupInfo, taskPriorityQueue.Len())
-
 	var tasksToAllocate []*pod_info.PodInfo
-	for !taskPriorityQueue.Empty() && (len(tasksToAllocate) < maxNumOfTasksToAllocate) {
-		nextPod := taskPriorityQueue.Pop().(*pod_info.PodInfo)
-		tasksToAllocate = append(tasksToAllocate, nextPod)
+	if len(podGroupInfo.SubGroups) > 0 {
+		priorityQueueMap := getTasksPriorityQueuePerSubGroup(podGroupInfo, taskOrderFn, isRealAllocation)
+		maxNumOfTasksToAllocateMap := getNumOfTasksToAllocatePerSubGroup(podGroupInfo)
+		for subGroupName := range podGroupInfo.SubGroups {
+			taskPriorityQueue := priorityQueueMap[subGroupName]
+			maxNumOfTasksToAllocate := maxNumOfTasksToAllocateMap[subGroupName]
+			subGroupTasks := getTasksFromQueue(taskPriorityQueue, maxNumOfTasksToAllocate)
+			tasksToAllocate = append(tasksToAllocate, subGroupTasks...)
+		}
+
+	} else {
+		taskPriorityQueue := getTasksPriorityQueue(podGroupInfo, taskOrderFn, isRealAllocation)
+		maxNumOfTasksToAllocate := getNumOfTasksToAllocate(podGroupInfo)
+		tasksToAllocate = getTasksFromQueue(taskPriorityQueue, maxNumOfTasksToAllocate)
 	}
 
 	podGroupInfo.tasksToAllocate = tasksToAllocate
+	return tasksToAllocate
+}
+
+func getTasksFromQueue(priorityQueue *scheduler_util.PriorityQueue, maxNumTasks int) []*pod_info.PodInfo {
+	var tasksToAllocate []*pod_info.PodInfo
+	for !priorityQueue.Empty() && (len(tasksToAllocate) < maxNumTasks) {
+		nextPod := priorityQueue.Pop().(*pod_info.PodInfo)
+		tasksToAllocate = append(tasksToAllocate, nextPod)
+	}
 	return tasksToAllocate
 }
 
@@ -102,15 +119,39 @@ func getTasksPriorityQueue(
 	return podPriorityQueue
 }
 
-func getNumOfTasksToAllocate(podGroupInfo *PodGroupInfo, numOfTasksWaitingAllocation int) int {
-	allocatedTasks := int32(podGroupInfo.GetActiveAllocatedTasksCount())
-
-	var maxTasksToAllocate int32
-	if allocatedTasks >= podGroupInfo.MinAvailable {
-		maxTasksToAllocate = 1
-	} else {
-		maxTasksToAllocate = podGroupInfo.MinAvailable
+func getTasksPriorityQueuePerSubGroup(
+	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
+) map[string]*scheduler_util.PriorityQueue {
+	priorityQueuesMap := map[string]*scheduler_util.PriorityQueue{}
+	for name, subGroup := range podGroupInfo.SubGroups {
+		priorityQueue := scheduler_util.NewPriorityQueue(taskOrderFn, scheduler_util.QueueCapacityInfinite)
+		for _, task := range subGroup.PodInfos {
+			if task.ShouldAllocate(isRealAllocation) {
+				priorityQueue.Push(task)
+			}
+		}
+		priorityQueuesMap[name] = priorityQueue
 	}
+	return priorityQueuesMap
+}
 
-	return int(math.Min(float64(maxTasksToAllocate), float64(numOfTasksWaitingAllocation)))
+func getNumOfTasksToAllocate(podGroupInfo *PodGroupInfo) int {
+	numAllocatedTasks := podGroupInfo.GetActiveAllocatedTasksCount()
+	if numAllocatedTasks >= int(podGroupInfo.MinAvailable) {
+		return 1
+	}
+	return int(podGroupInfo.MinAvailable) - numAllocatedTasks
+}
+
+func getNumOfTasksToAllocatePerSubGroup(podGroupInfo *PodGroupInfo) map[string]int {
+	maxTasksToAllocate := map[string]int{}
+	for name, subGroup := range podGroupInfo.SubGroups {
+		numAllocatedTasks := subGroup.GetNumActiveAllocatedTasks()
+		if numAllocatedTasks >= int(subGroup.MinAvailable) {
+			maxTasksToAllocate[name] = int(math.Min(float64(subGroup.GetNumPendingTasks()), 1))
+		} else {
+			maxTasksToAllocate[name] = int(subGroup.MinAvailable) - numAllocatedTasks
+		}
+	}
+	return maxTasksToAllocate
 }

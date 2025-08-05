@@ -27,6 +27,8 @@ func New() *KaiAdmissionPlugins {
 }
 
 func (bp *KaiAdmissionPlugins) RegisterPlugin(plugin Plugin) {
+	logger := log.FromContext(context.Background())
+	logger.Info("registering plugin", "plugin", plugin.Name())
 	bp.plugins = append(bp.plugins, plugin)
 }
 

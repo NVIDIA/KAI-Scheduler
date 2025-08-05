@@ -49,7 +49,6 @@ func (cpm *podMutator) Default(ctx context.Context, obj runtime.Object) error {
 	}
 
 	namespace, err := extractMutatingPodTargetNamespace(ctx, pod)
-	pod.Namespace = namespace
 	if err != nil {
 		return err
 	}

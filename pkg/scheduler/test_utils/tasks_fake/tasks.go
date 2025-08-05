@@ -25,6 +25,7 @@ const (
 type TestTaskBasic struct {
 	Name                   string
 	GPUGroups              []string
+	SubGroupName           string
 	RequiredGPUs           *int64
 	State                  pod_status.PodStatus
 	NodeName               string // Relevant if job is running
