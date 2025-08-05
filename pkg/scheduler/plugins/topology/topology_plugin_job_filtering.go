@@ -9,14 +9,15 @@ import (
 	"sort"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/types"
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
+
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/scores"
-	"k8s.io/apimachinery/pkg/types"
-	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 )
 
 type topologyStateData struct {
@@ -95,12 +96,12 @@ func (t *topologyPlugin) getJobTopology(job *podgroup_info.PodGroupInfo) (*Topol
 }
 
 func (t *topologyPlugin) calcTreeAllocatable(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo) (int, error) {
-	jobAllocationMetaData, err := initJobAllocationMetadataStruct(job, t)
+	jobAllocationData, err := initJobAllocationMetadataStruct(job, t)
 	if err != nil {
 		return 0, err
 	}
 
-	return t.calcSubTreeAllocatable(jobAllocationMetaData, topologyTree.Root)
+	return t.calcSubTreeAllocatable(jobAllocationData, topologyTree.Root)
 }
 
 func initJobAllocationMetadataStruct(job *podgroup_info.PodGroupInfo, t *topologyPlugin) (*jobAllocationMetaData, error) {
@@ -123,26 +124,28 @@ func initJobAllocationMetadataStruct(job *podgroup_info.PodGroupInfo, t *topolog
 	return jobAllocationData, nil
 }
 
-func (t *topologyPlugin) calcSubTreeAllocatable(jobAllocationData *jobAllocationMetaData, rootDomain *TopologyDomainInfo) (int, error) {
-	if rootDomain == nil {
+func (t *topologyPlugin) calcSubTreeAllocatable(
+	jobAllocationData *jobAllocationMetaData, domain *TopologyDomainInfo,
+) (int, error) {
+	if domain == nil {
 		return 0, nil
 	}
 
-	if len(rootDomain.Children) == 0 {
-		for _, node := range rootDomain.Nodes {
-			rootDomain.AllocatablePods += calcNodeAccommodation(jobAllocationData, node)
+	if len(domain.Children) == 0 {
+		for _, node := range domain.Nodes {
+			domain.AllocatablePods += calcNodeAccommodation(jobAllocationData, node)
 		}
-		return rootDomain.AllocatablePods, nil
+		return domain.AllocatablePods, nil
 	}
 
-	for _, child := range rootDomain.Children {
+	for _, child := range domain.Children {
 		childAllocatable, err := t.calcSubTreeAllocatable(jobAllocationData, child)
 		if err != nil {
 			return 0, err
 		}
-		rootDomain.AllocatablePods += childAllocatable
+		domain.AllocatablePods += childAllocatable
 	}
-	return rootDomain.AllocatablePods, nil
+	return domain.AllocatablePods, nil
 }
 
 func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *node_info.NodeInfo) int {
@@ -154,7 +157,7 @@ func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *n
 			break
 		}
 	}
-	// Add more to jobResourcesAllocationsRepresentors until node cannot accommodate any more pods
+	// Add more to jobResourcesAllocationsRepresenters until the node cannot accommodate any more pods
 	if allocatablePodsCount == len(jobAllocationMetaData.allocationTestPods) {
 		for i := allocatablePodsCount; i < len(jobAllocationMetaData.tasksToAllocate); i++ {
 			latestTestPod := jobAllocationMetaData.allocationTestPods[len(jobAllocationMetaData.allocationTestPods)-1]
