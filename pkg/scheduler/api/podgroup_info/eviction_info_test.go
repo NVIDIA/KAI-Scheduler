@@ -27,7 +27,9 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 					"pod-b": simpleTask("pod-b", "", pod_status.Running),
 					"pod-c": simpleTask("pod-c", "", pod_status.Running),
 				},
-				DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1),
+				SubGroups: map[string]*SubGroupInfo{
+					DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1),
+				},
 			},
 			expectedHasMoreTasks: true,
 			numExpectTasks:       1,
@@ -35,8 +37,10 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 		{
 			name: "WithoutSubGroups_EmptyQueue",
 			job: &PodGroupInfo{
-				PodInfos:        pod_info.PodsMap{},
-				DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1),
+				PodInfos: pod_info.PodsMap{},
+				SubGroups: map[string]*SubGroupInfo{
+					DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1),
+				},
 			},
 			expectedHasMoreTasks: false,
 			numExpectTasks:       0,
@@ -48,7 +52,9 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 					"pod-a": simpleTask("pod-a", "", pod_status.Running),
 					"pod-b": simpleTask("pod-b", "", pod_status.Running),
 				},
-				DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 2),
+				SubGroups: map[string]*SubGroupInfo{
+					DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 2),
+				},
 			},
 			expectedHasMoreTasks: false,
 			numExpectTasks:       2,
@@ -80,10 +86,10 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 
 				return &PodGroupInfo{
 					SubGroups: map[string]*SubGroupInfo{
-						"sg1": sub1,
-						"sg2": sub2,
+						DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 2),
+						"sg1":           sub1,
+						"sg2":           sub2,
 					},
-					DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 2),
 				}
 			}(),
 			expectedHasMoreTasks: false,

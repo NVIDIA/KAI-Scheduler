@@ -659,10 +659,12 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 		{
 			name: "basic stale pod group",
 			job: &podgroup_info.PodGroupInfo{
-				Name:            "job-pg",
-				Namespace:       "job-ns",
-				UID:             "job-uid",
-				DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 5),
+				Name:      "job-pg",
+				Namespace: "job-ns",
+				UID:       "job-uid",
+				SubGroups: map[string]*podgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 5),
+				},
 				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
 					"pod-1": {
 						Name:   "pod-1",
@@ -679,11 +681,11 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 		{
 			name: "stale pod group with subgroups",
 			job: &podgroup_info.PodGroupInfo{
-				Name:            "job-pg",
-				Namespace:       "job-ns",
-				UID:             "job-uid",
-				DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 3),
+				Name:      "job-pg",
+				Namespace: "job-ns",
+				UID:       "job-uid",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 3),
 					"sub-group-0": func() *podgroup_info.SubGroupInfo {
 						subGroup := podgroup_info.NewSubGroupInfo("sub-group-0", 1)
 						subGroup.AssignTask(&pod_info.PodInfo{UID: "pod-1", Status: pod_status.Running})

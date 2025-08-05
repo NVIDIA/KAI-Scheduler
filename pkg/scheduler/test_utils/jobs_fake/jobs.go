@@ -109,6 +109,8 @@ func BuildJobInfo(
 	if subGroups == nil {
 		subGroups = map[string]*podgroup_info.SubGroupInfo{}
 	}
+	subGroups[podgroup_info.DefaultSubGroup] = podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable)
+
 	for _, taskInfo := range taskInfos {
 		if len(taskInfo.SubGroupName) > 0 {
 			subGroup := subGroups[taskInfo.SubGroupName]
@@ -128,7 +130,6 @@ func BuildJobInfo(
 		NodesFitErrors:    map[common_info.PodID]*common_info.FitErrors{},
 		Queue:             queueUID,
 		CreationTimestamp: metav1.Time{Time: jobCreationTime},
-		DefaultSubGroup:   podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable),
 		SubGroups:         subGroups,
 		PodGroup: &enginev2alpha2.PodGroup{
 			ObjectMeta: metav1.ObjectMeta{
