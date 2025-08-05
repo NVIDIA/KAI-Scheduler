@@ -21,7 +21,6 @@ import (
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 
@@ -109,8 +108,13 @@ func (k *k8sLister) ListQueues() ([]*enginev2.Queue, error) {
 	return k.queueLister.List(k.partitionSelector)
 }
 
-func (k *k8sLister) ListResourceUsage() (map[common_info.QueueID]*queue_info.QueueUsage, error) {
-	return k.usageLister.GetResourceUsage()
+func (k *k8sLister) ListResourceUsage() (*queue_info.ClusterUsage, error) {
+	usage, err := k.usageLister.GetResourceUsage()
+	if err != nil {
+		return nil, err
+	}
+
+	return usage, nil
 }
 
 // +kubebuilder:rbac:groups="scheduling.k8s.io",resources=priorityclasses,verbs=get;list;watch

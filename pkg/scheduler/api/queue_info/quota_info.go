@@ -3,6 +3,8 @@
 
 package queue_info
 
+import "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+
 type QueueQuota struct {
 	GPU    ResourceQuota `json:"gpu,omitempty"`
 	CPU    ResourceQuota `json:"cpu,omitempty"`
@@ -10,6 +12,17 @@ type QueueQuota struct {
 }
 
 type QueueUsage QueueQuota
+type ClusterUsage struct {
+	Cluster QueueUsage                          `json:"cluster"`
+	Queues  map[common_info.QueueID]*QueueUsage `json:"queues"`
+}
+
+func NewClusterUsage() *ClusterUsage {
+	return &ClusterUsage{
+		Cluster: QueueUsage{},
+		Queues:  make(map[common_info.QueueID]*QueueUsage),
+	}
+}
 
 type ResourceQuota struct {
 	// +optional

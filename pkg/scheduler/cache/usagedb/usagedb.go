@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
@@ -16,12 +15,12 @@ import (
 var defaultFetchInterval = 1 * time.Minute
 
 type Interface interface {
-	GetResourceUsage() (map[common_info.QueueID]*queue_info.QueueUsage, error)
+	GetResourceUsage() (*queue_info.ClusterUsage, error)
 }
 
 type UsageLister struct {
 	client             Interface
-	lastUsageData      map[common_info.QueueID]*queue_info.QueueUsage
+	lastUsageData      *queue_info.ClusterUsage
 	lastUsageDataMutex sync.RWMutex
 	lastUsageDataTime  *time.Time
 	stopCh             <-chan struct{}
@@ -43,7 +42,7 @@ func NewUsageLister(client Interface, fetchInterval, stalenessPeriod *time.Durat
 
 	return &UsageLister{
 		client:          client,
-		lastUsageData:   make(map[common_info.QueueID]*queue_info.QueueUsage),
+		lastUsageData:   queue_info.NewClusterUsage(),
 		fetchInterval:   *fetchInterval,
 		stalenessPeriod: *stalenessPeriod,
 	}
@@ -51,7 +50,7 @@ func NewUsageLister(client Interface, fetchInterval, stalenessPeriod *time.Durat
 
 // GetResourceUsage returns the last known resource usage data.
 // If the data is stale, an error is returned, but the most recent data is still returned.
-func (l *UsageLister) GetResourceUsage() (map[common_info.QueueID]*queue_info.QueueUsage, error) {
+func (l *UsageLister) GetResourceUsage() (*queue_info.ClusterUsage, error) {
 	l.lastUsageDataMutex.RLock()
 	defer l.lastUsageDataMutex.RUnlock()
 
@@ -106,7 +105,7 @@ func (l *UsageLister) WaitForCacheSync(stopCh <-chan struct{}) bool {
 			return false
 		case <-ticker.C:
 			l.lastUsageDataMutex.RLock()
-			hasData := len(l.lastUsageData) > 0
+			hasData := l.lastUsageData != nil
 			l.lastUsageDataMutex.RUnlock()
 
 			if hasData {
