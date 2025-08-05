@@ -57,7 +57,7 @@ func handleStaleJob(ssn *framework.Session, job *podgroup_info.PodGroupInfo) {
 	job.StalenessInfo.Stale = true
 
 	var tasksToEvict []*pod_info.PodInfo
-	for _, task := range job.PodInfos {
+	for _, task := range job.GetAllPodsMap() {
 		if pod_status.IsActiveAllocatedStatus(task.Status) {
 			tasksToEvict = append(tasksToEvict, task)
 		} else {

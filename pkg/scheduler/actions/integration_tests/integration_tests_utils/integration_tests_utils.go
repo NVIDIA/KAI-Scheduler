@@ -89,7 +89,7 @@ func runSchedulerOneRound(testMetadata *TestTopologyMetadata, controller *Contro
 		jobId := common_info.PodGroupID(jobMetadata.Name)
 		job := (*ssn).PodGroupInfos[jobId]
 		for taskId, taskMetadata := range jobMetadata.Tasks {
-			task := job.PodInfos[common_info.PodID(fmt.Sprintf("%s-%d", jobId, taskId))]
+			task := job.GetAllPodsMap()[common_info.PodID(fmt.Sprintf("%s-%d", jobId, taskId))]
 			switch task.Status {
 			case pod_status.Releasing:
 				if jobMetadata.DeleteJobInTest {
