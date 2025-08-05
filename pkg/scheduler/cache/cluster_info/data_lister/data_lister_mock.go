@@ -15,7 +15,6 @@ import (
 	v1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	v2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	common_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	queue_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
@@ -229,10 +228,10 @@ func (mr *MockDataListerMockRecorder) ListQueues() *gomock.Call {
 }
 
 // ListResourceUsage mocks base method.
-func (m *MockDataLister) ListResourceUsage() (map[common_info.QueueID]*queue_info.QueueUsage, error) {
+func (m *MockDataLister) ListResourceUsage() (*queue_info.ClusterUsage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListResourceUsage")
-	ret0, _ := ret[0].(map[common_info.QueueID]*queue_info.QueueUsage)
+	ret0, _ := ret[0].(*queue_info.ClusterUsage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
