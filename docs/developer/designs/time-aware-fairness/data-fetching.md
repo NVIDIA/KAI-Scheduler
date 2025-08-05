@@ -1,4 +1,4 @@
-# Time Aware Fairness – High-Level Design
+# Usage data fetching – High-Level Design
 
 > Note: *Goals, non-goals, and detailed motivation are captured in* `time-aware-fairness.md`. The focus of this document is the **system architecture** and **integration points** required to implement the feature.
 
