@@ -24,7 +24,8 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 		return err
 	}
 	if topologyTree == nil {
-		return nil
+		return fmt.Errorf("matching topology tree was not found for job %s, workload topology name: %s",
+			job.PodGroup.Name, job.PodGroup.Spec.TopologyConstraint.Topology)
 	}
 
 	// Calc tree job allocation data
@@ -33,13 +34,12 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 		return err
 	}
 
-	// Clean allocation data from the tree
+	// Clear allocation data from the tree
 	for _, levelDomains := range topologyTree.DomainsByLevel {
 		for _, domain := range levelDomains {
 			domain.AllocatablePods = 0
 		}
 	}
-
 	return nil
 }
 
@@ -49,20 +49,16 @@ func (t *topologyPlugin) getJobTopology(job *podgroup_info.PodGroupInfo) (*Topol
 		return nil, nil
 	}
 	topologyTree := t.TopologyTrees[jobTopologyName]
-	if topologyTree == nil {
-		return nil, fmt.Errorf("matching topology tree haven't been found for job %s, workload topology name: %s",
-			job.PodGroup.Name, jobTopologyName)
-	}
 	return topologyTree, nil
 }
 
 func (t *topologyPlugin) calcTreeAllocatable(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo) (int, error) {
-	jobAllocationMetaData, err := initJobAllocationMetadataStruct(job, t)
+	jobAllocationData, err := initJobAllocationMetadataStruct(job, t)
 	if err != nil {
 		return 0, err
 	}
 
-	return t.calcSubTreeAllocatable(jobAllocationMetaData, topologyTree.Root)
+	return t.calcSubTreeAllocatable(jobAllocationData, topologyTree.Root)
 }
 
 func initJobAllocationMetadataStruct(job *podgroup_info.PodGroupInfo, t *topologyPlugin) (*jobAllocationMetaData, error) {
@@ -85,55 +81,56 @@ func initJobAllocationMetadataStruct(job *podgroup_info.PodGroupInfo, t *topolog
 	return jobAllocationData, nil
 }
 
-func (t *topologyPlugin) calcSubTreeAllocatable(jobAllocationData *jobAllocationMetaData, rootDomain *TopologyDomainInfo) (int, error) {
-	if rootDomain == nil {
+func (t *topologyPlugin) calcSubTreeAllocatable(
+	jobAllocationData *jobAllocationMetaData, domain *TopologyDomainInfo,
+) (int, error) {
+	if domain == nil {
 		return 0, nil
 	}
 
-	if len(rootDomain.Children) == 0 {
-		for _, node := range rootDomain.Nodes {
-			rootDomain.AllocatablePods += calcNodeAccomedation(jobAllocationData, node)
+	if len(domain.Children) == 0 {
+		for _, node := range domain.Nodes {
+			domain.AllocatablePods += calcNodeAccommodation(jobAllocationData, node)
 		}
-		return rootDomain.AllocatablePods, nil
+		return domain.AllocatablePods, nil
 	}
 
-	for _, child := range rootDomain.Children {
-		childAllocateable, err := t.calcSubTreeAllocatable(jobAllocationData, child)
+	for _, child := range domain.Children {
+		childAllocatable, err := t.calcSubTreeAllocatable(jobAllocationData, child)
 		if err != nil {
 			return 0, err
 		}
-		rootDomain.AllocatablePods += childAllocateable
+		domain.AllocatablePods += childAllocatable
 	}
-	return rootDomain.AllocatablePods, nil
+	return domain.AllocatablePods, nil
 }
 
-func calcNodeAccomedation(jobAllocationMetaData *jobAllocationMetaData, node *node_info.NodeInfo) int {
-	allocateablePodsCount := 0
+func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *node_info.NodeInfo) int {
+	allocatablePodsCount := 0
 	for _, resourceRepresentorPod := range jobAllocationMetaData.allocationTestPods {
-		if node.IsTaskAllocatable(resourceRepresentorPod) {
-			allocateablePodsCount++
-		} else {
+		if !node.IsTaskAllocatable(resourceRepresentorPod) {
 			break
 		}
+		allocatablePodsCount++
 	}
-	// Add more to jobResourcesAllocationsRepresentors until node cannot accommodate any more pods
-	if allocateablePodsCount == len(jobAllocationMetaData.allocationTestPods) {
-		for i := allocateablePodsCount; i < len(jobAllocationMetaData.tasksToAllocate); i++ {
+	// Add more to jobResourcesAllocationsRepresenters until the node cannot accommodate any more pods
+	if allocatablePodsCount == len(jobAllocationMetaData.allocationTestPods) {
+		for i := allocatablePodsCount; i < len(jobAllocationMetaData.tasksToAllocate); i++ {
 			latestTestPod := jobAllocationMetaData.allocationTestPods[len(jobAllocationMetaData.allocationTestPods)-1]
 
 			iAllocationsTestPod := &pod_info.PodInfo{
-				Name:   fmt.Sprintf("%d-pods-resources", allocateablePodsCount+1),
+				Name:   fmt.Sprintf("%d-pods-resources", allocatablePodsCount+1),
 				ResReq: calcNextAllocationTestPodResources(latestTestPod.ResReq, jobAllocationMetaData.maxPodResources),
 			}
 			jobAllocationMetaData.allocationTestPods = append(jobAllocationMetaData.allocationTestPods, iAllocationsTestPod)
 			if node.IsTaskAllocatable(iAllocationsTestPod) {
-				allocateablePodsCount++
+				allocatablePodsCount++
 			} else {
 				break
 			}
 		}
 	}
-	return allocateablePodsCount
+	return allocatablePodsCount
 }
 
 func calcNextAllocationTestPodResources(previousTestResources, maxPodResources *resource_info.ResourceRequirements) *resource_info.ResourceRequirements {
