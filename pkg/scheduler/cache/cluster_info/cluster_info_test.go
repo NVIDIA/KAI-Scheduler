@@ -832,9 +832,12 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 				},
 			},
@@ -886,9 +889,12 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 				},
 			},
@@ -910,9 +916,12 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 				},
 			},
@@ -941,9 +950,12 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 				},
 			},
@@ -1030,11 +1042,12 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 3,
-					},
 					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 3,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 						"SubGroup-0": {
 							Name:         "SubGroup-0",
 							MinAvailable: 1,
@@ -1082,9 +1095,9 @@ func TestSnapshotPodGroups(t *testing.T) {
 			assert.Equal(t, expected.Queue, pg.Queue)
 			assert.Equal(t, expected.GetDefaultMinAvailable(), pg.GetDefaultMinAvailable())
 
-			assert.Equal(t, len(expected.SubGroups), len(pg.SubGroups))
-			for _, expectedSubGroup := range expected.SubGroups {
-				for _, subGroup := range pg.SubGroups {
+			assert.Equal(t, len(expected.GetRealSubGroupInfo()), len(pg.GetRealSubGroupInfo()))
+			for _, expectedSubGroup := range expected.GetRealSubGroupInfo() {
+				for _, subGroup := range pg.GetRealSubGroupInfo() {
 					if expectedSubGroup.Name != subGroup.Name {
 						continue
 					}

@@ -48,9 +48,12 @@ func TestJobOrderFn(t *testing.T) {
 			name: "running single pod",
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -64,9 +67,12 @@ func TestJobOrderFn(t *testing.T) {
 					},
 				},
 				r: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -86,9 +92,12 @@ func TestJobOrderFn(t *testing.T) {
 			name: "allocated pod counts as allocated",
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -102,9 +111,12 @@ func TestJobOrderFn(t *testing.T) {
 					},
 				},
 				r: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -124,9 +136,12 @@ func TestJobOrderFn(t *testing.T) {
 			name: "bound pod counts as allocated",
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -140,9 +155,12 @@ func TestJobOrderFn(t *testing.T) {
 					},
 				},
 				r: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -162,9 +180,12 @@ func TestJobOrderFn(t *testing.T) {
 			name: "releasing pod doesn't count as allocated",
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -178,9 +199,12 @@ func TestJobOrderFn(t *testing.T) {
 					},
 				},
 				r: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -200,9 +224,12 @@ func TestJobOrderFn(t *testing.T) {
 			name: "pod group with min pods against pod group with no pods",
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -216,9 +243,12 @@ func TestJobOrderFn(t *testing.T) {
 					},
 				},
 				r: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos: map[common_info.PodID]*pod_info.PodInfo{},
 				},
@@ -230,9 +260,12 @@ func TestJobOrderFn(t *testing.T) {
 			name: "pod group with less then min pods against pod group with min pods",
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 2,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 2,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -246,9 +279,12 @@ func TestJobOrderFn(t *testing.T) {
 					},
 				},
 				r: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 2,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 2,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -273,9 +309,12 @@ func TestJobOrderFn(t *testing.T) {
 			name: "pod group with less then min pods against pod group with more than min pods",
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 2,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 2,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -289,9 +328,12 @@ func TestJobOrderFn(t *testing.T) {
 					},
 				},
 				r: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 2,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 2,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -321,9 +363,12 @@ func TestJobOrderFn(t *testing.T) {
 			name: "pod group with min pods against pod group with more than min pods",
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -337,9 +382,12 @@ func TestJobOrderFn(t *testing.T) {
 					},
 				},
 				r: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -364,9 +412,12 @@ func TestJobOrderFn(t *testing.T) {
 			name: "pod group with min pods against pod group with less than min pods",
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -380,9 +431,12 @@ func TestJobOrderFn(t *testing.T) {
 					},
 				},
 				r: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 3,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 3,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -407,9 +461,12 @@ func TestJobOrderFn(t *testing.T) {
 			name: "pod group with more than min pods against pod group with min pods",
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -428,9 +485,12 @@ func TestJobOrderFn(t *testing.T) {
 					},
 				},
 				r: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -450,9 +510,12 @@ func TestJobOrderFn(t *testing.T) {
 			name: "pod group with more than min pods against pod group with less than min pods",
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -471,9 +534,12 @@ func TestJobOrderFn(t *testing.T) {
 					},
 				},
 				r: &podgroup_info.PodGroupInfo{
-					DefaultSubGroup: &podgroup_info.SubGroupInfo{
-						Name:         podgroup_info.DefaultSubGroup,
-						MinAvailable: 1,
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 					},
 					PodInfos:       map[common_info.PodID]*pod_info.PodInfo{},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},

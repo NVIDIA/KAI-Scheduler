@@ -44,9 +44,11 @@ var _ = Describe("MinRuntime Plugin", func() {
 		pg := &podgroup_info.PodGroupInfo{
 			UID:   uid,
 			Queue: queue,
-			DefaultSubGroup: &podgroup_info.SubGroupInfo{
-				Name:         podgroup_info.DefaultSubGroup,
-				MinAvailable: minAvailable,
+			SubGroups: map[string]*podgroup_info.SubGroupInfo{
+				podgroup_info.DefaultSubGroup: {
+					Name:         podgroup_info.DefaultSubGroup,
+					MinAvailable: minAvailable,
+				},
 			},
 			PodInfos:       make(pod_info.PodsMap),
 			PodStatusIndex: make(map[pod_status.PodStatus]pod_info.PodsMap),
