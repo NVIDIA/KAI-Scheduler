@@ -130,6 +130,143 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 		},
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Name: "Job with sub groups consolidates another job up to MinAvailable",
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:                "running_job0",
+						RequiredGPUsPerTask: 3,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								NodeName: "node0",
+								State:    pod_status.Running,
+							},
+						},
+					},
+					{
+						Name:                "running_job1",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:    pod_status.Running,
+								NodeName: "node1",
+							},
+						},
+					},
+					{
+						Name:      "pending_job0",
+						Priority:  constants.PriorityTrainNumber,
+						QueueName: "queue0",
+						SubGroups: map[string]*podgroup_info.SubGroupInfo{
+							"sub-0": {
+								Name:         "sub-0",
+								MinAvailable: 1,
+							},
+							"sub-1": {
+								Name:         "sub-1",
+								MinAvailable: 1,
+							},
+						},
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub-0",
+								RequiredGPUs: ptr.To(int64(2)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub-0",
+								RequiredGPUs: ptr.To(int64(2)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub-0",
+								RequiredGPUs: ptr.To(int64(2)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub-1",
+								RequiredGPUs: ptr.To(int64(2)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub-1",
+								RequiredGPUs: ptr.To(int64(2)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub-1",
+								RequiredGPUs: ptr.To(int64(2)),
+							},
+						},
+						MinAvailable: ptr.To(int32(2)),
+					},
+				},
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node0": {
+						GPUs: 4,
+					},
+					"node1": {
+						GPUs: 4,
+					},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:         "queue0",
+						DeservedGPUs: 2,
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"running_job0-0": {
+						GPUsRequired: 3,
+						NodeName:     "node0",
+						Status:       pod_status.Running,
+					},
+					"running_job1-0": {
+						GPUsRequired: 1,
+						NodeName:     "node0",
+						Status:       pod_status.Pipelined,
+					},
+					"pending_job0-0": {
+						GPUsRequired: 2,
+						NodeName:     "node1",
+						Status:       pod_status.Pipelined,
+					},
+					"pending_job0-1": {
+						GPUsRequired: 2,
+						Status:       pod_status.Pending,
+					},
+					"pending_job0-2": {
+						GPUsRequired: 2,
+						Status:       pod_status.Pending,
+					},
+					"pending_job0-3": {
+						GPUsRequired: 2,
+						NodeName:     "node1",
+						Status:       pod_status.Pipelined,
+					},
+					"pending_job0-4": {
+						GPUsRequired: 2,
+						Status:       pod_status.Pending,
+					},
+					"pending_job0-5": {
+						GPUsRequired: 2,
+						Status:       pod_status.Pending,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheEvictions:  1,
+						NumberOfPipelineActions: 3,
+					},
+				},
+			},
+		},
+		{
+			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "job with sub groups cannot consolidate a running job - cannot satisfy sub group gang",
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
