@@ -41,6 +41,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info/data_lister"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/status_updater"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
@@ -71,6 +72,7 @@ func New(
 	informerFactory informers.SharedInformerFactory,
 	kubeAiSchedulerInformerFactory kubeAiSchedulerinfo.SharedInformerFactory,
 	kueueInformerFactory kueueinformer.SharedInformerFactory,
+	usageLister *usagedb.UsageLister,
 	nodePoolParams *conf.SchedulingNodePoolParams,
 	restrictNodeScheduling bool,
 	clusterPodAffinityInfo pod_affinity.ClusterPodAffinityInfo,
@@ -96,7 +98,7 @@ func New(
 	}
 
 	return &ClusterInfo{
-		dataLister:               data_lister.New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, nodePoolSelector),
+		dataLister:               data_lister.New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, usageLister, nodePoolSelector),
 		nodePoolParams:           nodePoolParams,
 		restrictNodeScheduling:   restrictNodeScheduling,
 		clusterPodAffinityInfo:   clusterPodAffinityInfo,
