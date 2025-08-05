@@ -21,6 +21,9 @@ import (
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 
 	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 	kueueInformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
@@ -35,6 +38,7 @@ type k8sLister struct {
 	queueLister    schedlistv2.QueueLister
 	pcLister       schedv1.PriorityClassLister
 	cmLister       listv1.ConfigMapLister
+	usageLister    *usagedb.UsageLister
 
 	pvcLister             listv1.PersistentVolumeClaimLister
 	storageCapacityLister v12.CSIStorageCapacityLister
@@ -50,9 +54,12 @@ type k8sLister struct {
 
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
 
+var _ DataLister = &k8sLister{}
+
 func New(
 	informerFactory informers.SharedInformerFactory, kubeAiSchedulerInformerFactory kubeAiSchedulerInfo.SharedInformerFactory,
 	kueueInformerFactory kueueInformer.SharedInformerFactory,
+	usageLister *usagedb.UsageLister,
 	partitionSelector labels.Selector,
 ) *k8sLister {
 	return &k8sLister{
@@ -63,6 +70,7 @@ func New(
 		queueLister:    kubeAiSchedulerInformerFactory.Scheduling().V2().Queues().Lister(),
 		pcLister:       informerFactory.Scheduling().V1().PriorityClasses().Lister(),
 		cmLister:       informerFactory.Core().V1().ConfigMaps().Lister(),
+		usageLister:    usageLister,
 
 		pvcLister:             informerFactory.Core().V1().PersistentVolumeClaims().Lister(),
 		storageCapacityLister: informerFactory.Storage().V1().CSIStorageCapacities().Lister(),
@@ -99,6 +107,10 @@ func (k *k8sLister) ListNodes() ([]*v1.Node, error) {
 
 func (k *k8sLister) ListQueues() ([]*enginev2.Queue, error) {
 	return k.queueLister.List(k.partitionSelector)
+}
+
+func (k *k8sLister) ListResourceUsage() (map[common_info.QueueID]*queue_info.QueueUsage, error) {
+	return k.usageLister.GetResourceUsage()
 }
 
 // +kubebuilder:rbac:groups="scheduling.k8s.io",resources=priorityclasses,verbs=get;list;watch
