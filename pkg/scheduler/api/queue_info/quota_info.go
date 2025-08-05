@@ -11,6 +11,15 @@ type QueueQuota struct {
 	Memory ResourceQuota `json:"memory,omitempty"`
 }
 
+type ResourceQuota struct {
+	// +optional
+	Quota float64 `json:"deserved"`
+	// +optional
+	OverQuotaWeight float64 `json:"overQuotaWeight"`
+	// +optional
+	Limit float64 `json:"limit"`
+}
+
 type QueueUsage QueueQuota
 type ClusterUsage struct {
 	Cluster QueueUsage                          `json:"cluster"`
@@ -22,13 +31,4 @@ func NewClusterUsage() *ClusterUsage {
 		Cluster: QueueUsage{},
 		Queues:  make(map[common_info.QueueID]*QueueUsage),
 	}
-}
-
-type ResourceQuota struct {
-	// +optional
-	Quota float64 `json:"deserved"`
-	// +optional
-	OverQuotaWeight float64 `json:"overQuotaWeight"`
-	// +optional
-	Limit float64 `json:"limit"`
 }
