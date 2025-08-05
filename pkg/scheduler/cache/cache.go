@@ -105,7 +105,6 @@ type SchedulerCache struct {
 	podGroupLister                 enginelisters.PodGroupLister
 	clusterInfo                    *cluster_info.ClusterInfo
 	usageLister                    *usagedb.UsageLister
-	usageListerStopCh              chan struct{}
 
 	schedulingNodePoolParams *conf.SchedulingNodePoolParams
 
