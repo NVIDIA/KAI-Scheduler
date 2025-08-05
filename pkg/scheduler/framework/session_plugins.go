@@ -63,6 +63,10 @@ func (ssn *Session) AddTaskOrderFn(tof common_info.CompareFn) {
 	ssn.TaskOrderFns = append(ssn.TaskOrderFns, tof)
 }
 
+func (ssn *Session) AddSubGroupsOrderFn(sgof common_info.CompareFn) {
+	ssn.SubGroupsOrderFns = append(ssn.SubGroupsOrderFns, sgof)
+}
+
 func (ssn *Session) AddQueueOrderFn(qof CompareQueueFn) {
 	ssn.QueueOrderFns = append(ssn.QueueOrderFns, qof)
 }
@@ -233,14 +237,26 @@ func (ssn *Session) TaskOrderFn(l, r interface{}) bool {
 		}
 	}
 
-	// If no job order funcs, order job by CreationTimestamp first, then by UID.
+	// As a fallback, order tasks by CreationTimestamp first, then by UID.
 	lv := l.(*pod_info.PodInfo)
 	rv := r.(*pod_info.PodInfo)
+
 	if lv.Pod.CreationTimestamp.Equal(&rv.Pod.CreationTimestamp) {
 		return lv.UID < rv.UID
 	} else {
 		return lv.Pod.CreationTimestamp.Before(&rv.Pod.CreationTimestamp)
 	}
+}
+
+func (ssn *Session) SubGroupOrderFn(l, r interface{}) bool {
+	lSubGroup := l.(*podgroup_info.SubGroupInfo)
+	rSubGroup := r.(*podgroup_info.SubGroupInfo)
+	for _, compareTasks := range ssn.SubGroupsOrderFns {
+		if comparison := compareTasks(lSubGroup, rSubGroup); comparison != 0 {
+			return comparison < 0
+		}
+	}
+	return lSubGroup.Name < rSubGroup.Name
 }
 
 func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo) bool {

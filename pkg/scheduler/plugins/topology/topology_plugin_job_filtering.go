@@ -61,7 +61,7 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 		return err
 	}
 
-	if maxAllocatablePods < len(podgroup_info.GetTasksToAllocate(job, t.taskOrderFunc, true)) {
+	if maxAllocatablePods < len(podgroup_info.GetTasksToAllocate(job, t.subGroupOrderFunc, t.taskOrderFunc, true)) {
 		log.InfraLogger.V(6).Infof("no relevant domains found for job %s, workload topology name: %s",
 			job.PodGroup.Name, topologyTree.Name)
 		return nil
@@ -105,7 +105,7 @@ func (t *topologyPlugin) calcTreeAllocatable(job *podgroup_info.PodGroupInfo, to
 }
 
 func initJobAllocationMetadataStruct(job *podgroup_info.PodGroupInfo, t *topologyPlugin) (*jobAllocationMetaData, error) {
-	tasksToAllocate := podgroup_info.GetTasksToAllocate(job, t.taskOrderFunc, true)
+	tasksToAllocate := podgroup_info.GetTasksToAllocate(job, t.subGroupOrderFunc, t.taskOrderFunc, true)
 	maxPodResources := resource_info.NewResourceRequirements(0, 0, 0)
 	for _, podInfo := range tasksToAllocate {
 		err := maxPodResources.SetMaxResource(podInfo.ResReq)
@@ -197,7 +197,7 @@ func (t *topologyPlugin) getBestJobAllocateableDomains(job *podgroup_info.PodGro
 	if err != nil {
 		return nil, err
 	}
-	taskToAllocateCount := len(podgroup_info.GetTasksToAllocate(job, t.taskOrderFunc, true))
+	taskToAllocateCount := len(podgroup_info.GetTasksToAllocate(job, t.subGroupOrderFunc, t.taskOrderFunc, true))
 
 	maxDepthDomains := []*TopologyDomainInfo{}
 	for _, level := range relevantLevels {
@@ -272,7 +272,7 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 }
 
 func (t *topologyPlugin) improveChoiceForPreference(maxDepthDomains []*TopologyDomainInfo, job *podgroup_info.PodGroupInfo) ([]*TopologyDomainInfo, error) {
-	taskToAllocateCount := len(podgroup_info.GetTasksToAllocate(job, t.taskOrderFunc, true))
+	taskToAllocateCount := len(podgroup_info.GetTasksToAllocate(job, t.subGroupOrderFunc, t.taskOrderFunc, true))
 	// Look for a subgroup of children domains that allows the job to be allocated
 	// and return the one with the least number of domains required for the allocation
 	bestChildrenSubset := []*TopologyDomainInfo{}

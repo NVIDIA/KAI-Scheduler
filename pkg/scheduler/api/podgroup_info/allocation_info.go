@@ -24,13 +24,14 @@ func HasTasksToAllocate(podGroupInfo *PodGroupInfo, isRealAllocation bool) bool 
 }
 
 func GetTasksToAllocate(
-	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
+	podGroupInfo *PodGroupInfo, _ common_info.LessFn, taskOrderFn common_info.LessFn,
+	isRealAllocation bool,
 ) []*pod_info.PodInfo {
 	if podGroupInfo.tasksToAllocate != nil {
 		return podGroupInfo.tasksToAllocate
 	}
 
-	taskPriorityQueue := getTasksToAllocateQueue(podGroupInfo, taskOrderFn, isRealAllocation)
+	taskPriorityQueue := getTasksPriorityQueue(podGroupInfo, taskOrderFn, isRealAllocation)
 	maxNumOfTasksToAllocate := getNumOfTasksToAllocate(podGroupInfo, taskPriorityQueue.Len())
 
 	var tasksToAllocate []*pod_info.PodInfo
@@ -44,11 +45,12 @@ func GetTasksToAllocate(
 }
 
 func GetTasksToAllocateRequestedGPUs(
-	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
+	podGroupInfo *PodGroupInfo, subGroupOrderFn common_info.LessFn, taskOrderFn common_info.LessFn,
+	isRealAllocation bool,
 ) (float64, int64) {
 	tasksTotalRequestedGPUs := float64(0)
 	tasksTotalRequestedGpuMemory := int64(0)
-	for _, task := range GetTasksToAllocate(podGroupInfo, taskOrderFn, isRealAllocation) {
+	for _, task := range GetTasksToAllocate(podGroupInfo, subGroupOrderFn, taskOrderFn, isRealAllocation) {
 		tasksTotalRequestedGPUs += task.ResReq.GPUs()
 		tasksTotalRequestedGpuMemory += task.ResReq.GpuMemory()
 
@@ -67,7 +69,8 @@ func GetTasksToAllocateRequestedGPUs(
 }
 
 func GetTasksToAllocateInitResource(
-	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
+	podGroupInfo *PodGroupInfo, subGroupOrderFn common_info.LessFn, taskOrderFn common_info.LessFn,
+	isRealAllocation bool,
 ) *resource_info.Resource {
 	if podGroupInfo == nil {
 		return resource_info.EmptyResource()
@@ -77,7 +80,7 @@ func GetTasksToAllocateInitResource(
 	}
 
 	tasksTotalRequestedResource := resource_info.EmptyResource()
-	for _, task := range GetTasksToAllocate(podGroupInfo, taskOrderFn, isRealAllocation) {
+	for _, task := range GetTasksToAllocate(podGroupInfo, subGroupOrderFn, taskOrderFn, isRealAllocation) {
 		if task.ShouldAllocate(isRealAllocation) {
 			tasksTotalRequestedResource.AddResourceRequirements(task.ResReq)
 		}
@@ -87,7 +90,7 @@ func GetTasksToAllocateInitResource(
 	return tasksTotalRequestedResource
 }
 
-func getTasksToAllocateQueue(
+func getTasksPriorityQueue(
 	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) *scheduler_util.PriorityQueue {
 	podPriorityQueue := scheduler_util.NewPriorityQueue(taskOrderFn, scheduler_util.QueueCapacityInfinite)
