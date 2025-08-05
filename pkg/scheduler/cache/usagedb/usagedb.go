@@ -117,6 +117,10 @@ func (l *UsageLister) WaitForCacheSync(stopCh <-chan struct{}) bool {
 }
 
 func (l *UsageLister) fetchAndUpdateUsage() error {
+	if l.client == nil {
+		return fmt.Errorf("failed to fetch usage data: client is not set")
+	}
+
 	// TODO: Add metrics
 	usage, err := l.client.GetResourceUsage()
 	if err != nil {
