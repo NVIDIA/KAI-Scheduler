@@ -115,12 +115,7 @@ func (k *k8sLister) ListResourceUsage() (*queue_info.ClusterUsage, error) {
 		return nil, fmt.Errorf("usage lister is not set")
 	}
 
-	usage, err := k.usageLister.GetResourceUsage()
-	if err != nil {
-		return nil, err
-	}
-
-	return usage, nil
+	return k.usageLister.GetResourceUsage()
 }
 
 // +kubebuilder:rbac:groups="scheduling.k8s.io",resources=priorityclasses,verbs=get;list;watch
