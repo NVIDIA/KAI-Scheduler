@@ -10,8 +10,8 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/admission/app"
 
-	admissionplugins "github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
-	admissiongpusharing "github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/gpusharing"
+	"github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/gpusharing"
 )
 
 var (
@@ -39,9 +39,9 @@ func main() {
 }
 
 func registerPlugins(app *app.App) error {
-	admissionPlugins := admissionplugins.New()
+	admissionPlugins := plugins.New()
 
-	admissionGpuSharingPlugin := admissiongpusharing.New(app.Client,
+	admissionGpuSharingPlugin := gpusharing.New(app.Client,
 		app.Options.GpuCdiEnabled, app.Options.GPUSharingEnabled)
 
 	admissionPlugins.RegisterPlugin(admissionGpuSharingPlugin)

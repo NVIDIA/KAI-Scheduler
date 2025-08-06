@@ -10,26 +10,19 @@ import (
 )
 
 type Options struct {
-	SchedulerName                        string
-	ResourceReservationNamespace         string
-	ResourceReservationServiceAccount    string
-	ResourceReservationPodImage          string
-	ResourceReservationAppLabel          string
-	ResourceReservationAllocationTimeout int
-	ScalingPodNamespace                  string
-	QPS                                  float64
-	Burst                                int
-	MaxConcurrentReconciles              int
-	RateLimiterBaseDelaySeconds          int
-	RateLimiterMaxDelaySeconds           int
-	EnableLeaderElection                 bool
-	MetricsAddr                          string
-	ProbeAddr                            string
-	WebhookPort                          int
-	FakeGPUNodes                         bool
-	GpuCdiEnabled                        bool
-	VolumeBindingTimeoutSeconds          int
-	GPUSharingEnabled                    bool
+	SchedulerName               string
+	QPS                         float64
+	Burst                       int
+	RateLimiterBaseDelaySeconds int
+	RateLimiterMaxDelaySeconds  int
+	EnableLeaderElection        bool
+	MetricsAddr                 string
+	ProbeAddr                   string
+	WebhookPort                 int
+	FakeGPUNodes                bool
+	GpuCdiEnabled               bool
+	VolumeBindingTimeoutSeconds int
+	GPUSharingEnabled           bool
 }
 
 func InitOptions() *Options {
@@ -40,33 +33,12 @@ func InitOptions() *Options {
 	fs.StringVar(&options.SchedulerName,
 		"scheduler-name", "kai-scheduler",
 		"The scheduler name the workloads are scheduled with")
-	fs.StringVar(&options.ResourceReservationNamespace,
-		"resource-reservation-namespace", "kai-resource-reservation",
-		"Namespace for resource reservation pods")
-	fs.StringVar(&options.ResourceReservationServiceAccount,
-		"resource-reservation-service-account", "kai-resource-reservation",
-		"Service account name for resource reservation pods")
-	fs.StringVar(&options.ResourceReservationPodImage,
-		"resource-reservation-pod-image", "registry/local/kai-scheduler/resource-reservation",
-		"Container image for the resource reservation pod")
-	fs.StringVar(&options.ResourceReservationAppLabel,
-		"resource-reservation-app-label", "kai-resource-reservation",
-		"App label value of resource reservation pods")
-	fs.IntVar(&options.ResourceReservationAllocationTimeout,
-		"resource-reservation-allocation-timeout", 40,
-		"Resource reservation allocation timeout in seconds")
-	fs.StringVar(&options.ScalingPodNamespace,
-		"scale-adjust-namespace", "kai-scale-adjust",
-		"Scaling pods namespace")
 	fs.Float64Var(&options.QPS,
 		"qps", 50,
 		"Queries per second to the K8s API server")
 	fs.IntVar(&options.Burst,
 		"burst", 300,
 		"Burst to the K8s API server")
-	fs.IntVar(&options.MaxConcurrentReconciles,
-		"max-concurrent-reconciles", 10,
-		"Max concurrent reconciles")
 	fs.IntVar(&options.RateLimiterBaseDelaySeconds,
 		"rate-limiter-base-delay", 1,
 		"Base delay in seconds for the ExponentialFailureRateLimiter")

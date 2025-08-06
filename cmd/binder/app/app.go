@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	admissionhooks "github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/podhooks"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -172,13 +171,6 @@ func (app *App) Run() error {
 		SchedulerName:       app.Options.SchedulerName,
 	}).SetupWithManager(app.manager, app.reconcilerParams); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pod")
-		return err
-	}
-
-	if err = ctrl.NewWebhookManagedBy(app.manager).For(&corev1.Pod{}).
-		WithDefaulter(admissionhooks.NewPodMutator(app.manager.GetClient(), app.admissionPlugins, app.Options.SchedulerName)).
-		WithValidator(admissionhooks.NewPodValidator(app.manager.GetClient(), app.admissionPlugins, app.Options.SchedulerName)).Complete(); err != nil {
-		setupLog.Error(err, "unable to create pod webhooks", "webhook", "Pod")
 		return err
 	}
 
