@@ -21,7 +21,7 @@ import (
 	rrmock "github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation/mock"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
-	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing"
+	bindinggpusharing "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/test_utils"
 )
 
@@ -71,8 +71,8 @@ func TestBind(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().WithRuntimeObjects(kubeObjects...).WithInterceptorFuncs(test_utils.EmptyBind).Build()
 
 	binderPlugins := plugins.New()
-	gpuSharingPlugin := gpusharing.New(kubeClient, false, true)
-	binderPlugins.RegisterPlugin(gpuSharingPlugin)
+	bindingGpuSharingPlugin := bindinggpusharing.New(kubeClient, false, true)
+	binderPlugins.RegisterPlugin(bindingGpuSharingPlugin)
 
 	binder := NewBinder(kubeClient, rrs, binderPlugins)
 
@@ -175,8 +175,8 @@ func TestBindApplyResourceReceivedType(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().WithRuntimeObjects(kubeObjects...).WithInterceptorFuncs(test_utils.EmptyBind).Build()
 
 	binderPlugins := plugins.New()
-	gpuSharingPlugin := gpusharing.New(kubeClient, false, true)
-	binderPlugins.RegisterPlugin(gpuSharingPlugin)
+	bindingGpuSharingPlugin := bindinggpusharing.New(kubeClient, false, true)
+	binderPlugins.RegisterPlugin(bindingGpuSharingPlugin)
 
 	binder := NewBinder(kubeClient, rrs, binderPlugins)
 
@@ -222,8 +222,8 @@ func TestBindFail(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().WithRuntimeObjects(kubeObjects...).WithInterceptorFuncs(test_utils.EmptyBind).Build()
 
 	binderPlugins := plugins.New()
-	gpuSharingPlugin := gpusharing.New(kubeClient, false, true)
-	binderPlugins.RegisterPlugin(gpuSharingPlugin)
+	bindingGpuSharingPlugin := bindinggpusharing.New(kubeClient, false, true)
+	binderPlugins.RegisterPlugin(bindingGpuSharingPlugin)
 
 	binder := NewBinder(kubeClient, rrs, binderPlugins)
 

@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -869,6 +870,74 @@ var _ = Describe("ResourceReservationService", func() {
 				Expect(len(pods.Items)).To(Equal(testData.podsLeft))
 			})
 		}
+	})
+
+	Context("createResourceReservationPod", func() {
+		It("should create a pod with the correct RuntimeClassName and metadata", func() {
+			rsc := &service{
+				namespace:           "kai-resource-reservation",
+				appLabelValue:       "kai-reservation",
+				serviceAccountName:  "kai-sa",
+				reservationPodImage: "nvidia/kai-reservation:latest",
+				kubeClient:          fake.NewClientBuilder().Build(),
+			}
+
+			resources := v1.ResourceRequirements{
+				Limits: v1.ResourceList{
+					"nvidia.com/gpu": resource.MustParse("1"),
+				},
+			}
+
+			podName := "reservation-test"
+			gpuGroup := "test-group"
+			nodeName := "node-test"
+
+			pod, err := rsc.createResourceReservationPod(nodeName, gpuGroup, podName, resources)
+			Expect(err).To(BeNil())
+			Expect(pod).NotTo(BeNil())
+
+			// Check metadata
+			Expect(pod.Name).To(Equal(podName))
+			Expect(pod.Namespace).To(Equal("kai-resource-reservation"))
+			Expect(pod.Labels[constants.AppLabelName]).To(Equal("kai-reservation"))
+			Expect(pod.Labels[constants.GPUGroup]).To(Equal(gpuGroup))
+
+			// PodSpec checks
+			Expect(pod.Spec.NodeName).To(Equal(nodeName))
+			Expect(pod.Spec.RuntimeClassName).NotTo(BeNil())
+			if pod.Spec.RuntimeClassName != nil {
+				Expect(*pod.Spec.RuntimeClassName).To(Equal("nvidia"))
+			}
+			Expect(pod.Spec.ServiceAccountName).To(Equal("kai-sa"))
+
+			// Check container
+			Expect(len(pod.Spec.Containers)).To(Equal(1))
+			container := pod.Spec.Containers[0]
+			Expect(container.Name).To(Equal("resource-reservation"))
+			Expect(container.Image).To(Equal("nvidia/kai-reservation:latest"))
+			Expect(container.ImagePullPolicy).To(Equal(v1.PullIfNotPresent))
+			Expect(container.Resources).To(Equal(resources))
+
+			// Check env vars
+			podNameEnv := v1.EnvVar{
+				Name: "POD_NAME",
+				ValueFrom: &v1.EnvVarSource{
+					FieldRef: &v1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			}
+			podNamespaceEnv := v1.EnvVar{
+				Name: "POD_NAMESPACE",
+				ValueFrom: &v1.EnvVarSource{
+					FieldRef: &v1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
+			}
+			Expect(container.Env).To(ContainElement(Equal(podNameEnv)))
+			Expect(container.Env).To(ContainElement(Equal(podNamespaceEnv)))
+		})
 	})
 })
 

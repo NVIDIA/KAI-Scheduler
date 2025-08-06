@@ -28,11 +28,12 @@ import (
 
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 
+	admissionplugins "github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/gpusharing"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/controllers"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
-	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing"
 	k8s_plugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/k8s-plugins"
 	// +kubebuilder:scaffold:imports
 )
@@ -111,13 +112,14 @@ var _ = BeforeSuite(func() {
 	informerFactory := informers.NewSharedInformerFactory(kubeClient, 0)
 
 	binderPlugins := plugins.New()
+	admissionPlugins := admissionplugins.New()
 	k8sPlugins, err := k8s_plugins.New(kubeClient, informerFactory, int64(options.VolumeBindingTimeoutSeconds))
 	Expect(err).NotTo(HaveOccurred())
 	binderPlugins.RegisterPlugin(k8sPlugins)
 	clientWithWatch, err := client.NewWithWatch(cfg, client.Options{})
 	Expect(err).NotTo(HaveOccurred())
 	gpuSharingPlugin := gpusharing.New(clientWithWatch, options.GpuCdiEnabled, options.GPUSharingEnabled)
-	binderPlugins.RegisterPlugin(gpuSharingPlugin)
+	admissionPlugins.RegisterPlugin(gpuSharingPlugin)
 
 	rrs := resourcereservation.NewService(false, clientWithWatch, "", 40*time.Second,
 		resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue, scalingPodsNamespace)

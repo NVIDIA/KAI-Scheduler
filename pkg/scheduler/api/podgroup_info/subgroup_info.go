@@ -36,6 +36,11 @@ func (sgi *SubGroupInfo) IsReadyForScheduling() bool {
 	return int32(readyTasks) >= sgi.MinAvailable
 }
 
+func (sgi *SubGroupInfo) IsGangSatisfied() bool {
+	numActiveTasks := sgi.GetNumActiveUsedTasks()
+	return numActiveTasks >= int(sgi.MinAvailable)
+}
+
 func (sgi *SubGroupInfo) GetNumActiveAllocatedTasks() int {
 	taskCount := 0
 	for _, task := range sgi.PodInfos {
@@ -44,6 +49,16 @@ func (sgi *SubGroupInfo) GetNumActiveAllocatedTasks() int {
 		}
 	}
 	return taskCount
+}
+
+func (sgi *SubGroupInfo) GetNumActiveUsedTasks() int {
+	numTasks := 0
+	for _, podInfo := range sgi.PodInfos {
+		if pod_status.IsActiveUsedStatus(podInfo.Status) {
+			numTasks += 1
+		}
+	}
+	return numTasks
 }
 
 func (sgi *SubGroupInfo) GetNumAliveTasks() int {
@@ -60,6 +75,16 @@ func (sgi *SubGroupInfo) GetNumGatedTasks() int {
 	numTasks := 0
 	for _, podInfo := range sgi.PodInfos {
 		if podInfo.Status == pod_status.Gated {
+			numTasks += 1
+		}
+	}
+	return numTasks
+}
+
+func (sgi *SubGroupInfo) GetNumPendingTasks() int {
+	numTasks := 0
+	for _, podInfo := range sgi.PodInfos {
+		if podInfo.Status == pod_status.Pending {
 			numTasks += 1
 		}
 	}
