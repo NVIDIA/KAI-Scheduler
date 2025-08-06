@@ -31,6 +31,7 @@ import (
 	kubeaischedulerver "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	schedcache "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
@@ -57,10 +58,17 @@ func NewScheduler(
 	mux *http.ServeMux,
 ) (*Scheduler, error) {
 	kubeClient, kubeAiSchedulerClient, kueueClient := newClients(config)
+
+	usageDBClient, err := usagedb.NewPrometheusClient("http://localhost:9090")
+	if err != nil {
+		log.InfraLogger.Fatalf(err.Error(), err)
+	}
+
 	schedulerCacheParams := &schedcache.SchedulerCacheParams{
 		KubeClient:                  kubeClient,
 		KAISchedulerClient:          kubeAiSchedulerClient,
 		KueueClient:                 kueueClient,
+		UsageDBClient:               usageDBClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      schedulerParams.RestrictSchedulingNodes,
