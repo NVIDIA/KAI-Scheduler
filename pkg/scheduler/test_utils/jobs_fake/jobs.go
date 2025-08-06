@@ -112,7 +112,7 @@ func BuildJobInfo(
 	subGroups[podgroup_info.DefaultSubGroup] = &podgroup_info.SubGroupInfo{
 		Name:         podgroup_info.DefaultSubGroup,
 		MinAvailable: minAvailable,
-		PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+		PodInfos:     allTasks,
 	}
 
 	for _, taskInfo := range taskInfos {
@@ -130,7 +130,6 @@ func BuildJobInfo(
 		Name:              name,
 		Namespace:         namespace,
 		Allocated:         allocatedResource,
-		PodInfos:          allTasks,
 		PodStatusIndex:    taskStatusIndex,
 		Priority:          priority,
 		JobFitErrors:      make(enginev2alpha2.UnschedulableExplanations, 0),

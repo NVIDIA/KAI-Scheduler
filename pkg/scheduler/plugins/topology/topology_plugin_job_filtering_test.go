@@ -913,10 +913,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod1": {Name: "pod1", Status: pod_status.Pending},
-					"pod2": {Name: "pod2", Status: pod_status.Pending},
-				},
 			},
 			topologyTree: &TopologyInfo{
 				Name: "test-topology",
@@ -990,10 +986,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod1": {Name: "pod1", Status: pod_status.Pending},
-					"pod2": {Name: "pod2", Status: pod_status.Pending},
-				},
 			},
 			topologyTree: &TopologyInfo{
 				Name: "test-topology",
@@ -1054,9 +1046,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod1": {Name: "pod1", Status: pod_status.Pending},
-				},
 			},
 			topologyTree: &TopologyInfo{
 				Name: "test-topology",
@@ -1110,11 +1099,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 							PreferredTopologyLevel: "zone",
 						},
 					},
-				},
-				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod1": {Name: "pod1", Status: pod_status.Pending},
-					"pod2": {Name: "pod2", Status: pod_status.Pending},
-					"pod3": {Name: "pod3", Status: pod_status.Pending},
 				},
 			},
 			topologyTree: &TopologyInfo{
@@ -1200,11 +1184,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod1": {Name: "pod1", Status: pod_status.Running},
-					"pod2": {Name: "pod2", Status: pod_status.Pending},
-					"pod3": {Name: "pod3", Status: pod_status.Pending},
-				},
 			},
 			topologyTree: &TopologyInfo{
 				Name: "test-topology",
@@ -1265,12 +1244,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 							PreferredTopologyLevel: "rack",
 						},
 					},
-				},
-				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod1": {Name: "pod1", Status: pod_status.Pending},
-					"pod2": {Name: "pod2", Status: pod_status.Pending},
-					"pod3": {Name: "pod3", Status: pod_status.Pending},
-					"pod4": {Name: "pod4", Status: pod_status.Pending},
 				},
 			},
 			topologyTree: &TopologyInfo{

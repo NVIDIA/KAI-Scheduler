@@ -774,7 +774,7 @@ func TestBindRequests(t *testing.T) {
 
 		assertedPods := 0
 		for _, podGroup := range snapshot.PodGroupInfos {
-			for _, podInfo := range podGroup.PodInfos {
+			for _, podInfo := range podGroup.GetAllPodsMap() {
 				byNamespace, found := test.expectedPodStatus[podInfo.Pod.Namespace]
 				if !found {
 					continue
@@ -1718,7 +1718,7 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 	snapshot, err := clusterInfo.Snapshot()
 	assert.Equal(t, nil, err)
 	node := snapshot.Nodes["node-1"]
-	task := snapshot.PodGroupInfos["podGroup-0"].PodInfos["pod-1"]
+	task := snapshot.PodGroupInfos["podGroup-0"].GetAllPodsMap()["pod-1"]
 	assert.Equal(t, node.IsTaskAllocatable(task), false)
 
 	pvc.OwnerReferences = nil
@@ -1727,7 +1727,7 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 	snapshot, err = clusterInfo.Snapshot()
 	assert.Equal(t, nil, err)
 	node = snapshot.Nodes["node-1"]
-	task = snapshot.PodGroupInfos["podGroup-0"].PodInfos["pod-1"]
+	task = snapshot.PodGroupInfos["podGroup-0"].GetAllPodsMap()["pod-1"]
 	assert.Equal(t, node.IsTaskAllocatable(task), true)
 
 }

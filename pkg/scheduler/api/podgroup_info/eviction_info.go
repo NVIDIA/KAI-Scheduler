@@ -15,7 +15,7 @@ func GetTasksToEvict(job *PodGroupInfo, _, taskOrderFn common_info.LessFn) ([]*p
 		return taskOrderFn(r, l)
 	}
 	podPriorityQueue := scheduler_util.NewPriorityQueue(reverseTaskOrderFn, scheduler_util.QueueCapacityInfinite)
-	for _, task := range job.PodInfos {
+	for _, task := range job.GetAllPodsMap() {
 		if pod_status.IsActiveAllocatedStatus(task.Status) {
 			podPriorityQueue.Push(task)
 		}

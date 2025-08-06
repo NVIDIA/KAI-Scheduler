@@ -9,7 +9,7 @@ import (
 )
 
 func FeasibleNodesForJob(allNodes []*node_info.NodeInfo, job *podgroup_info.PodGroupInfo) []*node_info.NodeInfo {
-	for _, task := range job.PodInfos {
+	for _, task := range job.GetAllPodsMap() {
 		if !task.IsRequireAnyKindOfGPU() {
 			return allNodes
 		}

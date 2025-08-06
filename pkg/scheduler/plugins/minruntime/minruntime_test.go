@@ -48,9 +48,9 @@ var _ = Describe("MinRuntime Plugin", func() {
 				podgroup_info.DefaultSubGroup: {
 					Name:         podgroup_info.DefaultSubGroup,
 					MinAvailable: minAvailable,
+					PodInfos:     make(pod_info.PodsMap),
 				},
 			},
-			PodInfos:       make(pod_info.PodsMap),
 			PodStatusIndex: make(map[pod_status.PodStatus]pod_info.PodsMap),
 			NodesFitErrors: make(map[common_info.PodID]*common_info.FitErrors),
 		}
@@ -67,7 +67,7 @@ var _ = Describe("MinRuntime Plugin", func() {
 				Job:    uid,
 				Status: pod_status.Running,
 			}
-			pg.PodInfos[podID] = podInfo
+			pg.SubGroups[podgroup_info.DefaultSubGroup].PodInfos[podID] = podInfo
 
 			// Initialize the PodStatusIndex map for this status if it doesn't exist
 			if _, found := pg.PodStatusIndex[pod_status.Running]; !found {
