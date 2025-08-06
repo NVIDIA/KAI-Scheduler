@@ -90,7 +90,6 @@ func BuildSchedulerParams(opt *options.ServerOption) *conf.SchedulerParams {
 		GlobalDefaultStalenessGracePeriod: opt.GlobalDefaultStalenessGracePeriod,
 		SchedulePeriod:                    opt.SchedulePeriod,
 		DetailedFitErrors:                 opt.DetailedFitErrors,
-		EnableUsageDataFetcher:            opt.EnableUsageDataFetcher,
 	}
 }
 

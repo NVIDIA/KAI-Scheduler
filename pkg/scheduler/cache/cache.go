@@ -90,7 +90,6 @@ type SchedulerCacheParams struct {
 	NodeLevelScheduler          bool
 	AllowConsolidatingReclaim   bool
 	NumOfStatusRecordingWorkers int
-	EnableUsageDataFetcher      bool
 }
 
 type SchedulerCache struct {
@@ -98,7 +97,6 @@ type SchedulerCache struct {
 	kubeClient                     kubernetes.Interface
 	kubeAiSchedulerClient          kubeaischedulerver.Interface
 	kueueClient                    kueueclient.Interface
-	usageDBClient                  usagedb.Interface
 	informerFactory                informers.SharedInformerFactory
 	kubeAiSchedulerInformerFactory kubeaischedulerinfo.SharedInformerFactory
 	kueueInformerFactory           kueue.SharedInformerFactory
@@ -132,7 +130,6 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 		kubeClient:               schedulerCacheParams.KubeClient,
 		kubeAiSchedulerClient:    schedulerCacheParams.KAISchedulerClient,
 		kueueClient:              schedulerCacheParams.KueueClient,
-		usageDBClient:            schedulerCacheParams.UsageDBClient,
 	}
 
 	schedulerName := schedulerCacheParams.SchedulerName
@@ -161,7 +158,7 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 	sc.podLister = sc.informerFactory.Core().V1().Pods().Lister()
 	sc.podGroupLister = sc.kubeAiSchedulerInformerFactory.Scheduling().V2alpha2().PodGroups().Lister()
 
-	sc.usageLister = usagedb.NewUsageLister(sc.usageDBClient, nil, nil)
+	sc.usageLister = usagedb.NewUsageLister(schedulerCacheParams.UsageDBClient, nil, nil)
 
 	clusterInfo, err := cluster_info.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, sc.usageLister, sc.schedulingNodePoolParams,
 		sc.restrictNodeScheduling, &sc.K8sClusterPodAffinityInfo, sc.scheduleCSIStorage, sc.fullHierarchyFairness, sc.StatusUpdater)

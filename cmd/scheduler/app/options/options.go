@@ -71,7 +71,6 @@ type ServerOption struct {
 	IsInferencePreemptible            bool
 	MaxNumberConsolidationPreemptees  int
 	DetailedFitErrors                 bool
-	EnableUsageDataFetcher            bool
 	ScheduleCSIStorage                bool
 	UseSchedulingSignatures           bool
 	FullHierarchyFairness             bool
@@ -134,7 +133,6 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.CPUWorkerNodeLabelKey, "cpu-worker-node-label-key", defaultCPUWorkerNodeLabelKey, "The label key for CPU worker nodes")
 	fs.StringVar(&s.GPUWorkerNodeLabelKey, "gpu-worker-node-label-key", defaultGPUWorkerNodeLabelKey, "The label key for GPU worker nodes")
 	fs.StringVar(&s.MIGWorkerNodeLabelKey, "mig-worker-node-label-key", defaultMIGWorkerNodeLabelKey, "The label key for MIG enabled worker nodes")
-	fs.BoolVar(&s.EnableUsageDataFetcher, "enable-usage-data-fetcher", false, "Enable usage data fetcher")
 
 	utilfeature.DefaultMutableFeatureGate.AddFlag(fs)
 }
