@@ -8,7 +8,6 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common/gpusharingconfigmap"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
@@ -41,8 +40,6 @@ func (p *AdmissionGPUSharing) Name() string {
 }
 
 func (p *AdmissionGPUSharing) Validate(pod *v1.Pod) error {
-	logger := log.FromContext(context.Background())
-	logger.Info("gpusharing validating pod", "pod", pod.Name, "plugin", p.Name())
 	if !p.gpuSharingEnabled && resources.RequestsGPUFraction(pod) {
 		return fmt.Errorf(
 			"attempting to create a pod %s/%s with gpu sharing request, while GPU sharing is disabled",
@@ -66,8 +63,6 @@ func (p *AdmissionGPUSharing) Mutate(pod *v1.Pod) error {
 		Index:     fractionContainerIndex,
 		Type:      gpusharingconfigmap.RegularContainer,
 	}
-	logger := log.FromContext(context.Background())
-	logger.Info("gpusharing mutating pod", "pod", pod.Name, "plugin", p.Name(), "container", containerRef, "index", containerRef.Index)
 	capabilitiesConfigMapName := gpusharingconfigmap.SetGpuCapabilitiesConfigMapName(pod, containerRef)
 	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
 	if err != nil {

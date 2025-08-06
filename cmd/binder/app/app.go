@@ -32,7 +32,6 @@ import (
 
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 
-	admissionplugins "github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/controllers"
@@ -59,7 +58,6 @@ type App struct {
 	manager          manager.Manager
 	rrs              resourcereservation.Interface
 	reconcilerParams *controllers.ReconcilerParams
-	admissionPlugins *admissionplugins.KaiAdmissionPlugins
 	bindingPlugins   *bindingplugins.BinderPlugins
 }
 
