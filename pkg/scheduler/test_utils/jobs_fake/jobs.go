@@ -95,13 +95,14 @@ func BuildJobInfo(
 	subGroups map[string]*podgroup_info.SubGroupInfo, taskInfos []*pod_info.PodInfo, priority int32,
 	queueUID common_info.QueueID, jobCreationTime time.Time, minAvailable int32, staleDuration *time.Duration,
 ) *podgroup_info.PodGroupInfo {
-	allTasks := pod_info.PodsMap{}
+	defaultSubGroupTasks := pod_info.PodsMap{}
 	taskStatusIndex := map[pod_status.PodStatus]pod_info.PodsMap{}
 
 	for _, taskInfo := range taskInfos {
-		allTasks[taskInfo.UID] = taskInfo
 		if len(taskStatusIndex[taskInfo.Status]) == 0 {
 			taskStatusIndex[taskInfo.Status] = pod_info.PodsMap{}
+		} else {
+			defaultSubGroupTasks[taskInfo.UID] = taskInfo
 		}
 		taskStatusIndex[taskInfo.Status][taskInfo.UID] = taskInfo
 	}
@@ -112,7 +113,7 @@ func BuildJobInfo(
 	subGroups[podgroup_info.DefaultSubGroup] = &podgroup_info.SubGroupInfo{
 		Name:         podgroup_info.DefaultSubGroup,
 		MinAvailable: minAvailable,
-		PodInfos:     allTasks,
+		PodInfos:     defaultSubGroupTasks,
 	}
 
 	for _, taskInfo := range taskInfos {

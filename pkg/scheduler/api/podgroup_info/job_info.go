@@ -239,8 +239,9 @@ func (pgi *PodGroupInfo) AddTaskInfo(ti *pod_info.PodInfo) {
 	subGroup, found := pgi.SubGroups[ti.SubGroupName]
 	if found {
 		subGroup.assignTask(ti)
+	} else {
+		pgi.SubGroups[DefaultSubGroup].assignTask(ti)
 	}
-	pgi.SubGroups[DefaultSubGroup].assignTask(ti)
 
 	pgi.addTaskIndex(ti)
 
