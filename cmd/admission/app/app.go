@@ -118,7 +118,6 @@ func New() (*App, error) {
 	informerFactory := informers.NewSharedInformerFactory(kubeClient, 0)
 
 	reconcilerParams := &controllers.ReconcilerParams{
-		MaxConcurrentReconciles:     options.MaxConcurrentReconciles,
 		RateLimiterBaseDelaySeconds: options.RateLimiterBaseDelaySeconds,
 		RateLimiterMaxDelaySeconds:  options.RateLimiterMaxDelaySeconds,
 	}

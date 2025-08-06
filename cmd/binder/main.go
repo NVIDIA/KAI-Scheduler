@@ -40,8 +40,7 @@ func main() {
 }
 
 func registerPlugins(app *app.App) error {
-	binderPlugins := bindingplugins.New()
-	admissionPlugins := admissionplugins.New()
+	binderPlugins := plugins.New()
 	k8sPlugins, err := k8s_plugins.New(app.K8sInterface, app.InformerFactory,
 		int64(app.Options.VolumeBindingTimeoutSeconds))
 	if err != nil {
