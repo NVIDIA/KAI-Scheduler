@@ -4,19 +4,446 @@
 package topology
 
 import (
+	"slices"
+	"sort"
 	"testing"
 
 	"k8s.io/utils/ptr"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
+	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
+	tests := []struct {
+		name            string
+		job             *podgroup_info.PodGroupInfo
+		jobTopologyName string
+		topologyTree    *TopologyInfo
+		expectedLevels  []string
+		expectedError   string
+	}{
+		{
+			name: "both required and preferred placement specified",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel:  "zone",
+							PreferredTopologyLevel: "rack",
+						},
+					},
+				},
+			},
+			jobTopologyName: "test-topology",
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "datacenter"},
+						},
+					},
+				},
+			},
+			expectedLevels: []string{
+				"rack",
+				"zone",
+			},
+			expectedError: "",
+		},
+		{
+			name: "only required placement specified",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel: "zone",
+						},
+					},
+				},
+			},
+			jobTopologyName: "test-topology",
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "datacenter"},
+						},
+					},
+				},
+			},
+			expectedLevels: []string{
+				"rack",
+				"zone",
+			},
+			expectedError: "",
+		},
+		{
+			name: "only preferred placement specified",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							PreferredTopologyLevel: "rack",
+						},
+					},
+				},
+			},
+			jobTopologyName: "test-topology",
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "datacenter"},
+						},
+					},
+				},
+			},
+			expectedLevels: []string{
+				"rack",
+				"zone",
+				"datacenter",
+			},
+			expectedError: "",
+		},
+		{
+			name: "no placement annotations specified",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "test-job",
+						Annotations: map[string]string{},
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{},
+					},
+				},
+			},
+			jobTopologyName: "test-topology",
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+						},
+					},
+				},
+			},
+			expectedLevels: nil,
+			expectedError:  "no topology placement annotations found for job test-job, workload topology name: test-topology",
+		},
+		{
+			name: "required placement not found in topology",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel: "nonexistent",
+						},
+					},
+				},
+			},
+			jobTopologyName: "test-topology",
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+						},
+					},
+				},
+			},
+			expectedLevels: nil,
+			expectedError:  "the topology test-topology doesn't have a level matching the required(nonexistent) specified for the job test-job",
+		},
+		{
+			name: "preferred placement not found in topology",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							PreferredTopologyLevel: "nonexistent",
+						},
+					},
+				},
+			},
+			jobTopologyName: "test-topology",
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+						},
+					},
+				},
+			},
+			expectedLevels: nil,
+			expectedError:  "the topology test-topology doesn't have a level matching the preferred(nonexistent) specified for the job test-job",
+		},
+		{
+			name: "required placement at first level",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel: "rack",
+						},
+					},
+				},
+			},
+			jobTopologyName: "test-topology",
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "datacenter"},
+						},
+					},
+				},
+			},
+			expectedLevels: []string{
+				"rack",
+			},
+			expectedError: "",
+		},
+		{
+			name: "preferred placement at first level",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							PreferredTopologyLevel: "rack",
+						},
+					},
+				},
+			},
+			jobTopologyName: "test-topology",
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "datacenter"},
+						},
+					},
+				},
+			},
+			expectedLevels: []string{
+				"rack",
+				"zone",
+				"datacenter",
+			},
+			expectedError: "",
+		},
+		{
+			name: "preferred placement at middle level",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							PreferredTopologyLevel: "zone",
+						},
+					},
+				},
+			},
+			jobTopologyName: "test-topology",
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "datacenter"},
+						},
+					},
+				},
+			},
+			expectedLevels: []string{
+				"zone",
+				"datacenter",
+			},
+			expectedError: "",
+		},
+		{
+			name: "single level topology with preferred placement",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							PreferredTopologyLevel: "zone",
+						},
+					},
+				},
+			},
+			jobTopologyName: "test-topology",
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "zone"},
+						},
+					},
+				},
+			},
+			expectedLevels: []string{
+				"zone",
+			},
+			expectedError: "",
+		},
+		{
+			name: "complex topology with multiple levels",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel:  "region",
+							PreferredTopologyLevel: "zone",
+						},
+					},
+				},
+			},
+			jobTopologyName: "test-topology",
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "region"},
+							{NodeLabel: "datacenter"},
+						},
+					},
+				},
+			},
+			expectedLevels: []string{
+				"zone",
+				"region",
+			},
+			expectedError: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &topologyPlugin{}
+
+			result, err := plugin.calculateRelevantDomainLevels(tt.job, tt.jobTopologyName, tt.topologyTree)
+
+			// Check error
+			if tt.expectedError != "" {
+				if err == nil {
+					t.Errorf("expected error '%s', but got nil", tt.expectedError)
+					return
+				}
+				if err.Error() != tt.expectedError {
+					t.Errorf("expected error '%s', but got '%s'", tt.expectedError, err.Error())
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			// Check result
+			if tt.expectedLevels == nil {
+				if result != nil {
+					t.Errorf("expected nil result, but got %v", result)
+				}
+				return
+			}
+
+			if result == nil {
+				t.Errorf("expected result %v, but got nil", tt.expectedLevels)
+				return
+			}
+
+			// Compare maps
+			if len(result) != len(tt.expectedLevels) {
+				t.Errorf("expected %d levels, but got %d", len(tt.expectedLevels), len(result))
+			}
+
+			if !slices.Equal(result, tt.expectedLevels) {
+				t.Errorf("expected %v, but got %v", tt.expectedLevels, result)
+			}
+		})
+	}
+}
 
 func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 	tests := []struct {
@@ -446,6 +873,555 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				if actualDomain.AllocatablePods != expectedDomain.AllocatablePods {
 					t.Errorf("domain %s: expected AllocatablePods %d, got %d",
 						domainID, expectedDomain.AllocatablePods, actualDomain.AllocatablePods)
+				}
+			}
+		})
+	}
+}
+
+func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
+	tests := []struct {
+		name            string
+		job             *podgroup_info.PodGroupInfo
+		topologyTree    *TopologyInfo
+		taskOrderFunc   common_info.LessFn
+		expectedDomains []*TopologyDomainInfo
+		expectedError   string
+	}{
+		{
+			name: "single domain with minimum distance",
+			job: &podgroup_info.PodGroupInfo{
+				Name:         "test-job",
+				MinAvailable: 2,
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel:  "zone",
+							PreferredTopologyLevel: "rack",
+						},
+					},
+				},
+				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					"pod1": {Name: "pod1", Status: pod_status.Pending},
+					"pod2": {Name: "pod2", Status: pod_status.Pending},
+				},
+			},
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+						},
+					},
+				},
+				DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+					"rack": {
+						"rack1.zone1": {
+							ID:              "rack1.zone1",
+							Name:            "rack1",
+							Level:           "rack",
+							AllocatablePods: 2,
+						},
+						"rack2.zone1": {
+							ID:              "rack2.zone1",
+							Name:            "rack2",
+							Level:           "rack",
+							AllocatablePods: 1,
+						},
+					},
+					"zone": {
+						"zone1": {
+							ID:              "zone1",
+							Name:            "zone1",
+							Level:           "zone",
+							AllocatablePods: 3,
+						},
+					},
+				},
+			},
+			taskOrderFunc: func(l, r interface{}) bool {
+				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
+			},
+			expectedDomains: []*TopologyDomainInfo{
+				{
+					ID:              "rack1.zone1",
+					Name:            "rack1",
+					Level:           "rack",
+					AllocatablePods: 2,
+				},
+			},
+			expectedError: "",
+		},
+		{
+			name: "no domains can allocate the job",
+			job: &podgroup_info.PodGroupInfo{
+				Name:         "test-job",
+				MinAvailable: 2,
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel: "zone",
+						},
+					},
+				},
+				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					"pod1": {Name: "pod1", Status: pod_status.Pending},
+					"pod2": {Name: "pod2", Status: pod_status.Pending},
+				},
+			},
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+						},
+					},
+				},
+				DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+					"rack": {
+						"rack1.zone1": {
+							ID:              "rack1.zone1",
+							Name:            "rack1",
+							Level:           "rack",
+							AllocatablePods: 1, // Can only fit 1 pod, job needs 2
+						},
+					},
+					"zone": {
+						"zone1": {
+							ID:              "zone1",
+							Name:            "zone1",
+							Level:           "zone",
+							AllocatablePods: 1, // Can only fit 1 pod, job needs 2
+						},
+					},
+				},
+			},
+			taskOrderFunc: func(l, r interface{}) bool {
+				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
+			},
+			expectedDomains: []*TopologyDomainInfo{},
+			expectedError:   "no domains found for the job test-job, workload topology name: test-topology",
+		},
+		{
+			name: "no relevant domain levels",
+			job: &podgroup_info.PodGroupInfo{
+				Name:         "test-job",
+				MinAvailable: 1,
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel:  "zone",
+							PreferredTopologyLevel: "rack",
+						},
+					},
+				},
+				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					"pod1": {Name: "pod1", Status: pod_status.Pending},
+				},
+			},
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "datacenter"},
+							{NodeLabel: "region"},
+						},
+					},
+				},
+				DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+					"datacenter": {
+						"datacenter1": {
+							ID:              "datacenter1",
+							Name:            "datacenter1",
+							Level:           "datacenter",
+							AllocatablePods: 1,
+						},
+					},
+				},
+			},
+			taskOrderFunc: func(l, r interface{}) bool {
+				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
+			},
+			expectedDomains: nil,
+			expectedError:   "the topology test-topology doesn't have a level matching the required(zone) specified for the job test-job",
+		},
+		{
+			name: "complex topology with multiple levels",
+			job: &podgroup_info.PodGroupInfo{
+				Name:         "test-job",
+				MinAvailable: 3,
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel:  "region",
+							PreferredTopologyLevel: "zone",
+						},
+					},
+				},
+				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					"pod1": {Name: "pod1", Status: pod_status.Pending},
+					"pod2": {Name: "pod2", Status: pod_status.Pending},
+					"pod3": {Name: "pod3", Status: pod_status.Pending},
+				},
+			},
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "region"},
+							{NodeLabel: "datacenter"},
+						},
+					},
+				},
+				DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+					"rack": {
+						"rack1.zone1.region1": {
+							ID:              "rack1.zone1.region1",
+							Name:            "rack1",
+							Level:           "rack",
+							AllocatablePods: 3,
+						},
+						"rack2.zone1.region1": {
+							ID:              "rack2.zone1.region1",
+							Name:            "rack2",
+							Level:           "rack",
+							AllocatablePods: 3,
+						},
+					},
+					"zone": {
+						"zone1.region1": {
+							ID:              "zone1.region1",
+							Name:            "zone1",
+							Level:           "zone",
+							AllocatablePods: 6,
+						},
+					},
+					"region": {
+						"region1": {
+							ID:              "region1",
+							Name:            "region1",
+							Level:           "region",
+							AllocatablePods: 9,
+						},
+					},
+				},
+			},
+			taskOrderFunc: func(l, r interface{}) bool {
+				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
+			},
+			expectedDomains: []*TopologyDomainInfo{
+				{
+					ID:              "zone1.region1",
+					Name:            "zone1",
+					Level:           "zone",
+					AllocatablePods: 6,
+				},
+			},
+			expectedError: "",
+		},
+		{
+			name: "mixed task statuses - some pending, some running",
+			job: &podgroup_info.PodGroupInfo{
+				Name:         "test-job",
+				MinAvailable: 2,
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel: "zone",
+						},
+					},
+				},
+				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					"pod1": {Name: "pod1", Status: pod_status.Running},
+					"pod2": {Name: "pod2", Status: pod_status.Pending},
+					"pod3": {Name: "pod3", Status: pod_status.Pending},
+				},
+			},
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "zone"},
+						},
+					},
+				},
+				DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+					"zone": {
+						"zone1": {
+							ID:              "zone1",
+							Name:            "zone1",
+							Level:           "zone",
+							AllocatablePods: 2,
+						},
+					},
+				},
+			},
+			taskOrderFunc: func(l, r interface{}) bool {
+				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
+			},
+			expectedDomains: []*TopologyDomainInfo{
+				{
+					ID:              "zone1",
+					Name:            "zone1",
+					Level:           "zone",
+					AllocatablePods: 2,
+				},
+			},
+			expectedError: "",
+		},
+		{
+			name: "Return children subset",
+			job: &podgroup_info.PodGroupInfo{
+				Name:         "test-job",
+				MinAvailable: 4,
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel:  "region",
+							PreferredTopologyLevel: "rack",
+						},
+					},
+				},
+				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					"pod1": {Name: "pod1", Status: pod_status.Pending},
+					"pod2": {Name: "pod2", Status: pod_status.Pending},
+					"pod3": {Name: "pod3", Status: pod_status.Pending},
+					"pod4": {Name: "pod4", Status: pod_status.Pending},
+				},
+			},
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "rack"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "region"},
+							{NodeLabel: "datacenter"},
+						},
+					},
+				},
+				DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+					"rack": {
+						"rack1.zone1.region1": {
+							ID:              "rack1.zone1.region1",
+							Name:            "rack1",
+							Level:           "rack",
+							AllocatablePods: 3,
+						},
+						"rack2.zone1.region1": {
+							ID:              "rack2.zone1.region1",
+							Name:            "rack2",
+							Level:           "rack",
+							AllocatablePods: 3,
+						},
+						"rack1.zone2.region1": {
+							ID:              "rack1.zone2.region1",
+							Name:            "rack1",
+							Level:           "rack",
+							AllocatablePods: 2,
+						},
+						"rack2.zone2.region1": {
+							ID:              "rack2.zone1.region1",
+							Name:            "rack2",
+							Level:           "rack",
+							AllocatablePods: 1,
+						},
+						"rack3.zone3.region1": {
+							ID:              "rack3.zone2.region1",
+							Name:            "rack3",
+							Level:           "rack",
+							AllocatablePods: 1,
+						},
+						"rack4.zone2.region1": {
+							ID:              "rack4.zone2.region1",
+							Name:            "rack4",
+							Level:           "rack",
+							AllocatablePods: 1,
+						},
+						"rack5.zone2.region1": {
+							ID:              "rack5.zone2.region1",
+							Name:            "rack5",
+							Level:           "rack",
+							AllocatablePods: 1,
+						},
+					},
+					"zone": {
+						"zone1.region1": {
+							ID:              "zone1.region1",
+							Name:            "zone1",
+							Level:           "zone",
+							AllocatablePods: 6,
+							Children: []*TopologyDomainInfo{
+								{
+									ID:              "rack1.zone1.region1",
+									Name:            "rack1",
+									Level:           "rack",
+									AllocatablePods: 3,
+								},
+								{
+									ID:              "rack2.zone1.region1",
+									Name:            "rack2",
+									Level:           "rack",
+									AllocatablePods: 3,
+								},
+							},
+						},
+						"zone2.region1": {
+							ID:              "zone2.region1",
+							Name:            "zone2",
+							Level:           "zone",
+							AllocatablePods: 6,
+							Children: []*TopologyDomainInfo{
+								{
+									ID:              "rack1.zone2.region1",
+									Name:            "rack1",
+									Level:           "rack",
+									AllocatablePods: 2,
+								},
+								{
+									ID:              "rack2.zone1.region1",
+									Name:            "rack2",
+									Level:           "rack",
+									AllocatablePods: 1,
+								},
+								{
+									ID:              "rack3.zone2.region1",
+									Name:            "rack3",
+									Level:           "rack",
+									AllocatablePods: 1,
+								},
+								{
+									ID:              "rack4.zone2.region1",
+									Name:            "rack4",
+									Level:           "rack",
+									AllocatablePods: 1,
+								},
+								{
+									ID:              "rack5.zone2.region1",
+									Name:            "rack5",
+									Level:           "rack",
+									AllocatablePods: 1,
+								},
+							},
+						},
+					},
+					"region": {
+						"region1": {
+							ID:              "region1",
+							Name:            "region1",
+							Level:           "region",
+							AllocatablePods: 9,
+						},
+					},
+				},
+			},
+			taskOrderFunc: func(l, r interface{}) bool {
+				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
+			},
+			expectedDomains: []*TopologyDomainInfo{
+				{
+					ID:              "rack1.zone1.region1",
+					Name:            "rack1",
+					Level:           "rack",
+					AllocatablePods: 3,
+				},
+				{
+					ID:              "rack2.zone1.region1",
+					Name:            "rack2",
+					Level:           "rack",
+					AllocatablePods: 3,
+				},
+			},
+			expectedError: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &topologyPlugin{
+				taskOrderFunc: tt.taskOrderFunc,
+			}
+
+			result, err := plugin.getBestJobAllocatableDomains(tt.job, tt.topologyTree)
+
+			// Check error
+			if tt.expectedError != "" {
+				if err == nil {
+					t.Errorf("expected error '%s', but got nil", tt.expectedError)
+					return
+				}
+				if err.Error() != tt.expectedError {
+					t.Errorf("expected error '%s', but got '%s'", tt.expectedError, err.Error())
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			// Check result
+			if len(result) != len(tt.expectedDomains) {
+				t.Errorf("expected %d domains, but got %d", len(tt.expectedDomains), len(result))
+				return
+			}
+
+			// Sort both slices by domain ID for consistent comparison
+			sortDomains := func(domains []*TopologyDomainInfo) {
+				sort.Slice(domains, func(i, j int) bool {
+					return domains[i].ID < domains[j].ID
+				})
+			}
+			sortDomains(result)
+			sortDomains(tt.expectedDomains)
+
+			for i, expectedDomain := range tt.expectedDomains {
+				if i >= len(result) {
+					t.Errorf("expected domain at index %d not found in result", i)
+					continue
+				}
+
+				actualDomain := result[i]
+				if actualDomain.ID != expectedDomain.ID {
+					t.Errorf("domain %d: expected ID %s, got %s", i, expectedDomain.ID, actualDomain.ID)
+				}
+				if actualDomain.Name != expectedDomain.Name {
+					t.Errorf("domain %d: expected Name %s, got %s", i, expectedDomain.Name, actualDomain.Name)
+				}
+				if actualDomain.Level != expectedDomain.Level {
+					t.Errorf("domain %d: expected Level %s, got %s", i, expectedDomain.Level, actualDomain.Level)
+				}
+				if actualDomain.AllocatablePods != expectedDomain.AllocatablePods {
+					t.Errorf("domain %d: expected AllocatablePods %d, got %d", i, expectedDomain.AllocatablePods, actualDomain.AllocatablePods)
 				}
 			}
 		})
