@@ -89,7 +89,7 @@ type Session struct {
 	SchedulerParams conf.SchedulerParams
 	mux             *http.ServeMux
 
-	k8sPodState map[types.UID]k8s_internal.SessionState
+	k8sResourceStateCache sync.Map
 }
 
 func (ssn *Session) Statement() *Statement {
@@ -97,15 +97,8 @@ func (ssn *Session) Statement() *Statement {
 }
 
 func (ssn *Session) GetSessionStateForResource(uid types.UID) k8s_internal.SessionState {
-	if ssn.k8sPodState == nil {
-		ssn.k8sPodState = make(map[types.UID]k8s_internal.SessionState)
-	}
-	state, found := ssn.k8sPodState[uid]
-	if found {
-		return state
-	}
-	ssn.k8sPodState[uid] = k8s_internal.NewSessionState()
-	return ssn.k8sPodState[uid]
+	state, _ := ssn.k8sResourceStateCache.LoadOrStore(uid, k8s_internal.NewSessionState())
+	return state.(k8s_internal.SessionState)
 }
 
 func (ssn *Session) BindPod(pod *pod_info.PodInfo) error {
@@ -347,10 +340,10 @@ func openSession(cache cache.Cache, sessionId types.UID, schedulerParams conf.Sc
 		Queues:        map[common_info.QueueID]*queue_info.QueueInfo{},
 		Topologies:    []*kueuev1alpha1.Topology{},
 
-		plugins:         map[string]Plugin{},
-		SchedulerParams: schedulerParams,
-		mux:             mux,
-		k8sPodState:     map[types.UID]k8s_internal.SessionState{},
+		plugins:               map[string]Plugin{},
+		SchedulerParams:       schedulerParams,
+		mux:                   mux,
+		k8sResourceStateCache: sync.Map{},
 	}
 
 	log.InfraLogger.V(2).Infof("Taking cluster snapshot ...")
