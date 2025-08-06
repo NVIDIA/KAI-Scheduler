@@ -15,11 +15,10 @@ import (
 )
 
 type Reclaimable struct {
-	isInferencePreemptible bool
 }
 
-func New(isInferencePreemptible bool) *Reclaimable {
-	return &Reclaimable{isInferencePreemptible}
+func New() *Reclaimable {
+	return &Reclaimable{}
 }
 
 func (r *Reclaimable) CanReclaimResources(
