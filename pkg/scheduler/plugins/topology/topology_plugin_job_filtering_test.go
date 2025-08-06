@@ -1057,7 +1057,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
 			},
 			expectedDomains: nil,
-			expectedError:   "the topology test-topology doesn't have a level matching the required(zone) spesified for the job test-job",
+			expectedError:   "the topology test-topology doesn't have a level matching the required(zone) specified for the job test-job",
 		},
 		{
 			name: "complex topology with multiple levels",
