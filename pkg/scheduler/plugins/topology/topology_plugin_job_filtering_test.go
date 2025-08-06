@@ -1370,7 +1370,7 @@ func TestTopologyPlugin_getBestjobAllocateableDomains(t *testing.T) {
 				taskOrderFunc: tt.taskOrderFunc,
 			}
 
-			result, err := plugin.getBestjobAllocateableDomains(tt.job, tt.topologyTree)
+			result, err := plugin.getBestJobAllocatableDomains(tt.job, tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {
