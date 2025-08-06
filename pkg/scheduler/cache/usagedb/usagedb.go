@@ -23,7 +23,6 @@ type UsageLister struct {
 	lastUsageData      *queue_info.ClusterUsage
 	lastUsageDataMutex sync.RWMutex
 	lastUsageDataTime  *time.Time
-	stopCh             <-chan struct{}
 	fetchInterval      time.Duration
 	stalenessPeriod    time.Duration
 }
@@ -69,7 +68,6 @@ func (l *UsageLister) GetResourceUsage() (*queue_info.ClusterUsage, error) {
 // Start begins periodic fetching of resource usage data in a background goroutine.
 // The data is fetched every minute by default.
 func (l *UsageLister) Start(stopCh <-chan struct{}) {
-	l.stopCh = stopCh
 	go func() {
 		ticker := time.NewTicker(l.fetchInterval)
 		defer ticker.Stop()
@@ -87,7 +85,7 @@ func (l *UsageLister) Start(stopCh <-chan struct{}) {
 					// Log error but continue - we'll retry on next tick
 					// TODO: Add proper logging
 				}
-			case <-l.stopCh:
+			case <-stopCh:
 				return
 			}
 		}
