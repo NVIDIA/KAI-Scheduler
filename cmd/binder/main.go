@@ -10,10 +10,8 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/binder/app"
 
-	admissionplugins "github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
-	admissiongpusharing "github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/gpusharing"
-	bindingplugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
-	bindinggpusharing "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing"
+	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing"
 	k8s_plugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/k8s-plugins"
 )
 
@@ -42,8 +40,7 @@ func main() {
 }
 
 func registerPlugins(app *app.App) error {
-	binderPlugins := bindingplugins.New()
-	admissionPlugins := admissionplugins.New()
+	binderPlugins := plugins.New()
 	k8sPlugins, err := k8s_plugins.New(app.K8sInterface, app.InformerFactory,
 		int64(app.Options.VolumeBindingTimeoutSeconds))
 	if err != nil {
@@ -51,13 +48,10 @@ func registerPlugins(app *app.App) error {
 	}
 	binderPlugins.RegisterPlugin(k8sPlugins)
 
-	bindingGpuSharingPlugin := bindinggpusharing.New(app.Client,
-		app.Options.GpuCdiEnabled, app.Options.GPUSharingEnabled)
-	admissionGpuSharingPlugin := admissiongpusharing.New(app.Client,
+	bindingGpuSharingPlugin := gpusharing.New(app.Client,
 		app.Options.GpuCdiEnabled, app.Options.GPUSharingEnabled)
 
 	binderPlugins.RegisterPlugin(bindingGpuSharingPlugin)
-	admissionPlugins.RegisterPlugin(admissionGpuSharingPlugin)
-	app.RegisterPlugins(admissionPlugins, binderPlugins)
+	app.RegisterPlugins(binderPlugins)
 	return nil
 }

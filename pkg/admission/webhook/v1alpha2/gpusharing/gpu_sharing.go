@@ -21,25 +21,25 @@ const (
 	CdiDeviceNameBase      = "k8s.device-plugin.nvidia.com/gpu=%s"
 )
 
-type GPUSharing struct {
+type AdmissionGPUSharing struct {
 	kubeClient             client.Client
 	gpuDevicePluginUsesCdi bool
 	gpuSharingEnabled      bool
 }
 
-func New(kubeClient client.Client, gpuDevicePluginUsesCdi bool, gpuSharingEnabled bool) *GPUSharing {
-	return &GPUSharing{
+func New(kubeClient client.Client, gpuDevicePluginUsesCdi bool, gpuSharingEnabled bool) *AdmissionGPUSharing {
+	return &AdmissionGPUSharing{
 		kubeClient:             kubeClient,
 		gpuDevicePluginUsesCdi: gpuDevicePluginUsesCdi,
 		gpuSharingEnabled:      gpuSharingEnabled,
 	}
 }
 
-func (p *GPUSharing) Name() string {
+func (p *AdmissionGPUSharing) Name() string {
 	return "gpusharing"
 }
 
-func (p *GPUSharing) Validate(pod *v1.Pod) error {
+func (p *AdmissionGPUSharing) Validate(pod *v1.Pod) error {
 	if !p.gpuSharingEnabled && resources.RequestsGPUFraction(pod) {
 		return fmt.Errorf(
 			"attempting to create a pod %s/%s with gpu sharing request, while GPU sharing is disabled",
@@ -49,7 +49,7 @@ func (p *GPUSharing) Validate(pod *v1.Pod) error {
 	return gpurequesthandler.ValidateGpuRequests(pod)
 }
 
-func (p *GPUSharing) Mutate(pod *v1.Pod) error {
+func (p *AdmissionGPUSharing) Mutate(pod *v1.Pod) error {
 	if len(pod.Spec.Containers) == 0 {
 		return nil
 	}
