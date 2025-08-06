@@ -60,6 +60,9 @@ func (r *ResourceShareOverrides) ResourceShare() *ResourceShare {
 	if r.Request != nil {
 		rs.Request = *r.Request
 	}
+	if r.AbsoluteUsage != nil {
+		rs.AbsoluteUsage = *r.AbsoluteUsage
+	}
 	return &rs
 }
 
@@ -97,7 +100,7 @@ type QueueOverrides struct {
 	ParentQueue       common_info.QueueID         `json:"parentQueue"`
 	ChildQueues       []common_info.QueueID       `json:"childQueues"`
 	CreationTimestamp *string                     `json:"creationTimestamp"`
-	Priority          *int                        `json:"priority"`
+	Priority          *int32                      `json:"priority"`
 	ResourceShare     QueueResourceShareOverrides `json:"resourceShare"`
 }
 
@@ -112,7 +115,7 @@ func (qo *QueueOverrides) ToQueueAttributes() *QueueAttributes {
 	}
 
 	if qo.Priority != nil {
-		qa.Priority = *qo.Priority
+		qa.Priority = int(*qo.Priority)
 	}
 
 	if qo.CreationTimestamp != nil {
