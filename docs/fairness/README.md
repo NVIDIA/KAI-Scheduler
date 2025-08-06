@@ -18,12 +18,12 @@ These two steps are repeated across all hierarchy levels until every leaf queue 
 ## Fair Share
 Once the fair share for each queue is calculated, it serves two primary purposes:
 1. Queue Order - Queues with a fair share further below their allocation will be prioritized for scheduling.
-2. Reclaim action - If scheduling cannot be performed due to limited resources in the cluster, the scheduler will evict workloads from queues that have exceeded their fair share, giving priority to queues that are below their fair share. For more details, refer to the reclaim strategies.
+2. Reclaim action – When reclamation is required, the scheduler compares the **utilisation ratio** (`Allocated / FairShare`) of queues that share the same parent. A queue can only reclaim resources if, **after** the transfer, its utilisation ratio remains lower than that of every sibling queue. For more details see the reclaim strategies.
 
 ## Reclaim Strategies
 There are two main reclaim strategies:
 1. Workloads from queues with resources below their fair share can evict workloads from queues that have exceeded their fair share.
 2. Workloads from queues under their quota can evict workloads from queues that have exceeded their quota.
 
-In both strategies, the scheduler ensures that the initial state remains unchanged after resource reclamation. Specifically, a queue below its fair share will not exceed that share after reclamation, and a queue below its quota will not exceed the quota.
+In both strategies, the scheduler ensures that the relative ordering is preserved: a queue that had the lowest utilisation ratio in its level before reclamation will still have the lowest ratio afterwards. Likewise, a queue that was below its quota will remain below its quota.
 The scheduler will prioritize the first strategy.
