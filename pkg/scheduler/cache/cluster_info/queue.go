@@ -55,6 +55,12 @@ func (c *ClusterInfo) snapshotQueues() (map[common_info.QueueID]*queue_info.Queu
 		return nil, err
 	}
 
+	usage, err := c.dataLister.ListResourceUsage()
+	if err != nil {
+		err = errors.WithStack(fmt.Errorf("error getting resource usage: %c", err))
+		return nil, err
+	}
+
 	result := map[common_info.QueueID]*queue_info.QueueInfo{}
 	if c.fairnessLevelType == FullFairness {
 		for _, queue := range queues {
@@ -72,6 +78,10 @@ func (c *ClusterInfo) snapshotQueues() (map[common_info.QueueID]*queue_info.Queu
 				result[queueInfo.UID] = queueInfo
 			}
 		}
+	}
+
+	for _, queue := range result {
+		queue.Resources.CPU.Limit = usage.Queues[queue.UID]
 	}
 
 	return result, nil
