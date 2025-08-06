@@ -552,9 +552,13 @@ var _ = Describe("Reclaimable - Single department", func() {
 			},
 		}
 		reclaimee := &podgroup_info.PodGroupInfo{
-			Name:     "reclaimee",
-			Queue:    "p2",
-			PodInfos: reclaimeePods,
+			Name:  "reclaimee",
+			Queue: "p2",
+			SubGroups: map[string]*podgroup_info.SubGroupInfo{
+				podgroup_info.DefaultSubGroup: {
+					PodInfos: reclaimeePods,
+				},
+			},
 		}
 		reclaimees = []*podgroup_info.PodGroupInfo{reclaimee}
 
@@ -701,9 +705,13 @@ var _ = Describe("Reclaimable - Multiple departments", func() {
 			},
 		}
 		reclaimee := &podgroup_info.PodGroupInfo{
-			Name:     "reclaimee",
-			Queue:    "p2",
-			PodInfos: reclaimeePods,
+			Name:  "reclaimee",
+			Queue: "p2",
+			SubGroups: map[string]*podgroup_info.SubGroupInfo{
+				podgroup_info.DefaultSubGroup: {
+					PodInfos: reclaimeePods,
+				},
+			},
 		}
 		reclaimees = []*podgroup_info.PodGroupInfo{reclaimee}
 
@@ -812,9 +820,13 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			},
 		}
 		reclaimee = &podgroup_info.PodGroupInfo{
-			Name:     "reclaimee",
-			Queue:    "right-leaf",
-			PodInfos: reclaimeePods,
+			Name:  "reclaimee",
+			Queue: "right-leaf",
+			SubGroups: map[string]*podgroup_info.SubGroupInfo{
+				podgroup_info.DefaultSubGroup: {
+					PodInfos: reclaimeePods,
+				},
+			},
 		}
 	})
 	It("Reclaimer is below fair share, reclaimee above fair share - sanity", func() {
@@ -957,7 +969,7 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 		queues := buildQueues(queuesData)
 		reclaimable = New(true)
 
-		reclaimee.PodInfos["1"].ResReq.GpuResourceRequirement =
+		reclaimee.GetAllPodsMap()["1"].ResReq.GpuResourceRequirement =
 			*resource_info.NewGpuResourceRequirementWithGpus(1.5, 0)
 		reclaimerInfo.RequiredResources = resource_info.NewResource(0, 0, 1)
 		reclaimerInfo.Queue = "left-leaf1"
@@ -1010,17 +1022,21 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 
 		reclaimerInfo.RequiredResources = resource_info.NewResource(0, 0, 1)
 		reclaimerInfo.Queue = "left-leaf1"
-		reclaimee.PodInfos["1"].ResReq.GpuResourceRequirement =
+		reclaimee.GetAllPodsMap()["1"].ResReq.GpuResourceRequirement =
 			*resource_info.NewGpuResourceRequirementWithGpus(1.5, 0)
 		reclaimee2 := &podgroup_info.PodGroupInfo{
 			Name:  "reclaimee",
 			Queue: "left-leaf2",
-			PodInfos: pod_info.PodsMap{
-				"1": &pod_info.PodInfo{
-					ResReq: &resource_info.ResourceRequirements{
-						GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(0.5, 0),
+			SubGroups: map[string]*podgroup_info.SubGroupInfo{
+				podgroup_info.DefaultSubGroup: {
+					PodInfos: pod_info.PodsMap{
+						"1": &pod_info.PodInfo{
+							ResReq: &resource_info.ResourceRequirements{
+								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(0.5, 0),
+							},
+							Status: pod_status.Running,
+						},
 					},
-					Status: pod_status.Running,
 				},
 			},
 		}

@@ -774,7 +774,7 @@ func TestBindRequests(t *testing.T) {
 
 		assertedPods := 0
 		for _, podGroup := range snapshot.PodGroupInfos {
-			for _, podInfo := range podGroup.PodInfos {
+			for _, podInfo := range podGroup.GetAllPodsMap() {
 				byNamespace, found := test.expectedPodStatus[podInfo.Pod.Namespace]
 				if !found {
 					continue
@@ -830,9 +830,15 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				{
-					Name:         "podGroup-0",
-					Queue:        "queue-0",
-					MinAvailable: 1,
+					Name:  "podGroup-0",
+					Queue: "queue-0",
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
+					},
 				},
 			},
 		},
@@ -881,9 +887,15 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				{
-					Name:         "podGroup-0",
-					Queue:        "queue-0",
-					MinAvailable: 1,
+					Name:  "podGroup-0",
+					Queue: "queue-0",
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
+					},
 				},
 			},
 		},
@@ -902,9 +914,15 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				{
-					Name:         "podGroup-0",
-					Queue:        "queue-0",
-					MinAvailable: 1,
+					Name:  "podGroup-0",
+					Queue: "queue-0",
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
+					},
 				},
 			},
 		},
@@ -930,9 +948,15 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				{
-					Name:         "podGroup-0",
-					Queue:        "queue-0",
-					MinAvailable: 1,
+					Name:  "podGroup-0",
+					Queue: "queue-0",
+					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 1,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
+					},
 				},
 			},
 		},
@@ -1016,10 +1040,14 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				{
-					Name:         "podGroup-0",
-					Queue:        "queue-0",
-					MinAvailable: 3,
+					Name:  "podGroup-0",
+					Queue: "queue-0",
 					SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: {
+							Name:         podgroup_info.DefaultSubGroup,
+							MinAvailable: 3,
+							PodInfos:     map[common_info.PodID]*pod_info.PodInfo{},
+						},
 						"SubGroup-0": {
 							Name:         "SubGroup-0",
 							MinAvailable: 1,
@@ -1065,11 +1093,11 @@ func TestSnapshotPodGroups(t *testing.T) {
 
 			assert.Equal(t, expected.Name, pg.Name)
 			assert.Equal(t, expected.Queue, pg.Queue)
-			assert.Equal(t, expected.MinAvailable, pg.MinAvailable)
+			assert.Equal(t, expected.GetDefaultMinAvailable(), pg.GetDefaultMinAvailable())
 
-			assert.Equal(t, len(expected.SubGroups), len(pg.SubGroups))
-			for _, expectedSubGroup := range expected.SubGroups {
-				for _, subGroup := range pg.SubGroups {
+			assert.Equal(t, len(expected.GetRealSubGroupInfo()), len(pg.GetRealSubGroupInfo()))
+			for _, expectedSubGroup := range expected.GetRealSubGroupInfo() {
+				for _, subGroup := range pg.GetRealSubGroupInfo() {
 					if expectedSubGroup.Name != subGroup.Name {
 						continue
 					}
@@ -1690,7 +1718,7 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 	snapshot, err := clusterInfo.Snapshot()
 	assert.Equal(t, nil, err)
 	node := snapshot.Nodes["node-1"]
-	task := snapshot.PodGroupInfos["podGroup-0"].PodInfos["pod-1"]
+	task := snapshot.PodGroupInfos["podGroup-0"].GetAllPodsMap()["pod-1"]
 	assert.Equal(t, node.IsTaskAllocatable(task), false)
 
 	pvc.OwnerReferences = nil
@@ -1699,7 +1727,7 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 	snapshot, err = clusterInfo.Snapshot()
 	assert.Equal(t, nil, err)
 	node = snapshot.Nodes["node-1"]
-	task = snapshot.PodGroupInfos["podGroup-0"].PodInfos["pod-1"]
+	task = snapshot.PodGroupInfos["podGroup-0"].GetAllPodsMap()["pod-1"]
 	assert.Equal(t, node.IsTaskAllocatable(task), true)
 
 }

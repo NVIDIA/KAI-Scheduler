@@ -61,7 +61,7 @@ func (bns *ByNodeScenario) VictimsTasksFromNodes(nodeNames []string) []*pod_info
 
 	for _, jobID := range victimsJobs {
 		for _, jobTaskGroup := range bns.victimsJobsTaskGroups[jobID] {
-			tasks = append(tasks, maps.Values(jobTaskGroup.PodInfos)...)
+			tasks = append(tasks, maps.Values(jobTaskGroup.GetAllPodsMap())...)
 		}
 	}
 

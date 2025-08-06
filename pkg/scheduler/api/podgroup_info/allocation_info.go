@@ -15,7 +15,7 @@ import (
 )
 
 func HasTasksToAllocate(podGroupInfo *PodGroupInfo, isRealAllocation bool) bool {
-	for _, task := range podGroupInfo.PodInfos {
+	for _, task := range podGroupInfo.GetAllPodsMap() {
 		if task.ShouldAllocate(isRealAllocation) {
 			return true
 		}
@@ -111,7 +111,7 @@ func getTasksPriorityQueue(
 	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) *scheduler_util.PriorityQueue {
 	podPriorityQueue := scheduler_util.NewPriorityQueue(taskOrderFn, scheduler_util.QueueCapacityInfinite)
-	for _, task := range podGroupInfo.PodInfos {
+	for _, task := range podGroupInfo.GetAllPodsMap() {
 		if task.ShouldAllocate(isRealAllocation) {
 			podPriorityQueue.Push(task)
 		}
@@ -137,10 +137,10 @@ func getTasksPriorityQueuePerSubGroup(
 
 func getNumOfTasksToAllocate(podGroupInfo *PodGroupInfo) int {
 	numAllocatedTasks := podGroupInfo.GetActiveAllocatedTasksCount()
-	if numAllocatedTasks >= int(podGroupInfo.MinAvailable) {
+	if numAllocatedTasks >= int(podGroupInfo.GetDefaultMinAvailable()) {
 		return 1
 	}
-	return int(podGroupInfo.MinAvailable) - numAllocatedTasks
+	return int(podGroupInfo.GetDefaultMinAvailable()) - numAllocatedTasks
 }
 
 func getNumOfTasksToAllocatePerSubGroup(podGroupInfo *PodGroupInfo) map[string]int {

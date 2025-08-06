@@ -92,15 +92,15 @@ func (ci ClusterInfo) String() string {
 		str = str + "PodGroupInfos:\n"
 		for _, job := range ci.PodGroupInfos {
 			str = str + fmt.Sprintf("\t Job(%s) name(%s) minAvailable(%v)\n",
-				job.UID, job.Name, job.MinAvailable)
+				job.UID, job.Name, job.GetDefaultMinAvailable())
 
-			for _, subGroup := range job.SubGroups {
+			for _, subGroup := range job.GetRealSubGroupInfo() {
 				str = str + fmt.Sprintf("\t\t subGroup(%s), minAvailable(%v)\n",
 					subGroup.Name, subGroup.MinAvailable)
 			}
 
 			i := 0
-			for _, task := range job.PodInfos {
+			for _, task := range job.GetAllPodsMap() {
 				str = str + fmt.Sprintf("\t\t task %d: %v\n", i, task)
 				i++
 			}

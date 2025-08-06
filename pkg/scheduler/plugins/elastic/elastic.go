@@ -32,19 +32,19 @@ func JobOrderFn(l, r interface{}) int {
 	lvAllocatedCount := int32(lv.GetActiveAllocatedTasksCount())
 	rvAllocatedCount := int32(rv.GetActiveAllocatedTasksCount())
 
-	if lvAllocatedCount < lv.MinAvailable && rvAllocatedCount >= rv.MinAvailable {
+	if lvAllocatedCount < lv.GetDefaultMinAvailable() && rvAllocatedCount >= rv.GetDefaultMinAvailable() {
 		return -1
 	}
 
-	if lvAllocatedCount == lv.MinAvailable && rvAllocatedCount > rv.MinAvailable {
+	if lvAllocatedCount == lv.GetDefaultMinAvailable() && rvAllocatedCount > rv.GetDefaultMinAvailable() {
 		return -1
 	}
 
-	if lvAllocatedCount >= lv.MinAvailable && rvAllocatedCount < rv.MinAvailable {
+	if lvAllocatedCount >= lv.GetDefaultMinAvailable() && rvAllocatedCount < rv.GetDefaultMinAvailable() {
 		return 1
 	}
 
-	if lvAllocatedCount > lv.MinAvailable && rvAllocatedCount == rv.MinAvailable {
+	if lvAllocatedCount > lv.GetDefaultMinAvailable() && rvAllocatedCount == rv.GetDefaultMinAvailable() {
 		return 1
 	}
 
