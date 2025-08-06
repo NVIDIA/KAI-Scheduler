@@ -148,6 +148,16 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 	UpdateQueueHierarchy(queues)
 	snapshot.Queues = queues
 
+	usage, usageErr := c.snapshotQueueResourceUsage()
+	if usageErr != nil {
+		log.InfraLogger.Warningf("error snapshotting queue resource usage: %c", usageErr)
+	}
+	if usage == nil {
+		log.InfraLogger.Warningf("resource usage is nil, using 0 values for all queues")
+		usage = queue_info.NewClusterUsage()
+	}
+	snapshot.QueueResourceUsage = *usage
+
 	snapshot.PodGroupInfos, err = c.snapshotPodGroups(snapshot.Queues, existingPods)
 	if err != nil {
 		return nil, err

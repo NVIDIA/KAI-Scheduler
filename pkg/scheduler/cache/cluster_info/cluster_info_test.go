@@ -1772,6 +1772,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
+				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
 				mdl.EXPECT().ListPriorityClasses().Return([]*v12.PriorityClass{}, nil)
 				mdl.EXPECT().ListPodGroups().Return(nil, fmt.Errorf(successErrorMsg))
 			},
@@ -1782,6 +1783,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
+				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
 				mdl.EXPECT().ListPriorityClasses().Return(nil, fmt.Errorf(successErrorMsg))
 			},
 		},
@@ -1808,6 +1810,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 						},
 					},
 				}, nil).AnyTimes()
+				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
 				mdl.EXPECT().ListPriorityClasses().Return([]*v12.PriorityClass{}, nil)
 				mdl.EXPECT().ListPodGroups().Return([]*enginev2alpha2.PodGroup{
 					{
