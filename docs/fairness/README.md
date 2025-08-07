@@ -27,3 +27,16 @@ There are two main reclaim strategies:
 
 In both strategies, the scheduler ensures that the relative ordering is preserved: a queue that had the lowest utilisation ratio in its level before reclamation will still have the lowest ratio afterwards. Likewise, a queue that was below its quota will remain below its quota.
 The scheduler will prioritize the first strategy.
+
+### Reclaim Ratio Adjustment
+The utilization ratio comparison can be adjusted using the `reclaimerUtilizationMultiplier` plugin argument. This multiplier is applied to the reclaimer's utilization ratio before comparison:
+- Values > 1.0 make it harder for jobs to reclaim resources (more conservative)
+- Minimum value is 1.0 (standard comparison, default)
+- Values < 1.0 are not allowed and will be set to 1.0 - These values could cause infinite reclaim cycles that we want to avoid.
+
+Example configuration:
+```yaml
+pluginArguments:
+  proportion:
+    reclaimerUtilizationMultiplier: "1.2"  # Makes reclamation 20% more conservative
+```
