@@ -2132,7 +2132,7 @@ func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects, ku
 
 	fakeUsageClient := usagedb.FakeClient{}
 	fakeUsageClient.SetResourceUsage(clusterUsage, clusterUsageErr)
-	usageLister := usagedb.NewUsageLister(&fakeUsageClient, nil, nil)
+	usageLister := usagedb.NewUsageLister(&fakeUsageClient, ptr.To(10*time.Microsecond), ptr.To(10*time.Second))
 
 	clusterInfo, _ := New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, usageLister, nodePoolParams, false,
 		clusterPodAffinityInfo, true, fullHierarchyFairness, nil)
