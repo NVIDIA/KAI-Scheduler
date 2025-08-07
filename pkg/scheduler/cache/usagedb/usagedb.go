@@ -13,6 +13,7 @@ import (
 )
 
 var defaultFetchInterval = 1 * time.Minute
+var defaultWaitTimeout = 1 * time.Minute
 
 type Interface interface {
 	GetResourceUsage() (*queue_info.ClusterUsage, error)
@@ -25,9 +26,10 @@ type UsageLister struct {
 	lastUsageDataTime  *time.Time
 	fetchInterval      time.Duration
 	stalenessPeriod    time.Duration
+	waitTimeout        time.Duration
 }
 
-func NewUsageLister(client Interface, fetchInterval, stalenessPeriod *time.Duration) *UsageLister {
+func NewUsageLister(client Interface, fetchInterval, stalenessPeriod, waitTimeout *time.Duration) *UsageLister {
 	if fetchInterval == nil {
 		log.InfraLogger.V(3).Infof("fetchInterval is not set, using default: %s", defaultFetchInterval)
 		fetchInterval = &defaultFetchInterval
@@ -37,6 +39,10 @@ func NewUsageLister(client Interface, fetchInterval, stalenessPeriod *time.Durat
 		period := 5 * defaultFetchInterval
 		stalenessPeriod = &period
 		log.InfraLogger.V(3).Infof("stalenessPeriod is not set, using default: %s", period)
+	}
+
+	if waitTimeout == nil {
+		waitTimeout = &defaultWaitTimeout
 	}
 
 	if stalenessPeriod.Seconds() < fetchInterval.Seconds() {
@@ -80,7 +86,7 @@ func (l *UsageLister) Start(stopCh <-chan struct{}) {
 		// Fetch immediately on start
 		if err := l.fetchAndUpdateUsage(); err != nil {
 			// Log error but continue - we'll retry on next tick
-			// TODO: Add proper logging
+			log.InfraLogger.V(1).Errorf("failed to fetch usage data: %v. Will retry in %s", err, l.fetchInterval)
 		}
 
 		for {
@@ -88,7 +94,7 @@ func (l *UsageLister) Start(stopCh <-chan struct{}) {
 			case <-ticker.C:
 				if err := l.fetchAndUpdateUsage(); err != nil {
 					// Log error but continue - we'll retry on next tick
-					// TODO: Add proper logging
+					log.InfraLogger.V(1).Errorf("failed to fetch usage data: %v. Will retry in %s", err, l.fetchInterval)
 				}
 			case <-stopCh:
 				return
@@ -106,9 +112,14 @@ func (l *UsageLister) WaitForCacheSync(stopCh <-chan struct{}) bool {
 	ticker := time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()
 
+	timeout := time.After(l.waitTimeout)
+
 	for {
 		select {
 		case <-stopCh:
+			return false
+		case <-timeout:
+			log.InfraLogger.V(2).Warnf("usage data fetch timed out after %s", l.waitTimeout)
 			return false
 		case <-ticker.C:
 			l.lastUsageDataMutex.RLock()

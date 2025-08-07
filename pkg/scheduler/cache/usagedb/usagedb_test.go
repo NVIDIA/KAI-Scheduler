@@ -60,7 +60,7 @@ func TestNewUsageLister(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lister := NewUsageLister(&FakeClient{}, tt.fetchInterval, tt.stalenessPeriod)
+			lister := NewUsageLister(&FakeClient{}, tt.fetchInterval, tt.stalenessPeriod, nil)
 			assert.Equal(t, tt.wantInterval, lister.fetchInterval)
 			assert.Equal(t, tt.wantStaleness, lister.stalenessPeriod)
 			assert.NotNil(t, lister.lastUsageData)
@@ -120,7 +120,7 @@ func TestGetResourceUsage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lister := NewUsageLister(&FakeClient{}, nil, nil)
+			lister := NewUsageLister(&FakeClient{}, nil, nil, nil)
 			if tt.setupLister != nil {
 				tt.setupLister(lister)
 			}
@@ -178,7 +178,7 @@ func TestFetchAndUpdateUsageErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lister := NewUsageLister(tt.setupClient(), nil, nil)
+			lister := NewUsageLister(tt.setupClient(), nil, nil, nil)
 			err := lister.fetchAndUpdateUsage()
 
 			if tt.wantErr {
