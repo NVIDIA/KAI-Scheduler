@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
@@ -67,19 +68,19 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 		Name:      podGangName,
 	}, podGang)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get PodGang %s/%s : %w",
+		return nil, fmt.Errorf("failed to get PodGang %s/%s. Err: %w",
 			pod.Namespace, podGangName, err)
 	}
 
 	metadata, err := gg.DefaultGrouper.GetPodGroupMetadata(podGang, pod)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DefaultGrouper metadata for PodGang %s/%s : %w",
+		return nil, fmt.Errorf("failed to get DefaultGrouper metadata for PodGang %s/%s. Err: %w",
 			pod.Namespace, podGangName, err)
 	}
 
 	priorityClassName, found, err := unstructured.NestedString(podGang.Object, "spec", "priorityClassName")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get spec.priorityClassName from PodGang %s/%s : %w",
+		return nil, fmt.Errorf("failed to get spec.priorityClassName from PodGang %s/%s. Err: %w",
 			pod.Namespace, podGangName, err)
 	}
 	if found {
@@ -89,27 +90,99 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 	var minAvailable int32
 	pgSlice, found, err := unstructured.NestedSlice(podGang.Object, "spec", "podgroups")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get spec.podgroups from PodGang %s/%s : %w",
+		return nil, fmt.Errorf("failed to get spec.podgroups from PodGang %s/%s. Err: %w",
 			pod.Namespace, podGangName, err)
 	}
-	for idx, v := range pgSlice {
+	for pgIndex, v := range pgSlice {
 		pgr, ok := v.(map[string]interface{})
 		if !ok {
 			return nil, fmt.Errorf("invalid structure of spec.podgroup[%v] in PodGang %s/%s",
-				idx, pod.Namespace, podGangName)
+				pgIndex, pod.Namespace, podGangName)
 		}
-		podSlice, found, err := unstructured.NestedSlice(pgr, "podReferences")
+		subGroup, err := parseGroveSubGroup(pgr, pgIndex, pod.Namespace, podGangName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get podReferences from spec.podgroup[%v] of PodGang %s/%s : %w",
-				idx, pod.Namespace, podGangName, err)
+			return nil, fmt.Errorf("failed to parse spec.podgroups[%d] from PodGang %s/%s. Err: %w",
+				pgIndex, pod.Namespace, podGangName, err)
 		}
-		if !found {
-			return nil, fmt.Errorf("missing podReferences in spec.podgroup[%v] of PodGang %s/%s",
-				idx, pod.Namespace, podGangName)
-		}
-		minAvailable += int32(len(podSlice))
+		metadata.SubGroups = append(metadata.SubGroups, subGroup)
+
+		minAvailable += subGroup.MinAvailable
 	}
 	metadata.MinAvailable = minAvailable
 
 	return metadata, nil
+}
+
+func parseGroveSubGroup(
+	pg map[string]interface{}, pgIndex int, namespace, podGangName string,
+) (*podgroup.SubGroupMetadata, error) {
+	// Name
+	name, found, err := unstructured.NestedString(pg, "name")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse 'name' field. Err: %v", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("missing required 'name' field")
+	}
+
+	// MinReplicas
+	minAvailable, found, err := unstructured.NestedInt64(pg, "minReplicas")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse 'minReplicas' field. Err: %v", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("missing required 'minReplicas' field")
+	}
+	if minAvailable <= 0 {
+		return nil, fmt.Errorf("invalid 'minReplicas' field. Must be greater than 0")
+	}
+
+	// PodReferences
+	podReferences, found, err := unstructured.NestedSlice(pg, "podReferences")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse 'podReferences' field. Err: %w", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("missing required 'podReferences' field")
+	}
+	var pods []*types.NamespacedName
+	for podIndex, podRef := range podReferences {
+		reference, ok := podRef.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("invalid spec.podgroup[%d].podReferences[%d] in PodGang %s/%s",
+				pgIndex, podIndex, namespace, podGangName)
+		}
+		namespacedName, err := parsePodReference(reference)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse spec.podgroups[%d].podreferences[%d] from PodGang %s/%s. Err: %w",
+				pgIndex, podIndex, namespace, podGangName, err)
+		}
+		pods = append(pods, namespacedName)
+	}
+
+	return &podgroup.SubGroupMetadata{
+		Name:           name,
+		MinAvailable:   int32(minAvailable),
+		PodsReferences: pods,
+	}, nil
+}
+
+func parsePodReference(podRef map[string]interface{}) (*types.NamespacedName, error) {
+	podNamespace, found, err := unstructured.NestedString(podRef, "namespace")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse 'namespace' field. Err: %v", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("missing required 'namespace' field")
+	}
+
+	podName, found, err := unstructured.NestedString(podRef, "name")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse 'name' field. Err: %v", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("missing required 'name' field")
+	}
+
+	return &types.NamespacedName{Namespace: podNamespace, Name: podName}, nil
 }
