@@ -87,7 +87,7 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 					MaxTaskNum: ptr.To(100),
 				},
 				"node-2": {
-					CPUMillis:  1000,
+					CPUMillis:  400,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
 				},
