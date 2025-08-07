@@ -18,6 +18,10 @@ spec:
       - name: upgrader
         image: "{{ .Values.global.registry }}/{{ .Values.crdupgrader.image.name }}:{{ .Chart.Version }}"
         imagePullPolicy: {{ .Values.crdupgrader.image.pullPolicy }}
+        {{- if .Values.global.securityContext }}
+        securityContext:
+          {{- toYaml .Values.global.securityContext | nindent 10 }}
+        {{- end }}
       restartPolicy: OnFailure
       {{- if .Values.global.nodeSelector }}
       nodeSelector:
