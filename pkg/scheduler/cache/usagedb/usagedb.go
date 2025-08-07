@@ -84,18 +84,12 @@ func (l *UsageLister) Start(stopCh <-chan struct{}) {
 		defer ticker.Stop()
 
 		// Fetch immediately on start
-		if err := l.fetchAndUpdateUsage(); err != nil {
-			// Log error but continue - we'll retry on next tick
-			log.InfraLogger.V(1).Errorf("failed to fetch usage data: %v. Will retry in %s", err, l.fetchInterval)
-		}
+		l.fetchAndUpdateUsage()
 
 		for {
 			select {
 			case <-ticker.C:
-				if err := l.fetchAndUpdateUsage(); err != nil {
-					// Log error but continue - we'll retry on next tick
-					log.InfraLogger.V(1).Errorf("failed to fetch usage data: %v. Will retry in %s", err, l.fetchInterval)
-				}
+				l.fetchAndUpdateUsage()
 			case <-stopCh:
 				return
 			}
@@ -133,15 +127,17 @@ func (l *UsageLister) WaitForCacheSync(stopCh <-chan struct{}) bool {
 	}
 }
 
-func (l *UsageLister) fetchAndUpdateUsage() error {
+func (l *UsageLister) fetchAndUpdateUsage() {
 	if l.client == nil {
-		return fmt.Errorf("failed to fetch usage data: client is not set")
+		log.InfraLogger.V(1).Errorf("failed to fetch usage data: client is not set")
+		return
 	}
 
 	// TODO: Add metrics for fetch times
 	usage, err := l.client.GetResourceUsage()
 	if err != nil {
-		return err
+		log.InfraLogger.V(1).Errorf("failed to fetch usage data: %v", err)
+		return
 	}
 
 	now := time.Now()
@@ -151,5 +147,4 @@ func (l *UsageLister) fetchAndUpdateUsage() error {
 
 	l.lastUsageData = usage
 	l.lastUsageDataTime = &now
-	return nil
 }
