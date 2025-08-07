@@ -10,7 +10,7 @@ webhooks:
   - v1
   clientConfig:
     service:
-      name: admission
+      name: kai-admission
       namespace: '{{ .Release.Namespace }}'
       path: /mutate--v1-pod
       port: 443
@@ -53,7 +53,7 @@ webhooks:
   - v1
   clientConfig:
     service:
-      name: admission
+      name: kai-admission
       namespace: '{{ .Release.Namespace }}'
       path: /validate--v1-pod
       port: 443

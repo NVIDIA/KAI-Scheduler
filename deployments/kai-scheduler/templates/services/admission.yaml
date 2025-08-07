@@ -4,22 +4,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: admission
+  name: kai-admission
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: admission
+      app: kai-admission
   template:
     metadata:
       labels:
-        app: admission
+        app: kai-admission
     spec:
-      serviceAccountName: admission
+      serviceAccountName: kai-admission
       containers:
-        - name: admission
+        - name: kai-admission
           image: "{{ .Values.global.registry }}/{{ .Values.admission.image.name }}:{{ .Chart.Version }}"
           imagePullPolicy: {{ .Values.admission.image.pullPolicy }}
           args:
