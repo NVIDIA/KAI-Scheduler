@@ -55,8 +55,8 @@ func NewUsageLister(client Interface, fetchInterval, stalenessPeriod *time.Durat
 // GetResourceUsage returns the last known resource usage data.
 // If the data is stale, an error is returned, but the most recent data is still returned.
 func (l *UsageLister) GetResourceUsage() (*queue_info.ClusterUsage, error) {
-	l.lastUsageDataMutex.RLock()
-	defer l.lastUsageDataMutex.RUnlock()
+	l.lastUsageDataMutex.Lock()
+	defer l.lastUsageDataMutex.Unlock()
 
 	if l.lastUsageDataTime == nil {
 		return nil, fmt.Errorf("usage data is not available")
