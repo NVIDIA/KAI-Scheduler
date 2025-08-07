@@ -176,14 +176,8 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub0": {
-								Name:         "sub0",
-								MinAvailable: 2,
-							},
-							"sub1": {
-								Name:         "sub1",
-								MinAvailable: 2,
-							},
+							"sub0": podgroup_info.NewSubGroupInfo("sub0", 2),
+							"sub1": podgroup_info.NewSubGroupInfo("sub1", 2),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -270,14 +264,8 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub0": {
-								Name:         "sub0",
-								MinAvailable: 2,
-							},
-							"sub1": {
-								Name:         "sub1",
-								MinAvailable: 1,
-							},
+							"sub0": podgroup_info.NewSubGroupInfo("sub0", 2),
+							"sub1": podgroup_info.NewSubGroupInfo("sub1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -380,14 +368,8 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub0": {
-								Name:         "sub0",
-								MinAvailable: 2,
-							},
-							"sub1": {
-								Name:         "sub1",
-								MinAvailable: 1,
-							},
+							"sub0": podgroup_info.NewSubGroupInfo("sub0", 2),
+							"sub1": podgroup_info.NewSubGroupInfo("sub1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
