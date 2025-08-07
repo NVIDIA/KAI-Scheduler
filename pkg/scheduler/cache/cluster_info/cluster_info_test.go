@@ -201,6 +201,31 @@ func TestSnapshotUsage(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:          "Error only",
+			usage:         nil,
+			err:           fmt.Errorf("error"),
+			expectedUsage: &queue_info.ClusterUsage{},
+		},
+		{
+			name: "Error and usage",
+			usage: &queue_info.ClusterUsage{
+				Cluster: queue_info.QueueUsage{
+					CPU:    10,
+					Memory: 10,
+					GPU:    10,
+				},
+				Queues: map[common_info.QueueID]*queue_info.QueueUsage{
+					"queue-1": {
+						CPU:    10,
+						Memory: 10,
+						GPU:    10,
+					},
+				},
+			},
+			err:           fmt.Errorf("error"),
+			expectedUsage: &queue_info.ClusterUsage{},
+		},
 	}
 
 	compareUsage := func(t *testing.T, expected, actual *queue_info.ClusterUsage) {

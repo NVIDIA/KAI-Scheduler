@@ -39,6 +39,11 @@ func NewUsageLister(client Interface, fetchInterval, stalenessPeriod *time.Durat
 		log.InfraLogger.V(3).Infof("stalenessPeriod is not set, using default: %s", period)
 	}
 
+	if stalenessPeriod.Seconds() < fetchInterval.Seconds() {
+		log.InfraLogger.V(2).Warnf("stalenessPeriod is less than fetchInterval, using stalenessPeriod: %s", stalenessPeriod)
+		stalenessPeriod = fetchInterval
+	}
+
 	return &UsageLister{
 		client:          client,
 		lastUsageData:   queue_info.NewClusterUsage(),
@@ -118,7 +123,7 @@ func (l *UsageLister) fetchAndUpdateUsage() error {
 		return fmt.Errorf("failed to fetch usage data: client is not set")
 	}
 
-	// TODO: Add metrics
+	// TODO: Add metrics for fetch times
 	usage, err := l.client.GetResourceUsage()
 	if err != nil {
 		return err
