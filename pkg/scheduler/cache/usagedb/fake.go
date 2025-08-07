@@ -18,8 +18,8 @@ type FakeClient struct {
 }
 
 func (f *FakeClient) GetResourceUsage() (*queue_info.ClusterUsage, error) {
-	f.resourceUsageMutex.Lock()
-	defer f.resourceUsageMutex.Unlock()
+	f.resourceUsageMutex.RLock()
+	defer f.resourceUsageMutex.RUnlock()
 
 	return f.resourceUsage, f.resourceUsageErr
 }
