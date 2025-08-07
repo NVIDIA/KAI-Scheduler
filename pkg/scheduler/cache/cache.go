@@ -158,7 +158,7 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 	sc.podLister = sc.informerFactory.Core().V1().Pods().Lister()
 	sc.podGroupLister = sc.kubeAiSchedulerInformerFactory.Scheduling().V2alpha2().PodGroups().Lister()
 
-	sc.usageLister = usagedb.NewUsageLister(schedulerCacheParams.UsageDBClient, nil, nil)
+	sc.usageLister = usagedb.NewUsageLister(schedulerCacheParams.UsageDBClient, nil, nil, nil)
 
 	clusterInfo, err := cluster_info.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, sc.usageLister, sc.schedulingNodePoolParams,
 		sc.restrictNodeScheduling, &sc.K8sClusterPodAffinityInfo, sc.scheduleCSIStorage, sc.fullHierarchyFairness, sc.StatusUpdater)

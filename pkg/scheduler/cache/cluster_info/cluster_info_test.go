@@ -211,15 +211,15 @@ func TestSnapshotUsage(t *testing.T) {
 			name: "Error and usage",
 			usage: &queue_info.ClusterUsage{
 				Cluster: queue_info.QueueUsage{
-					CPU:    10,
-					Memory: 10,
-					GPU:    10,
+					CPU:    11,
+					Memory: 11,
+					GPU:    11,
 				},
 				Queues: map[common_info.QueueID]*queue_info.QueueUsage{
 					"queue-1": {
-						CPU:    10,
-						Memory: 10,
-						GPU:    10,
+						CPU:    11,
+						Memory: 11,
+						GPU:    11,
 					},
 				},
 			},
@@ -2132,7 +2132,7 @@ func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects, ku
 
 	fakeUsageClient := usagedb.FakeClient{}
 	fakeUsageClient.SetResourceUsage(clusterUsage, clusterUsageErr)
-	usageLister := usagedb.NewUsageLister(&fakeUsageClient, ptr.To(10*time.Microsecond), ptr.To(10*time.Second))
+	usageLister := usagedb.NewUsageLister(&fakeUsageClient, ptr.To(10*time.Microsecond), ptr.To(10*time.Second), ptr.To(10*time.Second))
 
 	clusterInfo, _ := New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, usageLister, nodePoolParams, false,
 		clusterPodAffinityInfo, true, fullHierarchyFairness, nil)
