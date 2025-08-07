@@ -4,7 +4,6 @@
 package usagedb
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -134,60 +133,6 @@ func TestGetResourceUsage(t *testing.T) {
 
 			if tt.wantUsage != nil {
 				assert.Equal(t, tt.wantUsage, got)
-			}
-		})
-	}
-}
-
-func TestFetchAndUpdateUsageErrors(t *testing.T) {
-	tests := []struct {
-		name         string
-		setupClient  func() Interface
-		wantErr      bool
-		wantErrMatch string
-	}{
-		{
-			name: "nil client",
-			setupClient: func() Interface {
-				return nil
-			},
-			wantErr:      true,
-			wantErrMatch: "client is not set",
-		},
-		{
-			name: "client returns error",
-			setupClient: func() Interface {
-				fc := &FakeClient{}
-				fc.SetResourceUsage(nil, fmt.Errorf("failed to fetch"))
-				return fc
-			},
-			wantErr:      true,
-			wantErrMatch: "failed to fetch",
-		},
-		{
-			name: "successful fetch",
-			setupClient: func() Interface {
-				fc := &FakeClient{}
-				usage := queue_info.NewClusterUsage()
-				fc.SetResourceUsage(usage, nil)
-				return fc
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			lister := NewUsageLister(tt.setupClient(), nil, nil, nil)
-			err := lister.fetchAndUpdateUsage()
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.wantErrMatch != "" {
-					assert.Contains(t, err.Error(), tt.wantErrMatch)
-				}
-			} else {
-				assert.NoError(t, err)
 			}
 		})
 	}

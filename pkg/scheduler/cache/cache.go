@@ -195,7 +195,6 @@ func (sc *SchedulerCache) Run(stopCh <-chan struct{}) {
 	sc.StatusUpdater.Run(stopCh)
 
 	sc.usageLister.Start(stopCh)
-
 }
 
 func (sc *SchedulerCache) WaitForCacheSync(stopCh <-chan struct{}) {
@@ -204,7 +203,6 @@ func (sc *SchedulerCache) WaitForCacheSync(stopCh <-chan struct{}) {
 	sc.kueueInformerFactory.WaitForCacheSync(stopCh)
 
 	sc.usageLister.WaitForCacheSync(stopCh)
-
 }
 
 func (sc *SchedulerCache) Evict(evictedPod *v1.Pod, evictedPodGroup *podgroup_info.PodGroupInfo,
