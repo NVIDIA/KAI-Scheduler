@@ -26,7 +26,17 @@ func simpleTask(name string, subGroupName string, status pod_status.PodStatus) *
 	return info
 }
 
-func alwaysLess(_, _ interface{}) bool { return false }
+func tasksOrderFn(l, r interface{}) bool {
+	lTask := l.(*pod_info.PodInfo)
+	rTask := l.(*pod_info.PodInfo)
+	return lTask.UID < rTask.UID
+}
+
+func subGroupOrderFn(l, r interface{}) bool {
+	lSubGroup := l.(*SubGroupInfo)
+	rSubGroup := r.(*SubGroupInfo)
+	return lSubGroup.GetName() < rSubGroup.GetName()
+}
 
 func Test_HasTasksToAllocate(t *testing.T) {
 	pg := NewPodGroupInfo("pg1")
@@ -51,7 +61,7 @@ func Test_GetTasksToAllocate(t *testing.T) {
 	pg.MinAvailable = 1
 	task := simpleTask("pA", "", pod_status.Pending)
 	pg.AddTaskInfo(task)
-	result := GetTasksToAllocate(pg, alwaysLess, alwaysLess, true)
+	result := GetTasksToAllocate(pg, subGroupOrderFn, tasksOrderFn, true)
 	if len(result) != 1 {
 		t.Fatalf("expected 1 allocatable, got %d", len(result))
 	}
@@ -65,7 +75,7 @@ func Test_GetTaskToAllocateWithSubGroups(t *testing.T) {
 	pg.AddTaskInfo(simpleTask("pA", "sub", pod_status.Pending))
 	pg.AddTaskInfo(simpleTask("pB", "sub", pod_status.Pending))
 
-	got := GetTasksToAllocate(pg, alwaysLess, alwaysLess, true)
+	got := GetTasksToAllocate(pg, subGroupOrderFn, tasksOrderFn, true)
 	if len(got) != 2 {
 		t.Errorf("expected 2 tasks to allocate from main+subgroup, got %d", len(got))
 	}
@@ -78,7 +88,7 @@ func Test_GetTasksToAllocateRequestedGPUs(t *testing.T) {
 	// manually set up a fake ResReq that returns 2 for GPUs and 1000 for GpuMemory
 	task.ResReq = resource_info.NewResourceRequirements(2, 1000, 2000)
 	pg.AddTaskInfo(task)
-	gpus, _ := GetTasksToAllocateRequestedGPUs(pg, alwaysLess, alwaysLess, true)
+	gpus, _ := GetTasksToAllocateRequestedGPUs(pg, subGroupOrderFn, tasksOrderFn, true)
 	if gpus != 2 {
 		t.Errorf("expected gpus=2, got %v", gpus)
 	}
@@ -87,7 +97,7 @@ func Test_GetTasksToAllocateRequestedGPUs(t *testing.T) {
 func Test_GetTasksToAllocateInitResource(t *testing.T) {
 	pg := NewPodGroupInfo("ri")
 	// Nil case
-	res := GetTasksToAllocateInitResource(nil, alwaysLess, alwaysLess, true)
+	res := GetTasksToAllocateInitResource(nil, subGroupOrderFn, tasksOrderFn, true)
 	if !res.IsEmpty() {
 		t.Error("empty resource expected for nil pg")
 	}
@@ -96,20 +106,20 @@ func Test_GetTasksToAllocateInitResource(t *testing.T) {
 	task := simpleTask("p", "", pod_status.Pending)
 	task.ResReq = resource_info.NewResourceRequirements(0, 5000, 0)
 	pg.AddTaskInfo(task)
-	resource := GetTasksToAllocateInitResource(pg, alwaysLess, alwaysLess, true)
+	resource := GetTasksToAllocateInitResource(pg, subGroupOrderFn, tasksOrderFn, true)
 	cpu := resource.BaseResource.Get(v1.ResourceCPU)
 	if cpu != 5000 {
 		t.Fatalf("want cpu=5, got %v", cpu)
 	}
 	// Memoization/second call should return r
-	newResource := GetTasksToAllocateInitResource(pg, alwaysLess, alwaysLess, true)
+	newResource := GetTasksToAllocateInitResource(pg, subGroupOrderFn, tasksOrderFn, true)
 	if newResource != resource {
 		t.Error("cached resource pointer mismatch")
 	}
 }
 
 func Test_getTasksFromQueue(t *testing.T) {
-	q := scheduler_util.NewPriorityQueue(alwaysLess, 10)
+	q := scheduler_util.NewPriorityQueue(tasksOrderFn, 10)
 	p1 := simpleTask("q1", "", pod_status.Pending)
 	p2 := simpleTask("q2", "", pod_status.Pending)
 	q.Push(p1)
@@ -124,7 +134,7 @@ func Test_getTasksPriorityQueue(t *testing.T) {
 	pg := NewPodGroupInfo("pq")
 	pg.AddTaskInfo(simpleTask("t1", "", pod_status.Pending))
 	pg.AddTaskInfo(simpleTask("t2", "", pod_status.Succeeded))
-	q := getTasksPriorityQueue(pg, alwaysLess, true)
+	q := getTasksPriorityQueue(pg, tasksOrderFn, true)
 	if q.Len() != 1 {
 		t.Error("should filter to only allocatable tasks")
 	}
@@ -136,7 +146,7 @@ func Test_getTasksPriorityQueuePerSubGroup(t *testing.T) {
 	pg.SubGroups["test-sub-group"] = sg
 
 	pg.AddTaskInfo(simpleTask("a", "test-sub-group", pod_status.Pending))
-	m := getTasksPriorityQueuePerSubGroup(pg, alwaysLess, true)
+	m := getTasksPriorityQueuePerSubGroup(pg, tasksOrderFn, true)
 	if len(m) != 1 {
 		t.Error("expected 1 subgroup queue")
 	}
