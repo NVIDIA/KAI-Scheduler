@@ -67,14 +67,8 @@ func getReclaimSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": {
-								Name:         "sub-0",
-								MinAvailable: 1,
-							},
-							"sub-1": {
-								Name:         "sub-1",
-								MinAvailable: 1,
-							},
+							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -168,14 +162,8 @@ func getReclaimSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": {
-								Name:         "sub-0",
-								MinAvailable: 1,
-							},
-							"sub-1": {
-								Name:         "sub-1",
-								MinAvailable: 1,
-							},
+							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{

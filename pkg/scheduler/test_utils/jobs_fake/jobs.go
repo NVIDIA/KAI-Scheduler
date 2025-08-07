@@ -112,10 +112,7 @@ func BuildJobInfo(
 	for _, taskInfo := range taskInfos {
 		if len(taskInfo.SubGroupName) > 0 {
 			subGroup := subGroups[taskInfo.SubGroupName]
-			if subGroup.PodInfos == nil {
-				subGroup.PodInfos = pod_info.PodsMap{}
-			}
-			subGroup.PodInfos[taskInfo.UID] = taskInfo
+			subGroup.AssignTask(taskInfo)
 		}
 	}
 

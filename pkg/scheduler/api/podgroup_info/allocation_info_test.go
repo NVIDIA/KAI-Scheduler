@@ -60,7 +60,7 @@ func Test_GetTasksToAllocate(t *testing.T) {
 func Test_GetTaskToAllocateWithSubGroups(t *testing.T) {
 	pg := NewPodGroupInfo("pg")
 	pg.MinAvailable = 2
-	pg.SubGroups["sub"] = newSubGroupInfo("sub", 2)
+	pg.SubGroups["sub"] = NewSubGroupInfo("sub", 2)
 
 	pg.AddTaskInfo(simpleTask("pA", "sub", pod_status.Pending))
 	pg.AddTaskInfo(simpleTask("pB", "sub", pod_status.Pending))
@@ -132,7 +132,7 @@ func Test_getTasksPriorityQueue(t *testing.T) {
 
 func Test_getTasksPriorityQueuePerSubGroup(t *testing.T) {
 	pg := NewPodGroupInfo("test-pg")
-	sg := newSubGroupInfo("test-sub-group", 1)
+	sg := NewSubGroupInfo("test-sub-group", 1)
 	pg.SubGroups["test-sub-group"] = sg
 
 	pg.AddTaskInfo(simpleTask("a", "test-sub-group", pod_status.Pending))
@@ -160,7 +160,7 @@ func Test_getNumOfTasksToAllocate(t *testing.T) {
 
 func Test_getNumOfTasksToAllocatePerSubGroup(t *testing.T) {
 	pg := NewPodGroupInfo("pg")
-	sg := newSubGroupInfo("sg", 1)
+	sg := NewSubGroupInfo("sg", 1)
 	pg.SubGroups["sg"] = sg
 
 	pg.AddTaskInfo(simpleTask("p1", "sg", pod_status.Pending))
