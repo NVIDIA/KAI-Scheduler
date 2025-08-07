@@ -108,10 +108,10 @@ func (l *UsageLister) WaitForCacheSync(stopCh <-chan struct{}) bool {
 			return false
 		case <-ticker.C:
 			l.lastUsageDataMutex.RLock()
-			hasData := l.lastUsageData != nil
+			updated := l.lastUsageDataTime != nil
 			l.lastUsageDataMutex.RUnlock()
 
-			if hasData {
+			if updated {
 				return true
 			}
 		}
