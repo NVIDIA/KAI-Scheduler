@@ -42,8 +42,8 @@ func GetTasksToAllocate(
 
 		for !subGroupPriorityQueue.Empty() && (numAllocatedSubGroups < maxNumOfSubGroups) {
 			nextSubGroup := subGroupPriorityQueue.Pop().(*SubGroupInfo)
-			taskPriorityQueue := priorityQueueMap[nextSubGroup.Name]
-			maxNumOfTasksToAllocate := maxNumOfTasksToAllocateMap[nextSubGroup.Name]
+			taskPriorityQueue := priorityQueueMap[nextSubGroup.GetName()]
+			maxNumOfTasksToAllocate := maxNumOfTasksToAllocateMap[nextSubGroup.GetName()]
 			subGroupTasks := getTasksFromQueue(taskPriorityQueue, maxNumOfTasksToAllocate)
 			tasksToAllocate = append(tasksToAllocate, subGroupTasks...)
 			numAllocatedSubGroups += 1
@@ -175,7 +175,7 @@ func getNumOfTasksToAllocatePerSubGroup(podGroupInfo *PodGroupInfo) map[string]i
 func getNumOfSubGroupsToAllocate(podGroupInfo *PodGroupInfo) int {
 	for _, subGroup := range podGroupInfo.SubGroups {
 		allocatedTasks := subGroup.GetNumActiveAllocatedTasks()
-		if allocatedTasks >= int(subGroup.MinAvailable) {
+		if allocatedTasks >= int(subGroup.GetMinAvailable()) {
 			return 1
 		}
 	}
