@@ -3,7 +3,16 @@
 
 package podgroup
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+)
+
+type SubGroupMetadata struct {
+	Name           string
+	MinAvailable   int32
+	PodsReferences []*types.NamespacedName
+}
 
 type Metadata struct {
 	Annotations       map[string]string
@@ -14,6 +23,7 @@ type Metadata struct {
 	Name              string
 	MinAvailable      int32
 	Owner             metav1.OwnerReference
+	SubGroups         []*SubGroupMetadata
 
 	PreferredTopologyLevel string
 	RequiredTopologyLevel  string
