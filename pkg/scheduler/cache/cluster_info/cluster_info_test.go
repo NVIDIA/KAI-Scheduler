@@ -47,6 +47,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclass_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info/data_lister"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
 )
@@ -157,6 +158,79 @@ func TestSnapshot(t *testing.T) {
 		assert.Equal(t, test.expectedQueues, len(snapshot.Queues))
 
 		assert.Equal(t, test.expectedBindRequests, len(snapshot.BindRequests))
+	}
+}
+
+func TestSnapshotUsage(t *testing.T) {
+	tests := []struct {
+		name  string
+		usage *queue_info.ClusterUsage
+		err   error
+
+		expectedUsage *queue_info.ClusterUsage
+	}{
+		{
+			name: "BasicUsage",
+			usage: &queue_info.ClusterUsage{
+				Cluster: queue_info.QueueUsage{
+					CPU:    10,
+					Memory: 10,
+					GPU:    10,
+				},
+				Queues: map[common_info.QueueID]*queue_info.QueueUsage{
+					"queue-1": {
+						CPU:    10,
+						Memory: 10,
+						GPU:    10,
+					},
+				},
+			},
+			err: nil,
+			expectedUsage: &queue_info.ClusterUsage{
+				Cluster: queue_info.QueueUsage{
+					CPU:    10,
+					Memory: 10,
+					GPU:    10,
+				},
+				Queues: map[common_info.QueueID]*queue_info.QueueUsage{
+					"queue-1": {
+						CPU:    10,
+						Memory: 10,
+						GPU:    10,
+					},
+				},
+			},
+		},
+	}
+
+	compareUsage := func(t *testing.T, expected, actual *queue_info.ClusterUsage) {
+		if expected == nil {
+			assert.Nil(t, actual)
+			return
+		}
+		assert.NotNil(t, actual)
+		assert.Equal(t, expected.Cluster, actual.Cluster)
+		assert.Equal(t, len(expected.Queues), len(actual.Queues))
+		for queueID, expectedUsage := range expected.Queues {
+			actualUsage, ok := actual.Queues[queueID]
+			assert.True(t, ok)
+			assert.Equal(t, expectedUsage, actualUsage)
+		}
+	}
+
+	for i, test := range tests {
+		t.Logf("Running test %d: %s", i, test.name)
+		clusterInfo := newClusterInfoTests(t, clusterInfoTestParams{
+			kubeObjects:         []runtime.Object{},
+			kaiSchedulerObjects: []runtime.Object{},
+			kueueObjects:        []runtime.Object{},
+			clusterUsage:        test.usage,
+			clusterUsageErr:     test.err,
+		})
+		snapshot, err := clusterInfo.Snapshot()
+		assert.Equal(t, nil, err)
+		usage := snapshot.QueueResourceUsage
+		compareUsage(t, test.expectedUsage, &usage)
 	}
 }
 
@@ -2031,10 +2105,11 @@ func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects, ku
 	clusterPodAffinityInfo.EXPECT().UpdateNodeAffinity(gomock.Any()).AnyTimes()
 	clusterPodAffinityInfo.EXPECT().AddNode(gomock.Any(), gomock.Any()).AnyTimes()
 
-	fakeUsageLister := data_lister.NewMockDataLister(controller)
-	fakeUsageLister.EXPECT().ListResourceUsage().AnyTimes().Return(clusterUsage, clusterUsageErr)
+	fakeUsageClient := usagedb.FakeClient{}
+	fakeUsageClient.SetResourceUsage(clusterUsage, clusterUsageErr)
+	usageLister := usagedb.NewUsageLister(&fakeUsageClient, nil, nil)
 
-	clusterInfo, _ := New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, nil, nodePoolParams, false,
+	clusterInfo, _ := New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, usageLister, nodePoolParams, false,
 		clusterPodAffinityInfo, true, fullHierarchyFairness, nil)
 
 	stopCh := context.Background().Done()
@@ -2044,6 +2119,8 @@ func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects, ku
 	kubeAiSchedulerInformerFactory.WaitForCacheSync(stopCh)
 	kueueInformerFactory.Start(stopCh)
 	kueueInformerFactory.WaitForCacheSync(stopCh)
+	usageLister.Start(stopCh)
+	usageLister.WaitForCacheSync(stopCh)
 
 	return clusterInfo
 }
