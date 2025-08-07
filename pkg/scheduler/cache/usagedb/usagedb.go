@@ -98,6 +98,10 @@ func (l *UsageLister) Start(stopCh <-chan struct{}) {
 }
 
 func (l *UsageLister) WaitForCacheSync(stopCh <-chan struct{}) bool {
+	if l.client == nil {
+		return true
+	}
+
 	// Check every 10ms for data or stop signal
 	ticker := time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()
