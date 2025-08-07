@@ -21,6 +21,7 @@ package proportion
 
 import (
 	"math"
+	"strconv"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
@@ -54,19 +55,32 @@ type proportionPlugin struct {
 	queues              map[common_info.QueueID]*rs.QueueAttributes
 	jobSimulationQueues map[common_info.QueueID]*rs.QueueAttributes
 	// Arguments given for the plugin
-	pluginArguments           map[string]string
-	subGroupOrderFn           common_info.LessFn
-	taskOrderFunc             common_info.LessFn
-	reclaimablePlugin         *rec.Reclaimable
-	isInferencePreemptible    bool
-	allowConsolidatingReclaim bool
+	pluginArguments                map[string]string
+	subGroupOrderFn                common_info.LessFn
+	taskOrderFunc                  common_info.LessFn
+	reclaimablePlugin              *rec.Reclaimable
+	isInferencePreemptible         bool
+	allowConsolidatingReclaim      bool
+	reclaimerUtilizationMultiplier float64
 }
 
 func New(arguments map[string]string) framework.Plugin {
+	multiplier := 1.0
+	if val, exists := arguments["reclaimerUtilizationMultiplier"]; exists {
+		if m, err := strconv.ParseFloat(val, 64); err == nil {
+			if m < 1.0 {
+				log.InfraLogger.Warningf("reclaimerUtilizationMultiplier must be >= 1.0, got %v. Using default value of 1.0", m)
+			} else {
+				multiplier = m
+			}
+		}
+	}
+
 	return &proportionPlugin{
-		totalResource:   rs.EmptyResourceQuantities(),
-		queues:          map[common_info.QueueID]*rs.QueueAttributes{},
-		pluginArguments: arguments,
+		totalResource:                  rs.EmptyResourceQuantities(),
+		queues:                         map[common_info.QueueID]*rs.QueueAttributes{},
+		pluginArguments:                arguments,
+		reclaimerUtilizationMultiplier: multiplier,
 	}
 }
 
@@ -78,7 +92,7 @@ func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.calculateResourcesProportion(ssn)
 	pp.subGroupOrderFn = ssn.SubGroupOrderFn
 	pp.taskOrderFunc = ssn.TaskOrderFn
-	pp.reclaimablePlugin = rec.New()
+	pp.reclaimablePlugin = rec.New(pp.reclaimerUtilizationMultiplier)
 	pp.isInferencePreemptible = ssn.IsInferencePreemptible()
 	capacityPolicy := cp.New(pp.queues, ssn.IsInferencePreemptible())
 	ssn.AddQueueOrderFn(pp.queueOrder)
