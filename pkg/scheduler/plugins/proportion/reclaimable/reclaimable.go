@@ -4,6 +4,7 @@
 package reclaimable
 
 import (
+	"maps"
 	"math"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -56,12 +57,12 @@ func (r *Reclaimable) Reclaimable(
 	reclaimer *ReclaimerInfo,
 	reclaimeeResourcesByQueue map[common_info.QueueID][]*resource_info.Resource,
 ) bool {
-	reclaimable, reclaimedQueuesRemainingResources :=
+	reclaimable, reclaimedQueuesRemainingResources, involvedResources :=
 		r.reclaimResourcesFromReclaimees(queues, reclaimer, reclaimeeResourcesByQueue)
 	if !reclaimable {
 		return false
 	}
-	return r.reclaimingQueuesRemainWithinBoundaries(queues, reclaimer, reclaimedQueuesRemainingResources)
+	return r.reclaimingQueuesRemainWithinBoundaries(queues, reclaimer, reclaimedQueuesRemainingResources, involvedResources)
 }
 
 func (r *Reclaimable) reclaimResourcesFromReclaimees(
@@ -69,11 +70,14 @@ func (r *Reclaimable) reclaimResourcesFromReclaimees(
 	reclaimer *ReclaimerInfo,
 	reclaimeesResourcesByQueue map[common_info.QueueID][]*resource_info.Resource,
 ) (
-	bool, map[common_info.QueueID]rs.ResourceQuantities,
+	bool, map[common_info.QueueID]rs.ResourceQuantities, map[common_info.QueueID]map[rs.ResourceName]any,
 ) {
+	involvedResourcesByQueue := map[common_info.QueueID]map[rs.ResourceName]any{}
 	remainingResourcesMap := map[common_info.QueueID]rs.ResourceQuantities{}
 	for reclaimeeQueueID, reclaimeeQueueReclaimedResources := range reclaimeesResourcesByQueue {
 		reclaimerQueue, reclaimeeQueue := r.getLeveledQueues(queues, reclaimer.Queue, reclaimeeQueueID)
+
+		involvedResourcesByQueue[reclaimeeQueueID] = getInvolvedResourcesNames(reclaimeeQueueReclaimedResources)
 
 		if _, found := remainingResourcesMap[reclaimeeQueue.UID]; !found {
 			remainingResourcesMap[reclaimeeQueue.UID] = queues[reclaimeeQueue.UID].GetAllocatedShare()
@@ -88,14 +92,14 @@ func (r *Reclaimable) reclaimResourcesFromReclaimees(
 					reclaimeeQueue.Name, resource_info.StringResourceArray(reclaimeeQueueReclaimedResources),
 					remainingResources.String(), reclaimeeQueue.GetDeservedShare().String(),
 					reclaimeeQueue.GetFairShare().String())
-				return false, nil
+				return false, nil, nil
 			}
 
-			r.subtractReclaimedResources(queues, remainingResourcesMap, reclaimeeQueueID, reclaimeeResources)
+			r.subtractReclaimedResources(queues, remainingResourcesMap, reclaimeeQueueID, reclaimeeResources, involvedResourcesByQueue)
 		}
 	}
 
-	return true, remainingResourcesMap
+	return true, remainingResourcesMap, involvedResourcesByQueue
 }
 
 func (r *Reclaimable) subtractReclaimedResources(
@@ -103,6 +107,7 @@ func (r *Reclaimable) subtractReclaimedResources(
 	remainingResourcesMap map[common_info.QueueID]rs.ResourceQuantities,
 	reclaimeeQueueID common_info.QueueID,
 	reclaimedResources *resource_info.Resource,
+	involvedResourcesByQueue map[common_info.QueueID]map[rs.ResourceName]any,
 ) {
 	for queue, ok := queues[reclaimeeQueueID]; ok; queue, ok = queues[queue.ParentQueue] {
 		if _, found := remainingResourcesMap[queue.UID]; !found {
@@ -112,6 +117,13 @@ func (r *Reclaimable) subtractReclaimedResources(
 		remainingResources := remainingResourcesMap[queue.UID]
 		activeAllocatedQuota := utils.QuantifyResource(reclaimedResources)
 		remainingResources.Sub(activeAllocatedQuota)
+
+		_, found := involvedResourcesByQueue[queue.UID]
+		if found {
+			maps.Copy(involvedResourcesByQueue[queue.UID], involvedResourcesByQueue[reclaimeeQueueID])
+		} else {
+			involvedResourcesByQueue[queue.UID] = maps.Clone(involvedResourcesByQueue[reclaimeeQueueID])
+		}
 	}
 }
 
@@ -119,9 +131,11 @@ func (r *Reclaimable) reclaimingQueuesRemainWithinBoundaries(
 	queues map[common_info.QueueID]*rs.QueueAttributes,
 	reclaimer *ReclaimerInfo,
 	remainingResourcesMap map[common_info.QueueID]rs.ResourceQuantities,
+	involvedResourcesByQueue map[common_info.QueueID]map[rs.ResourceName]any,
 ) bool {
 
 	requestedQuota := utils.QuantifyResource(reclaimer.RequiredResources)
+	reclaimerInvolvedResources := getInvolvedResourcesNames([]*resource_info.Resource{reclaimer.RequiredResources})
 
 	for reclaimingQueue, found := queues[reclaimer.Queue]; found; reclaimingQueue, found = queues[reclaimingQueue.ParentQueue] {
 		remainingResources, foundRemaining := remainingResourcesMap[reclaimingQueue.UID]
@@ -141,8 +155,13 @@ func (r *Reclaimable) reclaimingQueuesRemainWithinBoundaries(
 				siblingQueueRemainingResources = sibling.GetAllocatedShare()
 			}
 
-			if !r.isFairShareUtilizationLowerPerResource(remainingResources, reclaimingQueue.GetFairShare(),
-				siblingQueueRemainingResources, sibling.GetFairShare()) {
+			involvedResources := maps.Clone(involvedResourcesByQueue[siblingID])
+			maps.Copy(involvedResources, reclaimerInvolvedResources)
+			if !r.isFairShareUtilizationLowerPerResource(
+				involvedResources,
+				remainingResources, reclaimingQueue.GetFairShare(),
+				siblingQueueRemainingResources, sibling.GetFairShare(),
+			) {
 				log.InfraLogger.V(5).Infof("Failed to reclaim resources for job: <%s/%s>. "+
 					"Utilisation ratios would not stay lower than sibling queue <%s>",
 					reclaimer.Namespace, reclaimer.Name, sibling.Name)
@@ -175,10 +194,11 @@ func (r *Reclaimable) reclaimingQueuesRemainWithinBoundaries(
 // A comparison for a given resource is skipped when both queues have unlimited
 // fair share configured for that resource.
 func (r *Reclaimable) isFairShareUtilizationLowerPerResource(
+	involvedResources map[rs.ResourceName]any,
 	reclaimerAllocated rs.ResourceQuantities, reclaimerFair rs.ResourceQuantities,
 	siblingAlloc rs.ResourceQuantities, siblingFair rs.ResourceQuantities,
 ) bool {
-	for _, resource := range rs.AllResources {
+	for resource := range involvedResources {
 		reclaimerFairShare := reclaimerFair[resource]
 		siblingFairShare := siblingFair[resource]
 
@@ -240,4 +260,27 @@ func (r *Reclaimable) getHierarchyPath(
 		queue, found = queues[queue.ParentQueue]
 	}
 	return hierarchyPath
+}
+
+func getInvolvedResourcesNames(resources []*resource_info.Resource) map[rs.ResourceName]any {
+	involvedResources := map[rs.ResourceName]any{}
+	for _, resource := range resources {
+		if resource == nil {
+			continue
+		}
+
+		if resource.Cpu() > 0 {
+			involvedResources[rs.CpuResource] = struct{}{}
+		}
+
+		if resource.Memory() > 0 {
+			involvedResources[rs.MemoryResource] = struct{}{}
+		}
+
+		if resource.GPUs() > 0 {
+			involvedResources[rs.GpuResource] = struct{}{}
+		}
+	}
+
+	return involvedResources
 }
