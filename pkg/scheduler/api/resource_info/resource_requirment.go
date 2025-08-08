@@ -173,3 +173,8 @@ func (r *ResourceRequirements) Get(rn v1.ResourceName) float64 {
 		return r.BaseResource.Get(rn)
 	}
 }
+
+func (r *ResourceRequirements) Add(other *ResourceRequirements) error {
+	r.BaseResource.Add(&other.BaseResource)
+	return r.GpuResourceRequirement.Add(&other.GpuResourceRequirement)
+}

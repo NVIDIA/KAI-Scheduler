@@ -174,6 +174,20 @@ func (g *GpuResourceRequirement) IsFractionalRequest() bool {
 	return g.count > 0 && g.portion < wholeGpuPortion
 }
 
+func (g *GpuResourceRequirement) Add(other *GpuResourceRequirement) error {
+	if g.portion != other.portion {
+		return fmt.Errorf("portion values must match for addition, got %v and %v", g.portion, other.portion)
+	}
+	if g.gpuMemory != other.gpuMemory {
+		return fmt.Errorf("gpuMemory values must match for addition, got %v and %v", g.gpuMemory, other.gpuMemory)
+	}
+	g.count += other.count
+	for name, value := range other.migResources {
+		g.migResources[name] += value
+	}
+	return nil
+}
+
 func getNonMigGpus(portion float64, count int64) float64 {
 	// use fixed-point arithmetic to avoid floating point errors
 	portionAsDecimals := int64(math.Round(portion * gpuPortionsAsDecimalsRoundingFactor))

@@ -21,10 +21,12 @@ package pod_info
 
 import (
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
+	nodev1 "k8s.io/api/node/v1"
 	clientcache "k8s.io/client-go/tools/cache"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -438,4 +440,43 @@ func (pi *PodInfo) updateLegacyMigResourceRequestFromAnnotations() {
 func (pi *PodInfo) ShouldAllocate(isRealAllocation bool) bool {
 	return pi.Status == pod_status.Pending ||
 		(!isRealAllocation && pi.Status == pod_status.Releasing && pi.IsVirtualStatus)
+}
+
+func (pi *PodInfo) ApplyRuntimeClass(runtimeClass *nodev1.RuntimeClass) error {
+	if runtimeClass == nil || pi.Pod == nil {
+		return nil
+	}
+	if pi.Pod.Spec.RuntimeClassName == nil || *pi.Pod.Spec.RuntimeClassName != runtimeClass.Name {
+		return fmt.Errorf("pod %s/%s does not use runtime class %s", pi.Namespace, pi.Name, runtimeClass.Name)
+	}
+
+	if runtimeClass.Overhead != nil && runtimeClass.Overhead.PodFixed != nil {
+		overheadResources := resource_info.RequirementsFromResourceList(runtimeClass.Overhead.PodFixed)
+		err := pi.ResReq.Add(overheadResources)
+		if err != nil {
+			return fmt.Errorf("Failed to apply RuntimeClass overhead to pod %s/%s: %v",
+				pi.Namespace, pi.Name, err)
+		} else {
+			log.InfraLogger.V(8).Infof("Applied RuntimeClass overhead to pod %s/%s: %v",
+				pi.Namespace, pi.Name, runtimeClass.Overhead.PodFixed)
+		}
+	}
+
+	if runtimeClass.Scheduling != nil {
+		log.InfraLogger.V(8).Infof("Applying RuntimeClass %s for pod %s/%s with scheduling changes: nodeSelector=%v, tolerations=%v",
+			runtimeClass.Name, pi.Namespace, pi.Name,
+			runtimeClass.Scheduling.NodeSelector, runtimeClass.Scheduling.Tolerations)
+		if pi.Pod.Spec.NodeSelector == nil {
+			pi.Pod.Spec.NodeSelector = runtimeClass.Scheduling.NodeSelector
+		} else {
+			maps.Copy(pi.Pod.Spec.NodeSelector, runtimeClass.Scheduling.NodeSelector)
+		}
+		if pi.Pod.Spec.Tolerations == nil {
+			pi.Pod.Spec.Tolerations = runtimeClass.Scheduling.Tolerations
+		} else {
+			pi.Pod.Spec.Tolerations = append(pi.Pod.Spec.Tolerations, runtimeClass.Scheduling.Tolerations...)
+		}
+	}
+
+	return nil
 }

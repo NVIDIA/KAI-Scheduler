@@ -24,6 +24,7 @@ import (
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
+	nodev1 "k8s.io/api/node/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -132,7 +133,13 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 		return nil, err
 	}
 
-	snapshot.Pods, err = c.addTasksToNodes(allPods, existingPods, snapshot.Nodes, snapshot.BindRequests)
+	runtimeClassesByName, err := c.snapshotRuntimeClasses()
+	if err != nil {
+		err = errors.WithStack(fmt.Errorf("error snapshotting runtime classes: %c", err))
+		return nil, err
+	}
+
+	snapshot.Pods, err = c.addTasksToNodes(allPods, existingPods, snapshot.Nodes, snapshot.BindRequests, runtimeClassesByName)
 	if err != nil {
 		err = errors.WithStack(fmt.Errorf("error adding tasks to nodes: %c", err))
 		return nil, err
@@ -146,7 +153,7 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 	UpdateQueueHierarchy(queues)
 	snapshot.Queues = queues
 
-	snapshot.PodGroupInfos, err = c.snapshotPodGroups(snapshot.Queues, existingPods)
+	snapshot.PodGroupInfos, err = c.snapshotPodGroups(snapshot.Queues, existingPods, runtimeClassesByName)
 	if err != nil {
 		return nil, err
 	}
@@ -224,11 +231,14 @@ func (c *ClusterInfo) snapshotNodes(
 	return resultNodes, nil
 }
 
-func (c *ClusterInfo) addTasksToNodes(allPods []*v1.Pod, existingPodsMap map[common_info.PodID]*pod_info.PodInfo,
-	nodes map[string]*node_info.NodeInfo, bindRequests bindrequest_info.BindRequestMap) (
+func (c *ClusterInfo) addTasksToNodes(
+	allPods []*v1.Pod, existingPodsMap map[common_info.PodID]*pod_info.PodInfo,
+	nodes map[string]*node_info.NodeInfo, bindRequests bindrequest_info.BindRequestMap,
+	runtimeClassesByName map[string]*nodev1.RuntimeClass,
+) (
 	[]*v1.Pod, error) {
 
-	nodePodInfosMap, nodeReservationPodInfosMap, err := c.getNodeToPodInfosMap(allPods, bindRequests)
+	nodePodInfosMap, nodeReservationPodInfosMap, err := c.getNodeToPodInfosMap(allPods, bindRequests, runtimeClassesByName)
 	if err != nil {
 		return nil, err
 	}
@@ -250,6 +260,20 @@ func (c *ClusterInfo) addTasksToNodes(allPods []*v1.Pod, existingPodsMap map[com
 		log.InfraLogger.V(6).Infof("Node: %v, indexed %d pods: %v", node.Name, len(node.PodInfos), podNames)
 	}
 	return resultPods, nil
+}
+
+func (c *ClusterInfo) snapshotRuntimeClasses() (map[string]*nodev1.RuntimeClass, error) {
+	runtimeClasses, err := c.dataLister.ListRuntimeClasses()
+	if err != nil {
+		return nil, err
+	}
+
+	runtimeClassMap := make(map[string]*nodev1.RuntimeClass)
+	for _, rc := range runtimeClasses {
+		runtimeClassMap[rc.Name] = rc
+	}
+
+	return runtimeClassMap, nil
 }
 
 func (c *ClusterInfo) snapshotBindRequests(nodes map[string]*node_info.NodeInfo) (
@@ -278,6 +302,7 @@ func (c *ClusterInfo) snapshotBindRequests(nodes map[string]*node_info.NodeInfo)
 func (c *ClusterInfo) snapshotPodGroups(
 	existingQueues map[common_info.QueueID]*queue_info.QueueInfo,
 	existingPods map[common_info.PodID]*pod_info.PodInfo,
+	runtimeClassesByName map[string]*nodev1.RuntimeClass,
 ) (map[common_info.PodGroupID]*podgroup_info.PodGroupInfo, error) {
 	defaultPriority, err := getDefaultPriority(c.dataLister)
 	if err != nil {
@@ -320,7 +345,7 @@ func (c *ClusterInfo) snapshotPodGroups(
 			if !ok {
 				log.InfraLogger.Errorf("Snapshot podGroups: Error getting pod from rawPod: %c", rawPod)
 			}
-			podInfo := c.getPodInfo(pod, existingPods)
+			podInfo := c.getPodInfo(pod, existingPods, runtimeClassesByName)
 			podGroupInfo.AddTaskInfo(podInfo)
 		}
 
@@ -333,6 +358,7 @@ func (c *ClusterInfo) snapshotPodGroups(
 
 func (c *ClusterInfo) getPodInfo(
 	pod *v1.Pod, existingPods map[common_info.PodID]*pod_info.PodInfo,
+	runtimeClassesByName map[string]*nodev1.RuntimeClass,
 ) *pod_info.PodInfo {
 	var podInfo *pod_info.PodInfo
 	log.InfraLogger.V(6).Infof("Looking for pod %s/%s/%s in existing pods", pod.Namespace, pod.Name,
@@ -343,6 +369,7 @@ func (c *ClusterInfo) getPodInfo(
 		log.InfraLogger.V(6).Infof("Pod %s/%s/%s not found in existing pods, adding", pod.Namespace,
 			pod.Name, pod.UID)
 		podInfo = pod_info.NewTaskInfo(pod)
+		applyRuntimeClass(podInfo, runtimeClassesByName)
 		existingPods[common_info.PodID(pod.UID)] = podInfo
 	}
 	return podInfo
@@ -352,13 +379,19 @@ func (c *ClusterInfo) setPodGroupWithIndex(podGroup *enginev2alpha2.PodGroup, po
 	podGroupInfo.SetPodGroup(podGroup)
 }
 
-func (c *ClusterInfo) getNodeToPodInfosMap(allPods []*v1.Pod, bindRequests bindrequest_info.BindRequestMap) (
+func (c *ClusterInfo) getNodeToPodInfosMap(
+	allPods []*v1.Pod, bindRequests bindrequest_info.BindRequestMap,
+	runtimeClassesByName map[string]*nodev1.RuntimeClass,
+) (
 	map[string][]*pod_info.PodInfo, map[string][]*pod_info.PodInfo, error) {
 	nodePodInfosMap := map[string][]*pod_info.PodInfo{}
 	nodeReservationPodInfosMap := map[string][]*pod_info.PodInfo{}
+
 	for _, pod := range allPods {
 		podBindRequest := bindRequests.GetBindRequestForPod(pod)
 		podInfo := pod_info.NewTaskInfoWithBindRequest(pod, podBindRequest)
+
+		applyRuntimeClass(podInfo, runtimeClassesByName)
 
 		if pod_info.IsResourceReservationTask(podInfo.Pod) {
 			podInfos := nodeReservationPodInfosMap[podInfo.NodeName]
@@ -479,4 +512,18 @@ func (c *ClusterInfo) isPodGroupUpForScheduler(podGroup *enginev2alpha2.PodGroup
 	}
 
 	return false
+}
+
+func applyRuntimeClass(pi *pod_info.PodInfo, runtimeClassesByName map[string]*nodev1.RuntimeClass) {
+	pod := pi.Pod
+	if pod.Spec.RuntimeClassName != nil {
+		if rc, exists := runtimeClassesByName[*pod.Spec.RuntimeClassName]; exists {
+			pi.ApplyRuntimeClass(rc)
+			log.InfraLogger.V(6).Infof("Applied RuntimeClass %s to pod %s/%s",
+				rc.Name, pod.Namespace, pod.Name)
+		} else {
+			log.InfraLogger.V(3).Errorf("Failed to find RuntimeClass %s for pod %s/%s",
+				*pod.Spec.RuntimeClassName, pod.Namespace, pod.Name)
+		}
+	}
 }

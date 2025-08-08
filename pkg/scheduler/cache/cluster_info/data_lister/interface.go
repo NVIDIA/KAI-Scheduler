@@ -5,6 +5,7 @@ package data_lister
 
 import (
 	v1 "k8s.io/api/core/v1"
+	nodev1 "k8s.io/api/node/v1"
 	scheduling "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"sigs.k8s.io/kueue/apis/kueue/v1alpha1"
@@ -28,5 +29,6 @@ type DataLister interface {
 	ListCSIDrivers() ([]*storage.CSIDriver, error)
 	ListBindRequests() ([]*schedulingv1alpha2.BindRequest, error)
 	ListConfigMaps() ([]*v1.ConfigMap, error)
+	ListRuntimeClasses() ([]*nodev1.RuntimeClass, error)
 	ListTopologies() ([]*v1alpha1.Topology, error)
 }

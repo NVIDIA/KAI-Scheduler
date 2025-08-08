@@ -5,11 +5,13 @@ package data_lister
 
 import (
 	v1 "k8s.io/api/core/v1"
+	nodev1 "k8s.io/api/node/v1"
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	listv1 "k8s.io/client-go/listers/core/v1"
+	v13 "k8s.io/client-go/listers/node/v1"
 	schedv1 "k8s.io/client-go/listers/scheduling/v1"
 	v12 "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
@@ -34,6 +36,7 @@ type k8sLister struct {
 	nodeLister     listv1.NodeLister
 	queueLister    schedlistv2.QueueLister
 	pcLister       schedv1.PriorityClassLister
+	rcLister       v13.RuntimeClassLister
 	cmLister       listv1.ConfigMapLister
 
 	pvcLister             listv1.PersistentVolumeClaimLister
@@ -62,6 +65,7 @@ func New(
 		nodeLister:     informerFactory.Core().V1().Nodes().Lister(),
 		queueLister:    kubeAiSchedulerInformerFactory.Scheduling().V2().Queues().Lister(),
 		pcLister:       informerFactory.Scheduling().V1().PriorityClasses().Lister(),
+		rcLister:       informerFactory.Node().V1().RuntimeClasses().Lister(),
 		cmLister:       informerFactory.Core().V1().ConfigMaps().Lister(),
 
 		pvcLister:             informerFactory.Core().V1().PersistentVolumeClaims().Lister(),
@@ -149,6 +153,12 @@ func (k *k8sLister) ListBindRequests() ([]*schedulingv1alpha2.BindRequest, error
 
 func (k *k8sLister) ListConfigMaps() ([]*v1.ConfigMap, error) {
 	return k.cmLister.List(labels.Everything())
+}
+
+// +kubebuilder:rbac:groups="node.k8s.io",resources=runtimeclasses,verbs=get;list;watch
+
+func (k *k8sLister) ListRuntimeClasses() ([]*nodev1.RuntimeClass, error) {
+	return k.rcLister.List(labels.Everything())
 }
 
 // +kubebuilder:rbac:groups="kueue.x-k8s.io",resources=topologies,verbs=get;list;watch

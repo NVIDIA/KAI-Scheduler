@@ -33,6 +33,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/runtimeclass_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storagecapacity_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclass_info"
@@ -52,6 +53,7 @@ type ClusterInfo struct {
 	CSIDrivers                  map[common_info.CSIDriverID]*csidriver_info.CSIDriverInfo
 	StorageClasses              map[common_info.StorageClassID]*storageclass_info.StorageClassInfo
 	ConfigMaps                  map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
+	RuntimeClasses              map[common_info.RuntimeClassID]*runtimeclass_info.RuntimeClassInfo
 	Topologies                  []*kueue.Topology
 }
 
@@ -66,6 +68,7 @@ func NewClusterInfo() *ClusterInfo {
 		StorageClaims:     make(map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo),
 		StorageCapacities: make(map[common_info.StorageCapacityID]*storagecapacity_info.StorageCapacityInfo),
 		ConfigMaps:        make(map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo),
+		RuntimeClasses:    make(map[common_info.RuntimeClassID]*runtimeclass_info.RuntimeClassInfo),
 		Topologies:        []*kueue.Topology{},
 	}
 }
