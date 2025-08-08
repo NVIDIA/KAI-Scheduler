@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	v1core "k8s.io/api/core/v1"
+	nodev1 "k8s.io/api/node/v1"
 	v12 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -336,7 +337,7 @@ func TestSnapshotNodes(t *testing.T) {
 			if err != nil {
 				assert.FailNow(t, fmt.Sprintf("SnapshotNode got error in test %s", t.Name()), err)
 			}
-			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil)
+			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil, nil)
 
 			assert.Equal(t, len(test.resultNodes), len(nodes))
 			assert.Equal(t, test.resultPodsLen, len(pods))
@@ -1043,7 +1044,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 		existingPods := map[common_info.PodID]*pod_info.PodInfo{}
 		podGroups, err := clusterInfo.snapshotPodGroups(
 			map[common_info.QueueID]*queue_info.QueueInfo{"queue-0": predefinedQueue},
-			existingPods)
+			existingPods, nil)
 		if err != nil {
 			assert.FailNow(t, fmt.Sprintf("SnapshotNode got error in test %v", name), err)
 		}
@@ -1755,6 +1756,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 					},
 				}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
+				mdl.EXPECT().ListRuntimeClasses().Return([]*nodev1.RuntimeClass{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
 			},
 		},
@@ -1763,6 +1765,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListNodes().Return([]*v1core.Node{}, nil)
 				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
+				mdl.EXPECT().ListRuntimeClasses().Return([]*nodev1.RuntimeClass{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
 			},
 		},
@@ -1771,6 +1774,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListNodes().Return([]*v1core.Node{}, nil)
 				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
+				mdl.EXPECT().ListRuntimeClasses().Return([]*nodev1.RuntimeClass{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListPriorityClasses().Return([]*v12.PriorityClass{}, nil)
 				mdl.EXPECT().ListPodGroups().Return(nil, fmt.Errorf(successErrorMsg))
@@ -1781,6 +1785,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListNodes().Return([]*v1core.Node{}, nil)
 				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
+				mdl.EXPECT().ListRuntimeClasses().Return([]*nodev1.RuntimeClass{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListPriorityClasses().Return(nil, fmt.Errorf(successErrorMsg))
 			},
@@ -1790,6 +1795,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListNodes().Return([]*v1core.Node{}, nil)
 				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
+				mdl.EXPECT().ListRuntimeClasses().Return([]*nodev1.RuntimeClass{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{
 					{
 						ObjectMeta: v1.ObjectMeta{
@@ -1988,6 +1994,126 @@ func TestSnapshotPodsInPartition(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, snapshot.Pods, 1)
 	assert.Equal(t, "pod1", snapshot.Pods[0].Name)
+}
+
+func TestRuntimeClassSupport(t *testing.T) {
+	kubeObjects := []runtime.Object{
+		&nodev1.RuntimeClass{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "my-runtimeclass",
+			},
+			Overhead: &nodev1.Overhead{
+				PodFixed: v1core.ResourceList{
+					"cpu":    resource.MustParse("0.5"),
+					"memory": resource.MustParse("512Mi"),
+				},
+			},
+			Scheduling: &nodev1.Scheduling{
+				NodeSelector: map[string]string{
+					"runtime": "special-nodes",
+				},
+				Tolerations: []v1core.Toleration{
+					{
+						Key:      "taintkey",
+						Operator: "Equal",
+						Value:    "value",
+						Effect:   "NoSchedule",
+					},
+				},
+			},
+		},
+		&v1core.Pod{
+			ObjectMeta: v1.ObjectMeta{
+				UID:       "runtimeclass-pod",
+				Name:      "runtimeclass-pod",
+				Namespace: "default",
+				Annotations: map[string]string{
+					commonconstants.PodGroupAnnotationForPod: "podgroup-rt",
+				},
+			},
+			Spec: v1core.PodSpec{
+				RuntimeClassName: ptr.To("my-runtimeclass"),
+				Containers: []v1core.Container{
+					{
+						Name: "container",
+						Resources: v1core.ResourceRequirements{
+							Requests: v1core.ResourceList{
+								"cpu":    resource.MustParse("1"),
+								"memory": resource.MustParse("1Gi"),
+							},
+						},
+					},
+				},
+			},
+			Status: v1core.PodStatus{
+				Phase: v1core.PodPending,
+			},
+		},
+	}
+
+	kaiSchedulerObjects := []runtime.Object{
+		&enginev2.Queue{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default-queue",
+			},
+		},
+		&enginev2alpha2.PodGroup{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      "podgroup-rt",
+				Namespace: "default",
+			},
+			Spec: enginev2alpha2.PodGroupSpec{
+				Queue: "default-queue",
+			},
+		},
+	}
+
+	clusterInfo := newClusterInfoTests(t, kubeObjects, kaiSchedulerObjects, []runtime.Object{})
+	snapshot, err := clusterInfo.Snapshot()
+	assert.Nil(t, err)
+
+	var podInfo *pod_info.PodInfo
+	found := false
+	for _, podGroup := range snapshot.PodGroupInfos {
+		var ok bool
+		if podInfo, ok = podGroup.PodInfos[common_info.PodID("runtimeclass-pod")]; ok {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "PodInfo not found for runtimeclass-pod")
+
+	// Verify resource requirements (original + overhead)
+	expectedCpu := resource.MustParse("1.5")
+	expectedMemory := resource.MustParse("1.5Gi")
+	assert.Equal(t, expectedCpu.ToDec().AsApproximateFloat64()*1000, podInfo.ResReq.Cpu(), "CPU resource requirement not as expected")
+	assert.Equal(t, expectedMemory.ToDec().AsApproximateFloat64(), podInfo.ResReq.Memory(), "Memory resource requirement not as expected")
+
+	// Verify node selector was applied
+	expectedNodeSelector := map[string]string{
+		"runtime": "special-nodes",
+	}
+	assert.Contains(t, podInfo.Pod.Spec.NodeSelector, "runtime")
+	assert.Equal(t, podInfo.Pod.Spec.NodeSelector["runtime"], expectedNodeSelector["runtime"])
+
+	// Verify tolerations were applied
+	expectedToleration := v1core.Toleration{
+		Key:      "taintkey",
+		Operator: "Equal",
+		Value:    "value",
+		Effect:   "NoSchedule",
+	}
+	foundToleration := false
+	for _, tol := range podInfo.Pod.Spec.Tolerations {
+		if tol.Key == expectedToleration.Key &&
+			tol.Operator == expectedToleration.Operator &&
+			tol.Value == expectedToleration.Value &&
+			tol.Effect == expectedToleration.Effect {
+			foundToleration = true
+			break
+		}
+	}
+	assert.True(t, foundToleration, "Expected toleration not found in Pod spec")
 }
 
 func newCompletedPod(pod *v1core.Pod) *v1core.Pod {
