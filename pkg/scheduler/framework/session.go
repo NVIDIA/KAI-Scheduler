@@ -392,6 +392,8 @@ func (ssn *Session) OverrideMaxNumberConsolidationPreemptees(maxPreemptees int) 
 	ssn.SchedulerParams.MaxNumberConsolidationPreemptees = maxPreemptees
 }
 
+// IsInferencePreemptible is deprecated and always returns false.
+// This method is retained for backward compatibility with existing call sites.
 func (ssn *Session) IsInferencePreemptible() bool {
 	return ssn.SchedulerParams.IsInferencePreemptible
 }
