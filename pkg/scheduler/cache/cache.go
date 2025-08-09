@@ -52,6 +52,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info/data_lister"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/evictor"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/status_updater"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants/status"
 	k8splugins "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/plugins"
@@ -82,6 +83,7 @@ type SchedulerCacheParams struct {
 	KubeClient                  kubernetes.Interface
 	KAISchedulerClient          kubeaischedulerver.Interface
 	KueueClient                 kueueclient.Interface
+	UsageDBClient               usagedb.Interface
 	DetailedFitErrors           bool
 	ScheduleCSIStorage          bool
 	FullHierarchyFairness       bool
@@ -101,6 +103,7 @@ type SchedulerCache struct {
 	podLister                      listv1.PodLister
 	podGroupLister                 enginelisters.PodGroupLister
 	clusterInfo                    *cluster_info.ClusterInfo
+	usageLister                    *usagedb.UsageLister
 
 	schedulingNodePoolParams *conf.SchedulingNodePoolParams
 
@@ -155,7 +158,9 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 	sc.podLister = sc.informerFactory.Core().V1().Pods().Lister()
 	sc.podGroupLister = sc.kubeAiSchedulerInformerFactory.Scheduling().V2alpha2().PodGroups().Lister()
 
-	clusterInfo, err := cluster_info.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, sc.schedulingNodePoolParams,
+	sc.usageLister = usagedb.NewUsageLister(schedulerCacheParams.UsageDBClient, nil, nil, nil)
+
+	clusterInfo, err := cluster_info.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, sc.usageLister, sc.schedulingNodePoolParams,
 		sc.restrictNodeScheduling, &sc.K8sClusterPodAffinityInfo, sc.scheduleCSIStorage, sc.fullHierarchyFairness, sc.StatusUpdater)
 
 	if err != nil {
@@ -188,12 +193,16 @@ func (sc *SchedulerCache) Run(stopCh <-chan struct{}) {
 	sc.kubeAiSchedulerInformerFactory.Start(stopCh)
 	sc.kueueInformerFactory.Start(stopCh)
 	sc.StatusUpdater.Run(stopCh)
+
+	sc.usageLister.Start(stopCh)
 }
 
 func (sc *SchedulerCache) WaitForCacheSync(stopCh <-chan struct{}) {
 	sc.informerFactory.WaitForCacheSync(stopCh)
 	sc.kubeAiSchedulerInformerFactory.WaitForCacheSync(stopCh)
 	sc.kueueInformerFactory.WaitForCacheSync(stopCh)
+
+	sc.usageLister.WaitForCacheSync(stopCh)
 }
 
 func (sc *SchedulerCache) Evict(evictedPod *v1.Pod, evictedPodGroup *podgroup_info.PodGroupInfo,
@@ -421,5 +430,5 @@ func (sc *SchedulerCache) GetDataLister() data_lister.DataLister {
 		log.InfraLogger.Errorf("Failed to get label selector: %v", err)
 		return nil
 	}
-	return data_lister.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, selector)
+	return data_lister.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, sc.usageLister, selector)
 }

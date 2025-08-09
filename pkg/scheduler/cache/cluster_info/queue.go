@@ -77,6 +77,10 @@ func (c *ClusterInfo) snapshotQueues() (map[common_info.QueueID]*queue_info.Queu
 	return result, nil
 }
 
+func (c *ClusterInfo) snapshotQueueResourceUsage() (*queue_info.ClusterUsage, error) {
+	return c.dataLister.ListResourceUsage()
+}
+
 // UpdateQueueHierarchy iterates over a map containing multiple levels of queue hierarchies, and updates queues with
 // child queues where relevant
 func UpdateQueueHierarchy(queues map[common_info.QueueID]*queue_info.QueueInfo) {
