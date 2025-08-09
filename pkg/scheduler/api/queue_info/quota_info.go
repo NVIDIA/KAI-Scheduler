@@ -27,13 +27,13 @@ type QueueUsage struct {
 }
 
 type ClusterUsage struct {
-	Cluster QueueUsage                          `json:"cluster"`
-	Queues  map[common_info.QueueID]*QueueUsage `json:"queues"`
+	ClusterCapacity QueueUsage                          `json:"cluster"`
+	Queues          map[common_info.QueueID]*QueueUsage `json:"queues"`
 }
 
 func NewClusterUsage() *ClusterUsage {
 	return &ClusterUsage{
-		Cluster: QueueUsage{},
-		Queues:  make(map[common_info.QueueID]*QueueUsage),
+		ClusterCapacity: QueueUsage{},
+		Queues:          make(map[common_info.QueueID]*QueueUsage),
 	}
 }
