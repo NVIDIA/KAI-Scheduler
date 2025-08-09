@@ -46,7 +46,6 @@ type SchedulerParams struct {
 	GlobalDefaultStalenessGracePeriod time.Duration             `json:"globalDefaultStalenessGracePeriod,omitempty"`
 	SchedulePeriod                    time.Duration             `json:"schedulePeriod,omitempty"`
 	DetailedFitErrors                 bool                      `json:"detailedFitErrors,omitempty"`
-	EnableUsageDataFetcher            bool                      `json:"enableUsageDataFetcher,omitempty"`
 }
 
 // SchedulerConfiguration defines the configuration of scheduler.
