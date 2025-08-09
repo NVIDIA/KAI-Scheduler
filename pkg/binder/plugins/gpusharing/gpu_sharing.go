@@ -24,25 +24,25 @@ const (
 	CdiDeviceNameBase      = "k8s.device-plugin.nvidia.com/gpu=%s"
 )
 
-type BinderGPUSharing struct {
+type GPUSharing struct {
 	kubeClient             client.Client
 	gpuDevicePluginUsesCdi bool
 	gpuSharingEnabled      bool
 }
 
-func New(kubeClient client.Client, gpuDevicePluginUsesCdi bool, gpuSharingEnabled bool) *BinderGPUSharing {
-	return &BinderGPUSharing{
+func New(kubeClient client.Client, gpuDevicePluginUsesCdi bool, gpuSharingEnabled bool) *GPUSharing {
+	return &GPUSharing{
 		kubeClient:             kubeClient,
 		gpuDevicePluginUsesCdi: gpuDevicePluginUsesCdi,
 		gpuSharingEnabled:      gpuSharingEnabled,
 	}
 }
 
-func (p *BinderGPUSharing) Name() string {
+func (p *GPUSharing) Name() string {
 	return "gpusharing"
 }
 
-func (p *BinderGPUSharing) PreBind(
+func (p *GPUSharing) PreBind(
 	ctx context.Context, pod *v1.Pod, _ *v1.Node, bindRequest *v1alpha2.BindRequest, state *state.BindingState,
 ) error {
 	if !common.IsSharedGPUAllocation(bindRequest) {
@@ -80,7 +80,7 @@ func (p *BinderGPUSharing) PreBind(
 	return common.SetGPUPortion(ctx, p.kubeClient, pod, containerRef, bindRequest.Spec.ReceivedGPU.Portion)
 }
 
-func (p *BinderGPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, pod *v1.Pod,
+func (p *GPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Context, pod *v1.Pod,
 	containerRef *gpusharingconfigmap.PodContainerRef) error {
 	capabilitiesConfigMapName, err := gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
 	if err != nil {
@@ -90,7 +90,7 @@ func (p *BinderGPUSharing) createCapabilitiesConfigMapIfMissing(ctx context.Cont
 	return err
 }
 
-func (p *BinderGPUSharing) createDirectEnvMapIfMissing(ctx context.Context, pod *v1.Pod,
+func (p *GPUSharing) createDirectEnvMapIfMissing(ctx context.Context, pod *v1.Pod,
 	containerRef *gpusharingconfigmap.PodContainerRef) error {
 	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
 	if err != nil {
@@ -100,7 +100,7 @@ func (p *BinderGPUSharing) createDirectEnvMapIfMissing(ctx context.Context, pod 
 	return gpusharingconfigmap.UpsertJobConfigMap(ctx, p.kubeClient, pod, directEnvVarsMapName, directEnvVars)
 }
 
-func (p *BinderGPUSharing) PostBind(
+func (p *GPUSharing) PostBind(
 	context.Context, *v1.Pod, *v1.Node, *v1alpha2.BindRequest, *state.BindingState,
 ) {
 }
