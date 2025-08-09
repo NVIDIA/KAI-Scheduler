@@ -21,7 +21,6 @@ import (
 	fakeschedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v2alpha2/fake"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
@@ -568,30 +567,17 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 					},
 				},
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
-					"sub-group-1": {
-						Name:         "sub-group-1",
-						MinAvailable: 1,
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-							"test-task-1": {
-								Name:   "test-task-1",
-								Status: pod_status.Pending,
-							},
-							"test-task-2": {
-								Name:   "test-task-2",
-								Status: pod_status.Pending,
-							},
-						},
-					},
-					"sub-group-2": {
-						Name:         "sub-group-2",
-						MinAvailable: 2,
-						PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-							"test-task-3": {
-								Name:   "test-task-3",
-								Status: pod_status.Pending,
-							},
-						},
-					},
+					"sub-group-1": func() *podgroup_info.SubGroupInfo {
+						subGroup := podgroup_info.NewSubGroupInfo("sub-group-1", 1)
+						subGroup.AssignTask(&pod_info.PodInfo{UID: "test-task1", Status: pod_status.Pending})
+						subGroup.AssignTask(&pod_info.PodInfo{UID: "test-task2", Status: pod_status.Pending})
+						return subGroup
+					}(),
+					"sub-group-2": func() *podgroup_info.SubGroupInfo {
+						subGroup := podgroup_info.NewSubGroupInfo("sub-group-2", 2)
+						subGroup.AssignTask(&pod_info.PodInfo{UID: "test-task3", Status: pod_status.Pending})
+						return subGroup
+					}(),
 				},
 			},
 			expectedEventActions:      []string{"Normal NotReady Job is not ready for scheduling. Waiting for 2 pods for SubGroup sub-group-2, currently 1 exist, 0 are gated."},

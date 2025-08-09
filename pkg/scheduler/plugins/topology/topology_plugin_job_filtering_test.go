@@ -4,10 +4,12 @@
 package topology
 
 import (
+	"errors"
 	"slices"
 	"sort"
 	"testing"
 
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/utils/ptr"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
@@ -18,11 +20,501 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
+
+// Mock session state provider for testing
+type mockSessionStateProvider struct {
+	states                   map[types.UID]*k8sframework.CycleState
+	GetSessionStateCallCount int
+}
+
+func newMockSessionStateProvider() *mockSessionStateProvider {
+	return &mockSessionStateProvider{
+		states:                   make(map[types.UID]*k8sframework.CycleState),
+		GetSessionStateCallCount: 0,
+	}
+}
+
+func (m *mockSessionStateProvider) GetSessionStateForResource(uid types.UID) k8s_internal.SessionState {
+	m.GetSessionStateCallCount++
+	if state, exists := m.states[uid]; exists {
+		return k8s_internal.SessionState(state)
+	}
+	state := k8sframework.NewCycleState()
+	m.states[uid] = state
+	return k8s_internal.SessionState(state)
+}
+
+func TestTopologyPlugin_prePredicateFn(t *testing.T) {
+	tests := []struct {
+		name                    string
+		job                     *jobs_fake.TestJobBasic
+		jobTopologyConstraint   *enginev2alpha2.TopologyConstraint
+		allocatedPodGroups      []*jobs_fake.TestJobBasic
+		nodes                   map[string]nodes_fake.TestNodeBasic
+		nodesToDomains          map[string]TopologyDomainID
+		setupTopologyTree       func() *TopologyInfo
+		setupSessionState       func(provider *mockSessionStateProvider, jobUID types.UID)
+		expectedError           string
+		expectedCacheCalls      int
+		expectedRelevantDomains []*TopologyDomainInfo
+	}{
+		{
+			name: "successful topology allocation - cache right",
+			job: &jobs_fake.TestJobBasic{
+				Name:                "test-job",
+				RequiredCPUsPerTask: 500,
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{State: pod_status.Pending},
+					{State: pod_status.Pending},
+				},
+			},
+			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
+				Topology:               "test-topology",
+				RequiredTopologyLevel:  "zone",
+				PreferredTopologyLevel: "rack",
+			},
+			nodes: map[string]nodes_fake.TestNodeBasic{
+				"node-1": {
+					CPUMillis:  1000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+				},
+				"node-2": {
+					CPUMillis:  400,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+				},
+			},
+			nodesToDomains: map[string]TopologyDomainID{
+				"node-1": "rack1.zone1",
+				"node-2": "rack2.zone1",
+			},
+			setupTopologyTree: func() *TopologyInfo {
+				tree := &TopologyInfo{
+					Name: "test-topology",
+					TopologyResource: &kueuev1alpha1.Topology{
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{NodeLabel: "rack"},
+								{NodeLabel: "zone"},
+							},
+						},
+					},
+					DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+						"rack": {
+							"rack1.zone1": {
+								ID:    "rack1.zone1",
+								Name:  "rack1",
+								Level: "rack",
+								Nodes: map[string]*node_info.NodeInfo{},
+							},
+							"rack2.zone1": {
+								ID:    "rack2.zone1",
+								Name:  "rack2",
+								Level: "rack",
+								Nodes: map[string]*node_info.NodeInfo{},
+							},
+						},
+						"zone": {
+							"zone1": {
+								ID:    "zone1",
+								Name:  "zone1",
+								Level: "zone",
+								Nodes: map[string]*node_info.NodeInfo{},
+							},
+						},
+					},
+				}
+
+				tree.Root = tree.DomainsByLevel["zone"]["zone1"]
+
+				// Set parent relationships
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*TopologyDomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
+					tree.DomainsByLevel["rack"]["rack2.zone1"],
+				}
+				tree.DomainsByLevel["rack"]["rack1.zone1"].Parent = tree.DomainsByLevel["zone"]["zone1"]
+				tree.DomainsByLevel["rack"]["rack2.zone1"].Parent = tree.DomainsByLevel["zone"]["zone1"]
+
+				return tree
+			},
+			expectedError:      "",
+			expectedCacheCalls: 2,
+			expectedRelevantDomains: []*TopologyDomainInfo{
+				{
+					ID:    "rack1.zone1",
+					Name:  "rack1",
+					Level: "rack",
+				},
+			},
+		},
+		{
+			name: "no topology constraint - early return",
+			job: &jobs_fake.TestJobBasic{
+				Name:                "test-job",
+				RequiredCPUsPerTask: 500,
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{State: pod_status.Pending},
+				},
+			},
+			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
+				Topology: "test-topology",
+			},
+			nodes: map[string]nodes_fake.TestNodeBasic{
+				"node-1": {
+					CPUMillis:  1000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+				},
+			},
+			setupTopologyTree: func() *TopologyInfo {
+				return &TopologyInfo{
+					Name: "test-topology",
+					TopologyResource: &kueuev1alpha1.Topology{
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{NodeLabel: "zone"},
+							},
+						},
+					},
+				}
+			},
+			expectedError:      "",
+			expectedCacheCalls: 0,
+		},
+		{
+			name: "topology not found - error",
+			job: &jobs_fake.TestJobBasic{
+				Name:                "test-job",
+				RequiredCPUsPerTask: 500,
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{State: pod_status.Pending},
+				},
+			},
+			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
+				Topology: "nonexistent-topology",
+			},
+			nodes: map[string]nodes_fake.TestNodeBasic{
+				"node-1": {
+					CPUMillis:  1000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+				},
+			},
+			setupTopologyTree: func() *TopologyInfo {
+				return &TopologyInfo{
+					Name: "test-topology",
+					TopologyResource: &kueuev1alpha1.Topology{
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{NodeLabel: "zone"},
+							},
+						},
+					},
+				}
+			},
+			expectedError:      "matching topology tree haven't been found for job test-job, workload topology name: nonexistent-topology",
+			expectedCacheCalls: 0,
+		},
+		{
+			name: "cache already populated - early return",
+			job: &jobs_fake.TestJobBasic{
+				Name:                "test-job",
+				RequiredCPUsPerTask: 500,
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{State: pod_status.Pending},
+				},
+			},
+			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
+				Topology: "test-topology",
+			},
+			nodes: map[string]nodes_fake.TestNodeBasic{
+				"node-1": {
+					CPUMillis:  1000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+				},
+			},
+			setupTopologyTree: func() *TopologyInfo {
+				return &TopologyInfo{
+					Name: "test-topology",
+					TopologyResource: &kueuev1alpha1.Topology{
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{NodeLabel: "zone"},
+							},
+						},
+					},
+				}
+			},
+			setupSessionState: func(provider *mockSessionStateProvider, jobUID types.UID) {
+				state := provider.GetSessionStateForResource(jobUID)
+				(*k8sframework.CycleState)(state).Write(
+					k8sframework.StateKey(topologyPluginName),
+					&topologyStateData{
+						relevantDomains: []*TopologyDomainInfo{
+							{
+								ID:              "zone1",
+								Name:            "zone1",
+								Level:           "zone",
+								AllocatablePods: 1,
+							},
+						},
+					},
+				)
+				provider.GetSessionStateCallCount = 0 // Do not count this test data initialization as a call
+			},
+			expectedError:      "",
+			expectedCacheCalls: 1, // read once and return, do not write
+		},
+		{
+			name: "insufficient allocatable pods - no domains found",
+			job: &jobs_fake.TestJobBasic{
+				Name:                "test-job",
+				RequiredCPUsPerTask: 2000, // Too much for any node
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{State: pod_status.Pending},
+				},
+			},
+			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
+				Topology: "test-topology",
+			},
+			nodes: map[string]nodes_fake.TestNodeBasic{
+				"node-1": {
+					CPUMillis:  1000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+				},
+			},
+			nodesToDomains: map[string]TopologyDomainID{
+				"node-1": "zone1",
+			},
+			setupTopologyTree: func() *TopologyInfo {
+				tree := &TopologyInfo{
+					Name: "test-topology",
+					TopologyResource: &kueuev1alpha1.Topology{
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{NodeLabel: "zone"},
+							},
+						},
+					},
+					DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+						"zone": {
+							"zone1": {
+								ID:    "zone1",
+								Name:  "zone1",
+								Level: "zone",
+								Nodes: map[string]*node_info.NodeInfo{},
+							},
+						},
+					},
+				}
+
+				tree.Root = tree.DomainsByLevel["zone"]["zone1"]
+
+				return tree
+			},
+			expectedError:      "",
+			expectedCacheCalls: 1,
+		},
+		{
+			name: "getBestJobAllocatableDomains constrain definition error",
+			job: &jobs_fake.TestJobBasic{
+				Name:                "test-job",
+				RequiredCPUsPerTask: 500,
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{State: pod_status.Pending},
+				},
+			},
+			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
+				Topology:               "test-topology",
+				RequiredTopologyLevel:  "nonexistent-level",
+				PreferredTopologyLevel: "rack",
+			},
+			nodes: map[string]nodes_fake.TestNodeBasic{
+				"node-1": {
+					CPUMillis:  1000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+				},
+			},
+			nodesToDomains: map[string]TopologyDomainID{
+				"node-1": "rack1.zone1",
+			},
+			setupTopologyTree: func() *TopologyInfo {
+				tree := &TopologyInfo{
+					Name: "test-topology",
+					TopologyResource: &kueuev1alpha1.Topology{
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{NodeLabel: "rack"},
+								{NodeLabel: "zone"},
+							},
+						},
+					},
+					DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+						"rack": {
+							"rack1.zone1": {
+								ID:    "rack1.zone1",
+								Name:  "rack1",
+								Level: "rack",
+								Nodes: map[string]*node_info.NodeInfo{},
+							},
+						},
+						"zone": {
+							"zone1": {
+								ID:    "zone1",
+								Name:  "zone1",
+								Level: "zone",
+								Nodes: map[string]*node_info.NodeInfo{},
+							},
+						},
+					},
+				}
+
+				tree.Root = tree.DomainsByLevel["zone"]["zone1"]
+
+				// Set parent relationships
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*TopologyDomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
+				}
+				tree.DomainsByLevel["rack"]["rack1.zone1"].Parent = tree.DomainsByLevel["zone"]["zone1"]
+
+				return tree
+			},
+			expectedError:      "the topology test-topology doesn't have a level matching the required(nonexistent-level) specified for the job test-job",
+			expectedCacheCalls: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup test data
+			jobName := tt.job.Name
+			clusterPodGroups := append(tt.allocatedPodGroups, tt.job)
+			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(clusterPodGroups)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.nodes, tasksToNodeMap)
+			job := jobsInfoMap[common_info.PodGroupID(jobName)]
+
+			// Setup topology tree
+			topologyTree := tt.setupTopologyTree()
+			if tt.nodesToDomains != nil {
+				for nodeName, domainId := range tt.nodesToDomains {
+					nodeInfo := nodesInfoMap[nodeName]
+					domain := topologyTree.DomainsByLevel[topologyTree.TopologyResource.Spec.Levels[0].NodeLabel][domainId]
+					for domain != nil {
+						if nodeInfo.Node.Labels == nil {
+							nodeInfo.Node.Labels = map[string]string{
+								domain.Level: domain.Name,
+							}
+						} else {
+							nodeInfo.Node.Labels[domain.Level] = domain.Name
+						}
+						domain.AddNode(nodeInfo)
+						domain = domain.Parent
+					}
+				}
+			}
+
+			// Setup session state provider
+			sessionStateProvider := newMockSessionStateProvider()
+			if tt.setupSessionState != nil {
+				tt.setupSessionState(sessionStateProvider, types.UID(job.PodGroupUID))
+			}
+
+			// Setup plugin
+			plugin := &topologyPlugin{
+				sessionStateGetter: sessionStateProvider,
+				nodesInfos:         nodesInfoMap,
+				TopologyTrees: map[string]*TopologyInfo{
+					"test-topology": topologyTree,
+				},
+				taskOrderFunc: func(l, r interface{}) bool {
+					return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
+				},
+				subGroupOrderFunc: func(l, r interface{}) bool {
+					return l.(*podgroup_info.PodGroupInfo).Name < r.(*podgroup_info.PodGroupInfo).Name
+				},
+			}
+
+			// Update job with topology constraints based on test case
+			if tt.jobTopologyConstraint != nil {
+				job.PodGroup.Spec.TopologyConstraint = *tt.jobTopologyConstraint
+			}
+
+			// Call the function under test
+			err := plugin.prePredicateFn(nil, job)
+
+			// Check error
+			if tt.expectedError != "" {
+				if err == nil {
+					t.Errorf("expected error '%s', but got nil", tt.expectedError)
+					return
+				}
+				if err.Error() != tt.expectedError {
+					t.Errorf("expected error '%s', but got '%s'", tt.expectedError, err.Error())
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			// Check cache write if expected
+			if tt.expectedCacheCalls >= 2 { // >=2 because the first call is read, the second is write
+				state := sessionStateProvider.GetSessionStateForResource(types.UID(job.PodGroupUID))
+				stateData, err := (*k8sframework.CycleState)(state).Read(k8sframework.StateKey(topologyPluginName))
+				if err != nil {
+					t.Errorf("failed to read state data: %v", err)
+					return
+				}
+
+				topologyState := stateData.(*topologyStateData)
+				if len(topologyState.relevantDomains) != len(tt.expectedRelevantDomains) {
+					t.Errorf("expected %d relevant domains, got %d",
+						len(tt.expectedRelevantDomains), len(topologyState.relevantDomains))
+					return
+				}
+
+				for i, expectedDomain := range tt.expectedRelevantDomains {
+					if i >= len(topologyState.relevantDomains) {
+						t.Errorf("expected domain at index %d not found", i)
+						continue
+					}
+
+					actualDomain := topologyState.relevantDomains[i]
+					if actualDomain.ID != expectedDomain.ID {
+						t.Errorf("domain %d: expected ID %s, got %s", i, expectedDomain.ID, actualDomain.ID)
+					}
+					if actualDomain.Level != expectedDomain.Level {
+						t.Errorf("domain %d: expected Level %s, got %s", i, expectedDomain.Level, actualDomain.Level)
+					}
+				}
+			} else {
+				// Verify no cache write occurred
+				testGetSessionStateCallCount := sessionStateProvider.GetSessionStateCallCount
+
+				state := sessionStateProvider.GetSessionStateForResource(types.UID(job.PodGroupUID))
+				_, err := (*k8sframework.CycleState)(state).Read(k8sframework.StateKey(topologyPluginName))
+				if err == nil && testGetSessionStateCallCount > 1 { // >1 because the first call is read, the second is write
+					t.Errorf("expected no cache write, but found more than 1 sessionState call (the first is read, the second is write)")
+				} else if !errors.Is(err, k8sframework.ErrNotFound) && tt.expectedCacheCalls == 0 {
+					t.Errorf("expected ErrNotFound error, but got: %v", err)
+				}
+			}
+		})
+	}
+}
 
 func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 	tests := []struct {

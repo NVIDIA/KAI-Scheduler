@@ -256,7 +256,7 @@ func (ssn *Session) SubGroupOrderFn(l, r interface{}) bool {
 			return comparison < 0
 		}
 	}
-	return lSubGroup.Name < rSubGroup.Name
+	return lSubGroup.GetName() < rSubGroup.GetName()
 }
 
 func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo) bool {
@@ -373,6 +373,20 @@ func (ssn *Session) NodeOrderFn(task *pod_info.PodInfo, node *node_info.NodeInfo
 		priorityScore += score
 	}
 	return priorityScore, nil
+}
+
+func (ssn *Session) AddCleanAllocationAttemptCacheFn(fn api.CleanAllocationAttemptCacheFn) {
+	ssn.CleanAllocationAttemptCacheFns = append(ssn.CleanAllocationAttemptCacheFns, fn)
+}
+
+func (ssn *Session) CleanAllocationAttemptCache(job *podgroup_info.PodGroupInfo) {
+	for _, cleaner := range ssn.CleanAllocationAttemptCacheFns {
+		err := cleaner(job)
+		if err != nil {
+			log.InfraLogger.V(6).Infof(
+				"Failed to run CleanAllocationAttemptCache on job %s", job.Name)
+		}
+	}
 }
 
 func (ssn *Session) IsRestrictNodeSchedulingEnabled() bool {

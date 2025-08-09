@@ -4,16 +4,31 @@
 package topology
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/scores"
+	"k8s.io/apimachinery/pkg/types"
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 )
+
+type topologyStateData struct {
+	relevantDomains []*TopologyDomainInfo
+}
+
+func (t *topologyStateData) Clone() k8sframework.StateData {
+	return &topologyStateData{
+		relevantDomains: t.relevantDomains,
+	}
+}
 
 type jobAllocationMetaData struct {
 	maxPodResources    *resource_info.ResourceRequirements
@@ -30,6 +45,16 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 		return nil
 	}
 
+	// Check in cache if the job has already been allocated to a domain
+	jobAllocatableDomains, err := t.loadAllocatableDomainsFromCache(types.UID(job.PodGroupUID))
+	if err != nil {
+		return err
+	}
+	if len(jobAllocatableDomains) > 0 {
+		// Cache is already populated, no need to calculate anything
+		return nil
+	}
+
 	defer t.treeAllocatableCleanup(topologyTree)
 	maxAllocatablePods, err := t.calcTreeAllocatable(job, topologyTree)
 	if err != nil {
@@ -42,10 +67,17 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 		return nil
 	}
 
-	_, err = t.getBestJobAllocatableDomains(job, topologyTree)
+	jobAllocatableDomain, err := t.getBestJobAllocatableDomains(job, topologyTree)
 	if err != nil {
 		return err
 	}
+
+	//Save results to cycle cache
+	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetSessionStateForResource(job.PodGroupUID))
+	cycleJobState.Write(
+		k8sframework.StateKey(topologyPluginName),
+		&topologyStateData{relevantDomains: jobAllocatableDomain},
+	)
 
 	return nil
 }
@@ -277,4 +309,74 @@ func (*topologyPlugin) treeAllocatableCleanup(topologyTree *TopologyInfo) {
 			domain.AllocatablePods = 0
 		}
 	}
+}
+
+func (t *topologyPlugin) predicateFn(pod *pod_info.PodInfo, job *podgroup_info.PodGroupInfo, node *node_info.NodeInfo) error {
+	jobAllocatableDomains, err := t.loadAllocatableDomainsFromCache(job.PodGroupUID)
+	if err != nil {
+		return err
+	}
+
+	if len(jobAllocatableDomains) > 0 {
+		jobDomainsNames := []string{}
+		for _, domain := range jobAllocatableDomains {
+			if domain.Nodes[node.Node.Name] != nil {
+				return nil
+			}
+			jobDomainsNames = append(jobDomainsNames, domain.Name)
+		}
+		return fmt.Errorf("the node %s is not part of the chosen topology domain for the job %s. The chosen domains are %s",
+			node.Node.Name, job.PodGroup.Name, strings.Join(jobDomainsNames, ", "))
+	}
+
+	return nil
+}
+
+func (t *topologyPlugin) nodeOrderFn(pod *pod_info.PodInfo, node *node_info.NodeInfo) (float64, error) {
+	score := 0.0
+
+	jobAllocatableDomains, err := t.loadAllocatableDomainsFromCache(types.UID(pod.Job))
+	if err != nil {
+		return score, err
+	}
+
+	if len(jobAllocatableDomains) > 0 {
+		for _, domain := range jobAllocatableDomains {
+			if domain.Nodes[node.Node.Name] != nil {
+				score = scores.Topology
+				break
+			}
+		}
+	}
+
+	return score, nil
+}
+
+func (t *topologyPlugin) loadAllocatableDomainsFromCache(podGroupUID types.UID) ([]*TopologyDomainInfo, error) {
+	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetSessionStateForResource(podGroupUID))
+	if cycleJobState == nil {
+		return nil, nil
+	}
+	jobTopologyStateData, err := cycleJobState.Read(k8sframework.StateKey(topologyPluginName))
+	if err != nil {
+		if errors.Is(err, k8sframework.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	jobAllocatableDomains := jobTopologyStateData.(*topologyStateData).relevantDomains
+	return jobAllocatableDomains, nil
+}
+
+func (t *topologyPlugin) cleanAllocationAttemptCache(job *podgroup_info.PodGroupInfo) error {
+	if job.PodGroup.Spec.TopologyConstraint.Topology == "" {
+		return nil
+	}
+
+	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetSessionStateForResource(job.PodGroupUID))
+	if cycleJobState == nil {
+		return nil
+	}
+	cycleJobState.Delete(k8sframework.StateKey(topologyPluginName))
+	return nil
 }
