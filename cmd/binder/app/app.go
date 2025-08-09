@@ -35,7 +35,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/controllers"
-	bindingplugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
 )
 
 var (
@@ -58,7 +58,7 @@ type App struct {
 	manager          manager.Manager
 	rrs              resourcereservation.Interface
 	reconcilerParams *controllers.ReconcilerParams
-	bindingPlugins   *bindingplugins.BinderPlugins
+	plugins          *plugins.BinderPlugins
 }
 
 func New() (*App, error) {
@@ -146,8 +146,8 @@ func New() (*App, error) {
 	return app, nil
 }
 
-func (app *App) RegisterPlugins(bindingPlugins *bindingplugins.BinderPlugins) {
-	app.bindingPlugins = bindingPlugins
+func (app *App) RegisterPlugins(plugins *plugins.BinderPlugins) {
+	app.plugins = plugins
 }
 
 func (app *App) Run() error {
@@ -172,7 +172,7 @@ func (app *App) Run() error {
 		return err
 	}
 
-	binder := binding.NewBinder(app.Client, app.rrs, app.bindingPlugins)
+	binder := binding.NewBinder(app.Client, app.rrs, app.plugins)
 
 	stopCh := make(chan struct{})
 	app.InformerFactory.Start(stopCh)
