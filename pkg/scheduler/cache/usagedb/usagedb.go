@@ -55,6 +55,7 @@ func NewUsageLister(client Interface, fetchInterval, stalenessPeriod, waitTimeou
 		lastUsageData:   queue_info.NewClusterUsage(),
 		fetchInterval:   *fetchInterval,
 		stalenessPeriod: *stalenessPeriod,
+		waitTimeout:     *waitTimeout,
 	}
 }
 
