@@ -86,7 +86,7 @@ func TestGetResourceUsage(t *testing.T) {
 			name: "fresh data available",
 			setupLister: func(l *UsageLister) {
 				usage := queue_info.NewClusterUsage()
-				usage.Cluster.GPU = 10
+				usage.ClusterCapacity.GPU = 10
 				usage.Queues["queue1"] = &queue_info.QueueUsage{GPU: 5}
 				now := time.Now()
 				l.lastUsageData = usage
@@ -94,7 +94,7 @@ func TestGetResourceUsage(t *testing.T) {
 			},
 			wantUsage: func() *queue_info.ClusterUsage {
 				usage := queue_info.NewClusterUsage()
-				usage.Cluster.GPU = 10
+				usage.ClusterCapacity.GPU = 10
 				usage.Queues["queue1"] = &queue_info.QueueUsage{GPU: 5}
 				return usage
 			}(),
@@ -103,14 +103,14 @@ func TestGetResourceUsage(t *testing.T) {
 			name: "stale data",
 			setupLister: func(l *UsageLister) {
 				usage := queue_info.NewClusterUsage()
-				usage.Cluster.GPU = 10
+				usage.ClusterCapacity.GPU = 10
 				staleTime := time.Now().Add(-10 * time.Minute)
 				l.lastUsageData = usage
 				l.lastUsageDataTime = &staleTime
 			},
 			wantUsage: func() *queue_info.ClusterUsage {
 				usage := queue_info.NewClusterUsage()
-				usage.Cluster.GPU = 10
+				usage.ClusterCapacity.GPU = 10
 				return usage
 			}(),
 			wantErr: true,
