@@ -5,3 +5,6 @@
 
 ---
 {{ include "kai-scheduler.preInstallWebhookJob" (dict "jobName" "queuecontroller-pre-install-job" "serviceName" "queuecontroller" "secretName" .Values.queuecontroller.certSecretName "weight" "1" "Values" .Values "Chart" .Chart "Release" .Release) }}
+
+---
+{{ include "kai-scheduler.preInstallWebhookJob" (dict "jobName" "kai-admission-pre-install-job" "serviceName" "kai-admission" "secretName" .Values.admission.certSecretName "weight" "0" "Values" .Values "Chart" .Chart "Release" .Release) }}

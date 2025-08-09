@@ -6,10 +6,8 @@ package app
 import (
 	"context"
 	"flag"
-	"fmt"
-	"time"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	admissionhooks "github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/podhooks"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -32,10 +30,8 @@ import (
 
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding"
-	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation"
+	admissionplugins "github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/controllers"
-	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
 )
 
 var (
@@ -56,10 +52,12 @@ type App struct {
 	InformerFactory  informers.SharedInformerFactory
 	Options          *Options
 	manager          manager.Manager
-	rrs              resourcereservation.Interface
 	reconcilerParams *controllers.ReconcilerParams
-	plugins          *plugins.BinderPlugins
+	admissionPlugins *admissionplugins.KaiAdmissionPlugins
 }
+
+// +kubebuilder:webhook:path=/mutate--v1-pod,mutating=true,failurePolicy=fail,sideEffects=None,resources=pods,verbs=create,groups=core,versions=v1,name=admission.run.ai,admissionReviewVersions=v1,reinvocationPolicy=IfNeeded
+// +kubebuilder:webhook:path=/validate--v1-pod,mutating=false,failurePolicy=fail,sideEffects=None,resources=pods,verbs=create;update,groups=core,versions=v1,name=admission.run.ai,admissionReviewVersions=v1
 
 func New() (*App, error) {
 	options := InitOptions()
@@ -105,10 +103,6 @@ func New() (*App, error) {
 		return nil, err
 	}
 
-	if err := createIndexesForResourceReservation(mgr); err != nil {
-		return nil, err
-	}
-
 	clientWithWatch, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
 		Scheme: scheme,
 		Cache: &client.CacheOptions{
@@ -123,13 +117,7 @@ func New() (*App, error) {
 	kubeClient := kubernetes.NewForConfigOrDie(config)
 	informerFactory := informers.NewSharedInformerFactory(kubeClient, 0)
 
-	rrs := resourcereservation.NewService(options.FakeGPUNodes, clientWithWatch, options.ResourceReservationPodImage,
-		time.Duration(options.ResourceReservationAllocationTimeout)*time.Second,
-		options.ResourceReservationNamespace, options.ResourceReservationServiceAccount,
-		options.ResourceReservationAppLabel, options.ScalingPodNamespace)
-
 	reconcilerParams := &controllers.ReconcilerParams{
-		MaxConcurrentReconciles:     options.MaxConcurrentReconciles,
 		RateLimiterBaseDelaySeconds: options.RateLimiterBaseDelaySeconds,
 		RateLimiterMaxDelaySeconds:  options.RateLimiterMaxDelaySeconds,
 	}
@@ -140,52 +128,33 @@ func New() (*App, error) {
 		InformerFactory:  informerFactory,
 		Options:          options,
 		manager:          mgr,
-		rrs:              rrs,
 		reconcilerParams: reconcilerParams,
 	}
 	return app, nil
 }
 
-func (app *App) RegisterPlugins(plugins *plugins.BinderPlugins) {
-	app.plugins = plugins
+func (app *App) RegisterPlugins(admissionPlugins *admissionplugins.KaiAdmissionPlugins) {
+	app.admissionPlugins = admissionPlugins
 }
 
 func (app *App) Run() error {
 	var err error
 	go func() {
 		app.manager.GetCache().WaitForCacheSync(context.Background())
-		setupLog.Info("syncing resource reservation")
-		err := app.rrs.Sync(context.Background())
-		if err != nil {
-			setupLog.Error(err, "unable to sync resource reservation")
-			panic(err)
-		}
 	}()
 
-	if err = (&controllers.PodReconciler{
-		Client:              app.manager.GetClient(),
-		Scheme:              app.manager.GetScheme(),
-		ResourceReservation: app.rrs,
-		SchedulerName:       app.Options.SchedulerName,
-	}).SetupWithManager(app.manager, app.reconcilerParams); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Pod")
+	// +kubebuilder:scaffold:builder
+
+	if err = ctrl.NewWebhookManagedBy(app.manager).For(&corev1.Pod{}).
+		WithDefaulter(admissionhooks.NewPodMutator(app.manager.GetClient(), app.admissionPlugins, app.Options.SchedulerName)).
+		WithValidator(admissionhooks.NewPodValidator(app.manager.GetClient(), app.admissionPlugins, app.Options.SchedulerName)).Complete(); err != nil {
+		setupLog.Error(err, "unable to create pod webhooks", "webhook", "Pod")
 		return err
 	}
-
-	binder := binding.NewBinder(app.Client, app.rrs, app.plugins)
 
 	stopCh := make(chan struct{})
 	app.InformerFactory.Start(stopCh)
 	app.InformerFactory.WaitForCacheSync(stopCh)
-
-	reconciler := controllers.NewBindRequestReconciler(
-		app.manager.GetClient(), app.manager.GetScheme(), app.manager.GetEventRecorderFor("binder"), app.reconcilerParams,
-		binder, app.rrs)
-	if err = reconciler.SetupWithManager(app.manager); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "BindRequest")
-		return err
-	}
-	// +kubebuilder:scaffold:builder
 
 	if err = app.manager.AddHealthzCheck("healthz", app.manager.GetWebhookServer().StartedChecker()); err != nil {
 		setupLog.Error(err, "unable to set up health check")
@@ -201,42 +170,5 @@ func (app *App) Run() error {
 		setupLog.Error(err, "problem running manager")
 		return err
 	}
-	return nil
-}
-
-func createIndexesForResourceReservation(mgr manager.Manager) error {
-
-	if err := mgr.GetFieldIndexer().IndexField(
-		context.Background(), &corev1.Pod{}, "spec.nodeName",
-		func(obj client.Object) []string {
-			nodeName := obj.(*corev1.Pod).Spec.NodeName
-			if nodeName == "" {
-				return nil
-			}
-			return []string{nodeName}
-		},
-	); err != nil {
-		setupLog.Error(err, "failed to create index for spec.nodeName")
-		return err
-	}
-
-	if err := mgr.GetFieldIndexer().IndexField(
-		context.Background(), &corev1.Pod{}, fmt.Sprintf("metadata.labels.%s", constants.GPUGroup),
-		func(obj client.Object) []string {
-			labels := obj.(*corev1.Pod).Labels
-			if labels == nil {
-				return nil
-			}
-			gpuGroup, found := labels[constants.GPUGroup]
-			if !found {
-				return nil
-			}
-			return []string{gpuGroup}
-		},
-	); err != nil {
-		setupLog.Error(err, "failed to create index for spec.nodeName")
-		return err
-	}
-
 	return nil
 }

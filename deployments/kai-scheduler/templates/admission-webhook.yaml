@@ -4,18 +4,18 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: kai-binder
+  name: kai-admission
 webhooks:
 - admissionReviewVersions:
   - v1
   clientConfig:
     service:
-      name: binder
+      name: kai-admission
       namespace: '{{ .Release.Namespace }}'
       path: /mutate--v1-pod
       port: 443
   failurePolicy: Fail
-  name: binder.run.ai
+  name: admission.run.ai
   namespaceSelector:
     {{- if .Values.global.namespaceLabelSelector }}
     matchLabels:
@@ -47,18 +47,18 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: kai-binder
+  name: kai-admission
 webhooks:
 - admissionReviewVersions:
   - v1
   clientConfig:
     service:
-      name: binder
+      name: kai-admission
       namespace: '{{ .Release.Namespace }}'
       path: /validate--v1-pod
       port: 443
   failurePolicy: Fail
-  name: binder.run.ai
+  name: admission.run.ai
   namespaceSelector:
     {{- if .Values.global.namespaceLabelSelector }}
     matchLabels:

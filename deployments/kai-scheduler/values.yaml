@@ -128,3 +128,23 @@ crdupgrader:
   image:
     name: crd-upgrader
     pullPolicy: IfNotPresent
+
+admission:
+  name: kai-admission
+  image:
+    name: admission
+    pullPolicy: IfNotPresent
+  certSecretName: admission-webhook-tls-secret
+  additionalArgs: []
+  ports:
+    webhookPort: 9443
+    metricsPort: 8080
+    probePort: 8081
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+    requests:
+      cpu: "250m"
+      memory: "128Mi"
+  cdi: false
