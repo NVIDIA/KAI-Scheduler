@@ -211,6 +211,55 @@ func TestIsGangSatisfied(t *testing.T) {
 	}
 }
 
+func TestIsStale(t *testing.T) {
+	tests := []struct {
+		name         string
+		minAvailable int32
+		pods         []*pod_info.PodInfo
+		expected     bool
+	}{
+		{
+			name:         "stale with insufficient active pods",
+			minAvailable: 3,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Running},
+				{UID: "2", Status: pod_status.Running},
+			},
+			expected: true,
+		},
+		{
+			name:         "stale with no active pods",
+			minAvailable: 2,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Failed},
+				{UID: "2", Status: pod_status.Failed},
+			},
+			expected: true,
+		},
+		{
+			name:         "not stale with sufficient active pods",
+			minAvailable: 2,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Running},
+				{UID: "2", Status: pod_status.Running},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sgi := NewSubGroupInfo("test", tt.minAvailable)
+			for _, pod := range tt.pods {
+				sgi.AssignTask(pod)
+			}
+			if got := sgi.IsStale(); got != tt.expected {
+				t.Errorf("IsStale() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestGetNumAliveTasks(t *testing.T) {
 	sgi := NewSubGroupInfo("test", 2)
 	pods := []*pod_info.PodInfo{
