@@ -377,7 +377,7 @@ func (pgi *PodGroupInfo) IsStale() bool {
 			return true
 		}
 		for _, subGroup := range pgi.SubGroups {
-			if subGroup.IsStale() {
+			if !subGroup.IsGangSatisfied() {
 				return true
 			}
 		}

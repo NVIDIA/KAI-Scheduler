@@ -57,11 +57,6 @@ func (sgi *SubGroupInfo) IsGangSatisfied() bool {
 	return numActiveTasks >= int(sgi.minAvailable)
 }
 
-func (sgi *SubGroupInfo) IsStale() bool {
-	numActiveTasks := sgi.GetNumActiveUsedTasks()
-	return numActiveTasks < int(sgi.minAvailable)
-}
-
 func (sgi *SubGroupInfo) GetNumActiveAllocatedTasks() int {
 	taskCount := 0
 	for _, task := range sgi.podInfos {
