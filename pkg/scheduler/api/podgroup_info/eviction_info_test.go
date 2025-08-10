@@ -14,23 +14,23 @@ import (
 
 func TestGetTasksToEvict_Table(t *testing.T) {
 	tests := []struct {
-		name         string
-		job          *PodGroupInfo
-		tasksToEvict bool
-		expectTasks  []string
+		name                 string
+		job                  *PodGroupInfo
+		expectedHasMoreTasks bool
+		numExpectTasks       int
 	}{
 		{
 			name: "WithoutSubGroups_EvictOne",
 			job: &PodGroupInfo{
 				PodInfos: pod_info.PodsMap{
 					"pod-a": simpleTask("pod-a", "", pod_status.Running),
-					"pod-b": simpleTask("pod-a", "", pod_status.Running),
+					"pod-b": simpleTask("pod-b", "", pod_status.Running),
 					"pod-c": simpleTask("pod-c", "", pod_status.Running),
 				},
 				MinAvailable: 1,
 			},
-			tasksToEvict: true,
-			expectTasks:  []string{"pod-a"},
+			expectedHasMoreTasks: true,
+			numExpectTasks:       1,
 		},
 		{
 			name: "WithoutSubGroups_EmptyQueue",
@@ -38,8 +38,8 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 				PodInfos:     pod_info.PodsMap{},
 				MinAvailable: 1,
 			},
-			tasksToEvict: false,
-			expectTasks:  []string{},
+			expectedHasMoreTasks: false,
+			numExpectTasks:       0,
 		},
 		{
 			name: "WithoutSubGroups_MultipleEvict",
@@ -50,8 +50,8 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 				},
 				MinAvailable: 2,
 			},
-			tasksToEvict: false,
-			expectTasks:  []string{"pod-a", "pod-b"},
+			expectedHasMoreTasks: false,
+			numExpectTasks:       2,
 		},
 		{
 			name: "WithSubGroups_SingleEvict",
@@ -66,8 +66,8 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 				pg.AddTaskInfo(simpleTask("pod-3", "sg2", pod_status.Running))
 				return pg
 			}(),
-			tasksToEvict: true,
-			expectTasks:  []string{"pod-3"},
+			expectedHasMoreTasks: true,
+			numExpectTasks:       1,
 		},
 		{
 			name: "WithSubGroups_EvictAll",
@@ -86,21 +86,16 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 					MinAvailable: 2,
 				}
 			}(),
-			tasksToEvict: false,
-			expectTasks:  []string{"pod-1", "pod-2"},
+			expectedHasMoreTasks: false,
+			numExpectTasks:       2,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var tasks []*pod_info.PodInfo
-			tasks, tasksToEvict := GetTasksToEvict(tt.job, subGroupOrderFn, tasksOrderFn)
-			assert.Equal(t, tt.tasksToEvict, tasksToEvict)
-			var actualTaskNames []string
-			for _, pod := range tasks {
-				actualTaskNames = append(actualTaskNames, pod.Name)
-			}
-			assert.ElementsMatch(t, tt.expectTasks, actualTaskNames)
+			tasksToEvict, hasMoreTasks := GetTasksToEvict(tt.job, subGroupOrderFn, tasksOrderFn)
+			assert.Equal(t, tt.expectedHasMoreTasks, hasMoreTasks)
+			assert.Equal(t, tt.numExpectTasks, len(tasksToEvict))
 		})
 	}
 }

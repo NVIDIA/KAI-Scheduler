@@ -16,7 +16,7 @@ import (
 )
 
 func simpleTask(name string, subGroupName string, status pod_status.PodStatus) *pod_info.PodInfo {
-	pod := common_info.BuildPod("node", name, "", v1.PodPending,
+	pod := common_info.BuildPod("test-namespace", name, "", v1.PodPending,
 		common_info.BuildResourceList("1", "1G"),
 		nil, nil, nil,
 	)
