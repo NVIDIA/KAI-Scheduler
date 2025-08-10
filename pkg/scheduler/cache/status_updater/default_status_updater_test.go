@@ -21,6 +21,7 @@ import (
 	fakeschedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v2alpha2/fake"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
@@ -645,6 +646,95 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 			close(finishUpdatesChan)
 			wg.Wait()
 			close(stopCh)
+		})
+	}
+}
+
+func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
+	tests := []struct {
+		name          string
+		job           *podgroup_info.PodGroupInfo
+		expectedEvent string
+	}{
+		{
+			name: "basic stale pod group",
+			job: &podgroup_info.PodGroupInfo{
+				Name:         "job-pg",
+				Namespace:    "job-ns",
+				UID:          "job-uid",
+				MinAvailable: 5,
+				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					"pod-1": {
+						Name:   "pod-1",
+						Status: pod_status.Running,
+					},
+					"pod-2": {
+						Name:   "pod-2",
+						Status: pod_status.Running,
+					},
+				},
+			},
+			expectedEvent: "Normal StaleJob Job is stale. 2 pods are active, minMember is 5",
+		},
+		{
+			name: "stale pod group with subgroups",
+			job: &podgroup_info.PodGroupInfo{
+				Name:         "job-pg",
+				Namespace:    "job-ns",
+				UID:          "job-uid",
+				MinAvailable: 3,
+				SubGroups: map[string]*podgroup_info.SubGroupInfo{
+					"sub-group-0": func() *podgroup_info.SubGroupInfo {
+						subGroup := podgroup_info.NewSubGroupInfo("sub-group-0", 1)
+						subGroup.AssignTask(&pod_info.PodInfo{UID: "pod-1", Status: pod_status.Running})
+						return subGroup
+					}(),
+					"sub-group-1": func() *podgroup_info.SubGroupInfo {
+						subGroup := podgroup_info.NewSubGroupInfo("sub-group-1", 2)
+						subGroup.AssignTask(&pod_info.PodInfo{UID: "pod-2", Status: pod_status.Running})
+						return subGroup
+					}(),
+				},
+				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
+					"pod-1": {
+						Name:         "pod-1",
+						Status:       pod_status.Running,
+						SubGroupName: "sub-group-0",
+					},
+					"pod-2": {
+						Name:         "pod-2",
+						Status:       pod_status.Running,
+						SubGroupName: "sub-group-1",
+					},
+				},
+			},
+			expectedEvent: "Normal StaleJob Job is stale. 2 pods are active, minMember is 3, subGroup sub-group-1 minMember is 2 and 1 pods are active",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			kubeClient := fake.NewSimpleClientset()
+			kubeAiSchedClient := kubeaischedfake.NewSimpleClientset()
+			recorder := record.NewFakeRecorder(100)
+			statusUpdater := New(kubeClient, kubeAiSchedClient, recorder, 1, false, nodePoolLabelKey)
+
+			stopCh := make(chan struct{})
+			statusUpdater.Run(stopCh)
+
+			statusUpdater.recordStaleJobEvent(test.job)
+
+			close(recorder.Events)
+
+			events := []string{}
+			for event := range recorder.Events {
+				events = append(events, event)
+			}
+			close(stopCh)
+			assert.Equal(t, 1, len(events))
+			assert.Equal(t, test.expectedEvent, events[0],
+				"event does not match. expected: %q, actual: %q",
+				test.expectedEvent, events[0])
 		})
 	}
 }
