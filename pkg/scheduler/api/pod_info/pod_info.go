@@ -310,6 +310,11 @@ func getPodResourceRequest(pod *v1.Pod) *resource_info.ResourceRequirements {
 		}
 	}
 
+	if pod.Spec.Overhead != nil {
+		overheadReq := resource_info.RequirementsFromResourceList(pod.Spec.Overhead)
+		result.Add(&overheadReq.BaseResource)
+	}
+
 	return result
 }
 
