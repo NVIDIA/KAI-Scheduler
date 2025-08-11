@@ -1038,3 +1038,195 @@ func TestPodGroupInfo_GetNumPendingTasks(t *testing.T) {
 		}
 	}
 }
+
+func TestPodGroupInfo_IsStale(t *testing.T) {
+	tests := []struct {
+		name     string
+		job      *PodGroupInfo
+		expected bool
+	}{
+		{
+			name: "empty PodGroupInfo, not stale",
+			job: func() *PodGroupInfo {
+				pgi := NewPodGroupInfo("test-podgroup")
+				pgi.MinAvailable = 1
+				return pgi
+			}(),
+			expected: false,
+		},
+		{
+			name: "no active used tasks, not stale",
+			job: func() *PodGroupInfo {
+				pod := &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       "1",
+						Namespace: "ns",
+						Name:      "task1",
+					},
+					Status: v1.PodStatus{Phase: v1.PodPending},
+				}
+				task := pod_info.NewTaskInfo(pod)
+				pgi := NewPodGroupInfo("test-podgroup", task)
+				pgi.MinAvailable = 1
+				return pgi
+			}(),
+			expected: false,
+		},
+		{
+			name: "job has succeeded tasks, not stale",
+			job: func() *PodGroupInfo {
+				pod1 := &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       "1",
+						Namespace: "ns",
+						Name:      "task1",
+					},
+					Status: v1.PodStatus{Phase: v1.PodSucceeded},
+				}
+				pod2 := &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       "2",
+						Namespace: "ns",
+						Name:      "task2",
+					},
+					Status: v1.PodStatus{Phase: v1.PodRunning},
+				}
+				task1 := pod_info.NewTaskInfo(pod1)
+				task2 := pod_info.NewTaskInfo(pod2)
+				pgi := NewPodGroupInfo("test-podgroup", task1, task2)
+				pgi.MinAvailable = 2
+				return pgi
+			}(),
+			expected: false,
+		},
+		{
+			name: "activeUsedTasks < minAvailable, stale",
+			job: func() *PodGroupInfo {
+				pod := &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       "1",
+						Namespace: "ns",
+						Name:      "task1",
+					},
+					Status: v1.PodStatus{Phase: v1.PodRunning},
+				}
+				task := pod_info.NewTaskInfo(pod)
+				pgi := NewPodGroupInfo("test-podgroup", task)
+				pgi.MinAvailable = 2
+				return pgi
+			}(),
+			expected: true,
+		},
+		{
+			name: "activeUsedTasks >= minAvailable, no subgroups, not stale",
+			job: func() *PodGroupInfo {
+				pod := &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       "1",
+						Namespace: "ns",
+						Name:      "task1",
+					},
+					Status: v1.PodStatus{Phase: v1.PodRunning},
+				}
+				task := pod_info.NewTaskInfo(pod)
+				pgi := NewPodGroupInfo("test-podgroup", task)
+				pgi.MinAvailable = 1
+				return pgi
+			}(),
+			expected: false,
+		},
+		{
+			name: "activeUsedTasks >= minAvailable, subgroups gang NOT satisfied, stale",
+			job: func() *PodGroupInfo {
+				pgi := NewPodGroupInfo("test-podgroup")
+				pgi.MinAvailable = 2
+
+				sg1 := NewSubGroupInfo("sg1", 1)
+				pgi.SubGroups["sg1"] = sg1
+
+				sg2 := NewSubGroupInfo("sg2", 1)
+				pgi.SubGroups["sg2"] = sg2
+
+				task1 := pod_info.NewTaskInfo(&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       "1",
+						Namespace: "ns",
+						Name:      "task1",
+						Labels: map[string]string{
+							pod_info.SubGroupLabelKey: "sg1",
+						},
+					},
+					Status: v1.PodStatus{Phase: v1.PodRunning},
+				})
+
+				task2 := pod_info.NewTaskInfo(&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       "2",
+						Namespace: "ns",
+						Name:      "task2",
+						Labels: map[string]string{
+							pod_info.SubGroupLabelKey: "sg1",
+						},
+					},
+					Status: v1.PodStatus{Phase: v1.PodRunning},
+				})
+
+				pgi.AddTaskInfo(task1)
+				pgi.AddTaskInfo(task2)
+
+				return pgi
+			}(),
+			expected: true,
+		},
+		{
+			name: "activeUsedTasks >= minAvailable, subgroups gang satisfied, not stale",
+			job: func() *PodGroupInfo {
+				pgi := NewPodGroupInfo("test-podgroup")
+				pgi.MinAvailable = 2
+
+				sg1 := NewSubGroupInfo("sg1", 1)
+				pgi.SubGroups["sg1"] = sg1
+
+				sg2 := NewSubGroupInfo("sg2", 1)
+				pgi.SubGroups["sg2"] = sg2
+
+				task1 := pod_info.NewTaskInfo(&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       "1",
+						Namespace: "ns",
+						Name:      "task1",
+						Labels: map[string]string{
+							pod_info.SubGroupLabelKey: "sg1",
+						},
+					},
+					Status: v1.PodStatus{Phase: v1.PodRunning},
+				})
+
+				task2 := pod_info.NewTaskInfo(&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       "2",
+						Namespace: "ns",
+						Name:      "task2",
+						Labels: map[string]string{
+							pod_info.SubGroupLabelKey: "sg2",
+						},
+					},
+					Status: v1.PodStatus{Phase: v1.PodRunning},
+				})
+
+				pgi.AddTaskInfo(task1)
+				pgi.AddTaskInfo(task2)
+
+				return pgi
+			}(),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		got := tt.job.IsStale()
+		if got != tt.expected {
+			t.Errorf("IsStale() for case '%s' got %v, want %v", tt.name, got, tt.expected)
+		}
+	}
+}
