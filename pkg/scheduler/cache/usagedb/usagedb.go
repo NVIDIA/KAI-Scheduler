@@ -9,18 +9,15 @@ import (
 	"time"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
 var defaultFetchInterval = 1 * time.Minute
 var defaultWaitTimeout = 1 * time.Minute
 
-type Interface interface {
-	GetResourceUsage() (*queue_info.ClusterUsage, error)
-}
-
 type UsageLister struct {
-	client             Interface
+	client             api.Interface
 	lastUsageData      *queue_info.ClusterUsage
 	lastUsageDataMutex sync.RWMutex
 	lastUsageDataTime  *time.Time
@@ -29,7 +26,7 @@ type UsageLister struct {
 	waitTimeout        time.Duration
 }
 
-func NewUsageLister(client Interface, fetchInterval, stalenessPeriod, waitTimeout *time.Duration) *UsageLister {
+func NewUsageLister(client api.Interface, fetchInterval, stalenessPeriod, waitTimeout *time.Duration) *UsageLister {
 	if fetchInterval == nil {
 		log.InfraLogger.V(3).Infof("fetchInterval is not set, using default: %s", defaultFetchInterval)
 		fetchInterval = &defaultFetchInterval
