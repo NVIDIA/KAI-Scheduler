@@ -310,6 +310,7 @@ func (c *ClusterInfo) snapshotPodGroups(
 		log.InfraLogger.V(7).Infof("The priority of job <%s/%s> is <%s/%d>", podGroup.Namespace, podGroup.Name,
 			podGroup.Spec.PriorityClassName, podGroupInfo.Priority)
 
+		c.setPodGroupWithIndex(podGroup, podGroupInfo)
 		rawPods, err := c.dataLister.ListPodByIndex(podByPodGroupIndexerName, podGroup.Name)
 		if err != nil {
 			log.InfraLogger.Errorf("failed to get indexed pods: %s", err)
@@ -323,8 +324,6 @@ func (c *ClusterInfo) snapshotPodGroups(
 			podInfo := c.getPodInfo(pod, existingPods)
 			podGroupInfo.AddTaskInfo(podInfo)
 		}
-
-		c.setPodGroupWithIndex(podGroup, podGroupInfo)
 		result[common_info.PodGroupID(podGroup.Name)] = podGroupInfo
 	}
 

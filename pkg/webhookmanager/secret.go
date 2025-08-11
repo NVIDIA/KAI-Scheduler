@@ -36,7 +36,7 @@ func UpsertSecret(ctx context.Context, kubeClient client.Client, namespace, name
 		}
 
 		logger.Info("Secret was not found, creating",
-			"namespace", namespace, "namea", name)
+			"namespace", namespace, "name", name)
 		secret, err = generateSecret(namespace, name, serviceName)
 		if err != nil {
 			return fmt.Errorf("failed to generate secret. err: %v", err)
