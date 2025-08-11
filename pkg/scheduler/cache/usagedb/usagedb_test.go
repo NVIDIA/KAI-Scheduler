@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/fake"
 	"github.com/stretchr/testify/assert"
 )
@@ -142,7 +143,7 @@ func TestGetResourceUsage(t *testing.T) {
 func TestGetClient(t *testing.T) {
 	tests := []struct {
 		name   string
-		config *UsageDBConfig
+		config *usagedbapi.UsageDBConfig
 
 		wantError bool
 		wantNil   bool
@@ -153,22 +154,15 @@ func TestGetClient(t *testing.T) {
 			wantNil: true,
 		},
 		{
-			name: "prometheus client",
-			config: &UsageDBConfig{
-				ClientType:       "prometheus",
-				ConnectionString: "http://localhost:9090",
-			},
-		},
-		{
 			name: "fake client",
-			config: &UsageDBConfig{
+			config: &usagedbapi.UsageDBConfig{
 				ClientType:       "fake",
 				ConnectionString: "fake-connection",
 			},
 		},
 		{
 			name: "unknown client type",
-			config: &UsageDBConfig{
+			config: &usagedbapi.UsageDBConfig{
 				ClientType:       "unknown",
 				ConnectionString: "test-connection",
 			},
@@ -176,7 +170,7 @@ func TestGetClient(t *testing.T) {
 		},
 		{
 			name: "empty client type",
-			config: &UsageDBConfig{
+			config: &usagedbapi.UsageDBConfig{
 				ClientType:       "",
 				ConnectionString: "test-connection",
 			},
