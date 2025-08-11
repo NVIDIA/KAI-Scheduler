@@ -22,7 +22,7 @@ package conf
 import (
 	"time"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -56,7 +56,7 @@ type SchedulerConfiguration struct {
 	QueueDepthPerAction map[string]int `yaml:"queueDepthPerAction,omitempty" json:"queueDepthPerAction,omitempty"`
 
 	// UsageDBConfig defines configuration for the usage db client
-	UsageDBConfig *usagedb.UsageDBConfig `yaml:"usageDBConfig,omitempty" json:"usageDBConfig,omitempty"`
+	UsageDBConfig *usagedbapi.UsageDBConfig `yaml:"usageDBConfig,omitempty" json:"usageDBConfig,omitempty"`
 }
 
 // Tier defines plugin tier

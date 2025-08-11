@@ -11,12 +11,7 @@ import (
 
 type GetClientFn func(connectionString string) (api.Interface, error)
 
-type UsageDBConfig struct {
-	ClientType       string `yaml:"clientType" json:"clientType"`
-	ConnectionString string `yaml:"connectionString" json:"connectionString"`
-}
-
-func GetClient(config *UsageDBConfig) (api.Interface, error) {
+func GetClient(config *api.UsageDBConfig) (api.Interface, error) {
 	if config == nil {
 		return nil, nil
 	}
