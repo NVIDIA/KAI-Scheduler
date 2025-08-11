@@ -1153,7 +1153,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 						Namespace: "ns",
 						Name:      "task1",
 						Labels: map[string]string{
-							pod_info.SubGroupLabelKey: "sg1",
+							commonconstants.SubGroupLabelKey: "sg1",
 						},
 					},
 					Status: v1.PodStatus{Phase: v1.PodRunning},
@@ -1165,7 +1165,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 						Namespace: "ns",
 						Name:      "task2",
 						Labels: map[string]string{
-							pod_info.SubGroupLabelKey: "sg1",
+							commonconstants.SubGroupLabelKey: "sg1",
 						},
 					},
 					Status: v1.PodStatus{Phase: v1.PodRunning},
@@ -1196,7 +1196,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 						Namespace: "ns",
 						Name:      "task1",
 						Labels: map[string]string{
-							pod_info.SubGroupLabelKey: "sg1",
+							commonconstants.SubGroupLabelKey: "sg1",
 						},
 					},
 					Status: v1.PodStatus{Phase: v1.PodRunning},
@@ -1208,7 +1208,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 						Namespace: "ns",
 						Name:      "task2",
 						Labels: map[string]string{
-							pod_info.SubGroupLabelKey: "sg2",
+							commonconstants.SubGroupLabelKey: "sg2",
 						},
 					},
 					Status: v1.PodStatus{Phase: v1.PodRunning},

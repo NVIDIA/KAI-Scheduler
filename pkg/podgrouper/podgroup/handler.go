@@ -14,10 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-)
-
-const (
-	subGroupLabelKey = "kai.scheduler/subgroup-name"
+	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 type Handler struct {
@@ -142,7 +139,7 @@ func (h *Handler) assignPodsToSubGroup(ctx context.Context, subGroups []*SubGrou
 			}
 
 			labeledPod := pod.DeepCopy()
-			labeledPod.Labels[subGroupLabelKey] = subGroup.Name
+			labeledPod.Labels[commonconstants.SubGroupLabelKey] = subGroup.Name
 
 			err = h.client.Patch(ctx, labeledPod, client.MergeFrom(pod))
 			if err != nil {

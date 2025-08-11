@@ -1102,7 +1102,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
 						},
 						Labels: map[string]string{
-							pod_info.SubGroupLabelKey: "SubGroup-0",
+							commonconstants.SubGroupLabelKey: "SubGroup-0",
 						},
 					},
 				},
@@ -1115,7 +1115,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
 						},
 						Labels: map[string]string{
-							pod_info.SubGroupLabelKey: "SubGroup-1",
+							commonconstants.SubGroupLabelKey: "SubGroup-1",
 						},
 					},
 				},
@@ -1128,7 +1128,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
 						},
 						Labels: map[string]string{
-							pod_info.SubGroupLabelKey: "SubGroup-1",
+							commonconstants.SubGroupLabelKey: "SubGroup-1",
 						},
 					},
 				},
