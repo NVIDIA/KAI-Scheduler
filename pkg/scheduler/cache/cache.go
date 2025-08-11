@@ -53,6 +53,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/evictor"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/status_updater"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
+	usageapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants/status"
 	k8splugins "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/plugins"
@@ -83,7 +84,7 @@ type SchedulerCacheParams struct {
 	KubeClient                  kubernetes.Interface
 	KAISchedulerClient          kubeaischedulerver.Interface
 	KueueClient                 kueueclient.Interface
-	UsageDBClient               usagedb.Interface
+	UsageDBClient               usageapi.Interface
 	DetailedFitErrors           bool
 	ScheduleCSIStorage          bool
 	FullHierarchyFairness       bool

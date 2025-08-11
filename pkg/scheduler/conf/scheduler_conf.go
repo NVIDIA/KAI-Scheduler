@@ -22,14 +22,10 @@ package conf
 import (
 	"time"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
-
-type SchedulingNodePoolParams struct {
-	NodePoolLabelKey   string
-	NodePoolLabelValue string
-}
 
 type SchedulerParams struct {
 	SchedulerName                     string                    `json:"schedulerName,omitempty"`
@@ -52,8 +48,10 @@ type SchedulerParams struct {
 type SchedulerConfiguration struct {
 	// Actions defines the actions list of scheduler in order
 	Actions string `yaml:"actions" json:"actions"`
+
 	// Tiers defines plugins in different tiers
 	Tiers []Tier `yaml:"tiers,omitempty" json:"tiers,omitempty"`
+
 	// QueueDepthPerAction max number of jobs to try for action per queue
 	QueueDepthPerAction map[string]int `yaml:"queueDepthPerAction,omitempty" json:"queueDepthPerAction,omitempty"`
 }
@@ -83,6 +81,11 @@ type PluginOption struct {
 	NodeOrderDisabled bool `yaml:"disableNodeOrder" json:"disableNodeOrder"`
 	// Arguments defines the different arguments that can be given to different plugins
 	Arguments map[string]string `yaml:"arguments" json:"arguments"`
+}
+
+type SchedulingNodePoolParams struct {
+	NodePoolLabelKey   string
+	NodePoolLabelValue string
 }
 
 func (s *SchedulingNodePoolParams) GetLabelSelector() (labels.Selector, error) {

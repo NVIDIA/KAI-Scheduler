@@ -42,12 +42,11 @@ import (
 )
 
 type Scheduler struct {
-	cache             schedcache.Cache
-	config            *conf.SchedulerConfiguration
-	schedulerParams   *conf.SchedulerParams
-	schedulerConfPath string
-	schedulePeriod    time.Duration
-	mux               *http.ServeMux
+	cache           schedcache.Cache
+	config          *conf.SchedulerConfiguration
+	schedulerParams *conf.SchedulerParams
+	schedulePeriod  time.Duration
+	mux             *http.ServeMux
 }
 
 func NewScheduler(
@@ -58,10 +57,20 @@ func NewScheduler(
 ) (*Scheduler, error) {
 	kubeClient, kubeAiSchedulerClient, kueueClient := newClients(config)
 
+	actions.InitDefaultActions()
+	plugins.InitDefaultPlugins()
+
+	// Load configuration of scheduler
+	schedConfig, err := conf_util.ResolveConfigurationFromFile(schedulerConfPath)
+	if err != nil {
+		return nil, fmt.Errorf("error resolving configuration from file: %v", err)
+	}
+
 	schedulerCacheParams := &schedcache.SchedulerCacheParams{
 		KubeClient:                  kubeClient,
 		KAISchedulerClient:          kubeAiSchedulerClient,
 		KueueClient:                 kueueClient,
+		UsageDBClient:               usageDBClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      schedulerParams.RestrictSchedulingNodes,
@@ -73,30 +82,19 @@ func NewScheduler(
 	}
 
 	scheduler := &Scheduler{
-		schedulerParams:   schedulerParams,
-		schedulerConfPath: schedulerConfPath,
-		cache:             schedcache.New(schedulerCacheParams),
-		schedulePeriod:    schedulerParams.SchedulePeriod,
-		mux:               mux,
+		config:          schedConfig,
+		schedulerParams: schedulerParams,
+		cache:           schedcache.New(schedulerCacheParams),
+		schedulePeriod:  schedulerParams.SchedulePeriod,
+		mux:             mux,
 	}
-
-	actions.InitDefaultActions()
-	plugins.InitDefaultPlugins()
 
 	return scheduler, nil
 }
 
 func (s *Scheduler) Run(stopCh <-chan struct{}) {
-	var err error
-
 	s.cache.Run(stopCh)
 	s.cache.WaitForCacheSync(stopCh)
-
-	// Load configuration of scheduler
-	s.config, err = conf_util.ResolveConfigurationFromFile(s.schedulerConfPath)
-	if err != nil {
-		panic(err)
-	}
 
 	go func() {
 		wait.Until(s.runOnce, s.schedulePeriod, stopCh)
