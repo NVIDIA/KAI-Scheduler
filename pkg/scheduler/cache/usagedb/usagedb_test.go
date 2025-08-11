@@ -138,3 +138,78 @@ func TestGetResourceUsage(t *testing.T) {
 		})
 	}
 }
+
+func TestGetClient(t *testing.T) {
+	tests := []struct {
+		name   string
+		config *UsageDBConfig
+
+		wantError bool
+		wantNil   bool
+	}{
+		{
+			name:    "nil config",
+			config:  nil,
+			wantNil: true,
+		},
+		{
+			name: "prometheus client",
+			config: &UsageDBConfig{
+				ClientType:       "prometheus",
+				ConnectionString: "http://localhost:9090",
+			},
+		},
+		{
+			name: "fake client",
+			config: &UsageDBConfig{
+				ClientType:       "fake",
+				ConnectionString: "fake-connection",
+			},
+		},
+		{
+			name: "unknown client type",
+			config: &UsageDBConfig{
+				ClientType:       "unknown",
+				ConnectionString: "test-connection",
+			},
+			wantError: true,
+		},
+		{
+			name: "empty client type",
+			config: &UsageDBConfig{
+				ClientType:       "",
+				ConnectionString: "test-connection",
+			},
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, err := GetClient(tt.config)
+
+			if tt.wantError {
+				assert.Error(t, err)
+				assert.Nil(t, client)
+				if tt.config != nil {
+					if tt.config.ClientType == "" {
+						assert.Contains(t, err.Error(), "client type cannot be empty")
+					} else {
+						assert.Contains(t, err.Error(), "unknown client type")
+						assert.Contains(t, err.Error(), tt.config.ClientType)
+					}
+				}
+				return
+			}
+
+			if tt.wantNil {
+				assert.NoError(t, err)
+				assert.Nil(t, client)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, client)
+		})
+	}
+}

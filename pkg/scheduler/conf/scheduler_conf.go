@@ -54,6 +54,9 @@ type SchedulerConfiguration struct {
 
 	// QueueDepthPerAction max number of jobs to try for action per queue
 	QueueDepthPerAction map[string]int `yaml:"queueDepthPerAction,omitempty" json:"queueDepthPerAction,omitempty"`
+
+	// UsageDBConfig defines configuration for the usage db client
+	UsageDBConfig *usagedb.UsageDBConfig `yaml:"usageDBConfig,omitempty" json:"usageDBConfig,omitempty"`
 }
 
 // Tier defines plugin tier

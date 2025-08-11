@@ -20,6 +20,7 @@ limitations under the License.
 package scheduler
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 	kubeaischedulerver "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	schedcache "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
@@ -64,6 +66,11 @@ func NewScheduler(
 	schedConfig, err := conf_util.ResolveConfigurationFromFile(schedulerConfPath)
 	if err != nil {
 		return nil, fmt.Errorf("error resolving configuration from file: %v", err)
+	}
+
+	usageDBClient, err := usagedb.GetClient(schedConfig.UsageDBConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error getting usage db client: %v", err)
 	}
 
 	schedulerCacheParams := &schedcache.SchedulerCacheParams{
