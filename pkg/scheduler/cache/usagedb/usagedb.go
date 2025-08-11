@@ -80,6 +80,11 @@ func (l *UsageLister) GetResourceUsage() (*queue_info.ClusterUsage, error) {
 // Start begins periodic fetching of resource usage data in a background goroutine.
 // The data is fetched every minute by default.
 func (l *UsageLister) Start(stopCh <-chan struct{}) {
+	if l.client == nil {
+		log.InfraLogger.V(1).Errorf("failed to fetch usage data: client is not set")
+		return
+	}
+
 	go func() {
 		ticker := time.NewTicker(l.fetchInterval)
 		defer ticker.Stop()
@@ -129,11 +134,6 @@ func (l *UsageLister) WaitForCacheSync(stopCh <-chan struct{}) bool {
 }
 
 func (l *UsageLister) fetchAndUpdateUsage() {
-	if l.client == nil {
-		log.InfraLogger.V(1).Errorf("failed to fetch usage data: client is not set")
-		return
-	}
-
 	// TODO: Add metrics for fetch times
 	usage, err := l.client.GetResourceUsage()
 	if err != nil {
