@@ -19,6 +19,7 @@ const (
 	ResourcesWereNotFoundMsg = "no nodes with enough resources were found"
 	DefaultPodgroupError     = "Unable to schedule podgroup"
 	DefaultPodError          = "Unable to schedule pod"
+	OverheadMessage          = "Not enough resources due to pod overhead resources"
 )
 
 type FitError struct {
@@ -60,7 +61,7 @@ func NewFitErrorByReasons(name, namespace, nodeName string, err error, reasons .
 func NewFitErrorInsufficientResource(
 	name, namespace, nodeName string,
 	resourceRequested *resource_info.ResourceRequirements, usedResource, capacityResource *resource_info.Resource,
-	capacityGpuMemory int64, gangSchedulingJob bool,
+	capacityGpuMemory int64, gangSchedulingJob bool, enoughResourcesWithoutOverhead bool,
 ) *FitError {
 	availableResource := capacityResource.Clone()
 	availableResource.Sub(usedResource)
@@ -144,6 +145,11 @@ func NewFitErrorInsufficientResource(
 			shortMessages = append(shortMessages, fmt.Sprintf("node(s) didn't have enough resources: %s",
 				requestedResourceName))
 		}
+	}
+
+	if enoughResourcesWithoutOverhead {
+		shortMessages = append(shortMessages, OverheadMessage)
+		detailedMessages = append(detailedMessages, OverheadMessage)
 	}
 
 	return NewFitErrorWithDetailedMessage(name, namespace, nodeName, shortMessages, detailedMessages...)
