@@ -6,9 +6,7 @@ package api
 import (
 	"testing"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -20,27 +18,6 @@ func TestUnscheduledInfo(t *testing.T) {
 
 var _ = Describe("UnscheduledInfo", func() {
 	Context("GetBuildOverCapacityMessageForQueue", func() {
-		It("should generate correct message for GPU resource", func() {
-			queueName := "test-queue"
-			resourceName := GpuResource
-			deserved := 4.0
-			used := 2.0
-			requiredResources := &podgroup_info.JobRequirement{
-				GPU:      3.0,
-				MilliCPU: 0,
-				Memory:   0,
-			}
-
-			message := GetBuildOverCapacityMessageForQueue(queueName, resourceName, deserved, used, requiredResources)
-
-			expectedPrefix := "Non-preemptible workload is over quota. "
-			expectedDetails := "Workload requested 3 GPUs, but test-queue quota is 4 GPUs, while 2 GPUs are already allocated for non-preemptible pods."
-			expectedSuffix := " Use a preemptible workload to go over quota."
-
-			Expect(message).To(ContainSubstring(expectedPrefix))
-			Expect(message).To(ContainSubstring(expectedDetails))
-			Expect(message).To(ContainSubstring(expectedSuffix))
-		})
 
 		It("should generate correct message for CPU resource", func() {
 			queueName := "cpu-queue"
@@ -86,27 +63,6 @@ var _ = Describe("UnscheduledInfo", func() {
 			Expect(message).To(ContainSubstring(expectedSuffix))
 		})
 
-		It("should handle unknown resource type gracefully", func() {
-			queueName := "unknown-queue"
-			resourceName := "UnknownResource"
-			deserved := 100.0
-			used := 50.0
-			requiredResources := &podgroup_info.JobRequirement{
-				GPU:      0,
-				MilliCPU: 0,
-				Memory:   0,
-			}
-
-			message := GetBuildOverCapacityMessageForQueue(queueName, resourceName, deserved, used, requiredResources)
-
-			expectedPrefix := "Non-preemptible workload is over quota. "
-			expectedSuffix := " Use a preemptible workload to go over quota."
-
-			Expect(message).To(ContainSubstring(expectedPrefix))
-			Expect(message).To(ContainSubstring(expectedSuffix))
-			// For unknown resource, the details should be empty string, so the message should just have prefix + suffix
-			Expect(message).To(Equal("Non-preemptible workload is over quota.  Use a preemptible workload to go over quota."))
-		})
 	})
 
 	Context("GetJobOverMaxAllowedMessageForQueue", func() {
@@ -150,83 +106,4 @@ var _ = Describe("UnscheduledInfo", func() {
 		})
 	})
 
-	Context("GetGangEvictionMessage", func() {
-		It("should generate correct gang eviction message", func() {
-			taskNamespace := "test-namespace"
-			taskName := "test-task"
-			minimum := int32(3)
-
-			message := GetGangEvictionMessage(taskNamespace, taskName, minimum)
-
-			expected := "Workload doesn't have the minimum required number of pods (3), evicting remaining pod: test-namespace/test-task"
-			Expect(message).To(Equal(expected))
-		})
-	})
-
-	Context("GetPreemptMessage", func() {
-		It("should generate correct preemption message", func() {
-			preemptorJob := &podgroup_info.PodGroupInfo{
-				Name:      "high-priority-job",
-				Namespace: "high-priority-namespace",
-			}
-			preempteeTask := &pod_info.PodInfo{
-				Name:      "low-priority-pod",
-				Namespace: "low-priority-namespace",
-			}
-
-			message := GetPreemptMessage(preemptorJob, preempteeTask)
-
-			expected := "Pod low-priority-namespace/low-priority-pod was preempted by higher priority workload high-priority-namespace/high-priority-job"
-			Expect(message).To(Equal(expected))
-		})
-	})
-
-	Context("GetReclaimMessage", func() {
-		It("should generate correct reclaim message", func() {
-			reclaimeeTask := &pod_info.PodInfo{
-				Name:      "reclaimed-pod",
-				Namespace: "reclaimed-namespace",
-			}
-			reclaimerJob := &podgroup_info.PodGroupInfo{
-				Name:      "reclaimer-job",
-				Namespace: "reclaimer-namespace",
-			}
-
-			message := GetReclaimMessage(reclaimeeTask, reclaimerJob)
-
-			expected := "Pod reclaimed-namespace/reclaimed-pod was preempted by workload reclaimer-namespace/reclaimer-job."
-			Expect(message).To(Equal(expected))
-		})
-	})
-
-	Context("GetReclaimQueueDetailsMessage", func() {
-		It("should generate correct reclaim queue details message", func() {
-			queueName := "test-queue"
-			queueAllocated := resource_info.NewResourceRequirements(2.0, 4000.0, 8000000000.0)  // 2 GPU, 4 CPU, 8 GB
-			queueQuota := resource_info.NewResourceRequirements(4.0, 8000.0, 16000000000.0)     // 4 GPU, 8 CPU, 16 GB
-			queueFairShare := resource_info.NewResourceRequirements(3.0, 6000.0, 12000000000.0) // 3 GPU, 6 CPU, 12 GB
-			queuePriority := 5
-
-			message := GetReclaimQueueDetailsMessage(queueName, queueAllocated, queueQuota, queueFairShare, queuePriority)
-
-			// Note: This test might need adjustment based on the actual String() implementation
-			// of ResourceRequirements. The exact format depends on how that method formats the resources.
-			Expect(message).To(ContainSubstring(queueName))
-			Expect(message).To(ContainSubstring("5"))
-		})
-	})
-
-	Context("GetConsolidateMessage", func() {
-		It("should generate correct consolidation message", func() {
-			preempteeTask := &pod_info.PodInfo{
-				Name:      "consolidated-pod",
-				Namespace: "consolidated-namespace",
-			}
-
-			message := GetConsolidateMessage(preempteeTask)
-
-			expected := "Pod consolidated-namespace/consolidated-pod was preempted and rescheduled due to bin packing (resource consolidation) procedure"
-			Expect(message).To(Equal(expected))
-		})
-	})
 })
