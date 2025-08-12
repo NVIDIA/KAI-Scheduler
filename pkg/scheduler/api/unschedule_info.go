@@ -100,8 +100,8 @@ func GetReclaimMessage(reclaimeeTask *pod_info.PodInfo, reclaimerJob *podgroup_i
 
 func GetReclaimQueueDetailsMessage(queueName string, queueAllocated *resource_info.ResourceRequirements,
 	queueQuota *resource_info.ResourceRequirements, queueFairShare *resource_info.ResourceRequirements, queuePriority int) string {
-	return fmt.Sprintf("%s uses <%v> with a quota of <%v>, fair-share of <%v> and queue priority of <%d>.",
-		queueName, queueAllocated.String(), queueQuota.String(), queueFairShare.String(), queuePriority)
+	return fmt.Sprintf("%s uses <%s> with a quota of <%s>, fair-share of <%s> and queue priority of <%d>.",
+		queueName, queueAllocated, queueQuota, queueFairShare, queuePriority)
 }
 
 func GetConsolidateMessage(preempteeTask *pod_info.PodInfo) string {

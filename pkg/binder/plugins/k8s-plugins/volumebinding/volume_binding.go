@@ -49,8 +49,8 @@ func (vb *volumeBindingPlugin) IsRelevant(pod *corev1.Pod) bool {
 func (vb *volumeBindingPlugin) PreFilter(ctx context.Context, pod *corev1.Pod, state plugins.State) (error, bool) {
 	logger := log.FromContext(ctx)
 	result, status := vb.binding.PreFilter(ctx, state, pod)
-	logger.V(2).Info(fmt.Sprintf("PreFilter for pod %s/%s. result: %v status code: %v",
-		pod.Namespace, pod.Name, result, status.Code().String()))
+	logger.V(2).Info(fmt.Sprintf("PreFilter for pod %s/%s. result: %v status code: %s",
+		pod.Namespace, pod.Name, result, status.Code()))
 	return status.AsError(), status.IsSkip()
 }
 
@@ -63,8 +63,8 @@ func (vb *volumeBindingPlugin) Filter(
 	nodeInfo.SetNode(node)
 
 	status := vb.binding.Filter(ctx, state, pod, nodeInfo)
-	logger.V(2).Info(fmt.Sprintf("Filter for pod %s/%s and node %s. status code: %v",
-		pod.Namespace, pod.Name, node.Name, status.Code().String()))
+	logger.V(2).Info(fmt.Sprintf("Filter for pod %s/%s and node %s. status code: %s",
+		pod.Namespace, pod.Name, node.Name, status.Code()))
 
 	return status.AsError()
 }
@@ -75,8 +75,8 @@ func (vb *volumeBindingPlugin) Allocate(
 ) error {
 	logger := log.FromContext(ctx)
 	status := vb.binding.Reserve(ctx, state, pod, hostname)
-	logger.V(2).Info(fmt.Sprintf("Reserve for pod %s/%s and node %s. status code: %v",
-		pod.Namespace, pod.Name, hostname, status.Code().String()))
+	logger.V(2).Info(fmt.Sprintf("Reserve for pod %s/%s and node %s. status code: %s",
+		pod.Namespace, pod.Name, hostname, status.Code()))
 	return status.AsError()
 }
 
@@ -96,8 +96,8 @@ func (vb *volumeBindingPlugin) Bind(
 ) error {
 	logger := log.FromContext(ctx)
 	status := vb.binding.PreBind(ctx, state, pod, request.Spec.SelectedNode)
-	logger.V(2).Info(fmt.Sprintf("PreBind for pod %s/%s and node %s. status code: %v",
-		pod.Namespace, pod.Name, pod.Spec.NodeName, status.Code().String()))
+	logger.V(2).Info(fmt.Sprintf("PreBind for pod %s/%s and node %s. status code: %s",
+		pod.Namespace, pod.Name, pod.Spec.NodeName, status.Code()))
 	return status.AsError()
 }
 

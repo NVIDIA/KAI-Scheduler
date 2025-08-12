@@ -29,8 +29,8 @@ func SkipIfInsufficientClusterResources(clientset kubernetes.Interface, resource
 		ginkgo.Skip(
 			fmt.Sprintf(
 				"The current cluster doesn't have enough resources to run the test. "+
-					"Requested resources: %v. Cluster resources: %v",
-				resourceRequest.String(), clusterMetrics.String(),
+					"Requested resources: %s. Cluster resources: %s",
+				resourceRequest, clusterMetrics,
 			),
 		)
 	}
