@@ -6,13 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Fixed
-- crd-upgrader respects global values for nodeSelector, affinity and tolerations 
 
 ## [v0.7.13] - 2025-08-12
 
-### Fixed
+### Added
 - seperated admission webhooks from binder service to a separate `kai-admission` service
+
+### Fixed
+- crd-upgrader respects global values for nodeSelector, affinity and tolerations 
 
 ## [v0.7.12] - 2025-08-04
 
