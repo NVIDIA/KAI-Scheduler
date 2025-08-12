@@ -123,12 +123,12 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 		var sumOfJobRequestedGPU, sumOfJobRequestedMillisCpu, sumOfJobRequestedMemory, sumOfAcceptedGpus float64
 		job, found := ssn.PodGroupInfos[common_info.PodGroupID(jobName)]
 		if !found {
-			t.Errorf("Test number: %d, name: %v, has failed. Couldn't find job: %v for expected tasks.", testNumber, testMetadata.Name, jobName)
+			t.Errorf("Test number: %d, name: %s, has failed. Couldn't find job: %s for expected tasks.", testNumber, testMetadata.Name, jobName)
 		}
 		for _, taskInfo := range ssn.PodGroupInfos[common_info.PodGroupID(jobName)].GetAllPodsMap() {
 
 			if taskInfo.Status != jobExpectedResult.Status {
-				t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses status: %v, was expecting status: %v", testNumber, testMetadata.Name, taskInfo.Name, taskInfo.Status, jobExpectedResult.Status.String())
+				t.Errorf("Test number: %d, name: %s, has failed. Task name: %s, actual uses status: %s, was expecting status: %s", testNumber, testMetadata.Name, taskInfo.Name, taskInfo.Status, jobExpectedResult.Status)
 				if jobExpectedResult.Status == pod_status.Running {
 					t.Errorf("%v", job.JobFitErrors)
 					t.Errorf("%v", job.NodesFitErrors)
@@ -136,7 +136,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 			}
 
 			if len(jobExpectedResult.NodeName) > 0 && taskInfo.NodeName != jobExpectedResult.NodeName {
-				t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses node: %v, was expecting node: %v", testNumber, testMetadata.Name, taskInfo.Name, taskInfo.NodeName, jobExpectedResult.NodeName)
+				t.Errorf("Test number: %d, name: %s, has failed. Task name: %s, actual uses node: %s, was expecting node: %s", testNumber, testMetadata.Name, taskInfo.Name, taskInfo.NodeName, jobExpectedResult.NodeName)
 			}
 
 			sumOfJobRequestedGPU += taskInfo.ResReq.GPUs()

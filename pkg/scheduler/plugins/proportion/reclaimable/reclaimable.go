@@ -87,11 +87,11 @@ func (r *Reclaimable) reclaimResourcesFromReclaimees(
 		for _, reclaimeeResources := range reclaimeeQueueReclaimedResources {
 			if !strategies.FitsReclaimStrategy(reclaimer.RequiredResources, reclaimerQueue, reclaimeeQueue,
 				remainingResources) {
-				log.InfraLogger.V(7).Infof("queue <%s>，shouldn't be reclaimed, for %v resources"+
-					" remaining reosurces: <%v>, deserved: <%v>, fairShare: <%v>",
+				log.InfraLogger.V(7).Infof("queue <%s>，shouldn't be reclaimed, for %s resources"+
+					" remaining reosurces: <%s>, deserved: <%s>, fairShare: <%s>",
 					reclaimeeQueue.Name, resource_info.StringResourceArray(reclaimeeQueueReclaimedResources),
-					remainingResources.String(), reclaimeeQueue.GetDeservedShare().String(),
-					reclaimeeQueue.GetFairShare().String())
+					remainingResources, reclaimeeQueue.GetDeservedShare(),
+					reclaimeeQueue.GetFairShare())
 				return false, nil, nil
 			}
 
@@ -178,9 +178,9 @@ func (r *Reclaimable) reclaimingQueuesRemainWithinBoundaries(
 		if !allocatedNonPreemptible.LessEqual(reclaimingQueue.GetDeservedShare()) {
 			log.InfraLogger.V(5).Infof("Failed to reclaim resources for: <%s/%s> in queue <%s>. "+
 				"Queue will have nonpreemtible jobs over quota and reclaimer job is an interactive job. "+
-				"Queue quota: %v, queue allocated nonpreemtible resources with task: %v",
-				reclaimer.Namespace, reclaimer.Name, reclaimingQueue.Name, reclaimingQueue.GetDeservedShare().String(),
-				allocatedNonPreemptible.String())
+				"Queue quota: %s, queue allocated nonpreemtible resources with task: %s",
+				reclaimer.Namespace, reclaimer.Name, reclaimingQueue.Name, reclaimingQueue.GetDeservedShare(),
+				allocatedNonPreemptible)
 			return false
 		}
 	}

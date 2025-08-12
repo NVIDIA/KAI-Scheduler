@@ -202,8 +202,8 @@ func (pp *proportionPlugin) calculateResourcesProportion(ssn *framework.Session)
 
 	pp.setTotalResources(ssn)
 	pp.createQueueAttributes(ssn)
-	log.InfraLogger.V(3).Infof("Total allocatable resources are <%v>, number of nodes: <%v>, number of "+
-		"queues: <%v>", pp.totalResource.String(), len(ssn.Nodes), len(pp.queues))
+	log.InfraLogger.V(3).Infof("Total allocatable resources are <%s>, number of nodes: <%d>, number of "+
+		"queues: <%d>", pp.totalResource, len(ssn.Nodes), len(pp.queues))
 }
 
 func (pp *proportionPlugin) setTotalResources(ssn *framework.Session) {
@@ -416,7 +416,7 @@ func (pp *proportionPlugin) allocateHandlerFn(ssn *framework.Session) func(event
 		}
 
 		leafQueue := pp.queues[job.Queue]
-		log.InfraLogger.V(7).Infof("Proportion AllocateFunc: job <%v/%v>, task resources <%v>, "+
+		log.InfraLogger.V(7).Infof("Proportion AllocateFunc: job <%v/%v>, task resources <%s>, "+
 			"queue: <%v>, queue allocated resources: <%v>",
 			job.Namespace, job.Name, taskResources, leafQueue.Name, leafQueue.GetAllocatedShare())
 	}
@@ -440,9 +440,9 @@ func (pp *proportionPlugin) deallocateHandlerFn(ssn *framework.Session) func(eve
 		}
 
 		leafQueue := pp.queues[job.Queue]
-		log.InfraLogger.V(7).Infof("Proportion DeallocateFunc: job <%v/%v>, task resources <%v>, "+
+		log.InfraLogger.V(7).Infof("Proportion DeallocateFunc: job <%v/%v>, task resources <%s>, "+
 			"queue: <%v>, queue allocated resources: <%v>",
-			job.Namespace, job.Name, taskResources.String(), leafQueue.Name, leafQueue.GetAllocatedShare())
+			job.Namespace, job.Name, taskResources, leafQueue.Name, leafQueue.GetAllocatedShare())
 	}
 }
 
