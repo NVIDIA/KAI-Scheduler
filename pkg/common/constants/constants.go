@@ -31,4 +31,5 @@ const (
 	MultiGpuGroupLabelPrefix = GPUGroup + "/"
 	MigStrategyLabel         = "nvidia.com/mig.strategy"
 	GpuCountLabel            = "nvidia.com/gpu.count"
+	SubGroupLabelKey         = "kai.scheduler/subgroup-name"
 )

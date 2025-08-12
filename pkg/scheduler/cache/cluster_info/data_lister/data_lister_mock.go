@@ -15,6 +15,7 @@ import (
 	v1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	v2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	queue_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 	v10 "k8s.io/api/scheduling/v1"
@@ -224,6 +225,21 @@ func (m *MockDataLister) ListQueues() ([]*v2.Queue, error) {
 func (mr *MockDataListerMockRecorder) ListQueues() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListQueues", reflect.TypeOf((*MockDataLister)(nil).ListQueues))
+}
+
+// ListResourceUsage mocks base method.
+func (m *MockDataLister) ListResourceUsage() (*queue_info.ClusterUsage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListResourceUsage")
+	ret0, _ := ret[0].(*queue_info.ClusterUsage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListResourceUsage indicates an expected call of ListResourceUsage.
+func (mr *MockDataListerMockRecorder) ListResourceUsage() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResourceUsage", reflect.TypeOf((*MockDataLister)(nil).ListResourceUsage))
 }
 
 // ListStorageClasses mocks base method.

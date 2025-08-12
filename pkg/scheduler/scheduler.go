@@ -57,6 +57,7 @@ func NewScheduler(
 	mux *http.ServeMux,
 ) (*Scheduler, error) {
 	kubeClient, kubeAiSchedulerClient, kueueClient := newClients(config)
+
 	schedulerCacheParams := &schedcache.SchedulerCacheParams{
 		KubeClient:                  kubeClient,
 		KAISchedulerClient:          kubeAiSchedulerClient,

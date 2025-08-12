@@ -56,6 +56,7 @@ type Session struct {
 	PodGroupInfos map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
 	Nodes         map[string]*node_info.NodeInfo
 	Queues        map[common_info.QueueID]*queue_info.QueueInfo
+	ResourceUsage queue_info.ClusterUsage
 	ConfigMaps    map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
 	Topologies    []*kueuev1alpha1.Topology
 
@@ -355,6 +356,7 @@ func openSession(cache cache.Cache, sessionId types.UID, schedulerParams conf.Sc
 	ssn.PodGroupInfos = snapshot.PodGroupInfos
 	ssn.Nodes = snapshot.Nodes
 	ssn.Queues = snapshot.Queues
+	ssn.ResourceUsage = snapshot.QueueResourceUsage
 	ssn.ConfigMaps = snapshot.ConfigMaps
 	ssn.Topologies = snapshot.Topologies
 

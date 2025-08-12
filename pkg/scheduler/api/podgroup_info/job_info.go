@@ -372,7 +372,17 @@ func (pgi *PodGroupInfo) IsStale() bool {
 	}
 
 	activeUsedTasks := int32(pgi.GetNumActiveUsedTasks())
-	return activeUsedTasks > 0 && activeUsedTasks < pgi.MinAvailable
+	if activeUsedTasks > 0 {
+		if activeUsedTasks < pgi.MinAvailable {
+			return true
+		}
+		for _, subGroup := range pgi.SubGroups {
+			if !subGroup.IsGangSatisfied() {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (pgi *PodGroupInfo) IsGangSatisfied() bool {
