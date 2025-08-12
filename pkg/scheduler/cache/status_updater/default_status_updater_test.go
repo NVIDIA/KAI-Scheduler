@@ -686,20 +686,6 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 				Namespace: "job-ns",
 				UID:       "job-uid",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 3).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod-1": {
-							UID:          "pod-1",
-							Name:         "pod-1",
-							Status:       pod_status.Running,
-							SubGroupName: "sub-group-0",
-						},
-						"pod-2": {
-							UID:          "pod-2",
-							Name:         "pod-2",
-							Status:       pod_status.Running,
-							SubGroupName: "sub-group-1",
-						},
-					}),
 					"sub-group-0": func() *podgroup_info.SubGroupInfo {
 						subGroup := podgroup_info.NewSubGroupInfo("sub-group-0", 1)
 						subGroup.AssignTask(&pod_info.PodInfo{UID: "pod-1", Status: pod_status.Running})
