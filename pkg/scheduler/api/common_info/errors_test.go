@@ -43,14 +43,15 @@ func TestFitErrors_Error(t *testing.T) {
 
 func TestNewFitErrorInsufficientResource(t *testing.T) {
 	type args struct {
-		name              string
-		namespace         string
-		nodeName          string
-		resourceRequested *resource_info.ResourceRequirements
-		usedResource      *resource_info.Resource
-		capacityResource  *resource_info.Resource
-		capacityGpuMemory int64
-		gangSchedulingJob bool
+		name                           string
+		namespace                      string
+		nodeName                       string
+		resourceRequested              *resource_info.ResourceRequirements
+		usedResource                   *resource_info.Resource
+		capacityResource               *resource_info.Resource
+		capacityGpuMemory              int64
+		gangSchedulingJob              bool
+		enoughResorucesWithoutOverhead bool
 	}
 	tests := []struct {
 		name string
@@ -163,12 +164,33 @@ func TestNewFitErrorInsufficientResource(t *testing.T) {
 				DetailedReasons: []string{"Node didn't have enough resources: Each gpu on the node has a gpu memory capacity of 1000 Mib. 2000 Mib of gpu memory has been requested."},
 			},
 		},
+		{
+			name: "Not enough cpu due to pod overhead",
+			args: args{
+				name:                           "t1",
+				namespace:                      "n1",
+				nodeName:                       "node1",
+				resourceRequested:              resource_info.NewResourceRequirements(0, 1500, 1000),
+				usedResource:                   BuildResource("500m", "1M"),
+				capacityResource:               BuildResource("1000m", "2M"),
+				capacityGpuMemory:              0,
+				gangSchedulingJob:              false,
+				enoughResorucesWithoutOverhead: true,
+			},
+			want: &FitError{
+				taskName:        "t1",
+				taskNamespace:   "n1",
+				NodeName:        "node1",
+				Reasons:         []string{"node(s) didn't have enough resources: CPU cores", OverheadMessage},
+				DetailedReasons: []string{"Node didn't have enough resources: CPU cores, requested: 1.5, used: 0.5, capacity: 1", OverheadMessage},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := NewFitErrorInsufficientResource(tt.args.name, tt.args.namespace, tt.args.nodeName,
 				tt.args.resourceRequested, tt.args.usedResource, tt.args.capacityResource, tt.args.capacityGpuMemory,
-				tt.args.gangSchedulingJob); !reflect.DeepEqual(got, tt.want) {
+				tt.args.gangSchedulingJob, tt.args.enoughResorucesWithoutOverhead); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewFitErrorInsufficientResource() = %v, want %v", got, tt.want)
 			}
 		})
