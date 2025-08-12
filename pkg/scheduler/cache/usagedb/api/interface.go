@@ -1,3 +1,6 @@
+// Copyright 2025 NVIDIA CORPORATION
+// SPDX-License-Identifier: Apache-2.0
+
 package api
 
 import "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
