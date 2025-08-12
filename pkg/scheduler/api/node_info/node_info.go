@@ -258,9 +258,19 @@ func (ni *NodeInfo) FittingError(task *pod_info.PodInfo, isGangTask bool) *commo
 				task.ResReq.GetNumOfGpuDevices(), ni.getResourceGpuPortion(task.ResReq), requestedResources.GpuMemory())
 		}
 
-		return common_info.NewFitErrorInsufficientResource(
+		enoughResourcesWithoutOverhead := false
+		if len(task.Pod.Spec.Overhead) > 0 {
+			// Adding to node idle instead of subtracting from pod requested resources
+			idleResourcesWithOverhead := ni.Idle.Clone()
+			idleResourcesWithOverhead.Add(resource_info.ResourceFromResourceList(task.Pod.Spec.Overhead))
+			enoughResourcesWithoutOverhead = ni.lessEqualTaskToNodeResources(task.ResReq, idleResourcesWithOverhead)
+		}
+
+		fitError := common_info.NewFitErrorInsufficientResource(
 			task.Name, task.Namespace, ni.Name, task.ResReq, totalUsed, totalCapability, ni.MemoryOfEveryGpuOnNode,
-			isGangTask)
+			isGangTask, enoughResourcesWithoutOverhead)
+
+		return fitError
 	}
 
 	allocatable, err := ni.isTaskStorageAllocatable(task)

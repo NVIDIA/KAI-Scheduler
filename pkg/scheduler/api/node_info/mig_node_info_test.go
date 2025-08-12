@@ -58,7 +58,7 @@ func TestIsTaskAllocatable_Mig(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			runAllocatableTest(
 				t, testData, testName,
-				func(ni *NodeInfo, task *pod_info.PodInfo) (bool, error) {
+				func(ni *NodeInfo, task *pod_info.PodInfo) (bool, *common_info.FitError) {
 					allocatable, err := ni.IsTaskAllocatable(task), ni.FittingError(task, false)
 					return allocatable, err
 				},
