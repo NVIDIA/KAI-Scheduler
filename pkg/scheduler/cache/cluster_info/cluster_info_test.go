@@ -1097,9 +1097,12 @@ func TestSnapshotPodGroups(t *testing.T) {
 					ObjectMeta: v1.ObjectMeta{
 						Namespace: testNamespace,
 						Name:      "pod-0",
+						UID:       types.UID(fmt.Sprintf("%s/pod-0", testNamespace)),
 						Annotations: map[string]string{
 							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
-							pod_info.SubGroupLabelKey:                "SubGroup-0",
+						},
+						Labels: map[string]string{
+							commonconstants.SubGroupLabelKey: "SubGroup-0",
 						},
 					},
 				},
@@ -1107,9 +1110,12 @@ func TestSnapshotPodGroups(t *testing.T) {
 					ObjectMeta: v1.ObjectMeta{
 						Namespace: testNamespace,
 						Name:      "pod-1",
+						UID:       types.UID(fmt.Sprintf("%s/pod-1", testNamespace)),
 						Annotations: map[string]string{
 							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
-							pod_info.SubGroupLabelKey:                "SubGroup-1",
+						},
+						Labels: map[string]string{
+							commonconstants.SubGroupLabelKey: "SubGroup-1",
 						},
 					},
 				},
@@ -1117,9 +1123,12 @@ func TestSnapshotPodGroups(t *testing.T) {
 					ObjectMeta: v1.ObjectMeta{
 						Namespace: testNamespace,
 						Name:      "pod-2",
+						UID:       types.UID(fmt.Sprintf("%s/pod-2", testNamespace)),
 						Annotations: map[string]string{
 							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
-							pod_info.SubGroupLabelKey:                "SubGroup-1",
+						},
+						Labels: map[string]string{
+							commonconstants.SubGroupLabelKey: "SubGroup-1",
 						},
 					},
 				},
@@ -1180,7 +1189,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 						continue
 					}
 					assert.Equal(t, expectedSubGroup.GetMinAvailable(), subGroup.GetMinAvailable())
-					assert.Equal(t, len(expectedSubGroup.GetPodInfos()), int(subGroup.GetMinAvailable()))
+					assert.Equal(t, len(expectedSubGroup.GetPodInfos()), len(subGroup.GetPodInfos()))
 					for _, podInfo := range subGroup.GetPodInfos() {
 						assert.Equal(t, subGroup.GetName(), podInfo.SubGroupName)
 					}

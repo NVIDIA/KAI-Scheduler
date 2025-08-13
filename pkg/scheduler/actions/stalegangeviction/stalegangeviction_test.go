@@ -13,6 +13,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/stalegangeviction"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
@@ -236,6 +237,166 @@ func TestStaleGangEviction(t *testing.T) {
 						NumberOfCacheBinds:      0,
 						NumberOfCacheEvictions:  0,
 						NumberOfPipelineActions: 0,
+					},
+				},
+			},
+		},
+		{
+			name: "Stale job with sub groups - evict",
+			topology: test_utils.TestTopologyBasic{
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:         "job-1",
+						QueueName:    "q-1",
+						MinAvailable: pointer.Int32(3),
+						SubGroups: map[string]*podgroup_info.SubGroupInfo{
+							"sub-group-0": podgroup_info.NewSubGroupInfo("sub-group-0", 2),
+							"sub-group-1": podgroup_info.NewSubGroupInfo("sub-group-1", 1),
+						},
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								Name:         "job-1-0",
+								SubGroupName: "sub-group-0",
+								State:        pod_status.Running,
+								NodeName:     "node-1",
+							},
+							{
+								Name:         "job-1-1",
+								SubGroupName: "sub-group-0",
+								State:        pod_status.Running,
+								NodeName:     "node-1",
+							},
+							{
+								Name:         "job-1-2",
+								SubGroupName: "sub-group-0",
+								State:        pod_status.Running,
+								NodeName:     "node-1",
+							},
+							{
+								Name:         "job-1-3",
+								SubGroupName: "sub-group-1",
+								State:        pod_status.Failed,
+								NodeName:     "node-1",
+							},
+						},
+						StaleDuration: pointer.Duration(61 * time.Second),
+					},
+				},
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node-1": {},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:        "q-1",
+						ParentQueue: "d-1",
+					},
+				},
+				Departments: []test_utils.TestDepartmentBasic{
+					{
+						Name: "d-1",
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"job-1-0": {
+						NodeName: "node-1",
+						Status:   pod_status.Releasing,
+					},
+					"job-1-1": {
+						NodeName: "node-1",
+						Status:   pod_status.Releasing,
+					},
+					"job-1-2": {
+						NodeName: "node-1",
+						Status:   pod_status.Releasing,
+					},
+					"job-1-3": {
+						NodeName: "node-1",
+						Status:   pod_status.Failed,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheEvictions: 3,
+					},
+				},
+			},
+		},
+		{
+			name: "Job with sub groups - should not evict",
+			topology: test_utils.TestTopologyBasic{
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:         "job-1",
+						QueueName:    "q-1",
+						MinAvailable: pointer.Int32(3),
+						SubGroups: map[string]*podgroup_info.SubGroupInfo{
+							"sub-group-0": podgroup_info.NewSubGroupInfo("sub-group-0", 2),
+							"sub-group-1": podgroup_info.NewSubGroupInfo("sub-group-1", 1),
+						},
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								Name:         "job-1-0",
+								SubGroupName: "sub-group-0",
+								State:        pod_status.Running,
+								NodeName:     "node-1",
+							},
+							{
+								Name:         "job-1-1",
+								SubGroupName: "sub-group-0",
+								State:        pod_status.Running,
+								NodeName:     "node-1",
+							},
+							{
+								Name:         "job-1-2",
+								SubGroupName: "sub-group-0",
+								State:        pod_status.Failed,
+								NodeName:     "node-1",
+							},
+							{
+								Name:         "job-1-3",
+								SubGroupName: "sub-group-1",
+								State:        pod_status.Running,
+								NodeName:     "node-1",
+							},
+						},
+						StaleDuration: pointer.Duration(61 * time.Second),
+					},
+				},
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node-1": {},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:        "q-1",
+						ParentQueue: "d-1",
+					},
+				},
+				Departments: []test_utils.TestDepartmentBasic{
+					{
+						Name: "d-1",
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"job-1-0": {
+						NodeName: "node-1",
+						Status:   pod_status.Running,
+					},
+					"job-1-1": {
+						NodeName: "node-1",
+						Status:   pod_status.Running,
+					},
+					"job-1-2": {
+						NodeName: "node-1",
+						Status:   pod_status.Failed,
+					},
+					"job-1-3": {
+						NodeName: "node-1",
+						Status:   pod_status.Running,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheEvictions: 0,
 					},
 				},
 			},

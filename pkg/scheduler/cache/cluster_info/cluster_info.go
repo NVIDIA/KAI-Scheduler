@@ -59,6 +59,7 @@ type ClusterInfo struct {
 	includeCSIStorageObjects bool
 	nodePoolSelector         labels.Selector
 	fairnessLevelType        FairnessLevelType
+	collectUsageData         bool
 }
 
 type FairnessLevelType string
@@ -106,6 +107,7 @@ func New(
 		nodePoolSelector:         nodePoolSelector,
 		fairnessLevelType:        fairnessLevelType,
 		podGroupSync:             podGroupSync,
+		collectUsageData:         usageLister != nil,
 	}, nil
 }
 
@@ -150,10 +152,9 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 
 	usage, usageErr := c.snapshotQueueResourceUsage()
 	if usageErr != nil {
-		log.InfraLogger.Warningf("error snapshotting queue resource usage: %c", usageErr)
+		log.InfraLogger.V(2).Warnf("error snapshotting queue resource usage: %c", usageErr)
 	}
 	if usage == nil {
-		log.InfraLogger.Warningf("resource usage is nil, using 0 values for all queues")
 		usage = queue_info.NewClusterUsage()
 	}
 	snapshot.QueueResourceUsage = *usage
@@ -322,6 +323,7 @@ func (c *ClusterInfo) snapshotPodGroups(
 		log.InfraLogger.V(7).Infof("The priority of job <%s/%s> is <%s/%d>", podGroup.Namespace, podGroup.Name,
 			podGroup.Spec.PriorityClassName, podGroupInfo.Priority)
 
+		c.setPodGroupWithIndex(podGroup, podGroupInfo)
 		rawPods, err := c.dataLister.ListPodByIndex(podByPodGroupIndexerName, podGroup.Name)
 		if err != nil {
 			log.InfraLogger.Errorf("failed to get indexed pods: %s", err)
@@ -335,8 +337,6 @@ func (c *ClusterInfo) snapshotPodGroups(
 			podInfo := c.getPodInfo(pod, existingPods)
 			podGroupInfo.AddTaskInfo(podInfo)
 		}
-
-		c.setPodGroupWithIndex(podGroup, podGroupInfo)
 		result[common_info.PodGroupID(podGroup.Name)] = podGroupInfo
 	}
 

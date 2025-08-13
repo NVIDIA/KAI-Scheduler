@@ -241,9 +241,17 @@ func (su *defaultStatusUpdater) markTaskUnschedulable(pod *v1.Pod, message strin
 }
 
 func (su *defaultStatusUpdater) recordStaleJobEvent(job *podgroup_info.PodGroupInfo) {
-	su.recorder.Eventf(job.PodGroup, v1.EventTypeNormal, "StaleJob",
-		fmt.Sprintf("Job is stale. %d pods are active, minMember is %d",
-			job.GetNumActiveUsedTasks(), job.MinAvailable))
+	message := fmt.Sprintf("Job is stale. %d pods are active, minMember is %d",
+		job.GetNumActiveUsedTasks(), job.MinAvailable)
+
+	for _, subGroup := range job.SubGroups {
+		if !subGroup.IsGangSatisfied() {
+			message += fmt.Sprintf(", subGroup %s minMember is %d and %d pods are active",
+				subGroup.GetName(), subGroup.GetMinAvailable(), subGroup.GetNumActiveUsedTasks())
+		}
+	}
+
+	su.recorder.Eventf(job.PodGroup, v1.EventTypeNormal, "StaleJob", message)
 }
 
 func (su *defaultStatusUpdater) recordJobNotReadyEvent(job *podgroup_info.PodGroupInfo) {

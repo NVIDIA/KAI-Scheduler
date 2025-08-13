@@ -65,6 +65,10 @@ func (l *UsageLister) GetResourceUsage() (*queue_info.ClusterUsage, error) {
 	l.lastUsageDataMutex.RLock()
 	defer l.lastUsageDataMutex.RUnlock()
 
+	if l.client == nil {
+		return nil, fmt.Errorf("client is not set")
+	}
+
 	if l.lastUsageDataTime == nil {
 		return nil, fmt.Errorf("usage data is not available")
 	}
