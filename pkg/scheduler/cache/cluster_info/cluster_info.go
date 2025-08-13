@@ -154,6 +154,9 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 	if usageErr != nil {
 		log.InfraLogger.V(2).Warnf("error snapshotting queue resource usage: %c", usageErr)
 	}
+	if usage == nil {
+		usage = queue_info.NewClusterUsage()
+	}
 	snapshot.QueueResourceUsage = *usage
 
 	snapshot.PodGroupInfos, err = c.snapshotPodGroups(snapshot.Queues, existingPods)

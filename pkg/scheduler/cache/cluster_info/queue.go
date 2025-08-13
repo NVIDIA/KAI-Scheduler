@@ -79,7 +79,7 @@ func (c *ClusterInfo) snapshotQueues() (map[common_info.QueueID]*queue_info.Queu
 
 func (c *ClusterInfo) snapshotQueueResourceUsage() (*queue_info.ClusterUsage, error) {
 	if !c.collectUsageData {
-		return queue_info.NewClusterUsage(), nil
+		return nil, nil
 	}
 
 	return c.dataLister.ListResourceUsage()

@@ -112,7 +112,7 @@ func (k *k8sLister) ListQueues() ([]*enginev2.Queue, error) {
 
 func (k *k8sLister) ListResourceUsage() (*queue_info.ClusterUsage, error) {
 	if k.usageLister == nil {
-		return nil, fmt.Errorf("usage lister is not set")
+		return queue_info.NewClusterUsage(), fmt.Errorf("usage lister is not set")
 	}
 
 	return k.usageLister.GetResourceUsage()
