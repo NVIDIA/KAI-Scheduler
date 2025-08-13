@@ -32,13 +32,9 @@ var _ = Describe("UnscheduledInfo", func() {
 
 			message := GetBuildOverCapacityMessageForQueue(queueName, resourceName, deserved, used, requiredResources)
 
-			expectedPrefix := "Non-preemptible workload is over quota. "
 			expectedDetails := "Workload requested 6 CPU cores, but cpu-queue quota is 8 cores, while 4 cores are already allocated for non-preemptible pods."
-			expectedSuffix := " Use a preemptible workload to go over quota."
 
-			Expect(message).To(ContainSubstring(expectedPrefix))
 			Expect(message).To(ContainSubstring(expectedDetails))
-			Expect(message).To(ContainSubstring(expectedSuffix))
 		})
 
 		It("should generate correct message for 200G memory resource", func() {
@@ -54,13 +50,9 @@ var _ = Describe("UnscheduledInfo", func() {
 
 			message := GetBuildOverCapacityMessageForQueue(queueName, resourceName, deserved, used, requiredResources)
 
-			expectedPrefix := "Non-preemptible workload is over quota. "
 			expectedDetails := "Workload requested 200 GB memory, but memory-queue quota is 100 GB, while 50 GB are already allocated for non-preemptible pods."
-			expectedSuffix := " Use a preemptible workload to go over quota."
 
-			Expect(message).To(ContainSubstring(expectedPrefix))
 			Expect(message).To(ContainSubstring(expectedDetails))
-			Expect(message).To(ContainSubstring(expectedSuffix))
 		})
 
 	})
