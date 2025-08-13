@@ -110,9 +110,7 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 			Stale:     false,
 		},
 
-		SubGroups: map[string]*SubGroupInfo{
-			DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 0),
-		},
+		SubGroups: map[string]*SubGroupInfo{},
 
 		LastStartTimestamp:   nil,
 		activeAllocatedCount: ptr.To(0),
@@ -138,19 +136,20 @@ func (pgi *PodGroupInfo) GetAllPodsMap() pod_info.PodsMap {
 func (pgi *PodGroupInfo) GetRealSubGroupInfo() map[string]*SubGroupInfo {
 	newSubGroups := make(map[string]*SubGroupInfo)
 	for name, subGroup := range pgi.SubGroups {
-		if name == DefaultSubGroup {
-			continue
-		}
 		newSubGroups[name] = subGroup
 	}
 	return newSubGroups
 }
 
 func (pgi *PodGroupInfo) GetDefaultMinAvailable() int32 {
-	if pgi.SubGroups == nil || len(pgi.SubGroups) == 0 || pgi.SubGroups[DefaultSubGroup] == nil {
+	if pgi.SubGroups == nil || len(pgi.SubGroups) == 0 {
 		return 0
 	}
-	return pgi.SubGroups[DefaultSubGroup].GetMinAvailable()
+	minAvailable := int32(0)
+	for _, subGroup := range pgi.SubGroups {
+		minAvailable += subGroup.GetMinAvailable()
+	}
+	return minAvailable
 }
 
 func (pgi *PodGroupInfo) SetDefaultMinAvailable(minAvailable int32) {
@@ -178,7 +177,9 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.Name = pg.Name
 	pgi.Namespace = pg.Namespace
 	pgi.NamespacedName = fmt.Sprintf("%s/%s", pgi.Namespace, pgi.Name)
-	pgi.SetDefaultMinAvailable(max(pg.Spec.MinMember, 1))
+	if len(pg.Spec.SubGroups) == 0 {
+		pgi.SetDefaultMinAvailable(max(pg.Spec.MinMember, 1))
+	}
 	pgi.Queue = common_info.QueueID(pg.Spec.Queue)
 	pgi.CreationTimestamp = pg.GetCreationTimestamp()
 	pgi.PodGroup = pg
@@ -232,8 +233,12 @@ func (pgi *PodGroupInfo) AddTaskInfo(ti *pod_info.PodInfo) {
 	subGroup, found := pgi.SubGroups[ti.SubGroupName]
 	if found {
 		subGroup.AssignTask(ti)
+	} else {
+		if pgi.SubGroups[DefaultSubGroup] == nil {
+			pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, 0)
+		}
+		pgi.SubGroups[DefaultSubGroup].AssignTask(ti)
 	}
-	pgi.SubGroups[DefaultSubGroup].AssignTask(ti)
 
 	pgi.addTaskIndex(ti)
 

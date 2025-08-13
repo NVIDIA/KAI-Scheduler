@@ -109,12 +109,16 @@ func BuildJobInfo(
 	if subGroups == nil {
 		subGroups = map[string]*podgroup_info.SubGroupInfo{}
 	}
-	subGroups[podgroup_info.DefaultSubGroup] = podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable).WithPodInfos(allTasks)
 
 	for _, taskInfo := range taskInfos {
 		if len(taskInfo.SubGroupName) > 0 {
 			subGroup := subGroups[taskInfo.SubGroupName]
 			subGroup.AssignTask(taskInfo)
+		} else {
+			if subGroups[podgroup_info.DefaultSubGroup] == nil {
+				subGroups[podgroup_info.DefaultSubGroup] = podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable)
+			}
+			subGroups[podgroup_info.DefaultSubGroup].AssignTask(taskInfo)
 		}
 	}
 

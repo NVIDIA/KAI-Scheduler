@@ -1154,9 +1154,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 						Name:  "podGroup-0",
 						Queue: "queue-0",
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 3),
-							"SubGroup-0":                  subGroup0,
-							"SubGroup-1":                  subGroup1,
+							"SubGroup-0": subGroup0,
+							"SubGroup-1": subGroup1,
 						},
 					}
 				}(),
@@ -1192,6 +1191,9 @@ func TestSnapshotPodGroups(t *testing.T) {
 
 			assert.Equal(t, len(expected.GetRealSubGroupInfo()), len(pg.GetRealSubGroupInfo()))
 			for _, expectedSubGroup := range expected.GetRealSubGroupInfo() {
+				if expectedSubGroup.GetName() == podgroup_info.DefaultSubGroup {
+					continue
+				}
 				for _, subGroup := range pg.GetRealSubGroupInfo() {
 					if expectedSubGroup.GetName() != subGroup.GetName() {
 						continue

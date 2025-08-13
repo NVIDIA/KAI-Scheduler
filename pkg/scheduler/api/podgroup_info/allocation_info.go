@@ -4,8 +4,6 @@
 package podgroup_info
 
 import (
-	"math"
-
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -164,7 +162,7 @@ func getNumOfTasksToAllocatePerSubGroup(podGroupInfo *PodGroupInfo) map[string]i
 	for name, subGroup := range podGroupInfo.GetRealSubGroupInfo() {
 		numAllocatedTasks := subGroup.GetNumActiveAllocatedTasks()
 		if numAllocatedTasks >= int(subGroup.minAvailable) {
-			maxTasksToAllocate[name] = int(math.Min(float64(subGroup.GetNumPendingTasks()), 1))
+			maxTasksToAllocate[name] = 1
 		} else {
 			maxTasksToAllocate[name] = int(subGroup.minAvailable) - numAllocatedTasks
 		}
