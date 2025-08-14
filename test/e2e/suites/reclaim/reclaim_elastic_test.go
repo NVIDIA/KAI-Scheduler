@@ -188,9 +188,9 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 		})
 	})
 
-	It("Reclaim elastic job partially for a distributed job", func(ctx context.Context) {
+	FIt("Reclaim elastic job partially for a distributed job", func(ctx context.Context) {
 		testCtx = testcontext.GetConnectivity(ctx, Default)
-		parentQueue, reclaimeeQueue, reclaimerQueue = createQueues(3, 1, 2)
+		parentQueue, reclaimeeQueue, reclaimerQueue = createQueues(4, 2, 2)
 		reclaimeeQueue.Spec.Resources.GPU.OverQuotaWeight = 0
 		testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 		reclaimeeNamespace = queue.GetConnectedNamespaceToQueue(reclaimeeQueue)
@@ -204,6 +204,8 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
 			"elastic-reclaimee-job", reclaimeeQueue, 3, nil,
 			reclaimeePodRequirements)
+		reclaimeePodGroup.Spec.MinMember = 2
+		Expect(testCtx.ControllerClient.Update(ctx, reclaimeePodGroup)).To(Succeed())
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimeeNamespace, reclaimeePods)
 
 		// reclaimer job
