@@ -61,7 +61,7 @@ func NewFitErrorByReasons(name, namespace, nodeName string, err error, reasons .
 func NewFitErrorInsufficientResource(
 	name, namespace, nodeName string,
 	resourceRequested *resource_info.ResourceRequirements, usedResource, capacityResource *resource_info.Resource,
-	capacityGpuMemory int64, gangSchedulingJob bool, enoughResourcesWithoutOverhead bool,
+	capacityGpuMemory int64, gangSchedulingJob bool, messageSuffix string,
 ) *FitError {
 	availableResource := capacityResource.Clone()
 	availableResource.Sub(usedResource)
@@ -147,9 +147,13 @@ func NewFitErrorInsufficientResource(
 		}
 	}
 
-	if enoughResourcesWithoutOverhead {
-		shortMessages = append(shortMessages, OverheadMessage)
-		detailedMessages = append(detailedMessages, OverheadMessage)
+	if len(messageSuffix) > 0 {
+		for i, msg := range shortMessages {
+			shortMessages[i] = fmt.Sprintf("%s. %s", msg, messageSuffix)
+		}
+		for i, msg := range detailedMessages {
+			detailedMessages[i] = fmt.Sprintf("%s. %s", msg, messageSuffix)
+		}
 	}
 
 	return NewFitErrorWithDetailedMessage(name, namespace, nodeName, shortMessages, detailedMessages...)
