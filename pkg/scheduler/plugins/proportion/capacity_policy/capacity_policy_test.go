@@ -154,7 +154,7 @@ var _ = Describe("Capacity Policy Check", func() {
 				testName := name
 				testData := data
 				It(testName, func() {
-					capacityPolicy := New(testData.queues, true)
+					capacityPolicy := New(testData.queues, testData.job.IsPreemptibleJob())
 					tasksToAllocate := podgroup_info.GetTasksToAllocate(testData.job, dummyTasksLessThen,
 						dummyTasksLessThen, true)
 					result := capacityPolicy.IsJobOverQueueCapacity(testData.job, tasksToAllocate)
@@ -303,7 +303,7 @@ var _ = Describe("Capacity Policy Check", func() {
 				testName := name
 				testData := data
 				It(testName, func() {
-					capacityPolicy := New(testData.queues, true)
+					capacityPolicy := New(testData.queues, testData.job.IsPreemptibleJob())
 					tasksToAllocate := podgroup_info.GetTasksToAllocate(testData.job, dummyTasksLessThen,
 						dummyTasksLessThen, true)
 					result := capacityPolicy.IsJobOverQueueCapacity(testData.job, tasksToAllocate)
@@ -455,7 +455,7 @@ var _ = Describe("Capacity Policy Check", func() {
 				testName := name
 				testData := data
 				It(testName, func() {
-					capacityPolicy := New(testData.queues, true)
+					capacityPolicy := New(testData.queues, testData.job.IsPreemptibleJob())
 					tasksToAllocate := podgroup_info.GetTasksToAllocate(testData.job, dummyTasksLessThen,
 						dummyTasksLessThen, true)
 					result := capacityPolicy.IsNonPreemptibleJobOverQuota(testData.job, tasksToAllocate)
@@ -1028,7 +1028,7 @@ var _ = Describe("Capacity Policy Check", func() {
 				testName := name
 				testData := data
 				It(testName, func() {
-					capacityPolicy := New(testData.queues, true)
+					capacityPolicy := New(testData.queues, testData.job.IsPreemptibleJob())
 					result := capacityPolicy.IsTaskAllocationOnNodeOverCapacity(testData.job.PodInfos["task-a"],
 						testData.job, testData.node)
 					Expect(result.IsSchedulable).To(Equal(testData.expectedResult))

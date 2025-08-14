@@ -21,7 +21,7 @@ func (cp *CapacityPolicy) resultsOverLimit(requestedShare rs.ResourceQuantities,
 		if overLimit {
 			request := utils.ResourceRequirementsFromQuantities(requestedShare).ToResourceList()
 			requestedNonPreemptible := resource_info.EmptyResourceRequirements().ToResourceList()
-			if !job.IsPreemptibleJob(cp.isInferencePreemptible) {
+			if !job.IsPreemptibleJob() {
 				requestedNonPreemptible = request.DeepCopy()
 			}
 
