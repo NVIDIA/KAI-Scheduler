@@ -5,6 +5,7 @@ package proportion
 
 import (
 	"math"
+	"strconv"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -39,13 +40,28 @@ type proportionPlugin struct {
 	pluginArguments   map[string]string
 	taskOrderFunc     common_info.LessFn
 	reclaimablePlugin *rec.Reclaimable
+	relcaimerSaturationMultiplier float64
 }
 
 func New(arguments map[string]string) framework.Plugin {
+	multiplier := 1.0
+	if val, exists := arguments["relcaimerSaturationMultiplier"]; exists {
+		if m, err := strconv.ParseFloat(val, 64); err == nil {
+			if m < 1.0 {
+				log.InfraLogger.Warningf("relcaimerSaturationMultiplier must be >= 1.0, got %v. Using default value of 1.0", m)
+			} else {
+				multiplier = m
+			}
+		} else {
+			log.InfraLogger.V(1).Errorf("Failed to parse relcaimerSaturationMultiplier: %s. Using default 1.", val)
+		}
+	}
+
 	return &proportionPlugin{
-		totalResource:   rs.EmptyResourceQuantities(),
-		queues:          map[common_info.QueueID]*rs.QueueAttributes{},
-		pluginArguments: arguments,
+		totalResource:                 rs.EmptyResourceQuantities(),
+		queues:                        map[common_info.QueueID]*rs.QueueAttributes{},
+		pluginArguments:               arguments,
+		relcaimerSaturationMultiplier: multiplier,
 	}
 }
 
@@ -56,7 +72,7 @@ func (pp *proportionPlugin) Name() string {
 func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.calculateResourcesProportion(ssn)
 	pp.taskOrderFunc = ssn.TaskOrderFn
-	pp.reclaimablePlugin = rec.New(ssn.IsInferencePreemptible(), pp.taskOrderFunc)
+	pp.reclaimablePlugin = rec.New(pp.relcaimerSaturationMultiplier)
 
 	capacityPolicy := cp.New(pp.queues, ssn.IsInferencePreemptible())
 	ssn.AddQueueOrderFn(pp.queueOrder)
