@@ -41,6 +41,7 @@ import (
 	sc_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storagecapacity_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
@@ -258,17 +259,21 @@ func (ni *NodeInfo) FittingError(task *pod_info.PodInfo, isGangTask bool) *commo
 				task.ResReq.GetNumOfGpuDevices(), ni.getResourceGpuPortion(task.ResReq), requestedResources.GpuMemory())
 		}
 
-		enoughResourcesWithoutOverhead := false
+		messageSuffix := ""
 		if len(task.Pod.Spec.Overhead) > 0 {
 			// Adding to node idle instead of subtracting from pod requested resources
 			idleResourcesWithOverhead := ni.Idle.Clone()
 			idleResourcesWithOverhead.Add(resource_info.ResourceFromResourceList(task.Pod.Spec.Overhead))
-			enoughResourcesWithoutOverhead = ni.lessEqualTaskToNodeResources(task.ResReq, idleResourcesWithOverhead)
+			enoughResourcesWithoutOverhead := ni.lessEqualTaskToNodeResources(task.ResReq, idleResourcesWithOverhead)
+			if enoughResourcesWithoutOverhead {
+				messageSuffix = fmt.Sprintf("%s. The overhead resources are %v", common_info.OverheadMessage,
+					k8s_utils.StringResourceList(task.Pod.Spec.Overhead))
+			}
 		}
 
 		fitError := common_info.NewFitErrorInsufficientResource(
 			task.Name, task.Namespace, ni.Name, task.ResReq, totalUsed, totalCapability, ni.MemoryOfEveryGpuOnNode,
-			isGangTask, enoughResourcesWithoutOverhead)
+			isGangTask, messageSuffix)
 
 		return fitError
 	}
