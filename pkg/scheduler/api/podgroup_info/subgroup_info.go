@@ -47,6 +47,11 @@ func (sgi *SubGroupInfo) AssignTask(ti *pod_info.PodInfo) {
 	sgi.podInfos[ti.UID] = ti
 }
 
+func (sgi *SubGroupInfo) WithPodInfos(podInfos pod_info.PodsMap) *SubGroupInfo {
+	sgi.podInfos = podInfos
+	return sgi
+}
+
 func (sgi *SubGroupInfo) IsReadyForScheduling() bool {
 	readyTasks := sgi.GetNumAliveTasks() - sgi.GetNumGatedTasks()
 	return int32(readyTasks) >= sgi.minAvailable

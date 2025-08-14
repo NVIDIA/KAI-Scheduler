@@ -109,6 +109,8 @@ func BuildJobInfo(
 	if subGroups == nil {
 		subGroups = map[string]*podgroup_info.SubGroupInfo{}
 	}
+	subGroups[podgroup_info.DefaultSubGroup] = podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable).WithPodInfos(allTasks)
+
 	for _, taskInfo := range taskInfos {
 		if len(taskInfo.SubGroupName) > 0 {
 			subGroup := subGroups[taskInfo.SubGroupName]
@@ -121,14 +123,12 @@ func BuildJobInfo(
 		Name:              name,
 		Namespace:         namespace,
 		Allocated:         allocatedResource,
-		PodInfos:          allTasks,
 		PodStatusIndex:    taskStatusIndex,
 		Priority:          priority,
 		JobFitErrors:      make(enginev2alpha2.UnschedulableExplanations, 0),
 		NodesFitErrors:    map[common_info.PodID]*common_info.FitErrors{},
 		Queue:             queueUID,
 		CreationTimestamp: metav1.Time{Time: jobCreationTime},
-		MinAvailable:      minAvailable,
 		SubGroups:         subGroups,
 		PodGroup: &enginev2alpha2.PodGroup{
 			ObjectMeta: metav1.ObjectMeta{

@@ -22,7 +22,7 @@ func GetVictimsQueue(
 
 	for _, job := range ssn.PodGroupInfos {
 		atLeastOneAlivePod := false
-		for _, task := range job.PodInfos {
+		for _, task := range job.GetAllPodsMap() {
 			if !pod_status.IsAliveStatus(task.Status) {
 				continue
 			}

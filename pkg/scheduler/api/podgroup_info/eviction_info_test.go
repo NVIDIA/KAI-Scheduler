@@ -22,12 +22,13 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 		{
 			name: "WithoutSubGroups_EvictOne",
 			job: &PodGroupInfo{
-				PodInfos: pod_info.PodsMap{
-					"pod-a": simpleTask("pod-a", "", pod_status.Running),
-					"pod-b": simpleTask("pod-b", "", pod_status.Running),
-					"pod-c": simpleTask("pod-c", "", pod_status.Running),
+				SubGroups: map[string]*SubGroupInfo{
+					DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+						"pod-a": simpleTask("pod-a", "", pod_status.Running),
+						"pod-b": simpleTask("pod-b", "", pod_status.Running),
+						"pod-c": simpleTask("pod-c", "", pod_status.Running),
+					}),
 				},
-				MinAvailable: 1,
 			},
 			expectedHasMoreTasks: true,
 			numExpectTasks:       1,
@@ -35,8 +36,9 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 		{
 			name: "WithoutSubGroups_EmptyQueue",
 			job: &PodGroupInfo{
-				PodInfos:     pod_info.PodsMap{},
-				MinAvailable: 1,
+				SubGroups: map[string]*SubGroupInfo{
+					DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1),
+				},
 			},
 			expectedHasMoreTasks: false,
 			numExpectTasks:       0,
@@ -44,11 +46,12 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 		{
 			name: "WithoutSubGroups_MultipleEvict",
 			job: &PodGroupInfo{
-				PodInfos: pod_info.PodsMap{
-					"pod-a": simpleTask("pod-a", "", pod_status.Running),
-					"pod-b": simpleTask("pod-b", "", pod_status.Running),
+				SubGroups: map[string]*SubGroupInfo{
+					DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 2).WithPodInfos(pod_info.PodsMap{
+						"pod-a": simpleTask("pod-a", "", pod_status.Running),
+						"pod-b": simpleTask("pod-b", "", pod_status.Running),
+					}),
 				},
-				MinAvailable: 2,
 			},
 			expectedHasMoreTasks: false,
 			numExpectTasks:       2,
@@ -57,7 +60,7 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 			name: "WithSubGroups_SingleEvict",
 			job: func() *PodGroupInfo {
 				pg := NewPodGroupInfo("pg1")
-				pg.MinAvailable = 2
+				pg.SetDefaultMinAvailable(2)
 				pg.SubGroups["sg1"] = NewSubGroupInfo("sg1", 1)
 				pg.SubGroups["sg2"] = NewSubGroupInfo("sg2", 1)
 
@@ -80,10 +83,10 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 
 				return &PodGroupInfo{
 					SubGroups: map[string]*SubGroupInfo{
-						"sg1": sub1,
-						"sg2": sub2,
+						DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 2),
+						"sg1":           sub1,
+						"sg2":           sub2,
 					},
-					MinAvailable: 2,
 				}
 			}(),
 			expectedHasMoreTasks: false,

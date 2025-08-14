@@ -126,12 +126,12 @@ func handleFailedTaskAllocation(job *podgroup_info.PodGroupInfo, unschedulableTa
 	}
 
 	numRunningTasks := job.GetActivelyRunningTasksCount()
-	if job.MinAvailable > 1 && numRunningTasks < job.MinAvailable {
+	if job.GetDefaultMinAvailable() > 1 && numRunningTasks < job.GetDefaultMinAvailable() {
 		job.SetJobFitError(
 			podgroup_info.PodSchedulingErrors,
 			fmt.Sprintf("Resources were found for %d pods while %d are required for gang scheduling. "+
 				"Additional pods cannot be scheduled due to: %s",
-				numSchedulableTasks, job.MinAvailable, allocationError.Error()),
+				numSchedulableTasks, job.GetDefaultMinAvailable(), allocationError.Error()),
 			nil)
 	} else {
 		job.SetJobFitError(

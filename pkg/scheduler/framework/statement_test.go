@@ -118,7 +118,7 @@ func TestStatement_Evict_Unevict(t *testing.T) {
 				sessionUID: "1234",
 			}
 
-			originalTask := jobsInfoMap[tt.args.jobName].PodInfos[tt.args.podName].Clone()
+			originalTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName].Clone()
 			originalJob := jobsInfoMap[tt.args.jobName].Clone()
 			originalNodeInfo := extractNodeAssertedInfo(nodesInfoMap[originalTask.NodeName])
 
@@ -132,7 +132,7 @@ func TestStatement_Evict_Unevict(t *testing.T) {
 				t.Errorf("unevict() error = %v", err)
 			}
 
-			actualTask := ssn.PodGroupInfos[tt.args.jobName].PodInfos[tt.args.podName]
+			actualTask := ssn.PodGroupInfos[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 			assert.Equal(t, actualTask.NodeName, originalTask.NodeName)
 			assert.Equal(t, actualTask.Status, originalTask.Status)
 			assert.Equal(t, *actualTask.ResReq, *originalTask.ResReq)
@@ -256,7 +256,7 @@ func TestStatement_Evict(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
 			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
-			task := jobsInfoMap[tt.args.jobName].PodInfos[tt.args.podName]
+			task := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{
 				operations: []Operation{},
@@ -402,7 +402,7 @@ func TestStatement_Evict_Undo_Undo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
 			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
-			task := jobsInfoMap[tt.args.jobName].PodInfos[tt.args.podName]
+			task := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{
 				operations: []Operation{},
@@ -637,7 +637,7 @@ func TestStatement_Pipeline_Unpipeline(t *testing.T) {
 				sessionUID: "1234",
 			}
 
-			pipelinedTask := jobsInfoMap[tt.args.jobName].PodInfos[tt.args.podName]
+			pipelinedTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			originalPipelineJob := jobsInfoMap[tt.args.jobName].Clone()
 			originalPipelineTask := pipelinedTask.Clone()
@@ -655,7 +655,7 @@ func TestStatement_Pipeline_Unpipeline(t *testing.T) {
 				t.Errorf("unpipeline() error = %v", err)
 			}
 
-			actualTask := ssn.PodGroupInfos[tt.args.jobName].PodInfos[tt.args.podName]
+			actualTask := ssn.PodGroupInfos[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 			assert.Equal(t, actualTask.NodeName, originalPipelineTask.NodeName)
 			assert.Equal(t, actualTask.Status, originalPipelineTask.Status)
 			assert.Equal(t, *actualTask.ResReq, *originalPipelineTask.ResReq)
@@ -760,7 +760,7 @@ func TestStatement_Pipeline(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
 			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
-			pipelinedTask := jobsInfoMap[tt.args.jobName].PodInfos[tt.args.podName]
+			pipelinedTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{
 				operations: []Operation{},
@@ -886,7 +886,7 @@ func TestStatement_Pipeline_Undo_Undo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
 			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
-			pipelinedTask := jobsInfoMap[tt.args.jobName].PodInfos[tt.args.podName]
+			pipelinedTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{
 				operations: []Operation{},
@@ -1007,7 +1007,7 @@ func TestStatement_Allocate_Unallocate(t *testing.T) {
 				sessionUID: "1234",
 			}
 
-			allocateTask := jobsInfoMap[tt.args.jobName].PodInfos[tt.args.podName]
+			allocateTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			originalAllocateJob := jobsInfoMap[tt.args.jobName].Clone()
 			originalAllocateTask := allocateTask.Clone()
@@ -1022,7 +1022,7 @@ func TestStatement_Allocate_Unallocate(t *testing.T) {
 				}
 			}
 
-			actualAllocatedTask := ssn.PodGroupInfos[tt.args.jobName].PodInfos[tt.args.podName]
+			actualAllocatedTask := ssn.PodGroupInfos[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 			assert.Equal(t, actualAllocatedTask.NodeName, originalAllocateTask.NodeName)
 			assert.Equal(t, actualAllocatedTask.Status, originalAllocateTask.Status)
 			assert.Equal(t, *actualAllocatedTask.ResReq, *originalAllocateTask.ResReq)
@@ -1106,7 +1106,7 @@ func TestStatement_Allocate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
 			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
-			allocatedTask := jobsInfoMap[tt.args.jobName].PodInfos[tt.args.podName]
+			allocatedTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{
 				operations: []Operation{},
@@ -1209,7 +1209,7 @@ func TestStatement_Allocate_Undo_Undo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
 			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
-			allocatedTask := jobsInfoMap[tt.args.jobName].PodInfos[tt.args.podName]
+			allocatedTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{
 				operations: []Operation{},
