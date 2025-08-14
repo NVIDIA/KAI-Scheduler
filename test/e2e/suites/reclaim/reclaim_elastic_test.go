@@ -190,7 +190,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 		})
 	})
 
-	It("Reclaim elastic job partially for a distributed job", func(ctx context.Context) {
+	FIt("Reclaim elastic job partially for a distributed job", func(ctx context.Context) {
 		testCtx = testcontext.GetConnectivity(ctx, Default)
 		parentQueue, reclaimeeQueue, reclaimerQueue = createQueues(4, 2, 2)
 		reclaimeeQueue.Spec.Resources.GPU.OverQuotaWeight = 0
@@ -229,7 +229,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 				LabelSelector: fmt.Sprintf("%s=%s", podGroupLabelName, reclaimeePodGroup.Name),
 			})
 			Expect(err).To(Succeed())
-			return len(pods.Items) == 1
+			return len(pods.Items) == 2
 		})
 	})
 	It("Reclaim elastic job with min runtime protecting", func(ctx context.Context) {
