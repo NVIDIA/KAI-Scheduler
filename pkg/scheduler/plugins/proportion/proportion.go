@@ -39,11 +39,11 @@ type proportionPlugin struct {
 	queues              map[common_info.QueueID]*rs.QueueAttributes
 	jobSimulationQueues map[common_info.QueueID]*rs.QueueAttributes
 	// Arguments given for the plugin
-	pluginArguments           map[string]string
-	taskOrderFunc             common_info.LessFn
-	reclaimablePlugin         *rec.Reclaimable
-	isInferencePreemptible    bool
-	allowConsolidatingReclaim bool
+	pluginArguments               map[string]string
+	taskOrderFunc                 common_info.LessFn
+	reclaimablePlugin             *rec.Reclaimable
+	isInferencePreemptible        bool
+	allowConsolidatingReclaim     bool
 	relcaimerSaturationMultiplier float64
 }
 
