@@ -25,7 +25,7 @@ func Schedulable() *api.SchedulableResult {
 func (cp *CapacityPolicy) resultsWithNonPreemptibleOverQuota(requestedShare rs.ResourceQuantities,
 	job *podgroup_info.PodGroupInfo) *api.SchedulableResult {
 
-	if job.IsPreemptibleJob(cp.isInferencePreemptible) {
+	if job.IsPreemptibleJob() {
 		log.InfraLogger.V(7).Infof("resultsWithNonPreemptibleOverQuota. Job: <%v/%v> is preemptable",
 			job.Namespace, job.Name)
 		return Schedulable()

@@ -57,7 +57,6 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 		Queues:        queueInfoMap,
 		PodGroupInfos: jobInfoMap,
 	}
-	ssn.OverrideInferencePreemptible(isInferencePreemptible)
 	ssn.OverrideMaxNumberConsolidationPreemptees(-1)
 	ssn.OverrideAllowConsolidatingReclaim(true)
 	ssn.OverrideSchedulerName(schedulerName)

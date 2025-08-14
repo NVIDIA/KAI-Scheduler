@@ -78,9 +78,8 @@ func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.calculateResourcesProportion(ssn)
 	pp.subGroupOrderFn = ssn.SubGroupOrderFn
 	pp.taskOrderFunc = ssn.TaskOrderFn
-	pp.reclaimablePlugin = rec.New(ssn.IsInferencePreemptible())
-	pp.isInferencePreemptible = ssn.IsInferencePreemptible()
-	capacityPolicy := cp.New(pp.queues, ssn.IsInferencePreemptible())
+	pp.reclaimablePlugin = rec.New(false)
+	capacityPolicy := cp.New(pp.queues, pp.isInferencePreemptible)
 	ssn.AddQueueOrderFn(pp.queueOrder)
 	ssn.AddCanReclaimResourcesFn(pp.CanReclaimResourcesFn)
 	ssn.AddReclaimScenarioValidatorFn(pp.reclaimableFn)
@@ -251,7 +250,7 @@ func (pp *proportionPlugin) buildReclaimerInfo(reclaimer *podgroup_info.PodGroup
 		Name:          reclaimer.Name,
 		Namespace:     reclaimer.Namespace,
 		Queue:         reclaimer.Queue,
-		IsPreemptable: reclaimer.IsPreemptibleJob(pp.isInferencePreemptible),
+		IsPreemptable: reclaimer.IsPreemptibleJob(),
 		RequiredResources: podgroup_info.GetTasksToAllocateInitResource(
 			reclaimer, pp.subGroupOrderFn, pp.taskOrderFunc, false),
 	}
@@ -301,7 +300,7 @@ func (pp *proportionPlugin) updateQueuesCurrentResourceUsage(ssn *framework.Sess
 			if pod_status.AllocatedStatus(status) {
 				for _, t := range tasks {
 					resources := utils.QuantifyResourceRequirements(t.AcceptedResource)
-					isPreemptible := job.IsPreemptibleJob(ssn.IsInferencePreemptible())
+					isPreemptible := job.IsPreemptibleJob()
 					pp.updateQueuesResourceUsageForAllocatedJob(job.Queue, resources, isPreemptible)
 				}
 			} else if status == pod_status.Pending {
@@ -385,7 +384,7 @@ func (pp *proportionPlugin) getChildQueues(parentQueue *rs.QueueAttributes) map[
 func (pp *proportionPlugin) allocateHandlerFn(ssn *framework.Session) func(event *framework.Event) {
 	return func(event *framework.Event) {
 		job := ssn.PodGroupInfos[event.Task.Job]
-		isPreemptibleJob := job.IsPreemptibleJob(ssn.IsInferencePreemptible())
+		isPreemptibleJob := job.IsPreemptibleJob()
 		taskResources := utils.QuantifyResourceRequirements(event.Task.AcceptedResource)
 
 		for queue, ok := pp.queues[job.Queue]; ok; queue, ok = pp.queues[queue.ParentQueue] {
@@ -409,7 +408,7 @@ func (pp *proportionPlugin) allocateHandlerFn(ssn *framework.Session) func(event
 func (pp *proportionPlugin) deallocateHandlerFn(ssn *framework.Session) func(event *framework.Event) {
 	return func(event *framework.Event) {
 		job := ssn.PodGroupInfos[event.Task.Job]
-		isPreemptibleJob := job.IsPreemptibleJob(ssn.IsInferencePreemptible())
+		isPreemptibleJob := job.IsPreemptibleJob()
 		taskResources := utils.QuantifyResourceRequirements(event.Task.AcceptedResource)
 
 		for queue, ok := pp.queues[job.Queue]; ok; queue, ok = pp.queues[queue.ParentQueue] {

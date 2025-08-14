@@ -135,7 +135,7 @@ func buildPreemptibleFilterFunc(preemptor *podgroup_info.PodGroupInfo, maxPreemp
 	preempteeJobsCounter := 0
 
 	return func(job *podgroup_info.PodGroupInfo) bool {
-		if !job.IsPreemptibleJob(false) {
+		if !job.IsPreemptibleJob() {
 			return false
 		}
 
