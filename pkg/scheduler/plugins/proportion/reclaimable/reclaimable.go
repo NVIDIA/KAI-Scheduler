@@ -17,12 +17,12 @@ import (
 )
 
 type Reclaimable struct {
-	utilizationMultiplier float64
+	saturationMultiplier float64
 }
 
 func New(multiplier float64) *Reclaimable {
 	return &Reclaimable{
-		utilizationMultiplier: multiplier,
+		saturationMultiplier: multiplier,
 	}
 }
 
@@ -157,13 +157,13 @@ func (r *Reclaimable) reclaimingQueuesRemainWithinBoundaries(
 
 			involvedResources := maps.Clone(involvedResourcesByQueue[siblingID])
 			maps.Copy(involvedResources, reclaimerInvolvedResources)
-			if !r.isFairShareUtilizationLowerPerResource(
+			if !r.isFairShareSaturationLowerPerResource(
 				involvedResources,
 				remainingResources, reclaimingQueue.GetFairShare(),
 				siblingQueueRemainingResources, sibling.GetFairShare(),
 			) {
 				log.InfraLogger.V(5).Infof("Failed to reclaim resources for job: <%s/%s>. "+
-					"Utilisation ratios would not stay lower than sibling queue <%s>",
+					"Saturation ratios would not stay lower than sibling queue <%s>",
 					reclaimer.Namespace, reclaimer.Name, sibling.Name)
 				return false
 			}
@@ -188,12 +188,12 @@ func (r *Reclaimable) reclaimingQueuesRemainWithinBoundaries(
 	return true
 }
 
-// isFairShareUtilizationLowerPerResource returns true if for every resource the
-// utilisation ratio (allocated / fairShare) of the reclaiming queue is strictly
-// lower than the utilisation ratio of the sibling queue.
+// isFairShareSaturationLowerPerResource returns true if for every resource the
+// saturation ratio (allocated / fairShare) of the reclaiming queue is strictly
+// lower than the utilisation ratio of the sibling queue after being multiplied by the saturationMultiplier.
 // A comparison for a given resource is skipped when both queues have unlimited
 // fair share configured for that resource.
-func (r *Reclaimable) isFairShareUtilizationLowerPerResource(
+func (r *Reclaimable) isFairShareSaturationLowerPerResource(
 	involvedResources map[rs.ResourceName]any,
 	reclaimerAllocated rs.ResourceQuantities, reclaimerFair rs.ResourceQuantities,
 	siblingAlloc rs.ResourceQuantities, siblingFair rs.ResourceQuantities,
@@ -206,19 +206,19 @@ func (r *Reclaimable) isFairShareUtilizationLowerPerResource(
 			continue
 		}
 
-		ratioReclaimer := fairShareUtilizationRatio(reclaimerAllocated[resource], reclaimerFairShare)
-		ratioSibling := fairShareUtilizationRatio(siblingAlloc[resource], siblingFairShare)
+		ratioReclaimer := fairShareSaturationRatio(reclaimerAllocated[resource], reclaimerFairShare)
+		ratioSibling := fairShareSaturationRatio(siblingAlloc[resource], siblingFairShare)
 
-		if (ratioReclaimer > 1) && (siblingFairShare > 0) && ((ratioReclaimer * r.utilizationMultiplier) >= ratioSibling) {
+		if (ratioReclaimer > 1) && (siblingFairShare > 0) && ((ratioReclaimer * r.saturationMultiplier) >= ratioSibling) {
 			return false
 		}
 	}
 	return true
 }
 
-// fairShareUtilizationRatio computes allocated/fairShare ratio while handling
+// fairShareSaturationRatio computes allocated/fairShare ratio while handling
 // edge cases.
-func fairShareUtilizationRatio(allocated float64, fairShare float64) float64 {
+func fairShareSaturationRatio(allocated float64, fairShare float64) float64 {
 	if fairShare == 0 {
 		if allocated > 0 {
 			return math.Inf(1)
