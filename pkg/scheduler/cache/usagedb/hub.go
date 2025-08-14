@@ -14,6 +14,10 @@ import (
 
 type GetClientFn func(connectionString string) (api.Interface, error)
 
+var clientMap = map[string]GetClientFn{
+	"fake": fake.NewFakeClient,
+}
+
 func GetClient(config *api.UsageDBConfig) (api.Interface, error) {
 	if config == nil {
 		return nil, nil
@@ -21,10 +25,6 @@ func GetClient(config *api.UsageDBConfig) (api.Interface, error) {
 
 	if config.ClientType == "" {
 		return nil, fmt.Errorf("client type cannot be empty")
-	}
-
-	clientMap := map[string]GetClientFn{
-		"fake": fake.NewFakeClient,
 	}
 
 	client, ok := clientMap[config.ClientType]
