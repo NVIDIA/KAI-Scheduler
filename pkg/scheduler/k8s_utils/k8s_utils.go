@@ -51,3 +51,12 @@ func annotationAndLabelsPatchBytes(annotations, labels map[string]interface{}) (
 		"annotations": annotations,
 	}})
 }
+
+func StringResourceList(resources v1.ResourceList) string {
+	output := ""
+	for name, value := range resources {
+		output += fmt.Sprintf(" %s: %s", name, value.String())
+	}
+
+	return output
+}
