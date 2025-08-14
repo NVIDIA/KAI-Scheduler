@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/fake"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,7 +61,7 @@ func TestNewUsageLister(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lister := NewUsageLister(&FakeClient{}, tt.fetchInterval, tt.stalenessPeriod, nil)
+			lister := NewUsageLister(&fake.FakeClient{}, tt.fetchInterval, tt.stalenessPeriod, nil)
 			assert.Equal(t, tt.wantInterval, lister.fetchInterval)
 			assert.Equal(t, tt.wantStaleness, lister.stalenessPeriod)
 			assert.NotNil(t, lister.lastUsageData)
@@ -119,7 +121,7 @@ func TestGetResourceUsage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lister := NewUsageLister(&FakeClient{}, nil, nil, nil)
+			lister := NewUsageLister(&fake.FakeClient{}, nil, nil, nil)
 			if tt.setupLister != nil {
 				tt.setupLister(lister)
 			}
@@ -134,6 +136,74 @@ func TestGetResourceUsage(t *testing.T) {
 			if tt.wantUsage != nil {
 				assert.Equal(t, tt.wantUsage, got)
 			}
+		})
+	}
+}
+
+func TestGetClient(t *testing.T) {
+	tests := []struct {
+		name   string
+		config *usagedbapi.UsageDBConfig
+
+		wantError bool
+		wantNil   bool
+	}{
+		{
+			name:    "nil config",
+			config:  nil,
+			wantNil: true,
+		},
+		{
+			name: "fake client",
+			config: &usagedbapi.UsageDBConfig{
+				ClientType:       "fake",
+				ConnectionString: "fake-connection",
+			},
+		},
+		{
+			name: "unknown client type",
+			config: &usagedbapi.UsageDBConfig{
+				ClientType:       "unknown",
+				ConnectionString: "test-connection",
+			},
+			wantError: true,
+		},
+		{
+			name: "empty client type",
+			config: &usagedbapi.UsageDBConfig{
+				ClientType:       "",
+				ConnectionString: "test-connection",
+			},
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, err := GetClient(tt.config)
+
+			if tt.wantError {
+				assert.Error(t, err)
+				assert.Nil(t, client)
+				if tt.config != nil {
+					if tt.config.ClientType == "" {
+						assert.Contains(t, err.Error(), "client type cannot be empty")
+					} else {
+						assert.Contains(t, err.Error(), "unknown client type")
+						assert.Contains(t, err.Error(), tt.config.ClientType)
+					}
+				}
+				return
+			}
+
+			if tt.wantNil {
+				assert.NoError(t, err)
+				assert.Nil(t, client)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, client)
 		})
 	}
 }
