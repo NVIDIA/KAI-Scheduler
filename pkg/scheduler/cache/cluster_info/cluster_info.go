@@ -59,6 +59,7 @@ type ClusterInfo struct {
 	includeCSIStorageObjects bool
 	nodePoolSelector         labels.Selector
 	fairnessLevelType        FairnessLevelType
+	collectUsageData         bool
 }
 
 type FairnessLevelType string
@@ -106,6 +107,7 @@ func New(
 		nodePoolSelector:         nodePoolSelector,
 		fairnessLevelType:        fairnessLevelType,
 		podGroupSync:             podGroupSync,
+		collectUsageData:         usageLister != nil,
 	}, nil
 }
 
@@ -150,10 +152,9 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 
 	usage, usageErr := c.snapshotQueueResourceUsage()
 	if usageErr != nil {
-		log.InfraLogger.Warningf("error snapshotting queue resource usage: %c", usageErr)
+		log.InfraLogger.V(2).Warnf("error snapshotting queue resource usage: %c", usageErr)
 	}
 	if usage == nil {
-		log.InfraLogger.Warningf("resource usage is nil, using 0 values for all queues")
 		usage = queue_info.NewClusterUsage()
 	}
 	snapshot.QueueResourceUsage = *usage

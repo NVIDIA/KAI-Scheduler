@@ -232,7 +232,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 		for _, data := range tests {
 			testData := data
 			It(testData.name, func() {
-				reclaimable := New(true)
+				reclaimable := New(1.0)
 				queues := map[common_info.QueueID]*rs.QueueAttributes{
 					testData.queue.UID: testData.queue,
 				}
@@ -518,7 +518,7 @@ var _ = Describe("Can Reclaim Resources", func() {
 		for _, data := range tests {
 			testData := data
 			It(testData.name, func() {
-				reclaimable := New(true)
+				reclaimable := New(1.0)
 				queues := map[common_info.QueueID]*rs.QueueAttributes{
 					testData.queue.UID: testData.queue,
 				}
@@ -607,7 +607,7 @@ var _ = Describe("Reclaimable - Single department", func() {
 				},
 			},
 		}
-		reclaimable = New(true)
+		reclaimable = New(1.0)
 	})
 	It("Reclaimer is below fair share, reclaimee above fair share", func() {
 		result := reclaimable.Reclaimable(queues, reclaimerInfo, reclaimeeResourcesByQueue(reclaimees))
@@ -767,7 +767,7 @@ var _ = Describe("Reclaimable - Multiple departments", func() {
 				},
 			},
 		}
-		reclaimable = New(true)
+		reclaimable = New(1.0)
 	})
 	It("Reclaimer is below fair share, reclaimee above fair share - sanity", func() {
 		result := reclaimable.Reclaimable(queues, reclaimerInfo, reclaimeeResourcesByQueue(reclaimees))
@@ -858,7 +858,7 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			},
 		}
 		queues := buildQueues(queuesData)
-		reclaimable = New(true)
+		reclaimable = New(1.0)
 		reclaimees := []*podgroup_info.PodGroupInfo{reclaimee}
 		result := reclaimable.Reclaimable(queues, reclaimerInfo, reclaimeeResourcesByQueue(reclaimees))
 		Expect(result).To(Equal(true))
@@ -910,7 +910,7 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			},
 		}
 		queues := buildQueues(queuesData)
-		reclaimable = New(true)
+		reclaimable = New(1.0)
 		reclaimees := []*podgroup_info.PodGroupInfo{reclaimee}
 		result := reclaimable.Reclaimable(queues, reclaimerInfo, reclaimeeResourcesByQueue(reclaimees))
 		Expect(result).To(Equal(false))
@@ -955,7 +955,7 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			},
 		}
 		queues := buildQueues(queuesData)
-		reclaimable = New(true)
+		reclaimable = New(1.0)
 
 		reclaimee.PodInfos["1"].ResReq.GpuResourceRequirement =
 			*resource_info.NewGpuResourceRequirementWithGpus(1.5, 0)
@@ -1006,7 +1006,7 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			},
 		}
 		queues := buildQueues(queuesData)
-		reclaimable = New(true)
+		reclaimable = New(1.0)
 
 		reclaimerInfo.RequiredResources = resource_info.NewResource(0, 0, 1)
 		reclaimerInfo.Queue = "left-leaf1"
@@ -1026,6 +1026,116 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 		}
 
 		reclaimees := []*podgroup_info.PodGroupInfo{reclaimee, reclaimee2}
+		result := reclaimable.Reclaimable(queues, reclaimerInfo, reclaimeeResourcesByQueue(reclaimees))
+		Expect(result).To(Equal(true))
+	})
+	It("Reclaimer has lower utilization ratio than reclaimee but over 1", func() {
+		queuesData = map[common_info.QueueID]queuesTestData{
+			"d1": {
+				"",
+				4,
+				4,
+				4,
+			},
+			"d1-project-1": {
+				"d1",
+				3,
+				1,
+				0,
+			},
+			"d1-project-2": {
+				"d1",
+				1,
+				3,
+				4,
+			},
+			"d2": {
+				"",
+				3,
+				3,
+				7,
+			},
+			"d2-project-1": {
+				"d2",
+				3,
+				3,
+				7,
+			},
+		}
+		queues := buildQueues(queuesData)
+		reclaimable = New(1.0)
+
+		reclaimerInfo.RequiredResources = resource_info.NewResource(0, 0, 1)
+		reclaimerInfo.Queue = "d1-project-1"
+		reclaimee2 := &podgroup_info.PodGroupInfo{
+			Name:  "reclaimee2",
+			Queue: "d2-project-1",
+			PodInfos: pod_info.PodsMap{
+				"1": &pod_info.PodInfo{
+					ResReq: &resource_info.ResourceRequirements{
+						GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
+					},
+					Status: pod_status.Running,
+				},
+			},
+		}
+
+		reclaimees := []*podgroup_info.PodGroupInfo{reclaimee2}
+		result := reclaimable.Reclaimable(queues, reclaimerInfo, reclaimeeResourcesByQueue(reclaimees))
+		Expect(result).To(Equal(true))
+	})
+	It("Reclamation with uninvolved resources", func() {
+		queuesData = map[common_info.QueueID]queuesTestData{
+			"d1": {
+				"",
+				4,
+				4,
+				4,
+			},
+			"d1-project-1": {
+				"d1",
+				1,
+				1,
+				1,
+			},
+			"d2": {
+				"",
+				3,
+				3,
+				7,
+			},
+			"d2-project-1": {
+				"d2",
+				3,
+				3,
+				7,
+			},
+		}
+		queues := buildQueues(queuesData)
+		// Set high CPU allocation for d1 to create a high utilization ratio
+		queues["d1"].CPU.Allocated = 3000
+		queues["d1"].CPU.FairShare = 1000 // This creates a 3.0 utilization ratio
+		queues["d2"].CPU.Allocated = 1000
+		queues["d2"].CPU.FairShare = 1000 // This creates a 1.0 utilization ratio
+
+		reclaimable = New(1.0)
+
+		reclaimerInfo.RequiredResources = resource_info.NewResource(0, 0, 1) // Only requests GPU
+		reclaimerInfo.Queue = "d1-project-1"
+		reclaimee2 := &podgroup_info.PodGroupInfo{
+			Name:  "reclaimee2",
+			Queue: "d2-project-1",
+			PodInfos: pod_info.PodsMap{
+				"1": &pod_info.PodInfo{
+					ResReq: &resource_info.ResourceRequirements{
+						GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
+					},
+					Status: pod_status.Running,
+				},
+			},
+		}
+
+		reclaimees := []*podgroup_info.PodGroupInfo{reclaimee2}
 		result := reclaimable.Reclaimable(queues, reclaimerInfo, reclaimeeResourcesByQueue(reclaimees))
 		Expect(result).To(Equal(true))
 	})

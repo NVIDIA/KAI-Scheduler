@@ -36,7 +36,7 @@ func getOverCapacityMessageDetails(queueName, resourceName string, deserved, use
 	case CpuResource:
 		return fmt.Sprintf("Workload requested %v CPU cores, but %s quota is %v cores, "+
 			"while %v cores are already allocated for non-preemptible pods.",
-			requiredResources.MilliCPU,
+			resource_info.HumanizeResource(requiredResources.MilliCPU, resource_info.MilliCPUToCores),
 			queueName,
 			resource_info.HumanizeResource(deserved, resource_info.MilliCPUToCores),
 			resource_info.HumanizeResource(used, resource_info.MilliCPUToCores),
@@ -44,7 +44,7 @@ func getOverCapacityMessageDetails(queueName, resourceName string, deserved, use
 	case MemoryResource:
 		return fmt.Sprintf("Workload requested %v GB memory, but %s quota is %v GB, "+
 			"while %v GB are already allocated for non-preemptible pods.",
-			requiredResources.Memory,
+			resource_info.HumanizeResource(requiredResources.Memory, resource_info.MemoryToGB),
 			queueName,
 			resource_info.HumanizeResource(deserved, resource_info.MemoryToGB),
 			resource_info.HumanizeResource(used, resource_info.MemoryToGB),
