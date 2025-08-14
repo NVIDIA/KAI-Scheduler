@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.6.11] - 2025-08-18
+
+### Changed
+- Scheduler now allows reclaim scenarios when both queues are above fair share, if starvation ratio will improve
+
 ### Fixed
 - kai-scheduler will not ignore pod spec.overhead field
 
