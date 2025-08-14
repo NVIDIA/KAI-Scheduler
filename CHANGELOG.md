@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Fixed scheduler panic in some elastic reclaim scenarios
+
 ## [v0.8.0] - 2025-08-18
 
 ### Added
