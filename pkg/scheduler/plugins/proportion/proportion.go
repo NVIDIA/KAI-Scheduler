@@ -170,11 +170,9 @@ func (pp *proportionPlugin) getVictimResources(victim *api.VictimInfo) []*resour
 	}
 
 	// Process core tasks as a group
-	if len(coreTasks) > 0 {
-		resources := getResources(pp.allowConsolidatingReclaim, coreTasks...)
-		if resources != nil {
-			victimResources = append(victimResources, resources)
-		}
+	resources := getResources(pp.allowConsolidatingReclaim, coreTasks...)
+	if resources != nil {
+		victimResources = append(victimResources, resources)
 	}
 
 	return victimResources
