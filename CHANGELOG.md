@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+## [v0.6.11] - 2025-08-14
+- Scheduler now allows reclaim scenarios when both queues are above fair share, if starvation ratio will improve
+
 ## [v0.6.9] - 2025-07-18
 
 ### Fixed
