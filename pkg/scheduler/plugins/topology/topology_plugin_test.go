@@ -190,19 +190,24 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 	assert.Equal(t, "test-block-1", blockDomains["test-block-1"].Name)
 	assert.Equal(t, "test-topology-label/block", blockDomains["test-block-1"].Level)
 	assert.Equal(t, 1, blockDomains["test-block-1"].Depth)
+	assert.Equal(t, 2, len(blockDomains["test-block-1"].Children))
 
 	assert.Equal(t, "test-rack-1", rackDomains["test-block-1.test-rack-1"].Name)
 	assert.Equal(t, "test-block-1", rackDomains["test-block-1.test-rack-1"].Parent.Name)
 	assert.Equal(t, 2, rackDomains["test-block-1.test-rack-1"].Depth)
+	assert.Equal(t, 0, len(rackDomains["test-block-1.test-rack-1"].Children))
 
 	assert.Equal(t, "test-rack-2", rackDomains["test-block-1.test-rack-2"].Name)
 	assert.Equal(t, "test-block-1", rackDomains["test-block-1.test-rack-2"].Parent.Name)
 	assert.Equal(t, 2, rackDomains["test-block-1.test-rack-2"].Depth)
+	assert.Equal(t, 0, len(rackDomains["test-block-1.test-rack-2"].Children))
 
 	assert.Equal(t, "test-block-2", blockDomains["test-block-2"].Name)
 	assert.Equal(t, 1, blockDomains["test-block-2"].Depth)
+	assert.Equal(t, 1, len(blockDomains["test-block-2"].Children))
 
 	assert.Equal(t, "test-rack-1", rackDomains["test-block-2.test-rack-1"].Name)
 	assert.Equal(t, "test-block-2", rackDomains["test-block-2.test-rack-1"].Parent.Name)
 	assert.Equal(t, 2, rackDomains["test-block-2.test-rack-1"].Depth)
+	assert.Equal(t, 0, len(rackDomains["test-block-2.test-rack-1"].Children))
 }
