@@ -14,7 +14,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -204,8 +206,8 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
 			"elastic-reclaimee-job", reclaimeeQueue, 3, nil,
 			reclaimeePodRequirements)
-		reclaimeePodGroup.Spec.MinMember = 2
-		Expect(testCtx.ControllerClient.Update(ctx, reclaimeePodGroup)).To(Succeed())
+		Expect(testCtx.ControllerClient.Patch(
+			ctx, reclaimeePodGroup, client.RawPatch(types.JSONPatchType, []byte(`[{"op": "replace", "path": "/spec/minMember", "value": 2}]`)))).To(Succeed())
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimeeNamespace, reclaimeePods)
 
 		// reclaimer job
