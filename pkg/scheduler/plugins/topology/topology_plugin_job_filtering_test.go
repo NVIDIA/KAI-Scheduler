@@ -102,8 +102,8 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 					TopologyResource: &kueuev1alpha1.Topology{
 						Spec: kueuev1alpha1.TopologySpec{
 							Levels: []kueuev1alpha1.TopologyLevel{
-								{NodeLabel: "rack"},
 								{NodeLabel: "zone"},
+								{NodeLabel: "rack"},
 							},
 						},
 					},
@@ -355,8 +355,8 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 					TopologyResource: &kueuev1alpha1.Topology{
 						Spec: kueuev1alpha1.TopologySpec{
 							Levels: []kueuev1alpha1.TopologyLevel{
-								{NodeLabel: "rack"},
 								{NodeLabel: "zone"},
+								{NodeLabel: "rack"},
 							},
 						},
 					},
@@ -409,7 +409,8 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 			if tt.nodesToDomains != nil {
 				for nodeName, domainId := range tt.nodesToDomains {
 					nodeInfo := nodesInfoMap[nodeName]
-					domain := topologyTree.DomainsByLevel[topologyTree.TopologyResource.Spec.Levels[0].NodeLabel][domainId]
+					leafLevel := len(topologyTree.TopologyResource.Spec.Levels) - 1
+					domain := topologyTree.DomainsByLevel[topologyTree.TopologyResource.Spec.Levels[leafLevel].NodeLabel][domainId]
 					for domain != nil {
 						if nodeInfo.Node.Labels == nil {
 							nodeInfo.Node.Labels = map[string]string{
@@ -547,9 +548,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
-							{NodeLabel: "zone"},
 							{NodeLabel: "datacenter"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -581,9 +582,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
-							{NodeLabel: "zone"},
 							{NodeLabel: "datacenter"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -615,9 +616,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
-							{NodeLabel: "zone"},
 							{NodeLabel: "datacenter"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -649,8 +650,8 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
 							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -679,8 +680,8 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
 							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -709,8 +710,8 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
 							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -739,9 +740,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
-							{NodeLabel: "zone"},
 							{NodeLabel: "datacenter"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -772,9 +773,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
-							{NodeLabel: "zone"},
 							{NodeLabel: "datacenter"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -807,9 +808,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
-							{NodeLabel: "zone"},
 							{NodeLabel: "datacenter"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -873,10 +874,10 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
-							{NodeLabel: "zone"},
-							{NodeLabel: "region"},
 							{NodeLabel: "datacenter"},
+							{NodeLabel: "region"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -980,8 +981,8 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 					TopologyResource: &kueuev1alpha1.Topology{
 						Spec: kueuev1alpha1.TopologySpec{
 							Levels: []kueuev1alpha1.TopologyLevel{
-								{NodeLabel: "rack"},
 								{NodeLabel: "zone"},
+								{NodeLabel: "rack"},
 							},
 						},
 					},
@@ -1077,8 +1078,8 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 					TopologyResource: &kueuev1alpha1.Topology{
 						Spec: kueuev1alpha1.TopologySpec{
 							Levels: []kueuev1alpha1.TopologyLevel{
-								{NodeLabel: "rack"},
 								{NodeLabel: "zone"},
+								{NodeLabel: "rack"},
 							},
 						},
 					},
@@ -1180,8 +1181,8 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 					TopologyResource: &kueuev1alpha1.Topology{
 						Spec: kueuev1alpha1.TopologySpec{
 							Levels: []kueuev1alpha1.TopologyLevel{
-								{NodeLabel: "rack"},
 								{NodeLabel: "zone"},
+								{NodeLabel: "rack"},
 							},
 						},
 					},
@@ -1308,7 +1309,8 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			topologyTree := tt.setupTopologyTree()
 			for nodeName, domainId := range tt.nodesToDomains {
 				nodeInfo := nodesInfoMap[nodeName]
-				domain := topologyTree.DomainsByLevel[topologyTree.TopologyResource.Spec.Levels[0].NodeLabel][domainId]
+				leafLevel := len(topologyTree.TopologyResource.Spec.Levels) - 1
+				domain := topologyTree.DomainsByLevel[topologyTree.TopologyResource.Spec.Levels[leafLevel].NodeLabel][domainId]
 				for domain != nil {
 					if nodeInfo.Node.Labels == nil {
 						nodeInfo.Node.Labels = map[string]string{
@@ -1407,8 +1409,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
 							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -1476,8 +1478,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
 							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -1582,10 +1584,10 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
-							{NodeLabel: "zone"},
-							{NodeLabel: "region"},
 							{NodeLabel: "datacenter"},
+							{NodeLabel: "region"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},
@@ -1719,10 +1721,10 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				TopologyResource: &kueuev1alpha1.Topology{
 					Spec: kueuev1alpha1.TopologySpec{
 						Levels: []kueuev1alpha1.TopologyLevel{
-							{NodeLabel: "rack"},
-							{NodeLabel: "zone"},
-							{NodeLabel: "region"},
 							{NodeLabel: "datacenter"},
+							{NodeLabel: "region"},
+							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
 						},
 					},
 				},

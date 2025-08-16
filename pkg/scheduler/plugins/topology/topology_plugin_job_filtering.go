@@ -241,7 +241,8 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 	foundPreferredLevel := false
 	relevantLevels := []string{}
 	abovePreferredLevel := preferredPlacement == ""
-	for _, level := range topologyTree.TopologyResource.Spec.Levels {
+	for i := len(topologyTree.TopologyResource.Spec.Levels) - 1; i >= 0; i-- {
+		level := topologyTree.TopologyResource.Spec.Levels[i]
 		if preferredPlacement != "" && preferredPlacement == level.NodeLabel {
 			foundPreferredLevel = true
 			abovePreferredLevel = true
