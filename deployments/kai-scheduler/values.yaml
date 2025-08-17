@@ -5,6 +5,7 @@ global:
   registry: registry/local/kai-scheduler
   securityContext: {}
   imagePullSecrets: []
+  leaderElection: false
   gpuSharing: false
   clusterAutoscaling: false
   nodeSelector: {}

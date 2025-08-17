@@ -21,6 +21,7 @@ spec:
           image: "{{ .Values.global.registry }}/{{ .Values.podgrouper.image.name }}:{{ .Chart.Version }}"
           imagePullPolicy: {{ .Values.podgrouper.image.pullPolicy }}
           args:
+            - "--leader-elect={{ .Values.global.leaderElection }}"
             - "--queue-label-key={{ .Values.podgrouper.queueLabelKey }}"
           {{- if .Values.global.podLabelSelector }}
             - "--pod-label-selector={{ include "render.map" .Values.global.podLabelSelector }}"

@@ -22,6 +22,7 @@ spec:
           image: "{{ .Values.global.registry }}/{{ .Values.nodescaleadjuster.image.name }}:{{ .Chart.Version }}"
           imagePullPolicy: {{ .Values.podgrouper.image.pullPolicy }}
           args:
+            - "--leader-elect={{ .Values.global.leaderElection }}"
             - "--scaling-pod-image={{ .Values.global.registry }}/{{ .Values.nodescaleadjuster.scalingPodImage.name }}:{{ .Chart.Version }}"
           {{- if .Values.nodescaleadjuster.additionalArgs }}
             {{- toYaml .Values.nodescaleadjuster.additionalArgs | nindent 12 }}

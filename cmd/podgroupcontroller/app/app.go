@@ -46,6 +46,9 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
+
 func Run() error {
 	options := InitOptions()
 	opts := zap.Options{
@@ -75,7 +78,7 @@ func Run() error {
 		Cache:                  cacheOptions,
 		HealthProbeBindAddress: options.ProbeAddr,
 		LeaderElection:         options.EnableLeaderElection,
-		LeaderElectionID:       "3f770c00.run.ai",
+		LeaderElectionID:       "o1x22tjj.kai.scheduler",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly

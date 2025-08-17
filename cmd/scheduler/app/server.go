@@ -152,6 +152,9 @@ func setConfig(so *options.ServerOption) {
 	config.MIGWorkerNodeLabelKey = so.MIGWorkerNodeLabelKey
 }
 
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
+
 func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMux) error {
 	if opt.PrintVersion {
 		version.PrintVersion()

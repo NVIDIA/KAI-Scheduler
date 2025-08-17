@@ -85,7 +85,7 @@ func New() (*App, error) {
 		}),
 		HealthProbeBindAddress: options.ProbeAddr,
 		LeaderElection:         options.EnableLeaderElection,
-		LeaderElectionID:       "2ad35f9c.kai.scheduler",
+		LeaderElectionID:       "ojptxr84.kai.scheduler",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -136,6 +136,10 @@ func New() (*App, error) {
 func (app *App) RegisterPlugins(admissionPlugins *admissionplugins.KaiAdmissionPlugins) {
 	app.admissionPlugins = admissionPlugins
 }
+
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch;update
 
 func (app *App) Run() error {
 	var err error

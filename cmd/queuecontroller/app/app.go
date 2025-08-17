@@ -44,6 +44,9 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
+
 func Run() error {
 	var opts Options
 	opts.AddFlags(flag.CommandLine)
@@ -60,7 +63,7 @@ func Run() error {
 			BindAddress: opts.MetricsAddress,
 		},
 		LeaderElection:   opts.EnableLeaderElection,
-		LeaderElectionID: "42ece193.run.ai",
+		LeaderElectionID: "ov3xj497.kai.scheduler",
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
