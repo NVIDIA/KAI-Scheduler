@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - crd-upgrader respects global values for nodeSelector, affinity and tolerations 
+- kai-scheduler will not ignore pod spec.overhead field
 
 ## [v0.7.12] - 2025-08-04
 

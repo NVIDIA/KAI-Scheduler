@@ -464,10 +464,12 @@ type allocatableTestData struct {
 	podsResources           []v1.ResourceList
 	podResourcesToAllocate  v1.ResourceList
 	podAnnotations          map[string]string
+	podOverhead             v1.ResourceList
 	expected                bool
 	expectedMessageContains []string
+	expectOverheadMessage   bool
 }
-type allocatableTestFunction func(ni *NodeInfo, task *pod_info.PodInfo) (bool, error)
+type allocatableTestFunction func(ni *NodeInfo, task *pod_info.PodInfo) (bool, *common_info.FitError)
 
 func TestIsTaskAllocatable(t *testing.T) {
 	nodeCapacityDifferent := common_info.BuildNode("n2", common_info.BuildResourceList("1000m", "1G"))
@@ -538,13 +540,49 @@ func TestIsTaskAllocatable(t *testing.T) {
 			expected:                true,
 			expectedMessageContains: []string{},
 		},
+		"pod with overhead that fits without overhead but not with overhead": {
+			node:                    common_info.BuildNode("n1", common_info.BuildResourceList("2000m", "2G")),
+			podsResources:           []v1.ResourceList{common_info.BuildResourceList("1000m", "1G")},
+			podResourcesToAllocate:  common_info.BuildResourceList("500m", "500M"),
+			podOverhead:             common_info.BuildResourceList("600m", "600M"),
+			expected:                false,
+			expectedMessageContains: []string{"CPU cores", "memory"},
+			expectOverheadMessage:   true,
+		},
+		"pod with overhead that doesn't fit even without overhead": {
+			node:                    common_info.BuildNode("n1", common_info.BuildResourceList("2000m", "2G")),
+			podsResources:           []v1.ResourceList{common_info.BuildResourceList("1000m", "1G")},
+			podResourcesToAllocate:  common_info.BuildResourceList("1500m", "1500M"),
+			podOverhead:             common_info.BuildResourceList("100m", "100M"),
+			expected:                false,
+			expectedMessageContains: []string{"CPU cores", "memory"},
+			expectOverheadMessage:   false,
+		},
+		"pod without overhead that doesn't fit": {
+			node:                    common_info.BuildNode("n1", common_info.BuildResourceList("2000m", "2G")),
+			podsResources:           []v1.ResourceList{common_info.BuildResourceList("1000m", "1G")},
+			podResourcesToAllocate:  common_info.BuildResourceList("1500m", "1500M"),
+			podOverhead:             v1.ResourceList{},
+			expected:                false,
+			expectedMessageContains: []string{"CPU cores", "memory"},
+			expectOverheadMessage:   false,
+		},
+		"pod with overhead that fits with overhead": {
+			node:                    common_info.BuildNode("n1", common_info.BuildResourceList("2000m", "2G")),
+			podsResources:           []v1.ResourceList{common_info.BuildResourceList("1000m", "1G")},
+			podResourcesToAllocate:  common_info.BuildResourceList("500m", "500M"),
+			podOverhead:             common_info.BuildResourceList("100m", "100M"),
+			expected:                true,
+			expectedMessageContains: []string{},
+			expectOverheadMessage:   false,
+		},
 	}
 
 	for testName, testData := range tests {
 		t.Run(testName, func(t *testing.T) {
 			runAllocatableTest(
 				t, testData, testName,
-				func(ni *NodeInfo, task *pod_info.PodInfo) (bool, error) {
+				func(ni *NodeInfo, task *pod_info.PodInfo) (bool, *common_info.FitError) {
 					return ni.IsTaskAllocatable(task), ni.FittingError(task, false)
 				},
 			)
@@ -580,7 +618,7 @@ func TestIsTaskAllocatableOnReleasingOrIdle(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			runAllocatableTest(
 				t, testData, testName,
-				func(ni *NodeInfo, task *pod_info.PodInfo) (bool, error) {
+				func(ni *NodeInfo, task *pod_info.PodInfo) (bool, *common_info.FitError) {
 					return ni.IsTaskAllocatableOnReleasingOrIdle(task), nil
 				},
 			)
@@ -611,6 +649,11 @@ func runAllocatableTest(
 		"podToAllocate", "p1", "n1", v1.PodRunning, testData.podResourcesToAllocate,
 		[]metav1.OwnerReference{}, make(map[string]string), testData.podAnnotations)
 	addJobAnnotation(pod)
+
+	if len(testData.podOverhead) > 0 {
+		pod.Spec.Overhead = testData.podOverhead
+	}
+
 	task := pod_info.NewTaskInfo(pod)
 	allocatable, fitErr := testedFunction(ni, task)
 	if allocatable != testData.expected {
@@ -622,6 +665,20 @@ func runAllocatableTest(
 				t.Errorf("%s: expected error message to contain %s, got %s", testName, expectedMessage, fitErr.Error())
 			}
 		}
+
+		if testData.expectOverheadMessage {
+			if !strings.Contains(fitErr.Error(), "Not enough resources due to pod overhead resources") {
+				t.Errorf("%s: expected overhead message, got %s", testName, fitErr.Error())
+			}
+		} else {
+			fitErrMessage := fitErr.Error()
+			if strings.Contains(fitErrMessage, "Not enough resources due to pod overhead resources") {
+				t.Errorf("%s: unexpected overhead message, got %s", testName, fitErrMessage)
+			}
+		}
+	} else if len(testData.expectedMessageContains) > 0 {
+		// If we expected an error but got none, that's a test failure
+		t.Errorf("%s: expected error but got none", testName)
 	}
 }
 

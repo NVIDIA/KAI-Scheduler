@@ -125,6 +125,27 @@ func TestGetPodResourceRequest(t *testing.T) {
 			},
 			expectedResource: resource_info.NewResourceRequirements(1, 3000, 5000000000),
 		},
+		{
+			name: "pod with overhead resources",
+			pod: &v1.Pod{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Resources: v1.ResourceRequirements{
+								Requests: common_info.BuildResourceListWithGPU("1000m", "1G", "1"),
+							},
+						},
+						{
+							Resources: v1.ResourceRequirements{
+								Requests: common_info.BuildResourceList("2000m", "1G"),
+							},
+						},
+					},
+					Overhead: common_info.BuildResourceList("1000m", "1G"),
+				},
+			},
+			expectedResource: resource_info.NewResourceRequirements(1, 4000, 3000000000),
+		},
 	}
 	for i, test := range tests {
 		req := getPodResourceRequest(test.pod)

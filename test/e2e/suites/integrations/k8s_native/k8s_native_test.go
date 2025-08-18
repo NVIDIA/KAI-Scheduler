@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	nodev1 "k8s.io/api/node/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -48,20 +49,65 @@ var _ = Describe("K8S Native object integrations", Ordered, func() {
 		testCtx.ClusterCleanup(ctx)
 	})
 
-	It("Pod", func(ctx context.Context) {
-		pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
+	Context("Pods", func() {
+		It("schedules simple pods", func(ctx context.Context) {
+			pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 
-		_, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
-		if err != nil {
-			Expect(err).NotTo(HaveOccurred(), "Failed to create pod-job")
-		}
+			_, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
+			if err != nil {
+				Expect(err).NotTo(HaveOccurred(), "Failed to create pod-job")
+			}
 
-		defer func() {
-			err = testCtx.KubeClientset.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
-			Expect(err).To(Succeed())
-		}()
+			defer func() {
+				err = testCtx.KubeClientset.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+				Expect(err).To(Succeed())
+			}()
 
-		wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
+			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
+		})
+
+		It("considers pod Overhead from runtimeclass", func(ctx context.Context) {
+			runtimeClassName := "my-runtime-class-" + utils.GenerateRandomK8sName(5)
+			limitedQueue := queue.CreateQueueObject("limited-"+utils.GenerateRandomK8sName(10), testCtx.Queues[1].Name)
+			limitedQueue.Spec.Resources.CPU.Limit = 1
+			testCtx.AddQueues(ctx, []*v2.Queue{limitedQueue})
+
+			defer func() {
+				Expect(testCtx.ControllerClient.Delete(ctx, limitedQueue)).To(Succeed())
+			}()
+
+			pod := rd.CreatePodObject(limitedQueue, v1.ResourceRequirements{})
+			pod.Spec.RuntimeClassName = &runtimeClassName
+
+			runtimeClass := &nodev1.RuntimeClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: runtimeClassName,
+				},
+				Handler: "runc",
+				Overhead: &nodev1.Overhead{
+					PodFixed: v1.ResourceList{
+						v1.ResourceCPU: resource.MustParse("2"),
+					},
+				},
+			}
+
+			Expect(testCtx.ControllerClient.Create(ctx, runtimeClass)).To(Succeed())
+
+			defer func() {
+				Expect(testCtx.ControllerClient.Delete(ctx, runtimeClass)).To(Succeed())
+			}()
+
+			_, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
+			if err != nil {
+				Expect(err).NotTo(HaveOccurred(), "Failed to create pod-job")
+			}
+
+			defer func() {
+				Expect(testCtx.ControllerClient.Delete(ctx, pod)).To(Succeed())
+			}()
+
+			wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, pod)
+		})
 	})
 
 	It("ReplicaSet", func(ctx context.Context) {
