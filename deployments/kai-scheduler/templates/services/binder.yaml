@@ -23,6 +23,7 @@ spec:
           image: "{{ .Values.global.registry }}/{{ .Values.binder.image.name }}:{{ .Chart.Version }}"
           imagePullPolicy: {{ .Values.binder.image.pullPolicy }}
           args:
+            - "--leader-elect={{ .Values.global.leaderElection }}"
             - "--webhook-addr={{ .Values.binder.ports.webhookPort }}"
             - "--health-probe-bind-address=:{{ .Values.binder.ports.probePort }}"
             - "--resource-reservation-pod-image={{ .Values.global.registry }}/{{ .Values.binder.resourceReservationImage.name }}:{{ .Chart.Version }}"

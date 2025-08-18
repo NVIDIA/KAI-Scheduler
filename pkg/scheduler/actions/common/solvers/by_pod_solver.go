@@ -207,7 +207,7 @@ func getNodesOfJob(pj *podgroup_info.PodGroupInfo) []string {
 	}
 
 	pjNodeNames := map[string]string{}
-	for _, latestPotentialVictimTask := range pj.PodInfos {
+	for _, latestPotentialVictimTask := range pj.GetAllPodsMap() {
 		pjNodeNames[latestPotentialVictimTask.NodeName] = latestPotentialVictimTask.NodeName
 	}
 	return maps.Keys(pjNodeNames)
@@ -256,7 +256,7 @@ func extractJobsFromTasks(
 		jobAlreadyExists := false
 		if possibleDuplicates, ok := jobs[task.Job]; ok {
 			for _, possibleDuplicate := range possibleDuplicates {
-				for _, podInfo := range possibleDuplicate.PodInfos {
+				for _, podInfo := range possibleDuplicate.GetAllPodsMap() {
 					if podInfo.UID == task.UID {
 						jobAlreadyExists = true
 						break

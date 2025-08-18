@@ -23,6 +23,7 @@ spec:
           image: "{{ .Values.global.registry }}/{{ .Values.admission.image.name }}:{{ .Chart.Version }}"
           imagePullPolicy: {{ .Values.admission.image.pullPolicy }}
           args:
+            - "--leader-elect={{ .Values.global.leaderElection }}"
             - "--webhook-addr={{ .Values.admission.ports.webhookPort }}"
             - "--health-probe-bind-address=:{{ .Values.admission.ports.probePort }}"
             - "--metrics-bind-address=:{{ .Values.admission.ports.metricsPort }}"

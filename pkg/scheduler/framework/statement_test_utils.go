@@ -98,7 +98,7 @@ func validateEvictedJob(t *testing.T, ssn *Session, jobName common_info.PodGroup
 
 func validateEvictedTask(t *testing.T, ssn *Session,
 	jobName common_info.PodGroupID, podName common_info.PodID, originalTask *pod_info.PodInfo) {
-	actualTask := ssn.PodGroupInfos[jobName].PodInfos[podName]
+	actualTask := ssn.PodGroupInfos[jobName].GetAllPodsMap()[podName]
 
 	assert.Equal(t, *originalTask.ResReq, *actualTask.ResReq)
 
@@ -111,7 +111,7 @@ func validateEvictedTask(t *testing.T, ssn *Session,
 
 func validatePipelinedTask(t *testing.T, ssn *Session, jobName common_info.PodGroupID, podName common_info.PodID,
 	nodeToPipeline string, originalPipelinedTask *pod_info.PodInfo) {
-	actualOnEvictTask := ssn.PodGroupInfos[jobName].PodInfos[podName]
+	actualOnEvictTask := ssn.PodGroupInfos[jobName].GetAllPodsMap()[podName]
 
 	assert.Equal(t, *originalPipelinedTask.ResReq, *actualOnEvictTask.ResReq)
 	assert.Equal(t, pod_status.Pipelined, actualOnEvictTask.Status)
@@ -152,7 +152,7 @@ func validatePipelinedToNode(t *testing.T,
 
 func validateAllocatedTask(t *testing.T, ssn *Session, jobName common_info.PodGroupID, podName common_info.PodID,
 	nodeToAllocate string, originalPipelinedTask *pod_info.PodInfo) {
-	actualTask := ssn.PodGroupInfos[jobName].PodInfos[podName]
+	actualTask := ssn.PodGroupInfos[jobName].GetAllPodsMap()[podName]
 
 	assert.Equal(t, *originalPipelinedTask.ResReq, *actualTask.ResReq)
 	assert.Equal(t, pod_status.Allocated, actualTask.Status)

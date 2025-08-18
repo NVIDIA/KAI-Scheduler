@@ -4,9 +4,11 @@
 package podgroup_info
 
 import (
+	"fmt"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -58,7 +60,7 @@ func Test_HasTasksToAllocate(t *testing.T) {
 
 func Test_GetTasksToAllocate(t *testing.T) {
 	pg := NewPodGroupInfo("pg")
-	pg.MinAvailable = 1
+	pg.SetDefaultMinAvailable(1)
 	task := simpleTask("pA", "", pod_status.Pending)
 	pg.AddTaskInfo(task)
 	result := GetTasksToAllocate(pg, subGroupOrderFn, tasksOrderFn, true)
@@ -69,7 +71,7 @@ func Test_GetTasksToAllocate(t *testing.T) {
 
 func Test_GetTaskToAllocateWithSubGroups(t *testing.T) {
 	pg := NewPodGroupInfo("pg")
-	pg.MinAvailable = 2
+	pg.SetDefaultMinAvailable(2)
 	pg.SubGroups["sub"] = NewSubGroupInfo("sub", 2)
 
 	pg.AddTaskInfo(simpleTask("pA", "sub", pod_status.Pending))
@@ -83,7 +85,7 @@ func Test_GetTaskToAllocateWithSubGroups(t *testing.T) {
 
 func Test_GetTasksToAllocateRequestedGPUs(t *testing.T) {
 	pg := NewPodGroupInfo("test-podgroup")
-	pg.MinAvailable = 1
+	pg.SetDefaultMinAvailable(1)
 	task := simpleTask("p1", "", pod_status.Pending)
 	// manually set up a fake ResReq that returns 2 for GPUs and 1000 for GpuMemory
 	task.ResReq = resource_info.NewResourceRequirements(2, 1000, 2000)
@@ -102,7 +104,7 @@ func Test_GetTasksToAllocateInitResource(t *testing.T) {
 		t.Error("empty resource expected for nil pg")
 	}
 
-	pg.MinAvailable = 1
+	pg.SetDefaultMinAvailable(1)
 	task := simpleTask("p", "", pod_status.Pending)
 	task.ResReq = resource_info.NewResourceRequirements(0, 5000, 0)
 	pg.AddTaskInfo(task)
@@ -157,25 +159,25 @@ func Test_getTasksPriorityQueuePerSubGroup(t *testing.T) {
 
 func Test_getNumOfTasksToAllocate(t *testing.T) {
 	pg := NewPodGroupInfo("n")
-	pg.MinAvailable = 2
+	pg.SetDefaultMinAvailable(2)
 	// None allocated, 2 pending
 	pg.AddTaskInfo(simpleTask("p1", "", pod_status.Pending))
 	pg.AddTaskInfo(simpleTask("p2", "", pod_status.Allocated))
 	want := 1
-	got := getNumOfTasksToAllocate(pg)
+	got := getNumTasksToAllocate(pg)
 	if got != want {
 		t.Errorf("got %d want %d", got, want)
 	}
 }
 
-func Test_getNumOfTasksToAllocatePerSubGroup(t *testing.T) {
+func Test_getNumTasksToAllocatePerSubGroup(t *testing.T) {
 	pg := NewPodGroupInfo("pg")
 	sg := NewSubGroupInfo("sg", 1)
 	pg.SubGroups["sg"] = sg
 
 	pg.AddTaskInfo(simpleTask("p1", "sg", pod_status.Pending))
 	pg.AddTaskInfo(simpleTask("p2", "sg", pod_status.Allocated))
-	m := getNumOfTasksToAllocatePerSubGroup(pg)
+	m := getNumTasksToAllocatePerSubGroup(pg, true)
 	if m["sg"] != 1 {
 		t.Errorf("want 1, got %v", m["sg"])
 	}
@@ -270,7 +272,7 @@ func Test_getMaxNumOfTasksToAllocate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pg := NewPodGroupInfo("u1")
-			pg.MinAvailable = tt.args.minAvailable
+			pg.SetDefaultMinAvailable(tt.args.minAvailable)
 			for i, pod := range tt.args.pods {
 				pi := pod_info.NewTaskInfo(pod)
 				if tt.args.overridingStatus != nil {
@@ -279,8 +281,82 @@ func Test_getMaxNumOfTasksToAllocate(t *testing.T) {
 				pg.AddTaskInfo(pi)
 			}
 
-			if got := getNumOfTasksToAllocate(pg); got != tt.want {
-				t.Errorf("getNumOfTasksToAllocate() = %v, want %v", got, tt.want)
+			if got := getNumTasksToAllocate(pg); got != tt.want {
+				t.Errorf("getNumTasksToAllocate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getNumAllocatableTasks(t *testing.T) {
+	tests := []struct {
+		name             string
+		taskStatuses     []pod_status.PodStatus
+		isRealAllocation bool
+		want             int
+	}{
+		{
+			name:             "no tasks",
+			taskStatuses:     nil,
+			isRealAllocation: true,
+			want:             0,
+		},
+		{
+			name:             "all pending",
+			taskStatuses:     []pod_status.PodStatus{pod_status.Pending, pod_status.Pending},
+			isRealAllocation: true,
+			want:             2,
+		},
+		{
+			name:             "pending and running",
+			taskStatuses:     []pod_status.PodStatus{pod_status.Pending, pod_status.Running},
+			isRealAllocation: true,
+			want:             1, // assuming only Pending is allocatable
+		},
+		{
+			name:             "pending and releasing - real allocation",
+			taskStatuses:     []pod_status.PodStatus{pod_status.Pending, pod_status.Releasing},
+			isRealAllocation: true,
+			want:             1, // only Pending is allocatable with real allocation
+		},
+		{
+			name:             "pending and releasing - non-real allocation",
+			taskStatuses:     []pod_status.PodStatus{pod_status.Pending, pod_status.Releasing},
+			isRealAllocation: false,
+			want:             2, // assuming both Pending and Releasing are allocatable
+		},
+		{
+			name:             "allocated and succeeded",
+			taskStatuses:     []pod_status.PodStatus{pod_status.Allocated, pod_status.Succeeded},
+			isRealAllocation: true,
+			want:             0,
+		},
+		{
+			name:             "all succeeded",
+			taskStatuses:     []pod_status.PodStatus{pod_status.Succeeded, pod_status.Succeeded},
+			isRealAllocation: true,
+			want:             0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sg := NewSubGroupInfo("test-subgroup", 1)
+			for i, st := range tt.taskStatuses {
+				p := simpleTask(
+					fmt.Sprintf("test-task-%d", i),
+					"test-subgroup",
+					st,
+				)
+				p.Pod.UID = types.UID(fmt.Sprintf("test-pod-%d", i))
+				if p.Status == pod_status.Releasing && !tt.isRealAllocation {
+					p.IsVirtualStatus = true
+				}
+				sg.AssignTask(p)
+			}
+			got := getNumAllocatableTasks(sg, tt.isRealAllocation)
+			if got != tt.want {
+				t.Errorf("getNumAllocatableTasks() = %d, want %d", got, tt.want)
 			}
 		})
 	}

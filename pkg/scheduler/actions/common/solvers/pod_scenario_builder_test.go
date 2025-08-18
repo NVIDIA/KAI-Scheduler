@@ -96,15 +96,15 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			Expect(len(lastScenario.PotentialVictimsTasks())).To(Equal(4))
 			for _, task := range lastScenario.PotentialVictimsTasks() {
 				matchingJob := lastScenario.GetVictimJobRepresentativeById(task)
-				Expect(len(matchingJob.PodInfos)).To(Equal(1))
+				Expect(len(matchingJob.GetAllPodsMap())).To(Equal(1))
 			}
 
 		})
 
 		It("returns scenario with all tasks in single groups when minAvailable is amount of pods", func() {
 			for _, podGroupInfo := range ssn.PodGroupInfos {
-				podGroupInfo.MinAvailable = int32(len(podGroupInfo.PodInfos))
-				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.PodInfos))
+				podGroupInfo.SetDefaultMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
+				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.GetAllPodsMap()))
 			}
 			scenarioBuilder = NewPodAccumulatedScenarioBuilder(ssn, reclaimerJob, []*podgroup_info.PodGroupInfo{},
 				utils.GetVictimsQueue(ssn, nil))
@@ -120,7 +120,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			Expect(len(lastScenario.PotentialVictimsTasks())).To(Equal(4))
 			for _, task := range lastScenario.PotentialVictimsTasks() {
 				matchingJob := lastScenario.GetVictimJobRepresentativeById(task)
-				Expect(len(matchingJob.PodInfos)).To(Equal(2))
+				Expect(len(matchingJob.GetAllPodsMap())).To(Equal(2))
 			}
 		})
 	})
@@ -129,8 +129,8 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 		It("returns scenarios that have the same recorded victims", func() {
 			ssn, _ = initializeSession(3, 2)
 			for _, podGroupInfo := range ssn.PodGroupInfos {
-				podGroupInfo.MinAvailable = int32(len(podGroupInfo.PodInfos))
-				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.PodInfos))
+				podGroupInfo.SetDefaultMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
+				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.GetAllPodsMap()))
 			}
 			submitQueue := createQueue("team-a")
 			ssn.Queues[submitQueue.UID] = submitQueue
@@ -163,8 +163,8 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 		It("returns scenarios that have correct number of potential victims", func() {
 			ssn, _ = initializeSession(3, 2)
 			for _, podGroupInfo := range ssn.PodGroupInfos {
-				podGroupInfo.MinAvailable = int32(len(podGroupInfo.PodInfos))
-				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.PodInfos))
+				podGroupInfo.SetDefaultMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
+				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.GetAllPodsMap()))
 			}
 			submitQueue := createQueue("team-a")
 			ssn.Queues[submitQueue.UID] = submitQueue
@@ -202,7 +202,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			ssn, _ = initializeSession(1, 3)
 			minAvailable := 1
 			for _, podGroupInfo := range ssn.PodGroupInfos {
-				podGroupInfo.MinAvailable = int32(minAvailable)
+				podGroupInfo.SetDefaultMinAvailable(int32(minAvailable))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(minAvailable)
 			}
 			submitQueue := createQueue("team-a")
@@ -214,7 +214,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			// Only the first pod group with the last task is recordedVictimJobs
 			for _, podGroupInfo := range ssn.PodGroupInfos {
 				var partialTasks []*pod_info.PodInfo
-				for _, podInfo := range podGroupInfo.PodInfos {
+				for _, podInfo := range podGroupInfo.GetAllPodsMap() {
 					// use last pod as recorded victim as sorting will be reversed
 					if podInfo.Name == "pod-2" {
 						partialTasks = append(partialTasks, podInfo)
@@ -243,7 +243,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			ssn, _ = initializeSession(1, 4)
 			minAvailable := 2
 			for _, podGroupInfo := range ssn.PodGroupInfos {
-				podGroupInfo.MinAvailable = int32(minAvailable)
+				podGroupInfo.SetDefaultMinAvailable(int32(minAvailable))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(minAvailable)
 			}
 			submitQueue := createQueue("team-a")
@@ -255,7 +255,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			// Only the first pod group with the last task is recordedVictimJobs
 			for _, podGroupInfo := range ssn.PodGroupInfos {
 				var partialTasks []*pod_info.PodInfo
-				for _, podInfo := range podGroupInfo.PodInfos {
+				for _, podInfo := range podGroupInfo.GetAllPodsMap() {
 					// use last pod as recorded victim as sorting will be reversed
 					if podInfo.Name == "pod-3" {
 						partialTasks = append(partialTasks, podInfo)

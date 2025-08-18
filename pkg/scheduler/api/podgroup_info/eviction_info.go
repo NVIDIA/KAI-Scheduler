@@ -18,7 +18,7 @@ func GetTasksToEvict(job *PodGroupInfo, subGroupOrderFn, taskOrderFn common_info
 		return subGroupOrderFn(r, l)
 	}
 
-	if len(job.SubGroups) > 0 {
+	if len(job.GetActiveSubGroupInfos()) > 0 {
 		return getTasksToEvictWithSubGroups(job, reverseSubGroupOrderFn, reverseTaskOrderFn)
 	}
 	return getTasksToEvict(job, reverseTaskOrderFn)
@@ -28,7 +28,7 @@ func getTasksToEvict(
 	job *PodGroupInfo, reverseTaskOrderFn common_info.LessFn,
 ) ([]*pod_info.PodInfo, bool) {
 	podPriorityQueue := scheduler_util.NewPriorityQueue(reverseTaskOrderFn, scheduler_util.QueueCapacityInfinite)
-	for _, task := range job.PodInfos {
+	for _, task := range job.GetAllPodsMap() {
 		if pod_status.IsActiveAllocatedStatus(task.Status) {
 			podPriorityQueue.Push(task)
 		}
@@ -37,7 +37,7 @@ func getTasksToEvict(
 		return []*pod_info.PodInfo{}, false
 	}
 
-	if int(job.MinAvailable) < podPriorityQueue.Len() {
+	if int(job.GetDefaultMinAvailable()) < podPriorityQueue.Len() {
 		task := podPriorityQueue.Pop().(*pod_info.PodInfo)
 		return []*pod_info.PodInfo{task}, true
 	}
@@ -53,7 +53,7 @@ func getTasksToEvict(
 func getTasksToEvictWithSubGroups(
 	job *PodGroupInfo, reverseSubGroupOrderFn, reverseTaskOrderFn common_info.LessFn,
 ) ([]*pod_info.PodInfo, bool) {
-	subGroupPriorityQueue := getSubGroupsPriorityQueue(job.SubGroups, reverseSubGroupOrderFn)
+	subGroupPriorityQueue := getSubGroupsPriorityQueue(job.GetActiveSubGroupInfos(), reverseSubGroupOrderFn)
 	maxNumOfSubGroups := getNumOfSubGroupsToEvict(job)
 
 	var tasksToEvict []*pod_info.PodInfo

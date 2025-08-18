@@ -125,7 +125,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 		if !found {
 			t.Errorf("Test number: %d, name: %v, has failed. Couldn't find job: %v for expected tasks.", testNumber, testMetadata.Name, jobName)
 		}
-		for _, taskInfo := range ssn.PodGroupInfos[common_info.PodGroupID(jobName)].PodInfos {
+		for _, taskInfo := range ssn.PodGroupInfos[common_info.PodGroupID(jobName)].GetAllPodsMap() {
 
 			if taskInfo.Status != jobExpectedResult.Status {
 				t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses status: %v, was expecting status: %v", testNumber, testMetadata.Name, taskInfo.Name, taskInfo.Status, jobExpectedResult.Status.String())
@@ -196,7 +196,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 
 	if len(testMetadata.TaskExpectedResults) > 0 {
 		for jobId, job := range ssn.PodGroupInfos {
-			for taskId, task := range ssn.PodGroupInfos[jobId].PodInfos {
+			for taskId, task := range ssn.PodGroupInfos[jobId].GetAllPodsMap() {
 				taskExpectedResult, found := testMetadata.TaskExpectedResults[string(taskId)]
 				if !found {
 					continue

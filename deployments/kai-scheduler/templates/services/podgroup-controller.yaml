@@ -20,8 +20,9 @@ spec:
         - name: podgroup-controller
           image: "{{ .Values.global.registry }}/{{ .Values.podgroupcontroller.image.name }}:{{ .Chart.Version }}"
           imagePullPolicy: {{ .Values.podgroupcontroller.image.pullPolicy }}
-          {{- if .Values.podgroupcontroller.additionalArgs }}
           args:
+            - "--leader-elect={{ .Values.global.leaderElection }}"
+          {{- if .Values.podgroupcontroller.additionalArgs }}
             {{- toYaml .Values.podgroupcontroller.additionalArgs | nindent 12 }}
           {{- end }}
           {{- if .Values.podgroupcontroller.resources }}

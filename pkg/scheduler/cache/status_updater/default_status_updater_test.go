@@ -659,19 +659,20 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 		{
 			name: "basic stale pod group",
 			job: &podgroup_info.PodGroupInfo{
-				Name:         "job-pg",
-				Namespace:    "job-ns",
-				UID:          "job-uid",
-				MinAvailable: 5,
-				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod-1": {
-						Name:   "pod-1",
-						Status: pod_status.Running,
-					},
-					"pod-2": {
-						Name:   "pod-2",
-						Status: pod_status.Running,
-					},
+				Name:      "job-pg",
+				Namespace: "job-ns",
+				UID:       "job-uid",
+				SubGroups: map[string]*podgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 5).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						"pod-1": {
+							Name:   "pod-1",
+							Status: pod_status.Running,
+						},
+						"pod-2": {
+							Name:   "pod-2",
+							Status: pod_status.Running,
+						},
+					}),
 				},
 			},
 			expectedEvent: "Normal StaleJob Job is stale. 2 pods are active, minMember is 5",
@@ -679,11 +680,22 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 		{
 			name: "stale pod group with subgroups",
 			job: &podgroup_info.PodGroupInfo{
-				Name:         "job-pg",
-				Namespace:    "job-ns",
-				UID:          "job-uid",
-				MinAvailable: 3,
+				Name:      "job-pg",
+				Namespace: "job-ns",
+				UID:       "job-uid",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 3).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						"pod-1": {
+							Name:         "pod-1",
+							Status:       pod_status.Running,
+							SubGroupName: "sub-group-0",
+						},
+						"pod-2": {
+							Name:         "pod-2",
+							Status:       pod_status.Running,
+							SubGroupName: "sub-group-1",
+						},
+					}),
 					"sub-group-0": func() *podgroup_info.SubGroupInfo {
 						subGroup := podgroup_info.NewSubGroupInfo("sub-group-0", 1)
 						subGroup.AssignTask(&pod_info.PodInfo{UID: "pod-1", Status: pod_status.Running})
@@ -694,18 +706,6 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 						subGroup.AssignTask(&pod_info.PodInfo{UID: "pod-2", Status: pod_status.Running})
 						return subGroup
 					}(),
-				},
-				PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-					"pod-1": {
-						Name:         "pod-1",
-						Status:       pod_status.Running,
-						SubGroupName: "sub-group-0",
-					},
-					"pod-2": {
-						Name:         "pod-2",
-						Status:       pod_status.Running,
-						SubGroupName: "sub-group-1",
-					},
 				},
 			},
 			expectedEvent: "Normal StaleJob Job is stale. 2 pods are active, minMember is 3, subGroup sub-group-1 minMember is 2 and 1 pods are active",

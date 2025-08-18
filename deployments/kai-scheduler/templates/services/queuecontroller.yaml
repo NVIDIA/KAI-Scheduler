@@ -29,6 +29,7 @@ spec:
               mountPath: "/tmp/k8s-webhook-server/serving-certs"
           {{- if .Values.queuecontroller.additionalArgs }}
           args:
+            - "--leader-elect={{ .Values.global.leaderElection }}"
             {{- toYaml .Values.queuecontroller.additionalArgs | nindent 12 }}
           {{- end }}
           {{- if .Values.queuecontroller.resources }}

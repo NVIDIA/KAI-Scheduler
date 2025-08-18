@@ -439,7 +439,7 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 								RequiredGPUs: ptr.To(int64(2)),
 							},
 						},
-						MinAvailable: ptr.To(int32(2)),
+						MinAvailable: ptr.To(int32(1)),
 					},
 					{
 						Name:      "running_job1",
@@ -528,6 +528,84 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 					CacheRequirements: &test_utils.CacheMocking{
 						NumberOfCacheEvictions:  2,
 						NumberOfPipelineActions: 4,
+					},
+				},
+			},
+		},
+		{
+			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Name: "job with sub groups above minAvailable consolidated by a pending job - complete eviction",
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:      "running_job0",
+						Priority:  constants.PriorityTrainNumber,
+						QueueName: "queue0",
+						SubGroups: map[string]*podgroup_info.SubGroupInfo{
+							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
+						},
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:        pod_status.Running,
+								NodeName:     "node0",
+								SubGroupName: "sub-0",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+							{
+								State:        pod_status.Running,
+								NodeName:     "node1",
+								SubGroupName: "sub-0",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+						},
+						MinAvailable: ptr.To(int32(1)),
+					},
+					{
+						Name:                "pending_job",
+						RequiredGPUsPerTask: 4,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State: pod_status.Pending,
+							},
+						},
+					},
+				},
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node0": {
+						GPUs: 4,
+					},
+					"node1": {
+						GPUs: 4,
+					},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:         "queue0",
+						DeservedGPUs: 2,
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"running_job0-0": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Running,
+					},
+					"running_job0-1": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Pipelined,
+					},
+					"pending_job-0": {
+						GPUsRequired: 4,
+						NodeName:     "node1",
+						Status:       pod_status.Pipelined,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheEvictions:  1,
+						NumberOfPipelineActions: 2,
 					},
 				},
 			},
