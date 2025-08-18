@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.8.0] - 2025-08-18
+
 ### Added
 - Added leader election configuration in all deployments and added global helm value that controls it during installation
 
