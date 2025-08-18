@@ -2599,7 +2599,7 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		},
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
-				Name: "inference basic reclaim",
+				Name: "Attempt to reclaim from an inference workload",
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
 						Name:                "q0_job0",

@@ -1467,7 +1467,7 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		},
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
-				Name: "Allocate inference over quota",
+				Name: "Attempt to allocate inference over quota",
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
 						Name:                "pending_job0",
