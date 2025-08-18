@@ -774,3 +774,42 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 
 	})
 })
+
+var _ = Describe("New", func() {
+	Context("Initializing proportion plugin", func() {
+		var args map[string]string
+
+		BeforeEach(func() {
+			args = make(map[string]string)
+		})
+
+		It("should create plugin with empty state and default multiplier", func() {
+			plugin := New(args).(*proportionPlugin)
+			Expect(plugin).NotTo(BeNil())
+			Expect(plugin.totalResource).To(Equal(rs.EmptyResourceQuantities()))
+			Expect(plugin.queues).To(HaveLen(0))
+			Expect(plugin.pluginArguments).To(Equal(args))
+		})
+
+		It("should handle malformed Saturation Multiplier arg", func() {
+			args := map[string]string{"relcaimerSaturationMultiplier": "wrong"}
+			plugin := New(args).(*proportionPlugin)
+			Expect(plugin.pluginArguments).To(Equal(args))
+			Expect(plugin.relcaimerSaturationMultiplier).To(Equal(1.0))
+		})
+
+		It("should handle Saturation Multiplier arg", func() {
+			args := map[string]string{"relcaimerSaturationMultiplier": "1.5"}
+			plugin := New(args).(*proportionPlugin)
+			Expect(plugin.pluginArguments).To(Equal(args))
+			Expect(plugin.relcaimerSaturationMultiplier).To(Equal(1.5))
+		})
+
+		It("should prevent Saturation Multiplier lower than 1", func() {
+			args := map[string]string{"relcaimerSaturationMultiplier": "0.5"}
+			plugin := New(args).(*proportionPlugin)
+			Expect(plugin.pluginArguments).To(Equal(args))
+			Expect(plugin.relcaimerSaturationMultiplier).To(Equal(1.0))
+		})
+	})
+})
