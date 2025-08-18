@@ -1471,7 +1471,7 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
 						Name:                "pending_job0",
-						Priority:            constants.PriorityBuildNumber - 1,
+						Priority:            constants.PriorityInferenceNumber,
 						QueueName:           "queue0",
 						RequiredGPUsPerTask: 1,
 						Tasks: []*tasks_fake.TestTaskBasic{
@@ -1499,8 +1499,8 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 				JobExpectedResults: map[string]test_utils.TestExpectedResultBasic{
 					"pending_job0": {
 						GPUsRequired: 1,
-						Status:       pod_status.Binding,
-						NodeName:     "node0",
+						Status:       pod_status.Pending,
+						NodeName:     "",
 					},
 				},
 				Mocks: &test_utils.TestMock{
