@@ -170,14 +170,14 @@ func Test_getNumOfTasksToAllocate(t *testing.T) {
 	}
 }
 
-func Test_getNumOfTasksToAllocatePerSubGroup(t *testing.T) {
+func Test_getNumTasksToAllocatePerSubGroup(t *testing.T) {
 	pg := NewPodGroupInfo("pg")
 	sg := NewSubGroupInfo("sg", 1)
 	pg.SubGroups["sg"] = sg
 
 	pg.AddTaskInfo(simpleTask("p1", "sg", pod_status.Pending))
 	pg.AddTaskInfo(simpleTask("p2", "sg", pod_status.Allocated))
-	m := getNumOfTasksToAllocatePerSubGroup(pg, true)
+	m := getNumTasksToAllocatePerSubGroup(pg, true)
 	if m["sg"] != 1 {
 		t.Errorf("want 1, got %v", m["sg"])
 	}
