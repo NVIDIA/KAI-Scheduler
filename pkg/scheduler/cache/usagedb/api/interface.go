@@ -9,6 +9,7 @@ type Interface interface {
 	GetResourceUsage() (*queue_info.ClusterUsage, error)
 }
 type UsageDBConfig struct {
-	ClientType       string `yaml:"clientType" json:"clientType"`
-	ConnectionString string `yaml:"connectionString" json:"connectionString"`
+	ClientType             string `yaml:"clientType" json:"clientType"`
+	ConnectionString       string `yaml:"connectionString" json:"connectionString"`
+	ConnectionStringEnvVar string `yaml:"connectionStringEnvVar" json:"connectionStringEnvVar"`
 }

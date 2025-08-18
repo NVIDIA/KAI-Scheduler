@@ -6,6 +6,7 @@ package usagedb
 import (
 	"fmt"
 	"maps"
+	"os"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/fake"
@@ -34,5 +35,24 @@ func GetClient(config *api.UsageDBConfig) (api.Interface, error) {
 
 	log.InfraLogger.V(3).Infof("getting usage db client of type: %s, connection string: %s", config.ClientType, config.ConnectionString)
 
-	return client(config.ConnectionString)
+	connectionString, err := resolveConnectionString(config)
+	log.InfraLogger.V(3).Infof("resolved connection string: %s", connectionString)
+	if err != nil {
+		return nil, err
+	}
+
+	log.InfraLogger.V(3).Infof("getting usage db client of type: %s, connection string: %s", config.ClientType, connectionString)
+
+	return client(connectionString)
+}
+
+func resolveConnectionString(config *api.UsageDBConfig) (string, error) {
+	if config.ConnectionString != "" && config.ConnectionStringEnvVar != "" {
+		return "", fmt.Errorf("both connection string and connection string env var are set")
+	}
+
+	if config.ConnectionStringEnvVar != "" {
+		return os.Getenv(config.ConnectionStringEnvVar), nil
+	}
+	return config.ConnectionString, nil
 }
