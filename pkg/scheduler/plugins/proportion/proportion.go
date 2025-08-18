@@ -59,7 +59,6 @@ type proportionPlugin struct {
 	subGroupOrderFn               common_info.LessFn
 	taskOrderFunc                 common_info.LessFn
 	reclaimablePlugin             *rec.Reclaimable
-	isInferencePreemptible        bool
 	allowConsolidatingReclaim     bool
 	relcaimerSaturationMultiplier float64
 }
@@ -93,9 +92,9 @@ func (pp *proportionPlugin) Name() string {
 func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.calculateResourcesProportion(ssn)
 	pp.subGroupOrderFn = ssn.SubGroupOrderFn
-	pp.taskOrderFunc = ssn.TaskOrderFn	
+	pp.taskOrderFunc = ssn.TaskOrderFn
 	pp.reclaimablePlugin = rec.New(pp.relcaimerSaturationMultiplier)
-  capacityPolicy := cp.New(pp.queues, pp.isInferencePreemptible)
+	capacityPolicy := cp.New(pp.queues)
 	ssn.AddQueueOrderFn(pp.queueOrder)
 	ssn.AddCanReclaimResourcesFn(pp.CanReclaimResourcesFn)
 	ssn.AddReclaimScenarioValidatorFn(pp.reclaimableFn)

@@ -438,7 +438,7 @@ var _ = Describe("Max Allowed Policy Check", func() {
 				testName := name
 				testData := data
 				It(testName, func() {
-					capacityPolicy := New(testData.queues, true)
+					capacityPolicy := New(testData.queues)
 					result := capacityPolicy.resultsOverLimit(testData.requestedShare, testData.job)
 					Expect(result.IsSchedulable).To(Equal(testData.expectedResult))
 					if testData.expectedDetails != nil {

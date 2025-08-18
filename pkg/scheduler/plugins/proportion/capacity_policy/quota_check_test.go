@@ -330,7 +330,7 @@ var _ = Describe("Quota Policy Check", func() {
 				testName := name
 				testData := data
 				It(testName, func() {
-					capacityPolicy := New(testData.queues, true)
+					capacityPolicy := New(testData.queues)
 					result := capacityPolicy.resultsWithNonPreemptibleOverQuota(testData.requestedShare,
 						testData.job)
 					Expect(result.IsSchedulable).To(Equal(testData.expectedResult))

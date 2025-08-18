@@ -16,12 +16,11 @@ import (
 type capacityCheckFn func(requestedShare rs.ResourceQuantities, job *podgroup_info.PodGroupInfo) *api.SchedulableResult
 
 type CapacityPolicy struct {
-	queues                 map[common_info.QueueID]*rs.QueueAttributes
-	isInferencePreemptible bool
+	queues map[common_info.QueueID]*rs.QueueAttributes
 }
 
-func New(queues map[common_info.QueueID]*rs.QueueAttributes, isInferencePreemptible bool) *CapacityPolicy {
-	return &CapacityPolicy{queues, isInferencePreemptible}
+func New(queues map[common_info.QueueID]*rs.QueueAttributes) *CapacityPolicy {
+	return &CapacityPolicy{queues}
 }
 
 func (cp *CapacityPolicy) IsJobOverQueueCapacity(job *podgroup_info.PodGroupInfo,
