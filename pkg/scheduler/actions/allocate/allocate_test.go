@@ -1471,7 +1471,7 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
 						Name:                "pending_job0",
-						Priority:            constants.PriorityInferenceNumber,
+						Priority:            constants.PriorityBuildNumber - 1,
 						QueueName:           "queue0",
 						RequiredGPUsPerTask: 1,
 						Tasks: []*tasks_fake.TestTaskBasic{

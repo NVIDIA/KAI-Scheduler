@@ -2615,7 +2615,7 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					}, {
 						Name:                "q0_job1",
 						RequiredGPUsPerTask: 1,
-						Priority:            constants.PriorityInferenceNumber,
+						Priority:            constants.PriorityBuildNumber - 1,
 						QueueName:           "queue0",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -2626,7 +2626,7 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					}, {
 						Name:                "q1_job0",
 						RequiredGPUsPerTask: 1,
-						Priority:            constants.PriorityInferenceNumber,
+						Priority:            constants.PriorityBuildNumber - 1,
 						QueueName:           "queue1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
