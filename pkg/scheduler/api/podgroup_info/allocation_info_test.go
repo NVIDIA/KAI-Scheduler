@@ -132,16 +132,6 @@ func Test_getTasksFromQueue(t *testing.T) {
 	}
 }
 
-func Test_getTasksPriorityQueue(t *testing.T) {
-	pg := NewPodGroupInfo("pq")
-	pg.AddTaskInfo(simpleTask("t1", "", pod_status.Pending))
-	pg.AddTaskInfo(simpleTask("t2", "", pod_status.Succeeded))
-	q := getTasksPriorityQueue(pg, tasksOrderFn, true)
-	if q.Len() != 1 {
-		t.Error("should filter to only allocatable tasks")
-	}
-}
-
 func Test_getTasksPriorityQueuePerSubGroup(t *testing.T) {
 	pg := NewPodGroupInfo("test-pg")
 	sg := NewSubGroupInfo("test-sub-group", 1)
@@ -157,19 +147,6 @@ func Test_getTasksPriorityQueuePerSubGroup(t *testing.T) {
 	}
 }
 
-func Test_getNumOfTasksToAllocate(t *testing.T) {
-	pg := NewPodGroupInfo("n")
-	pg.SetDefaultMinAvailable(2)
-	// None allocated, 2 pending
-	pg.AddTaskInfo(simpleTask("p1", "", pod_status.Pending))
-	pg.AddTaskInfo(simpleTask("p2", "", pod_status.Allocated))
-	want := 1
-	got := getNumTasksToAllocate(pg)
-	if got != want {
-		t.Errorf("got %d want %d", got, want)
-	}
-}
-
 func Test_getNumTasksToAllocatePerSubGroup(t *testing.T) {
 	pg := NewPodGroupInfo("pg")
 	sg := NewSubGroupInfo("sg", 1)
@@ -180,111 +157,6 @@ func Test_getNumTasksToAllocatePerSubGroup(t *testing.T) {
 	m := getNumTasksToAllocatePerSubGroup(pg, true)
 	if m["sg"] != 1 {
 		t.Errorf("want 1, got %v", m["sg"])
-	}
-}
-
-func Test_getMaxNumOfTasksToAllocate(t *testing.T) {
-	type args struct {
-		minAvailable     int32
-		pods             []*v1.Pod
-		overridingStatus []pod_status.PodStatus
-	}
-	tests := []struct {
-		name string
-		args args
-		want int
-	}{
-		{
-			name: "single pod pending",
-			args: args{
-				minAvailable: 1,
-				pods: []*v1.Pod{
-					common_info.BuildPod("n1", "p1", "", v1.PodPending,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-				},
-			},
-			want: 1,
-		},
-		{
-			name: "three pods pending",
-			args: args{
-				minAvailable: 3,
-				pods: []*v1.Pod{
-					common_info.BuildPod("n1", "p1", "", v1.PodPending,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-					common_info.BuildPod("n1", "p2", "", v1.PodPending,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-					common_info.BuildPod("n1", "p3", "", v1.PodPending,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-				},
-			},
-			want: 3,
-		},
-		{
-			name: "four pods, min available equal running, two pending",
-			args: args{
-				minAvailable: 2,
-				pods: []*v1.Pod{
-					common_info.BuildPod("n1", "p1", "", v1.PodRunning,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-					common_info.BuildPod("n1", "p2", "", v1.PodRunning,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-					common_info.BuildPod("n1", "p3", "", v1.PodPending,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-					common_info.BuildPod("n1", "p4", "", v1.PodPending,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-				},
-			},
-			want: 1,
-		},
-		{
-			name: "pipline over dying pods",
-			args: args{
-				minAvailable: 2,
-				pods: []*v1.Pod{
-					common_info.BuildPod("n1", "p1", "", v1.PodRunning,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-					common_info.BuildPod("n1", "p2", "", v1.PodRunning,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-					common_info.BuildPod("n1", "p3", "", v1.PodPending,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-					common_info.BuildPod("n1", "p4", "", v1.PodPending,
-						common_info.BuildResourceList("1000m", "1G"),
-						nil, nil, nil),
-				},
-				overridingStatus: []pod_status.PodStatus{pod_status.Releasing, pod_status.Releasing,
-					pod_status.Pending, pod_status.Pending},
-			},
-			want: 2,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			pg := NewPodGroupInfo("u1")
-			pg.SetDefaultMinAvailable(tt.args.minAvailable)
-			for i, pod := range tt.args.pods {
-				pi := pod_info.NewTaskInfo(pod)
-				if tt.args.overridingStatus != nil {
-					pi.Status = tt.args.overridingStatus[i]
-				}
-				pg.AddTaskInfo(pi)
-			}
-
-			if got := getNumTasksToAllocate(pg); got != tt.want {
-				t.Errorf("getNumTasksToAllocate() = %v, want %v", got, tt.want)
-			}
-		})
 	}
 }
 
