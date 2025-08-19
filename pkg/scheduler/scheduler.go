@@ -33,6 +33,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	schedcache "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
@@ -68,7 +69,7 @@ func NewScheduler(
 		return nil, fmt.Errorf("error resolving configuration from file: %v", err)
 	}
 
-	usageDBClient, err := usagedb.GetClient(schedConfig.UsageDBConfig)
+	usageDBClient, err := getUsageDBClient(schedConfig.UsageDBConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error getting usage db client: %v", err)
 	}
@@ -143,4 +144,9 @@ func newClients(config *rest.Config) (kubernetes.Interface, kubeaischedulerver.I
 	k8cClientConfig.AcceptContentTypes = "application/vnd.kubernetes.protobuf"
 	k8cClientConfig.ContentType = "application/vnd.kubernetes.protobuf"
 	return kubernetes.NewForConfigOrDie(k8cClientConfig), kubeaischedulerver.NewForConfigOrDie(config), kueue.NewForConfigOrDie(config)
+}
+
+func getUsageDBClient(dbConfig *usagedbapi.UsageDBConfig) (usagedbapi.Interface, error) {
+	resolver := usagedb.NewClientResolver(nil)
+	return resolver.GetClient(dbConfig)
 }
