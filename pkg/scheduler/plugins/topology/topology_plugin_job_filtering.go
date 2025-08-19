@@ -6,7 +6,6 @@ package topology
 import (
 	"errors"
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 
@@ -242,7 +241,8 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 	foundPreferredLevel := false
 	relevantLevels := []string{}
 	abovePreferredLevel := preferredPlacement == ""
-	for _, level := range topologyTree.TopologyResource.Spec.Levels {
+	for i := len(topologyTree.TopologyResource.Spec.Levels) - 1; i >= 0; i-- {
+		level := topologyTree.TopologyResource.Spec.Levels[i]
 		if preferredPlacement != "" && preferredPlacement == level.NodeLabel {
 			foundPreferredLevel = true
 			abovePreferredLevel = true
@@ -286,7 +286,10 @@ func (t *topologyPlugin) improveChoiceForPreference(maxDepthDomains []*TopologyD
 }
 
 func getJobAllocatableChildrenSubset(domain *TopologyDomainInfo, taskToAllocateCount int) []*TopologyDomainInfo {
-	children := slices.Clone(domain.Children)
+	children := make([]*TopologyDomainInfo, 0, len(domain.Children))
+	for _, child := range domain.Children {
+		children = append(children, child)
+	}
 	sort.SliceStable(children, func(i, j int) bool {
 		return children[i].AllocatablePods > children[j].AllocatablePods
 	})

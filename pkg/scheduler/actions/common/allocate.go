@@ -26,6 +26,8 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 		}
 		return false
 	}
+
+	defer ssn.CleanAllocationAttemptCache(job)
 	cp := stmt.Checkpoint()
 	for index, task := range tasksToAllocate {
 		success := allocateTask(ssn, stmt, nodes, task, isPipelineOnly)
@@ -72,8 +74,6 @@ func allocateTask(ssn *framework.Session, stmt *framework.Statement, nodes []*no
 		log.InfraLogger.V(6).Infof("Failed to allocate or pipeline task: <%v/%v> to node: %v",
 			task.Namespace, task.Name, node.Name)
 	}
-
-	ssn.CleanAllocationAttemptCache(job)
 
 	if success {
 		log.InfraLogger.V(6).Infof("Allocation succeeded for task: <%v/%v>", task.Namespace, task.Name)

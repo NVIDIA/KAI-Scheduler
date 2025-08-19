@@ -43,7 +43,7 @@ type TopologyDomainInfo struct {
 	Parent *TopologyDomainInfo
 
 	// Child domains
-	Children []*TopologyDomainInfo
+	Children map[TopologyDomainID]*TopologyDomainInfo
 
 	// Nodes that belong to this domain
 	Nodes map[string]*node_info.NodeInfo
@@ -61,10 +61,14 @@ func NewTopologyDomainInfo(id TopologyDomainID, name, level string, depth int) *
 		Name:     name,
 		Level:    level,
 		Parent:   nil,
-		Children: []*TopologyDomainInfo{},
+		Children: map[TopologyDomainID]*TopologyDomainInfo{},
 		Nodes:    map[string]*node_info.NodeInfo{},
 		Depth:    depth,
 	}
+}
+
+func (t *TopologyDomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
+	t.Nodes[nodeInfo.Node.Name] = nodeInfo
 }
 
 func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, nodeLabels map[string]string) TopologyDomainID {
@@ -80,6 +84,7 @@ func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, node
 	return TopologyDomainID(strings.Join(domainsNames, "."))
 }
 
-func (t *TopologyDomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
-	t.Nodes[nodeInfo.Node.Name] = nodeInfo
+func connectDomainToParent(domain *TopologyDomainInfo, parent *TopologyDomainInfo) {
+	domain.Parent = parent
+	parent.Children[domain.ID] = domain
 }
