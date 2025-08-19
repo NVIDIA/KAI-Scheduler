@@ -384,10 +384,6 @@ func (pgi *PodGroupInfo) GetTasksActiveAllocatedReqResource() *resource_info.Res
 }
 
 func (pgi *PodGroupInfo) IsReadyForScheduling() bool {
-	validTasks := pgi.GetNumAliveTasks() - pgi.GetNumGatedTasks()
-	if int32(validTasks) < pgi.GetDefaultMinAvailable() {
-		return false
-	}
 	for _, subGroup := range pgi.GetActiveSubGroupInfos() {
 		if !subGroup.IsReadyForScheduling() {
 			return false
@@ -405,15 +401,13 @@ func (pgi *PodGroupInfo) IsStale() bool {
 		return false
 	}
 
-	activeUsedTasks := int32(pgi.GetNumActiveUsedTasks())
-	if activeUsedTasks > 0 {
-		if activeUsedTasks < pgi.GetDefaultMinAvailable() {
+	totalActivePods := pgi.GetNumActiveUsedTasks()
+	if totalActivePods == 0 {
+		return false
+	}
+	for _, subGroup := range pgi.GetActiveSubGroupInfos() {
+		if !subGroup.IsGangSatisfied() {
 			return true
-		}
-		for _, subGroup := range pgi.GetActiveSubGroupInfos() {
-			if !subGroup.IsGangSatisfied() {
-				return true
-			}
 		}
 	}
 	return false
