@@ -4,6 +4,7 @@
 package usagedb
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -204,6 +205,108 @@ func TestGetClient(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.NotNil(t, client)
+		})
+	}
+}
+
+func TestResolveConnectionString(t *testing.T) {
+	// Save original env var values to restore later
+	testEnvVar := "TEST_CONNECTION_STRING"
+	originalValue := os.Getenv(testEnvVar)
+	defer func() {
+		if originalValue != "" {
+			os.Setenv(testEnvVar, originalValue)
+		} else {
+			os.Unsetenv(testEnvVar)
+		}
+	}()
+
+	tests := []struct {
+		name        string
+		config      *usagedbapi.UsageDBConfig
+		envVarValue string
+		setEnvVar   bool
+		want        string
+		wantErr     bool
+		wantErrMsg  string
+	}{
+		{
+			name: "both connection string and env var set - should error",
+			config: &usagedbapi.UsageDBConfig{
+				ConnectionString:       "direct-connection",
+				ConnectionStringEnvVar: testEnvVar,
+			},
+			envVarValue: "env-connection",
+			setEnvVar:   true,
+			wantErr:     true,
+			wantErrMsg:  "both connection string and connection string env var are set, only one is allowed",
+		},
+		{
+			name: "neither connection string nor env var set - should error",
+			config: &usagedbapi.UsageDBConfig{
+				ConnectionString:       "",
+				ConnectionStringEnvVar: "",
+			},
+			wantErr:    true,
+			wantErrMsg: "connection string and connection string env var are not set, one is required",
+		},
+		{
+			name: "only connection string set - should return connection string",
+			config: &usagedbapi.UsageDBConfig{
+				ConnectionString:       "direct-connection",
+				ConnectionStringEnvVar: "",
+			},
+			want: "direct-connection",
+		},
+		{
+			name: "only env var set with value - should return env var value",
+			config: &usagedbapi.UsageDBConfig{
+				ConnectionString:       "",
+				ConnectionStringEnvVar: testEnvVar,
+			},
+			envVarValue: "env-connection-value",
+			setEnvVar:   true,
+			want:        "env-connection-value",
+		},
+		{
+			name: "only env var set but empty value - should return empty string",
+			config: &usagedbapi.UsageDBConfig{
+				ConnectionString:       "",
+				ConnectionStringEnvVar: testEnvVar,
+			},
+			envVarValue: "",
+			setEnvVar:   true,
+			want:        "",
+		},
+		{
+			name: "env var set but not in environment - should return empty string",
+			config: &usagedbapi.UsageDBConfig{
+				ConnectionString:       "",
+				ConnectionStringEnvVar: "NON_EXISTENT_ENV_VAR",
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup environment variable if needed
+			if tt.setEnvVar {
+				os.Setenv(testEnvVar, tt.envVarValue)
+			} else {
+				os.Unsetenv(testEnvVar)
+			}
+
+			got, err := resolveConnectionString(tt.config)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrMsg)
+				assert.Empty(t, got)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
 		})
 	}
 }
