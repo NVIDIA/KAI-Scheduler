@@ -190,7 +190,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 		})
 	})
 
-	FIt("Reclaim elastic job partially for a distributed job", func(ctx context.Context) {
+	It("Reclaim elastic job partially for a distributed job", func(ctx context.Context) {
 		testCtx = testcontext.GetConnectivity(ctx, Default)
 		parentQueue, reclaimeeQueue, reclaimerQueue = createQueues(4, 2, 2)
 		reclaimeeQueue.Spec.Resources.GPU.OverQuotaWeight = 0
