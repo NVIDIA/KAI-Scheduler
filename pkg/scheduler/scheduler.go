@@ -87,6 +87,7 @@ func NewScheduler(
 		FullHierarchyFairness:       schedulerParams.FullHierarchyFairness,
 		NodeLevelScheduler:          schedulerParams.NodeLevelScheduler,
 		NumOfStatusRecordingWorkers: schedulerParams.NumOfStatusRecordingWorkers,
+		UpdatePodEvictionCondition:  schedulerParams.UpdatePodEvictionCondition,
 	}
 
 	scheduler := &Scheduler{

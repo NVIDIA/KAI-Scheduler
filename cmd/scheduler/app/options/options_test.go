@@ -59,6 +59,7 @@ func TestAddFlags(t *testing.T) {
 		QPS:                               50,
 		Burst:                             300,
 		DetailedFitErrors:                 false,
+		UpdatePodEvictionCondition:        false,
 		UseSchedulingSignatures:           true,
 		NodeLevelScheduler:                false,
 		AllowConsolidatingReclaim:         true,

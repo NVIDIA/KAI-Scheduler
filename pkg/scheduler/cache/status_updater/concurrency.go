@@ -35,7 +35,7 @@ func (su *defaultStatusUpdater) keyForPodLabelsPayload(name, namespace string, u
 }
 
 func (su *defaultStatusUpdater) processPayload(ctx context.Context, payload *updatePayload) {
-	updateData, found := su.loadInflighUpdate(payload)
+	updateData, found := su.loadInflightUpdate(payload)
 	if !found {
 		return
 	}
@@ -48,7 +48,7 @@ func (su *defaultStatusUpdater) processPayload(ctx context.Context, payload *upd
 	}
 }
 
-func (su *defaultStatusUpdater) loadInflighUpdate(payload *updatePayload) (*inflightUpdate, bool) {
+func (su *defaultStatusUpdater) loadInflightUpdate(payload *updatePayload) (*inflightUpdate, bool) {
 	var data any
 	var found bool
 	switch {

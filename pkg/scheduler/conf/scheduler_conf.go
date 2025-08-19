@@ -42,6 +42,7 @@ type SchedulerParams struct {
 	GlobalDefaultStalenessGracePeriod time.Duration             `json:"globalDefaultStalenessGracePeriod,omitempty"`
 	SchedulePeriod                    time.Duration             `json:"schedulePeriod,omitempty"`
 	DetailedFitErrors                 bool                      `json:"detailedFitErrors,omitempty"`
+	UpdatePodEvictionCondition        bool                      `json:"updatePodEvictionCondition,omitempty"`
 }
 
 // SchedulerConfiguration defines the configuration of scheduler.
