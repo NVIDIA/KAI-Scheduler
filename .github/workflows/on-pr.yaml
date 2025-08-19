@@ -77,7 +77,8 @@ jobs:
       - name: Extract package version
         id: package_version
         run: |
-          PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)
+          GIT_REV=$(git rev-parse --short HEAD | sed 's/^0*//')
+          PACKAGE_VERSION=0.0.0-$GIT_REV
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
           echo $PACKAGE_VERSION
