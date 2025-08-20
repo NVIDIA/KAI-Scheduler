@@ -863,7 +863,6 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 			// Should return 1 resource for all core tasks (no elastic tasks)
 			Expect(len(result)).To(Equal(1))
 			Expect(result[0]).ToNot(BeNil())
-
 			Expect(result[0].Cpu()).To(Equal(2000.0)) // Combined resources
 		})
 
