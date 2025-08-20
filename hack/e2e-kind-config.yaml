@@ -14,3 +14,6 @@ nodes:
 - role: worker
   labels:
     run.ai/simulated-gpu-node-pool: default
+- role: worker
+  labels:
+    run.ai/simulated-gpu-node-pool: default
