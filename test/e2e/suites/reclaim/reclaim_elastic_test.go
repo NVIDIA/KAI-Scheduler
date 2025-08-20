@@ -14,7 +14,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -190,7 +192,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 
 	It("Reclaim elastic job partially for a distributed job", func(ctx context.Context) {
 		testCtx = testcontext.GetConnectivity(ctx, Default)
-		parentQueue, reclaimeeQueue, reclaimerQueue = createQueues(3, 1, 2)
+		parentQueue, reclaimeeQueue, reclaimerQueue = createQueues(4, 2, 2)
 		reclaimeeQueue.Spec.Resources.GPU.OverQuotaWeight = 0
 		testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 		reclaimeeNamespace = queue.GetConnectedNamespaceToQueue(reclaimeeQueue)
@@ -204,6 +206,8 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
 			"elastic-reclaimee-job", reclaimeeQueue, 3, nil,
 			reclaimeePodRequirements)
+		Expect(testCtx.ControllerClient.Patch(
+			ctx, reclaimeePodGroup, client.RawPatch(types.JSONPatchType, []byte(`[{"op": "replace", "path": "/spec/minMember", "value": 2}]`)))).To(Succeed())
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimeeNamespace, reclaimeePods)
 
 		// reclaimer job
@@ -225,7 +229,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 				LabelSelector: fmt.Sprintf("%s=%s", podGroupLabelName, reclaimeePodGroup.Name),
 			})
 			Expect(err).To(Succeed())
-			return len(pods.Items) == 1
+			return len(pods.Items) == 2
 		})
 	})
 	It("Reclaim elastic job with min runtime protecting", func(ctx context.Context) {

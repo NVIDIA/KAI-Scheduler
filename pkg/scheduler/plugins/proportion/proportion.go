@@ -139,23 +139,43 @@ func (pp *proportionPlugin) reclaimableFn(
 
 func (pp *proportionPlugin) getVictimResources(victim *api.VictimInfo) []*resource_info.Resource {
 	var victimResources []*resource_info.Resource
-	if len(victim.Tasks) > int(victim.Job.MinAvailable) {
-		elasticTasks := victim.Tasks[victim.Job.MinAvailable:]
-		for _, task := range elasticTasks {
-			resources := getResources(pp.allowConsolidatingReclaim, task)
-			if resources == nil {
-				continue
-			}
-			victimResources = append(victimResources, resources)
+	elasticTasks, coreTasks := splitVictimTasks(victim.Tasks, victim.Job.MinAvailable)
+
+	// Process elastic tasks individually
+	for _, task := range elasticTasks {
+		resources := getResources(pp.allowConsolidatingReclaim, task)
+		if resources == nil {
+			continue
 		}
+		victimResources = append(victimResources, resources)
 	}
 
-	resources := getResources(pp.allowConsolidatingReclaim, victim.Tasks[:victim.Job.MinAvailable]...)
+	// Process core tasks as a group
+	resources := getResources(pp.allowConsolidatingReclaim, coreTasks...)
 	if resources != nil {
 		victimResources = append(victimResources, resources)
 	}
 
 	return victimResources
+}
+
+// splitVictimTasks safely splits victim tasks into elastic and core tasks
+// Returns (elasticTasks, coreTasks)
+func splitVictimTasks(tasks []*pod_info.PodInfo, minAvailable int32) ([]*pod_info.PodInfo, []*pod_info.PodInfo) {
+	totalTasks := len(tasks)
+	minAvailableInt := int(minAvailable)
+
+	// Handle case where minAvailable is greater than or equal to the number of tasks
+	if minAvailableInt >= totalTasks {
+		// All tasks are considered core tasks, no elastic tasks
+		return nil, tasks
+	}
+
+	// Normal case: split tasks into elastic and core
+	elasticTasks := tasks[minAvailableInt:]
+	coreTasks := tasks[:minAvailableInt]
+
+	return elasticTasks, coreTasks
 }
 
 func getResources(ignoreReallocatedTasks bool, pods ...*pod_info.PodInfo) *resource_info.Resource {
