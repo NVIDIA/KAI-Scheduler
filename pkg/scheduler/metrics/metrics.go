@@ -51,6 +51,9 @@ var (
 	queueFairShareCPU           *prometheus.GaugeVec
 	queueFairShareMemory        *prometheus.GaugeVec
 	queueFairShareGPU           *prometheus.GaugeVec
+	queueCPUUsage               *prometheus.GaugeVec
+	queueMemoryUsage            *prometheus.GaugeVec
+	queueGPUUsage               *prometheus.GaugeVec
 )
 
 func init() {
@@ -168,6 +171,25 @@ func InitMetrics(namespace string) {
 			Name:      "queue_fair_share_gpu",
 			Help:      "GPU Fair share of queue, as a gauge. Values in GPU devices",
 		}, []string{"queue_name"})
+
+	queueCPUUsage = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: namespace,
+			Name:      "queue_cpu_usage_cores",
+			Help:      "CPU usage of queue, as a gauge. Value is proportional to cpu*hours usage with time decay applied",
+		}, []string{"queue_name"})
+	queueMemoryUsage = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: namespace,
+			Name:      "queue_memory_usage_gb",
+			Help:      "Memory usage of queue, as a gauge. Value is proportional to memory*hours usage with time decay applied",
+		}, []string{"queue_name"})
+	queueGPUUsage = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: namespace,
+			Name:      "queue_gpu_usage_devices",
+			Help:      "GPU usage of queue, as a gauge. Value is proportional to gpu*hours usage with time decay applied",
+		}, []string{"queue_name"})
 }
 
 // UpdateOpenSessionDuration updates latency for open session, including all plugins
@@ -240,6 +262,19 @@ func ResetQueueFairShare() {
 	queueFairShareCPU.Reset()
 	queueFairShareMemory.Reset()
 	queueFairShareGPU.Reset()
+}
+
+// UpdateQueueUsage updates usage of queue for a resource
+func UpdateQueueUsage(queueName string, cpu, memory, gpu float64) {
+	queueCPUUsage.WithLabelValues(queueName).Set(cpu)
+	queueMemoryUsage.WithLabelValues(queueName).Set(memory)
+	queueGPUUsage.WithLabelValues(queueName).Set(gpu)
+}
+
+func ResetQueueUsage() {
+	queueCPUUsage.Reset()
+	queueMemoryUsage.Reset()
+	queueGPUUsage.Reset()
 }
 
 // RegisterPreemptionAttempts records number of attempts for preemption

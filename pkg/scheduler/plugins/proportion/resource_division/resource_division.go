@@ -23,18 +23,18 @@ type remainingRequestedResource struct {
 	remainingAmount float64
 }
 
-func SetResourcesShare(totalResource rs.ResourceQuantities, queues map[common_info.QueueID]*rs.QueueAttributes) {
+func SetResourcesShare(totalResource, totalUsageCapacity rs.ResourceQuantities, kValue float64, queues map[common_info.QueueID]*rs.QueueAttributes) {
 	for _, resource := range rs.AllResources {
-		setResourceShare(totalResource[resource], resource, queues)
+		setResourceShare(totalResource[resource], totalUsageCapacity[resource], kValue, resource, queues)
 	}
 	reportDivisionResult(queues)
 }
 
-func setResourceShare(totalAmount float64, resourceName rs.ResourceName, queues map[common_info.QueueID]*rs.QueueAttributes) float64 {
+func setResourceShare(totalAmount, totalUsageCapacity, kValue float64, resourceName rs.ResourceName, queues map[common_info.QueueID]*rs.QueueAttributes) float64 {
 	log.InfraLogger.V(6).Infof("About to start calculating %v fairShare, totalAmount: <%v>", resourceName, totalAmount)
 	remainingAmount := setDeservedResource(totalAmount, queues, resourceName)
 	if remainingAmount > 0 {
-		remainingAmount = divideOverQuotaResource(remainingAmount, queues, resourceName)
+		remainingAmount = divideOverQuotaResource(remainingAmount, totalUsageCapacity, kValue, queues, resourceName)
 	} else {
 		remainingAmount = 0
 	}
@@ -54,24 +54,34 @@ func reportDivisionResult(queues map[common_info.QueueID]*rs.QueueAttributes) {
 			gpuResourceShare.FairShare,
 		)
 
+		metrics.UpdateQueueUsage(
+			queue.Name,
+			cpuResourceShare.GetUsage(),
+			memoryResourceShare.GetUsage(),
+			gpuResourceShare.GetUsage(),
+		)
+
 		log.InfraLogger.V(3).Infof("Resource division result for queue <%v>: "+
 			"Queue Priority: <%d>, "+
-			"GPU: deserved: <%v>, requested: <%v>, maxAllowed: <%v>, fairShare: <%v> "+
-			"CPU (cores): deserved: <%v>, requested: <%v>, maxAllowed: <%v>, fairShare: <%v> "+
-			"memory (GB): deserved: <%v>, requested: <%v>, maxAllowed: <%v>, fairShare: <%v> ",
+			"GPU: deserved: <%v>, requested: <%v>, maxAllowed: <%v>, usage: <%v>, fairShare: <%v> "+
+			"CPU (cores): deserved: <%v>, requested: <%v>, maxAllowed: <%v>, usage: <%v>, fairShare: <%v> "+
+			"memory (GB): deserved: <%v>, requested: <%v>, maxAllowed: <%v>, usage: <%v>, fairShare: <%v> ",
 			queue.Name,
 			queue.Priority,
 			resource_info.HumanizeResource(gpuResourceShare.Deserved, 1),
 			resource_info.HumanizeResource(gpuResourceShare.GetRequestableShare(), 1),
 			resource_info.HumanizeResource(gpuResourceShare.MaxAllowed, 1),
+			resource_info.HumanizeResource(gpuResourceShare.GetUsage(), 1),
 			resource_info.HumanizeResource(gpuResourceShare.FairShare, 1),
 			resource_info.HumanizeResource(cpuResourceShare.Deserved, resource_info.MilliCPUToCores),
 			resource_info.HumanizeResource(cpuResourceShare.GetRequestableShare(), resource_info.MilliCPUToCores),
 			resource_info.HumanizeResource(cpuResourceShare.MaxAllowed, resource_info.MilliCPUToCores),
+			resource_info.HumanizeResource(cpuResourceShare.GetUsage(), resource_info.MilliCPUToCores),
 			resource_info.HumanizeResource(cpuResourceShare.FairShare, resource_info.MilliCPUToCores),
 			resource_info.HumanizeResource(memoryResourceShare.Deserved, resource_info.MemoryToGB),
 			resource_info.HumanizeResource(memoryResourceShare.GetRequestableShare(), resource_info.MemoryToGB),
 			resource_info.HumanizeResource(memoryResourceShare.MaxAllowed, resource_info.MemoryToGB),
+			resource_info.HumanizeResource(memoryResourceShare.GetUsage(), resource_info.MemoryToGB),
 			resource_info.HumanizeResource(memoryResourceShare.FairShare, resource_info.MemoryToGB))
 	}
 }
@@ -95,7 +105,7 @@ func setDeservedResource(
 	return remainingAmount
 }
 
-func divideOverQuotaResource(totalResourceAmount float64, queues map[common_info.QueueID]*rs.QueueAttributes,
+func divideOverQuotaResource(totalResourceAmount, totalUsageCapacity, kValue float64, queues map[common_info.QueueID]*rs.QueueAttributes,
 	resourceName rs.ResourceName) (remainingAmount float64) {
 	queuesByPriority, priorities := getQueuesByPriority(queues)
 	remainingRequested := make(map[int]map[common_info.QueueID]*remainingRequestedResource)
@@ -103,7 +113,7 @@ func divideOverQuotaResource(totalResourceAmount float64, queues map[common_info
 
 	for _, priority := range priorities {
 		var newRemainingRequested map[common_info.QueueID]*remainingRequestedResource
-		remainingAmount, newRemainingRequested = divideUpToFairShare(remainingAmount, queuesByPriority[priority], resourceName)
+		remainingAmount, newRemainingRequested = divideUpToFairShare(remainingAmount, totalUsageCapacity, kValue, queuesByPriority[priority], resourceName)
 		if remainingRequested[priority] == nil {
 			remainingRequested[priority] = make(map[common_info.QueueID]*remainingRequestedResource)
 		}
@@ -148,9 +158,10 @@ func getQueuesByPriority(queues map[common_info.QueueID]*rs.QueueAttributes) (ma
 	return queuesByPriority, priorities
 }
 
-func divideUpToFairShare(totalResourceAmount float64, queues map[common_info.QueueID]*rs.QueueAttributes,
+func divideUpToFairShare(totalResourceAmount, totalUsageCapacity, kValue float64, queues map[common_info.QueueID]*rs.QueueAttributes,
 	resourceName rs.ResourceName) (remainingAmount float64, remainingRequested map[common_info.QueueID]*remainingRequestedResource) {
 	remainingRequested = map[common_info.QueueID]*remainingRequestedResource{}
+
 	for {
 		shouldRunAnotherRound := false
 		amountToGiveInCurrentRound := totalResourceAmount

@@ -52,6 +52,7 @@ const (
 
 type proportionPlugin struct {
 	totalResource       rs.ResourceQuantities
+	totalUsageCapacity  rs.ResourceQuantities
 	queues              map[common_info.QueueID]*rs.QueueAttributes
 	jobSimulationQueues map[common_info.QueueID]*rs.QueueAttributes
 	// Arguments given for the plugin
@@ -220,6 +221,11 @@ func (pp *proportionPlugin) calculateResourcesProportion(ssn *framework.Session)
 	log.InfraLogger.V(6).Infof("Calculating resource proportion")
 
 	pp.setTotalResources(ssn)
+	pp.totalUsageCapacity = rs.EmptyResourceQuantities()
+	pp.totalUsageCapacity[rs.GpuResource] = ssn.ResourceUsage.ClusterCapacity.GPU
+	pp.totalUsageCapacity[rs.CpuResource] = ssn.ResourceUsage.ClusterCapacity.CPU
+	pp.totalUsageCapacity[rs.MemoryResource] = ssn.ResourceUsage.ClusterCapacity.Memory
+
 	pp.createQueueAttributes(ssn)
 	log.InfraLogger.V(3).Infof("Total allocatable resources are <%s>, number of nodes: <%d>, number of "+
 		"queues: <%d>", pp.totalResource, len(ssn.Nodes), len(pp.queues))
@@ -322,6 +328,11 @@ func (pp *proportionPlugin) createQueueResourceAttrs(ssn *framework.Session) {
 		overQuotaWeight = queue.Resources.GPU.OverQuotaWeight
 		queueAttributes.SetQuotaResources(rs.GpuResource, deserved, limit, overQuotaWeight)
 
+		usage, found := ssn.ResourceUsage.Queues[queue.UID]
+		if found {
+			queueAttributes.SetResourceUsage(*usage)
+		}
+
 		pp.queues[queue.UID] = queueAttributes
 		log.InfraLogger.V(7).Infof("Added queue attributes for queue <%s>", queue.Name)
 	}
@@ -380,22 +391,23 @@ func (pp *proportionPlugin) updateQueuesResourceUsageForPendingJob(queueId commo
 
 func (pp *proportionPlugin) setFairShare() {
 	topQueues := pp.getTopQueues()
+	metrics.ResetQueueUsage()
 	metrics.ResetQueueFairShare()
-	pp.setFairShareForQueues(pp.totalResource, topQueues)
+	pp.setFairShareForQueues(pp.totalResource, pp.totalUsageCapacity, topQueues)
 }
 
-func (pp *proportionPlugin) setFairShareForQueues(totalResources rs.ResourceQuantities,
+func (pp *proportionPlugin) setFairShareForQueues(totalResources, totalUsageCapacity rs.ResourceQuantities,
 	queues map[common_info.QueueID]*rs.QueueAttributes) {
 
 	if len(queues) == 0 {
 		return
 	}
 
-	resource_division.SetResourcesShare(totalResources, queues)
+	resource_division.SetResourcesShare(totalResources, totalUsageCapacity, 1, queues)
 	for _, queue := range queues {
 		childQueues := pp.getChildQueues(queue)
 		resources := queue.GetFairShare()
-		pp.setFairShareForQueues(resources, childQueues)
+		pp.setFairShareForQueues(resources, totalUsageCapacity, childQueues)
 	}
 }
 

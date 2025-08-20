@@ -11,6 +11,7 @@ import (
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 )
 
 const (
@@ -180,4 +181,18 @@ func (qrs *QueueResourceShare) SetQuotaResources(resource ResourceName, deserved
 
 	// invalidate cache for deserved share
 	qrs.lastDeservedShare = nil
+}
+
+func (qrs *QueueResourceShare) GetResourceUsage() queue_info.QueueUsage {
+	return queue_info.QueueUsage{
+		GPU:    qrs.GPU.Usage,
+		CPU:    qrs.CPU.Usage,
+		Memory: qrs.Memory.Usage,
+	}
+}
+
+func (qrs *QueueResourceShare) SetResourceUsage(usage queue_info.QueueUsage) {
+	qrs.GPU.Usage = usage.GPU
+	qrs.CPU.Usage = usage.CPU
+	qrs.Memory.Usage = usage.Memory
 }

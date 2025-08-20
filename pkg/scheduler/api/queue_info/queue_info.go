@@ -35,6 +35,7 @@ type QueueInfo struct {
 	ParentQueue       common_info.QueueID
 	ChildQueues       []common_info.QueueID
 	Resources         QueueQuota
+	ResourceUsage     QueueUsage
 	Priority          int
 	CreationTimestamp metav1.Time
 	PreemptMinRuntime *metav1.Duration
