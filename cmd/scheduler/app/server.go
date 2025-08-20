@@ -193,7 +193,11 @@ func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMu
 	// Prepare event clients.
 	broadcaster := record.NewBroadcaster()
 	broadcaster.StartRecordingToSink(&corev1.EventSinkImpl{Interface: leaderElectionClient.CoreV1().Events(opt.Namspace)})
-	eventRecorder := broadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: opt.SchedulerName})
+	componentName := opt.SchedulerName
+	if len(opt.NodePoolLabelValue) > 0 {
+		componentName = fmt.Sprintf("%s-%s", opt.SchedulerName, opt.NodePoolLabelValue)
+	}
+	eventRecorder := broadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: componentName})
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -204,7 +208,7 @@ func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMu
 
 	rl, err := resourcelock.New(resourcelock.LeasesResourceLock,
 		opt.Namspace,
-		opt.SchedulerName,
+		componentName,
 		leaderElectionClient.CoreV1(),
 		leaderElectionClient.CoordinationV1(),
 		resourcelock.ResourceLockConfig{
