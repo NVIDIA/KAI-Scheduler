@@ -784,7 +784,9 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 			// Create a victim with only 1 task but MinAvailable = 2
 			// This should cause a slice bounds panic without the fix
 			victim := &api.VictimInfo{
-				Job: &podgroup_info.PodGroupInfo{},
+				Job: &podgroup_info.PodGroupInfo{
+					MinAvailable: 2,
+				},
 				Tasks: []*pod_info.PodInfo{
 					{
 						Status:           pod_status.Pending,
@@ -792,7 +794,6 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 					},
 				},
 			}
-			victim.Job.SetDefaultMinAvailable(2)
 
 			// This should not panic
 			result := plugin.getVictimResources(victim)
@@ -809,7 +810,9 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 
 			// Create a victim with 3 tasks but MinAvailable = 1
 			victim := &api.VictimInfo{
-				Job: &podgroup_info.PodGroupInfo{},
+				Job: &podgroup_info.PodGroupInfo{
+					MinAvailable: 1,
+				},
 				Tasks: []*pod_info.PodInfo{
 					{
 						Status:           pod_status.Pending,
@@ -825,7 +828,6 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 					},
 				},
 			}
-			victim.Job.SetDefaultMinAvailable(1)
 
 			result := plugin.getVictimResources(victim)
 
@@ -844,7 +846,9 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 
 			// Create a victim with 2 tasks and MinAvailable = 2
 			victim := &api.VictimInfo{
-				Job: &podgroup_info.PodGroupInfo{},
+				Job: &podgroup_info.PodGroupInfo{
+					MinAvailable: 2,
+				},
 				Tasks: []*pod_info.PodInfo{
 					{
 						Status:           pod_status.Pending,
@@ -856,7 +860,6 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 					},
 				},
 			}
-			victim.Job.SetDefaultMinAvailable(2)
 
 			result := plugin.getVictimResources(victim)
 
@@ -872,7 +875,9 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 			}
 
 			victim := &api.VictimInfo{
-				Job: &podgroup_info.PodGroupInfo{},
+				Job: &podgroup_info.PodGroupInfo{
+					MinAvailable: 0,
+				},
 				Tasks: []*pod_info.PodInfo{
 					{
 						Status:           pod_status.Pending,
@@ -884,7 +889,6 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 					},
 				},
 			}
-			victim.Job.SetDefaultMinAvailable(0)
 
 			result := plugin.getVictimResources(victim)
 
