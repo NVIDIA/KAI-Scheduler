@@ -20,6 +20,7 @@ limitations under the License.
 package scheduler
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -31,6 +32,8 @@ import (
 	kubeaischedulerver "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	schedcache "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
@@ -42,12 +45,11 @@ import (
 )
 
 type Scheduler struct {
-	cache             schedcache.Cache
-	config            *conf.SchedulerConfiguration
-	schedulerParams   *conf.SchedulerParams
-	schedulerConfPath string
-	schedulePeriod    time.Duration
-	mux               *http.ServeMux
+	cache           schedcache.Cache
+	config          *conf.SchedulerConfiguration
+	schedulerParams *conf.SchedulerParams
+	schedulePeriod  time.Duration
+	mux             *http.ServeMux
 }
 
 func NewScheduler(
@@ -58,10 +60,25 @@ func NewScheduler(
 ) (*Scheduler, error) {
 	kubeClient, kubeAiSchedulerClient, kueueClient := newClients(config)
 
+	actions.InitDefaultActions()
+	plugins.InitDefaultPlugins()
+
+	// Load configuration of scheduler
+	schedConfig, err := conf_util.ResolveConfigurationFromFile(schedulerConfPath)
+	if err != nil {
+		return nil, fmt.Errorf("error resolving configuration from file: %v", err)
+	}
+
+	usageDBClient, err := getUsageDBClient(schedConfig.UsageDBConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error getting usage db client: %v", err)
+	}
+
 	schedulerCacheParams := &schedcache.SchedulerCacheParams{
 		KubeClient:                  kubeClient,
 		KAISchedulerClient:          kubeAiSchedulerClient,
 		KueueClient:                 kueueClient,
+		UsageDBClient:               usageDBClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      schedulerParams.RestrictSchedulingNodes,
@@ -73,30 +90,19 @@ func NewScheduler(
 	}
 
 	scheduler := &Scheduler{
-		schedulerParams:   schedulerParams,
-		schedulerConfPath: schedulerConfPath,
-		cache:             schedcache.New(schedulerCacheParams),
-		schedulePeriod:    schedulerParams.SchedulePeriod,
-		mux:               mux,
+		config:          schedConfig,
+		schedulerParams: schedulerParams,
+		cache:           schedcache.New(schedulerCacheParams),
+		schedulePeriod:  schedulerParams.SchedulePeriod,
+		mux:             mux,
 	}
-
-	actions.InitDefaultActions()
-	plugins.InitDefaultPlugins()
 
 	return scheduler, nil
 }
 
 func (s *Scheduler) Run(stopCh <-chan struct{}) {
-	var err error
-
 	s.cache.Run(stopCh)
 	s.cache.WaitForCacheSync(stopCh)
-
-	// Load configuration of scheduler
-	s.config, err = conf_util.ResolveConfigurationFromFile(s.schedulerConfPath)
-	if err != nil {
-		panic(err)
-	}
 
 	go func() {
 		wait.Until(s.runOnce, s.schedulePeriod, stopCh)
@@ -138,4 +144,9 @@ func newClients(config *rest.Config) (kubernetes.Interface, kubeaischedulerver.I
 	k8cClientConfig.AcceptContentTypes = "application/vnd.kubernetes.protobuf"
 	k8cClientConfig.ContentType = "application/vnd.kubernetes.protobuf"
 	return kubernetes.NewForConfigOrDie(k8cClientConfig), kubeaischedulerver.NewForConfigOrDie(config), kueue.NewForConfigOrDie(config)
+}
+
+func getUsageDBClient(dbConfig *usagedbapi.UsageDBConfig) (usagedbapi.Interface, error) {
+	resolver := usagedb.NewClientResolver(nil)
+	return resolver.GetClient(dbConfig)
 }
