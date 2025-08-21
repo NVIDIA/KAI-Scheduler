@@ -102,7 +102,10 @@ func (su *defaultStatusUpdater) updatePodGroup(
 	} else {
 		// Move the update to the applied cache
 		su.appliedPodGroupUpdates.Store(key, updateData)
-		su.inFlightPodGroups.Delete(key)
+		_, loaded := su.inFlightPodGroups.LoadAndDelete(key)
+		if !loaded {
+			su.appliedPodGroupUpdates.Delete(key)
+		}
 	}
 }
 
