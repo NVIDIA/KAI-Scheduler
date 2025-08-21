@@ -29,8 +29,8 @@ import (
 
 const (
 	binPackingPluginName = "binpack"
-	spreadingPluginName  = "spread"
-	defaultPluginName    = binPackingPluginName
+	SpreadingPluginName  = "spread"
+	DefaultPluginName    = binPackingPluginName
 
 	gpuIndexEnvVarName = "NVIDIA_VISIBLE_DEVICES"
 )
@@ -74,7 +74,7 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 		})
 
 		AfterAll(func(ctx context.Context) {
-			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, defaultPluginName); err != nil {
+			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, DefaultPluginName); err != nil {
 				Fail(fmt.Sprintf("Failed to patch scheduler config with default plugin: %v", err))
 			}
 		})
@@ -141,13 +141,13 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 
 	Context("Spreading", func() {
 		BeforeAll(func(ctx context.Context) {
-			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, spreadingPluginName); err != nil {
+			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, SpreadingPluginName); err != nil {
 				Fail(fmt.Sprintf("Failed to patch scheduler config with spreading plugin: %v", err))
 			}
 		})
 
 		AfterAll(func(ctx context.Context) {
-			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, defaultPluginName); err != nil {
+			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, DefaultPluginName); err != nil {
 				Fail(fmt.Sprintf("Failed to patch scheduler config with default plugin: %v", err))
 			}
 		})
