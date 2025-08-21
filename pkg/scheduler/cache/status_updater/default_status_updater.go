@@ -247,7 +247,7 @@ func (su *defaultStatusUpdater) recordStaleJobEvent(job *podgroup_info.PodGroupI
 
 	totalActivePods := 0
 	totalMinAvailable := int32(0)
-	for _, subGroup := range job.GetActiveSubGroupInfos() {
+	for _, subGroup := range job.GetSubGroups() {
 		activeTasks := subGroup.GetNumActiveUsedTasks()
 		minAvailable := subGroup.GetMinAvailable()
 		totalActivePods += activeTasks
@@ -266,7 +266,7 @@ func (su *defaultStatusUpdater) recordStaleJobEvent(job *podgroup_info.PodGroupI
 
 func (su *defaultStatusUpdater) recordJobNotReadyEvent(job *podgroup_info.PodGroupInfo) {
 	message := fmt.Sprintf("Job is not ready for scheduling.")
-	for _, subGroup := range job.GetActiveSubGroupInfos() {
+	for _, subGroup := range job.GetSubGroups() {
 		if !subGroup.IsReadyForScheduling() {
 			if subGroup.GetName() == podgroup_info.DefaultSubGroup {
 				message = message + fmt.Sprintf(" Waiting for %d pods, currently %d exist, %d are gated",

@@ -133,7 +133,7 @@ func (pgi *PodGroupInfo) GetAllPodsMap() pod_info.PodsMap {
 	return allPods
 }
 
-func (pgi *PodGroupInfo) GetActiveSubGroupInfos() map[string]*SubGroupInfo {
+func (pgi *PodGroupInfo) GetSubGroups() map[string]*SubGroupInfo {
 	return pgi.SubGroups
 }
 
@@ -384,7 +384,7 @@ func (pgi *PodGroupInfo) GetTasksActiveAllocatedReqResource() *resource_info.Res
 }
 
 func (pgi *PodGroupInfo) IsReadyForScheduling() bool {
-	for _, subGroup := range pgi.GetActiveSubGroupInfos() {
+	for _, subGroup := range pgi.GetSubGroups() {
 		if !subGroup.IsReadyForScheduling() {
 			return false
 		}
@@ -405,7 +405,7 @@ func (pgi *PodGroupInfo) IsStale() bool {
 	if totalActivePods == 0 {
 		return false
 	}
-	for _, subGroup := range pgi.GetActiveSubGroupInfos() {
+	for _, subGroup := range pgi.GetSubGroups() {
 		if !subGroup.IsGangSatisfied() {
 			return true
 		}
@@ -484,7 +484,7 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 func (pgi *PodGroupInfo) String() string {
 	res := ""
 
-	for _, subGroup := range pgi.GetActiveSubGroupInfos() {
+	for _, subGroup := range pgi.GetSubGroups() {
 		res = res + fmt.Sprintf("\t\t subGroup %s: minAvailable(%v)\n",
 			subGroup.name, subGroup.minAvailable)
 	}

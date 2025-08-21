@@ -35,7 +35,7 @@ func GetTasksToAllocate(
 	priorityQueueMap := getTasksPriorityQueuePerSubGroup(podGroupInfo, taskOrderFn, isRealAllocation)
 	maxNumOfTasksToAllocateMap := getNumTasksToAllocatePerSubGroup(podGroupInfo, isRealAllocation)
 
-	subGroupPriorityQueue := getSubGroupsPriorityQueue(podGroupInfo.GetActiveSubGroupInfos(), subGroupOrderFn)
+	subGroupPriorityQueue := getSubGroupsPriorityQueue(podGroupInfo.GetSubGroups(), subGroupOrderFn)
 	maxNumOfSubGroups := getNumOfSubGroupsToAllocate(podGroupInfo)
 	numAllocatedSubGroups := 0
 
@@ -111,7 +111,7 @@ func getTasksPriorityQueuePerSubGroup(
 	podGroupInfo *PodGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) map[string]*scheduler_util.PriorityQueue {
 	priorityQueuesMap := map[string]*scheduler_util.PriorityQueue{}
-	for name, subGroup := range podGroupInfo.GetActiveSubGroupInfos() {
+	for name, subGroup := range podGroupInfo.GetSubGroups() {
 		priorityQueue := scheduler_util.NewPriorityQueue(taskOrderFn, scheduler_util.QueueCapacityInfinite)
 		for _, task := range subGroup.podInfos {
 			if task.ShouldAllocate(isRealAllocation) {
@@ -134,7 +134,7 @@ func getSubGroupsPriorityQueue(subGroups map[string]*SubGroupInfo,
 
 func getNumTasksToAllocatePerSubGroup(podGroupInfo *PodGroupInfo, isRealAllocation bool) map[string]int {
 	maxTasksToAllocate := map[string]int{}
-	for name, subGroup := range podGroupInfo.GetActiveSubGroupInfos() {
+	for name, subGroup := range podGroupInfo.GetSubGroups() {
 		numAllocatedTasks := subGroup.GetNumActiveAllocatedTasks()
 		if numAllocatedTasks >= int(subGroup.minAvailable) {
 			numTasksToAllocate := getNumAllocatableTasks(subGroup, isRealAllocation)
@@ -157,7 +157,7 @@ func getNumAllocatableTasks(subGroup *SubGroupInfo, isRealAllocation bool) int {
 }
 
 func getNumOfSubGroupsToAllocate(podGroupInfo *PodGroupInfo) int {
-	for _, subGroup := range podGroupInfo.GetActiveSubGroupInfos() {
+	for _, subGroup := range podGroupInfo.GetSubGroups() {
 		allocatedTasks := subGroup.GetNumActiveAllocatedTasks()
 		if allocatedTasks >= int(subGroup.GetMinAvailable()) {
 			return 1
