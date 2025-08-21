@@ -18,7 +18,7 @@ type FakeClient struct {
 
 var _ api.Interface = &FakeClient{}
 
-func NewFakeClient(_ string) (api.Interface, error) {
+func NewFakeClient(_ string, _ *api.UsageParams) (api.Interface, error) {
 	return &FakeClient{
 		resourceUsage: queue_info.NewClusterUsage(),
 	}, nil
