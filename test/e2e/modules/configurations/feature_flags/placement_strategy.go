@@ -15,7 +15,8 @@ import (
 
 const (
 	binpackStrategy = "binpack"
-	spreadStrategy  = "spread"
+	SpreadStrategy  = "spread"
+	DefaultStrategy = binpackStrategy
 	gpuResource     = "gpu"
 	cpuResource     = "cpu"
 )
@@ -31,7 +32,7 @@ func SetPlacementStrategy(
 		innerConfig := config{}
 
 		actions := []string{"allocate"}
-		if placementArguments[gpuResource] != spreadStrategy && placementArguments[cpuResource] != spreadStrategy {
+		if placementArguments[gpuResource] != SpreadStrategy && placementArguments[cpuResource] != SpreadStrategy {
 			actions = append(actions, "consolidation")
 		}
 		actions = append(actions, []string{"reclaim", "preempt", "stalegangeviction"}...)
