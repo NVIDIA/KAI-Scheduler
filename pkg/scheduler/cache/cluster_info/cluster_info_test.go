@@ -980,7 +980,9 @@ func TestSnapshotPodGroups(t *testing.T) {
 					Queue: "queue-0",
 					SubGroups: map[string]*podgroup_info.SubGroupInfo{
 						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
-							"test-pod": {},
+							"test-pod": {
+								UID: "test-pod",
+							},
 						}),
 					},
 				},
