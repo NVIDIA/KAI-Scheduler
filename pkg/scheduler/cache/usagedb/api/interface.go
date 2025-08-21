@@ -35,7 +35,7 @@ type UsageParams struct {
 	HalfLifePeriod *time.Duration `yaml:"halfLifePeriod" json:"halfLifePeriod"`
 	// Window size of the usage. Default is 1 hour.
 	WindowSize *time.Duration `yaml:"windowSize" json:"windowSize"`
-	// Window type for time-series aggregation. If not set, defaults to tumbling.
+	// Window type for time-series aggregation. If not set, defaults to sliding.
 	WindowType *WindowType `yaml:"windowType" json:"windowType"`
 }
 
