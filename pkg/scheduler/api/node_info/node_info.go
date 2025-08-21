@@ -637,8 +637,9 @@ func getNodeGpuMemory(node *v1.Node) (int64, bool) {
 		gpuMemoryLabelValue = convertBytesToMib(gpuMemoryLabelValue)
 	}
 
-	gpuMemoryInMb := convertMibToMb(gpuMemoryLabelValue)
-	return gpuMemoryInMb - (gpuMemoryInMb % 100), true // Floor the memory count to make sure its divided by 100 so there will not be 2 jobs that get same bytes
+	// Use the original MiB value from the node label, don't convert to MB
+	// The flooring should be done in MiB, not MB to preserve accuracy
+	return gpuMemoryLabelValue - (gpuMemoryLabelValue % 100), true // Floor the memory count to make sure its divided by 100 so there will not be 2 jobs that get same bytes
 }
 
 func checkGpuMemoryIsInMib(gpuMemoryValue int64) bool {
