@@ -79,7 +79,6 @@ func BuildSchedulerParams(opt *options.ServerOption) *conf.SchedulerParams {
 		SchedulerName:                     opt.SchedulerName,
 		RestrictSchedulingNodes:           opt.RestrictSchedulingNodes,
 		PartitionParams:                   schedulingPartitionParams,
-		IsInferencePreemptible:            opt.IsInferencePreemptible,
 		MaxNumberConsolidationPreemptees:  opt.MaxNumberConsolidationPreemptees,
 		ScheduleCSIStorage:                opt.ScheduleCSIStorage,
 		UseSchedulingSignatures:           opt.UseSchedulingSignatures,

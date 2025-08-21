@@ -68,7 +68,6 @@ type ServerOption struct {
 	PyroscopeMutexProfilerRate        int
 	PyroscopeBlockProfilerRate        int
 	Verbosity                         int
-	IsInferencePreemptible            bool
 	MaxNumberConsolidationPreemptees  int
 	DetailedFitErrors                 bool
 	UpdatePodEvictionCondition        bool

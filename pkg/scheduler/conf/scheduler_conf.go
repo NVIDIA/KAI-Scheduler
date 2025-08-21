@@ -22,16 +22,16 @@ package conf
 import (
 	"time"
 
-	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 )
 
 type SchedulerParams struct {
 	SchedulerName                     string                    `json:"schedulerName,omitempty"`
 	RestrictSchedulingNodes           bool                      `json:"restrictSchedulingNodes,omitempty"`
 	PartitionParams                   *SchedulingNodePoolParams `json:"partitionParams,omitempty"`
-	IsInferencePreemptible            bool                      `json:"isInferencePreemptible,omitempty"`
 	MaxNumberConsolidationPreemptees  int                       `json:"maxNumberConsolidationPreemptees,omitempty"`
 	ScheduleCSIStorage                bool                      `json:"scheduleCSIStorage,omitempty"`
 	UseSchedulingSignatures           bool                      `json:"useSchedulingSignatures,omitempty"`
