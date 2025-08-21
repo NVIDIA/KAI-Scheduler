@@ -1227,9 +1227,9 @@ func TestSnapshotPodGroups(t *testing.T) {
 			assert.Equal(t, expected.Queue, pg.Queue)
 			assert.Equal(t, expected.GetDefaultMinAvailable(), pg.GetDefaultMinAvailable())
 
-			assert.Equal(t, len(expected.GetActiveSubGroupInfos()), len(pg.GetActiveSubGroupInfos()))
-			for _, expectedSubGroup := range expected.GetActiveSubGroupInfos() {
-				for _, subGroup := range pg.GetActiveSubGroupInfos() {
+			assert.Equal(t, len(expected.GetSubGroups()), len(pg.GetSubGroups()))
+			for _, expectedSubGroup := range expected.GetSubGroups() {
+				for _, subGroup := range pg.GetSubGroups() {
 					if expectedSubGroup.GetName() != subGroup.GetName() {
 						continue
 					}

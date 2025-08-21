@@ -24,7 +24,7 @@ func GetTasksToEvict(job *PodGroupInfo, subGroupOrderFn, taskOrderFn common_info
 func getTasksToEvictWithSubGroups(
 	job *PodGroupInfo, reverseSubGroupOrderFn, reverseTaskOrderFn common_info.LessFn,
 ) ([]*pod_info.PodInfo, bool) {
-	subGroupPriorityQueue := getSubGroupsPriorityQueue(job.GetActiveSubGroupInfos(), reverseSubGroupOrderFn)
+	subGroupPriorityQueue := getSubGroupsPriorityQueue(job.GetSubGroups(), reverseSubGroupOrderFn)
 	maxNumOfSubGroups := getNumOfSubGroupsToEvict(job)
 
 	var tasksToEvict []*pod_info.PodInfo
