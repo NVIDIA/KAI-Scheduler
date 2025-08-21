@@ -7,10 +7,12 @@ package topology
 
 import (
 	"context"
+	"fmt"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/configurations/feature_flags"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/pod_group"
@@ -38,10 +40,21 @@ var _ = Describe("Topology", Ordered, func() {
 		testCtx.InitQueues([]*v2.Queue{childQueue, parentQueue})
 
 		testTopologyData, gpuNodesNames = rd.CreateRackZoneTopology(ctx, testCtx.KubeClientset, testCtx.KubeConfig)
+
+		// Set spreading strategy to try and increase the probability of
+		//  out-of-topology allocation more common in case of a bug.
+		if err := feature_flags.SetPlacementStrategy(ctx, testCtx, feature_flags.SpreadStrategy); err != nil {
+			Fail(fmt.Sprintf("Failed to patch scheduler config with spreading plugin: %v", err))
+		}
 	})
 
 	AfterAll(func(ctx context.Context) {
+		if err := feature_flags.SetPlacementStrategy(ctx, testCtx, feature_flags.DefaultStrategy); err != nil {
+			Fail(fmt.Sprintf("Failed to patch scheduler config with spreading plugin: %v", err))
+		}
+
 		rd.CleanRackZoneTopology(ctx, testTopologyData, testCtx.KubeConfig)
+
 		testCtx.ClusterCleanup(ctx)
 	})
 
