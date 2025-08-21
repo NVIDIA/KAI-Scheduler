@@ -164,20 +164,19 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.Name = pg.Name
 	pgi.Namespace = pg.Namespace
 	pgi.NamespacedName = fmt.Sprintf("%s/%s", pgi.Namespace, pgi.Name)
-	if len(pg.Spec.SubGroups) == 0 {
-		if pgi.SubGroups == nil {
-			pgi.SubGroups = map[string]*SubGroupInfo{}
-		}
-
-		if _, exists := pgi.SubGroups[DefaultSubGroup]; !exists {
-			pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, max(pg.Spec.MinMember, 1))
-		}
-	}
 	pgi.Queue = common_info.QueueID(pg.Spec.Queue)
 	pgi.CreationTimestamp = pg.GetCreationTimestamp()
 	pgi.PodGroup = pg
 	pgi.PodGroupUID = pg.UID
 
+	if len(pg.Spec.SubGroups) == 0 {
+		if pgi.SubGroups == nil {
+			pgi.SubGroups = map[string]*SubGroupInfo{}
+		}
+		if _, exists := pgi.SubGroups[DefaultSubGroup]; !exists {
+			pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, max(pg.Spec.MinMember, 1))
+		}
+	}
 	for _, sg := range pg.Spec.SubGroups {
 		subGroupInfo := FromSubGroup(&sg)
 		pgi.SubGroups[subGroupInfo.name] = subGroupInfo
