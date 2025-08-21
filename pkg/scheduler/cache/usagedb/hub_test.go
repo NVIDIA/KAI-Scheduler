@@ -16,15 +16,15 @@ import (
 )
 
 // mockClientFn is a helper function that creates a mock client
-func mockClientFn(connectionString string) (api.Interface, error) {
+func mockClientFn(connectionString string, usageParams *api.UsageParams) (api.Interface, error) {
 	if connectionString == "error-connection" {
 		return nil, fmt.Errorf("mock client error")
 	}
-	return fake.NewFakeClient(connectionString)
+	return fake.NewFakeClient(connectionString, usageParams)
 }
 
 // errorClientFn is a helper function that always returns an error
-func errorClientFn(connectionString string) (api.Interface, error) {
+func errorClientFn(connectionString string, usageParams *api.UsageParams) (api.Interface, error) {
 	return nil, fmt.Errorf("client creation failed for connection: %s", connectionString)
 }
 
@@ -313,10 +313,10 @@ func TestClientResolver_GetClient_Integration(t *testing.T) {
 
 	t.Run("custom client integration", func(t *testing.T) {
 		customClientCreated := false
-		customClientFn := func(connectionString string) (api.Interface, error) {
+		customClientFn := func(connectionString string, usageParams *api.UsageParams) (api.Interface, error) {
 			customClientCreated = true
 			assert.Equal(t, "custom-integration-connection", connectionString)
-			return fake.NewFakeClient(connectionString)
+			return fake.NewFakeClient(connectionString, nil)
 		}
 
 		resolver := NewClientResolver(map[string]GetClientFn{

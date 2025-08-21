@@ -13,7 +13,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
-type GetClientFn func(connectionString string) (api.Interface, error)
+type GetClientFn func(connectionString string, usageParams *api.UsageParams) (api.Interface, error)
 
 var defaultClientMap = map[string]GetClientFn{
 	"fake": fake.NewFakeClient,
@@ -58,7 +58,7 @@ func (cr *ClientResolver) GetClient(config *api.UsageDBConfig) (api.Interface, e
 
 	log.InfraLogger.V(3).Infof("getting usage db client of type: %s, connection string: %s", config.ClientType, connectionString)
 
-	return client(connectionString)
+	return client(connectionString, config.GetUsageParams())
 }
 
 func resolveConnectionString(config *api.UsageDBConfig) (string, error) {
