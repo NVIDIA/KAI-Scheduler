@@ -173,11 +173,6 @@ func TestSnapshotUsage(t *testing.T) {
 		{
 			name: "BasicUsage",
 			usage: &queue_info.ClusterUsage{
-				ClusterCapacity: queue_info.QueueUsage{
-					CPU:    10,
-					Memory: 10,
-					GPU:    10,
-				},
 				Queues: map[common_info.QueueID]*queue_info.QueueUsage{
 					"queue-1": {
 						CPU:    10,
@@ -188,11 +183,6 @@ func TestSnapshotUsage(t *testing.T) {
 			},
 			err: nil,
 			expectedUsage: &queue_info.ClusterUsage{
-				ClusterCapacity: queue_info.QueueUsage{
-					CPU:    10,
-					Memory: 10,
-					GPU:    10,
-				},
 				Queues: map[common_info.QueueID]*queue_info.QueueUsage{
 					"queue-1": {
 						CPU:    10,
@@ -211,11 +201,6 @@ func TestSnapshotUsage(t *testing.T) {
 		{
 			name: "Error and usage",
 			usage: &queue_info.ClusterUsage{
-				ClusterCapacity: queue_info.QueueUsage{
-					CPU:    11,
-					Memory: 11,
-					GPU:    11,
-				},
 				Queues: map[common_info.QueueID]*queue_info.QueueUsage{
 					"queue-1": {
 						CPU:    11,
@@ -235,7 +220,6 @@ func TestSnapshotUsage(t *testing.T) {
 			return
 		}
 		assert.NotNil(t, actual)
-		assert.Equal(t, expected.ClusterCapacity, actual.ClusterCapacity)
 		assert.Equal(t, len(expected.Queues), len(actual.Queues))
 		for queueID, expectedUsage := range expected.Queues {
 			actualUsage, ok := actual.Queues[queueID]

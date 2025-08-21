@@ -56,7 +56,7 @@ func (s *server) simulateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queues := SimulateSetResourcesShare(req.TotalResource, nil, 0, req.Queues)
+	queues := SimulateSetResourcesShare(req.TotalResource, 0, req.Queues)
 
 	resp := make(map[string]QueueFairShare)
 	for id, qa := range queues {
@@ -92,13 +92,12 @@ func main() {
 	}
 }
 
-func SimulateSetResourcesShare(totalResource, totalUsageCapacity rs.ResourceQuantities,
-	kValue float64, queueOverrides []rs.QueueOverrides) map[common_info.QueueID]*rs.QueueAttributes {
+func SimulateSetResourcesShare(totalResource rs.ResourceQuantities, kValue float64, queueOverrides []rs.QueueOverrides) map[common_info.QueueID]*rs.QueueAttributes {
 	queues := make(map[common_info.QueueID]*rs.QueueAttributes)
 	for _, qo := range queueOverrides {
 		qa := qo.ToQueueAttributes()
 		queues[qa.UID] = qa
 	}
-	resource_division.SetResourcesShare(totalResource, totalUsageCapacity, kValue, queues)
+	resource_division.SetResourcesShare(totalResource, kValue, queues)
 	return queues
 }

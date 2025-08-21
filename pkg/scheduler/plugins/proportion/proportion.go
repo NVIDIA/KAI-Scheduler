@@ -52,7 +52,6 @@ const (
 
 type proportionPlugin struct {
 	totalResource       rs.ResourceQuantities
-	totalUsageCapacity  rs.ResourceQuantities
 	queues              map[common_info.QueueID]*rs.QueueAttributes
 	jobSimulationQueues map[common_info.QueueID]*rs.QueueAttributes
 	// Arguments given for the plugin
@@ -221,10 +220,6 @@ func (pp *proportionPlugin) calculateResourcesProportion(ssn *framework.Session)
 	log.InfraLogger.V(6).Infof("Calculating resource proportion")
 
 	pp.setTotalResources(ssn)
-	pp.totalUsageCapacity = rs.EmptyResourceQuantities()
-	pp.totalUsageCapacity[rs.GpuResource] = ssn.ResourceUsage.ClusterCapacity.GPU
-	pp.totalUsageCapacity[rs.CpuResource] = ssn.ResourceUsage.ClusterCapacity.CPU
-	pp.totalUsageCapacity[rs.MemoryResource] = ssn.ResourceUsage.ClusterCapacity.Memory
 
 	pp.createQueueAttributes(ssn)
 	log.InfraLogger.V(3).Infof("Total allocatable resources are <%s>, number of nodes: <%d>, number of "+
@@ -393,21 +388,21 @@ func (pp *proportionPlugin) setFairShare() {
 	topQueues := pp.getTopQueues()
 	metrics.ResetQueueUsage()
 	metrics.ResetQueueFairShare()
-	pp.setFairShareForQueues(pp.totalResource, pp.totalUsageCapacity, topQueues)
+	pp.setFairShareForQueues(pp.totalResource, 1, topQueues)
 }
 
-func (pp *proportionPlugin) setFairShareForQueues(totalResources, totalUsageCapacity rs.ResourceQuantities,
+func (pp *proportionPlugin) setFairShareForQueues(totalResources rs.ResourceQuantities, kValue float64,
 	queues map[common_info.QueueID]*rs.QueueAttributes) {
 
 	if len(queues) == 0 {
 		return
 	}
 
-	resource_division.SetResourcesShare(totalResources, totalUsageCapacity, 1, queues)
+	resource_division.SetResourcesShare(totalResources, kValue, queues)
 	for _, queue := range queues {
 		childQueues := pp.getChildQueues(queue)
 		resources := queue.GetFairShare()
-		pp.setFairShareForQueues(resources, totalUsageCapacity, childQueues)
+		pp.setFairShareForQueues(resources, kValue, childQueues)
 	}
 }
 
