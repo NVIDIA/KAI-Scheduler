@@ -45,7 +45,8 @@ func (cr *ClientResolver) GetClient(config *api.UsageDBConfig) (api.Interface, e
 
 	client, ok := cr.clientMap[config.ClientType]
 	if !ok {
-		return nil, fmt.Errorf("unknown client type: %s, supported types: %v", config.ClientType, maps.Keys(cr.clientMap))
+		supportedTypes := slices.Collect(maps.Keys(cr.clientMap))
+		return nil, fmt.Errorf("unknown client type: %s, supported types: %v", config.ClientType, supportedTypes)
 	}
 
 	log.InfraLogger.V(3).Infof("getting usage db client of type: %s, connection string: %s", config.ClientType, config.ConnectionString)
