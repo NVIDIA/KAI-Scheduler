@@ -27,8 +27,7 @@ import (
 
 	"go.uber.org/multierr"
 	"golang.org/x/exp/maps"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
+	v1 "k8s.io/api/core/v1"	
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
