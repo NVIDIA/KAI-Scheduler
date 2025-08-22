@@ -98,7 +98,9 @@ func New(
 }
 
 func (su *defaultStatusUpdater) Evicted(
-	evictedPodGroup *enginev2alpha2.PodGroup, evictionMetadata eviction_info.EvictionMetadata, message string,
+	evictedPodGroup *enginev2alpha2.PodGroup,
+	evictionMetadata eviction_info.EvictionMetadata,
+	message string,
 ) {
 	evictionEventMetadata := map[string]string{
 		evictionGangSize:  strconv.Itoa(evictionMetadata.EvictionGangSize),

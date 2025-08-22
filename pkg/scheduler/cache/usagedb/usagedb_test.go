@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/fake"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,7 +60,7 @@ func TestNewUsageLister(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lister := NewUsageLister(&FakeClient{}, tt.fetchInterval, tt.stalenessPeriod, nil)
+			lister := NewUsageLister(&fake.FakeClient{}, tt.fetchInterval, tt.stalenessPeriod, nil)
 			assert.Equal(t, tt.wantInterval, lister.fetchInterval)
 			assert.Equal(t, tt.wantStaleness, lister.stalenessPeriod)
 			assert.NotNil(t, lister.lastUsageData)
@@ -119,7 +120,7 @@ func TestGetResourceUsage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lister := NewUsageLister(&FakeClient{}, nil, nil, nil)
+			lister := NewUsageLister(&fake.FakeClient{}, nil, nil, nil)
 			if tt.setupLister != nil {
 				tt.setupLister(lister)
 			}

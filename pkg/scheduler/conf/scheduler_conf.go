@@ -24,18 +24,14 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-)
 
-type SchedulingNodePoolParams struct {
-	NodePoolLabelKey   string
-	NodePoolLabelValue string
-}
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
+)
 
 type SchedulerParams struct {
 	SchedulerName                     string                    `json:"schedulerName,omitempty"`
 	RestrictSchedulingNodes           bool                      `json:"restrictSchedulingNodes,omitempty"`
 	PartitionParams                   *SchedulingNodePoolParams `json:"partitionParams,omitempty"`
-	IsInferencePreemptible            bool                      `json:"isInferencePreemptible,omitempty"`
 	MaxNumberConsolidationPreemptees  int                       `json:"maxNumberConsolidationPreemptees,omitempty"`
 	ScheduleCSIStorage                bool                      `json:"scheduleCSIStorage,omitempty"`
 	UseSchedulingSignatures           bool                      `json:"useSchedulingSignatures,omitempty"`
@@ -46,16 +42,22 @@ type SchedulerParams struct {
 	GlobalDefaultStalenessGracePeriod time.Duration             `json:"globalDefaultStalenessGracePeriod,omitempty"`
 	SchedulePeriod                    time.Duration             `json:"schedulePeriod,omitempty"`
 	DetailedFitErrors                 bool                      `json:"detailedFitErrors,omitempty"`
+	UpdatePodEvictionCondition        bool                      `json:"updatePodEvictionCondition,omitempty"`
 }
 
 // SchedulerConfiguration defines the configuration of scheduler.
 type SchedulerConfiguration struct {
 	// Actions defines the actions list of scheduler in order
 	Actions string `yaml:"actions" json:"actions"`
+
 	// Tiers defines plugins in different tiers
 	Tiers []Tier `yaml:"tiers,omitempty" json:"tiers,omitempty"`
+
 	// QueueDepthPerAction max number of jobs to try for action per queue
 	QueueDepthPerAction map[string]int `yaml:"queueDepthPerAction,omitempty" json:"queueDepthPerAction,omitempty"`
+
+	// UsageDBConfig defines configuration for the usage db client
+	UsageDBConfig *usagedbapi.UsageDBConfig `yaml:"usageDBConfig,omitempty" json:"usageDBConfig,omitempty"`
 }
 
 // Tier defines plugin tier
@@ -83,6 +85,11 @@ type PluginOption struct {
 	NodeOrderDisabled bool `yaml:"disableNodeOrder" json:"disableNodeOrder"`
 	// Arguments defines the different arguments that can be given to different plugins
 	Arguments map[string]string `yaml:"arguments" json:"arguments"`
+}
+
+type SchedulingNodePoolParams struct {
+	NodePoolLabelKey   string
+	NodePoolLabelValue string
 }
 
 func (s *SchedulingNodePoolParams) GetLabelSelector() (labels.Selector, error) {

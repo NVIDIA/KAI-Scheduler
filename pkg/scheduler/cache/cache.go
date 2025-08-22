@@ -53,6 +53,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/evictor"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/status_updater"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
+	usageapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants/status"
 	k8splugins "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/plugins"
@@ -83,13 +84,14 @@ type SchedulerCacheParams struct {
 	KubeClient                  kubernetes.Interface
 	KAISchedulerClient          kubeaischedulerver.Interface
 	KueueClient                 kueueclient.Interface
-	UsageDBClient               usagedb.Interface
+	UsageDBClient               usageapi.Interface
 	DetailedFitErrors           bool
 	ScheduleCSIStorage          bool
 	FullHierarchyFairness       bool
 	NodeLevelScheduler          bool
 	AllowConsolidatingReclaim   bool
 	NumOfStatusRecordingWorkers int
+	UpdatePodEvictionCondition  bool
 }
 
 type SchedulerCache struct {
@@ -142,7 +144,7 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 	broadcaster.StartRecordingToSink(&corev1.EventSinkImpl{Interface: sc.kubeClient.CoreV1().Events("")})
 	recorder := broadcaster.NewRecorder(kubeaischedulerschema.Scheme, v1.EventSource{Component: schedulerName})
 
-	sc.Evictor = evictor.New(sc.kubeClient)
+	sc.Evictor = evictor.New(sc.kubeClient, schedulerCacheParams.UpdatePodEvictionCondition)
 
 	sc.StatusUpdater = status_updater.New(
 		sc.kubeClient, sc.kubeAiSchedulerClient, recorder, schedulerCacheParams.NumOfStatusRecordingWorkers,
@@ -242,7 +244,7 @@ func (sc *SchedulerCache) evict(evictedPod *v1.Pod, evictedPodGroup *enginev2alp
 
 		log.InfraLogger.V(6).Infof("Evicting pod %v/%v, reason: %v, message: %v",
 			evictedPod.Namespace, evictedPod.Name, status.Preempted, message)
-		err := sc.Evictor.Evict(evictedPod)
+		err := sc.Evictor.Evict(evictedPod, message)
 		if err != nil {
 			log.InfraLogger.Errorf("Failed to evict pod: %v/%v, error: %v", evictedPod.Namespace, evictedPod.Name, err)
 		}

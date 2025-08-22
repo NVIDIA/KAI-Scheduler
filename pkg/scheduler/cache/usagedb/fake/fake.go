@@ -1,20 +1,27 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package usagedb
+package fake
 
 import (
 	"sync"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 )
-
-var _ Interface = &FakeClient{}
 
 type FakeClient struct {
 	resourceUsage      *queue_info.ClusterUsage
 	resourceUsageMutex sync.RWMutex
 	resourceUsageErr   error
+}
+
+var _ api.Interface = &FakeClient{}
+
+func NewFakeClient(_ string) (api.Interface, error) {
+	return &FakeClient{
+		resourceUsage: queue_info.NewClusterUsage(),
+	}, nil
 }
 
 func (f *FakeClient) GetResourceUsage() (*queue_info.ClusterUsage, error) {

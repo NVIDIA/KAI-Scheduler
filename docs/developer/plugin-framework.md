@@ -177,7 +177,7 @@ func (sp *SpotInstancePlugin) OnSessionOpen(ssn *Session) {
 	// Register predicate to prevent non-preemptible pods on spot instances
 	ssn.AddPredicateFn(func(task *pod_info.PodInfo, job *podgroup_info.PodGroupInfo, node *node_info.NodeInfo) error {
 		// Ignore preemptible jobs
-        if job.IsPreemptibleJob(ssn.IsInferencePreemptible()) {
+        if job.IsPreemptibleJob() {
 			return nil
 		}
 

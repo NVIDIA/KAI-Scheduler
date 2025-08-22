@@ -44,7 +44,7 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 	testMetadata TestTopologyBasic,
 	controller *Controller,
 	createCacheMockIfNotExists bool,
-	isInferencePreemptible bool) *framework.Session {
+) *framework.Session {
 	ssn := framework.Session{
 		Nodes: nodesInfoMap,
 		Config: &conf.SchedulerConfiguration{
@@ -256,7 +256,7 @@ func BuildSession(testMetadata TestTopologyBasic, controller *Controller) *frame
 		testMetadata.Mocks.Cache == nil
 
 	return CreateFakeSession(&schedulerConfig, nodesInfoMap, jobsInfoMap, queueInfoMap, testMetadata,
-		controller, createCacheMockIfNotExists, true)
+		controller, createCacheMockIfNotExists)
 }
 
 func mergeQueues(queuesMaps ...map[common_info.QueueID]*queue_info.QueueInfo) map[common_info.QueueID]*queue_info.QueueInfo {
