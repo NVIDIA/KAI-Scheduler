@@ -452,12 +452,6 @@ func TestAddRemovePods(t *testing.T) {
 	}
 }
 
-func TestConvertMibToMb(t *testing.T) {
-	mibSize := int64(100)
-	mbSize := convertMibToMb(mibSize)
-	mbSizeManualConversion := int64(float64(mibSize) * MibToMbScale)
-	assert.Equal(t, mbSize, mbSizeManualConversion)
-}
 
 type allocatableTestData struct {
 	node                    *v1.Node

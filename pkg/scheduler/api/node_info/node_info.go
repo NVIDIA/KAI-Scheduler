@@ -637,8 +637,6 @@ func getNodeGpuMemory(node *v1.Node) (int64, bool) {
 		gpuMemoryLabelValue = convertBytesToMib(gpuMemoryLabelValue)
 	}
 
-	// Use the original MiB value from the node label, don't convert to MB
-	// The flooring should be done in MiB, not MB to preserve accuracy
 	return gpuMemoryLabelValue - (gpuMemoryLabelValue % 100), true // Floor the memory count to make sure its divided by 100 so there will not be 2 jobs that get same bytes
 }
 
@@ -650,11 +648,6 @@ func convertBytesToMib(gpuMemoryValue int64) int64 {
 	return gpuMemoryValue / BitToMib
 }
 
-func convertMibToMb(countInMib int64) int64 {
-	resourceMemory := resource.NewQuantity(countInMib*1024*1024, resource.BinarySI)
-	mbResourceMemory := resource.NewQuantity(resourceMemory.Value(), resource.DecimalSI)
-	return mbResourceMemory.Value() / MbToBRatio
-}
 
 func (ni *NodeInfo) IsCPUOnlyNode() bool {
 	if ni.IsMIGEnabled() {
