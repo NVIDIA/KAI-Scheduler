@@ -277,6 +277,51 @@ func TestSnapshotNodes(t *testing.T) {
 			Phase: v1core.PodRunning,
 		},
 	}
+	exampleMIGPod := &v1core.Pod{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "mig-pod-1",
+		},
+		Spec: v1core.PodSpec{
+			NodeName: "node-1",
+			Containers: []v1core.Container{
+				{
+					Resources: v1core.ResourceRequirements{
+						Requests: v1core.ResourceList{
+							"cpu":                   resource.MustParse("2"),
+							"nvidia.com/mig-1g.5gb": resource.MustParse("2"),
+						},
+					},
+				},
+			},
+		},
+		Status: v1core.PodStatus{
+			Phase: v1core.PodRunning,
+		},
+	}
+	exampleMIGPodWithPG := &v1core.Pod{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "mig-pod-2",
+			Annotations: map[string]string{
+				commonconstants.PodGroupAnnotationForPod: "pg-1",
+			},
+		},
+		Spec: v1core.PodSpec{
+			NodeName: "node-1",
+			Containers: []v1core.Container{
+				{
+					Resources: v1core.ResourceRequirements{
+						Requests: v1core.ResourceList{
+							"cpu":                   resource.MustParse("2"),
+							"nvidia.com/mig-1g.5gb": resource.MustParse("2"),
+						},
+					},
+				},
+			},
+		},
+		Status: v1core.PodStatus{
+			Phase: v1core.PodRunning,
+		},
+	}
 	tests := map[string]struct {
 		objs          []runtime.Object
 		resultNodes   []*node_info.NodeInfo
@@ -414,6 +459,48 @@ func TestSnapshotNodes(t *testing.T) {
 			},
 			resultPodsLen: 1,
 			nodePoolName:  "pool-a",
+		},
+		"MIG Job": {
+			objs: []runtime.Object{
+				&v1core.Node{
+					ObjectMeta: v1.ObjectMeta{
+						Name: "node-1",
+					},
+					Status: v1core.NodeStatus{
+						Allocatable: v1core.ResourceList{
+							"cpu":                   resource.MustParse("10"),
+							"nvidia.com/mig-1g.5gb": resource.MustParse("10"),
+						},
+					},
+				},
+				exampleMIGPod,
+				exampleMIGPodWithPG,
+			},
+			resultNodes: []*node_info.NodeInfo{
+				{
+					Name: "node-1",
+					Idle: resource_info.ResourceFromResourceList(
+						v1core.ResourceList{
+							"cpu":                   resource.MustParse("6"),
+							"nvidia.com/mig-1g.5gb": resource.MustParse("6"),
+						},
+					),
+					Used: resource_info.ResourceFromResourceList(
+						v1core.ResourceList{
+							"cpu":                   resource.MustParse("4"),
+							"memory":                resource.MustParse("0"),
+							"nvidia.com/mig-1g.5gb": resource.MustParse("4"),
+						},
+					),
+					Releasing: resource_info.ResourceFromResourceList(
+						v1core.ResourceList{
+							"cpu":    resource.MustParse("0"),
+							"memory": resource.MustParse("0"),
+						},
+					),
+				},
+			},
+			resultPodsLen: 2,
 		},
 	}
 

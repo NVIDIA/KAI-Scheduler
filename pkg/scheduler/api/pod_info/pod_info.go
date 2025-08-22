@@ -371,10 +371,6 @@ func getTaskStatus(pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo) p
 }
 
 func (pi *PodInfo) updatePodAdditionalFields(bindRequest *bindrequest_info.BindRequestInfo) {
-	if len(pi.Job) == 0 {
-		return
-	}
-
 	if bindRequest != nil && len(bindRequest.BindRequest.Spec.SelectedGPUGroups) > 0 {
 		pi.GPUGroups = bindRequest.BindRequest.Spec.SelectedGPUGroups
 	} else {

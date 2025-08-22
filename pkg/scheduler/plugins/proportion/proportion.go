@@ -245,7 +245,7 @@ func getNodeResources(ssn *framework.Session, node *node_info.NodeInfo) rs.Resou
 	if shouldIgnoreGPUs {
 		nodeResource.Add(rs.NewResourceQuantities(node.Allocatable.Cpu(), node.Allocatable.Memory(), 0))
 	} else {
-		nodeResource.Add(utils.QuantifyResource(node.Allocatable))
+		nodeResource.Add(rs.NewResourceQuantities(node.Allocatable.Cpu(), node.Allocatable.Memory(), node.Allocatable.GPUs()))
 		migEnabledGpus := 0
 		for resource, qty := range node.Node.Status.Allocatable {
 			if resource_info.IsMigResource(resource) {
