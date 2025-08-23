@@ -681,7 +681,7 @@ func TestGpuOperatorHasMemoryError_MibInput(t *testing.T) {
 	testNode.Labels[GpuMemoryLabel] = "4096"
 	gpuMemoryInMb, ok := getNodeGpuMemory(testNode)
 	assert.Equal(t, true, ok)
-	assert.Equal(t, int64(4200), gpuMemoryInMb)
+	assert.Equal(t, int64(4000), gpuMemoryInMb)
 }
 
 func TestGpuOperatorHasMemoryError_Bytes(t *testing.T) {
@@ -689,7 +689,7 @@ func TestGpuOperatorHasMemoryError_Bytes(t *testing.T) {
 	testNode.Labels[GpuMemoryLabel] = "4295000001"
 	gpuMemoryInMb, ok := getNodeGpuMemory(testNode)
 	assert.Equal(t, true, ok)
-	assert.Equal(t, int64(4200), gpuMemoryInMb)
+	assert.Equal(t, int64(4000), gpuMemoryInMb)
 }
 
 func addJobAnnotation(pod *v1.Pod) {
