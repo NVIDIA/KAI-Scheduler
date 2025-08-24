@@ -547,6 +547,7 @@ var _ = Describe("Reclaimable - Single department", func() {
 
 		reclaimeePods := pod_info.PodsMap{
 			"1": &pod_info.PodInfo{
+				UID:    "1",
 				ResReq: &resource_info.ResourceRequirements{GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0)},
 				Status: pod_status.Running,
 			},
@@ -698,6 +699,7 @@ var _ = Describe("Reclaimable - Multiple departments", func() {
 
 		reclaimeePods := pod_info.PodsMap{
 			"1": &pod_info.PodInfo{
+				UID:    "1",
 				ResReq: &resource_info.ResourceRequirements{GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0)},
 				Status: pod_status.Running,
 			},
@@ -811,6 +813,7 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 
 		reclaimeePods := pod_info.PodsMap{
 			"1": &pod_info.PodInfo{
+				UID:    "1",
 				ResReq: &resource_info.ResourceRequirements{GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(2, 0)},
 				Status: pod_status.Running,
 			},
@@ -1024,6 +1027,7 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			SubGroups: map[string]*podgroup_info.SubGroupInfo{
 				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 					"1": &pod_info.PodInfo{
+						UID: "1",
 						ResReq: &resource_info.ResourceRequirements{
 							GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(0.5, 0),
 						},
@@ -1081,6 +1085,7 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			SubGroups: map[string]*podgroup_info.SubGroupInfo{
 				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 					"1": &pod_info.PodInfo{
+						UID: "1",
 						ResReq: &resource_info.ResourceRequirements{
 							GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
 						},
@@ -1138,6 +1143,7 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			SubGroups: map[string]*podgroup_info.SubGroupInfo{
 				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 					"1": &pod_info.PodInfo{
+						UID: "1",
 						ResReq: &resource_info.ResourceRequirements{
 							GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
 						},

@@ -90,6 +90,7 @@ func TestFeasibleNodes(t *testing.T) {
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
+							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeRegular,
 							ResReq:              resource_info.NewResourceRequirementsWithGpus(1),
 						},
@@ -105,6 +106,7 @@ func TestFeasibleNodes(t *testing.T) {
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
+							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeRegular,
 							ResReq:              resource_info.NewResourceRequirements(0, 1000, 0),
 						},
@@ -120,6 +122,7 @@ func TestFeasibleNodes(t *testing.T) {
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
+							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeRegular,
 							ResReq: &resource_info.ResourceRequirements{
 								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(2, 0),
@@ -137,12 +140,14 @@ func TestFeasibleNodes(t *testing.T) {
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
+							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeRegular,
 							ResReq: &resource_info.ResourceRequirements{
 								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(2, 0),
 							},
 						},
 						"pod2": &pod_info.PodInfo{
+							UID: "pod2",
 							ResReq: &resource_info.ResourceRequirements{
 								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(2, 0),
 							},
@@ -159,12 +164,14 @@ func TestFeasibleNodes(t *testing.T) {
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
+							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeRegular,
 							ResReq: &resource_info.ResourceRequirements{
 								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(2, 0),
 							},
 						},
 						"pod2": &pod_info.PodInfo{
+							UID:    "pod2",
 							ResReq: resource_info.NewResourceRequirements(0, 1000, 2000),
 						},
 					}),
@@ -179,6 +186,7 @@ func TestFeasibleNodes(t *testing.T) {
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
+							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeFraction,
 							ResReq: &resource_info.ResourceRequirements{
 								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(0.5, 0),
@@ -196,6 +204,7 @@ func TestFeasibleNodes(t *testing.T) {
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
+							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeGpuMemory,
 							ResReq: &resource_info.ResourceRequirements{
 								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(
@@ -214,6 +223,7 @@ func TestFeasibleNodes(t *testing.T) {
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
+							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeMigInstance,
 							ResReq: &resource_info.ResourceRequirements{
 								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithMig(

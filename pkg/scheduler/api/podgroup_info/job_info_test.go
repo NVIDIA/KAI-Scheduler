@@ -559,51 +559,43 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 								}},
 						),
 					}),
-					"sb-1": {
-						name:         "sb-1",
-						minAvailable: 2,
-						podInfos: map[common_info.PodID]*pod_info.PodInfo{
-							"111": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "111",
-										Name:      "task1",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodPending,
-									}},
-							),
-							"222": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "222",
-										Name:      "task2",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodPending,
-									}},
-							),
-						},
-					},
-					"sb-2": {
-						name:         "sb-2",
-						minAvailable: 1,
-						podInfos: map[common_info.PodID]*pod_info.PodInfo{
-							"333": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "333",
-										Name:      "task3",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodPending,
-									}},
-							),
-						},
-					},
+					"sb-1": NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
+						"111": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "111",
+									Name:      "task1",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodPending,
+								}},
+						),
+						"222": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "222",
+									Name:      "task2",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodPending,
+								}},
+						),
+					}),
+					"sb-2": NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
+						"333": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "333",
+									Name:      "task3",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodPending,
+								}},
+						),
+					}),
 				},
 			},
 			expected: true,
@@ -648,51 +640,43 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 								}},
 						),
 					}),
-					"sb-1": {
-						name:         "sb-1",
-						minAvailable: 2,
-						podInfos: map[common_info.PodID]*pod_info.PodInfo{
-							"111": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "111",
-										Name:      "task1",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodPending,
-									}},
-							),
-							"222": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "222",
-										Name:      "task2",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodPending,
-									}},
-							),
-						},
-					},
-					"sb-2": {
-						name:         "sb-2",
-						minAvailable: 1,
-						podInfos: map[common_info.PodID]*pod_info.PodInfo{
-							"333": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "333",
-										Name:      "task3",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodRunning,
-									}},
-							),
-						},
-					},
+					"sb-1": NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
+						"111": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "111",
+									Name:      "task1",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodPending,
+								}},
+						),
+						"222": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "222",
+									Name:      "task2",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodPending,
+								}},
+						),
+					}),
+					"sb-2": NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
+						"333": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "333",
+									Name:      "task3",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodRunning,
+								}},
+						),
+					}),
 				},
 			},
 			expected: true,
@@ -748,62 +732,54 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 								}},
 						),
 					}),
-					"sb-1": {
-						name:         "sb-1",
-						minAvailable: 2,
-						podInfos: map[common_info.PodID]*pod_info.PodInfo{
-							"111": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "111",
-										Name:      "task1",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodPending,
-									}},
-							),
-							"222": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "222",
-										Name:      "task2",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodPending,
-									}},
-							),
-							"333": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "333",
-										Name:      "task3",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodPending,
-									}},
-							),
-						},
-					},
-					"sb-2": {
-						name:         "sb-2",
-						minAvailable: 1,
-						podInfos: map[common_info.PodID]*pod_info.PodInfo{
-							"444": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "444",
-										Name:      "task4",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodPending,
-									}},
-							),
-						},
-					},
+					"sb-1": NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
+						"111": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "111",
+									Name:      "task1",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodPending,
+								}},
+						),
+						"222": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "222",
+									Name:      "task2",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodPending,
+								}},
+						),
+						"333": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "333",
+									Name:      "task3",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodPending,
+								}},
+						),
+					}),
+					"sb-2": NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
+						"444": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "444",
+									Name:      "task4",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodPending,
+								}},
+						),
+					}),
 				},
 			},
 			expected: true,
@@ -848,40 +824,32 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 								}},
 						),
 					}),
-					"sb-1": {
-						name:         "sb-1",
-						minAvailable: 2,
-						podInfos: map[common_info.PodID]*pod_info.PodInfo{
-							"111": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "111",
-										Name:      "task1",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodPending,
-									}},
-							),
-						},
-					},
-					"sb-2": {
-						name:         "sb-2",
-						minAvailable: 1,
-						podInfos: map[common_info.PodID]*pod_info.PodInfo{
-							"333": pod_info.NewTaskInfo(
-								&v1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										UID:       "333",
-										Name:      "task3",
-										Namespace: "ns1",
-									},
-									Status: v1.PodStatus{
-										Phase: v1.PodPending,
-									}},
-							),
-						},
-					},
+					"sb-1": NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
+						"111": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "111",
+									Name:      "task1",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodPending,
+								}},
+						),
+					}),
+					"sb-2": NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
+						"333": pod_info.NewTaskInfo(
+							&v1.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									UID:       "333",
+									Name:      "task3",
+									Namespace: "ns1",
+								},
+								Status: v1.PodStatus{
+									Phase: v1.PodPending,
+								}},
+						),
+					}),
 				},
 			},
 			expected: false,
