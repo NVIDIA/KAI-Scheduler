@@ -36,15 +36,15 @@ func TestNewClientResolver(t *testing.T) {
 		description         string
 	}{
 		{
-			name:                "no overrides - should have default fake client",
+			name:                "no overrides - should have default fake and prometheus clients",
 			clientMapOverrides:  nil,
-			expectedClientTypes: []string{"fake"},
-			description:         "When no overrides are provided, should contain only default fake client",
+			expectedClientTypes: []string{"fake", "prometheus"},
+			description:         "When no overrides are provided, should contain default fake and prometheus clients",
 		},
 		{
-			name:                "empty overrides - should have default fake client",
+			name:                "empty overrides - should have default fake and prometheus clients",
 			clientMapOverrides:  map[string]GetClientFn{},
-			expectedClientTypes: []string{"fake"},
+			expectedClientTypes: []string{"fake", "prometheus"},
 			description:         "Empty overrides map should result in default behavior",
 		},
 		{
@@ -52,16 +52,16 @@ func TestNewClientResolver(t *testing.T) {
 			clientMapOverrides: map[string]GetClientFn{
 				"custom": mockClientFn,
 			},
-			expectedClientTypes: []string{"fake", "custom"},
-			description:         "Should contain both default fake and custom client",
+			expectedClientTypes: []string{"fake", "prometheus", "custom"},
+			description:         "Should contain default fake, prometheus, and custom clients",
 		},
 		{
 			name: "override existing client type",
 			clientMapOverrides: map[string]GetClientFn{
 				"fake": mockClientFn,
 			},
-			expectedClientTypes: []string{"fake"},
-			description:         "Should override the default fake client with custom implementation",
+			expectedClientTypes: []string{"fake", "prometheus"},
+			description:         "Should override the default fake client with custom implementation but keep prometheus",
 		},
 		{
 			name: "multiple overrides",
@@ -70,7 +70,7 @@ func TestNewClientResolver(t *testing.T) {
 				"custom2": errorClientFn,
 				"fake":    mockClientFn,
 			},
-			expectedClientTypes: []string{"fake", "custom1", "custom2"},
+			expectedClientTypes: []string{"fake", "prometheus", "custom1", "custom2"},
 			description:         "Should contain all client types from overrides and defaults",
 		},
 	}
@@ -280,10 +280,6 @@ func TestClientResolver_GetClient(t *testing.T) {
 				assert.NoError(t, err, "Unexpected error: %v", err)
 				if tt.wantClient {
 					assert.NotNil(t, client, "Expected client but got nil")
-
-					// Verify the client implements the Interface
-					_, ok := client.(api.Interface)
-					assert.True(t, ok, "Client should implement api.Interface")
 				} else {
 					assert.Nil(t, client, "Expected nil client")
 				}
@@ -341,12 +337,14 @@ func TestClientResolver_GetClient_Integration(t *testing.T) {
 }
 
 func TestClientResolver_DefaultBehavior(t *testing.T) {
-	t.Run("default client map should contain fake", func(t *testing.T) {
+	t.Run("default client map should contain fake and prometheus", func(t *testing.T) {
 		// Test the module-level defaultClientMap
 		assert.NotNil(t, defaultClientMap)
 		assert.Contains(t, defaultClientMap, "fake")
-		// Can't directly compare function pointers, but we can verify it's not nil
+		assert.Contains(t, defaultClientMap, "prometheus")
+		// Can't directly compare function pointers, but we can verify they're not nil
 		assert.NotNil(t, defaultClientMap["fake"])
+		assert.NotNil(t, defaultClientMap["prometheus"])
 	})
 
 	t.Run("resolver should clone default map", func(t *testing.T) {
@@ -355,18 +353,21 @@ func TestClientResolver_DefaultBehavior(t *testing.T) {
 			"custom": mockClientFn,
 		})
 
-		// Verify resolver1 has only fake
-		assert.Len(t, resolver1.clientMap, 1)
+		// Verify resolver1 has fake and prometheus
+		assert.Len(t, resolver1.clientMap, 2)
 		assert.Contains(t, resolver1.clientMap, "fake")
+		assert.Contains(t, resolver1.clientMap, "prometheus")
 
-		// Verify resolver2 has both fake and custom
-		assert.Len(t, resolver2.clientMap, 2)
+		// Verify resolver2 has fake, prometheus, and custom
+		assert.Len(t, resolver2.clientMap, 3)
 		assert.Contains(t, resolver2.clientMap, "fake")
+		assert.Contains(t, resolver2.clientMap, "prometheus")
 		assert.Contains(t, resolver2.clientMap, "custom")
 
 		// Verify that modifying one doesn't affect the default
-		assert.Len(t, defaultClientMap, 1)
+		assert.Len(t, defaultClientMap, 2)
 		assert.Contains(t, defaultClientMap, "fake")
+		assert.Contains(t, defaultClientMap, "prometheus")
 	})
 }
 
@@ -388,6 +389,13 @@ func TestGetClient(t *testing.T) {
 			config: &usagedbapi.UsageDBConfig{
 				ClientType:       "fake",
 				ConnectionString: "fake-connection",
+			},
+		},
+		{
+			name: "prometheus client",
+			config: &usagedbapi.UsageDBConfig{
+				ClientType:       "prometheus",
+				ConnectionString: "http://localhost:9090",
 			},
 		},
 		{
