@@ -45,6 +45,49 @@ func TestFromSubGroup(t *testing.T) {
 	}
 }
 
+func TestWithPodInfos(t *testing.T) {
+	sgi := NewSubGroupInfo("test", 1)
+
+	// Pre-populate with a pod that should be cleared
+	sgi.AssignTask(&pod_info.PodInfo{UID: "old", Status: pod_status.Running})
+
+	// Prepare new pod infos
+	p1 := &pod_info.PodInfo{UID: "pod1", Status: pod_status.Pending}
+	p2 := &pod_info.PodInfo{UID: "pod2", Status: pod_status.Running}
+	replacement := pod_info.PodsMap{
+		"pod1": p1,
+		"pod2": p2,
+	}
+
+	sgi.WithPodInfos(replacement)
+
+	gotInfos := sgi.GetPodInfos()
+	if len(gotInfos) != 2 {
+		t.Errorf("expected len(podInfos)==2, got %d", len(gotInfos))
+	}
+	if gotInfos["pod1"] != p1 {
+		t.Errorf("pod1 entry is not correct")
+	}
+	if gotInfos["pod2"] != p2 {
+		t.Errorf("pod2 entry is not correct")
+	}
+	// Old pod should not be present
+	if _, ok := gotInfos["old"]; ok {
+		t.Errorf("expected old pod to be cleared by WithPodInfos")
+	}
+
+	// Check counters based on status
+	if want := 2; sgi.GetNumAliveTasks() != want {
+		t.Errorf("GetNumAliveTasks() = %d, want %d", sgi.GetNumAliveTasks(), want)
+	}
+	if want := 1; sgi.GetNumActiveAllocatedTasks() != want {
+		t.Errorf("GetNumActiveAllocatedTasks() = %d, want %d", sgi.GetNumActiveAllocatedTasks(), want)
+	}
+	if want := 1; sgi.GetNumPendingTasks() != want {
+		t.Errorf("GetNumPendingTasks() = %d, want %d", sgi.GetNumPendingTasks(), want)
+	}
+}
+
 func TestGetName(t *testing.T) {
 	name := "test-subgroup"
 	sgi := NewSubGroupInfo(name, 1)
@@ -235,17 +278,18 @@ func TestGetNumActiveUsedTasks(t *testing.T) {
 	pods := []*pod_info.PodInfo{
 		{UID: "1", Status: pod_status.Running},
 		{UID: "2", Status: pod_status.Pipelined},
-		{UID: "3", Status: pod_status.Failed},
-		{UID: "4", Status: pod_status.Succeeded},
+		{UID: "3", Status: pod_status.Releasing},
+		{UID: "4", Status: pod_status.Failed},
+		{UID: "5", Status: pod_status.Succeeded},
 	}
 
 	for _, pod := range pods {
 		sgi.AssignTask(pod)
 	}
 
-	expected := 2 // Running and Pipelined are active allocated statuses
-	if got := sgi.GetNumActiveAllocatedTasks(); got != expected {
-		t.Errorf("GetNumAliveTasks() = %v, want %v", got, expected)
+	expected := 3 // Running, Pipelined, and Releasing are considered active used statuses
+	if got := sgi.GetNumActiveUsedTasks(); got != expected {
+		t.Errorf("GetNumActiveUsedTasks() = %v, want %v", got, expected)
 	}
 }
 
