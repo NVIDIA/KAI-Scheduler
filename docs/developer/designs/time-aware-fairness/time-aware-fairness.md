@@ -11,6 +11,7 @@
     - [Story 2](#story-2-burst-access-to-resources)
     - [Story 3](#story-3-time-aware-fairness-with-guaranteed-resources)
     - [Story 4](#story-4-no-over-usage-open-for-debate)
+    - [Story 5](#story-5-resource-hour-budget)
   - [Notes/Constraints/Caveats](#notesconstraintscaveats)
     - [Data storage constraints](#data-storage-constraints)
     - [Intuitive understanding of fairness over time](#intuitive-understanding-of-fairness-over-time)
@@ -76,6 +77,16 @@ Users can rely on guaranteed resources for non-preemptible interactive & inferen
 
 #### Story 4: No over-usage (open for debate)
 In a cluster with no deserved quotas, N queues are weighted arbitrarily (W_i for i in N is queue `i`'s weight, Ẃ_i = W_i/∑W_j for i,j in N is the normalized weight). If no queue ever goes above it's relative share - should they be penalized for their usage? On one hand, it's not intuitively fair to be penalized for usage of one's relative share. On the other, this could cause any queue with a pending job that requires more than it's relative share to be starved. For example, SDRF doesn't count in-share usage as "Commitment".
+
+#### Story 5: Resource-hour budget
+In a cluster with mainly long-running, interruption-sensitive batch workloads where each workload requires all or most of the resources (such as large model training jobs), several organizational units (teams/ project) participate and are allocated "gpu-hours" budget. For a known time period (monthly), the admin knows and assigns how many resource-hours each team deserves. Jobs are not interrupted unless they used their entire queues' budget. If the budget is not overcommited, and if all consumers submit their jobs at the beginning of the monthly cycle, the admin expects each to get their budget over the course of the month, up to ~5% deviation due to sampling resolution or scheduling overheads (lower is likely achievable). 
+
+Question: if resources are overcommited (more than the possible gpu-hours are assigned), or if all consumers attempt to "withdraw" their budget at the end of the period - how should the schduler divide resources?
+- Attempt to approximate the relative resource distribution?
+- Revert to FIFO? (first job to be scheduled will not be interrupted if within budget, even at the expense of pending jobs not getting their budget)
+- Are there other options?
+
+This use case can also be useful for clusters with predictable, periodic workloads, such as Spark ETL pipelines, scheduled training workloads, data prep workloads, etc.
 
 ### Notes/Constraints/Caveats
 
