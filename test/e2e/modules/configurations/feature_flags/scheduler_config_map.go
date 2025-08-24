@@ -9,6 +9,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	testContext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
