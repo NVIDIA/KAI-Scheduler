@@ -165,9 +165,13 @@ func divideUpToFairShare(totalResourceAmount, kValue float64, queues map[common_
 	for {
 		shouldRunAnotherRound := false
 		amountToGiveInCurrentRound := totalResourceAmount
-		totalWeights := getTotalWeightsForUnsatisfied(queues, resourceName)
+		totalWeights, totalUsages := getTotalWeightsForUnsatisfied(queues, resourceName)
 		if totalWeights == 0 {
 			break
+		}
+
+		if totalUsages == 0 {
+			totalUsages = 1
 		}
 
 		for _, queue := range queues {
@@ -190,7 +194,12 @@ func divideUpToFairShare(totalResourceAmount, kValue float64, queues map[common_
 			log.InfraLogger.V(6).Infof("calculating %v resource fair share for %v: deserved: %v, "+
 				"remaining requested: %v, fairShare: %v",
 				resourceName, queue.Name, resourceShare.Deserved, requested, resourceShare.FairShare)
-			fairShare := amountToGiveInCurrentRound * (overQuotaWeight / totalWeights)
+
+			// normalize values
+			nWeight := overQuotaWeight / totalWeights
+			nUsage := resourceShare.GetUsage() / totalUsages
+
+			fairShare := amountToGiveInCurrentRound * (nWeight + kValue*(nWeight-nUsage))
 			resourceToGive := getResourceToGiveInCurrentRound(fairShare, requested, queue, remainingRequested)
 			if resourceToGive == 0 {
 				continue
@@ -255,14 +264,24 @@ func getResourceToGiveInCurrentRound(fairShare float64, requested float64, queue
 	return resourcesToGive
 }
 
-func getTotalWeightsForUnsatisfied(queues map[common_info.QueueID]*rs.QueueAttributes, resourceName rs.ResourceName) (totalOverQuotaWeights float64) {
+func getTotalWeightsForUnsatisfied(queues map[common_info.QueueID]*rs.QueueAttributes, resourceName rs.ResourceName) (totalOverQuotaWeights, totalUsages float64) {
 	for _, queue := range queues {
 		remainingRequested := getRemainingRequested(queue, resourceName)
-		if remainingRequested > 0 {
-			totalOverQuotaWeights += queue.ResourceShare(resourceName).OverQuotaWeight
+		if remainingRequested <= 0 {
+			continue
 		}
+		totalOverQuotaWeights += queue.ResourceShare(resourceName).OverQuotaWeight
+
+		queueUsage := queue.ResourceShare(resourceName).GetUsage()
+		if queueUsage < 0 {
+			log.InfraLogger.V(1).Warnf("queue <%v> has negative usage score of <%v> for resource <%v>, expected non-negative",
+				queue.Name, queueUsage, resourceName)
+			continue
+		}
+
+		totalUsages += queueUsage
 	}
-	return totalOverQuotaWeights
+	return totalOverQuotaWeights, totalUsages
 }
 
 func getRemainingRequested(queue *rs.QueueAttributes, resourceName rs.ResourceName) float64 {
