@@ -1,0 +1,21 @@
+grafana:
+  enabled: true
+  persistence:
+    enabled: true
+    type: pvc
+    accessModes:
+      - ReadWriteOnce
+    size: 10Gi
+    # storageClassName: ""   # uncomment and set to your StorageClass if not using the default
+    finalizers:
+      - kubernetes.io/pvc-protection
+  # Keep sidecars enabled so ConfigMaps like `docs/metrics/grafana-datasource.yaml`
+  # (labeled with `grafana_datasource: "1"`) are automatically loaded.
+  sidecar:
+    datasources:
+      enabled: true
+    dashboards:
+      enabled: true
+
+# You can put other kube-prometheus-stack overrides here if needed.
+
