@@ -13,6 +13,9 @@ import (
 	"k8s.io/utils/ptr"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -24,8 +27,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // Mock session state provider for testing
@@ -1388,8 +1389,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				Name: "test-job",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {Name: "pod1", Status: pod_status.Pending},
-						"pod2": {Name: "pod2", Status: pod_status.Pending},
+						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
+						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 					}),
 				},
 				PodGroup: &enginev2alpha2.PodGroup{
@@ -1458,8 +1459,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				Name: "test-job",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {Name: "pod1", Status: pod_status.Pending},
-						"pod2": {Name: "pod2", Status: pod_status.Pending},
+						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
+						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 					}),
 				},
 				PodGroup: &enginev2alpha2.PodGroup{
@@ -1514,7 +1515,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				Name: "test-job",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {Name: "pod1", Status: pod_status.Pending},
+						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
 					}),
 				},
 				PodGroup: &enginev2alpha2.PodGroup{
@@ -1562,9 +1563,9 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				Name: "test-job",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 3).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {Name: "pod1", Status: pod_status.Pending},
-						"pod2": {Name: "pod2", Status: pod_status.Pending},
-						"pod3": {Name: "pod3", Status: pod_status.Pending},
+						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
+						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
+						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
 					}),
 				},
 				PodGroup: &enginev2alpha2.PodGroup{
@@ -1643,9 +1644,9 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				Name: "test-job",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {Name: "pod1", Status: pod_status.Running},
-						"pod2": {Name: "pod2", Status: pod_status.Pending},
-						"pod3": {Name: "pod3", Status: pod_status.Pending},
+						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Running},
+						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
+						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
 					}),
 				},
 				PodGroup: &enginev2alpha2.PodGroup{
@@ -1698,10 +1699,10 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				Name: "test-job",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 4).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {Name: "pod1", Status: pod_status.Pending},
-						"pod2": {Name: "pod2", Status: pod_status.Pending},
-						"pod3": {Name: "pod3", Status: pod_status.Pending},
-						"pod4": {Name: "pod4", Status: pod_status.Pending},
+						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
+						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
+						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
+						"pod4": {UID: "pod4", Name: "pod4", Status: pod_status.Pending},
 					}),
 				},
 				PodGroup: &enginev2alpha2.PodGroup{

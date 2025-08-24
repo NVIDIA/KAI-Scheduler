@@ -665,10 +665,12 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 5).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 						"pod-1": {
+							UID:    "pod-1",
 							Name:   "pod-1",
 							Status: pod_status.Running,
 						},
 						"pod-2": {
+							UID:    "pod-2",
 							Name:   "pod-2",
 							Status: pod_status.Running,
 						},
@@ -686,11 +688,13 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 3).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 						"pod-1": {
+							UID:          "pod-1",
 							Name:         "pod-1",
 							Status:       pod_status.Running,
 							SubGroupName: "sub-group-0",
 						},
 						"pod-2": {
+							UID:          "pod-2",
 							Name:         "pod-2",
 							Status:       pod_status.Running,
 							SubGroupName: "sub-group-1",
