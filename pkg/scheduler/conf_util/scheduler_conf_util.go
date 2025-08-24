@@ -57,13 +57,13 @@ tiers:
       gpu: binpack
   - name: minruntime
   - name: topology
-usageDBConfig:
-  clientType: prometheus
-  connectionString: http://localhost:9090
-  usageParams:
-    halfLifePeriod: 1h
-    windowSize: 1h
-    windowType: sliding
+#usageDBConfig:
+#  clientType: prometheus
+#  connectionString: http://localhost:9090
+#  usageParams:
+#    halfLifePeriod: 1h
+#    windowSize: 1h
+#    windowType: sliding
 `
 
 func ResolveConfigurationFromFile(confPath string) (*conf.SchedulerConfiguration, error) {
