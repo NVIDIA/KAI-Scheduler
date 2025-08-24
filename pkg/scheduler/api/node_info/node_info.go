@@ -27,7 +27,7 @@ import (
 
 	"go.uber.org/multierr"
 	"golang.org/x/exp/maps"
-	v1 "k8s.io/api/core/v1"	
+	v1 "k8s.io/api/core/v1"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -646,7 +646,6 @@ func checkGpuMemoryIsInMib(gpuMemoryValue int64) bool {
 func convertBytesToMib(gpuMemoryValue int64) int64 {
 	return gpuMemoryValue / BitToMib
 }
-
 
 func (ni *NodeInfo) IsCPUOnlyNode() bool {
 	if ni.IsMIGEnabled() {

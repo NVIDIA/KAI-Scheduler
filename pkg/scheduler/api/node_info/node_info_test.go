@@ -452,7 +452,6 @@ func TestAddRemovePods(t *testing.T) {
 	}
 }
 
-
 type allocatableTestData struct {
 	node                    *v1.Node
 	podsResources           []v1.ResourceList
