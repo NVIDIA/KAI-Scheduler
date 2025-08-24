@@ -22,6 +22,19 @@ GOLANGCI_LINT_VERSION=v1.64.8
 ## Tool Versions
 CGO_ENABLED?=1
 
+## Version Variables
+BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+GIT_COMMIT := $(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
+GIT_VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "unknown")
+GIT_TREE_STATE := $(shell if git diff-index --quiet HEAD -- 2>/dev/null; then echo "clean"; else echo "dirty"; fi)
+
+## Go Build Flags
+VERSION_PKG := github.com/NVIDIA/KAI-scheduler/pkg/scheduler/version
+LDFLAGS := -X '$(VERSION_PKG).buildDate=$(BUILD_DATE)' \
+           -X '$(VERSION_PKG).gitCommit=$(GIT_COMMIT)' \
+           -X '$(VERSION_PKG).gitVersion=$(GIT_VERSION)' \
+           -X '$(VERSION_PKG).gitTreeState=$(GIT_TREE_STATE)'
+
 ### GO
 DOCKER_GO_BASE_COMMAND=${DOCKER_COMMAND} -e CGO_ENABLED=${CGO_ENABLED} -e GO111MODULE=on ${DOCKER_GO_CACHING_VOLUME_AND_ENV}
 
@@ -62,12 +75,12 @@ build-go: builder build-go-amd build-go-arm
 
 build-go-amd: gocache
 	@ ${ECHO_COMMAND} ${GREEN_CONSOLE} "${CONSOLE_PREFIX} Building ${SERVICE_NAME}, GOOS: ${OS}, GOARCH amd64" ${BASE_CONSOLE}
-	${DOCKER_GO_COMMAND_AMD} go build -buildvcs=false ${GO_BUILD_ADDITIONAL_FLAGS} -o ${BUILD_OUT_PATH_AMD} ${BUILD_IN_PATH} || ${FAILURE_MESSAGE_HANDLER}
+	${DOCKER_GO_COMMAND_AMD} go build -buildvcs=false -ldflags "$(LDFLAGS)" ${GO_BUILD_ADDITIONAL_FLAGS} -o ${BUILD_OUT_PATH_AMD} ${BUILD_IN_PATH} || ${FAILURE_MESSAGE_HANDLER}
 	${SUCCESS_MESSAGE_HANDLER}
 .PHONY: build-go-amd
 
 build-go-arm: gocache
 	@ ${ECHO_COMMAND} ${GREEN_CONSOLE} "${CONSOLE_PREFIX} Building ${SERVICE_NAME}, GOOS: ${OS}, GOARCH arm64" ${BASE_CONSOLE}
-	${DOCKER_GO_COMMAND_ARM} go build -buildvcs=false ${GO_BUILD_ADDITIONAL_FLAGS} -o ${BUILD_OUT_PATH_ARM} ${BUILD_IN_PATH} || ${FAILURE_MESSAGE_HANDLER}
+	${DOCKER_GO_COMMAND_ARM} go build -buildvcs=false -ldflags "$(LDFLAGS)" ${GO_BUILD_ADDITIONAL_FLAGS} -o ${BUILD_OUT_PATH_ARM} ${BUILD_IN_PATH} || ${FAILURE_MESSAGE_HANDLER}
 	${SUCCESS_MESSAGE_HANDLER}
 .PHONY: build-go-arm
