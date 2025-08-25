@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Fixed scheduler panic in some elastic reclaim scenarios
+- Fixed wrong GPU memory unit conversion from node `nvidia.com/gpu.memory` labels
+- Fixed incorrect MIG GPU usage calculation leading to wrong scheduling decision
 
 ## [v0.8.0] - 2025-08-18
 
