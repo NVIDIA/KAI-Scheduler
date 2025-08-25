@@ -1,3 +1,5 @@
+prometheus:
+  enabled: true
 grafana:
   enabled: true
   persistence:
@@ -16,6 +18,3 @@ grafana:
       enabled: true
     dashboards:
       enabled: true
-
-# You can put other kube-prometheus-stack overrides here if needed.
-

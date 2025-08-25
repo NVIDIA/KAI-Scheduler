@@ -23,6 +23,11 @@ type PrometheusClient struct {
 	client      v1.API
 	promClient  promapi.Client
 	usageParams *api.UsageParams
+
+	// Extra params
+	usageQueryTimeout    time.Duration
+	queryResolution      time.Duration
+	allocationMetricsMap map[string]string
 }
 
 func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface, error) {
@@ -43,21 +48,34 @@ func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface
 		params.WindowType = &windowType
 	}
 
+	usageQueryTimeout := params.GetExtraDurationParamOrDefault("usageQueryTimeout", 10*time.Second)
+	queryResolution := params.GetExtraDurationParamOrDefault("queryResolution", 1*time.Minute)
+
+	allocationMetricsMap := map[string]string{
+		"gpu":    params.GetExtraStringParamOrDefault("gpuAllocationMetric", "kai_queue_allocated_gpus"),
+		"cpu":    params.GetExtraStringParamOrDefault("cpuAllocationMetric", "kai_queue_allocated_cpu_cores"),
+		"memory": params.GetExtraStringParamOrDefault("memoryAllocationMetric", "kai_queue_allocated_memory_bytes"),
+	}
+
 	return &PrometheusClient{
 		client:      v1api,
 		promClient:  client,
 		usageParams: params,
+
+		usageQueryTimeout:    usageQueryTimeout,
+		queryResolution:      queryResolution,
+		allocationMetricsMap: allocationMetricsMap,
 	}, nil
 }
 
 func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), p.usageQueryTimeout)
 	defer cancel()
 
 	usage := queue_info.NewClusterUsage()
 
-	// get gpu capacity and usage
-	gpuUsage, err := p.queryResourceUsage(ctx, "gpu")
+	// get gpu usage per queue
+	gpuUsage, err := p.queryResourceUsage(ctx, p.allocationMetricsMap["gpu"])
 	if err != nil {
 		return nil, fmt.Errorf("error querying gpu capacity and usage: %v", err)
 	}
@@ -68,7 +86,8 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 		usage.Queues[queueID].GPU = queueGPUUsage
 	}
 
-	cpuUsage, err := p.queryResourceUsage(ctx, "cpu")
+	// get cpu usage per queue
+	cpuUsage, err := p.queryResourceUsage(ctx, p.allocationMetricsMap["cpu"])
 	if err != nil {
 		return nil, fmt.Errorf("error querying cpu capacity and usage: %v", err)
 	}
@@ -79,7 +98,8 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 		usage.Queues[queueID].CPU = queueCPUUsage
 	}
 
-	memoryUsage, err := p.queryResourceUsage(ctx, "memory")
+	// get memory usage per queue
+	memoryUsage, err := p.queryResourceUsage(ctx, p.allocationMetricsMap["memory"])
 	if err != nil {
 		return nil, fmt.Errorf("error querying memory capacity and usage: %v", err)
 	}
@@ -93,29 +113,23 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 	return usage, nil
 }
 
-func (p *PrometheusClient) queryResourceUsage(ctx context.Context, resource string) (map[common_info.QueueID]float64, error) {
-	expressionMap := map[string]string{
-		"gpu":    "kai_queue_allocated_gpus",
-		"cpu":    "kai_queue_allocated_cpu_cores",
-		"memory": "kai_queue_allocated_memory_bytes",
-	}
-
+func (p *PrometheusClient) queryResourceUsage(ctx context.Context, allocationMetric string) (map[common_info.QueueID]float64, error) {
 	queueUsage := make(map[common_info.QueueID]float64)
 
 	usageQuery := fmt.Sprintf("sum_over_time(%s[%s:%s])",
-		expressionMap[resource],
+		allocationMetric,
 		p.usageParams.WindowSize.String(),
-		"1m", // ToDo: make resolution configurable
+		p.queryResolution.String(),
 	)
 
 	usageResult, warnings, err := p.client.Query(ctx, usageQuery, time.Now())
 	if err != nil {
-		return nil, fmt.Errorf("error querying cluster %s usage: %v", resource, err)
+		return nil, err
 	}
 
 	// Log warnings if exist
 	for _, w := range warnings {
-		log.InfraLogger.V(3).Warnf("Warning querying cluster %s usage: %s", resource, w)
+		log.InfraLogger.V(3).Warnf("Warning querying cluster usage metric %s: %s", allocationMetric, w)
 	}
 
 	if usageResult.Type() != model.ValVector {
@@ -124,7 +138,7 @@ func (p *PrometheusClient) queryResourceUsage(ctx context.Context, resource stri
 
 	usageVector := usageResult.(model.Vector)
 	if len(usageVector) == 0 {
-		return nil, fmt.Errorf("no data returned for cluster %s usage", resource)
+		return nil, fmt.Errorf("no data returned for cluster usage metric %s", allocationMetric)
 	}
 
 	for _, usageSample := range usageVector {
