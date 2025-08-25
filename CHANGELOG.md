@@ -6,13 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.8.2] - 2025-08-25
+
+### Fixed
+- Fixed wrong GPU memory unit conversion from node `nvidia.com/gpu.memory` labels
+- Fixed incorrect MIG GPU usage calculation leading to wrong scheduling decision
+
+## [v0.8.1] - 2025-08-20
+
 ### Added
 - Added a new scheduler flag `--update-pod-eviction-condition`. When enabled, a DisruptionTarget condition is set on the pod before deletion
 
 ### Fixed
 - Fixed scheduler panic in some elastic reclaim scenarios
-- Fixed wrong GPU memory unit conversion from node `nvidia.com/gpu.memory` labels
-- Fixed incorrect MIG GPU usage calculation leading to wrong scheduling decision
 
 ## [v0.8.0] - 2025-08-18
 
