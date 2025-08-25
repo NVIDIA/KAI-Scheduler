@@ -4,7 +4,7 @@ go 1.24.4
 
 require (
 	github.com/NVIDIA/go-nvml v0.12.4-1
-	github.com/NVIDIA/gpu-operator v1.8.3-0.20240812232433-87286e93f2c9
+	github.com/NVIDIA/gpu-operator v1.8.3-0.20250724212111-616690d88d86
 	github.com/argoproj/argo-workflows/v3 v3.6.4
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gin-contrib/pprof v1.5.2
@@ -70,8 +70,8 @@ require (
 require (
 	cel.dev/expr v0.19.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/NVIDIA/k8s-kata-manager v0.2.0 // indirect
-	github.com/NVIDIA/k8s-operator-libs v0.0.0-20240627150410-078e3039ecf7 // indirect
+	github.com/NVIDIA/k8s-kata-manager v0.2.3 // indirect
+	github.com/NVIDIA/k8s-operator-libs v0.0.0-20250311214045-7d667fbaa7ac // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
@@ -144,7 +144,7 @@ require (
 	github.com/opencontainers/selinux v1.11.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.73.2 // indirect
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.81.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.63.0 // indirect
 	github.com/prometheus/procfs v0.16.0 // indirect
@@ -172,7 +172,6 @@ require (
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	golang.org/x/arch v0.12.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/oauth2 v0.28.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
@@ -184,7 +183,7 @@ require (
 	google.golang.org/api v0.215.0 // indirect
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241219192143-6b3ec007d9bb // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241223144023-3abc09e42ca8 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250227231956-55c901821b1e // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
