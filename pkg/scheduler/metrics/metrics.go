@@ -54,6 +54,7 @@ var (
 	queueCPUUsage               *prometheus.GaugeVec
 	queueMemoryUsage            *prometheus.GaugeVec
 	queueGPUUsage               *prometheus.GaugeVec
+	usageQueryLatency           *prometheus.HistogramVec
 )
 
 func init() {
@@ -190,6 +191,14 @@ func InitMetrics(namespace string) {
 			Name:      "queue_gpu_usage_devices",
 			Help:      "GPU usage of queue, as a gauge. Value is proportional to gpu*hours usage with time decay applied",
 		}, []string{"queue_name"})
+
+	usageQueryLatency = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: namespace,
+			Name:      "usage_query_latency_milliseconds",
+			Help:      "Usage database query latency histogram in milliseconds",
+			Buckets:   prometheus.ExponentialBuckets(5, 2, 10),
+		}, []string{})
 }
 
 // UpdateOpenSessionDuration updates latency for open session, including all plugins
@@ -275,6 +284,10 @@ func ResetQueueUsage() {
 	queueCPUUsage.Reset()
 	queueMemoryUsage.Reset()
 	queueGPUUsage.Reset()
+}
+
+func UpdateUsageQueryLatency(latency time.Duration) {
+	usageQueryLatency.WithLabelValues().Observe(float64(latency.Milliseconds()))
 }
 
 // RegisterPreemptionAttempts records number of attempts for preemption
