@@ -11,6 +11,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
 )
 
 var defaultFetchInterval = 1 * time.Minute
@@ -135,14 +136,13 @@ func (l *UsageLister) WaitForCacheSync(stopCh <-chan struct{}) bool {
 }
 
 func (l *UsageLister) fetchAndUpdateUsage() {
-	// TODO: Add metrics for fetch times
+	now := time.Now()
 	usage, err := l.client.GetResourceUsage()
 	if err != nil {
 		log.InfraLogger.V(1).Errorf("failed to fetch usage data: %v", err)
 		return
 	}
-
-	now := time.Now()
+	metrics.UpdateUsageQueryLatency(time.Since(now))
 
 	l.lastUsageDataMutex.Lock()
 	defer l.lastUsageDataMutex.Unlock()
