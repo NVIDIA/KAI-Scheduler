@@ -26,7 +26,6 @@ import (
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -245,19 +244,7 @@ func getNodeResources(ssn *framework.Session, node *node_info.NodeInfo) rs.Resou
 	if shouldIgnoreGPUs {
 		nodeResource.Add(rs.NewResourceQuantities(node.Allocatable.Cpu(), node.Allocatable.Memory(), 0))
 	} else {
-		nodeResource.Add(rs.NewResourceQuantities(node.Allocatable.Cpu(), node.Allocatable.Memory(), node.Allocatable.GPUs()))
-		migEnabledGpus := 0
-		for resource, qty := range node.Node.Status.Allocatable {
-			if resource_info.IsMigResource(resource) {
-				gpu, _, err := resources.ExtractGpuAndMemoryFromMigResourceName(string(resource))
-				if err != nil {
-					log.InfraLogger.Errorf("Failed to extract gpu and memory from mig resource %v: %v", resource, err)
-					continue
-				}
-				migEnabledGpus += int(qty.Value()) * gpu
-			}
-		}
-		nodeResource[rs.GpuResource] += float64(migEnabledGpus)
+		nodeResource.Add(utils.QuantifyResource(node.Allocatable))
 	}
 
 	// Subtract resources of non-related pods

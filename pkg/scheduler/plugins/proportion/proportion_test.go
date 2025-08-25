@@ -576,9 +576,6 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 								"node-role.kubernetes.io/gpu-worker": "true",
 							},
 						},
-						Status: v1.NodeStatus{
-							Allocatable: common_info.BuildResourceListWithMig("8000m", "10G", "nvidia.com/mig-1g.5gb"),
-						},
 					},
 					Allocatable: resource_info.ResourceFromResourceList(
 						common_info.BuildResourceListWithMig("8000m", "10G", "nvidia.com/mig-1g.5gb"),

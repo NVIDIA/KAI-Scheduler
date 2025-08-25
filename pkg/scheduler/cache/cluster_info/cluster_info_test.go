@@ -278,51 +278,15 @@ func TestSnapshotNodes(t *testing.T) {
 			Phase: v1core.PodRunning,
 		},
 	}
-	exampleMIGPod := &v1core.Pod{
-		ObjectMeta: v1.ObjectMeta{
-			Name: "mig-pod-1",
-		},
-		Spec: v1core.PodSpec{
-			NodeName: "node-1",
-			Containers: []v1core.Container{
-				{
-					Resources: v1core.ResourceRequirements{
-						Requests: v1core.ResourceList{
-							"cpu":                   resource.MustParse("2"),
-							"nvidia.com/mig-1g.5gb": resource.MustParse("2"),
-						},
-					},
-				},
-			},
-		},
-		Status: v1core.PodStatus{
-			Phase: v1core.PodRunning,
-		},
+	exampleMIGPod := examplePod.DeepCopy()
+	exampleMIGPod.Name = "mig-pod"
+	exampleMIGPod.Spec.Containers[0].Resources.Requests["nvidia.com/mig-1g.5gb"] = resource.MustParse("2")
+	exampleMIGPodWithPG := examplePod.DeepCopy()
+	exampleMIGPodWithPG.Name = "mig-pod-with-pg"
+	exampleMIGPodWithPG.Annotations = map[string]string{
+		commonconstants.PodGroupAnnotationForPod: "pg-1",
 	}
-	exampleMIGPodWithPG := &v1core.Pod{
-		ObjectMeta: v1.ObjectMeta{
-			Name: "mig-pod-2",
-			Annotations: map[string]string{
-				commonconstants.PodGroupAnnotationForPod: "pg-1",
-			},
-		},
-		Spec: v1core.PodSpec{
-			NodeName: "node-1",
-			Containers: []v1core.Container{
-				{
-					Resources: v1core.ResourceRequirements{
-						Requests: v1core.ResourceList{
-							"cpu":                   resource.MustParse("2"),
-							"nvidia.com/mig-1g.5gb": resource.MustParse("2"),
-						},
-					},
-				},
-			},
-		},
-		Status: v1core.PodStatus{
-			Phase: v1core.PodRunning,
-		},
-	}
+	exampleMIGPodWithPG.Spec.Containers[0].Resources.Requests["nvidia.com/mig-1g.5gb"] = resource.MustParse("2")
 	tests := map[string]struct {
 		objs          []runtime.Object
 		resultNodes   []*node_info.NodeInfo
