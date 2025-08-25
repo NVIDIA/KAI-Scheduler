@@ -33,7 +33,7 @@ func (c *UsageDBConfig) GetUsageParams() *UsageParams {
 type UsageParams struct {
 	// Half life period of the usage. If not set, or set to 0, the usage will not be decayed.
 	HalfLifePeriod *time.Duration `yaml:"halfLifePeriod" json:"halfLifePeriod"`
-	// Window size of the usage. Default is 1 hour.
+	// Window size of the usage. Default is 1 week.
 	WindowSize *time.Duration `yaml:"windowSize" json:"windowSize"`
 	// Window type for time-series aggregation. If not set, defaults to sliding.
 	WindowType *WindowType `yaml:"windowType" json:"windowType"`
@@ -44,7 +44,7 @@ func (up *UsageParams) SetDefaults() {
 		// noop: disabled by default
 	}
 	if up.WindowSize == nil {
-		windowSize := time.Hour
+		windowSize := time.Hour * 24 * 7
 		up.WindowSize = &windowSize
 	}
 	if up.WindowType == nil {

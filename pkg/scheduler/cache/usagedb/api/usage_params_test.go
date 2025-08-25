@@ -22,7 +22,7 @@ func TestUsageParams_SetDefaults(t *testing.T) {
 			input: &UsageParams{},
 			expected: &UsageParams{
 				HalfLifePeriod: nil, // should remain nil (disabled by default)
-				WindowSize:     &[]time.Duration{time.Hour}[0],
+				WindowSize:     &[]time.Duration{time.Hour * 24 * 7}[0],
 				WindowType:     &[]WindowType{SlidingWindow}[0],
 			},
 		},
@@ -33,7 +33,7 @@ func TestUsageParams_SetDefaults(t *testing.T) {
 			},
 			expected: &UsageParams{
 				HalfLifePeriod: &[]time.Duration{30 * time.Minute}[0],
-				WindowSize:     &[]time.Duration{time.Hour}[0],
+				WindowSize:     &[]time.Duration{time.Hour * 24 * 7}[0],
 				WindowType:     &[]WindowType{SlidingWindow}[0],
 			},
 		},
@@ -55,7 +55,7 @@ func TestUsageParams_SetDefaults(t *testing.T) {
 			},
 			expected: &UsageParams{
 				HalfLifePeriod: nil,
-				WindowSize:     &[]time.Duration{time.Hour}[0],
+				WindowSize:     &[]time.Duration{time.Hour * 24 * 7}[0],
 				WindowType:     &[]WindowType{TumblingWindow}[0],
 			},
 		},
@@ -140,7 +140,7 @@ func TestUsageDBConfig_GetUsageParams(t *testing.T) {
 			},
 			expected: &UsageParams{
 				HalfLifePeriod: nil,
-				WindowSize:     &[]time.Duration{time.Hour}[0],
+				WindowSize:     &[]time.Duration{time.Hour * 24 * 7}[0],
 				WindowType:     &[]WindowType{SlidingWindow}[0],
 			},
 		},
@@ -153,7 +153,7 @@ func TestUsageDBConfig_GetUsageParams(t *testing.T) {
 			},
 			expected: &UsageParams{
 				HalfLifePeriod: nil,
-				WindowSize:     &[]time.Duration{time.Hour}[0],
+				WindowSize:     &[]time.Duration{time.Hour * 24 * 7}[0],
 				WindowType:     &[]WindowType{SlidingWindow}[0],
 			},
 		},
@@ -168,7 +168,7 @@ func TestUsageDBConfig_GetUsageParams(t *testing.T) {
 			},
 			expected: &UsageParams{
 				HalfLifePeriod: &[]time.Duration{30 * time.Minute}[0],
-				WindowSize:     &[]time.Duration{time.Hour}[0],
+				WindowSize:     &[]time.Duration{time.Hour * 24 * 7}[0],
 				WindowType:     &[]WindowType{SlidingWindow}[0],
 			},
 		},
