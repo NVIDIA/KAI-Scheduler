@@ -4,20 +4,22 @@
 package allocate_test
 
 import (
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
+	"testing"
+
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
-	"testing"
+
+	. "go.uber.org/mock/gomock"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/allocate"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
-	. "go.uber.org/mock/gomock"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
 )
 
 func TestHandleSubGroupsAllocation(t *testing.T) {
@@ -527,6 +529,131 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Status:       pod_status.Pending,
 					},
 					"pending_job0-3": {
+						GPUsRequired: 1,
+						Status:       pod_status.Pending,
+					},
+				},
+			},
+		},
+		{
+			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Name: "Allocate multiple jobs with SubGroups",
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:      "pending_job0",
+						QueueName: "queue0",
+						Priority:  constants.PriorityTrainNumber,
+						SubGroups: map[string]*podgroup_info.SubGroupInfo{
+							"sub0": podgroup_info.NewSubGroupInfo("sub0", 1),
+							"sub1": podgroup_info.NewSubGroupInfo("sub1", 1),
+						},
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub0",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub0",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub1",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub1",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+						},
+						MinAvailable: pointer.Int32(2),
+					},
+					{
+						Name:      "pending_job1",
+						QueueName: "queue0",
+						Priority:  constants.PriorityTrainNumber,
+						SubGroups: map[string]*podgroup_info.SubGroupInfo{
+							"sub0": podgroup_info.NewSubGroupInfo("sub0", 1),
+							"sub1": podgroup_info.NewSubGroupInfo("sub1", 1),
+						},
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub0",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub0",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub1",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub1",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+						},
+						MinAvailable: pointer.Int32(2),
+					},
+				},
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node0": {
+						GPUs: 4,
+					},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:         "queue0",
+						DeservedGPUs: 1,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheBinds: 4,
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"pending_job0-0": {
+						GPUsRequired: 1,
+						Status:       pod_status.Binding,
+						NodeName:     "node0",
+					},
+					"pending_job0-1": {
+						GPUsRequired: 1,
+						Status:       pod_status.Pending,
+					},
+					"pending_job0-2": {
+						GPUsRequired: 1,
+						Status:       pod_status.Binding,
+						NodeName:     "node0",
+					},
+					"pending_job0-3": {
+						GPUsRequired: 1,
+						Status:       pod_status.Pending,
+					},
+					"pending_job1-0": {
+						GPUsRequired: 1,
+						Status:       pod_status.Binding,
+						NodeName:     "node0",
+					},
+					"pending_job1-1": {
+						GPUsRequired: 1,
+						Status:       pod_status.Pending,
+					},
+					"pending_job1-2": {
+						GPUsRequired: 1,
+						Status:       pod_status.Binding,
+						NodeName:     "node0",
+					},
+					"pending_job1-3": {
 						GPUsRequired: 1,
 						Status:       pod_status.Pending,
 					},
