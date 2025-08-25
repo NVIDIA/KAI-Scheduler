@@ -12,7 +12,6 @@ import (
 	"go.uber.org/multierr"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -622,8 +621,7 @@ func getNodeGpuMemory(node *v1.Node) (int64, bool) {
 		gpuMemoryLabelValue = convertBytesToMib(gpuMemoryLabelValue)
 	}
 
-	gpuMemoryInMb := convertMibToMb(gpuMemoryLabelValue)
-	return gpuMemoryInMb - (gpuMemoryInMb % 100), true // Floor the memory count to make sure its divided by 100 so there will not be 2 jobs that get same bytes
+	return gpuMemoryLabelValue - (gpuMemoryLabelValue % 100), true // Floor the memory count to make sure its divided by 100 so there will not be 2 jobs that get same bytes
 }
 
 func checkGpuMemoryIsInMib(gpuMemoryValue int64) bool {
@@ -632,12 +630,6 @@ func checkGpuMemoryIsInMib(gpuMemoryValue int64) bool {
 
 func convertBytesToMib(gpuMemoryValue int64) int64 {
 	return gpuMemoryValue / BitToMib
-}
-
-func convertMibToMb(countInMib int64) int64 {
-	resourceMemory := resource.NewQuantity(countInMib*1024*1024, resource.BinarySI)
-	mbResourceMemory := resource.NewQuantity(resourceMemory.Value(), resource.DecimalSI)
-	return mbResourceMemory.Value() / MbToBRatio
 }
 
 func (ni *NodeInfo) IsCPUOnlyNode() bool {
