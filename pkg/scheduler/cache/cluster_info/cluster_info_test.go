@@ -169,6 +169,15 @@ func TestSnapshotNodes(t *testing.T) {
 			Phase: v1core.PodRunning,
 		},
 	}
+	exampleMIGPod := examplePod.DeepCopy()
+	exampleMIGPod.Name = "mig-pod"
+	exampleMIGPod.Spec.Containers[0].Resources.Requests["nvidia.com/mig-1g.5gb"] = resource.MustParse("2")
+	exampleMIGPodWithPG := examplePod.DeepCopy()
+	exampleMIGPodWithPG.Name = "mig-pod-with-pg"
+	exampleMIGPodWithPG.Annotations = map[string]string{
+		commonconstants.PodGroupAnnotationForPod: "pg-1",
+	}
+	exampleMIGPodWithPG.Spec.Containers[0].Resources.Requests["nvidia.com/mig-1g.5gb"] = resource.MustParse("2")
 	tests := map[string]struct {
 		objs          []runtime.Object
 		resultNodes   []*node_info.NodeInfo
@@ -306,6 +315,48 @@ func TestSnapshotNodes(t *testing.T) {
 			},
 			resultPodsLen: 1,
 			nodePoolName:  "pool-a",
+		},
+		"MIG Job": {
+			objs: []runtime.Object{
+				&v1core.Node{
+					ObjectMeta: v1.ObjectMeta{
+						Name: "node-1",
+					},
+					Status: v1core.NodeStatus{
+						Allocatable: v1core.ResourceList{
+							"cpu":                   resource.MustParse("10"),
+							"nvidia.com/mig-1g.5gb": resource.MustParse("10"),
+						},
+					},
+				},
+				exampleMIGPod,
+				exampleMIGPodWithPG,
+			},
+			resultNodes: []*node_info.NodeInfo{
+				{
+					Name: "node-1",
+					Idle: resource_info.ResourceFromResourceList(
+						v1core.ResourceList{
+							"cpu":                   resource.MustParse("6"),
+							"nvidia.com/mig-1g.5gb": resource.MustParse("6"),
+						},
+					),
+					Used: resource_info.ResourceFromResourceList(
+						v1core.ResourceList{
+							"cpu":                   resource.MustParse("4"),
+							"memory":                resource.MustParse("0"),
+							"nvidia.com/mig-1g.5gb": resource.MustParse("4"),
+						},
+					),
+					Releasing: resource_info.ResourceFromResourceList(
+						v1core.ResourceList{
+							"cpu":    resource.MustParse("0"),
+							"memory": resource.MustParse("0"),
+						},
+					),
+				},
+			},
+			resultPodsLen: 2,
 		},
 	}
 

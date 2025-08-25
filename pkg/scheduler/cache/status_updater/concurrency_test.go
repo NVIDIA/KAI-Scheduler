@@ -150,11 +150,18 @@ var _ = Describe("Status Updater Concurrency - large scale: increase queue size"
 			close(finishUpdatesChan)
 			wg.Wait()
 
-			podGroupsList, _ := kubeAiSchedClient.SchedulingV2alpha2().PodGroups("default").List(context.TODO(), metav1.ListOptions{})
-			podGroupsFromCluster := make([]*schedulingv2alpha2.PodGroup, 0, len(podGroupsList.Items))
-			for _, podGroup := range podGroupsList.Items {
-				podGroupsFromCluster = append(podGroupsFromCluster, podGroup.DeepCopy())
-			}
+			var podGroupsFromCluster []*schedulingv2alpha2.PodGroup
+			Eventually(func() bool {
+				podGroupsList, _ := kubeAiSchedClient.SchedulingV2alpha2().PodGroups("default").List(context.TODO(), metav1.ListOptions{})
+				podGroupsFromCluster = make([]*schedulingv2alpha2.PodGroup, 0, len(podGroupsList.Items))
+				for _, podGroup := range podGroupsList.Items {
+					if len(podGroup.Status.Conditions) == 0 {
+						return false
+					}
+					podGroupsFromCluster = append(podGroupsFromCluster, podGroup.DeepCopy())
+				}
+				return true
+			}).WithTimeout(10 * time.Second).Should(BeTrue())
 
 			statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsFromCluster)
 
