@@ -2,9 +2,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-datasource-kai-prom
-  namespace: monitoring            # <-- change if your Grafana is elsewhere
+  namespace: monitoring # Modify according to your Grafana namespace
   labels:
-    grafana_datasource: "1"        # sidecar watches this label
+    grafana_datasource: "1"
 data:
   kai-prometheus.yaml: |
     apiVersion: 1
@@ -12,7 +12,7 @@ data:
     - name: kai-prometheus
       type: prometheus
       access: proxy
-      url: http://prometheus-operated.kai-scheduler.svc:9090
+      url: http://prometheus-operated.kai-scheduler.svc:9090 # Modify according to your Prometheus URL
       isDefault: false
       editable: true
       jsonData:

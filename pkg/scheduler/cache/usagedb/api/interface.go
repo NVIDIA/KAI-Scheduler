@@ -37,6 +37,8 @@ type UsageParams struct {
 	WindowSize *time.Duration `yaml:"windowSize" json:"windowSize"`
 	// Window type for time-series aggregation. If not set, defaults to sliding.
 	WindowType *WindowType `yaml:"windowType" json:"windowType"`
+	// ExtraParams are extra parameters for the usage db client, which are client specific.
+	ExtraParams map[string]string `yaml:"extraParams" json:"extraParams"`
 }
 
 func (up *UsageParams) SetDefaults() {
@@ -87,4 +89,35 @@ func (up *UsageParams) GetWindowTypeOrDefault() WindowType {
 		return GetDefaultWindowType()
 	}
 	return *up.WindowType
+}
+
+func (up *UsageParams) GetExtraDurationParamOrDefault(key string, defaultValue time.Duration) time.Duration {
+	if up.ExtraParams == nil {
+		return defaultValue
+	}
+
+	value, exists := up.ExtraParams[key]
+	if !exists {
+		return defaultValue
+	}
+
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return defaultValue
+	}
+
+	return duration
+}
+
+func (up *UsageParams) GetExtraStringParamOrDefault(key string, defaultValue string) string {
+	if up.ExtraParams == nil {
+		return defaultValue
+	}
+
+	value, exists := up.ExtraParams[key]
+	if !exists {
+		return defaultValue
+	}
+
+	return value
 }
