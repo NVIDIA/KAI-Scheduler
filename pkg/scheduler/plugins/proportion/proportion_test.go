@@ -572,7 +572,7 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 					Node: &v1.Node{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"node-role.kubernetes.io/gpu-worker": "true",
+								node_info.GpuWorkerNode: "true",
 							},
 						},
 					},
