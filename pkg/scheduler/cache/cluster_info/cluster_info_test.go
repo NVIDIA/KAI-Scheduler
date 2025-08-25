@@ -979,7 +979,9 @@ func TestSnapshotPodGroups(t *testing.T) {
 					Name:  "podGroup-0",
 					Queue: "queue-0",
 					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+							"test-pod": {},
+						}),
 					},
 				},
 			},
@@ -1190,9 +1192,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 						Name:  "podGroup-0",
 						Queue: "queue-0",
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 3),
-							"SubGroup-0":                  subGroup0,
-							"SubGroup-1":                  subGroup1,
+							"SubGroup-0": subGroup0,
+							"SubGroup-1": subGroup1,
 						},
 					}
 				}(),
@@ -1226,14 +1227,17 @@ func TestSnapshotPodGroups(t *testing.T) {
 			assert.Equal(t, expected.Queue, pg.Queue)
 			assert.Equal(t, expected.GetDefaultMinAvailable(), pg.GetDefaultMinAvailable())
 
-			assert.Equal(t, len(expected.GetActiveSubGroupInfos()), len(pg.GetActiveSubGroupInfos()))
-			for _, expectedSubGroup := range expected.GetActiveSubGroupInfos() {
-				for _, subGroup := range pg.GetActiveSubGroupInfos() {
+			assert.Equal(t, len(expected.GetSubGroups()), len(pg.GetSubGroups()))
+			for _, expectedSubGroup := range expected.GetSubGroups() {
+				for _, subGroup := range pg.GetSubGroups() {
 					if expectedSubGroup.GetName() != subGroup.GetName() {
 						continue
 					}
 					assert.Equal(t, expectedSubGroup.GetMinAvailable(), subGroup.GetMinAvailable())
 					assert.Equal(t, len(expectedSubGroup.GetPodInfos()), len(subGroup.GetPodInfos()))
+					if subGroup.GetName() == podgroup_info.DefaultSubGroup {
+						continue
+					}
 					for _, podInfo := range subGroup.GetPodInfos() {
 						assert.Equal(t, subGroup.GetName(), podInfo.SubGroupName)
 					}

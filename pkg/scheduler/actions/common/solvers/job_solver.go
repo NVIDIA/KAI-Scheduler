@@ -122,11 +122,12 @@ func (s *JobSolver) solvePartialJob(ssn *framework.Session, state *solvingState,
 func getPartialJobRepresentative(
 	job *podgroup_info.PodGroupInfo, pendingTasks []*pod_info.PodInfo) *podgroup_info.PodGroupInfo {
 	jobRepresentative := job.CloneWithTasks(pendingTasks)
-	jobRepresentative.SetDefaultMinAvailable(int32(len(pendingTasks)))
 	subGroupsMinAvailable := map[string]int{}
 	for _, pendingTask := range pendingTasks {
 		if _, found := jobRepresentative.SubGroups[pendingTask.SubGroupName]; found {
 			subGroupsMinAvailable[pendingTask.SubGroupName] += 1
+		} else {
+			subGroupsMinAvailable[podgroup_info.DefaultSubGroup] += 1
 		}
 	}
 	for subGroupName, minAvailable := range subGroupsMinAvailable {

@@ -243,27 +243,35 @@ func (su *defaultStatusUpdater) markTaskUnschedulable(pod *v1.Pod, message strin
 }
 
 func (su *defaultStatusUpdater) recordStaleJobEvent(job *podgroup_info.PodGroupInfo) {
-	message := fmt.Sprintf("Job is stale. %d pods are active, minMember is %d",
-		job.GetNumActiveUsedTasks(), job.GetDefaultMinAvailable())
+	subGroupMessages := ""
 
-	for _, subGroup := range job.GetActiveSubGroupInfos() {
-		if !subGroup.IsGangSatisfied() {
-			message += fmt.Sprintf(", subGroup %s minMember is %d and %d pods are active",
-				subGroup.GetName(), subGroup.GetMinAvailable(), subGroup.GetNumActiveUsedTasks())
+	totalActivePods := 0
+	totalMinAvailable := int32(0)
+	for _, subGroup := range job.GetSubGroups() {
+		activeTasks := subGroup.GetNumActiveUsedTasks()
+		minAvailable := subGroup.GetMinAvailable()
+		totalActivePods += activeTasks
+		totalMinAvailable += minAvailable
+
+		if !subGroup.IsGangSatisfied() && subGroup.GetName() != podgroup_info.DefaultSubGroup {
+			subGroupMessages += fmt.Sprintf(", subGroup %s minMember is %d and %d pods are active",
+				subGroup.GetName(), minAvailable, activeTasks)
 		}
 	}
+
+	message := fmt.Sprintf("Job is stale. %d pods are active, minMember is %d", totalActivePods, totalMinAvailable) + subGroupMessages
 
 	su.recorder.Eventf(job.PodGroup, v1.EventTypeNormal, "StaleJob", message)
 }
 
 func (su *defaultStatusUpdater) recordJobNotReadyEvent(job *podgroup_info.PodGroupInfo) {
-	message := "Job is not ready for scheduling."
-	if len(job.GetActiveSubGroupInfos()) == 0 {
-		message = message + fmt.Sprintf(" Waiting for %d pods, currently %d exist, %d are gated",
-			job.GetDefaultMinAvailable(), job.GetNumAliveTasks(), job.GetNumGatedTasks())
-	} else {
-		for _, subGroup := range job.GetActiveSubGroupInfos() {
-			if !subGroup.IsReadyForScheduling() {
+	message := fmt.Sprintf("Job is not ready for scheduling.")
+	for _, subGroup := range job.GetSubGroups() {
+		if !subGroup.IsReadyForScheduling() {
+			if subGroup.GetName() == podgroup_info.DefaultSubGroup {
+				message = message + fmt.Sprintf(" Waiting for %d pods, currently %d exist, %d are gated",
+					subGroup.GetMinAvailable(), subGroup.GetNumAliveTasks(), subGroup.GetNumGatedTasks())
+			} else {
 				message += fmt.Sprintf(" Waiting for %d pods for SubGroup %s, currently %d exist, %d are gated.",
 					subGroup.GetMinAvailable(), subGroup.GetName(), subGroup.GetNumAliveTasks(), subGroup.GetNumGatedTasks())
 			}
