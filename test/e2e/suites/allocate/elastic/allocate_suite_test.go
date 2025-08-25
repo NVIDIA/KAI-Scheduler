@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestPriority(t *testing.T) {
+func TestAllocate(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Elastic allocation Suite")
