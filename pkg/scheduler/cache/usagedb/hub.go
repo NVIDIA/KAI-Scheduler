@@ -11,13 +11,15 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/fake"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/prometheus"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
 type GetClientFn func(connectionString string, usageParams *api.UsageParams) (api.Interface, error)
 
 var defaultClientMap = map[string]GetClientFn{
-	"fake": fake.NewFakeClient,
+	"fake":       fake.NewFakeClient,
+	"prometheus": prometheus.NewPrometheusClient,
 }
 
 type ClientResolver struct {
