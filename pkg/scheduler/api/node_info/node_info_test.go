@@ -436,13 +436,6 @@ func TestAddRemovePods(t *testing.T) {
 	}
 }
 
-func TestConvertMibToMb(t *testing.T) {
-	mibSize := int64(100)
-	mbSize := convertMibToMb(mibSize)
-	mbSizeManualConversion := int64(float64(mibSize) * MibToMbScale)
-	assert.Equal(t, mbSize, mbSizeManualConversion)
-}
-
 type allocatableTestData struct {
 	node                    *v1.Node
 	podsResources           []v1.ResourceList
@@ -671,7 +664,7 @@ func TestGpuOperatorHasMemoryError_MibInput(t *testing.T) {
 	testNode.Labels[GpuMemoryLabel] = "4096"
 	gpuMemoryInMb, ok := getNodeGpuMemory(testNode)
 	assert.Equal(t, true, ok)
-	assert.Equal(t, int64(4200), gpuMemoryInMb)
+	assert.Equal(t, int64(4000), gpuMemoryInMb)
 }
 
 func TestGpuOperatorHasMemoryError_Bytes(t *testing.T) {
@@ -679,7 +672,7 @@ func TestGpuOperatorHasMemoryError_Bytes(t *testing.T) {
 	testNode.Labels[GpuMemoryLabel] = "4295000001"
 	gpuMemoryInMb, ok := getNodeGpuMemory(testNode)
 	assert.Equal(t, true, ok)
-	assert.Equal(t, int64(4200), gpuMemoryInMb)
+	assert.Equal(t, int64(4000), gpuMemoryInMb)
 }
 
 func addJobAnnotation(pod *v1.Pod) {

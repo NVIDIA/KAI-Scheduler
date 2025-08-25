@@ -566,6 +566,28 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 				},
 			},
 			{
+				name:           "mig gpu node",
+				isRestrictNode: true,
+				node: &node_info.NodeInfo{
+					Name: "n1",
+					Node: &v1.Node{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"node-role.kubernetes.io/gpu-worker": "true",
+							},
+						},
+					},
+					Allocatable: resource_info.ResourceFromResourceList(
+						common_info.BuildResourceListWithMig("8000m", "10G", "nvidia.com/mig-1g.5gb"),
+					),
+				},
+				want: rs.ResourceQuantities{
+					rs.CpuResource:    8000,
+					rs.MemoryResource: 10000000000,
+					rs.GpuResource:    1,
+				},
+			},
+			{
 				name:           "ignore extra resources",
 				isRestrictNode: true,
 				node: &node_info.NodeInfo{
