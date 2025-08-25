@@ -11,7 +11,6 @@ import (
 
 	lws "sigs.k8s.io/lws/api/leaderworkerset/v1"
 
-	nvidiav1 "github.com/NVIDIA/gpu-operator/api/nvidia/v1"
 	"k8s.io/api/node/v1alpha1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -65,9 +64,6 @@ func initConnectivity() error {
 		}
 		if err = kwokopv1beta1.AddToScheme(controllerClient.Scheme()); err != nil {
 			return fmt.Errorf("failed to add scheduling v1beta1 to scheme: %w", err)
-		}
-		if err = nvidiav1.AddToScheme(controllerClient.Scheme()); err != nil {
-			return fmt.Errorf("failed to add nvidiav1 to scheme: %w", err)
 		}
 		if err = lws.AddToScheme(controllerClient.Scheme()); err != nil {
 			return fmt.Errorf("failed to add lws to scheme: %w", err)
