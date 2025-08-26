@@ -126,9 +126,8 @@ func (mr *minruntimePlugin) reclaimScenarioValidatorFn(scenario api.ScenarioInfo
 		if !protected {
 			continue
 		}
-		numVictimTasks := int32(len(victimInfo.Tasks))
-		currentlyRunning := victimInfo.Job.GetActivelyRunningTasksCount()
-		if victimInfo.Job.GetDefaultMinAvailable() > currentlyRunning-numVictimTasks {
+
+		if !validVictimForMinAvailable(victimInfo) {
 			return false
 		}
 	}
@@ -145,9 +144,8 @@ func (mr *minruntimePlugin) preemptScenarioValidatorFn(scenario api.ScenarioInfo
 		if !protected {
 			continue
 		}
-		numVictimTasks := int32(len(victimInfo.Tasks))
-		currentlyRunning := victimInfo.Job.GetActivelyRunningTasksCount()
-		if victimInfo.Job.GetDefaultMinAvailable() > currentlyRunning-numVictimTasks {
+
+		if !validVictimForMinAvailable(victimInfo) {
 			return false
 		}
 	}
@@ -211,4 +209,28 @@ func (mr *minruntimePlugin) cacheReclaimProtection(pendingJob *podgroup_info.Pod
 		mr.reclaimProtectionCache[pendingJob.UID] = make(map[common_info.PodGroupID]bool)
 	}
 	mr.reclaimProtectionCache[pendingJob.UID][victim.UID] = protected
+}
+
+func validVictimForMinAvailable(victimInfo *api.VictimInfo) bool {
+	numVictimTasksPerSubGroup := map[string]int32{}
+	for _, task := range victimInfo.Tasks {
+		subGroupName := podgroup_info.DefaultSubGroup
+		if task.SubGroupName != "" {
+			subGroupName = task.SubGroupName
+		}
+		numVictimTasksPerSubGroup[subGroupName]++
+	}
+
+	numCurrentlyRunningSubGroup := map[string]int32{}
+	for subGroupName := range numVictimTasksPerSubGroup {
+		numCurrentlyRunningSubGroup[subGroupName] = int32(victimInfo.Job.GetSubGroups()[subGroupName].GetNumActiveUsedTasks())
+	}
+
+	for subGroupName, numVictims := range numVictimTasksPerSubGroup {
+		subGroupCurrentlyRunning := numCurrentlyRunningSubGroup[subGroupName]
+		if victimInfo.Job.GetSubGroups()[subGroupName].GetMinAvailable() > subGroupCurrentlyRunning-numVictims {
+			return false
+		}
+	}
+	return true
 }
