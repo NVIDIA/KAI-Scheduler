@@ -26,6 +26,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/gpupack"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/gpusharingorder"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/gpuspread"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/joborder"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/kubeflow"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/minruntime"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/nodeavailability"
@@ -69,4 +70,7 @@ func InitDefaultPlugins() {
 
 	// Other Plugins
 	framework.RegisterPluginBuilder("snapshot", snapshot.New)
+
+	// Always register the Job Order Plugin last.
+	framework.RegisterPluginBuilder("joborder", joborder.New)
 }
