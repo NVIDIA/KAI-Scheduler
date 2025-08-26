@@ -403,7 +403,12 @@ func (pgi *PodGroupInfo) IsReadyForScheduling() bool {
 }
 
 func (pgi *PodGroupInfo) IsElastic() bool {
-	return pgi.GetDefaultMinAvailable() < int32(len(pgi.GetAllPodsMap()))
+	for _, subGroup := range pgi.GetSubGroups() {
+		if subGroup.IsElastic() {
+			return true
+		}
+	}
+	return false
 }
 
 func (pgi *PodGroupInfo) IsStale() bool {

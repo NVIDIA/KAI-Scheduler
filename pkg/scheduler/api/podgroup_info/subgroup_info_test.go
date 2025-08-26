@@ -332,6 +332,52 @@ func TestGetNumPendingTasks(t *testing.T) {
 	}
 }
 
+func TestIsElastic(t *testing.T) {
+	tests := []struct {
+		name     string
+		pods     []*pod_info.PodInfo
+		expected bool
+	}{
+		{
+			name: "satisfied with exact minimum",
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Running},
+				{UID: "2", Status: pod_status.Running},
+			},
+			expected: false,
+		},
+		{
+			name: "not satisfied with insufficient pods",
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Pending},
+			},
+			expected: false,
+		},
+		{
+			name: "satisfied with above minimum pods",
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Pending},
+				{UID: "2", Status: pod_status.Running},
+				{UID: "3", Status: pod_status.Pending},
+				{UID: "4", Status: pod_status.Gated},
+				{UID: "5", Status: pod_status.Pending},
+			},
+			expected: true,
+		},
+	}
+
+	for _, test := range tests {
+		sgi := NewSubGroupInfo("test", 2)
+		for _, pod := range test.pods {
+			sgi.AssignTask(pod)
+		}
+
+		if got := sgi.IsElastic(); got != test.expected {
+			t.Errorf("Name: %v, IsElastic() = %v, want %v", test.name, got, test.expected)
+		}
+	}
+}
+
 func TestGetNumActiveAllocatedTasks(t *testing.T) {
 	tests := []struct {
 		name     string

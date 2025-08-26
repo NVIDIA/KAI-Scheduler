@@ -117,6 +117,10 @@ func (sgi *SubGroupInfo) IsGangSatisfied() bool {
 	return numActiveTasks >= int(sgi.minAvailable)
 }
 
+func (sgi *SubGroupInfo) IsElastic() bool {
+	return sgi.GetMinAvailable() < int32(len(sgi.GetPodInfos()))
+}
+
 func (sgi *SubGroupInfo) GetNumActiveAllocatedTasks() int {
 	return sgi.numActiveAllocatedTasks
 }
