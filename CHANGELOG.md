@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Luke I am your father
+
 ## [v0.6.14] - 2025-08-26
 
 ### Removed
