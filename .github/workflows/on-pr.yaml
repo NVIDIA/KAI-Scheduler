@@ -4,8 +4,6 @@
 name: KAI Scheduler - Pull Request
 on:
   pull_request:
-    paths-ignore:
-      - '*.md'
     types: [opened, reopened, synchronize]
 
 concurrency:
@@ -13,9 +11,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-changes:
+    name: Check Changes
+    runs-on: ubuntu-latest
+    outputs:
+      should-run-ci: ${{ steps.changes.outputs.should-run-ci }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            should-run-ci:
+              - '!*.md'
+
   validate-and-test:
     name: Validate & Test
     runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.should-run-ci == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,6 +71,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.should-run-ci == 'true'
     outputs:
       package_version: ${{ steps.package_version.outputs.PACKAGE_VERSION }}
     steps:
@@ -100,7 +117,8 @@ jobs:
 
   e2e-tests:
     name: Run E2E Tests
-    needs: [ build ]
+    needs: [ check-changes, build ]
+    if: needs.check-changes.outputs.should-run-ci == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -152,3 +170,23 @@ jobs:
       - name: Run e2e tests
         run: |
           ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv ./test/e2e/suites --label-filter '!autoscale', '!scale'
+
+  # This job provides the required status checks when CI is skipped for markdown-only changes
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [check-changes, validate-and-test, build, e2e-tests]
+    if: always()
+    steps:
+      - name: Check CI status
+        run: |
+          if [[ "${{ needs.check-changes.outputs.should-run-ci }}" == "false" ]]; then
+            echo "✅ CI skipped for markdown-only changes"
+            exit 0
+          elif [[ "${{ needs.validate-and-test.result }}" == "success" && "${{ needs.build.result }}" == "success" && "${{ needs.e2e-tests.result }}" == "success" ]]; then
+            echo "✅ All CI jobs passed"
+            exit 0
+          else
+            echo "❌ CI jobs failed"
+            exit 1
+          fi
