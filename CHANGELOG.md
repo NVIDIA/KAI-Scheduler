@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [v0.6.12] - 2025-08-26
+## [v0.6.14] - 2025-08-26
 
 ### Removed
 - Removed unused code that required gpu-operator as a dependency
