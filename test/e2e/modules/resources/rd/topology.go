@@ -25,7 +25,7 @@ import (
 const (
 	TestZoneLabelKey = "e2e-topology-label/zone"
 	TestRackLabelKey = "e2e-topology-label/rack"
-	nodeNameLabelKey = "kubernetes.io/hostname"
+	NodeNameLabelKey = "kubernetes.io/hostname"
 
 	numNodesInTestTopology = 4
 )
@@ -61,7 +61,7 @@ func CreateRackZoneTopology(
 			Levels: []kueuev1alpha1.TopologyLevel{
 				{NodeLabel: TestZoneLabelKey},
 				{NodeLabel: TestRackLabelKey},
-				{NodeLabel: nodeNameLabelKey},
+				{NodeLabel: NodeNameLabelKey},
 			},
 		},
 	}
@@ -132,7 +132,7 @@ func CleanNodesFromTopology(ctx context.Context,
 ) {
 	labelsToClean := []string{}
 	for _, label := range testTopologyData.TopologyCrd.Spec.Levels {
-		if label.NodeLabel != nodeNameLabelKey {
+		if label.NodeLabel != NodeNameLabelKey {
 			labelsToClean = append(labelsToClean, label.NodeLabel)
 		}
 	}

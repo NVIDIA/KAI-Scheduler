@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -70,36 +71,18 @@ var _ = Describe("Topology", Ordered, func() {
 
 		It("required only - rack level", func(ctx context.Context) {
 			namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
-			queueName := testCtx.Queues[0].Name
+			topologyConstraint := v2alpha2.TopologyConstraint{
+				RequiredTopologyLevel: rd.TestRackLabelKey,
+				Topology:              "e2e-topology-tree",
+			}
 
-			podCount := 2
 			gpusPerNode := testTopologyData.TopologyNodes[gpuNodesNames[0]].
 				Status.Allocatable[v1.ResourceName(constants.GpuResource)]
 			podResource := v1.ResourceList{
 				v1.ResourceName(constants.GpuResource): gpusPerNode,
 			}
 
-			podGroup := pod_group.Create(
-				namespace, "distributed-pod-group"+utils.GenerateRandomK8sName(10), queueName)
-			podGroup.Spec.MinMember = int32(podCount)
-			podGroup.Spec.TopologyConstraint = v2alpha2.TopologyConstraint{
-				RequiredTopologyLevel: rd.TestRackLabelKey,
-				Topology:              "e2e-topology-tree",
-			}
-
-			pods := []*v1.Pod{}
-
-			Expect(testCtx.ControllerClient.Create(ctx, podGroup)).To(Succeed())
-			for i := 0; i < podCount; i++ {
-				pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{Requests: podResource, Limits: podResource})
-				pod.Name = "distributed-pod-" + utils.GenerateRandomK8sName(10)
-				pod.Annotations[pod_group.PodGroupNameAnnotation] = podGroup.Name
-				pod.Labels[pod_group.PodGroupNameAnnotation] = podGroup.Name
-				_, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
-				Expect(err).To(Succeed())
-				pods = append(pods, pod)
-			}
-
+			pods := createDistributedWorkload(ctx, testCtx, 2, podResource, topologyConstraint)
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, namespace, pods)
 
 			// Validate that all the pods have been scheduled to the same rack
@@ -114,6 +97,98 @@ var _ = Describe("Topology", Ordered, func() {
 
 			Expect(len(scheduledRacks)).To(Equal(1), "Expected all pods scheduled to one rack, got %v", scheduledRacks)
 		})
+
+		It("preferred only - rack level", func(ctx context.Context) {
+			namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+			topologyConstraint := v2alpha2.TopologyConstraint{
+				PreferredTopologyLevel: rd.TestRackLabelKey,
+				Topology:               "e2e-topology-tree",
+			}
+
+			gpusPerNode := testTopologyData.TopologyNodes[gpuNodesNames[0]].
+				Status.Allocatable[v1.ResourceName(constants.GpuResource)]
+			podResource := v1.ResourceList{
+				v1.ResourceName(constants.GpuResource): gpusPerNode,
+			}
+
+			pods := createDistributedWorkload(ctx, testCtx, 2, podResource, topologyConstraint)
+			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, namespace, pods)
+
+			// Validate that all the pods have been scheduled to the same rack
+			podList, err := testCtx.KubeClientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Failed to list pods")
+
+			scheduledRacks := map[string][]string{}
+			for _, pod := range podList.Items {
+				podRack := testTopologyData.TopologyNodes[pod.Spec.NodeName].Labels[rd.TestRackLabelKey]
+				scheduledRacks[podRack] = append(scheduledRacks[podRack], pod.Name)
+			}
+
+			Expect(len(scheduledRacks)).To(Equal(1), "Expected all pods scheduled to one rack, got %v", scheduledRacks)
+		})
+
+		It("required rack and preferred node - all pods in a single node", func(ctx context.Context) {
+			namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+			topologyConstraint := v2alpha2.TopologyConstraint{
+				RequiredTopologyLevel:  rd.TestRackLabelKey,
+				PreferredTopologyLevel: rd.NodeNameLabelKey,
+				Topology:               "e2e-topology-tree",
+			}
+
+			gpusPerNode := testTopologyData.TopologyNodes[gpuNodesNames[0]].
+				Status.Allocatable[v1.ResourceName(constants.GpuResource)]
+			halfGpusPerNode := int64(gpusPerNode.AsFloat64Slow() / 2)
+			podResource := v1.ResourceList{
+				v1.ResourceName(constants.GpuResource): *resource.NewQuantity(halfGpusPerNode, resource.DecimalSI),
+			}
+
+			pods := createDistributedWorkload(ctx, testCtx, 2, podResource, topologyConstraint)
+			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, namespace, pods)
+
+			// Validate that all the pods have been scheduled to the same rack
+			podList, err := testCtx.KubeClientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Failed to list pods")
+
+			scheduledNodes := map[string][]string{}
+			for _, pod := range podList.Items {
+				scheduledNodes[pod.Spec.NodeName] = append(scheduledNodes[pod.Spec.NodeName], pod.Name)
+			}
+
+			Expect(len(scheduledNodes)).To(Equal(1), "Expected all pods scheduled to one node, got %v", scheduledNodes)
+		})
+
+		It("required rack and preferred node - all pods in a rack", func(ctx context.Context) {
+			namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+			topologyConstraint := v2alpha2.TopologyConstraint{
+				RequiredTopologyLevel:  rd.TestRackLabelKey,
+				PreferredTopologyLevel: rd.NodeNameLabelKey,
+				Topology:               "e2e-topology-tree",
+			}
+
+			gpusPerNode := testTopologyData.TopologyNodes[gpuNodesNames[0]].
+				Status.Allocatable[v1.ResourceName(constants.GpuResource)]
+			podResource := v1.ResourceList{
+				v1.ResourceName(constants.GpuResource): gpusPerNode,
+			}
+
+			pods := createDistributedWorkload(ctx, testCtx, 2, podResource, topologyConstraint)
+			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, namespace, pods)
+
+			// Validate that all the pods have been scheduled to the same rack
+			podList, err := testCtx.KubeClientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Failed to list pods")
+
+			scheduledNodes := map[string][]string{}
+			scheduledRacks := map[string][]string{}
+			for _, pod := range podList.Items {
+				scheduledNodes[pod.Spec.NodeName] = append(scheduledNodes[pod.Spec.NodeName], pod.Name)
+				podRack := testTopologyData.TopologyNodes[pod.Spec.NodeName].Labels[rd.TestRackLabelKey]
+				scheduledRacks[podRack] = append(scheduledRacks[podRack], pod.Name)
+			}
+
+			Expect(len(scheduledNodes)).To(BeNumerically(">", 1), "Expected all pods scheduled to one more then one node, got %v", scheduledNodes)
+			Expect(len(scheduledRacks)).To(Equal(1), "Expected all pods scheduled to the same rack, got %v", scheduledRacks)
+		})
 	}, MustPassRepeatedly(3))
 
 	Context("Empty context to jump over ginkgo bug", func() {
@@ -122,3 +197,27 @@ var _ = Describe("Topology", Ordered, func() {
 		})
 	})
 }, Ordered)
+
+func createDistributedWorkload(ctx context.Context, testCtx *testcontext.TestContext,
+	podCount int, podResource v1.ResourceList, topologyConstraint v2alpha2.TopologyConstraint) []*v1.Pod {
+	namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+	queueName := testCtx.Queues[0].Name
+
+	podGroup := pod_group.Create(namespace, "distributed-pod-group"+utils.GenerateRandomK8sName(10), queueName)
+	podGroup.Spec.MinMember = int32(podCount)
+	podGroup.Spec.TopologyConstraint = topologyConstraint
+
+	pods := []*v1.Pod{}
+	Expect(testCtx.ControllerClient.Create(ctx, podGroup)).To(Succeed())
+	for i := 0; i < podCount; i++ {
+		pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{Requests: podResource, Limits: podResource})
+		pod.Name = "distributed-pod-" + utils.GenerateRandomK8sName(10)
+		pod.Annotations[pod_group.PodGroupNameAnnotation] = podGroup.Name
+		pod.Labels[pod_group.PodGroupNameAnnotation] = podGroup.Name
+		_, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
+		Expect(err).To(Succeed())
+		pods = append(pods, pod)
+	}
+
+	return pods
+}
