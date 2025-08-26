@@ -156,6 +156,15 @@ var _ = Describe("Status Updater Concurrency - large scale: increase queue size"
 				podGroupsFromCluster = append(podGroupsFromCluster, podGroup.DeepCopy())
 			}
 
+			Eventually(func() int {
+				numberOfPodGroupInFlight := 0
+				statusUpdater.inFlightPodGroups.Range(func(key any, value any) bool {
+					numberOfPodGroupInFlight += 1
+					return true
+				})
+				return numberOfPodGroupInFlight
+			}, time.Second*20, time.Millisecond*50).Should(Equal(0))
+
 			statusUpdater.SyncPodGroupsWithPendingUpdates(podGroupsFromCluster)
 
 			// check that the pods groups are now not updated anymore
