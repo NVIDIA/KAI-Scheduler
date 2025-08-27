@@ -13,8 +13,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
-// Need to implement job ordering logic for users/operator
-
 type JobOrder struct {
 	ID       common_info.PodGroupID `json:"id"`
 	Priority int32                  `json:"priority"`
@@ -48,7 +46,12 @@ func (jp *JobOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 		QueueOrder:  make(map[common_info.QueueID][]JobOrder),
 	}
 
-	jobsOrderByQueues := utils.CreateJobsOrderSnapshot(ssn)
+	jobsOrderByQueues := utils.NewJobsOrderByQueues(ssn, utils.JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     true,
+		MaxJobsQueueDepth: ssn.GetJobsDepth(framework.Allocate),
+	})
+	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
 
 	// Extract global order by popping jobs until empty
 	for !jobsOrderByQueues.IsEmpty() {
