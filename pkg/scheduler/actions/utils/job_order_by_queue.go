@@ -338,14 +338,3 @@ func (jobsOrder *JobsOrderByQueues) buildFuncOrderBetweenDepartmentsWithJobs(rev
 		return jobsOrder.ssn.QueueOrderFn(lDepartment, rDepartment, lPending, rPending, lVictims, rVictims)
 	}
 }
-
-// CreateJobsOrderSnapshot creates an initialized JobsOrderByQueues snapshot with typical options
-func CreateJobsOrderSnapshot(ssn *framework.Session) JobsOrderByQueues {
-	jobsOrderByQueues := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
-		FilterNonPending:  true,
-		FilterUnready:     true,
-		MaxJobsQueueDepth: ssn.GetJobsDepth(framework.Allocate),
-	})
-	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
-	return jobsOrderByQueues
-}
