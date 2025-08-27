@@ -247,7 +247,7 @@ func (su *defaultStatusUpdater) recordStaleJobEvent(job *podgroup_info.PodGroupI
 		job.GetNumActiveUsedTasks(), job.GetDefaultMinAvailable())
 
 	for _, subGroup := range job.GetActiveSubGroupInfos() {
-		if !subGroup.IsGangSatisfied() {
+		if subGroup.IsStale() {
 			message += fmt.Sprintf(", subGroup %s minMember is %d and %d pods are active",
 				subGroup.GetName(), subGroup.GetMinAvailable(), subGroup.GetNumActiveUsedTasks())
 		}

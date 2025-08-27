@@ -407,7 +407,7 @@ func (pgi *PodGroupInfo) IsStale() bool {
 			return true
 		}
 		for _, subGroup := range pgi.GetActiveSubGroupInfos() {
-			if !subGroup.IsGangSatisfied() {
+			if subGroup.IsStale() {
 				return true
 			}
 		}
@@ -416,8 +416,8 @@ func (pgi *PodGroupInfo) IsStale() bool {
 }
 
 func (pgi *PodGroupInfo) IsGangSatisfied() bool {
-	numActiveTasks := pgi.GetNumActiveUsedTasks()
-	if numActiveTasks < int(pgi.GetDefaultMinAvailable()) {
+	numActiveAllocatedTasks := pgi.GetActiveAllocatedTasksCount()
+	if numActiveAllocatedTasks < int(pgi.GetDefaultMinAvailable()) {
 		return false
 	}
 	for _, subGroup := range pgi.SubGroups {

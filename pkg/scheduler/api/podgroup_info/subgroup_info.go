@@ -113,8 +113,13 @@ func (sgi *SubGroupInfo) IsReadyForScheduling() bool {
 }
 
 func (sgi *SubGroupInfo) IsGangSatisfied() bool {
-	numActiveTasks := sgi.GetNumActiveUsedTasks()
+	numActiveTasks := sgi.GetNumActiveAllocatedTasks()
 	return numActiveTasks >= int(sgi.minAvailable)
+}
+
+func (sgi *SubGroupInfo) IsStale() bool {
+	numActiveUsedTasks := sgi.GetNumActiveUsedTasks()
+	return numActiveUsedTasks < int(sgi.minAvailable)
 }
 
 func (sgi *SubGroupInfo) GetNumActiveAllocatedTasks() int {

@@ -254,6 +254,77 @@ func TestIsGangSatisfied(t *testing.T) {
 	}
 }
 
+func TestIsStale(t *testing.T) {
+	tests := []struct {
+		name         string
+		minAvailable int32
+		pods         []*pod_info.PodInfo
+		expected     bool
+	}{
+		{
+			name:         "not stale when used >= minAvailable",
+			minAvailable: 2,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Running},
+				{UID: "2", Status: pod_status.Pipelined},
+			},
+			expected: false,
+		},
+		{
+			name:         "not stale with releasing status counted as used",
+			minAvailable: 2,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Running},
+				{UID: "2", Status: pod_status.Releasing},
+			},
+			expected: false,
+		},
+		{
+			name:         "stale when used < minAvailable",
+			minAvailable: 3,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Running},
+				{UID: "2", Status: pod_status.Releasing},
+			},
+			expected: true,
+		},
+		{
+			name:         "stale when no used pods",
+			minAvailable: 1,
+			pods:         []*pod_info.PodInfo{},
+			expected:     true,
+		},
+		{
+			name:         "not stale when used equals minAvailable",
+			minAvailable: 1,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Releasing},
+			},
+			expected: false,
+		},
+		{
+			name:         "stale with only non-used statuses",
+			minAvailable: 1,
+			pods: []*pod_info.PodInfo{
+				{UID: "1", Status: pod_status.Gated},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sgi := NewSubGroupInfo("test", tt.minAvailable)
+			for _, pod := range tt.pods {
+				sgi.AssignTask(pod)
+			}
+			if got := sgi.IsStale(); got != tt.expected {
+				t.Errorf("IsStale() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestGetNumAliveTasks(t *testing.T) {
 	sgi := NewSubGroupInfo("test", 2)
 	pods := []*pod_info.PodInfo{
