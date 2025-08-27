@@ -116,7 +116,7 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 func (p *PrometheusClient) queryResourceUsage(ctx context.Context, allocationMetric string) (map[common_info.QueueID]float64, error) {
 	queueUsage := make(map[common_info.QueueID]float64)
 
-	usageQuery := fmt.Sprintf("sum_over_time(%s[%s:%s])",
+	usageQuery := fmt.Sprintf("sum_over_time((%s)[%s:%s])",
 		allocationMetric,
 		p.usageParams.WindowSize.String(),
 		p.queryResolution.String(),
@@ -124,7 +124,7 @@ func (p *PrometheusClient) queryResourceUsage(ctx context.Context, allocationMet
 
 	usageResult, warnings, err := p.client.Query(ctx, usageQuery, time.Now())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error running query %s: %v", usageQuery, err)
 	}
 
 	// Log warnings if exist
