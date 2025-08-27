@@ -110,7 +110,9 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 			Stale:     false,
 		},
 
-		SubGroups: map[string]*SubGroupInfo{},
+		SubGroups: map[string]*SubGroupInfo{
+			DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1),
+		},
 
 		LastStartTimestamp:   nil,
 		activeAllocatedCount: ptr.To(0),
@@ -176,10 +178,12 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 		if _, exists := pgi.SubGroups[DefaultSubGroup]; !exists {
 			pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, max(pg.Spec.MinMember, 1))
 		}
-	}
-	for _, sg := range pg.Spec.SubGroups {
-		subGroupInfo := FromSubGroup(&sg)
-		pgi.SubGroups[subGroupInfo.name] = subGroupInfo
+	} else {
+		pgi.SubGroups = map[string]*SubGroupInfo{}
+		for _, sg := range pg.Spec.SubGroups {
+			subGroupInfo := FromSubGroup(&sg)
+			pgi.SubGroups[subGroupInfo.name] = subGroupInfo
+		}
 	}
 
 	if pg.Annotations[commonconstants.StalePodgroupTimeStamp] != "" {
@@ -222,16 +226,17 @@ func (pgi *PodGroupInfo) addTaskIndex(ti *pod_info.PodInfo) {
 }
 
 func (pgi *PodGroupInfo) AddTaskInfo(ti *pod_info.PodInfo) {
-	subGroup, found := pgi.SubGroups[ti.SubGroupName]
-	if found {
-		subGroup.AssignTask(ti)
-	} else {
-		if pgi.SubGroups[DefaultSubGroup] == nil {
-			pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, 0)
-		}
-		pgi.SubGroups[DefaultSubGroup].AssignTask(ti)
+	taskSubGroupName := DefaultSubGroup
+	if ti.SubGroupName != "" {
+		taskSubGroupName = ti.SubGroupName
+	}
+	subGroup, found := pgi.SubGroups[taskSubGroupName]
+	if !found {
+		log.InfraLogger.Warningf("AddTaskInfo for task <%s/%s> of podGroup: <%s/%s>: SubGroup not found <%s>", ti.Namespace, ti.Name, pgi.Namespace, pgi.Name, taskSubGroupName)
+		return
 	}
 
+	subGroup.AssignTask(ti)
 	pgi.addTaskIndex(ti)
 
 	if pod_status.AllocatedStatus(ti.Status) {

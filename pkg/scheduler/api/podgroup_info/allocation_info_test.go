@@ -135,7 +135,9 @@ func Test_getTasksFromQueue(t *testing.T) {
 func Test_getTasksPriorityQueuePerSubGroup(t *testing.T) {
 	pg := NewPodGroupInfo("test-pg")
 	sg := NewSubGroupInfo("test-sub-group", 1)
-	pg.SubGroups["test-sub-group"] = sg
+	pg.SubGroups = map[string]*SubGroupInfo{
+		"test-sub-group": sg,
+	}
 
 	pg.AddTaskInfo(simpleTask("a", "test-sub-group", pod_status.Pending))
 	m := getTasksPriorityQueuePerSubGroup(pg, tasksOrderFn, true)
