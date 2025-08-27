@@ -119,8 +119,8 @@ func TestUsageParams_GetWindowTypeOrDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.input.GetWindowTypeOrDefault()
-			assert.Equal(t, tt.expected, result)
+			tt.input.SetDefaults()
+			assert.Equal(t, tt.expected, *tt.input.WindowType)
 		})
 	}
 }
@@ -279,17 +279,6 @@ func TestWindowType_IsValid(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
-}
-
-func TestGetDefaultWindowType(t *testing.T) {
-	result := GetDefaultWindowType()
-	assert.Equal(t, SlidingWindow, result)
-}
-
-func TestWindowTypeConstants(t *testing.T) {
-	// Test that constants have expected values
-	assert.Equal(t, "tumbling", string(TumblingWindow))
-	assert.Equal(t, "sliding", string(SlidingWindow))
 }
 
 func TestUsageParams_ZeroValues(t *testing.T) {

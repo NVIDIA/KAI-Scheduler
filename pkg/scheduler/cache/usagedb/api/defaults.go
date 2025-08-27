@@ -42,19 +42,6 @@ func (wt WindowType) IsValid() bool {
 	}
 }
 
-// GetDefaultWindowType returns the default window type (sliding)
-func GetDefaultWindowType() WindowType {
-	return SlidingWindow
-}
-
-// GetWindowTypeOrDefault returns the window type if set, otherwise returns the default (sliding)
-func (up *UsageParams) GetWindowTypeOrDefault() WindowType {
-	if up.WindowType == nil {
-		return GetDefaultWindowType()
-	}
-	return *up.WindowType
-}
-
 func (up *UsageParams) GetExtraDurationParamOrDefault(key string, defaultValue time.Duration) time.Duration {
 	if up.ExtraParams == nil {
 		return defaultValue
