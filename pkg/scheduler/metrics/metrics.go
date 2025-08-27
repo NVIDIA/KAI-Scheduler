@@ -176,20 +176,20 @@ func InitMetrics(namespace string) {
 	queueCPUUsage = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: namespace,
-			Name:      "queue_cpu_usage_cores",
-			Help:      "CPU usage of queue, as a gauge. Value is proportional to cpu*hours usage with time decay applied",
+			Name:      "queue_cpu_usage",
+			Help:      "CPU usage of queue, as a gauge. Units depend on UsageDB configuration",
 		}, []string{"queue_name"})
 	queueMemoryUsage = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: namespace,
-			Name:      "queue_memory_usage_gb",
-			Help:      "Memory usage of queue, as a gauge. Value is proportional to memory*hours usage with time decay applied",
+			Name:      "queue_memory_usage",
+			Help:      "Memory usage of queue, as a gauge. Units depend on UsageDB configuration",
 		}, []string{"queue_name"})
 	queueGPUUsage = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: namespace,
-			Name:      "queue_gpu_usage_devices",
-			Help:      "GPU usage of queue, as a gauge. Value is proportional to gpu*hours usage with time decay applied",
+			Name:      "queue_gpu_usage",
+			Help:      "GPU usage of queue, as a gauge. Units depend on UsageDB configuration",
 		}, []string{"queue_name"})
 
 	usageQueryLatency = promauto.NewHistogramVec(
