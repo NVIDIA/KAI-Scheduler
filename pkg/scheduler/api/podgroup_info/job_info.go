@@ -175,8 +175,11 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 		if pgi.SubGroups == nil {
 			pgi.SubGroups = map[string]*SubGroupInfo{}
 		}
-		if _, exists := pgi.SubGroups[DefaultSubGroup]; !exists {
+		defaultSubGroup, found := pgi.SubGroups[DefaultSubGroup]
+		if !found {
 			pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, max(pg.Spec.MinMember, 1))
+		} else {
+			defaultSubGroup.SetMinAvailable(max(pg.Spec.MinMember, 1))
 		}
 	} else {
 		pgi.SubGroups = map[string]*SubGroupInfo{}
