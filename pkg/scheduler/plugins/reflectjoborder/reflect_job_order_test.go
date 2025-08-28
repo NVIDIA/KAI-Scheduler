@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package joborder
+package reflectjoborder
 
 import (
 	"bytes"
@@ -21,7 +21,7 @@ func TestServeJobs_ReflectJobOrderReady(t *testing.T) {
 			QueueOrder:  map[common_info.QueueID][]JobOrder{"q1": {{ID: "pg1", Priority: 10}}},
 		},
 	}
-	req := httptest.NewRequest(http.MethodGet, "/get-jobs", nil)
+	req := httptest.NewRequest(http.MethodGet, "/get-job-order", nil)
 	rr := httptest.NewRecorder()
 	plugin.serveJobs(rr, req)
 	if rr.Code != http.StatusOK {
@@ -42,7 +42,7 @@ func TestServeJobs_ReflectJobOrderReady(t *testing.T) {
 // Test serveJobs returns 503 if ReflectJobOrder is nil
 func TestServeJobs_ReflectJobOrderNotReady(t *testing.T) {
 	plugin := &JobOrderPlugin{ReflectJobOrder: nil}
-	req := httptest.NewRequest(http.MethodGet, "/get-jobs", nil)
+	req := httptest.NewRequest(http.MethodGet, "/get-job-order", nil)
 	rr := httptest.NewRecorder()
 	plugin.serveJobs(rr, req)
 	if rr.Code != http.StatusServiceUnavailable {
@@ -66,7 +66,7 @@ func (e *encodeError) Error() string { return e.msg }
 
 func TestServeJobs_EncodeError(t *testing.T) {
 	plugin := &JobOrderPlugin{ReflectJobOrder: &ReflectJobOrder{}}
-	req := httptest.NewRequest(http.MethodGet, "/get-jobs", nil)
+	req := httptest.NewRequest(http.MethodGet, "/get-job-order", nil)
 	rr := httptest.NewRecorder()
 	bw := &brokenWriter{rr}
 	plugin.serveJobs(bw, req)
