@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package joborder
+package reflectjoborder
 
 import (
 	"encoding/json"
@@ -62,7 +62,7 @@ func (jp *JobOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 		jp.ReflectJobOrder.QueueOrder[job.Queue] = append(jp.ReflectJobOrder.QueueOrder[job.Queue], jobOrder)
 	}
 
-	ssn.AddHttpHandler("/get-jobs", jp.serveJobs)
+	ssn.AddHttpHandler("/get-job-order", jp.serveJobs)
 }
 
 func (jp *JobOrderPlugin) OnSessionClose(ssn *framework.Session) {}
