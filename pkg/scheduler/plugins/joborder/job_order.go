@@ -40,9 +40,8 @@ func (jp *JobOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 	jp.session = ssn
 	log.InfraLogger.V(3).Info("Job Order registering get-jobs")
 
-	// Initialize empty structure
 	jp.ReflectJobOrder = &ReflectJobOrder{
-		GlobalOrder: []JobOrder{},
+		GlobalOrder: make([]JobOrder, 0),
 		QueueOrder:  make(map[common_info.QueueID][]JobOrder),
 	}
 
@@ -53,7 +52,6 @@ func (jp *JobOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 	})
 	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
 
-	// Extract global order by popping jobs until empty
 	for !jobsOrderByQueues.IsEmpty() {
 		job := jobsOrderByQueues.PopNextJob()
 		jobOrder := JobOrder{
@@ -61,10 +59,7 @@ func (jp *JobOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 			Priority: job.Priority,
 		}
 		jp.ReflectJobOrder.GlobalOrder = append(jp.ReflectJobOrder.GlobalOrder, jobOrder)
-
-		// Extract per-queue order
-		queueID := job.Queue
-		jp.ReflectJobOrder.QueueOrder[queueID] = append(jp.ReflectJobOrder.QueueOrder[queueID], jobOrder)
+		jp.ReflectJobOrder.QueueOrder[job.Queue] = append(jp.ReflectJobOrder.QueueOrder[job.Queue], jobOrder)
 	}
 
 	ssn.AddHttpHandler("/get-jobs", jp.serveJobs)
@@ -72,15 +67,15 @@ func (jp *JobOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 
 func (jp *JobOrderPlugin) OnSessionClose(ssn *framework.Session) {}
 
-func (jp *JobOrderPlugin) serveJobs(writer http.ResponseWriter, request *http.Request) {
+func (jp *JobOrderPlugin) serveJobs(w http.ResponseWriter, r *http.Request) {
 	if jp.ReflectJobOrder == nil {
-		http.Error(writer, "Job order data not ready", http.StatusServiceUnavailable)
+		http.Error(w, "Job order data not ready", http.StatusServiceUnavailable)
 		return
 	}
-
-	// Serve the job order data
-	writer.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(writer).Encode(jp.ReflectJobOrder); err != nil {
-		http.Error(writer, "Failed to encode job order data", http.StatusInternalServerError)
+	w.Header().Set("Content-Type", "application/json")
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(jp.ReflectJobOrder); err != nil {
+		http.Error(w, "Failed to encode job order data", http.StatusInternalServerError)
 	}
 }
