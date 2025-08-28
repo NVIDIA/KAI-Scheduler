@@ -189,9 +189,15 @@ func divideUpToFairShare(totalResourceAmount, kValue float64, queues map[common_
 			// We assume that usage is normalized to usage/clusterCapacity
 			nUsage := share.GetUsage()
 
-			portion := nWeight + kValue*(nWeight-nUsage)
+			// Floor portion to 0 if it's negative
+			portion := math.Max(0, nWeight+kValue*(nWeight-nUsage))
+
 			portions[queue.UID] = portion
 			totalPortions += portion
+		}
+
+		if totalPortions == 0 {
+			break
 		}
 
 		for _, queue := range queues {
