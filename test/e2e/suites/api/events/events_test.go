@@ -22,7 +22,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
-var _ = Describe("Priority Preemption", Ordered, func() {
+var _ = Describe("Events", Ordered, func() {
 	var (
 		testCtx *testcontext.TestContext
 	)

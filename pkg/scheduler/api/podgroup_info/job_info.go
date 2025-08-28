@@ -171,19 +171,14 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.PodGroup = pg
 	pgi.PodGroupUID = pg.UID
 
-	if len(pg.Spec.SubGroups) == 0 {
-		if pgi.SubGroups == nil {
-			pgi.SubGroups = map[string]*SubGroupInfo{}
-		}
-		if _, exists := pgi.SubGroups[DefaultSubGroup]; !exists {
-			pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, max(pg.Spec.MinMember, 1))
-		}
-	} else {
-		pgi.SubGroups = map[string]*SubGroupInfo{}
+	pgi.SubGroups = map[string]*SubGroupInfo{}
+	if len(pg.Spec.SubGroups) > 0 {
 		for _, sg := range pg.Spec.SubGroups {
 			subGroupInfo := FromSubGroup(&sg)
 			pgi.SubGroups[subGroupInfo.name] = subGroupInfo
 		}
+	} else {
+		pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, max(pg.Spec.MinMember, 1))
 	}
 
 	if pg.Annotations[commonconstants.StalePodgroupTimeStamp] != "" {
