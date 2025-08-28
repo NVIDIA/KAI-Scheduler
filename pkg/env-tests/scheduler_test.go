@@ -6,6 +6,7 @@ package env_tests
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -24,6 +25,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/dynamicresource"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/scheduler"
+	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 var _ = Describe("Scheduler", Ordered, func() {
@@ -107,7 +109,13 @@ var _ = Describe("Scheduler", Ordered, func() {
 			})
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 
-			err := GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod}, 1)
+			podGroupConfig := podGroupConfig{
+				queueName:          testQueue.Name,
+				podgroupName:       "test-podgroup",
+				minMember:          1,
+				topologyConstraint: nil,
+			}
+			err := GroupPods(ctx, ctrlClient, podGroupConfig, []*corev1.Pod{testPod})
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 
 			// Wait for bind request to be created instead of checking pod binding
@@ -136,8 +144,13 @@ var _ = Describe("Scheduler", Ordered, func() {
 			}
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 
-			err := GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod}, 1)
-
+			podGroupConfig := podGroupConfig{
+				queueName:          testQueue.Name,
+				podgroupName:       "test-podgroup",
+				minMember:          1,
+				topologyConstraint: nil,
+			}
+			err := GroupPods(ctx, ctrlClient, podGroupConfig, []*corev1.Pod{testPod})
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 			err = wait.PollUntilContextTimeout(ctx, interval, defaultTimeout, true, func(ctx context.Context) (bool, error) {
 				var events corev1.EventList
@@ -198,7 +211,13 @@ var _ = Describe("Scheduler", Ordered, func() {
 			}
 			Expect(ctrlClient.Create(ctx, testPod2)).To(Succeed(), "Failed to create test pod")
 
-			err := GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod1, testPod2}, 1)
+			podGroupConfig := podGroupConfig{
+				queueName:          testQueue.Name,
+				podgroupName:       "test-podgroup",
+				minMember:          1,
+				topologyConstraint: nil,
+			}
+			err := GroupPods(ctx, ctrlClient, podGroupConfig, []*corev1.Pod{testPod1, testPod2})
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 
 			err = wait.PollUntilContextTimeout(ctx, interval, defaultTimeout, true, func(ctx context.Context) (bool, error) {
@@ -289,7 +308,13 @@ var _ = Describe("Scheduler", Ordered, func() {
 			dynamicresource.UseClaim(testPod, resourceClaim)
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 
-			err = GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod}, 1)
+			podGroupConfig := podGroupConfig{
+				queueName:          testQueue.Name,
+				podgroupName:       "test-podgroup",
+				minMember:          1,
+				topologyConstraint: nil,
+			}
+			err = GroupPods(ctx, ctrlClient, podGroupConfig, []*corev1.Pod{testPod})
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 
 			err = WaitForPodScheduled(ctx, ctrlClient, testPod.Name, testNamespace.Name, defaultTimeout, interval)
@@ -322,7 +347,13 @@ var _ = Describe("Scheduler", Ordered, func() {
 				Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 				createdPods = append(createdPods, testPod)
 
-				err = GroupPods(ctx, ctrlClient, testQueue.Name, fmt.Sprintf("test-podgroup-%d", i), []*corev1.Pod{testPod}, 1)
+				podGroupConfig := podGroupConfig{
+					queueName:          testQueue.Name,
+					podgroupName:       fmt.Sprintf("test-podgroup-%d", i),
+					minMember:          1,
+					topologyConstraint: nil,
+				}
+				err = GroupPods(ctx, ctrlClient, podGroupConfig, []*corev1.Pod{testPod})
 				Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 			}
 
@@ -336,6 +367,133 @@ var _ = Describe("Scheduler", Ordered, func() {
 			}
 
 			Expect(podMap).To(HaveLen(deviceNum), "Expected exactly %d pods to be scheduled", deviceNum)
+		})
+	})
+
+	Context("topology", func() {
+		const (
+			topologyName     = "gb2000-topology"
+			rackLabelKey     = "nvidia.com/gpu.clique"
+			hostnameLabelKey = "kubernetes.io/hostname"
+
+			gpusPerNode     = 4
+			numRacks        = 2
+			numNodesPerRack = 18
+			numNodes        = numRacks * numNodesPerRack
+		)
+
+		var (
+			topologyNodes []*corev1.Node
+			topologyTree  *kueuev1alpha1.Topology
+		)
+
+		BeforeAll(func(ctx context.Context) {
+			topologyNodes = []*corev1.Node{}
+
+			nodeToRack := map[int]string{}
+			for i := range numNodes {
+				nodeToRack[i] = fmt.Sprintf("%d", i%numRacks)
+			}
+			rand.Shuffle(len(nodeToRack), func(i, j int) {
+				nodeToRack[i], nodeToRack[j] = nodeToRack[j], nodeToRack[i]
+			})
+
+			for i := 0; i < numNodes; i++ {
+				topologyNode := DefaultNodeConfig(fmt.Sprintf("t-node-%d", i))
+				topologyNode.GPUs = gpusPerNode
+				topologyNode.Labels[rackLabelKey] = fmt.Sprintf("clusterUuid.%s", nodeToRack[i])
+				topologyNode.Labels[hostnameLabelKey] = topologyNode.Name
+				nodeObj := CreateNodeObject(ctx, ctrlClient, topologyNode)
+				Expect(ctrlClient.Create(ctx, nodeObj)).To(Succeed(), "Failed to create topology test node")
+				topologyNodes = append(topologyNodes, nodeObj)
+			}
+
+			topologyTree = &kueuev1alpha1.Topology{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: topologyName,
+				},
+				Spec: kueuev1alpha1.TopologySpec{
+					Levels: []kueuev1alpha1.TopologyLevel{
+						{NodeLabel: rackLabelKey},
+						{NodeLabel: hostnameLabelKey},
+					},
+				},
+			}
+			Expect(ctrlClient.Create(ctx, topologyTree)).To(Succeed(), "Failed to create topology tree")
+		})
+
+		AfterAll(func(ctx context.Context) {
+			if topologyTree != nil {
+				Expect(ctrlClient.Delete(ctx, topologyTree)).To(Succeed(), "Failed to delete topology tree")
+			}
+
+			for _, node := range topologyNodes {
+				Expect(ctrlClient.Delete(ctx, node)).To(Succeed(), "Failed to delete topology test node")
+			}
+
+			err := DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
+				&corev1.Pod{},
+				&schedulingv2alpha2.PodGroup{},
+				&resourcev1beta1.ResourceClaim{},
+				&kaiv1alpha2.BindRequest{},
+			)
+			Expect(err).NotTo(HaveOccurred(), "Failed to delete test resources")
+
+			err = WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, interval,
+				&corev1.PodList{},
+				&schedulingv2alpha2.PodGroupList{},
+				&resourcev1beta1.ResourceClaimList{},
+				&kaiv1alpha2.BindRequestList{},
+			)
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test resources to be deleted")
+		})
+
+		It("Schedule pods with rack topology constraints", func(ctx context.Context) {
+			singlePodResourceRequirements := corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					constants.GpuResource: resource.MustParse(fmt.Sprintf("%d", gpusPerNode)),
+				},
+				Requests: corev1.ResourceList{
+					constants.GpuResource: resource.MustParse(fmt.Sprintf("%d", gpusPerNode)),
+				},
+			}
+
+			workloadPods := []*corev1.Pod{}
+			for i := 0; i < 4; i++ {
+				testPod := CreatePodObject(testNamespace.Name, fmt.Sprintf("test-pod-%d", i), singlePodResourceRequirements)
+				Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod %s", testPod.Name)
+				workloadPods = append(workloadPods, testPod)
+			}
+
+			podGroupConfig := podGroupConfig{
+				queueName:    testQueue.Name,
+				podgroupName: "test-podgroup",
+				minMember:    1,
+				topologyConstraint: &schedulingv2alpha2.TopologyConstraint{
+					Topology:              topologyName,
+					RequiredTopologyLevel: rackLabelKey,
+				},
+			}
+			err := GroupPods(ctx, ctrlClient, podGroupConfig, workloadPods)
+			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
+
+			for _, pod := range workloadPods {
+				err = WaitForPodScheduled(ctx, ctrlClient, pod.Name, testNamespace.Name, defaultTimeout, interval)
+				Expect(err).NotTo(HaveOccurred(), "Failed to wait for test pod to be scheduled")
+			}
+
+			pods := &corev1.PodList{}
+			Expect(ctrlClient.List(ctx, pods, client.InNamespace(testNamespace.Name))).
+				To(Succeed(), "Failed to list pods")
+
+			Expect(len(pods.Items)).To(Equal(4), "Expected 4 pods to be created in the test")
+
+			scheduledRacks := map[string]int{}
+			for _, pod := range pods.Items {
+				scheduledRacks[pod.Labels[rackLabelKey]]++
+			}
+
+			Expect(scheduledRacks).To(HaveLen(1), "Expected all pods to be scheduled on the same rack. Got %v", scheduledRacks)
 		})
 	})
 })
