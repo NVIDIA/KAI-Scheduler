@@ -170,24 +170,7 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.CreationTimestamp = pg.GetCreationTimestamp()
 	pgi.PodGroup = pg
 	pgi.PodGroupUID = pg.UID
-
-	if len(pg.Spec.SubGroups) == 0 {
-		if pgi.SubGroups == nil {
-			pgi.SubGroups = map[string]*SubGroupInfo{}
-		}
-		defaultSubGroup, found := pgi.SubGroups[DefaultSubGroup]
-		if !found {
-			pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, max(pg.Spec.MinMember, 1))
-		} else {
-			defaultSubGroup.SetMinAvailable(max(pg.Spec.MinMember, 1))
-		}
-	} else {
-		pgi.SubGroups = map[string]*SubGroupInfo{}
-		for _, sg := range pg.Spec.SubGroups {
-			subGroupInfo := FromSubGroup(&sg)
-			pgi.SubGroups[subGroupInfo.name] = subGroupInfo
-		}
-	}
+	pgi.setSubGroups(pg)
 
 	if pg.Annotations[commonconstants.StalePodgroupTimeStamp] != "" {
 		staleTimeStamp, err := time.Parse(time.RFC3339, pg.Annotations[commonconstants.StalePodgroupTimeStamp])
@@ -213,6 +196,26 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	log.InfraLogger.V(7).Infof(
 		"SetPodGroup. podGroupName=<%s>, PodGroupUID=<%s> pgi.PodGroupIndex=<%d>",
 		pgi.Name, pgi.PodGroupUID)
+}
+
+func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) {
+	if len(podGroup.Spec.SubGroups) > 0 {
+		pgi.SubGroups = map[string]*SubGroupInfo{}
+		for _, sg := range podGroup.Spec.SubGroups {
+			subGroupInfo := FromSubGroup(&sg)
+			pgi.SubGroups[subGroupInfo.name] = subGroupInfo
+		}
+		return
+	}
+	if pgi.SubGroups == nil {
+		pgi.SubGroups = map[string]*SubGroupInfo{}
+	}
+	defaultSubGroup, found := pgi.SubGroups[DefaultSubGroup]
+	if !found {
+		pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, max(podGroup.Spec.MinMember, 1))
+	} else {
+		defaultSubGroup.SetMinAvailable(max(podGroup.Spec.MinMember, 1))
+	}
 }
 
 func (pgi *PodGroupInfo) addTaskIndex(ti *pod_info.PodInfo) {
