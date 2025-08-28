@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
@@ -76,40 +76,17 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 
 	usage := queue_info.NewClusterUsage()
 
-	// get gpu usage per queue
-	gpuUsage, err := p.queryResourceUsage(ctx, p.allocationMetricsMap["gpu"])
-	if err != nil {
-		return nil, fmt.Errorf("error querying gpu capacity and usage: %v", err)
-	}
-	for queueID, queueGPUUsage := range gpuUsage {
-		if _, exists := usage.Queues[queueID]; !exists {
-			usage.Queues[queueID] = queue_info.QueueUsage{}
+	for _, resource := range []v1.ResourceName{commonconstants.GpuResource, v1.ResourceCPU, v1.ResourceMemory} {
+		resourceUsage, err := p.queryResourceUsage(ctx, p.allocationMetricsMap[string(resource)])
+		if err != nil {
+			return nil, fmt.Errorf("error querying %s and usage: %v", resource, err)
 		}
-		usage.Queues[queueID][constants.GpuResource] = queueGPUUsage
-	}
-
-	// get cpu usage per queue
-	cpuUsage, err := p.queryResourceUsage(ctx, p.allocationMetricsMap["cpu"])
-	if err != nil {
-		return nil, fmt.Errorf("error querying cpu capacity and usage: %v", err)
-	}
-	for queueID, queueCPUUsage := range cpuUsage {
-		if _, exists := usage.Queues[queueID]; !exists {
-			usage.Queues[queueID] = queue_info.QueueUsage{}
+		for queueID, queueResourceUsage := range resourceUsage {
+			if _, exists := usage.Queues[queueID]; !exists {
+				usage.Queues[queueID] = queue_info.QueueUsage{}
+			}
+			usage.Queues[queueID][resource] = queueResourceUsage
 		}
-		usage.Queues[queueID][v1.ResourceCPU] = queueCPUUsage
-	}
-
-	// get memory usage per queue
-	memoryUsage, err := p.queryResourceUsage(ctx, p.allocationMetricsMap["memory"])
-	if err != nil {
-		return nil, fmt.Errorf("error querying memory capacity and usage: %v", err)
-	}
-	for queueID, queueMemoryUsage := range memoryUsage {
-		if _, exists := usage.Queues[queueID]; !exists {
-			usage.Queues[queueID] = queue_info.QueueUsage{}
-		}
-		usage.Queues[queueID][v1.ResourceMemory] = queueMemoryUsage
 	}
 
 	return usage, nil
