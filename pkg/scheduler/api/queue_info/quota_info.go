@@ -3,7 +3,10 @@
 
 package queue_info
 
-import "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+import (
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+	v1 "k8s.io/api/core/v1"
+)
 
 type QueueQuota struct {
 	GPU    ResourceQuota `json:"gpu,omitempty"`
@@ -20,18 +23,14 @@ type ResourceQuota struct {
 	Limit float64 `json:"limit"`
 }
 
-type QueueUsage struct {
-	GPU    float64 `json:"gpu,omitempty"`
-	CPU    float64 `json:"cpu,omitempty"`
-	Memory float64 `json:"memory,omitempty"`
-}
+type QueueUsage map[v1.ResourceName]float64
 
 type ClusterUsage struct {
-	Queues map[common_info.QueueID]*QueueUsage `json:"queues"`
+	Queues map[common_info.QueueID]QueueUsage `json:"queues"`
 }
 
 func NewClusterUsage() *ClusterUsage {
 	return &ClusterUsage{
-		Queues: make(map[common_info.QueueID]*QueueUsage),
+		Queues: make(map[common_info.QueueID]QueueUsage),
 	}
 }

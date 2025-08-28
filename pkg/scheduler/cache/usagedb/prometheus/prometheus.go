@@ -8,19 +8,21 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	promapi "github.com/prometheus/client_golang/api"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	v1 "k8s.io/api/core/v1"
 )
 
 var _ api.Interface = &PrometheusClient{}
 
 type PrometheusClient struct {
-	client      v1.API
+	client      promv1.API
 	promClient  promapi.Client
 	usageParams *api.UsageParams
 
@@ -40,7 +42,7 @@ func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface
 		return nil, fmt.Errorf("error creating prometheus client: %v", err)
 	}
 
-	v1api := v1.NewAPI(client)
+	v1api := promv1.NewAPI(client)
 
 	if params.WindowType != nil && *params.WindowType == api.TumblingWindow {
 		log.InfraLogger.V(3).Warnf("Tumbling window is not supported for prometheus client, using sliding window instead")
@@ -81,9 +83,9 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 	}
 	for queueID, queueGPUUsage := range gpuUsage {
 		if _, exists := usage.Queues[queueID]; !exists {
-			usage.Queues[queueID] = &queue_info.QueueUsage{}
+			usage.Queues[queueID] = queue_info.QueueUsage{}
 		}
-		usage.Queues[queueID].GPU = queueGPUUsage
+		usage.Queues[queueID][constants.GpuResource] = queueGPUUsage
 	}
 
 	// get cpu usage per queue
@@ -93,9 +95,9 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 	}
 	for queueID, queueCPUUsage := range cpuUsage {
 		if _, exists := usage.Queues[queueID]; !exists {
-			usage.Queues[queueID] = &queue_info.QueueUsage{}
+			usage.Queues[queueID] = queue_info.QueueUsage{}
 		}
-		usage.Queues[queueID].CPU = queueCPUUsage
+		usage.Queues[queueID][v1.ResourceCPU] = queueCPUUsage
 	}
 
 	// get memory usage per queue
@@ -105,9 +107,9 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 	}
 	for queueID, queueMemoryUsage := range memoryUsage {
 		if _, exists := usage.Queues[queueID]; !exists {
-			usage.Queues[queueID] = &queue_info.QueueUsage{}
+			usage.Queues[queueID] = queue_info.QueueUsage{}
 		}
-		usage.Queues[queueID].Memory = queueMemoryUsage
+		usage.Queues[queueID][v1.ResourceMemory] = queueMemoryUsage
 	}
 
 	return usage, nil

@@ -312,7 +312,7 @@ func (pp *proportionPlugin) createQueueResourceAttrs(ssn *framework.Session) {
 
 		usage, found := ssn.ResourceUsage.Queues[queue.UID]
 		if found {
-			queueAttributes.SetResourceUsage(*usage)
+			queueAttributes.SetResourceUsage(usage)
 		}
 
 		pp.queues[queue.UID] = queueAttributes

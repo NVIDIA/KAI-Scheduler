@@ -11,11 +11,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	v1core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	v12 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
@@ -71,13 +71,13 @@ func TestSnapshot(t *testing.T) {
 	}{
 		"SingleFromEach": {
 			kubeObjects: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
 				},
-				&v1core.Pod{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-pod",
 						Namespace: "my-ns",
 					},
@@ -85,7 +85,7 @@ func TestSnapshot(t *testing.T) {
 			},
 			kaiSchedulerObjects: []runtime.Object{
 				&enginev2.Queue{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "my-department",
 					},
 					Spec: enginev2.QueueSpec{
@@ -93,7 +93,7 @@ func TestSnapshot(t *testing.T) {
 					},
 				},
 				&enginev2.Queue{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "my-queue",
 					},
 					Spec: enginev2.QueueSpec{
@@ -101,7 +101,7 @@ func TestSnapshot(t *testing.T) {
 					},
 				},
 				&schedulingv1alpha2.BindRequest{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-pod-1234",
 						Namespace: "my-ns",
 					},
@@ -117,15 +117,15 @@ func TestSnapshot(t *testing.T) {
 		},
 		"SingleFromEach2": {
 			kubeObjects: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
 				},
 			},
 			kaiSchedulerObjects: []runtime.Object{
 				&enginev2.Queue{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "my-department",
 					},
 					Spec: enginev2.QueueSpec{
@@ -133,7 +133,7 @@ func TestSnapshot(t *testing.T) {
 					},
 				},
 				&enginev2.Queue{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "my-queue",
 					},
 					Spec: enginev2.QueueSpec{
@@ -173,21 +173,21 @@ func TestSnapshotUsage(t *testing.T) {
 		{
 			name: "BasicUsage",
 			usage: &queue_info.ClusterUsage{
-				Queues: map[common_info.QueueID]*queue_info.QueueUsage{
+				Queues: map[common_info.QueueID]queue_info.QueueUsage{
 					"queue-1": {
-						CPU:    10,
-						Memory: 10,
-						GPU:    10,
+						corev1.ResourceCPU:          10,
+						corev1.ResourceMemory:       10,
+						commonconstants.GpuResource: 10,
 					},
 				},
 			},
 			err: nil,
 			expectedUsage: &queue_info.ClusterUsage{
-				Queues: map[common_info.QueueID]*queue_info.QueueUsage{
+				Queues: map[common_info.QueueID]queue_info.QueueUsage{
 					"queue-1": {
-						CPU:    10,
-						Memory: 10,
-						GPU:    10,
+						corev1.ResourceCPU:          10,
+						corev1.ResourceMemory:       10,
+						commonconstants.GpuResource: 10,
 					},
 				},
 			},
@@ -201,11 +201,11 @@ func TestSnapshotUsage(t *testing.T) {
 		{
 			name: "Error and usage",
 			usage: &queue_info.ClusterUsage{
-				Queues: map[common_info.QueueID]*queue_info.QueueUsage{
+				Queues: map[common_info.QueueID]queue_info.QueueUsage{
 					"queue-1": {
-						CPU:    11,
-						Memory: 11,
-						GPU:    11,
+						corev1.ResourceCPU:          11,
+						corev1.ResourceMemory:       11,
+						commonconstants.GpuResource: 11,
 					},
 				},
 			},
@@ -245,21 +245,21 @@ func TestSnapshotUsage(t *testing.T) {
 }
 
 func TestSnapshotNodes(t *testing.T) {
-	examplePod := &v1core.Pod{
-		Spec: v1core.PodSpec{
+	examplePod := &corev1.Pod{
+		Spec: corev1.PodSpec{
 			NodeName: "node-1",
-			Containers: []v1core.Container{
+			Containers: []corev1.Container{
 				{
-					Resources: v1core.ResourceRequirements{
-						Requests: v1core.ResourceList{
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
 							"cpu": resource.MustParse("2"),
 						},
 					},
 				},
 			},
 		},
-		Status: v1core.PodStatus{
-			Phase: v1core.PodRunning,
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
 		},
 	}
 	exampleMIGPod := examplePod.DeepCopy()
@@ -279,12 +279,12 @@ func TestSnapshotNodes(t *testing.T) {
 	}{
 		"BasicUsage": {
 			objs: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					},
@@ -295,18 +295,18 @@ func TestSnapshotNodes(t *testing.T) {
 				{
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu": resource.MustParse("8"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu":    resource.MustParse("2"),
 							"memory": resource.MustParse("0"),
 						},
 					),
 					Releasing: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu":    resource.MustParse("0"),
 							"memory": resource.MustParse("0"),
 						},
@@ -317,12 +317,12 @@ func TestSnapshotNodes(t *testing.T) {
 		},
 		"Finished job": {
 			objs: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					},
@@ -333,18 +333,18 @@ func TestSnapshotNodes(t *testing.T) {
 				{
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu":    resource.MustParse("0"),
 							"memory": resource.MustParse("0"),
 						},
 					),
 					Releasing: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu":    resource.MustParse("0"),
 							"memory": resource.MustParse("0"),
 						},
@@ -355,28 +355,28 @@ func TestSnapshotNodes(t *testing.T) {
 		},
 		"Filter Pods by nodepool": {
 			objs: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 						Labels: map[string]string{
 							defaultNodePoolName: "pool-a",
 						},
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					},
 				},
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-2",
 						Labels: map[string]string{
 							defaultNodePoolName: "pool-b",
 						},
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					},
@@ -388,18 +388,18 @@ func TestSnapshotNodes(t *testing.T) {
 				{
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu": resource.MustParse("8"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu":    resource.MustParse("2"),
 							"memory": resource.MustParse("0"),
 						},
 					),
 					Releasing: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu":    resource.MustParse("0"),
 							"memory": resource.MustParse("0"),
 						},
@@ -411,12 +411,12 @@ func TestSnapshotNodes(t *testing.T) {
 		},
 		"MIG Job": {
 			objs: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu":                   resource.MustParse("10"),
 							"nvidia.com/mig-1g.5gb": resource.MustParse("10"),
 						},
@@ -429,20 +429,20 @@ func TestSnapshotNodes(t *testing.T) {
 				{
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu":                   resource.MustParse("6"),
 							"nvidia.com/mig-1g.5gb": resource.MustParse("6"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu":                   resource.MustParse("4"),
 							"memory":                resource.MustParse("0"),
 							"nvidia.com/mig-1g.5gb": resource.MustParse("4"),
 						},
 					),
 					Releasing: resource_info.ResourceFromResourceList(
-						v1core.ResourceList{
+						corev1.ResourceList{
 							"cpu":    resource.MustParse("0"),
 							"memory": resource.MustParse("0"),
 						},
@@ -494,8 +494,8 @@ func TestBindRequests(t *testing.T) {
 	examplePodName := "pod-1"
 	namespace1 := "namespace-1"
 	podGroupName := "podgroup-1"
-	examplePod := &v1core.Pod{
-		ObjectMeta: v1.ObjectMeta{
+	examplePod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      examplePodName,
 			Namespace: namespace1,
 			UID:       types.UID(examplePodName),
@@ -503,24 +503,24 @@ func TestBindRequests(t *testing.T) {
 				commonconstants.PodGroupAnnotationForPod: podGroupName,
 			},
 		},
-		Spec: v1core.PodSpec{
-			Containers: []v1core.Container{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
 				{
-					Resources: v1core.ResourceRequirements{
-						Requests: v1core.ResourceList{
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
 							"cpu": resource.MustParse("2"),
 						},
 					},
 				},
 			},
 		},
-		Status: v1core.PodStatus{
-			Phase: v1core.PodPending,
+		Status: corev1.PodStatus{
+			Phase: corev1.PodPending,
 		},
 	}
 
 	exampleQueue := &enginev2.Queue{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "queue-0",
 		},
 	}
@@ -537,12 +537,12 @@ func TestBindRequests(t *testing.T) {
 	}{
 		"Pod with PodGroup Waiting For Binding": {
 			kubeObjects: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					},
@@ -552,7 +552,7 @@ func TestBindRequests(t *testing.T) {
 			kaiSchedulerObjects: []runtime.Object{
 				exampleQueue,
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      podGroupName,
 						Namespace: namespace1,
 					},
@@ -561,7 +561,7 @@ func TestBindRequests(t *testing.T) {
 					},
 				},
 				&schedulingv1alpha2.BindRequest{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-pod-1234",
 						Namespace: namespace1,
 					},
@@ -583,12 +583,12 @@ func TestBindRequests(t *testing.T) {
 		},
 		"Pod with PodGroup Waiting For Binding that is failing but no at backoff limit": {
 			kubeObjects: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					},
@@ -598,7 +598,7 @@ func TestBindRequests(t *testing.T) {
 			kaiSchedulerObjects: []runtime.Object{
 				exampleQueue,
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      podGroupName,
 						Namespace: namespace1,
 					},
@@ -607,7 +607,7 @@ func TestBindRequests(t *testing.T) {
 					},
 				},
 				&schedulingv1alpha2.BindRequest{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-pod-1234",
 						Namespace: namespace1,
 					},
@@ -634,12 +634,12 @@ func TestBindRequests(t *testing.T) {
 		},
 		"Pod with PodGroup Waiting For Binding that is failing and reached backoff limit": {
 			kubeObjects: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					},
@@ -649,7 +649,7 @@ func TestBindRequests(t *testing.T) {
 			kaiSchedulerObjects: []runtime.Object{
 				exampleQueue,
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      podGroupName,
 						Namespace: namespace1,
 					},
@@ -658,7 +658,7 @@ func TestBindRequests(t *testing.T) {
 					},
 				},
 				&schedulingv1alpha2.BindRequest{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-pod-1234",
 						Namespace: namespace1,
 					},
@@ -686,18 +686,18 @@ func TestBindRequests(t *testing.T) {
 		},
 		"Pod pending and BindRequest to a different pod": {
 			kubeObjects: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					},
 				},
 				examplePod,
-				func() *v1core.Pod {
+				func() *corev1.Pod {
 					pod := examplePod.DeepCopy()
 					pod.Name = "not-" + examplePod.Name
 					pod.UID = types.UID(fmt.Sprintf("not-%s", examplePod.UID))
@@ -707,7 +707,7 @@ func TestBindRequests(t *testing.T) {
 			kaiSchedulerObjects: []runtime.Object{
 				exampleQueue,
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      podGroupName,
 						Namespace: namespace1,
 					},
@@ -716,7 +716,7 @@ func TestBindRequests(t *testing.T) {
 					},
 				},
 				&schedulingv1alpha2.BindRequest{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("not-%s-1234", examplePodName),
 						Namespace: namespace1,
 					},
@@ -739,12 +739,12 @@ func TestBindRequests(t *testing.T) {
 		},
 		"Pod pending and BindRequest to non existing node and is failed": {
 			kubeObjects: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					},
@@ -754,7 +754,7 @@ func TestBindRequests(t *testing.T) {
 			kaiSchedulerObjects: []runtime.Object{
 				exampleQueue,
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      podGroupName,
 						Namespace: namespace1,
 					},
@@ -763,7 +763,7 @@ func TestBindRequests(t *testing.T) {
 					},
 				},
 				&schedulingv1alpha2.BindRequest{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-pod-1234",
 						Namespace: namespace1,
 					},
@@ -791,12 +791,12 @@ func TestBindRequests(t *testing.T) {
 		},
 		"Pod pending with stale bind request from another shard and node is not in our shard": {
 			kubeObjects: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					},
@@ -806,7 +806,7 @@ func TestBindRequests(t *testing.T) {
 			kaiSchedulerObjects: []runtime.Object{
 				exampleQueue,
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      podGroupName,
 						Namespace: namespace1,
 					},
@@ -815,7 +815,7 @@ func TestBindRequests(t *testing.T) {
 					},
 				},
 				&schedulingv1alpha2.BindRequest{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-pod-1234",
 						Namespace: namespace1,
 						Labels: map[string]string{
@@ -840,12 +840,12 @@ func TestBindRequests(t *testing.T) {
 		},
 		"Pod pending with stale bind request from another shard and node is actually in our shard": {
 			kubeObjects: []runtime.Object{
-				&v1core.Node{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "node-1",
 					},
-					Status: v1core.NodeStatus{
-						Allocatable: v1core.ResourceList{
+					Status: corev1.NodeStatus{
+						Allocatable: corev1.ResourceList{
 							"cpu": resource.MustParse("10"),
 						},
 					},
@@ -855,7 +855,7 @@ func TestBindRequests(t *testing.T) {
 			kaiSchedulerObjects: []runtime.Object{
 				exampleQueue,
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      podGroupName,
 						Namespace: namespace1,
 					},
@@ -864,7 +864,7 @@ func TestBindRequests(t *testing.T) {
 					},
 				},
 				&schedulingv1alpha2.BindRequest{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-pod-1234",
 						Namespace: namespace1,
 						Labels: map[string]string{
@@ -956,7 +956,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 		"BasicUsage": {
 			objs: []runtime.Object{
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "podGroup-0",
 						UID:  "ABC",
 					},
@@ -966,8 +966,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				},
 			},
 			kubeObjs: []runtime.Object{
-				&v1core.Pod{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
 							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
 						},
@@ -991,7 +991,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 		"NotExistingQueue": {
 			objs: []runtime.Object{
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "podGroup-0",
 						UID:  "ABC",
 					},
@@ -1001,8 +1001,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				},
 			},
 			kubeObjs: []runtime.Object{
-				&v1core.Pod{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
 							commonconstants.PodGroupAnnotationForPod: "podGroup-0",
 						},
@@ -1014,7 +1014,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 		"filter unassigned pod groups - no scheduling backoff": {
 			objs: []runtime.Object{
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "podGroup-0",
 						UID:  "ABC",
 					},
@@ -1044,7 +1044,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 		"filter unassigned pod groups - no scheduling conditions": {
 			objs: []runtime.Object{
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "podGroup-0",
 						UID:  "ABC",
 					},
@@ -1067,7 +1067,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 		"filter unassigned pod groups - unschedulable in different nodepool": {
 			objs: []runtime.Object{
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "podGroup-0",
 						UID:  "ABC",
 					},
@@ -1097,7 +1097,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 		"filter unassigned pod groups - unassigned": {
 			objs: []runtime.Object{
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "podGroup-0",
 						UID:  "ABC",
 					},
@@ -1119,7 +1119,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 		"With sub groups": {
 			objs: []runtime.Object{
 				&enginev2alpha2.PodGroup{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "podGroup-0",
 						UID:  "ABC",
 					},
@@ -1141,8 +1141,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				},
 			},
 			kubeObjs: []runtime.Object{
-				&v1core.Pod{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
 						Namespace: testNamespace,
 						Name:      "pod-0",
 						UID:       types.UID(fmt.Sprintf("%s/pod-0", testNamespace)),
@@ -1154,8 +1154,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 						},
 					},
 				},
-				&v1core.Pod{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
 						Namespace: testNamespace,
 						Name:      "pod-1",
 						UID:       types.UID(fmt.Sprintf("%s/pod-1", testNamespace)),
@@ -1167,8 +1167,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 						},
 					},
 				},
-				&v1core.Pod{
-					ObjectMeta: v1.ObjectMeta{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
 						Namespace: testNamespace,
 						Name:      "pod-2",
 						UID:       types.UID(fmt.Sprintf("%s/pod-2", testNamespace)),
@@ -1253,7 +1253,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 func TestSnapshotQueues(t *testing.T) {
 	objs := []runtime.Object{
 		&enginev2.Queue{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "department0",
 			},
 			Spec: enginev2.QueueSpec{
@@ -1266,7 +1266,7 @@ func TestSnapshotQueues(t *testing.T) {
 			},
 		},
 		&enginev2.Queue{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "department0-a",
 				Labels: map[string]string{
 					nodePoolNameLabel: "nodepool-a",
@@ -1281,7 +1281,7 @@ func TestSnapshotQueues(t *testing.T) {
 			},
 		},
 		&enginev2.Queue{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:   "queue0",
 				Labels: map[string]string{},
 			},
@@ -1320,7 +1320,7 @@ func TestSnapshotQueues(t *testing.T) {
 
 func TestSnapshotFlatHierarchy(t *testing.T) {
 	parentQueue0 := &enginev2.Queue{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "department0",
 			Labels: map[string]string{
 				nodePoolNameLabel: "nodepool-a",
@@ -1340,7 +1340,7 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 	parentQueue1.Name = "department1"
 
 	queue0 := &enginev2.Queue{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "queue0",
 			Labels: map[string]string{
 				nodePoolNameLabel: "nodepool-a",
@@ -1351,7 +1351,7 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 		},
 	}
 	queue1 := &enginev2.Queue{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "queue1",
 			Labels: map[string]string{
 				nodePoolNameLabel: "nodepool-a",
@@ -1412,7 +1412,7 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 func TestGetPodGroupPriority(t *testing.T) {
 	kubeObjects := []runtime.Object{
 		&v12.PriorityClass{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "my-priority",
 			},
 			Value: 2,
@@ -1439,49 +1439,49 @@ func TestGetPodGroupPriority(t *testing.T) {
 func TestSnapshotStorageObjects(t *testing.T) {
 	kubeObjects := []runtime.Object{
 		&storage.CSIDriver{
-			ObjectMeta: v1.ObjectMeta{Name: "csi-driver"},
+			ObjectMeta: metav1.ObjectMeta{Name: "csi-driver"},
 			Spec: storage.CSIDriverSpec{
 				StorageCapacity: ptr.To(true),
 			},
 		},
 		&storage.StorageClass{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "storage-class",
 			},
 			Provisioner:       "csi-driver",
 			VolumeBindingMode: (*storage.VolumeBindingMode)(ptr.To(string(storage.VolumeBindingWaitForFirstConsumer))),
 		},
 		&storage.StorageClass{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "non-csi-storage-class",
 			},
 			Provisioner:       "non-csi-driver",
 			VolumeBindingMode: (*storage.VolumeBindingMode)(ptr.To(string(storage.VolumeBindingWaitForFirstConsumer))),
 		},
 		&storage.StorageClass{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "immediate-binding-storage-class",
 			},
 			Provisioner:       "csi-driver",
 			VolumeBindingMode: (*storage.VolumeBindingMode)(ptr.To(string(storage.VolumeBindingImmediate))),
 		},
-		&v1core.PersistentVolumeClaim{
-			ObjectMeta: v1.ObjectMeta{
+		&corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      nonOwnedClaimName,
 				Namespace: testNamespace,
 				UID:       "csi-pvc-uid",
 			},
-			Spec: v1core.PersistentVolumeClaimSpec{
+			Spec: corev1.PersistentVolumeClaimSpec{
 				StorageClassName: ptr.To("storage-class"),
 			},
-			Status: v1core.PersistentVolumeClaimStatus{Phase: v1core.ClaimBound},
+			Status: corev1.PersistentVolumeClaimStatus{Phase: corev1.ClaimBound},
 		},
-		&v1core.PersistentVolumeClaim{
-			ObjectMeta: v1.ObjectMeta{
+		&corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      ownedClaimName,
 				Namespace: testNamespace,
 				UID:       "owned-csi-pvc-uid",
-				OwnerReferences: []v1.OwnerReference{
+				OwnerReferences: []metav1.OwnerReference{
 					{
 						APIVersion: "v1",
 						Kind:       "pod",
@@ -1490,13 +1490,13 @@ func TestSnapshotStorageObjects(t *testing.T) {
 					},
 				},
 			},
-			Spec: v1core.PersistentVolumeClaimSpec{
+			Spec: corev1.PersistentVolumeClaimSpec{
 				StorageClassName: ptr.To("storage-class"),
 			},
-			Status: v1core.PersistentVolumeClaimStatus{Phase: v1core.ClaimBound},
+			Status: corev1.PersistentVolumeClaimStatus{Phase: corev1.ClaimBound},
 		},
-		&v1core.Pod{
-			ObjectMeta: v1.ObjectMeta{
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      "owner-pod",
 				Namespace: testNamespace,
 				UID:       "owner-pod-uid",
@@ -1504,11 +1504,11 @@ func TestSnapshotStorageObjects(t *testing.T) {
 					commonconstants.PodGroupAnnotationForPod: "podGroup-0",
 				},
 			},
-			Spec: v1core.PodSpec{
-				Volumes: []v1core.Volume{
+			Spec: corev1.PodSpec{
+				Volumes: []corev1.Volume{
 					{
-						VolumeSource: v1core.VolumeSource{
-							PersistentVolumeClaim: &v1core.PersistentVolumeClaimVolumeSource{
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 								ClaimName: ownedClaimName,
 							},
 						},
@@ -1520,12 +1520,12 @@ func TestSnapshotStorageObjects(t *testing.T) {
 
 	kubeAiSchedOjbs := []runtime.Object{
 		&enginev2.Queue{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "queue-0",
 			},
 		},
 		&enginev2alpha2.PodGroup{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "podGroup-0",
 				UID:  "ABC",
 			},
@@ -1537,7 +1537,7 @@ func TestSnapshotStorageObjects(t *testing.T) {
 
 	kueueObjects := []runtime.Object{
 		&kueuev1alpha1.Topology{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "topology-0",
 			},
 		},
@@ -1568,7 +1568,7 @@ func TestSnapshotStorageObjects(t *testing.T) {
 			Name:              nonOwnedClaimName,
 			Namespace:         testNamespace,
 			Size:              resource.NewQuantity(0, resource.BinarySI),
-			Phase:             v1core.ClaimBound,
+			Phase:             corev1.ClaimBound,
 			StorageClass:      "storage-class",
 			PodOwnerReference: nil,
 			DeletedOwner:      true,
@@ -1578,7 +1578,7 @@ func TestSnapshotStorageObjects(t *testing.T) {
 			Name:         ownedClaimName,
 			Namespace:    testNamespace,
 			Size:         resource.NewQuantity(0, resource.BinarySI),
-			Phase:        v1core.ClaimBound,
+			Phase:        corev1.ClaimBound,
 			StorageClass: "storage-class",
 			PodOwnerReference: &storageclaim_info.PodOwnerReference{
 				PodID:        "owner-pod-uid",
@@ -1614,7 +1614,7 @@ func TestGetPodGroupPriorityNotExistingPriority(t *testing.T) {
 func TestGetDefaultPriority(t *testing.T) {
 	kubeObjects := []runtime.Object{
 		&v12.PriorityClass{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "my-priority",
 			},
 			Value:         2,
@@ -1638,7 +1638,7 @@ func TestGetDefaultPriority(t *testing.T) {
 func TestGetDefaultPriorityNotExists(t *testing.T) {
 	kubeObjects := []runtime.Object{
 		&v12.PriorityClass{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "my-priority",
 			},
 			Value: 2,
@@ -1671,7 +1671,7 @@ func TestGetDefaultPriorityWithError(t *testing.T) {
 
 func TestPodGroupWithIndex(t *testing.T) {
 	podGroup := &enginev2alpha2.PodGroup{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			UID: "ABC",
 		},
 	}
@@ -1691,7 +1691,7 @@ func TestPodGroupWithIndex(t *testing.T) {
 
 func TestPodGroupWithIndexNonMatching(t *testing.T) {
 	podGroup := &enginev2alpha2.PodGroup{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			UID: "ABC",
 		},
 	}
@@ -1815,8 +1815,8 @@ func TestIsPodGroupUpForScheduler(t *testing.T) {
 
 func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 	kubeObjects := []runtime.Object{
-		&v1core.Pod{
-			ObjectMeta: v1.ObjectMeta{
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      "pod-1",
 				Namespace: "test",
 				UID:       "pod-1",
@@ -1824,42 +1824,42 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 					commonconstants.PodGroupAnnotationForPod: "podGroup-0",
 				},
 			},
-			Spec: v1core.PodSpec{
-				Containers: []v1core.Container{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
 					{
 						Name: "container-1",
 					},
 				},
-				Volumes: []v1core.Volume{
+				Volumes: []corev1.Volume{
 					{
 						Name: "pv-1",
-						VolumeSource: v1core.VolumeSource{
-							PersistentVolumeClaim: &v1core.PersistentVolumeClaimVolumeSource{
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 								ClaimName: "pvc-1",
 							},
 						},
 					},
 				},
 			},
-			Status: v1core.PodStatus{
-				Phase: v1core.PodPending,
+			Status: corev1.PodStatus{
+				Phase: corev1.PodPending,
 			},
 		},
 		&storage.CSIDriver{
-			ObjectMeta: v1.ObjectMeta{Name: "csi-driver"},
+			ObjectMeta: metav1.ObjectMeta{Name: "csi-driver"},
 			Spec: storage.CSIDriverSpec{
 				StorageCapacity: ptr.To(true),
 			},
 		},
 		&storage.StorageClass{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "storage-class",
 			},
 			Provisioner:       "csi-driver",
 			VolumeBindingMode: (*storage.VolumeBindingMode)(ptr.To(string(storage.VolumeBindingWaitForFirstConsumer))),
 		},
-		&v1core.Node{
-			ObjectMeta: v1.ObjectMeta{
+		&corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "node-1",
 				Labels: map[string]string{
 					"kubernetes.io/hostname": "node-1",
@@ -1867,10 +1867,10 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 			},
 		},
 		&storage.CSIStorageCapacity{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "capacity-node-1",
 			},
-			NodeTopology: &v1.LabelSelector{
+			NodeTopology: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"kubernetes.io/hostname": "node-1",
 				},
@@ -1879,11 +1879,11 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 		},
 	}
 
-	pvc := &v1core.PersistentVolumeClaim{
-		ObjectMeta: v1.ObjectMeta{
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pvc-1",
 			Namespace: "test",
-			OwnerReferences: []v1.OwnerReference{
+			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: "v1",
 					Kind:       "Pod",
@@ -1892,23 +1892,23 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 				},
 			},
 		},
-		Spec: v1core.PersistentVolumeClaimSpec{
+		Spec: corev1.PersistentVolumeClaimSpec{
 			VolumeName:       "pv-1",
 			StorageClassName: ptr.To("storage-class"),
 		},
-		Status: v1core.PersistentVolumeClaimStatus{
-			Phase: v1core.ClaimPending,
+		Status: corev1.PersistentVolumeClaimStatus{
+			Phase: corev1.ClaimPending,
 		},
 	}
 
 	kubeAiSchedOjbs := []runtime.Object{
 		&enginev2.Queue{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "queue-0",
 			},
 		},
 		&enginev2alpha2.PodGroup{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "podGroup-0",
 				UID:  "ABC",
 			},
@@ -1951,7 +1951,7 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 func createFakePodGroup(name string, schedulingBackoff *int32, nodePoolName string,
 	lastSchedulingCondition *enginev2alpha2.SchedulingCondition) *enginev2alpha2.PodGroup {
 	result := &enginev2alpha2.PodGroup{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{},
 			Name:   name,
 		},
@@ -1989,21 +1989,21 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		},
 		"twiceSamePod": {
 			func(mdl *data_lister.MockDataLister) {
-				mdl.EXPECT().ListNodes().Return([]*v1core.Node{
+				mdl.EXPECT().ListNodes().Return([]*corev1.Node{
 					{
-						ObjectMeta: v1.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name: "node-0",
 						},
 					},
 				}, nil)
-				mdl.EXPECT().ListPods().Return([]*v1core.Pod{
+				mdl.EXPECT().ListPods().Return([]*corev1.Pod{
 					{
-						ObjectMeta: v1.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name: "my-pod",
 						},
 					},
 					{
-						ObjectMeta: v1.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name: "my-pod",
 						},
 					},
@@ -2014,16 +2014,16 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		},
 		"listQueues": {
 			func(mdl *data_lister.MockDataLister) {
-				mdl.EXPECT().ListNodes().Return([]*v1core.Node{}, nil)
-				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
+				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
 			},
 		},
 		"listPodGroups": {
 			func(mdl *data_lister.MockDataLister) {
-				mdl.EXPECT().ListNodes().Return([]*v1core.Node{}, nil)
-				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
+				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
@@ -2033,8 +2033,8 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		},
 		"defaultPriorityClass": {
 			func(mdl *data_lister.MockDataLister) {
-				mdl.EXPECT().ListNodes().Return([]*v1core.Node{}, nil)
-				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
+				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
@@ -2043,12 +2043,12 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		},
 		"getPriorityClassByNameAndPodByPodGroup": {
 			func(mdl *data_lister.MockDataLister) {
-				mdl.EXPECT().ListNodes().Return([]*v1core.Node{}, nil)
-				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
+				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{
 					{
-						ObjectMeta: v1.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name: "queue-0",
 						},
 						Spec: enginev2.QueueSpec{
@@ -2056,7 +2056,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 						},
 					},
 					{
-						ObjectMeta: v1.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name: "default",
 						},
 						Spec: enginev2.QueueSpec{
@@ -2068,7 +2068,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListPriorityClasses().Return([]*v12.PriorityClass{}, nil)
 				mdl.EXPECT().ListPodGroups().Return([]*enginev2alpha2.PodGroup{
 					{
-						ObjectMeta: v1.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name: "my-pg",
 						},
 						Spec: enginev2alpha2.PodGroupSpec{Queue: "queue-0"},
@@ -2080,8 +2080,8 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		},
 		"ListBindRequests": {
 			func(mdl *data_lister.MockDataLister) {
-				mdl.EXPECT().ListPods().Return([]*v1core.Pod{}, nil)
-				mdl.EXPECT().ListNodes().Return([]*v1core.Node{}, nil)
+				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
 				mdl.EXPECT().ListBindRequests().Return(nil, fmt.Errorf(successErrorMsg))
 			},
 		},
@@ -2215,41 +2215,41 @@ func newFakeClients(kubernetesObjects, kaiSchedulerObjects, kueueObjects []runti
 
 func TestSnapshotPodsInPartition(t *testing.T) {
 	clusterObjects := []runtime.Object{
-		&v1core.Node{
-			ObjectMeta: v1.ObjectMeta{
+		&corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "node1",
 				Labels: map[string]string{
 					nodePoolNameLabel: "foo",
 				},
 			},
 		},
-		&v1core.Node{
-			ObjectMeta: v1.ObjectMeta{
+		&corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "node2",
 				Labels: map[string]string{
 					nodePoolNameLabel: "bar",
 				},
 			},
 		},
-		&v1core.Pod{
-			ObjectMeta: v1.ObjectMeta{
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "pod1",
 				Labels: map[string]string{
 					nodePoolNameLabel: "foo",
 				},
 			},
-			Spec: v1core.PodSpec{
+			Spec: corev1.PodSpec{
 				NodeName: "node1",
 			},
 		},
-		&v1core.Pod{
-			ObjectMeta: v1.ObjectMeta{
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "pod2",
 				Labels: map[string]string{
 					nodePoolNameLabel: "bar",
 				},
 			},
-			Spec: v1core.PodSpec{
+			Spec: corev1.PodSpec{
 				NodeName: "node2",
 			},
 		},
@@ -2272,19 +2272,19 @@ func TestSnapshotPodsInPartition(t *testing.T) {
 	assert.Equal(t, "pod1", snapshot.Pods[0].Name)
 }
 
-func newCompletedPod(pod *v1core.Pod) *v1core.Pod {
+func newCompletedPod(pod *corev1.Pod) *corev1.Pod {
 	newPod := pod.DeepCopy()
-	newPod.Status.Phase = v1core.PodSucceeded
-	newPod.Status.Conditions = []v1core.PodCondition{
+	newPod.Status.Phase = corev1.PodSucceeded
+	newPod.Status.Conditions = []corev1.PodCondition{
 		{
-			Type:   v1core.PodReady,
-			Status: v1core.ConditionTrue,
+			Type:   corev1.PodReady,
+			Status: corev1.ConditionTrue,
 		},
 	}
 	return newPod
 }
 
-func newPodOnNode(pod *v1core.Pod, nodeName string) *v1core.Pod {
+func newPodOnNode(pod *corev1.Pod, nodeName string) *corev1.Pod {
 	newPod := pod.DeepCopy()
 	newPod.Spec.NodeName = nodeName
 	newPod.Name = fmt.Sprintf("%s-%s", pod.Name, nodeName)
