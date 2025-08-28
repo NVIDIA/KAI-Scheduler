@@ -174,6 +174,24 @@ func divideUpToFairShare(totalResourceAmount, kValue float64, queues map[common_
 			totalUsages = 1
 		}
 
+		portions := make(map[common_info.QueueID]float64)
+		totalPortions := 0.0
+		for _, queue := range queues {
+			share := queue.ResourceShare(resourceName)
+			if share.Request <= share.FairShare {
+				// queue is satisfied, no need to give it more resources
+				continue
+			}
+
+			// normalize values
+			nWeight := share.OverQuotaWeight / totalWeights
+			nUsage := share.GetUsage() / totalUsages
+
+			portion := nWeight + kValue*(nWeight-nUsage)
+			portions[queue.UID] = portion
+			totalPortions += portion
+		}
+
 		for _, queue := range queues {
 			requested := getRemainingRequested(queue, resourceName)
 			if requested == 0 {
@@ -195,11 +213,11 @@ func divideUpToFairShare(totalResourceAmount, kValue float64, queues map[common_
 				"remaining requested: %v, fairShare: %v",
 				resourceName, queue.Name, resourceShare.Deserved, requested, resourceShare.FairShare)
 
-			// normalize values
-			nWeight := overQuotaWeight / totalWeights
-			nUsage := resourceShare.GetUsage() / totalUsages
+			// normalize portion
+			portion := portions[queue.UID]
+			nPortion := portion / totalPortions
 
-			fairShare := amountToGiveInCurrentRound * (nWeight + kValue*(nWeight-nUsage))
+			fairShare := amountToGiveInCurrentRound * nPortion
 			resourceToGive := getResourceToGiveInCurrentRound(fairShare, requested, queue, remainingRequested)
 			if resourceToGive == 0 {
 				continue
