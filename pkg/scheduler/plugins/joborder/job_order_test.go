@@ -1,0 +1,77 @@
+// Copyright 2025 NVIDIA CORPORATION
+// SPDX-License-Identifier: Apache-2.0
+
+package joborder
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+)
+
+// Test serveJobs returns correct JSON and status when ReflectJobOrder is set
+func TestServeJobs_ReflectJobOrderReady(t *testing.T) {
+	plugin := &JobOrderPlugin{
+		ReflectJobOrder: &ReflectJobOrder{
+			GlobalOrder: []JobOrder{{ID: "pg1", Priority: 10}},
+			QueueOrder:  map[common_info.QueueID][]JobOrder{"q1": {{ID: "pg1", Priority: 10}}},
+		},
+	}
+	req := httptest.NewRequest(http.MethodGet, "/get-jobs", nil)
+	rr := httptest.NewRecorder()
+	plugin.serveJobs(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected HTTP 200 OK, got %d", rr.Code)
+	}
+	var resp ReflectJobOrder
+	if err := json.NewDecoder(bytes.NewReader(rr.Body.Bytes())).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode serveJobs response: %v", err)
+	}
+	if len(resp.GlobalOrder) != 1 || resp.GlobalOrder[0].Priority != 10 {
+		t.Errorf("Unexpected response json: %+v", resp)
+	}
+	if len(resp.QueueOrder) != 1 {
+		t.Errorf("Expected 1 queue, got %d", len(resp.QueueOrder))
+	}
+}
+
+// Test serveJobs returns 503 if ReflectJobOrder is nil
+func TestServeJobs_ReflectJobOrderNotReady(t *testing.T) {
+	plugin := &JobOrderPlugin{ReflectJobOrder: nil}
+	req := httptest.NewRequest(http.MethodGet, "/get-jobs", nil)
+	rr := httptest.NewRecorder()
+	plugin.serveJobs(rr, req)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected HTTP 503, got %d", rr.Code)
+	}
+	if !bytes.Contains(rr.Body.Bytes(), []byte("Job order data not ready")) {
+		t.Errorf("Expected error message in body, got: %s", rr.Body.String())
+	}
+}
+
+// Test serveJobs handles encoding error gracefully
+type brokenWriter struct{ http.ResponseWriter }
+
+func (b *brokenWriter) Write(_ []byte) (int, error) { return 0, errEncode }
+
+var errEncode = &encodeError{"forced encode error"}
+
+type encodeError struct{ msg string }
+
+func (e *encodeError) Error() string { return e.msg }
+
+func TestServeJobs_EncodeError(t *testing.T) {
+	plugin := &JobOrderPlugin{ReflectJobOrder: &ReflectJobOrder{}}
+	req := httptest.NewRequest(http.MethodGet, "/get-jobs", nil)
+	rr := httptest.NewRecorder()
+	bw := &brokenWriter{rr}
+	plugin.serveJobs(bw, req)
+	// Should write 500 error
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("Expected HTTP 500, got %d", rr.Code)
+	}
+}
