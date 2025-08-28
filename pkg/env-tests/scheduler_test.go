@@ -458,8 +458,9 @@ var _ = Describe("Scheduler", Ordered, func() {
 				},
 			}
 
+			numWorkloadPods := 4
 			workloadPods := []*corev1.Pod{}
-			for i := 0; i < 4; i++ {
+			for i := 0; i < numWorkloadPods; i++ {
 				testPod := CreatePodObject(testNamespace.Name, fmt.Sprintf("test-pod-%d", i), singlePodResourceRequirements)
 				Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod %s", testPod.Name)
 				workloadPods = append(workloadPods, testPod)
@@ -486,7 +487,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			Expect(ctrlClient.List(ctx, pods, client.InNamespace(testNamespace.Name))).
 				To(Succeed(), "Failed to list pods")
 
-			Expect(len(pods.Items)).To(Equal(4), "Expected 4 pods to be created in the test")
+			Expect(len(pods.Items)).To(Equal(numWorkloadPods), "Expected %d pods to be created in the test", numWorkloadPods)
 
 			scheduledRacks := map[string]int{}
 			for _, pod := range pods.Items {
