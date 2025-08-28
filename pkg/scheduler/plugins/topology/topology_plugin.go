@@ -72,6 +72,11 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 }
 
 func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, singleTopology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
+	// Validate that the node is part of the topology
+	if !isNodePartOfTopology(nodeInfo, singleTopology) {
+		return
+	}
+
 	var nodeContainingChildDomain *TopologyDomainInfo
 	for levelIndex := len(singleTopology.Spec.Levels) - 1; levelIndex >= 0; levelIndex-- {
 		level := singleTopology.Spec.Levels[levelIndex]
@@ -103,6 +108,16 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, singleT
 	}
 	connectDomainToParent(nodeContainingChildDomain, topologyTree.Root)
 	topologyTree.Root.AddNode(nodeInfo)
+}
+
+// For a given node to be part of the topology correctly, it must have a label for each level of the topology
+func isNodePartOfTopology(nodeInfo *node_info.NodeInfo, singleTopology *kueuev1alpha1.Topology) bool {
+	for _, level := range singleTopology.Spec.Levels {
+		if _, found := nodeInfo.Node.Labels[level.NodeLabel]; !found {
+			return false
+		}
+	}
+	return true
 }
 
 func (t *topologyPlugin) OnSessionClose(ssn *framework.Session) {}
