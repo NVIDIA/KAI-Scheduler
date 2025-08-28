@@ -22,6 +22,13 @@ import (
 	commonconsts "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
+type podGroupConfig struct {
+	queueName          string
+	podgroupName       string
+	minMember          int32
+	topologyConstraint *schedulingv2alpha2.TopologyConstraint
+}
+
 // NodeConfig holds the configuration for a test node
 type NodeConfig struct {
 	Name        string
@@ -36,6 +43,7 @@ type NodeConfig struct {
 func DefaultNodeConfig(name string) NodeConfig {
 	return NodeConfig{
 		Name:   name,
+		Labels: map[string]string{},
 		CPUs:   "8",
 		Memory: "16Gi",
 		GPUs:   4,
@@ -125,21 +133,24 @@ func CreatePodObject(namespace, name string, resources corev1.ResourceRequiremen
 	return pod
 }
 
-func GroupPods(ctx context.Context, c client.Client, queueName, podgroupName string, pods []*corev1.Pod, minMember int32) error {
+func GroupPods(ctx context.Context, c client.Client, podGroupConfig podGroupConfig, pods []*corev1.Pod) error {
 	if len(pods) == 0 {
 		return fmt.Errorf("no pods to group")
 	}
 
 	podgroup := &schedulingv2alpha2.PodGroup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      podgroupName,
+			Name:      podGroupConfig.podgroupName,
 			Namespace: pods[0].Namespace,
 		},
 		Spec: schedulingv2alpha2.PodGroupSpec{
-			Queue:             queueName,
-			MinMember:         minMember,
+			Queue:             podGroupConfig.queueName,
+			MinMember:         podGroupConfig.minMember,
 			MarkUnschedulable: ptr.To(true),
 		},
+	}
+	if podGroupConfig.topologyConstraint != nil {
+		podgroup.Spec.TopologyConstraint = *podGroupConfig.topologyConstraint
 	}
 	err := c.Create(ctx, podgroup, &client.CreateOptions{})
 	if err != nil {
@@ -151,7 +162,7 @@ func GroupPods(ctx context.Context, c client.Client, queueName, podgroupName str
 		if pod.Annotations == nil {
 			pod.Annotations = make(map[string]string)
 		}
-		pod.Annotations[commonconsts.PodGroupAnnotationForPod] = podgroupName
+		pod.Annotations[commonconsts.PodGroupAnnotationForPod] = podGroupConfig.podgroupName
 		err = c.Patch(ctx, pod, client.MergeFrom(originalPod))
 		if err != nil {
 			return fmt.Errorf("failed to patch pod with podgroup annotation: %w", err)
