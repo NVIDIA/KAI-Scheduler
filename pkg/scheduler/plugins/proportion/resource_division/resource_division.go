@@ -183,9 +183,11 @@ func divideUpToFairShare(totalResourceAmount, kValue float64, queues map[common_
 				continue
 			}
 
-			// normalize values
+			// Normalize queue over quota weight
 			nWeight := share.OverQuotaWeight / totalWeights
-			nUsage := share.GetUsage() / totalUsages
+
+			// We assume that usage is normalized to usage/clusterCapacity
+			nUsage := share.GetUsage()
 
 			portion := nWeight + kValue*(nWeight-nUsage)
 			portions[queue.UID] = portion
