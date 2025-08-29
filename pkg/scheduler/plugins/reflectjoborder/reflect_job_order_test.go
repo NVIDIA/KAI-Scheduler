@@ -11,7 +11,28 @@ import (
 	"testing"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
+
+func TestJobOrderPlugin_OnSessionOpen(t *testing.T) {
+	ssn := &framework.Session{
+		PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+			"pg1": {UID: "pg1", Priority: 5, Queue: "q1"},
+			"pg2": {UID: "pg2", Priority: 2, Queue: "q2"},
+		},
+		Config: &conf.SchedulerConfiguration{
+			QueueDepthPerAction: map[string]int{"Allocate": 10},
+		},
+	}
+	plugin := &JobOrderPlugin{}
+	plugin.OnSessionOpen(ssn)
+
+	if plugin.ReflectJobOrder == nil {
+		t.Fatalf("ReflectJobOrder should be initialized")
+	}
+}
 
 // Test serveJobs returns correct JSON and status when ReflectJobOrder is set
 func TestServeJobs_ReflectJobOrderReady(t *testing.T) {
