@@ -60,6 +60,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				lPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-1",
 						Name:   "pod-a-1",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -74,6 +75,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				rPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -94,6 +96,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				lPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-1",
 						Name:   "pod-a-1",
 						Status: pod_status.Allocated,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -108,6 +111,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				rPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -128,6 +132,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				lPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-1",
 						Name:   "pod-a-1",
 						Status: pod_status.Bound,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -142,6 +147,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				rPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -162,6 +168,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				lPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-1",
 						Name:   "pod-a-1",
 						Status: pod_status.Releasing,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -176,6 +183,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				rPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -196,6 +204,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				lPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-1",
 						Name:   "pod-a-1",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -222,6 +231,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				lPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-1",
 						Name:   "pod-a-1",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -236,11 +246,13 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				rPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
 					},
 					{
+						UID:    "pod-b-2",
 						Name:   "pod-b-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -261,6 +273,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				lPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-1",
 						Name:   "pod-a-1",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -275,16 +288,19 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				rPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
 					},
 					{
+						UID:    "pod-b-2",
 						Name:   "pod-b-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
 					},
 					{
+						UID:    "pod-b-3",
 						Name:   "pod-b-3",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -305,6 +321,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				lPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-1",
 						Name:   "pod-a-1",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -319,11 +336,13 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				rPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
 					},
 					{
+						UID:    "pod-b-2",
 						Name:   "pod-b-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -344,6 +363,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				lPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-1",
 						Name:   "pod-a-1",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -358,11 +378,13 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				rPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
 					},
 					{
+						UID:    "pod-b-2",
 						Name:   "pod-b-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -383,11 +405,13 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				lPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-1",
 						Name:   "pod-a-1",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
 					},
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -402,6 +426,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				rPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -422,11 +447,13 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				lPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-1",
 						Name:   "pod-a-1",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
 					},
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),
@@ -441,6 +468,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				rPods: []*pod_info.PodInfo{
 					{
+						UID:    "pod-a-2",
 						Name:   "pod-a-2",
 						Status: pod_status.Running,
 						ResReq: resource_info.EmptyResourceRequirements(),

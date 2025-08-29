@@ -403,7 +403,12 @@ func (pgi *PodGroupInfo) IsReadyForScheduling() bool {
 }
 
 func (pgi *PodGroupInfo) IsElastic() bool {
-	return pgi.GetDefaultMinAvailable() < int32(len(pgi.GetAllPodsMap()))
+	for _, subGroup := range pgi.GetSubGroups() {
+		if subGroup.IsElastic() {
+			return true
+		}
+	}
+	return false
 }
 
 func (pgi *PodGroupInfo) IsStale() bool {
@@ -424,10 +429,6 @@ func (pgi *PodGroupInfo) IsStale() bool {
 }
 
 func (pgi *PodGroupInfo) IsGangSatisfied() bool {
-	numActiveTasks := pgi.GetNumActiveUsedTasks()
-	if numActiveTasks < int(pgi.GetDefaultMinAvailable()) {
-		return false
-	}
 	for _, subGroup := range pgi.SubGroups {
 		if !subGroup.IsGangSatisfied() {
 			return false
@@ -437,20 +438,26 @@ func (pgi *PodGroupInfo) IsGangSatisfied() bool {
 }
 
 func (pgi *PodGroupInfo) ShouldPipelineJob() bool {
-	hasPipelinedTask := false
-	activeAllocatedTasksCount := 0
-	for _, task := range pgi.GetAllPodsMap() {
-		if task.Status == pod_status.Pipelined {
-			log.InfraLogger.V(7).Infof("task: <%v/%v> was pipelined to node: <%v>",
-				task.Namespace, task.Name, task.NodeName)
-			hasPipelinedTask = true
-		} else if pod_status.IsActiveAllocatedStatus(task.Status) {
-			activeAllocatedTasksCount += 1
+	for _, subGroup := range pgi.SubGroups {
+		hasPipelinedTask := false
+		activeAllocatedTasksCount := 0
+		for _, task := range subGroup.GetPodInfos() {
+			if task.Status == pod_status.Pipelined {
+				log.InfraLogger.V(7).Infof("task: <%v/%v> was pipelined to node: <%v>",
+					task.Namespace, task.Name, task.NodeName)
+				hasPipelinedTask = true
+			} else if pod_status.IsActiveAllocatedStatus(task.Status) {
+				activeAllocatedTasksCount += 1
+			}
+		}
+
+		if hasPipelinedTask && activeAllocatedTasksCount < int(subGroup.GetMinAvailable()) {
+			log.InfraLogger.V(7).Infof("Subgroup: <%v/%v> has pipelined tasks, and not enough allocated pods for minAvailable <%v>. Pipeline all.",
+				pgi.UID, subGroup.GetName(), subGroup.GetMinAvailable())
+			return true
 		}
 	}
-	// If the job has already MinAvailable tasks active allocated (but not pipelined),
-	//  then we shouldn't convert non-pipelined tasks to pipeline.
-	return hasPipelinedTask && activeAllocatedTasksCount < int(pgi.GetDefaultMinAvailable())
+	return false
 }
 
 func (pgi *PodGroupInfo) Clone() *PodGroupInfo {

@@ -29,28 +29,42 @@ func JobOrderFn(l, r interface{}) int {
 	lv := l.(*podgroup_info.PodGroupInfo)
 	rv := r.(*podgroup_info.PodGroupInfo)
 
-	lvAllocatedCount := int32(lv.GetActiveAllocatedTasksCount())
-	rvAllocatedCount := int32(rv.GetActiveAllocatedTasksCount())
+	lvBelowMinAvailable, lvAboveMinAvailable, lvExactlyAtMinAvailable := minAvailableState(lv)
+	rvBelowMinAvailable, rvAboveMinAvailable, rvExactlyAtMinAvailable := minAvailableState(rv)
 
-	if lvAllocatedCount < lv.GetDefaultMinAvailable() && rvAllocatedCount >= rv.GetDefaultMinAvailable() {
+	if lvBelowMinAvailable && !rvBelowMinAvailable {
 		return -1
 	}
 
-	if lvAllocatedCount == lv.GetDefaultMinAvailable() && rvAllocatedCount > rv.GetDefaultMinAvailable() {
+	if lvExactlyAtMinAvailable && rvAboveMinAvailable {
 		return -1
 	}
 
-	if lvAllocatedCount >= lv.GetDefaultMinAvailable() && rvAllocatedCount < rv.GetDefaultMinAvailable() {
+	if !lvBelowMinAvailable && rvBelowMinAvailable {
 		return 1
 	}
 
-	if lvAllocatedCount > lv.GetDefaultMinAvailable() && rvAllocatedCount == rv.GetDefaultMinAvailable() {
+	if lvAboveMinAvailable && rvExactlyAtMinAvailable {
 		return 1
 	}
 
 	// TODO: consider the number of extra pods for elastic jobs?
 
 	return 0
+}
+
+func minAvailableState(pgi *podgroup_info.PodGroupInfo) (bool, bool, bool) {
+	exactlyAtMinAvailable := true
+	for _, subGroup := range pgi.SubGroups {
+		numAllocatedTasks := int32(subGroup.GetNumActiveAllocatedTasks())
+		if numAllocatedTasks < subGroup.GetMinAvailable() {
+			return true, false, false
+		}
+		if numAllocatedTasks > subGroup.GetMinAvailable() {
+			exactlyAtMinAvailable = false
+		}
+	}
+	return false, !exactlyAtMinAvailable, exactlyAtMinAvailable
 }
 
 func (pp *elasticPlugin) OnSessionClose(_ *framework.Session) {}

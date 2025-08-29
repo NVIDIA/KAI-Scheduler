@@ -155,7 +155,7 @@ func (pp *proportionPlugin) reclaimableFn(
 func (pp *proportionPlugin) getVictimResources(victim *api.VictimInfo) []*resource_info.Resource {
 	var victimResources []*resource_info.Resource
 
-	elasticTasks, coreTasks := splitVictimTasks(victim.Tasks, victim.Job.GetDefaultMinAvailable())
+	elasticTasks, coreTasks := splitVictimTasks(victim.Tasks, victim.Job.GetSubGroups())
 
 	// Process elastic tasks individually
 	for _, task := range elasticTasks {
@@ -177,19 +177,34 @@ func (pp *proportionPlugin) getVictimResources(victim *api.VictimInfo) []*resour
 
 // splitVictimTasks safely splits victim tasks into elastic and core tasks
 // Returns (elasticTasks, coreTasks)
-func splitVictimTasks(tasks []*pod_info.PodInfo, minAvailable int32) ([]*pod_info.PodInfo, []*pod_info.PodInfo) {
-	totalTasks := len(tasks)
-	minAvailableInt := int(minAvailable)
-
-	// Handle case where minAvailable is greater than or equal to the number of tasks
-	if minAvailableInt >= totalTasks {
-		// All tasks are considered core tasks, no elastic tasks
-		return nil, tasks
+func splitVictimTasks(tasks []*pod_info.PodInfo, subGroups map[string]*podgroup_info.SubGroupInfo) ([]*pod_info.PodInfo, []*pod_info.PodInfo) {
+	subGroupsToTasks := map[string][]*pod_info.PodInfo{}
+	for _, task := range tasks {
+		subGroupName := podgroup_info.DefaultSubGroup
+		if task.SubGroupName != "" {
+			subGroupName = task.SubGroupName
+		}
+		if _, found := subGroupsToTasks[subGroupName]; !found {
+			subGroupsToTasks[subGroupName] = []*pod_info.PodInfo{}
+		}
+		subGroupsToTasks[subGroupName] = append(subGroupsToTasks[subGroupName], task)
 	}
 
-	// Normal case: split tasks into elastic and core
-	elasticTasks := tasks[minAvailableInt:]
-	coreTasks := tasks[:minAvailableInt]
+	coreTasks := []*pod_info.PodInfo{}
+	elasticTasks := []*pod_info.PodInfo{}
+	for subGroupName, subGroupTasks := range subGroupsToTasks {
+		subGroup := subGroups[subGroupName]
+
+		// Handle case where minAvailable is greater than or equal to the number of tasks
+		if subGroup.GetMinAvailable() >= int32(len(subGroupTasks)) {
+			// All tasks are considered core tasks, no elastic tasks
+			coreTasks = append(coreTasks, subGroupTasks...)
+			continue
+		}
+
+		coreTasks = append(coreTasks, subGroupTasks[:subGroup.GetMinAvailable()]...)
+		elasticTasks = append(elasticTasks, subGroupTasks[subGroup.GetMinAvailable():]...)
+	}
 
 	return elasticTasks, coreTasks
 }
