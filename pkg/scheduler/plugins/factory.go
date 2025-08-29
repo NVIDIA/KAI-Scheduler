@@ -36,6 +36,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/priority"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/ray"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/reflectjoborder"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/resourcetype"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/subgrouporder"
@@ -69,4 +70,7 @@ func InitDefaultPlugins() {
 
 	// Other Plugins
 	framework.RegisterPluginBuilder("snapshot", snapshot.New)
+
+	// Always register the Job Order Plugin last.
+	framework.RegisterPluginBuilder("reflectjoborder", reflectjoborder.New)
 }
