@@ -9,7 +9,7 @@ SUCCESS_MESSAGE_HANDLER=(${ECHO_COMMAND} ${GREEN_CONSOLE} "${CONSOLE_PREFIX} Suc
 
 DOCKER_SOCK_PATH=/var/run/docker.sock
 DOCKERFILE_PATH=./Dockerfile
-CRD_UPGRADER_DOCKERFILE_PATH=./deployments/crds/crd-upgrader/Dockerfile
+CRD_UPGRADER_DOCKERFILE_PATH=./deployments/crd-upgrader/Dockerfile
 
 DOCKER_TAG?=0.0.0
 VERSION?=${DOCKER_TAG}
