@@ -20,8 +20,6 @@ type Options struct {
 	ProbeAddr                   string
 	WebhookPort                 int
 	FakeGPUNodes                bool
-	GpuCdiEnabled               bool
-	VolumeBindingTimeoutSeconds int
 	GPUSharingEnabled           bool
 }
 
@@ -61,12 +59,6 @@ func InitOptions() *Options {
 	fs.BoolVar(&options.FakeGPUNodes,
 		"fake-gpu-nodes", false,
 		"Enables running fractions on fake gpu nodes for testing")
-	fs.BoolVar(&options.GpuCdiEnabled,
-		"cdi-enabled", false,
-		"Specifies if the gpu device plugin uses the cdi devices api to set gpu devices to the pods")
-	fs.IntVar(&options.VolumeBindingTimeoutSeconds,
-		"volume-binding-timeout-seconds", 120,
-		"Volume binding timeout in seconds")
 	fs.BoolVar(&options.GPUSharingEnabled,
 		"gpu-sharing-enabled", false,
 		"Specifies if the GPU sharing is enabled")

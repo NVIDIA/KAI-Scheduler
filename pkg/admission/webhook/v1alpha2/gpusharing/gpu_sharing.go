@@ -22,16 +22,14 @@ const (
 )
 
 type GPUSharing struct {
-	kubeClient             client.Client
-	gpuDevicePluginUsesCdi bool
-	gpuSharingEnabled      bool
+	kubeClient        client.Client
+	gpuSharingEnabled bool
 }
 
-func New(kubeClient client.Client, gpuDevicePluginUsesCdi bool, gpuSharingEnabled bool) *GPUSharing {
+func New(kubeClient client.Client, gpuSharingEnabled bool) *GPUSharing {
 	return &GPUSharing{
-		kubeClient:             kubeClient,
-		gpuDevicePluginUsesCdi: gpuDevicePluginUsesCdi,
-		gpuSharingEnabled:      gpuSharingEnabled,
+		kubeClient:        kubeClient,
+		gpuSharingEnabled: gpuSharingEnabled,
 	}
 }
 

@@ -28,7 +28,6 @@ spec:
             - "--health-probe-bind-address=:{{ .Values.admission.ports.probePort }}"
             - "--metrics-bind-address=:{{ .Values.admission.ports.metricsPort }}"
             - "--gpu-sharing-enabled={{ .Values.global.gpuSharing }}"
-            - "--cdi-enabled={{ .Values.admission.cdi }}"
           {{- if .Values.admission.additionalArgs }}
             {{- toYaml .Values.admission.additionalArgs | nindent 12 }}
           {{- end }}

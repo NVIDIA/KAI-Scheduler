@@ -148,4 +148,3 @@ admission:
     requests:
       cpu: "250m"
       memory: "128Mi"
-  cdi: false

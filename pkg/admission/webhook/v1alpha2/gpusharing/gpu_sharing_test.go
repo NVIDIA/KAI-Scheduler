@@ -164,7 +164,7 @@ func TestValidate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			kubeClient := fake.NewClientBuilder().WithRuntimeObjects(tt.pod).Build()
-			gpuSharingPlugin := New(kubeClient, false, tt.GPUSharingEnabled)
+			gpuSharingPlugin := New(kubeClient, tt.GPUSharingEnabled)
 			err := gpuSharingPlugin.Validate(tt.pod)
 			if err == nil && tt.error != nil {
 				t.Errorf("Validate() expected and error but actual is nil")

@@ -41,8 +41,7 @@ func main() {
 func registerPlugins(app *app.App) error {
 	admissionPlugins := plugins.New()
 
-	admissionGpuSharingPlugin := gpusharing.New(app.Client,
-		app.Options.GpuCdiEnabled, app.Options.GPUSharingEnabled)
+	admissionGpuSharingPlugin := gpusharing.New(app.Client, app.Options.GPUSharingEnabled)
 
 	admissionPlugins.RegisterPlugin(admissionGpuSharingPlugin)
 	app.RegisterPlugins(admissionPlugins)
