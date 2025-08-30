@@ -48,8 +48,7 @@ func registerPlugins(app *app.App) error {
 	}
 	binderPlugins.RegisterPlugin(k8sPlugins)
 
-	bindingGpuSharingPlugin := gpusharing.New(app.Client,
-		app.Options.GpuCdiEnabled, app.Options.GPUSharingEnabled)
+	bindingGpuSharingPlugin := gpusharing.New(app.Client, app.Options.GpuCdiEnabled)
 
 	binderPlugins.RegisterPlugin(bindingGpuSharingPlugin)
 	app.RegisterPlugins(binderPlugins)

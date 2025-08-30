@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 
@@ -82,9 +81,6 @@ func New() (*App, error) {
 		Metrics: server.Options{
 			BindAddress: options.MetricsAddr,
 		},
-		WebhookServer: webhook.NewServer(webhook.Options{
-			Port: options.WebhookPort,
-		}),
 		HealthProbeBindAddress: options.ProbeAddr,
 		LeaderElection:         options.EnableLeaderElection,
 		LeaderElectionID:       "2ad35f9c.kai.scheduler",
@@ -189,15 +185,6 @@ func (app *App) Run() error {
 		return err
 	}
 	// +kubebuilder:scaffold:builder
-
-	if err = app.manager.AddHealthzCheck("healthz", app.manager.GetWebhookServer().StartedChecker()); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		return err
-	}
-	if err = app.manager.AddReadyzCheck("readyz", app.manager.GetWebhookServer().StartedChecker()); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		return err
-	}
 
 	setupLog.Info("starting manager")
 	if err = app.manager.Start(ctrl.SetupSignalHandler()); err != nil {

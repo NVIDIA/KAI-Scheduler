@@ -53,10 +53,8 @@ binder:
     pullPolicy: IfNotPresent
   resourceReservationImage:
     name: resourcereservation
-  certSecretName: binder-webhook-tls-secret
   additionalArgs: []
   ports:
-    webhookPort: 9443
     metricsPort: 8080
     probePort: 8081
   resources:

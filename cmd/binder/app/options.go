@@ -25,11 +25,9 @@ type Options struct {
 	EnableLeaderElection                 bool
 	MetricsAddr                          string
 	ProbeAddr                            string
-	WebhookPort                          int
 	FakeGPUNodes                         bool
 	GpuCdiEnabled                        bool
 	VolumeBindingTimeoutSeconds          int
-	GPUSharingEnabled                    bool
 }
 
 func InitOptions() *Options {
@@ -83,9 +81,6 @@ func InitOptions() *Options {
 	fs.StringVar(&options.ProbeAddr,
 		"health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
-	fs.IntVar(&options.WebhookPort,
-		"webhook-addr", 9443,
-		"The port the webhook binds to.")
 	fs.BoolVar(&options.FakeGPUNodes,
 		"fake-gpu-nodes", false,
 		"Enables running fractions on fake gpu nodes for testing")
@@ -95,9 +90,6 @@ func InitOptions() *Options {
 	fs.IntVar(&options.VolumeBindingTimeoutSeconds,
 		"volume-binding-timeout-seconds", 120,
 		"Volume binding timeout in seconds")
-	fs.BoolVar(&options.GPUSharingEnabled,
-		"gpu-sharing-enabled", false,
-		"Specifies if the GPU sharing is enabled")
 
 	utilfeature.DefaultMutableFeatureGate.AddFlag(fs)
 
