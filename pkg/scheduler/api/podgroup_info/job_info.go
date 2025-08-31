@@ -512,8 +512,8 @@ func (pgi *PodGroupInfo) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("Job (%v): namespace %v (%v), name %v, minAvailable %d, podGroup %+v",
-		pgi.UID, pgi.Namespace, pgi.Queue, pgi.Name, pgi.GetDefaultMinAvailable(), pgi.PodGroup) + res
+	return fmt.Sprintf("Job (%v): namespace %v (%v), name %v, podGroup %+v",
+		pgi.UID, pgi.Namespace, pgi.Queue, pgi.Name, pgi.PodGroup) + res
 }
 
 func (pgi *PodGroupInfo) SetTaskFitError(task *pod_info.PodInfo, fitErrors *common_info.FitErrors) {

@@ -125,19 +125,44 @@ func handleFailedTaskAllocation(job *podgroup_info.PodGroupInfo, unschedulableTa
 		allocationError.SetError(common_info.DefaultPodError)
 	}
 
-	numRunningTasks := job.GetActivelyRunningTasksCount()
-	if job.GetDefaultMinAvailable() > 1 && numRunningTasks < job.GetDefaultMinAvailable() {
-		job.SetJobFitError(
-			podgroup_info.PodSchedulingErrors,
-			fmt.Sprintf("Resources were found for %d pods while %d are required for gang scheduling. "+
-				"Additional pods cannot be scheduled due to: %s",
-				numSchedulableTasks, job.GetDefaultMinAvailable(), allocationError.Error()),
-			nil)
-	} else {
+	gangScheduling := isGangScheduling(job)
+	taskSubGroupName := podgroup_info.DefaultSubGroup
+	if len(unschedulableTask.SubGroupName) != 0 {
+		taskSubGroupName = unschedulableTask.SubGroupName
+	}
+	taskSubGroup := job.GetSubGroups()[taskSubGroupName]
+
+	if !gangScheduling || taskSubGroup.GetNumActiveUsedTasks() >= int(taskSubGroup.GetMinAvailable()) {
 		job.SetJobFitError(
 			podgroup_info.PodSchedulingErrors,
 			fmt.Sprintf("Resources were not found for pod %s/%s due to: %s",
 				unschedulableTask.Namespace, unschedulableTask.Name, allocationError.Error()),
 			nil)
+		return
 	}
+
+	if len(job.GetSubGroups()) == 1 && taskSubGroup.GetName() == podgroup_info.DefaultSubGroup {
+		job.SetJobFitError(
+			podgroup_info.PodSchedulingErrors,
+			fmt.Sprintf("Resources were found for %d pods while %d are required for gang scheduling. "+
+				"Additional pods cannot be scheduled due to: %s",
+				numSchedulableTasks, taskSubGroup.GetMinAvailable(), allocationError.Error()),
+			nil)
+		return
+	}
+	job.SetJobFitError(
+		podgroup_info.PodSchedulingErrors,
+		fmt.Sprintf("Resources were found for %d pods from all sub-groups while sub-group %s requires %d pods for gang scheduling. "+
+			"Additional pods cannot be scheduled in this sub-group due to: %s",
+			numSchedulableTasks, taskSubGroup.GetName(), taskSubGroup.GetMinAvailable(), allocationError.Error()),
+		nil)
+}
+
+func isGangScheduling(job *podgroup_info.PodGroupInfo) bool {
+	for _, subGroup := range job.GetSubGroups() {
+		if subGroup.GetMinAvailable() > 1 {
+			return true
+		}
+	}
+	return false
 }
