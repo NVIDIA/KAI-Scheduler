@@ -460,7 +460,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 
 			numWorkloadPods := 4
 			workloadPods := []*corev1.Pod{}
-			for i := 0; i < numWorkloadPods; i++ {
+			for i := range numWorkloadPods {
 				testPod := CreatePodObject(testNamespace.Name, fmt.Sprintf("test-pod-%d", i), singlePodResourceRequirements)
 				Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod %s", testPod.Name)
 				workloadPods = append(workloadPods, testPod)
