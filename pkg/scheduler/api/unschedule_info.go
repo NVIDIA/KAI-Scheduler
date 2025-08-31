@@ -82,10 +82,36 @@ func GetJobOverMaxAllowedMessageForQueue(
 		queueName, resourceNameStr, details)
 }
 
-func GetGangEvictionMessage(taskNamespace, taskName string, minimum int32) string {
+func GetGangEvictionMessage(task *pod_info.PodInfo, job *podgroup_info.PodGroupInfo) string {
+	if len(job.GetSubGroups()) == 1 {
+		if defaultSubgroup, found := job.GetSubGroups()[podgroup_info.DefaultSubGroup]; found {
+			return getGangEvictionForDefaultSubgroupMessage(task.Namespace, task.Name, defaultSubgroup.GetMinAvailable())
+		}
+	}
+
+	subGroup, found := job.GetSubGroups()[task.SubGroupName]
+	if !found {
+		return getGangEvictionWithUndefinedSubGroupMessage(task.Namespace, task.Name, task.SubGroupName)
+	}
+	return getGangEvictionWithSubGroupsMessage(task.Namespace, task.Name, subGroup.GetName(), subGroup.GetMinAvailable())
+}
+
+func getGangEvictionForDefaultSubgroupMessage(taskNamespace, taskName string, minimum int32) string {
 	return fmt.Sprintf(
-		"Workload doesn't have the minimum required number of pods (%d), evicting remaining pod: %s/%s",
+		"Workload doesn't meet the minimum required number of pods (%d), evicting remaining pod: %s/%s",
 		minimum, taskNamespace, taskName)
+}
+
+func getGangEvictionWithSubGroupsMessage(taskNamespace, taskName, subGroup string, minimum int32) string {
+	return fmt.Sprintf(
+		"Workload doesn't meet the minimum required number of pods (%d) in sub-group %s, evicting remaining pod: %s/%s",
+		minimum, subGroup, taskNamespace, taskName)
+}
+
+func getGangEvictionWithUndefinedSubGroupMessage(taskNamespace, taskName, subGroup string) string {
+	return fmt.Sprintf(
+		"Workload doesn't meet the minimum required number of pods in sub-group %s, evicting remaining pod: %s/%s",
+		subGroup, taskNamespace, taskName)
 }
 
 func GetPreemptMessage(preemptorJob *podgroup_info.PodGroupInfo, preempteeTask *pod_info.PodInfo) string {
