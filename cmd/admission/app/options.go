@@ -4,6 +4,7 @@
 package app
 
 import (
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/spf13/pflag"
 
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -29,7 +30,7 @@ func InitOptions() *Options {
 	fs := pflag.CommandLine
 
 	fs.StringVar(&options.SchedulerName,
-		"scheduler-name", "kai-scheduler",
+		"scheduler-name", constants.DefaultSchedulerName,
 		"The scheduler name the workloads are scheduled with")
 	fs.Float64Var(&options.QPS,
 		"qps", 50,

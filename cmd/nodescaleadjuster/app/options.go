@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/nodescaleadjuster/consts"
 )
 
@@ -32,10 +33,10 @@ func (o *Options) AddFlags() {
 		"scaling-pod-image", consts.DefaultScalingPodImage,
 		"The image to use for the scaling pod, defaults to "+consts.DefaultScalingPodImage)
 	flag.StringVar(&o.ScalingPodNamespace,
-		"scale-adjust-namespace", "kai-scale-adjust",
+		"scale-adjust-namespace", constants.DefaultScaleAdjustName,
 		"The namespace to use for the scaling pods, defaults to kai-scale-adjust")
 	flag.StringVar(&o.SchedulerName,
-		"scheduler-name", "kai-scheduler",
+		"scheduler-name", constants.DefaultSchedulerName,
 		"Scheduler name, defaults to kai-scheduler")
 	flag.StringVar(&o.ScalingPodAppLabel,
 		"scaling-pod-app-label", "scaling-pod",

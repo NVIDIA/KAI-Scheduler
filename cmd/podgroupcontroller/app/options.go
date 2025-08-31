@@ -5,6 +5,8 @@ package app
 
 import (
 	"flag"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 type Options struct {
@@ -36,7 +38,7 @@ func InitOptions() *Options {
 		"Max concurrent reconciles")
 	flag.IntVar(&options.LogLevel, "log-level", 3,
 		"Log level")
-	flag.StringVar(&options.SchedulerName, "scheduler-name", "kai-scheduler",
+	flag.StringVar(&options.SchedulerName, "scheduler-name", constants.DefaultSchedulerName,
 		"The name of the scheduler used to schedule pod groups")
 
 	return options

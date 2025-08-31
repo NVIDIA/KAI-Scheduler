@@ -4,6 +4,7 @@
 package app
 
 import (
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/spf13/pflag"
 
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -36,25 +37,25 @@ func InitOptions() *Options {
 	fs := pflag.CommandLine
 
 	fs.StringVar(&options.SchedulerName,
-		"scheduler-name", "kai-scheduler",
+		"scheduler-name", constants.DefaultSchedulerName,
 		"The scheduler name the workloads are scheduled with")
 	fs.StringVar(&options.ResourceReservationNamespace,
-		"resource-reservation-namespace", "kai-resource-reservation",
+		"resource-reservation-namespace", constants.DefaultResourceReservationName,
 		"Namespace for resource reservation pods")
 	fs.StringVar(&options.ResourceReservationServiceAccount,
-		"resource-reservation-service-account", "kai-resource-reservation",
+		"resource-reservation-service-account", constants.DefaultResourceReservationName,
 		"Service account name for resource reservation pods")
 	fs.StringVar(&options.ResourceReservationPodImage,
 		"resource-reservation-pod-image", "registry/local/kai-scheduler/resource-reservation",
 		"Container image for the resource reservation pod")
 	fs.StringVar(&options.ResourceReservationAppLabel,
-		"resource-reservation-app-label", "kai-resource-reservation",
+		"resource-reservation-app-label", constants.DefaultResourceReservationName,
 		"App label value of resource reservation pods")
 	fs.IntVar(&options.ResourceReservationAllocationTimeout,
 		"resource-reservation-allocation-timeout", 40,
 		"Resource reservation allocation timeout in seconds")
 	fs.StringVar(&options.ScalingPodNamespace,
-		"scale-adjust-namespace", "kai-scale-adjust",
+		"scale-adjust-namespace", constants.DefaultScaleAdjustName,
 		"Scaling pods namespace")
 	fs.Float64Var(&options.QPS,
 		"qps", 50,

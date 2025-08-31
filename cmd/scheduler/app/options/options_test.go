@@ -45,10 +45,10 @@ func TestAddFlags(t *testing.T) {
 
 	// This is a snapshot of expected options parsed by args.
 	expected := &ServerOption{
-		SchedulerName:                     defaultSchedulerName,
-		Namspace:                          defaultNamespace,
+		SchedulerName:                     constants.DefaultSchedulerName,
+		Namspace:                          constants.DefaultKAINamespace,
 		MetricsNamespace:                  constants.DefaultMetricsNamespace,
-		ResourceReservationAppLabel:       defaultResourceReservationAppLabel,
+		ResourceReservationAppLabel:       constants.DefaultResourceReservationName,
 		SchedulePeriod:                    5 * time.Minute,
 		PrintVersion:                      true,
 		ListenAddress:                     defaultListenAddress,
@@ -67,7 +67,7 @@ func TestAddFlags(t *testing.T) {
 		PyroscopeMutexProfilerRate:        DefaultPyroscopeMutexProfilerRate,
 		GlobalDefaultStalenessGracePeriod: defaultStalenessGracePeriod,
 		NumOfStatusRecordingWorkers:       defaultNumOfStatusRecordingWorkers,
-		NodePoolLabelKey:                  defaultNodePoolLabelKey,
+		NodePoolLabelKey:                  constants.DefaultNodePoolLabelKey,
 		PluginServerPort:                  8081,
 		CPUWorkerNodeLabelKey:             defaultCPUWorkerNodeLabelKey,
 		GPUWorkerNodeLabelKey:             defaultGPUWorkerNodeLabelKey,
