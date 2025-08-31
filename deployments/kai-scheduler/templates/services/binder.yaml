@@ -42,10 +42,6 @@ spec:
           securityContext:
             {{- toYaml .Values.global.securityContext | nindent 12 }}
           {{- end }}
-          readinessProbe:
-            httpGet:
-              path: "/readyz"
-              port: {{ .Values.binder.ports.probePort }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
