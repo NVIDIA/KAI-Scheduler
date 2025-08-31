@@ -398,7 +398,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 				nodeToRack[i], nodeToRack[j] = nodeToRack[j], nodeToRack[i]
 			})
 
-			for i := 0; i < numNodes; i++ {
+			for i := range numNodes {
 				topologyNode := DefaultNodeConfig(fmt.Sprintf("t-node-%d", i))
 				topologyNode.GPUs = gpusPerNode
 				topologyNode.Labels[rackLabelKey] = fmt.Sprintf("clusterUuid.%s", nodeToRack[i])
