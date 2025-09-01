@@ -145,6 +145,50 @@ func Test_GetTasksToAllocate(t *testing.T) {
 			wantTasks:    []string{"task3"},
 			wantNumTasks: 1,
 		},
+		{
+			name: "three subgroups, last two are not gang satisfied",
+			subGroupTasks: map[string][]*pod_info.PodInfo{
+				"subGroup1": {
+					simpleTask("task1", "subGroup1", pod_status.Running),
+				},
+				"subGroup2": {
+					simpleTask("task2", "subGroup2", pod_status.Pending),
+				},
+				"subGroup3": {
+					simpleTask("task3", "subGroup3", pod_status.Pending),
+				},
+			},
+			minAvailMap: map[string]int32{
+				"subGroup1": 1,
+				"subGroup2": 1,
+				"subGroup3": 1,
+			},
+			wantTasks:    []string{"task2", "task3"},
+			wantNumTasks: 2,
+		},
+		{
+			name: "three subgroups, all gang satisfied, allocation left in the last two",
+			subGroupTasks: map[string][]*pod_info.PodInfo{
+				"subGroup1": {
+					simpleTask("task1", "subGroup1", pod_status.Running),
+				},
+				"subGroup2": {
+					simpleTask("task2", "subGroup2", pod_status.Running),
+					simpleTask("task3", "subGroup2", pod_status.Pending),
+				},
+				"subGroup3": {
+					simpleTask("task4", "subGroup3", pod_status.Running),
+					simpleTask("task5", "subGroup3", pod_status.Pending),
+				},
+			},
+			minAvailMap: map[string]int32{
+				"subGroup1": 1,
+				"subGroup2": 1,
+				"subGroup3": 1,
+			},
+			wantTasks:    []string{"task3"},
+			wantNumTasks: 1,
+		},
 	}
 
 	for _, tt := range tests {

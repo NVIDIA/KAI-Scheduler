@@ -33,10 +33,10 @@ func GetTasksToAllocate(
 
 	var tasksToAllocate []*pod_info.PodInfo
 	subGroupPriorityQueue := getSubGroupsPriorityQueue(podGroupInfo.GetSubGroups(), subGroupOrderFn)
-	maxNumOfSubGroups := getNumOfSubGroupsToAllocate(podGroupInfo)
+	maxNumSubGroups := getMaxNumSubGroupsToAllocate(podGroupInfo)
 	numSubGroupsToAllocate := 0
 
-	for !subGroupPriorityQueue.Empty() && (numSubGroupsToAllocate < maxNumOfSubGroups) {
+	for !subGroupPriorityQueue.Empty() && (numSubGroupsToAllocate < maxNumSubGroups) {
 		nextSubGroup := subGroupPriorityQueue.Pop().(*SubGroupInfo)
 		taskPriorityQueue := getTasksPriorityQueue(nextSubGroup, taskOrderFn, isRealAllocation)
 		if taskPriorityQueue.Empty() {
@@ -148,12 +148,16 @@ func getNumAllocatableTasks(subGroup *SubGroupInfo, isRealAllocation bool) int {
 	return numTasksToAllocate
 }
 
-func getNumOfSubGroupsToAllocate(podGroupInfo *PodGroupInfo) int {
+func getMaxNumSubGroupsToAllocate(podGroupInfo *PodGroupInfo) int {
+	numUnsatisfied := 0
 	for _, subGroup := range podGroupInfo.GetSubGroups() {
 		allocatedTasks := subGroup.GetNumActiveAllocatedTasks()
-		if allocatedTasks >= int(subGroup.GetMinAvailable()) {
-			return 1
+		if allocatedTasks < int(subGroup.GetMinAvailable()) {
+			numUnsatisfied += 1
 		}
 	}
-	return len(podGroupInfo.SubGroups)
+	if numUnsatisfied > 0 {
+		return numUnsatisfied
+	}
+	return 1
 }
