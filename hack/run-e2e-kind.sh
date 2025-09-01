@@ -12,8 +12,8 @@ GOBIN=${GOPATH}/bin
 
 # Parse named parameters
 TEST_THIRD_PARTY_INTEGRATIONS="false"
-LOCAL_IMAGES_BUILD="false"
-PRESERVE_CLUSTER="false"
+LOCAL_IMAGES_BUILD="true"
+PRESERVE_CLUSTER="true"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -83,7 +83,7 @@ if [ ! -f ${GOBIN}/ginkgo ]; then
     GOBIN=${GOBIN} go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.3
 fi
 
-${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --label-filter '!autoscale && !scale' --trace -vv ${REPO_ROOT}/test/e2e/suites
+${GOBIN}/ginkgo -r --keep-going --seed="1756195201" --randomize-all --randomize-suites  --label-filter '!autoscale && !scale' --trace -vv ${REPO_ROOT}/test/e2e/suites  
 
 if [ "$PRESERVE_CLUSTER" != "true" ]; then
     kind delete cluster --name $CLUSTER_NAME
