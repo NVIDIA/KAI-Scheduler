@@ -449,12 +449,24 @@ var _ = Describe("Scheduler", Ordered, func() {
 		})
 
 		It("Schedule pods with rack topology constraints", func(ctx context.Context) {
+
+			// schedule a single gpu pod outside of the topology to try and "pull" the topology constraint workload pods outside of a valid rack
+			binPackingPullPod := CreatePodObject(testNamespace.Name, "bin-packing-pull-pod", corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{constants.GpuResource: resource.MustParse("1")},
+			})
+			binPackingPullPod.Spec.NodeSelector = map[string]string{
+				hostnameLabelKey: "test-node",
+			}
+			Expect(ctrlClient.Create(ctx, binPackingPullPod)).To(Succeed(), "Failed to create bin-packing-pull-pod")
+			err := GroupPods(ctx, ctrlClient, podGroupConfig{queueName: testQueue.Name, podgroupName: "bin-packing-pull-podgroup", minMember: 1}, []*corev1.Pod{binPackingPullPod})
+			Expect(err).NotTo(HaveOccurred(), "Failed tocreate a pod group for bin-packing-pull-pod")
+
 			singlePodResourceRequirements := corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse(fmt.Sprintf("%d", gpusPerNode)),
+					constants.GpuResource: resource.MustParse(fmt.Sprintf("%d", gpusPerNode-1)),
 				},
 				Requests: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse(fmt.Sprintf("%d", gpusPerNode)),
+					constants.GpuResource: resource.MustParse(fmt.Sprintf("%d", gpusPerNode-1)),
 				},
 			}
 
@@ -475,7 +487,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 					RequiredTopologyLevel: rackLabelKey,
 				},
 			}
-			err := GroupPods(ctx, ctrlClient, podGroupConfig, workloadPods)
+			err = GroupPods(ctx, ctrlClient, podGroupConfig, workloadPods)
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 
 			for _, pod := range workloadPods {
@@ -487,7 +499,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			Expect(ctrlClient.List(ctx, pods, client.InNamespace(testNamespace.Name))).
 				To(Succeed(), "Failed to list pods")
 
-			Expect(len(pods.Items)).To(Equal(numWorkloadPods), "Expected %d pods to be created in the test", numWorkloadPods)
+			Expect(len(pods.Items)).To(Equal(numWorkloadPods+1), "Expected %d pods to be created in the test", numWorkloadPods)
 
 			scheduledRacks := map[string]int{}
 			for _, pod := range pods.Items {
