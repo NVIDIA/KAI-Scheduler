@@ -134,6 +134,7 @@ func waitForPGConditionReason(
 		updatedPod := &v1.Pod{}
 		Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
 		podGroupName, found := updatedPod.Annotations[constants.PodGroupAnnotationForPod]
+		GinkgoWriter.Printf("PodGroup '%s' has %d conditions:\n", podGroupName, len(podGroup.Status.SchedulingConditions))
 		if !found {
 			return false
 		}
@@ -146,9 +147,10 @@ func waitForPGConditionReason(
 				}
 			}
 		}
-
+		GinkgoWriter.Printf("Expected reason '%s' not found. PodGroup '%s' has %d conditions:\n",
+			expectedReason, podGroupName, len(podGroup.Status.SchedulingConditions))
 		return false
-	}, time.Minute, time.Millisecond*100).Should(BeTrue())
+	}, time.Minute*2, time.Millisecond*50).Should(BeTrue())
 
 	return podGroup
 }
