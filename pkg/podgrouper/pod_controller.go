@@ -164,6 +164,8 @@ func (r *PodReconciler) addPodGroupAnnotationToPod(ctx context.Context, pod *v1.
 
 	value, found := pod.Annotations[constants.PodGroupAnnotationForPod]
 	if found && value == podGroup {
+		logger.V(1).Info("Podgroup annotation already exists for pod", "pod",
+			fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "value", value)
 		return nil
 	}
 	logger.V(1).Info("Reconciling podgroup annotation for pod", "pod",

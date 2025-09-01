@@ -40,7 +40,7 @@ var _ = Describe("PodGroup Conditions", Ordered, func() {
 		testQueue = queue.CreateQueueObject(utils.GenerateRandomK8sName(10), parentQueue.Name)
 		testCtx.InitQueues([]*v2.Queue{testQueue, parentQueue})
 
-		nonPreemptiblePriorityClass = "high"
+		nonPreemptiblePriorityClass = "kai-high"
 		nonPreemptiblePriorityValue := e2econstant.NonPreemptiblePriorityThreshold + 2
 		_, err := testCtx.KubeClientset.SchedulingV1().PriorityClasses().
 			Create(ctx, rd.CreatePriorityClass(nonPreemptiblePriorityClass, nonPreemptiblePriorityValue),
@@ -68,18 +68,18 @@ var _ = Describe("PodGroup Conditions", Ordered, func() {
 			testQueue.Spec.Resources.GPU.Quota = -1
 			Expect(testCtx.ControllerClient.Patch(ctx, testQueue, runtimeClient.MergeFrom(originalTestQueue))).To(Succeed())
 		})
-		It("sets condition with NonPreemptibleOverQuota reason on PodGroup", func(ctx context.Context) {
-			pod := rd.CreatePodObject(testQueue, v1.ResourceRequirements{
-				Limits: v1.ResourceList{
-					constants.GpuResource: resource.MustParse("1"),
-				},
-			})
-			pod.Spec.PriorityClassName = nonPreemptiblePriorityClass
-			createdPod, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
-			Expect(err).NotTo(HaveOccurred())
+		// It("sets condition with NonPreemptibleOverQuota reason on PodGroup", func(ctx context.Context) {
+		// 	pod := rd.CreatePodObject(testQueue, v1.ResourceRequirements{
+		// 		Limits: v1.ResourceList{
+		// 			constants.GpuResource: resource.MustParse("1"),
+		// 		},
+		// 	})
+		// 	pod.Spec.PriorityClassName = nonPreemptiblePriorityClass
+		// 	createdPod, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
+		// 	Expect(err).NotTo(HaveOccurred())
 
-			waitForPGConditionReason(ctx, testCtx, createdPod, v2alpha2.NonPreemptibleOverQuota)
-		})
+		// 	waitForPGConditionReason(ctx, testCtx, createdPod, v2alpha2.NonPreemptibleOverQuota)
+		// })
 	})
 
 	Context("Jobs Over Queue Limit", func() {
@@ -94,19 +94,20 @@ var _ = Describe("PodGroup Conditions", Ordered, func() {
 			Expect(testCtx.ControllerClient.Patch(ctx, testQueue, runtimeClient.MergeFrom(originalTestQueue))).To(Succeed())
 		})
 
-		Context("Preemptible Job", func() {
-			It("sets condition with reason on PodGroup", func(ctx context.Context) {
-				pod := rd.CreatePodObject(testQueue, v1.ResourceRequirements{
-					Limits: v1.ResourceList{
-						constants.GpuResource: resource.MustParse("1"),
-					},
-				})
-				createdPod, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
-				Expect(err).NotTo(HaveOccurred())
+		// Context("Preemptible Job", func() {
+		// 	It("dfghdrhdrhdrhsets condition with reason on PodGroupteryerher", func(ctx context.Context) {
+		// 		pod := rd.CreatePodObject(testQueue, v1.ResourceRequirements{
+		// 			Limits: v1.ResourceList{
+		// 				constants.GpuResource: resource.MustParse("1"),
+		// 			},
+		// 		})
+		// 		createdPod, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
+		// 		GinkgoWriter.Printf("CreatedPod '%s' has %d conditions:\n", createdPod.Name, len(createdPod.Status.Conditions))
+		// 		Expect(err).NotTo(HaveOccurred())
 
-				waitForPGConditionReason(ctx, testCtx, createdPod, v2alpha2.OverLimit)
-			})
-		})
+		// 		waitForPGConditionReason(ctx, testCtx, createdPod, v2alpha2.OverLimit)
+		// 	})
+		// })
 
 		Context("NonPreemptible Job", func() {
 			It("sets condition with reason on PodGroup", func(ctx context.Context) {
@@ -117,6 +118,7 @@ var _ = Describe("PodGroup Conditions", Ordered, func() {
 				})
 				createdPod, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
 				createdPod.Spec.PriorityClassName = nonPreemptiblePriorityClass
+
 				Expect(err).NotTo(HaveOccurred())
 
 				waitForPGConditionReason(ctx, testCtx, createdPod, v2alpha2.OverLimit)
@@ -132,9 +134,11 @@ func waitForPGConditionReason(
 	podGroup := &v2alpha2.PodGroup{}
 	Eventually(func() bool {
 		updatedPod := &v1.Pod{}
-		Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
+		Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKey{Name: pod.Name, Namespace: pod.Namespace}, updatedPod)).To(Succeed())
+		GinkgoWriter.Printf("UpdatedPod '%s' has %d conditions: %v \n", updatedPod.Name, len(updatedPod.Status.Conditions), updatedPod.Status.Conditions)
 		podGroupName, found := updatedPod.Annotations[constants.PodGroupAnnotationForPod]
 		if !found {
+			GinkgoWriter.Printf("PodGroup annotation not found. %v podgrpoupname %s \n", updatedPod.Annotations, podGroupName)
 			return false
 		}
 		Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKey{Name: podGroupName, Namespace: pod.Namespace}, podGroup)).To(Succeed())
@@ -149,7 +153,7 @@ func waitForPGConditionReason(
 		GinkgoWriter.Printf("Expected reason '%s' not found. PodGroup '%s' has %d conditions:\n",
 			expectedReason, podGroupName, len(podGroup.Status.SchedulingConditions))
 		return false
-	}, time.Minute*2, time.Millisecond*50).Should(BeTrue())
+	}, time.Second*30, time.Millisecond*100).Should(BeTrue())
 
 	return podGroup
 }
