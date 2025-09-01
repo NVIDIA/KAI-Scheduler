@@ -40,9 +40,9 @@ func deploymentForKAIConfig(
 		Containers: []v1.Container{
 			{
 				Name:            deploymentName,
-				Image:           config.Image.Url(),
-				ImagePullPolicy: *config.Image.PullPolicy,
-				Resources:       v1.ResourceRequirements(*config.Resources),
+				Image:           config.Service.Image.Url(),
+				ImagePullPolicy: *config.Service.Image.PullPolicy,
+				Resources:       v1.ResourceRequirements(*config.Service.Resources),
 				Args:            buildArgsList(config, *kaiConfig.Spec.Global.SchedulerName),
 				SecurityContext: kaiConfig.Spec.Global.GetSecurityContext(),
 			},
@@ -73,8 +73,8 @@ func buildArgsList(config *pod_group_controller.PodGroupController, schedulerNam
 		"--scheduler-name", schedulerName,
 	}
 
-	if config.K8sClientConfig != nil {
-		k8sClientConfig := config.K8sClientConfig
+	if config.Service.K8sClientConfig != nil {
+		k8sClientConfig := config.Service.K8sClientConfig
 		if k8sClientConfig.QPS != nil {
 			args = append(args, "--qps", strconv.Itoa(*k8sClientConfig.QPS))
 		}

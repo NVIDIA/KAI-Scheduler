@@ -16,21 +16,7 @@ const (
 )
 
 type PodGroupController struct {
-	// Enabled defines whether the pod-group-controller should be deployed
-	// +kubebuilder:validation:Optional
-	Enabled *bool `json:"enabled,omitempty"`
-
-	// Image is the configuration of the pod-group-controller image
-	// +kubebuilder:validation:Optional
-	Image *common.Image `json:"image,omitempty"`
-
-	// Resources describes the resource requirements for the pod-group-controller pod
-	// +kubebuilder:validation:Optional
-	Resources *common.Resources `json:"resources,omitempty"`
-
-	// ClientConfig specifies the configuration of k8s client
-	// +kubebuilder:validation:Optional
-	K8sClientConfig *common.K8sClientConfig `json:"k8sClientConfig,omitempty"`
+	Service *common.Service `json:"service,omitempty"`
 
 	// MaxConcurrentReconciles specifies the number of max concurrent reconcile workers
 	// +kubebuilder:validation:Optional
@@ -52,43 +38,22 @@ type Args struct {
 }
 
 func (pg *PodGroupController) SetDefaultsWhereNeeded(replicaCount *int32) {
-	if pg.Enabled == nil {
-		pg.Enabled = ptr.To(true)
+	if pg.Service == nil {
+		pg.Service = &common.Service{}
 	}
+	pg.Service.SetDefaultsWhereNeeded(imageName)
 
-	if pg.Image == nil {
-		pg.Image = &common.Image{}
+	if _, found := pg.Service.Resources.Requests[v1.ResourceCPU]; !found {
+		pg.Service.Resources.Requests[v1.ResourceCPU] = resource.MustParse("20m")
 	}
-	if pg.Image.Name == nil {
-		pg.Image.Name = ptr.To(imageName)
+	if _, found := pg.Service.Resources.Requests[v1.ResourceMemory]; !found {
+		pg.Service.Resources.Requests[v1.ResourceMemory] = resource.MustParse("100Mi")
 	}
-	pg.Image.SetDefaultsWhereNeeded()
-
-	if pg.Resources == nil {
-		pg.Resources = &common.Resources{}
+	if _, found := pg.Service.Resources.Limits[v1.ResourceCPU]; !found {
+		pg.Service.Resources.Limits[v1.ResourceCPU] = resource.MustParse("500m")
 	}
-	if pg.Resources.Requests == nil {
-		pg.Resources.Requests = v1.ResourceList{}
-	}
-	if pg.Resources.Limits == nil {
-		pg.Resources.Limits = v1.ResourceList{}
-	}
-
-	if _, found := pg.Resources.Requests[v1.ResourceCPU]; !found {
-		pg.Resources.Requests[v1.ResourceCPU] = resource.MustParse("20m")
-	}
-	if _, found := pg.Resources.Requests[v1.ResourceMemory]; !found {
-		pg.Resources.Requests[v1.ResourceMemory] = resource.MustParse("100Mi")
-	}
-	if _, found := pg.Resources.Limits[v1.ResourceCPU]; !found {
-		pg.Resources.Limits[v1.ResourceCPU] = resource.MustParse("500m")
-	}
-	if _, found := pg.Resources.Limits[v1.ResourceMemory]; !found {
-		pg.Resources.Limits[v1.ResourceMemory] = resource.MustParse("100Mi")
-	}
-
-	if pg.K8sClientConfig == nil {
-		pg.K8sClientConfig = &common.K8sClientConfig{}
+	if _, found := pg.Service.Resources.Limits[v1.ResourceMemory]; !found {
+		pg.Service.Resources.Limits[v1.ResourceMemory] = resource.MustParse("100Mi")
 	}
 
 	if pg.Args == nil {

@@ -23,7 +23,7 @@ func (p *PodGroupController) DesiredState(
 ) ([]client.Object, error) {
 	p.namespace = kaiConfig.Spec.Namespace
 
-	if *kaiConfig.Spec.PodGroupController.Enabled == false {
+	if *kaiConfig.Spec.PodGroupController.Service.Enabled == false {
 		p.lastDesiredState = []client.Object{}
 		return nil, nil
 	}

@@ -20,8 +20,8 @@ var _ = Describe("PodGroupController", func() {
 	It("Set Defaults", func(ctx context.Context) {
 		podGroupController := &PodGroupController{}
 		podGroupController.SetDefaultsWhereNeeded(nil)
-		Expect(*podGroupController.Enabled).To(Equal(true))
-		Expect(*podGroupController.Image.Name).To(Equal(imageName))
+		Expect(*podGroupController.Service.Enabled).To(Equal(true))
+		Expect(*podGroupController.Service.Image.Name).To(Equal(imageName))
 	})
 	It("Set Defaults With replicas", func(ctx context.Context) {
 		podGroupController := &PodGroupController{}

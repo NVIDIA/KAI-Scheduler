@@ -83,7 +83,7 @@ var _ = Describe("PodGrouper", func() {
 func kaiConfigForPodGrouper() *kaiv1.Config {
 	kaiConfig := &kaiv1.Config{}
 	kaiConfig.Spec.SetDefaultsWhereNeeded()
-	kaiConfig.Spec.PodGroupController.Enabled = ptr.To(true)
+	kaiConfig.Spec.PodGroupController.Service.Enabled = ptr.To(true)
 
 	return kaiConfig
 }
