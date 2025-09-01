@@ -25,17 +25,16 @@ type CMConfigParams struct {
 }
 
 type Options struct {
-	MetricsAddr                string
-	EnableLeaderElection       bool
-	ProbeAddr                  string
-	Qps                        int
-	Burst                      int
-	Namespace                  string
-	ImagePullSecretName        string
-	AdditionalImagePullSecrets ArrayFlags
-	ZapOptions                 zap.Options
-	cMFilePath                 string
-	CMConfigParams             CMConfigParams
+	MetricsAddr          string
+	EnableLeaderElection bool
+	ProbeAddr            string
+	Qps                  int
+	Burst                int
+	Namespace            string
+	ImagePullSecretName  string
+	ZapOptions           zap.Options
+	cMFilePath           string
+	CMConfigParams       CMConfigParams
 }
 
 func SetOptions() (*Options, error) {
@@ -77,7 +76,6 @@ func (opts *Options) parseCommandLineArgs(flagSet *flag.FlagSet, options []strin
 
 	flagSet.StringVar(&opts.Namespace, "namespace", "runai-engine", "The namespace to create the resources in")
 	flagSet.StringVar(&opts.ImagePullSecretName, "image-pull-secret", "", "The name of the image pull secret to use")
-	flagSet.Var(&opts.AdditionalImagePullSecrets, "additional-image-pull-secrets", "Additional image pull secrets names to use")
 	flagSet.StringVar(&opts.cMFilePath, "cm-file-path", cmFile, "Path to the configmap file")
 	opts.ZapOptions = zap.Options{
 		Development: true,
