@@ -9,6 +9,7 @@ import (
 	"sort"
 	"testing"
 
+	v1 "k8s.io/api/core/v1"
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/utils/ptr"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
@@ -1644,7 +1645,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				Name: "test-job",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Running},
+						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Running, NodeName: "node1"},
 						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
 					}),
@@ -1672,9 +1673,18 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
 					"zone": {
 						"zone1": {
-							ID:              "zone1",
-							Name:            "zone1",
-							Level:           "zone",
+							ID:    "zone1",
+							Name:  "zone1",
+							Level: "zone",
+							Nodes: map[string]*node_info.NodeInfo{
+								"node1": {
+									Node: &v1.Node{
+										ObjectMeta: metav1.ObjectMeta{
+											Name: "node1",
+										},
+									},
+								},
+							},
 							AllocatablePods: 2,
 						},
 					},
@@ -1687,6 +1697,85 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				{
 					ID:              "zone1",
 					Name:            "zone1",
+					Level:           "zone",
+					AllocatablePods: 2,
+				},
+			},
+			expectedError: "",
+		},
+		{
+			name: "mixed task statuses with required constraint - choose zone with existing pods",
+			job: &podgroup_info.PodGroupInfo{
+				Name: "test-job",
+				SubGroups: map[string]*podgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Running, NodeName: "node2"},
+						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
+						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
+					}),
+				},
+				PodGroup: &enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-job",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						TopologyConstraint: enginev2alpha2.TopologyConstraint{
+							RequiredTopologyLevel: "zone",
+						},
+					},
+				},
+			},
+			topologyTree: &TopologyInfo{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "zone"},
+						},
+					},
+				},
+				DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+					"zone": {
+						"zone1": {
+							ID:    "zone1",
+							Name:  "zone1",
+							Level: "zone",
+							Nodes: map[string]*node_info.NodeInfo{
+								"node1": {
+									Node: &v1.Node{
+										ObjectMeta: metav1.ObjectMeta{
+											Name: "node1",
+										},
+									},
+								},
+							},
+							AllocatablePods: 2,
+						},
+						"zone2": {
+							ID:    "zone2",
+							Name:  "zone2",
+							Level: "zone",
+							Nodes: map[string]*node_info.NodeInfo{
+								"node2": {
+									Node: &v1.Node{
+										ObjectMeta: metav1.ObjectMeta{
+											Name: "node2",
+										},
+									},
+								},
+							},
+							AllocatablePods: 2,
+						},
+					},
+				},
+			},
+			taskOrderFunc: func(l, r interface{}) bool {
+				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
+			},
+			expectedDomains: []*TopologyDomainInfo{
+				{
+					ID:              "zone2",
+					Name:            "zone2",
 					Level:           "zone",
 					AllocatablePods: 2,
 				},

@@ -14,6 +14,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
@@ -199,11 +200,20 @@ func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGrou
 	if err != nil {
 		return nil, err
 	}
+
+	// Validate that the domains do not crush with the active pods of the job
+	var relevantDomainsByLevel map[string]map[TopologyDomainID]*TopologyDomainInfo
+	if job.GetActiveAllocatedTasksCount() > 0 && jobHasTopologyRequiredConstraint(job) {
+		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(job, topologyTree, job.PodGroup.Spec.TopologyConstraint.RequiredTopologyLevel)
+	} else {
+		relevantDomainsByLevel = topologyTree.DomainsByLevel
+	}
+
 	taskToAllocateCount := len(podgroup_info.GetTasksToAllocate(job, t.subGroupOrderFunc, t.taskOrderFunc, true))
 
 	maxDepthDomains := []*TopologyDomainInfo{}
 	for _, level := range relevantLevels {
-		for _, domain := range topologyTree.DomainsByLevel[level] {
+		for _, domain := range relevantDomainsByLevel[level] {
 			if domain.AllocatablePods < taskToAllocateCount { // Filter domains that cannot allocate the job
 				continue
 			}
@@ -229,6 +239,47 @@ func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGrou
 
 	// For stage 1, return a single domain
 	return []*TopologyDomainInfo{maxDepthDomains[0]}, nil
+}
+
+func getRelevantDomainsWithAllocatedPods(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo, topLevel string) map[string]map[TopologyDomainID]*TopologyDomainInfo {
+	relevantDomainsByLevel := map[string]map[TopologyDomainID]*TopologyDomainInfo{}
+	for _, domainAtRequiredLevel := range topologyTree.DomainsByLevel[topLevel] {
+		activePodsInDomain := countActiveJobPodsInDomain(job, domainAtRequiredLevel)
+		if activePodsInDomain == 0 {
+			continue // if the domain at the top level does not have any active pods, then any domains under the subtree cannot satisfy the required constraint for both active and pending pods
+		}
+		addSubTreeToDomainMap(domainAtRequiredLevel, relevantDomainsByLevel)
+	}
+	return relevantDomainsByLevel
+}
+
+func countActiveJobPodsInDomain(job *podgroup_info.PodGroupInfo, domain *TopologyDomainInfo) int {
+	activePodsInDomain := 0
+	for _, pod := range job.GetAllPodsMap() {
+		if pod_status.IsActiveAllocatedStatus(pod.Status) {
+			podInDomain := domain.Nodes[pod.NodeName] != nil
+			if podInDomain {
+				activePodsInDomain++
+			}
+		}
+	}
+	return activePodsInDomain
+}
+
+func addSubTreeToDomainMap(domain *TopologyDomainInfo, domainsMap map[string]map[TopologyDomainID]*TopologyDomainInfo) {
+	if domainsMap[domain.Level] == nil {
+		domainsMap[domain.Level] = map[TopologyDomainID]*TopologyDomainInfo{}
+	}
+	if domain.Children != nil {
+		for _, childDomain := range domain.Children {
+			addSubTreeToDomainMap(childDomain, domainsMap)
+		}
+	}
+	domainsMap[domain.Level][domain.ID] = domain
+}
+
+func jobHasTopologyRequiredConstraint(job *podgroup_info.PodGroupInfo) bool {
+	return job.PodGroup.Spec.TopologyConstraint.RequiredTopologyLevel != ""
 }
 
 func (*topologyPlugin) calculateRelevantDomainLevels(
