@@ -17,6 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1common "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
+	kaiConfigUtils "github.com/NVIDIA/KAI-scheduler/pkg/operator/config"
 )
 
 var controllerTypes = []string{"Deployment", "DaemonSet"}
@@ -97,13 +99,11 @@ func ObjectForKAIConfig(
 }
 
 func DeploymentForKAIConfig(
-	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
-	deploymentName string,
+	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config, service *kaiv1common.Service, deploymentName string,
 ) (*appsv1.Deployment, error) {
 
 	deploymentObj, err := ObjectForKAIConfig(
-		ctx, runtimeClient, &appsv1.Deployment{}, deploymentName,
-		kaiConfig.Spec.Namespace)
+		ctx, runtimeClient, &appsv1.Deployment{}, deploymentName, kaiConfig.Spec.Namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +123,21 @@ func DeploymentForKAIConfig(
 		deployment.Spec.Template.Labels = map[string]string{}
 	}
 	deployment.Spec.Template.Labels["app"] = deploymentName
+
+	deployment.Spec.Template.Spec.Affinity = kaiConfig.Spec.Global.Affinity
+	deployment.Spec.Template.Spec.Tolerations = kaiConfig.Spec.Global.Tolerations
+
+	deployment.Spec.Template.Spec.Containers = []v1.Container{
+		{
+			Name:            deploymentName,
+			Image:           service.Image.Url(),
+			ImagePullPolicy: *service.Image.PullPolicy,
+			Resources:       v1.ResourceRequirements(*service.Resources),
+			SecurityContext: kaiConfig.Spec.Global.GetSecurityContext(),
+		},
+	}
+
+	deployment.Spec.Template.Spec.ImagePullSecrets = kaiConfigUtils.GetGlobalImagePullSecrets(kaiConfig.Spec.Global)
 
 	return deployment, nil
 }

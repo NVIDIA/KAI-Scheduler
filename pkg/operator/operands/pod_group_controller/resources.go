@@ -7,8 +7,6 @@ import (
 	"context"
 	"strconv"
 
-	kaiConfigUtils "github.com/NVIDIA/KAI-scheduler/pkg/operator/config"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,29 +24,15 @@ func deploymentForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) (client.Object, error) {
 
-	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, deploymentName)
+	config := kaiConfig.Spec.PodGroupController
+
+	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, config.Service, deploymentName)
 	if err != nil {
 		return nil, err
 	}
 
-	config := kaiConfig.Spec.PodGroupController
 	deployment.Spec.Replicas = config.Replicas
-	deployment.Spec.Template.Spec = v1.PodSpec{
-		ServiceAccountName: deploymentName,
-		Affinity:           kaiConfig.Spec.Global.Affinity,
-		Tolerations:        kaiConfig.Spec.Global.Tolerations,
-		Containers: []v1.Container{
-			{
-				Name:            deploymentName,
-				Image:           config.Service.Image.Url(),
-				ImagePullPolicy: *config.Service.Image.PullPolicy,
-				Resources:       v1.ResourceRequirements(*config.Service.Resources),
-				Args:            buildArgsList(config, *kaiConfig.Spec.Global.SchedulerName),
-				SecurityContext: kaiConfig.Spec.Global.GetSecurityContext(),
-			},
-		},
-		ImagePullSecrets: kaiConfigUtils.GetGlobalImagePullSecrets(kaiConfig.Spec.Global),
-	}
+	deployment.Spec.Template.Spec.Containers[0].Args = buildArgsList(config, *kaiConfig.Spec.Global.SchedulerName)
 
 	return deployment, nil
 }
