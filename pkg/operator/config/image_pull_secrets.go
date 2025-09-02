@@ -9,14 +9,11 @@ import (
 )
 
 func GetGlobalImagePullSecrets(globalConfig *kaiv1.GlobalConfig) []v1.LocalObjectReference {
-	additionalImagePullSecrets := globalConfig.AdditionalImagePullSecrets
+	additionalImagePullSecrets := globalConfig.ImagePullSecrets
 	var secretDeploymentObjs []v1.LocalObjectReference
 	for _, secret := range additionalImagePullSecrets {
 		deploymentObj := v1.LocalObjectReference{Name: secret}
 		secretDeploymentObjs = append(secretDeploymentObjs, deploymentObj)
-	}
-	if globalConfig.ImagesPullSecret != nil && *globalConfig.ImagesPullSecret != "" {
-		secretDeploymentObjs = append(secretDeploymentObjs, v1.LocalObjectReference{Name: *globalConfig.ImagesPullSecret})
 	}
 	return secretDeploymentObjs
 }

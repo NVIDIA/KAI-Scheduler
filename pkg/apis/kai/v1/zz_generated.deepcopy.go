@@ -140,13 +140,8 @@ func (in *GlobalConfig) DeepCopyInto(out *GlobalConfig) {
 		*out = new(corev1.SecurityContext)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.ImagesPullSecret != nil {
-		in, out := &in.ImagesPullSecret, &out.ImagesPullSecret
-		*out = new(string)
-		**out = **in
-	}
-	if in.AdditionalImagePullSecrets != nil {
-		in, out := &in.AdditionalImagePullSecrets, &out.AdditionalImagePullSecrets
+	if in.ImagePullSecrets != nil {
+		in, out := &in.ImagePullSecrets, &out.ImagePullSecrets
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

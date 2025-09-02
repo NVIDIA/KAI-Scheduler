@@ -45,8 +45,8 @@ spec:
                 description: Global defined global configuration of the system
                 properties:
                   additionalImagePullSecrets:
-                    description: AdditionalImagePullSecrets defines the container
-                      registry additional secret credentials
+                    description: ImagePullSecrets defines the container registry additional
+                      secret credentials
                     items:
                       type: string
                     type: array
@@ -1017,10 +1017,6 @@ spec:
                           type: string
                       type: object
                     type: array
-                  imagesPullSecret:
-                    description: ImagesPullSecret defines the container registry KAI
-                      secret credential
-                    type: string
                   namespaceLabelSelector:
                     additionalProperties:
                       type: string

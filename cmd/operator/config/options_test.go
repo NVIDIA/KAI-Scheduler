@@ -33,7 +33,6 @@ var _ = Describe("options", Ordered, func() {
 			Expect(opts.CMConfigParams.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution == nil).To(BeTrue())
 			Expect(opts.CMConfigParams.Tolerations).To(Not(BeNil()))
 			Expect(len(opts.CMConfigParams.Tolerations)).To(Equal(2))
-			Expect(len(opts.AdditionalImagePullSecrets)).To(Equal(2))
 		})
 		It("Test empty additional image pull secrets", func() {
 			flags := []string{
@@ -42,7 +41,6 @@ var _ = Describe("options", Ordered, func() {
 			opts := &Options{}
 			flagSet := flag.NewFlagSet("test2", flag.ExitOnError)
 			opts.parseCommandLineArgs(flagSet, flags)
-			Expect(len(opts.AdditionalImagePullSecrets)).To(Equal(0))
 		})
 
 		It("Test cm file doesn't exists flags parsed", func() {

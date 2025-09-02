@@ -24,13 +24,9 @@ type GlobalConfig struct {
 	// +kubebuilder:validation:Optional
 	SecurityContext *v1.SecurityContext `json:"securityContext,omitempty"`
 
-	// ImagesPullSecret defines the container registry KAI secret credential
+	// ImagePullSecrets defines the container registry additional secret credentials
 	// +kubebuilder:validation:Optional
-	ImagesPullSecret *string `json:"imagesPullSecret,omitempty"`
-
-	// AdditionalImagePullSecrets defines the container registry additional secret credentials
-	// +kubebuilder:validation:Optional
-	AdditionalImagePullSecrets []string `json:"additionalImagePullSecrets,omitempty"`
+	ImagePullSecrets []string `json:"additionalImagePullSecrets,omitempty"`
 
 	// Tolerations defines tolerations for KAI operators & services
 	// +kubebuilder:validation:Optional
@@ -88,11 +84,8 @@ func (g *GlobalConfig) SetDefaultWhereNeeded() {
 	if len(g.SecurityContext.Capabilities.Drop) == 0 {
 		g.SecurityContext.Capabilities.Drop = []v1.Capability{"all"}
 	}
-	if g.ImagesPullSecret == nil {
-		g.ImagesPullSecret = ptr.To("")
-	}
-	if g.AdditionalImagePullSecrets == nil {
-		g.AdditionalImagePullSecrets = []string{}
+	if g.ImagePullSecrets == nil {
+		g.ImagePullSecrets = []string{}
 	}
 	if g.DaemonsetsTolerations == nil {
 		g.DaemonsetsTolerations = []v1.Toleration{}
