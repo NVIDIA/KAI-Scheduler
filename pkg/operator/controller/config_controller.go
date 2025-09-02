@@ -37,6 +37,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/admission"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/deployable"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/known_types"
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/node_scale_adjuster"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/pod_group_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/queue_controller"
 )
@@ -44,6 +45,7 @@ import (
 var ConfigReconcilerOperands = []operands.Operand{
 	&queue_controller.QueueController{},
 	&pod_group_controller.PodGroupController{},
+	&node_scale_adjuster.NodeScaleAdjuster{},
 	&admission.Admission{},
 }
 

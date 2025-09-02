@@ -6,6 +6,7 @@ package v1
 import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/admission"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/node_scale_adjuster"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_group_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -55,6 +56,10 @@ type ConfigSpec struct {
 	// PodGroupController specifies configuration for the pod-group-controller
 	// +kubebuilder:validation:Optional
 	PodGroupController *pod_group_controller.PodGroupController `json:"podGroupController,omitempty"`
+
+	// NodeScaleAdjuster specifies configuration for the node-scale-adjuster
+	// +kubebuilder:validation:Optional
+	NodeScaleAdjuster *node_scale_adjuster.NodeScaleAdjuster `json:"nodeScaleAdjuster,omitempty"`
 }
 
 func (c *ConfigSpec) SetDefaultsWhereNeeded() {
@@ -72,6 +77,9 @@ func (c *ConfigSpec) SetDefaultsWhereNeeded() {
 
 	c.Admission = common.SetDefault(c.Admission, &admission.Admission{})
 	c.Admission.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
+
+	c.NodeScaleAdjuster = common.SetDefault(c.NodeScaleAdjuster, &node_scale_adjuster.NodeScaleAdjuster{})
+	c.NodeScaleAdjuster.SetDefaultsWhereNeeded()
 }
 
 // ConfigStatus defines the observed state of Config
