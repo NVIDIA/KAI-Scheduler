@@ -81,6 +81,7 @@ type Session struct {
 	IsTaskAllocationOnNodeOverCapacityFns []api.IsTaskAllocationOverCapacityFn
 	PrePredicateFns                       []api.PrePredicateFn
 	PredicateFns                          []api.PredicateFn
+	NodePartitionFns                      []api.NodePartitionFn
 	BindRequestMutateFns                  []api.BindRequestMutateFn
 	CleanAllocationAttemptCacheFns        []api.CleanAllocationAttemptCacheFn
 

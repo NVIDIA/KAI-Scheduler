@@ -27,6 +27,22 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 		return false
 	}
 
+	nodePartitions, err := ssn.NodePartitionFn(job, tasksToAllocate, nodes)
+	if err != nil {
+		log.InfraLogger.Errorf("Failed to partition nodes for job <%s/%s> in session %v, err: %v", job.Namespace, job.Name, ssn.UID, err)
+		return false
+	}
+
+	for _, partition := range nodePartitions {
+		if allocateJobOnPartition(ssn, stmt, partition, job, isPipelineOnly, tasksToAllocate) {
+			return true
+		}
+	}
+	return false
+}
+
+func allocateJobOnPartition(ssn *framework.Session, stmt *framework.Statement, nodes []*node_info.NodeInfo,
+	job *podgroup_info.PodGroupInfo, isPipelineOnly bool, tasksToAllocate []*pod_info.PodInfo) bool {
 	defer ssn.CleanAllocationAttemptCache(job)
 	cp := stmt.Checkpoint()
 	for index, task := range tasksToAllocate {
@@ -40,7 +56,6 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 			return false
 		}
 	}
-
 	return true
 }
 
