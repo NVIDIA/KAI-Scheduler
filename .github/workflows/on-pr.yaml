@@ -163,6 +163,13 @@ jobs:
         run: |
           go install github.com/onsi/ginkgo/v2/ginkgo@v2.19.0
 
+      - name: Delete images from disk
+        env:
+          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
+        run: |
+          docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
+          rm -rf images
+
       - name: Run e2e tests
         run: |
           ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv ./test/e2e/suites --label-filter '!autoscale', '!scale'
