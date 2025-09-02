@@ -5,6 +5,7 @@ package v1
 
 import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/admission"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/binder"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/node_scale_adjuster"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_group_controller"
@@ -50,6 +51,10 @@ type ConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	PodGrouper *pod_grouper.PodGrouper `json:"podGrouper,omitempty"`
 
+	// Binder specifies configuration for the binder
+	// +kubebuilder:validation:Optional
+	Binder *binder.Binder `json:"binder,omitempty"`
+
 	// Admission holds KAI admission webhooks
 	// +kubebuilder:validation:Optional
 	Admission *admission.Admission `json:"admission,omitempty"`
@@ -76,6 +81,9 @@ func (c *ConfigSpec) SetDefaultsWhereNeeded() {
 
 	c.QueueController = common.SetDefault(c.QueueController, &queue_controller.QueueController{})
 	c.QueueController.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
+
+	c.Binder = common.SetDefault(c.Binder, &binder.Binder{})
+	c.Binder.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
 
 	c.PodGrouper = common.SetDefault(c.PodGrouper, &pod_grouper.PodGrouper{})
 	c.PodGrouper.SetDefaultsWhereNeeded(c.Global.ReplicaCount)

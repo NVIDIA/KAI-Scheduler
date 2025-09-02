@@ -44,6 +44,7 @@ import (
 
 var ConfigReconcilerOperands = []operands.Operand{
 	&pod_grouper.PodGrouper{},
+	// &binder.Binder{},
 	&queue_controller.QueueController{},
 	&pod_group_controller.PodGroupController{},
 	// &node_scale_adjuster.NodeScaleAdjuster{},
