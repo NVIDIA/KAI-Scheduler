@@ -54,9 +54,9 @@ func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface
 	queryResolution := params.GetExtraDurationParamOrDefault("queryResolution", 1*time.Minute)
 
 	allocationMetricsMap := map[string]string{
-		"gpu":    params.GetExtraStringParamOrDefault("gpuAllocationMetric", "kai_queue_allocated_gpus"),
-		"cpu":    params.GetExtraStringParamOrDefault("cpuAllocationMetric", "kai_queue_allocated_cpu_cores"),
-		"memory": params.GetExtraStringParamOrDefault("memoryAllocationMetric", "kai_queue_allocated_memory_bytes"),
+		"nvidia.com/gpu": params.GetExtraStringParamOrDefault("gpuAllocationMetric", "kai_queue_allocated_gpus"),
+		"cpu":            params.GetExtraStringParamOrDefault("cpuAllocationMetric", "kai_queue_allocated_cpu_cores"),
+		"memory":         params.GetExtraStringParamOrDefault("memoryAllocationMetric", "kai_queue_allocated_memory_bytes"),
 	}
 
 	return &PrometheusClient{
