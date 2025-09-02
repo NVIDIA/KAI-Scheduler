@@ -4,25 +4,11 @@
 package config
 
 import (
-	"encoding/json"
 	"flag"
-	"fmt"
-	"log"
 	"os"
-
-	v1 "k8s.io/api/core/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
-
-const (
-	cmFile = "/etc/cm/params.json"
-)
-
-type CMConfigParams struct {
-	Affinity    *v1.Affinity    `json:"affinity,omitempty"`
-	Tolerations []v1.Toleration `json:"tolerations,omitempty"`
-}
 
 type Options struct {
 	MetricsAddr          string
@@ -33,8 +19,6 @@ type Options struct {
 	Namespace            string
 	ImagePullSecretName  string
 	ZapOptions           zap.Options
-	cMFilePath           string
-	CMConfigParams       CMConfigParams
 }
 
 func SetOptions() (*Options, error) {
@@ -46,23 +30,7 @@ func parse(flagSet *flag.FlagSet, options []string) (*Options, error) {
 	if err := opts.parseCommandLineArgs(flagSet, options); err != nil {
 		return nil, err
 	}
-	if err := opts.loadConfigFromFile(); err != nil {
-		return nil, err
-	}
 	return opts, nil
-}
-
-func (opts *Options) loadConfigFromFile() error {
-	fileContent, err := os.ReadFile(opts.cMFilePath)
-	if err != nil {
-		log.Printf("configmap file not found, err: [%v]", err)
-		return nil
-	}
-	err = json.Unmarshal(fileContent, &opts.CMConfigParams)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal configmap file content, err: [%v]", err)
-	}
-	return nil
 }
 
 func (opts *Options) parseCommandLineArgs(flagSet *flag.FlagSet, options []string) error {
@@ -76,7 +44,6 @@ func (opts *Options) parseCommandLineArgs(flagSet *flag.FlagSet, options []strin
 
 	flagSet.StringVar(&opts.Namespace, "namespace", "runai-engine", "The namespace to create the resources in")
 	flagSet.StringVar(&opts.ImagePullSecretName, "image-pull-secret", "", "The name of the image pull secret to use")
-	flagSet.StringVar(&opts.cMFilePath, "cm-file-path", cmFile, "Path to the configmap file")
 	opts.ZapOptions = zap.Options{
 		Development: true,
 	}
