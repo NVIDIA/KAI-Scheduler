@@ -22,19 +22,9 @@ type PodGroupController struct {
 	// +kubebuilder:validation:Optional
 	MaxConcurrentReconciles *int `json:"maxConcurrentReconciles,omitempty"`
 
-	// Args specifies the CLI arguments for the pod-group-controller
-	// +kubebuilder:validation:Optional
-	Args *Args `json:"args,omitempty"`
-
 	// Replicas specifies the number of replicas of the pod-group controller
 	// +kubebuilder:validation:Optional
 	Replicas *int32 `json:"replicas,omitempty"`
-}
-
-// Args defines command line arguments for the pod-group-controller
-type Args struct {
-	// InferencePreemptible should inference priority class be counted as preemptibile
-	InferencePreemptible *bool `json:"inferencePreemptible,omitempty"`
 }
 
 func (pg *PodGroupController) SetDefaultsWhereNeeded(replicaCount *int32) {
@@ -54,10 +44,6 @@ func (pg *PodGroupController) SetDefaultsWhereNeeded(replicaCount *int32) {
 	}
 	if _, found := pg.Service.Resources.Limits[v1.ResourceMemory]; !found {
 		pg.Service.Resources.Limits[v1.ResourceMemory] = resource.MustParse("100Mi")
-	}
-
-	if pg.Args == nil {
-		pg.Args = &Args{}
 	}
 
 	if pg.Replicas == nil {

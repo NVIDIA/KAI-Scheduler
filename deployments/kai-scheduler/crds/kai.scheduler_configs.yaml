@@ -1290,14 +1290,6 @@ spec:
               podGroupController:
                 description: PodGroupController specifies configuration for the pod-group-controller
                 properties:
-                  args:
-                    description: Args specifies the CLI arguments for the pod-group-controller
-                    properties:
-                      inferencePreemptible:
-                        description: InferencePreemptible should inference priority
-                          class be counted as preemptibile
-                        type: boolean
-                    type: object
                   maxConcurrentReconciles:
                     description: MaxConcurrentReconciles specifies the number of max
                       concurrent reconcile workers

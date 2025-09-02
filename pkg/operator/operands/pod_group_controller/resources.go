@@ -71,10 +71,6 @@ func buildArgsList(config *pod_group_controller.PodGroupController, schedulerNam
 		args = append(args, "--max-concurrent-reconciles", strconv.Itoa(*config.MaxConcurrentReconciles))
 	}
 
-	if config.Args.InferencePreemptible != nil {
-		args = append(args, "--inference-preemptible", strconv.FormatBool(*config.Args.InferencePreemptible))
-	}
-
 	if config.Replicas != nil && *config.Replicas > 1 {
 		args = append(args, "--leader-elect")
 	}
