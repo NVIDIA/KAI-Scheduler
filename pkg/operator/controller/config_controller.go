@@ -34,6 +34,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/controller/status_reconciler"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands"
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/admission"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/deployable"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/known_types"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/pod_group_controller"
@@ -41,6 +42,7 @@ import (
 
 var ConfigReconcilerOperands = []operands.Operand{
 	&pod_group_controller.PodGroupController{},
+	&admission.Admission{},
 }
 
 // ConfigReconciler reconciles a Config object

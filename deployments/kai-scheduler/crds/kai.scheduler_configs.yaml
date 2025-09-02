@@ -41,6 +41,137 @@ spec:
           spec:
             description: ConfigSpec defines the desired state of Config
             properties:
+              admission:
+                description: Admission holds KAI admission webhooks
+                properties:
+                  gpuSharing:
+                    description: GPUSharing enables GPU sharing functionality for
+                      the admission service
+                    type: boolean
+                  queueLabelSelector:
+                    description: QueueLabelSelector enables the queue label MatchExpression
+                      in webhooks
+                    type: boolean
+                  replicas:
+                    description: Replicas specifies the number of replicas of the
+                      admission controller
+                    format: int32
+                    type: integer
+                  service:
+                    properties:
+                      enabled:
+                        description: Enabled defines whether the service should be
+                          deployed
+                        type: boolean
+                      image:
+                        description: Image is the configuration of the service image
+                        properties:
+                          name:
+                            description: Name is the name of the image
+                            type: string
+                          pullPolicy:
+                            description: PullPolicy is the pull policy of the image
+                            type: string
+                          repository:
+                            description: Repository is the repository/registry prefix
+                              for the image
+                            type: string
+                          tag:
+                            description: Tag is the tag of the image
+                            type: string
+                        type: object
+                      k8sClientConfig:
+                        description: ClientConfig specifies the configuration of k8s
+                          client
+                        properties:
+                          burst:
+                            description: Burst specifies the burst rate for the k8s
+                              client
+                            type: integer
+                          qps:
+                            description: QPS specifies the QPS rate for the k8s client
+                            type: integer
+                        type: object
+                      resources:
+                        description: Resources describes the resource requirements
+                          for the service pods
+                        properties:
+                          claims:
+                            description: |-
+                              Claims lists the names of resources, defined in spec.resourceClaims,
+                              that are used by this container.
+
+                              This is an alpha field and requires enabling the
+                              DynamicResourceAllocation feature gate.
+
+                              This field is immutable. It can only be set for containers.
+                            items:
+                              description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                              properties:
+                                name:
+                                  description: |-
+                                    Name must match the name of one entry in pod.spec.resourceClaims of
+                                    the Pod where this field is used. It makes that resource available
+                                    inside a container.
+                                  type: string
+                                request:
+                                  description: |-
+                                    Request is the name chosen for a request in the referenced claim.
+                                    If empty, everything from the claim is made available, otherwise
+                                    only the result of this request.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
+                          limits:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Limits describes the maximum amount of compute resources allowed.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                          requests:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Requests describes the minimum amount of compute resources required.
+                              If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                              otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                        type: object
+                    type: object
+                  webhook:
+                    description: Webhook defines configuration for the admission service
+                    properties:
+                      metricsPort:
+                        description: MetricsPort specifies the metrics service port
+                        type: integer
+                      port:
+                        description: Port specifies the webhook service port
+                        type: integer
+                      probePort:
+                        description: ProbePort specifies the health and readiness
+                          probe port
+                        type: integer
+                      targetPort:
+                        description: TargetPort specifies the webhook service container
+                          port
+                        type: integer
+                    type: object
+                type: object
               global:
                 description: Global defined global configuration of the system
                 properties:

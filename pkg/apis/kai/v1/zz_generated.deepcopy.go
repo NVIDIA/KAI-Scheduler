@@ -10,6 +10,7 @@ SPDX-License-Identifier: Apache-2.0
 package v1
 
 import (
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/admission"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_group_controller"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,6 +82,11 @@ func (in *ConfigSpec) DeepCopyInto(out *ConfigSpec) {
 	if in.Global != nil {
 		in, out := &in.Global, &out.Global
 		*out = new(GlobalConfig)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Admission != nil {
+		in, out := &in.Admission, &out.Admission
+		*out = new(admission.Admission)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.PodGroupController != nil {

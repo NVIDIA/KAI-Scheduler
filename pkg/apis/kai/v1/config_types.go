@@ -4,6 +4,7 @@
 package v1
 
 import (
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/admission"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_group_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
@@ -41,6 +42,10 @@ type ConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	Global *GlobalConfig `json:"global,omitempty"`
 
+	// Admission holds KAI admission webhooks
+	// +kubebuilder:validation:Optional
+	Admission *admission.Admission `json:"admission,omitempty"`
+
 	// PodGroupController specifies configuration for the pod-group-controller
 	// +kubebuilder:validation:Optional
 	PodGroupController *pod_group_controller.PodGroupController `json:"podGroupController,omitempty"`
@@ -59,6 +64,11 @@ func (c *ConfigSpec) SetDefaultsWhereNeeded() {
 		c.PodGroupController = &pod_group_controller.PodGroupController{}
 	}
 	c.PodGroupController.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
+
+	if c.Admission == nil {
+		c.Admission = &admission.Admission{}
+	}
+	c.Admission.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
 }
 
 // ConfigStatus defines the observed state of Config

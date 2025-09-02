@@ -124,6 +124,7 @@ func DeploymentForKAIConfig(
 	}
 	deployment.Spec.Template.Labels["app"] = deploymentName
 
+	deployment.Spec.Template.Spec.ServiceAccountName = deploymentName
 	deployment.Spec.Template.Spec.Affinity = kaiConfig.Spec.Global.Affinity
 	deployment.Spec.Template.Spec.Tolerations = kaiConfig.Spec.Global.Tolerations
 
