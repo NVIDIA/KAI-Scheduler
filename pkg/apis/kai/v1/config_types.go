@@ -6,6 +6,7 @@ package v1
 import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/admission"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_group_controller"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,6 +47,10 @@ type ConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	Admission *admission.Admission `json:"admission,omitempty"`
 
+	// QueueController specifies configuration for the queue controller
+	// +kubebuilder:validation:Optional
+	QueueController *queue_controller.QueueController `json:"queueController,omitempty"`
+
 	// PodGroupController specifies configuration for the pod-group-controller
 	// +kubebuilder:validation:Optional
 	PodGroupController *pod_group_controller.PodGroupController `json:"podGroupController,omitempty"`
@@ -59,6 +64,11 @@ func (c *ConfigSpec) SetDefaultsWhereNeeded() {
 		c.Global = &GlobalConfig{}
 	}
 	c.Global.SetDefaultWhereNeeded()
+
+	if c.QueueController == nil {
+		c.QueueController = &queue_controller.QueueController{}
+	}
+	c.QueueController.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
 
 	if c.PodGroupController == nil {
 		c.PodGroupController = &pod_group_controller.PodGroupController{}
