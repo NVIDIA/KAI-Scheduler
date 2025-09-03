@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	imageName = "pod-group-controller"
+	imageName = "podgroupcontroller"
 )
 
 type PodGroupController struct {
