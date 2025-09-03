@@ -36,7 +36,6 @@ type SchedulerParams struct {
 	ScheduleCSIStorage                bool                      `json:"scheduleCSIStorage,omitempty"`
 	UseSchedulingSignatures           bool                      `json:"useSchedulingSignatures,omitempty"`
 	FullHierarchyFairness             bool                      `json:"fullHierarchyFairness,omitempty"`
-	NodeLevelScheduler                bool                      `json:"nodeLevelScheduler,omitempty"`
 	AllowConsolidatingReclaim         bool                      `json:"allowConsolidatingReclaim,omitempty"`
 	NumOfStatusRecordingWorkers       int                       `json:"numOfStatusRecordingWorkers,omitempty"`
 	GlobalDefaultStalenessGracePeriod time.Duration             `json:"globalDefaultStalenessGracePeriod,omitempty"`

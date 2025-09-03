@@ -61,7 +61,6 @@ func TestAddFlags(t *testing.T) {
 		DetailedFitErrors:                 false,
 		UpdatePodEvictionCondition:        false,
 		UseSchedulingSignatures:           true,
-		NodeLevelScheduler:                false,
 		AllowConsolidatingReclaim:         true,
 		PyroscopeBlockProfilerRate:        DefaultPyroscopeBlockProfilerRate,
 		PyroscopeMutexProfilerRate:        DefaultPyroscopeMutexProfilerRate,

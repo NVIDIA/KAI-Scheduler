@@ -85,7 +85,6 @@ func NewScheduler(
 		DetailedFitErrors:           schedulerParams.DetailedFitErrors,
 		ScheduleCSIStorage:          schedulerParams.ScheduleCSIStorage,
 		FullHierarchyFairness:       schedulerParams.FullHierarchyFairness,
-		NodeLevelScheduler:          schedulerParams.NodeLevelScheduler,
 		NumOfStatusRecordingWorkers: schedulerParams.NumOfStatusRecordingWorkers,
 		UpdatePodEvictionCondition:  schedulerParams.UpdatePodEvictionCondition,
 	}

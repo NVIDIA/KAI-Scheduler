@@ -83,7 +83,6 @@ func BuildSchedulerParams(opt *options.ServerOption) *conf.SchedulerParams {
 		ScheduleCSIStorage:                opt.ScheduleCSIStorage,
 		UseSchedulingSignatures:           opt.UseSchedulingSignatures,
 		FullHierarchyFairness:             opt.FullHierarchyFairness,
-		NodeLevelScheduler:                opt.NodeLevelScheduler,
 		AllowConsolidatingReclaim:         opt.AllowConsolidatingReclaim,
 		NumOfStatusRecordingWorkers:       opt.NumOfStatusRecordingWorkers,
 		GlobalDefaultStalenessGracePeriod: opt.GlobalDefaultStalenessGracePeriod,
