@@ -1,15 +1,16 @@
 # Copyright 2025 NVIDIA CORPORATION
-  # SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: Apache-2.0
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kai-podgroup-controller
+  name: kai-operator
 subjects:
   - kind: ServiceAccount
-    name: pod-group-controller
+    name: kai-operator
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: kai-podgroup-controller
+  name: kai-operator
   apiGroup: rbac.authorization.k8s.io
+

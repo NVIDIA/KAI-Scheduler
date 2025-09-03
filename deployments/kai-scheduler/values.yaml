@@ -3,6 +3,8 @@
 
 global:
   registry: registry/local/kai-scheduler
+  tag: latest
+  imagePullPolicy: IfNotPresent
   securityContext: {}
   imagePullSecrets: []
   leaderElection: false
@@ -18,33 +20,27 @@ global:
     serviceAccount: kai-resource-reservation
     appLabel: kai-resource-reservation
 
+operator:
+  image:
+    name: operator
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  metricsBindAddress: ":8080"
+  probeBindAddress: ":8081"
+  qps: 50
+  burst: 300
 
 podgrouper:
   image:
     name: podgrouper
     pullPolicy: IfNotPresent
   additionalArgs: []
-  resources:
-    limits:
-      cpu: "500m"
-      memory: "256Mi"
-    requests:
-      cpu: "250m"
-      memory: "128Mi"
   queueLabelKey: "kai.scheduler/queue"
 
 podgroupcontroller:
   image:
     name: podgroupcontroller
     pullPolicy: IfNotPresent
-  additionalArgs: []
-  resources:
-    limits:
-      cpu: "500m"
-      memory: "256Mi"
-    requests:
-      cpu: "250m"
-      memory: "128Mi"
 
 binder:
   name: binder
@@ -56,14 +52,6 @@ binder:
   additionalArgs: []
   ports:
     metricsPort: 8080
-    probePort: 8081
-  resources:
-    limits:
-      cpu: "500m"
-      memory: "256Mi"
-    requests:
-      cpu: "250m"
-      memory: "128Mi"
   cdi: false
 
 scheduler:
@@ -74,13 +62,39 @@ scheduler:
   placementStrategy: binpack
   ports:
     metricsPort: 8080
-  resources:
-    limits:
-      cpu: "500m"
-      memory: "256Mi"
-    requests:
-      cpu: "250m"
-      memory: "128Mi"
+
+queuecontroller:
+  image:
+    name: queuecontroller
+    pullPolicy: IfNotPresent
+  additionalArgs: []
+  certSecretName: queuecontroller-webhook-tls-secret
+
+admission:
+  name: kai-admission
+  image:
+    name: admission
+    pullPolicy: IfNotPresent
+  certSecretName: admission-webhook-tls-secret
+  additionalArgs: []
+  ports:
+    webhookPort: 9443
+    metricsPort: 8080
+    probePort: 8081
+  cdi: false
+
+nodescaleadjuster:
+  image:
+    name: nodescaleadjuster
+    pullPolicy: IfNotPresent
+  scalingPodImage:
+    name: scalingpod
+  additionalArgs: []
+
+crdupgrader:
+  image:
+    name: crd-upgrader
+    pullPolicy: IfNotPresent
 
 webhookmanager:
   image:
@@ -94,55 +108,3 @@ webhookmanager:
       cpu: "250m"
       memory: "128Mi"
 
-nodescaleadjuster:
-  image:
-    name: nodescaleadjuster
-    pullPolicy: IfNotPresent
-  scalingPodImage:
-    name: scalingpod
-  additionalArgs: []
-  resources:
-    limits:
-      cpu: "500m"
-      memory: "256Mi"
-    requests:
-      cpu: "250m"
-      memory: "128Mi"
-
-queuecontroller:
-  image:
-    name: queuecontroller
-    pullPolicy: IfNotPresent
-  additionalArgs: []
-  certSecretName: queuecontroller-webhook-tls-secret
-  resources:
-    limits:
-      cpu: "500m"
-      memory: "256Mi"
-    requests:
-      cpu: "250m"
-      memory: "128Mi"
-
-crdupgrader:
-  image:
-    name: crd-upgrader
-    pullPolicy: IfNotPresent
-
-admission:
-  name: kai-admission
-  image:
-    name: admission
-    pullPolicy: IfNotPresent
-  certSecretName: admission-webhook-tls-secret
-  additionalArgs: []
-  ports:
-    webhookPort: 9443
-    metricsPort: 8080
-    probePort: 8081
-  resources:
-    limits:
-      cpu: "500m"
-      memory: "256Mi"
-    requests:
-      cpu: "250m"
-      memory: "128Mi"

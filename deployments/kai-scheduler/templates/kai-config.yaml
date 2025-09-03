@@ -1,0 +1,51 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: kai.scheduler/v1
+kind: Config
+metadata:
+  name: kai-config
+  namespace: {{ .Release.Namespace }}
+spec:
+  namespace: {{ .Release.Namespace }}
+  global:
+    schedulerName: "kai-scheduler"
+    queueLabelKey: "kai.scheduler/queue"
+    nodePoolLabelKey: "kai.scheduler/nodepool"
+    {{- if .Values.global.namespaceLabelSelector }}
+    namespaceLabelSelector:
+      {{- toYaml .Values.global.namespaceLabelSelector | nindent 6 }}
+    {{- end }}
+    {{- if .Values.global.podLabelSelector }}
+    podLabelSelector:
+      {{- toYaml .Values.global.podLabelSelector | nindent 6 }}
+    {{- end }}
+    {{- if .Values.global.affinity }}
+    affinity:
+      {{- toYaml .Values.global.affinity | nindent 6 }}
+    {{- end }}
+    {{- if .Values.global.tolerations }}
+    tolerations:
+      {{- toYaml .Values.global.tolerations | nindent 6 }}
+    {{- end }}
+    {{- if .Values.global.securityContext }}
+    securityContext:
+      {{- toYaml .Values.global.securityContext | nindent 6 }}
+    {{- end }}
+    {{- if .Values.global.imagePullSecrets }}
+    imagesPullSecret: {{ index .Values.global.imagePullSecrets 0 | default "" }}
+    {{- end }}
+    replicaCount: {{ .Values.operator.replicaCount | default 1 }}
+
+  podGroupController:
+    service:
+        enabled: true
+        image:
+          name: {{ .Values.podgroupcontroller.image.name }}
+          repository: {{ .Values.global.registry }}
+          tag: {{ .Chart.Version }}
+          pullPolicy: {{ .Values.podgroupcontroller.image.pullPolicy | default .Values.global.imagePullPolicy }}
+        {{- if .Values.podgroupcontroller.resources }}
+        resources:
+          {{- toYaml .Values.podgroupcontroller.resources | nindent 6 }}
+        {{- end }}
