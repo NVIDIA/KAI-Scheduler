@@ -5,7 +5,6 @@ package app
 
 import (
 	"flag"
-	"fmt"
 
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +50,9 @@ func init() {
 }
 
 type App struct {
-	mgr        manager.Manager
+	Mgr               manager.Manager
+	DefaultPluginsHub pluginshub.PluginsHub
+
 	configs    controllers.Configs
 	pluginsHub pluginshub.PluginsHub
 }
@@ -61,11 +62,6 @@ func Run() error {
 	if err != nil {
 		return err
 	}
-
-	pluginsHub := pluginshub.NewDefaultPluginsHub(app.mgr.GetClient(), app.configs.SearchForLegacyPodGroups,
-		app.configs.KnativeGangSchedule, app.configs.SchedulingQueueLabelKey, app.configs.NodePoolLabelKey,
-		app.configs.DefaultPrioritiesConfigMapName, app.configs.DefaultPrioritiesConfigMapNamespace)
-	app.RegisterPlugins(pluginsHub)
 
 	return app.Run()
 }
@@ -110,10 +106,15 @@ func New() (*App, error) {
 		return nil, err
 	}
 
+	defaultPluginsHub := pluginshub.NewDefaultPluginsHub(mgr.GetClient(), configs.SearchForLegacyPodGroups,
+		configs.KnativeGangSchedule, configs.SchedulingQueueLabelKey, configs.NodePoolLabelKey,
+		configs.DefaultPrioritiesConfigMapName, configs.DefaultPrioritiesConfigMapNamespace)
+
 	app := &App{
-		mgr:        mgr,
-		configs:    configs,
-		pluginsHub: nil,
+		Mgr:               mgr,
+		DefaultPluginsHub: defaultPluginsHub,
+		configs:           configs,
+		pluginsHub:        nil,
 	}
 	return app, nil
 }
@@ -126,27 +127,28 @@ func (app *App) RegisterPlugins(pluginsHub pluginshub.PluginsHub) {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 
 func (app *App) Run() error {
-	if app.pluginsHub == nil {
-		return fmt.Errorf("plugins hub is not registered")
+	pluginsHub := app.pluginsHub
+	if pluginsHub == nil {
+		pluginsHub = app.DefaultPluginsHub
 	}
 
 	if err := (&controllers.PodReconciler{
-		Client: app.mgr.GetClient(),
-		Scheme: app.mgr.GetScheme(),
-	}).SetupWithManager(app.mgr, app.configs, app.pluginsHub); err != nil {
+		Client: app.Mgr.GetClient(),
+		Scheme: app.Mgr.GetScheme(),
+	}).SetupWithManager(app.Mgr, app.configs, pluginsHub); err != nil {
 		return err
 	}
 	// +kubebuilder:scaffold:builder
 
-	if err := app.mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+	if err := app.Mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		return err
 	}
-	if err := app.mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err := app.Mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		return err
 	}
 
 	setupLog.Info("starting manager")
-	return app.mgr.Start(ctrl.SetupSignalHandler())
+	return app.Mgr.Start(ctrl.SetupSignalHandler())
 }
 
 func initLogger() {
