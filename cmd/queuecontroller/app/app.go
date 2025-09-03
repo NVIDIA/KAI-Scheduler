@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/zap/zapcore"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -66,7 +66,11 @@ func Run() error {
 		LeaderElectionID: "ov3xj497.kai.scheduler",
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
+	clientConfig := ctrl.GetConfigOrDie()
+	clientConfig.QPS = float32(opts.Qps)
+	clientConfig.Burst = opts.Burst
+
+	mgr, err := ctrl.NewManager(clientConfig, options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return nil
