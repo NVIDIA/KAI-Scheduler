@@ -53,7 +53,7 @@ func init() {
 type App struct {
 	mgr        manager.Manager
 	configs    controllers.Configs
-	pluginsHub pluginshub.PluginsHubI
+	pluginsHub pluginshub.PluginsHub
 }
 
 func Run() error {
@@ -62,7 +62,7 @@ func Run() error {
 		return err
 	}
 
-	pluginsHub := pluginshub.NewPluginsHub(app.mgr.GetClient(), app.configs.SearchForLegacyPodGroups,
+	pluginsHub := pluginshub.NewDefaultPluginsHub(app.mgr.GetClient(), app.configs.SearchForLegacyPodGroups,
 		app.configs.KnativeGangSchedule, app.configs.SchedulingQueueLabelKey, app.configs.NodePoolLabelKey,
 		app.configs.DefaultPrioritiesConfigMapName, app.configs.DefaultPrioritiesConfigMapNamespace)
 	app.RegisterPlugins(pluginsHub)
@@ -118,7 +118,7 @@ func New() (*App, error) {
 	return app, nil
 }
 
-func (app *App) RegisterPlugins(pluginsHub pluginshub.PluginsHubI) {
+func (app *App) RegisterPlugins(pluginsHub pluginshub.PluginsHub) {
 	app.pluginsHub = pluginsHub
 }
 

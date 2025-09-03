@@ -29,7 +29,7 @@ type Interface interface {
 
 type podGrouper struct {
 	client     client.Client
-	pluginsHub pluginshub.PluginsHubI
+	pluginsHub pluginshub.PluginsHub
 
 	// For runtime client with cache enabled, GET/LIST calls create an informer/watch for the specified object.
 	// Unfortunetly, this is true even if the GET call fails with an RBAC error. The created listener will panic and the reconciler crashes.
@@ -41,7 +41,7 @@ type podGrouper struct {
 
 type GetPodGroupMetadataFunc func(topOwner *unstructured.Unstructured, pod *v1.Pod, otherOwners ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error)
 
-func NewPodgrouper(client client.Client, clientWithoutCache client.Client, pluginsHub pluginshub.PluginsHubI) *podGrouper {
+func NewPodgrouper(client client.Client, clientWithoutCache client.Client, pluginsHub pluginshub.PluginsHub) *podGrouper {
 	podGrouper := &podGrouper{
 		client:             client,
 		clientWithoutCache: clientWithoutCache,

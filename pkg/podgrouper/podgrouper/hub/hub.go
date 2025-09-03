@@ -55,16 +55,16 @@ const (
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns/finalizers;taskruns/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=run.ai,resources=trainingworkloads;interactiveworkloads;distributedworkloads;inferenceworkloads;distributedinferenceworkloads,verbs=get;list;watch
 
-type PluginsHub struct {
+type DefaultPluginsHub struct {
 	defaultPlugin *defaultgrouper.DefaultGrouper
 	customPlugins map[metav1.GroupVersionKind]grouper.Grouper
 }
 
-type PluginsHubI interface {
+type PluginsHub interface {
 	GetPodGrouperPlugin(gvk metav1.GroupVersionKind) grouper.Grouper
 }
 
-func (ph *PluginsHub) GetPodGrouperPlugin(gvk metav1.GroupVersionKind) grouper.Grouper {
+func (ph *DefaultPluginsHub) GetPodGrouperPlugin(gvk metav1.GroupVersionKind) grouper.Grouper {
 	if f, found := ph.customPlugins[gvk]; found {
 		return f
 	}
@@ -77,9 +77,9 @@ func (ph *PluginsHub) GetPodGrouperPlugin(gvk metav1.GroupVersionKind) grouper.G
 	return ph.defaultPlugin
 }
 
-func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
+func NewDefaultPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 	gangScheduleKnative bool, queueLabelKey, nodePoolLabelKey string,
-	defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string) *PluginsHub {
+	defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string) *DefaultPluginsHub {
 	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, kubeClient)
 	defaultGrouper.SetDefaultPrioritiesConfigMapParams(defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace)
 
@@ -280,7 +280,7 @@ func NewPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 		}] = skipTopOwnerGrouper
 	}
 
-	return &PluginsHub{
+	return &DefaultPluginsHub{
 		defaultPlugin: defaultGrouper,
 		customPlugins: table,
 	}

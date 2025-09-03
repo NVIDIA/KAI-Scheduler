@@ -132,7 +132,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager, configs Configs, pluginsHub pluginshub.PluginsHubI) error {
+func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager, configs Configs, pluginsHub pluginshub.PluginsHub) error {
 	clientWithoutCache, err := client.New(mgr.GetConfig(), client.Options{Cache: nil})
 	if err != nil {
 		return err

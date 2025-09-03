@@ -28,12 +28,12 @@ var _ = Describe("SupportedTypes", func() {
 	Context("Exact Match Tests", func() {
 		var (
 			kubeClient client.Client
-			hub        *PluginsHub
+			hub        *DefaultPluginsHub
 		)
 
 		BeforeEach(func() {
 			kubeClient = fake.NewFakeClient()
-			hub = NewPluginsHub(
+			hub = NewDefaultPluginsHub(
 				kubeClient, false, false, queueLabelKey, nodePoolLabelKey, "", "",
 			)
 		})
@@ -64,12 +64,12 @@ var _ = Describe("SupportedTypes", func() {
 	Context("Wildcard Version Tests", func() {
 		var (
 			kubeClient client.Client
-			hub        *PluginsHub
+			hub        *DefaultPluginsHub
 		)
 
 		BeforeEach(func() {
 			kubeClient = fake.NewFakeClient()
-			hub = NewPluginsHub(
+			hub = NewDefaultPluginsHub(
 				kubeClient, false, false, queueLabelKey, nodePoolLabelKey, "", "",
 			)
 		})
