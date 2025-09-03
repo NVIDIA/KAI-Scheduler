@@ -21,6 +21,7 @@ import (
 	commonconsts "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper"
+	pluginshub "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/hub"
 )
 
 const (
@@ -120,8 +121,9 @@ func TestNewPodgrouper(t *testing.T) {
 	resources := append(nativeK8sTestResources, testResources...)
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(resources...).Build()
 
-	grouper := podgrouper.NewPodgrouper(client, client, false, true,
+	pluginsHub := pluginshub.NewPluginsHub(client, false, true,
 		queueLabelKey, nodePoolLabelKey, "", "")
+	grouper := podgrouper.NewPodgrouper(client, client, pluginsHub)
 
 	topOwner, owners, err := grouper.GetPodOwners(context.Background(), &pod)
 	assert.Nil(t, err)
@@ -313,7 +315,7 @@ kind: Pod
 					gangScheduleKnative:      true,
 				}
 			}
-			grouper := podgrouper.NewPodgrouper(client, client,
+			pluginsHub := pluginshub.NewPluginsHub(client,
 				tt.podGrouperOptions.searchForLegacyPodGroups,
 				tt.podGrouperOptions.gangScheduleKnative,
 				queueLabelKey,
@@ -321,6 +323,7 @@ kind: Pod
 				"",
 				"",
 			)
+			grouper := podgrouper.NewPodgrouper(client, client, pluginsHub)
 
 			topOwner, owners, err := grouper.GetPodOwners(context.Background(), tt.reconciledPod)
 			assert.Nil(t, err)

@@ -60,6 +60,10 @@ type PluginsHub struct {
 	customPlugins map[metav1.GroupVersionKind]grouper.Grouper
 }
 
+type PluginsHubI interface {
+	GetPodGrouperPlugin(gvk metav1.GroupVersionKind) grouper.Grouper
+}
+
 func (ph *PluginsHub) GetPodGrouperPlugin(gvk metav1.GroupVersionKind) grouper.Grouper {
 	if f, found := ph.customPlugins[gvk]; found {
 		return f

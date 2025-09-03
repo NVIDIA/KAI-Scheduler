@@ -5,6 +5,7 @@ package app
 
 import (
 	"flag"
+	"fmt"
 
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
@@ -20,12 +21,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	kubeAiSchedulerV2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	controllers "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper"
+	pluginshub "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/hub"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -47,10 +50,27 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
+type App struct {
+	mgr        manager.Manager
+	configs    controllers.Configs
+	pluginsHub pluginshub.PluginsHubI
+}
 
 func Run() error {
+	app, err := New()
+	if err != nil {
+		return err
+	}
+
+	pluginsHub := pluginshub.NewPluginsHub(app.mgr.GetClient(), app.configs.SearchForLegacyPodGroups,
+		app.configs.KnativeGangSchedule, app.configs.SchedulingQueueLabelKey, app.configs.NodePoolLabelKey,
+		app.configs.DefaultPrioritiesConfigMapName, app.configs.DefaultPrioritiesConfigMapNamespace)
+	app.RegisterPlugins(pluginsHub)
+
+	return app.Run()
+}
+
+func New() (*App, error) {
 	var opts Options
 	opts.AddFlags(flag.CommandLine)
 
@@ -87,26 +107,46 @@ func Run() error {
 		// LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err = (&controllers.PodReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr, configs); err != nil {
+	app := &App{
+		mgr:        mgr,
+		configs:    configs,
+		pluginsHub: nil,
+	}
+	return app, nil
+}
+
+func (app *App) RegisterPlugins(pluginsHub pluginshub.PluginsHubI) {
+	app.pluginsHub = pluginsHub
+}
+
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
+
+func (app *App) Run() error {
+	if app.pluginsHub == nil {
+		return fmt.Errorf("plugins hub is not registered")
+	}
+
+	if err := (&controllers.PodReconciler{
+		Client: app.mgr.GetClient(),
+		Scheme: app.mgr.GetScheme(),
+	}).SetupWithManager(app.mgr, app.configs, app.pluginsHub); err != nil {
 		return err
 	}
 	// +kubebuilder:scaffold:builder
 
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+	if err := app.mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		return err
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err := app.mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		return err
 	}
 
 	setupLog.Info("starting manager")
-	return mgr.Start(ctrl.SetupSignalHandler())
+	return app.mgr.Start(ctrl.SetupSignalHandler())
 }
 
 func initLogger() {

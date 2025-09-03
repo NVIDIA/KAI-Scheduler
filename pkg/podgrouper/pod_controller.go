@@ -22,6 +22,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper"
+	pluginshub "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/hub"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
@@ -131,15 +132,13 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager, configs Configs) error {
+func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager, configs Configs, pluginsHub pluginshub.PluginsHubI) error {
 	clientWithoutCache, err := client.New(mgr.GetConfig(), client.Options{Cache: nil})
 	if err != nil {
 		return err
 	}
 
-	r.podGrouper = podgrouper.NewPodgrouper(mgr.GetClient(), clientWithoutCache, configs.SearchForLegacyPodGroups,
-		configs.KnativeGangSchedule, configs.SchedulingQueueLabelKey, configs.NodePoolLabelKey,
-		configs.DefaultPrioritiesConfigMapName, configs.DefaultPrioritiesConfigMapNamespace)
+	r.podGrouper = podgrouper.NewPodgrouper(mgr.GetClient(), clientWithoutCache, pluginsHub)
 	r.PodGroupHandler = podgroup.NewHandler(mgr.GetClient(), configs.NodePoolLabelKey, configs.SchedulingQueueLabelKey)
 	r.configs = configs
 	r.eventRecorder = mgr.GetEventRecorderFor(controllerName)
