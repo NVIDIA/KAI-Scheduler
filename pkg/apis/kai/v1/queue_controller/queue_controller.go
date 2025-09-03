@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	imageName = "queue-controller"
+	imageName = "queuecontroller"
 )
 
 type QueueController struct {
