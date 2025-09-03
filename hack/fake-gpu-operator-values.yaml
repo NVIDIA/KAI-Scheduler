@@ -10,8 +10,8 @@ topology:
   nodePools:
     default:
       gpuProduct: Tesla-K80
-      gpuCount: 8
-      gpuMemory: 11441
+      gpuCount: 2
+      gpuMemory: 2000
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
 
 environment:
