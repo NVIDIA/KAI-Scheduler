@@ -21,6 +21,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/scores"
 )
 
+type domainsByLevel map[string]map[TopologyDomainID]*TopologyDomainInfo
+
 type topologyStateData struct {
 	relevantDomains []*TopologyDomainInfo
 }
@@ -201,8 +203,8 @@ func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGrou
 		return nil, err
 	}
 
-	// Validate that the domains do not crush with the active pods of the job
-	var relevantDomainsByLevel map[string]map[TopologyDomainID]*TopologyDomainInfo
+	// Validate that the domains do not clash with the chosen domain for active pods of the job
+	var relevantDomainsByLevel domainsByLevel
 	if job.GetActiveAllocatedTasksCount() > 0 && jobHasTopologyRequiredConstraint(job) {
 		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(job, topologyTree, job.PodGroup.Spec.TopologyConstraint.RequiredTopologyLevel)
 	} else {
@@ -241,9 +243,9 @@ func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGrou
 	return []*TopologyDomainInfo{maxDepthDomains[0]}, nil
 }
 
-func getRelevantDomainsWithAllocatedPods(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo, topLevel string) map[string]map[TopologyDomainID]*TopologyDomainInfo {
-	relevantDomainsByLevel := map[string]map[TopologyDomainID]*TopologyDomainInfo{}
-	for _, domainAtRequiredLevel := range topologyTree.DomainsByLevel[topLevel] {
+func getRelevantDomainsWithAllocatedPods(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo, requiredLevel string) domainsByLevel {
+	relevantDomainsByLevel := domainsByLevel{}
+	for _, domainAtRequiredLevel := range topologyTree.DomainsByLevel[requiredLevel] {
 		activePodsInDomain := countActiveJobPodsInDomain(job, domainAtRequiredLevel)
 		if activePodsInDomain == 0 {
 			continue // if the domain at the top level does not have any active pods, then any domains under the subtree cannot satisfy the required constraint for both active and pending pods
@@ -266,14 +268,12 @@ func countActiveJobPodsInDomain(job *podgroup_info.PodGroupInfo, domain *Topolog
 	return activePodsInDomain
 }
 
-func addSubTreeToDomainMap(domain *TopologyDomainInfo, domainsMap map[string]map[TopologyDomainID]*TopologyDomainInfo) {
+func addSubTreeToDomainMap(domain *TopologyDomainInfo, domainsMap domainsByLevel) {
 	if domainsMap[domain.Level] == nil {
 		domainsMap[domain.Level] = map[TopologyDomainID]*TopologyDomainInfo{}
 	}
-	if domain.Children != nil {
-		for _, childDomain := range domain.Children {
-			addSubTreeToDomainMap(childDomain, domainsMap)
-		}
+	for _, childDomain := range domain.Children {
+		addSubTreeToDomainMap(childDomain, domainsMap)
 	}
 	domainsMap[domain.Level][domain.ID] = domain
 }
