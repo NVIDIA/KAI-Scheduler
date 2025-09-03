@@ -4,13 +4,13 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: kai-admission
+  name: admission
 webhooks:
 - admissionReviewVersions:
   - v1
   clientConfig:
     service:
-      name: kai-admission
+      name: admission
       namespace: '{{ .Release.Namespace }}'
       path: /mutate--v1-pod
       port: 443
@@ -47,13 +47,13 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: kai-admission
+  name: admission
 webhooks:
 - admissionReviewVersions:
   - v1
   clientConfig:
     service:
-      name: kai-admission
+      name: admission
       namespace: '{{ .Release.Namespace }}'
       path: /validate--v1-pod
       port: 443

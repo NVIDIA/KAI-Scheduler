@@ -66,7 +66,7 @@ manifests: controller-gen kustomize ## Generate ClusterRole and CustomResourceDe
 	$(CONTROLLER_GEN) rbac:roleName=kai-node-scale-adjuster,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/nodescaleadjuster/..." paths="./cmd/nodescaleadjuster/..." output:stdout > deployments/kai-scheduler/templates/rbac/nodescaleadjuster.yaml
 	$(CONTROLLER_GEN) rbac:roleName=kai-podgroup-controller,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/podgroupcontroller/..." paths="./cmd/podgroupcontroller/..." output:stdout > deployments/kai-scheduler/templates/rbac/podgroupcontroller.yaml
 	$(CONTROLLER_GEN) rbac:roleName=queuecontroller,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/queuecontroller/..." paths="./cmd/queuecontroller/..." output:stdout > deployments/kai-scheduler/templates/rbac/queuecontroller.yaml
-	$(CONTROLLER_GEN) rbac:roleName=kai-admission,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/admission/..." paths="./cmd/admission/..." output:stdout > deployments/kai-scheduler/templates/rbac/admission.yaml
+	$(CONTROLLER_GEN) rbac:roleName=admission,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/admission/..." paths="./cmd/admission/..." output:stdout > deployments/kai-scheduler/templates/rbac/admission.yaml
 	$(CONTROLLER_GEN) rbac:roleName=kai-operator,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/operator/..." paths="./cmd/operator/..." output:stdout > deployments/kai-scheduler/templates/rbac/operator.yaml
 
 	$(CONTROLLER_GEN) rbac:roleName=kai-webhookmanager,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/webhookmanager/..." paths="./cmd/webhookmanager/..." output:stdout > deployments/kustomization/webhookmanager-clusterrole/resource.yaml
