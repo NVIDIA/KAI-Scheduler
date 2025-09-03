@@ -1418,6 +1418,140 @@ spec:
               namespace:
                 description: Namespace is the namespace to create the operands in
                 type: string
+              nodeScaleAdjuster:
+                description: NodeScaleAdjuster specifies configuration for the node-scale-adjuster
+                properties:
+                  args:
+                    description: Args specifies the CLI arguments for node-scale-adjuster
+                    properties:
+                      gpuMemoryToFractionRatio:
+                        description: GPUMemoryToFractionRatio is the ratio of GPU
+                          memory to fraction conversion
+                        type: number
+                      nodeScaleNamespace:
+                        description: NodeScaleNamespace is the namespace in which
+                          the scaling pods will be created
+                        type: string
+                      nodeScaleServiceAccount:
+                        description: NodeScaleServiceAccount is the name of the service
+                          account used by the scale adjust pods
+                        type: string
+                      scalingPodImage:
+                        description: ScalingPodImage is the image to use for the scaling
+                          pod
+                        properties:
+                          name:
+                            description: Name is the name of the image
+                            type: string
+                          pullPolicy:
+                            description: PullPolicy is the pull policy of the image
+                            type: string
+                          repository:
+                            description: Repository is the repository/registry prefix
+                              for the image
+                            type: string
+                          tag:
+                            description: Tag is the tag of the image
+                            type: string
+                        type: object
+                    type: object
+                  service:
+                    properties:
+                      enabled:
+                        description: Enabled defines whether the service should be
+                          deployed
+                        type: boolean
+                      image:
+                        description: Image is the configuration of the service image
+                        properties:
+                          name:
+                            description: Name is the name of the image
+                            type: string
+                          pullPolicy:
+                            description: PullPolicy is the pull policy of the image
+                            type: string
+                          repository:
+                            description: Repository is the repository/registry prefix
+                              for the image
+                            type: string
+                          tag:
+                            description: Tag is the tag of the image
+                            type: string
+                        type: object
+                      k8sClientConfig:
+                        description: ClientConfig specifies the configuration of k8s
+                          client
+                        properties:
+                          burst:
+                            description: Burst specifies the burst rate for the k8s
+                              client
+                            type: integer
+                          qps:
+                            description: QPS specifies the QPS rate for the k8s client
+                            type: integer
+                        type: object
+                      resources:
+                        description: Resources describes the resource requirements
+                          for the service pods
+                        properties:
+                          claims:
+                            description: |-
+                              Claims lists the names of resources, defined in spec.resourceClaims,
+                              that are used by this container.
+
+                              This is an alpha field and requires enabling the
+                              DynamicResourceAllocation feature gate.
+
+                              This field is immutable. It can only be set for containers.
+                            items:
+                              description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                              properties:
+                                name:
+                                  description: |-
+                                    Name must match the name of one entry in pod.spec.resourceClaims of
+                                    the Pod where this field is used. It makes that resource available
+                                    inside a container.
+                                  type: string
+                                request:
+                                  description: |-
+                                    Request is the name chosen for a request in the referenced claim.
+                                    If empty, everything from the claim is made available, otherwise
+                                    only the result of this request.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
+                          limits:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Limits describes the maximum amount of compute resources allowed.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                          requests:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Requests describes the minimum amount of compute resources required.
+                              If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                              otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                        type: object
+                    type: object
+                type: object
               podGroupController:
                 description: PodGroupController specifies configuration for the pod-group-controller
                 properties:
