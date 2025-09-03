@@ -129,7 +129,7 @@ crdupgrader:
     pullPolicy: IfNotPresent
 
 admission:
-  name: kai-admission
+  name: admission
   image:
     name: admission
     pullPolicy: IfNotPresent
