@@ -57,15 +57,7 @@ func buildArgsList(config *pod_group_controller.PodGroupController, schedulerNam
 		"--scheduler-name", schedulerName,
 	}
 
-	if config.Service.K8sClientConfig != nil {
-		k8sClientConfig := config.Service.K8sClientConfig
-		if k8sClientConfig.QPS != nil {
-			args = append(args, "--qps", strconv.Itoa(*k8sClientConfig.QPS))
-		}
-		if k8sClientConfig.Burst != nil {
-			args = append(args, "--burst", strconv.Itoa(*k8sClientConfig.Burst))
-		}
-	}
+	common.AddK8sClientConfigToArgs(config.Service.K8sClientConfig, args)
 
 	if config.MaxConcurrentReconciles != nil {
 		args = append(args, "--max-concurrent-reconciles", strconv.Itoa(*config.MaxConcurrentReconciles))

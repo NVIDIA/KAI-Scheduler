@@ -6,6 +6,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -180,4 +181,15 @@ func isControllerAvailable(obj client.Object) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func AddK8sClientConfigToArgs(k8sClientConfig *kaiv1common.K8sClientConfig, args []string) {
+	if k8sClientConfig != nil {
+		if k8sClientConfig.QPS != nil {
+			args = append(args, "--qps", strconv.Itoa(*k8sClientConfig.QPS))
+		}
+		if k8sClientConfig.Burst != nil {
+			args = append(args, "--burst", strconv.Itoa(*k8sClientConfig.Burst))
+		}
+	}
 }
