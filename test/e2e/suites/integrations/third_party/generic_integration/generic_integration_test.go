@@ -81,6 +81,6 @@ var _ = Describe("Generic podgrouper integration", Ordered, func() {
 		Expect(err).To(Succeed())
 
 		// wait for the pod group to be created
-		wait.WaitForPodGroupsToBeReady(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset, testCtx.ControllerClient, namespace, 1)
+		wait.WaitForPodGroupsToBeReady(ctx, testCtx.ControllerClient, namespace, 1)
 	})
 })

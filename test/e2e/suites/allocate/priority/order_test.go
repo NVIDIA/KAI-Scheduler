@@ -94,7 +94,7 @@ var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered,
 		_, err = rd.CreatePod(ctx, testCtx.KubeClientset, highPod)
 		Expect(err).NotTo(HaveOccurred())
 
-		wait.WaitForPodGroupsToBeReady(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset, testCtx.ControllerClient,
+		wait.WaitForPodGroupsToBeReady(ctx, testCtx.ControllerClient,
 			queue.GetConnectedNamespaceToQueue(testCtx.Queues[0]), 2)
 
 		configurations.EnableScheduler(ctx, testCtx)
@@ -122,7 +122,7 @@ var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered,
 		_, err = rd.CreatePod(ctx, testCtx.KubeClientset, highPod)
 		Expect(err).NotTo(HaveOccurred())
 
-		wait.WaitForPodGroupsToBeReady(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset, testCtx.ControllerClient,
+		wait.WaitForPodGroupsToBeReady(ctx, testCtx.ControllerClient,
 			queue.GetConnectedNamespaceToQueue(testCtx.Queues[0]), 2)
 
 		configurations.EnableScheduler(ctx, testCtx)

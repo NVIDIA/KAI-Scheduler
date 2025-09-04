@@ -6,6 +6,7 @@ package podgroup
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -24,6 +25,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
 var _ = Describe("PodGroup Conditions", Ordered, func() {
@@ -129,14 +131,12 @@ func waitForPGConditionReason(
 	ctx context.Context, testCtx *testcontext.TestContext,
 	pod *v1.Pod, expectedReason v2alpha2.UnschedulableReason,
 ) *v2alpha2.PodGroup {
+	podGroupName := waitForPGAnnotationOnPod(ctx, testCtx, pod)
+
+	wait.WaitForPodGroupToExist(ctx, testCtx.ControllerClient, pod.Namespace, podGroupName)
+
 	podGroup := &v2alpha2.PodGroup{}
 	Eventually(func() bool {
-		updatedPod := &v1.Pod{}
-		Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
-		podGroupName, found := updatedPod.Annotations[constants.PodGroupAnnotationForPod]
-		if !found {
-			return false
-		}
 		Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKey{Name: podGroupName, Namespace: pod.Namespace}, podGroup)).To(Succeed())
 
 		for _, condition := range podGroup.Status.SchedulingConditions {
@@ -151,4 +151,18 @@ func waitForPGConditionReason(
 	}, time.Minute, time.Millisecond*100).Should(BeTrue())
 
 	return podGroup
+}
+
+func waitForPGAnnotationOnPod(ctx context.Context, testCtx *testcontext.TestContext, pod *v1.Pod) string {
+	var updatedPod v1.Pod
+	Eventually(func() bool {
+		Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(pod), &updatedPod)).To(Succeed())
+		_, found := updatedPod.Annotations[constants.PodGroupAnnotationForPod]
+		return found
+	}, time.Minute, time.Millisecond*100).Should(BeTrue(),
+		"PodGroup annotation not found on pod",
+		fmt.Sprintf("%v", updatedPod),
+	)
+
+	return updatedPod.Annotations[constants.PodGroupAnnotationForPod]
 }
