@@ -40,9 +40,6 @@ const (
 	DefaultPyroscopeMutexProfilerRate  = 5
 	DefaultPyroscopeBlockProfilerRate  = 5
 	defaultNumOfStatusRecordingWorkers = 5
-	defaultCPUWorkerNodeLabelKey       = "node-role.kubernetes.io/cpu-worker"
-	defaultGPUWorkerNodeLabelKey       = "node-role.kubernetes.io/gpu-worker"
-	defaultMIGWorkerNodeLabelKey       = "node-role.kubernetes.io/mig-enabled"
 )
 
 // ServerOption is the main context object for the controller manager.
@@ -124,9 +121,9 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&s.NumOfStatusRecordingWorkers, "num-of-status-recording-workers", defaultNumOfStatusRecordingWorkers, "specifies the max number of go routines spawned to update pod and podgroups conditions and events. Defaults to 5")
 	fs.DurationVar(&s.GlobalDefaultStalenessGracePeriod, "default-staleness-grace-period", defaultStalenessGracePeriod, "Global default staleness grace period duration. Negative values means infinite. Defaults to 60s")
 	fs.IntVar(&s.PluginServerPort, "plugin-server-port", 8081, "The port to bind for plugin server requests")
-	fs.StringVar(&s.CPUWorkerNodeLabelKey, "cpu-worker-node-label-key", defaultCPUWorkerNodeLabelKey, "The label key for CPU worker nodes")
-	fs.StringVar(&s.GPUWorkerNodeLabelKey, "gpu-worker-node-label-key", defaultGPUWorkerNodeLabelKey, "The label key for GPU worker nodes")
-	fs.StringVar(&s.MIGWorkerNodeLabelKey, "mig-worker-node-label-key", defaultMIGWorkerNodeLabelKey, "The label key for MIG enabled worker nodes")
+	fs.StringVar(&s.CPUWorkerNodeLabelKey, "cpu-worker-node-label-key", constants.DefaultCPUWorkerNodeLabelKey, "The label key for CPU worker nodes")
+	fs.StringVar(&s.GPUWorkerNodeLabelKey, "gpu-worker-node-label-key", constants.DefaultGPUWorkerNodeLabelKey, "The label key for GPU worker nodes")
+	fs.StringVar(&s.MIGWorkerNodeLabelKey, "mig-worker-node-label-key", constants.DefaultMIGWorkerNodeLabelKey, "The label key for MIG enabled worker nodes")
 
 	utilfeature.DefaultMutableFeatureGate.AddFlag(fs)
 }

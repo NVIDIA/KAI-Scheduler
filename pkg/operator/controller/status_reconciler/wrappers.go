@@ -28,3 +28,25 @@ func (e *KAIConfigWithStatusWrapper) DeepCopy() objectWithConditions {
 func (e *KAIConfigWithStatusWrapper) GetInternalObject() client.Object {
 	return e.Config
 }
+
+type SchedulingShardWithStatusWrapper struct {
+	*kaiv1.SchedulingShard
+}
+
+func (s *SchedulingShardWithStatusWrapper) GetConditions() []metav1.Condition {
+	return s.Status.Conditions
+}
+
+func (s *SchedulingShardWithStatusWrapper) SetConditions(conditions []metav1.Condition) {
+	s.Status.Conditions = conditions
+}
+
+func (s *SchedulingShardWithStatusWrapper) DeepCopy() objectWithConditions {
+	return &SchedulingShardWithStatusWrapper{
+		SchedulingShard: s.SchedulingShard.DeepCopy(),
+	}
+}
+
+func (s *SchedulingShardWithStatusWrapper) GetInternalObject() client.Object {
+	return s.SchedulingShard
+}

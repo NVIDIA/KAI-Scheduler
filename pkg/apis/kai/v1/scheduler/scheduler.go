@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	defaultImageName = "kai-scheduler"
+	defaultImageName = "scheduler"
 )
 
 type Scheduler struct {
@@ -36,28 +36,9 @@ func (s *Scheduler) SetDefaultsWhereNeeded(replicaCount *int32) {
 	if s.Service == nil {
 		s.Service = &common.Service{}
 	}
+	s.Service = common.SetDefault(s.Service, &common.Service{})
+	s.Service.Enabled = common.SetDefault(s.Service.Enabled, ptr.To(false))
 	s.Service.SetDefaultsWhereNeeded(defaultImageName)
-
-	if s.Service.Enabled == nil {
-		s.Service.Enabled = ptr.To(true)
-	}
-	if s.Service.Image == nil {
-		s.Service.Image = &common.Image{}
-	}
-	if s.Service.Image.Name == nil {
-		s.Service.Image.Name = ptr.To(defaultImageName)
-	}
-	s.Service.Image.SetDefaultsWhereNeeded()
-
-	if s.Service.Resources == nil {
-		s.Service.Resources = &common.Resources{}
-	}
-	if s.Service.Resources.Requests == nil {
-		s.Service.Resources.Requests = v1.ResourceList{}
-	}
-	if s.Service.Resources.Limits == nil {
-		s.Service.Resources.Limits = v1.ResourceList{}
-	}
 
 	if _, found := s.Service.Resources.Requests[v1.ResourceCPU]; !found {
 		s.Service.Resources.Requests[v1.ResourceCPU] = resource.MustParse("250m")
@@ -72,18 +53,12 @@ func (s *Scheduler) SetDefaultsWhereNeeded(replicaCount *int32) {
 		s.Service.Resources.Limits[v1.ResourceMemory] = resource.MustParse("512Mi")
 	}
 
-	if s.GOGC == nil {
-		s.GOGC = ptr.To(400)
-	}
+	s.GOGC = common.SetDefault(s.GOGC, ptr.To(400))
 
-	if s.SchedulerService == nil {
-		s.SchedulerService = &Service{}
-	}
+	s.SchedulerService = common.SetDefault(s.SchedulerService, &Service{})
 	s.SchedulerService.SetDefaultsWhereNeeded()
 
-	if s.Replicas == nil {
-		s.Replicas = ptr.To(ptr.Deref(replicaCount, 1))
-	}
+	s.Replicas = common.SetDefault(s.Replicas, ptr.To(ptr.Deref(replicaCount, 1)))
 }
 
 // Service defines configuration for the scheduler service

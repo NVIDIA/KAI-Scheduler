@@ -21,11 +21,11 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 const (
-	binpackStrategy  = "binpack"
-	defaultImageName = "runai-scheduler"
+	binpackStrategy = "binpack"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -44,9 +44,7 @@ type SchedulingShardSpec struct {
 }
 
 func (s *SchedulingShardSpec) SetDefaultsWhereNeeded() {
-	if s.Args == nil {
-		s.Args = &Args{}
-	}
+	s.Args = common.SetDefault(s.Args, &Args{})
 	s.Args.SetDefaultWhereNeeded()
 }
 
@@ -141,46 +139,38 @@ type Args struct {
 	// UpdatePodEvictionCondition configures whether the scheduler updates pod eviction conditions to reflect status
 	// +kubebuilder:validation:Optional
 	UpdatePodEvictionCondition *bool `json:"updatePodEvictionCondition,omitempty"`
+
+	// CPUWorkerNodeLabelKey specifies the label key for CPU worker nodes
+	// +kubebuilder:validation:Optional
+	CPUWorkerNodeLabelKey *string `json:"cpuWorkerNodeLabelKey,omitempty"`
+
+	// GPUWorkerNodeLabelKey specifies the label key for GPU worker nodes
+	// +kubebuilder:validation:Optional
+	GPUWorkerNodeLabelKey *string `json:"gpuWorkerNodeLabelKey,omitempty"`
+
+	// MIGWorkerNodeLabelKey specifies the label key for MIG enabled worker nodes
+	// +kubebuilder:validation:Optional
+	MIGWorkerNodeLabelKey *string `json:"migWorkerNodeLabelKey,omitempty"`
 }
 
 func (a *Args) SetDefaultWhereNeeded() {
-	if a.PlacementStrategy == nil {
-		a.PlacementStrategy = &PlacementStrategy{}
-	}
+	a.PlacementStrategy = common.SetDefault(a.PlacementStrategy, &PlacementStrategy{})
 	a.PlacementStrategy.SetDefaultWhereNeeded()
-	if a.Verbosity == nil {
-		a.Verbosity = ptr.To(3)
-	}
-	if a.DefaultSchedulerPeriod == nil {
-		a.DefaultSchedulerPeriod = ptr.To("5s")
-	}
-	if a.DefaultSchedulerName == nil {
-		a.DefaultSchedulerName = ptr.To(defaultImageName)
-	}
-	if a.RestrictNodeScheduling == nil {
-		a.RestrictNodeScheduling = ptr.To(false)
-	}
-	if a.DetailedFitErrors == nil {
-		a.DetailedFitErrors = ptr.To(true)
-	}
-	if a.AdvancedCSIScheduling == nil {
-		a.AdvancedCSIScheduling = ptr.To(false)
-	}
-	if a.Profiling == nil {
-		a.Profiling = ptr.To(false)
-	}
-	if a.UseSchedulingSignatures == nil {
-		a.UseSchedulingSignatures = ptr.To(true)
-	}
-	if a.AllowConsolidatingReclaim == nil {
-		a.AllowConsolidatingReclaim = ptr.To(true)
-	}
-	if a.PluginServerPort == nil {
-		a.PluginServerPort = ptr.To(8081)
-	}
-	if a.UpdatePodEvictionCondition == nil {
-		a.UpdatePodEvictionCondition = ptr.To(false)
-	}
+
+	a.Verbosity = common.SetDefault(a.Verbosity, ptr.To(3))
+	a.DefaultSchedulerPeriod = common.SetDefault(a.DefaultSchedulerPeriod, ptr.To("5s"))
+	a.DefaultSchedulerName = common.SetDefault(a.DefaultSchedulerName, ptr.To(constants.DefaultSchedulerName))
+	a.RestrictNodeScheduling = common.SetDefault(a.RestrictNodeScheduling, ptr.To(false))
+	a.DetailedFitErrors = common.SetDefault(a.DetailedFitErrors, ptr.To(true))
+	a.AdvancedCSIScheduling = common.SetDefault(a.AdvancedCSIScheduling, ptr.To(false))
+	a.Profiling = common.SetDefault(a.Profiling, ptr.To(false))
+	a.UseSchedulingSignatures = common.SetDefault(a.UseSchedulingSignatures, ptr.To(true))
+	a.AllowConsolidatingReclaim = common.SetDefault(a.AllowConsolidatingReclaim, ptr.To(true))
+	a.PluginServerPort = common.SetDefault(a.PluginServerPort, ptr.To(8081))
+	a.UpdatePodEvictionCondition = common.SetDefault(a.UpdatePodEvictionCondition, ptr.To(false))
+	a.CPUWorkerNodeLabelKey = common.SetDefault(a.CPUWorkerNodeLabelKey, ptr.To(constants.DefaultCPUWorkerNodeLabelKey))
+	a.GPUWorkerNodeLabelKey = common.SetDefault(a.GPUWorkerNodeLabelKey, ptr.To(constants.DefaultGPUWorkerNodeLabelKey))
+	a.MIGWorkerNodeLabelKey = common.SetDefault(a.MIGWorkerNodeLabelKey, ptr.To(constants.DefaultMIGWorkerNodeLabelKey))
 }
 
 // PlacementStrategy defines the scheduling strategy of NodePool
@@ -195,12 +185,8 @@ type PlacementStrategy struct {
 }
 
 func (p *PlacementStrategy) SetDefaultWhereNeeded() {
-	if p.Gpu == nil {
-		p.Gpu = ptr.To(binpackStrategy)
-	}
-	if p.Cpu == nil {
-		p.Cpu = ptr.To(binpackStrategy)
-	}
+	p.Gpu = common.SetDefault(p.Gpu, ptr.To(binpackStrategy))
+	p.Cpu = common.SetDefault(p.Cpu, ptr.To(binpackStrategy))
 }
 
 // SchedulingShardStatus defines the observed state of SchedulingShard
