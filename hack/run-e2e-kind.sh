@@ -99,9 +99,8 @@ for i in {1..100}; do
 
   if ! ${GOBIN}/ginkgo -r -focus "PodGroup Conditions Jobs Over Queue Limit NonPreemptible Job" --trace -vv ${REPO_ROOT}/test/e2e/suites/api/crds/podgroup; then
       PRESERVE_CLUSTER="true"
-      kubectl logs -nkai-scheduler deploy/kai-scheduler > ~/flaky-podgroup-condition/kai-scheduler.log
-      kubectl logs -nkai-scheduler deploy/pod-grouper > ~/flaky-podgroup-condition/grouper.log
-      kubectl get podgroups.v2alpha2.scheduling.run.ai -A -oyaml > ~/flaky-podgroup-condition/podgroups.yaml
+      kubectl logs -nkai-scheduler deploy/kai-scheduler
+      kubectl logs -nkai-scheduler deploy/pod-grouper
       break
   fi
 
