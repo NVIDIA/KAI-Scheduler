@@ -3,6 +3,7 @@
 > Note: *Goals, non-goals, and detailed motivation are captured in* `time-aware-fairness.md`. The focus of this document is the **system architecture** and **integration points** required to implement the feature.
 
 ## Rationale
+
 In large-scale environments the scheduler runs a tight loop that shouldn't depend on external calls per cycle. Executing raw PromQL (or other TSDB) queries every few milliseconds would:
 * Introduce unpredictable latency spikes when the database is under load.
 * Create pressure on the DB as cluster size and metric cardinality grow.
@@ -30,7 +31,7 @@ A **background Usage-Query routine embedded inside the Scheduler pod** acts as a
           v
 +------------------+
 |   Prometheus     |
-+---------+----------+
++---------+--------+
           | Pull (PromQL)
           v
 +-------------------------------------------+
