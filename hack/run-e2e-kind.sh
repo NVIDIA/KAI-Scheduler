@@ -99,9 +99,9 @@ for i in {1..100}; do
 
   if ! ${GOBIN}/ginkgo -r -focus "PodGroup Conditions Jobs Over Queue Limit NonPreemptible Job" --trace -vv ${REPO_ROOT}/test/e2e/suites/api/crds/podgroup; then
       PRESERVE_CLUSTER="true"
-      kubectl logs -nkai-scheduler deploy/kai-scheduler
-      kubectl logs -nkai-scheduler deploy/pod-grouper
-      break
+      kubectl logs -nkai-scheduler deploy/scheduler
+      kubectl logs -nkai-scheduler deploy/podgrouper
+      exit 1
   fi
 
   if [ "$PRESERVE_CLUSTER" != "true" ]; then
