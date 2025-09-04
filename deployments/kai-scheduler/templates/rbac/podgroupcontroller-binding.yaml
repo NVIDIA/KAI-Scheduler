@@ -7,7 +7,7 @@ metadata:
   name: kai-podgroup-controller
 subjects:
   - kind: ServiceAccount
-    name: pod-group-controller
+    name: podgroup-controller
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole

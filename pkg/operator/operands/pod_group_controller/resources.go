@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	deploymentName = "pod-group-controller"
+	deploymentName = "podgroup-controller"
 )
 
 func deploymentForKAIConfig(
