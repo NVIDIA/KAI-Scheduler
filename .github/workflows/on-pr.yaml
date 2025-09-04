@@ -126,50 +126,6 @@ jobs:
           path: images
           key:  images-${{ github.sha }}
 
-      - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.10.0
-        with:
-          cluster_name: kind
-          version: v0.26.0
-          config: ./hack/e2e-kind-config.yaml
-
-      - name: Load docker images to kind
-        working-directory: images
-        env:
-          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
+      - name: Run e2e script
         run: |
-          docker load < docker_images.tgz
-          for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
-            kind load docker-image $image --name kind
-          done
-
-      - name: Deploy fake gpu operator
-        run: |
-          helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
-              --version 0.0.62 --values ./hack/fake-gpu-operator-values.yaml --wait
-
-      - name: install KAI-scheduler
-        env:
-          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
-        run: |
-          helm upgrade -i kai-scheduler ./images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
-            --set "global.gpuSharing=true" --debug --wait
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.22
-
-      - name: Install ginkgo
-        run: |
-          go install github.com/onsi/ginkgo/v2/ginkgo@v2.19.0
-
-      - name: Delete images from disk
-        env:
-          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
-        run: |
-          docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
-          rm -rf images
-
-      - name: Run e2e tests
-        run: |
-          ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv ./test/e2e/suites --label-filter '!autoscale', '!scale'
+          ./hack/run-e2e-kind.sh --local-images-build
