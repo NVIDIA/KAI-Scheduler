@@ -35,44 +35,18 @@ type Admission struct {
 }
 
 func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
-	if b.Service == nil {
-		b.Service = &common.Service{}
-	}
+	b.Service = common.SetDefault(b.Service, &common.Service{})
 	b.Service.SetDefaultsWhereNeeded(imageName)
 
-	if b.Service.Enabled == nil {
-		b.Service.Enabled = ptr.To(true)
-	}
-
-	if b.Service.Image == nil {
-		b.Service.Image = &common.Image{}
-	}
-	b.Service.Image.SetDefaultsWhereNeeded()
-	if len(*b.Service.Image.Name) == 0 {
-		b.Service.Image.Name = ptr.To(imageName)
-	}
-
-	if b.Service.Resources == nil {
-		b.Service.Resources = &common.Resources{}
-	}
+	b.Service.Resources = common.SetDefault(b.Service.Resources, &common.Resources{})
 	b.Service.Resources.SetDefaultsWhereNeeded()
 
-	if b.Webhook == nil {
-		b.Webhook = &Webhook{}
-	}
+	b.Webhook = common.SetDefault(b.Webhook, &Webhook{})
 	b.Webhook.SetDefaultsWhereNeeded()
 
-	if b.Replicas == nil {
-		b.Replicas = ptr.To(ptr.Deref(replicaCount, 1))
-	}
-
-	if b.GPUSharing == nil {
-		b.GPUSharing = ptr.To(false)
-	}
-
-	if b.QueueLabelSelector == nil {
-		b.QueueLabelSelector = ptr.To(false)
-	}
+	b.Replicas = common.SetDefault(b.Replicas, ptr.To(ptr.Deref(replicaCount, 1)))
+	b.GPUSharing = common.SetDefault(b.GPUSharing, ptr.To(false))
+	b.QueueLabelSelector = common.SetDefault(b.QueueLabelSelector, ptr.To(false))
 }
 
 // Webhook defines configuration for the admission webhook
@@ -94,19 +68,8 @@ type Webhook struct {
 
 // SetDefaultsWhereNeeded sets default fields for unset fields
 func (w *Webhook) SetDefaultsWhereNeeded() {
-	if w.Port == nil {
-		w.Port = ptr.To(443)
-	}
-
-	if w.TargetPort == nil {
-		w.TargetPort = ptr.To(9443)
-	}
-
-	if w.ProbePort == nil {
-		w.ProbePort = ptr.To(8081)
-	}
-
-	if w.MetricsPort == nil {
-		w.MetricsPort = ptr.To(8080)
-	}
+	w.Port = common.SetDefault(w.Port, ptr.To(443))
+	w.TargetPort = common.SetDefault(w.TargetPort, ptr.To(9443))
+	w.ProbePort = common.SetDefault(w.ProbePort, ptr.To(8081))
+	w.MetricsPort = common.SetDefault(w.MetricsPort, ptr.To(8080))
 }

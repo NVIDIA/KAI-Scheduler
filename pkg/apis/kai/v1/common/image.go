@@ -37,19 +37,10 @@ type Image struct {
 }
 
 func (i *Image) SetDefaultsWhereNeeded() {
-	if i.Repository == nil {
-		i.Repository = ptr.To(os.Getenv(DefaultRepositoryEnvVarName))
-	}
-	if i.Tag == nil {
-		i.Tag = ptr.To(os.Getenv(DefaultTagEnvVarName))
-	}
-	if i.PullPolicy == nil {
-		pullIfNotPresent := v1.PullIfNotPresent
-		i.PullPolicy = &pullIfNotPresent
-	}
-	if i.Name == nil {
-		i.Name = ptr.To("")
-	}
+	i.Repository = SetDefault(i.Repository, ptr.To(os.Getenv(DefaultRepositoryEnvVarName)))
+	i.Tag = SetDefault(i.Tag, ptr.To(os.Getenv(DefaultTagEnvVarName)))
+	i.PullPolicy = SetDefault(i.PullPolicy, ptr.To(v1.PullIfNotPresent))
+	i.Name = SetDefault(i.Name, ptr.To(""))
 }
 
 func (i *Image) Url() string {

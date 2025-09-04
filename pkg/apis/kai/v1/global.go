@@ -7,6 +7,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
@@ -63,42 +64,27 @@ type GlobalConfig struct {
 }
 
 func (g *GlobalConfig) SetDefaultWhereNeeded() {
-	if g.Openshift == nil {
-		g.Openshift = ptr.To(false)
-	}
-	if g.SecurityContext == nil {
-		g.SecurityContext = &v1.SecurityContext{}
-	}
-	if g.SecurityContext.AllowPrivilegeEscalation == nil {
-		g.SecurityContext.AllowPrivilegeEscalation = ptr.To(false)
-	}
-	if g.SecurityContext.RunAsNonRoot == nil {
-		g.SecurityContext.RunAsNonRoot = ptr.To(true)
-	}
-	if g.SecurityContext.RunAsUser == nil {
-		g.SecurityContext.RunAsUser = ptr.To(int64(10000))
-	}
-	if g.SecurityContext.Capabilities == nil {
-		g.SecurityContext.Capabilities = &v1.Capabilities{}
-	}
+	g.Openshift = common.SetDefault(g.Openshift, ptr.To(false))
+	g.SecurityContext = common.SetDefault(g.SecurityContext, &v1.SecurityContext{})
+	g.SecurityContext.AllowPrivilegeEscalation = common.SetDefault(g.SecurityContext.AllowPrivilegeEscalation, ptr.To(false))
+	g.SecurityContext.RunAsNonRoot = common.SetDefault(g.SecurityContext.RunAsNonRoot, ptr.To(true))
+	g.SecurityContext.RunAsUser = common.SetDefault(g.SecurityContext.RunAsUser, ptr.To(int64(10000)))
+	g.SecurityContext.Capabilities = common.SetDefault(g.SecurityContext.Capabilities, &v1.Capabilities{})
 	if len(g.SecurityContext.Capabilities.Drop) == 0 {
 		g.SecurityContext.Capabilities.Drop = []v1.Capability{"all"}
 	}
+
 	if g.ImagePullSecrets == nil {
 		g.ImagePullSecrets = []string{}
 	}
 	if g.DaemonsetsTolerations == nil {
 		g.DaemonsetsTolerations = []v1.Toleration{}
 	}
-	if g.QueueLabelKey == nil {
-		g.QueueLabelKey = ptr.To(constants.DefaultQueueLabel)
-	}
-	if g.SchedulerName == nil {
-		g.SchedulerName = ptr.To(constants.DefaultSchedulerName)
-	}
-	if g.NodePoolLabelKey == nil {
-		g.NodePoolLabelKey = ptr.To(constants.DefaultNodePoolLabelKey)
-	}
+	g.QueueLabelKey = common.SetDefault(g.QueueLabelKey, ptr.To(constants.DefaultQueueLabel))
+	g.SchedulerName = common.SetDefault(g.SchedulerName, ptr.To(constants.DefaultSchedulerName))
+
+	g.NodePoolLabelKey = common.SetDefault(g.NodePoolLabelKey, ptr.To(constants.DefaultNodePoolLabelKey))
+
 	if g.NamespaceLabelSelector == nil {
 		g.NamespaceLabelSelector = map[string]string{}
 	}

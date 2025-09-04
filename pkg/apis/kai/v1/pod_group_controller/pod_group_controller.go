@@ -28,9 +28,7 @@ type PodGroupController struct {
 }
 
 func (pg *PodGroupController) SetDefaultsWhereNeeded(replicaCount *int32) {
-	if pg.Service == nil {
-		pg.Service = &common.Service{}
-	}
+	pg.Service = common.SetDefault(pg.Service, &common.Service{})
 	pg.Service.SetDefaultsWhereNeeded(imageName)
 
 	if _, found := pg.Service.Resources.Requests[v1.ResourceCPU]; !found {
@@ -46,7 +44,5 @@ func (pg *PodGroupController) SetDefaultsWhereNeeded(replicaCount *int32) {
 		pg.Service.Resources.Limits[v1.ResourceMemory] = resource.MustParse("100Mi")
 	}
 
-	if pg.Replicas == nil {
-		pg.Replicas = ptr.To(ptr.Deref(replicaCount, 1))
-	}
+	pg.Replicas = common.SetDefault(pg.Replicas, ptr.To(ptr.Deref(replicaCount, 1)))
 }

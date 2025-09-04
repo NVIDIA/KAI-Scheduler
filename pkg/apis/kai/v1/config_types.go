@@ -5,6 +5,7 @@ package v1
 
 import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/admission"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_group_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -60,24 +61,16 @@ func (c *ConfigSpec) SetDefaultsWhereNeeded() {
 	if len(c.Namespace) == 0 {
 		c.Namespace = constants.DefaultKAINamespace
 	}
-	if c.Global == nil {
-		c.Global = &GlobalConfig{}
-	}
+	c.Global = common.SetDefault(c.Global, &GlobalConfig{})
 	c.Global.SetDefaultWhereNeeded()
 
-	if c.QueueController == nil {
-		c.QueueController = &queue_controller.QueueController{}
-	}
+	c.QueueController = common.SetDefault(c.QueueController, &queue_controller.QueueController{})
 	c.QueueController.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
 
-	if c.PodGroupController == nil {
-		c.PodGroupController = &pod_group_controller.PodGroupController{}
-	}
+	c.PodGroupController = common.SetDefault(c.PodGroupController, &pod_group_controller.PodGroupController{})
 	c.PodGroupController.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
 
-	if c.Admission == nil {
-		c.Admission = &admission.Admission{}
-	}
+	c.Admission = common.SetDefault(c.Admission, &admission.Admission{})
 	c.Admission.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
 }
 

@@ -44,32 +44,8 @@ type QueueController struct {
 }
 
 func (q *QueueController) SetDefaultsWhereNeeded(replicaCount *int32) {
-	if q.Service == nil {
-		q.Service = &common.Service{}
-	}
+	q.Service = common.SetDefault(q.Service, &common.Service{})
 	q.Service.SetDefaultsWhereNeeded(imageName)
-
-	if q.Service.Enabled == nil {
-		q.Service.Enabled = ptr.To(true)
-	}
-
-	if q.Service.Image == nil {
-		q.Service.Image = &common.Image{}
-	}
-	if q.Service.Image.Name == nil {
-		q.Service.Image.Name = ptr.To(imageName)
-	}
-	q.Service.Image.SetDefaultsWhereNeeded()
-
-	if q.Service.Resources == nil {
-		q.Service.Resources = &common.Resources{}
-	}
-	if q.Service.Resources.Requests == nil {
-		q.Service.Resources.Requests = v1.ResourceList{}
-	}
-	if q.Service.Resources.Limits == nil {
-		q.Service.Resources.Limits = v1.ResourceList{}
-	}
 
 	if _, found := q.Service.Resources.Requests[v1.ResourceCPU]; !found {
 		q.Service.Resources.Requests[v1.ResourceCPU] = resource.MustParse("20m")
@@ -84,17 +60,12 @@ func (q *QueueController) SetDefaultsWhereNeeded(replicaCount *int32) {
 		q.Service.Resources.Limits[v1.ResourceMemory] = resource.MustParse("100Mi")
 	}
 
-	if q.ControllerService == nil {
-		q.ControllerService = &Service{}
-	}
+	q.ControllerService = common.SetDefault(q.ControllerService, &Service{})
 	q.ControllerService.SetDefaultsWhereNeeded()
 
-	if q.Webhooks == nil {
-		q.Webhooks = &QueueControllerWebhooks{}
-	}
-	if q.Replicas == nil {
-		q.Replicas = ptr.To(ptr.Deref(replicaCount, 1))
-	}
+	q.Replicas = common.SetDefault(q.Replicas, ptr.To(ptr.Deref(replicaCount, 1)))
+
+	q.Webhooks = common.SetDefault(q.Webhooks, &QueueControllerWebhooks{})
 	q.Webhooks.SetDefaultsWhereNeeded()
 }
 
@@ -109,21 +80,13 @@ type Service struct {
 }
 
 func (s *Service) SetDefaultsWhereNeeded() {
-	if s.Metrics == nil {
-		s.Metrics = &PortMapping{}
-	}
+	s.Metrics = common.SetDefault(s.Metrics, &PortMapping{})
 	s.Metrics.SetDefaultsWhereNeeded()
-	s.Metrics.Port = ptr.To(8080)
-	s.Metrics.TargetPort = ptr.To(8080)
-	s.Metrics.Name = ptr.To("metrics")
 
-	if s.Webhook == nil {
-		s.Webhook = &PortMapping{}
-	}
-	s.Webhook.SetDefaultsWhereNeeded()
-	s.Webhook.Port = ptr.To(443)
-	s.Webhook.TargetPort = ptr.To(9443)
-	s.Webhook.Name = ptr.To("webhook")
+	s.Webhook = common.SetDefault(s.Webhook, &PortMapping{})
+	s.Webhook.Port = common.SetDefault(s.Webhook.Port, ptr.To(443))
+	s.Webhook.TargetPort = common.SetDefault(s.Webhook.TargetPort, ptr.To(9443))
+	s.Webhook.Name = common.SetDefault(s.Webhook.Name, ptr.To("webhook"))
 }
 
 type PortMapping struct {
@@ -141,17 +104,9 @@ type PortMapping struct {
 }
 
 func (p *PortMapping) SetDefaultsWhereNeeded() {
-	if p.Port == nil {
-		p.Port = ptr.To(8080)
-	}
-
-	if p.TargetPort == nil {
-		p.TargetPort = ptr.To(8080)
-	}
-
-	if p.Name == nil {
-		p.Name = ptr.To("metrics")
-	}
+	p.Port = common.SetDefault(p.Port, ptr.To(8080))
+	p.TargetPort = common.SetDefault(p.TargetPort, ptr.To(8080))
+	p.Name = common.SetDefault(p.Name, ptr.To("metrics"))
 }
 
 type QueueControllerWebhooks struct {
@@ -159,7 +114,5 @@ type QueueControllerWebhooks struct {
 }
 
 func (q *QueueControllerWebhooks) SetDefaultsWhereNeeded() {
-	if q.EnableValidation == nil {
-		q.EnableValidation = ptr.To(true)
-	}
+	q.EnableValidation = common.SetDefault(q.EnableValidation, ptr.To(true))
 }

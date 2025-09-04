@@ -5,7 +5,6 @@
 package common
 
 import (
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -28,29 +27,15 @@ type Service struct {
 }
 
 func (s *Service) SetDefaultsWhereNeeded(imageName string) {
-	if s.Enabled == nil {
-		s.Enabled = ptr.To(true)
-	}
+	s.Enabled = SetDefault(s.Enabled, ptr.To(true))
 
-	if s.Image == nil {
-		s.Image = &Image{}
-	}
-	if s.Image.Name == nil {
-		s.Image.Name = ptr.To(imageName)
-	}
+	s.Image = SetDefault(s.Image, &Image{})
+	s.Image.Name = SetDefault(s.Image.Name, ptr.To(imageName))
 	s.Image.SetDefaultsWhereNeeded()
 
-	if s.Resources == nil {
-		s.Resources = &Resources{}
-	}
-	if s.Resources.Requests == nil {
-		s.Resources.Requests = v1.ResourceList{}
-	}
-	if s.Resources.Limits == nil {
-		s.Resources.Limits = v1.ResourceList{}
-	}
+	s.Resources = SetDefault(s.Resources, &Resources{})
+	s.Resources.SetDefaultsWhereNeeded()
 
-	if s.K8sClientConfig == nil {
-		s.K8sClientConfig = &K8sClientConfig{}
-	}
+	s.K8sClientConfig = SetDefault(s.K8sClientConfig, &K8sClientConfig{})
+	s.K8sClientConfig.SetDefaultsWhereNeeded()
 }
