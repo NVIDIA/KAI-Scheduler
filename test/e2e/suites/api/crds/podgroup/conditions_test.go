@@ -148,7 +148,10 @@ func waitForPGConditionReason(
 		}
 
 		return false
-	}, time.Minute, time.Millisecond*100).Should(BeTrue())
+	}, time.Minute, time.Millisecond*100).Should(BeTrue(),
+		"PodGroup condition not found",
+		fmt.Sprintf("%v", podGroup),
+	)
 
 	return podGroup
 }
