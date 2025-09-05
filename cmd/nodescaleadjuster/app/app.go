@@ -52,6 +52,9 @@ func Run() error {
 	log.Println("Node scale adjuster started")
 
 	clientConfig := ctrl.GetConfigOrDie()
+	clientConfig.QPS = float32(options.Qps)
+	clientConfig.Burst = options.Burst
+
 	mgr, err := ctrl.NewManager(clientConfig, ctrl.Options{
 		Scheme:           scheme,
 		LeaderElection:   options.EnableLeaderElection,
