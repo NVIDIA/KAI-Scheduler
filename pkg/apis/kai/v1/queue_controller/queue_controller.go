@@ -45,6 +45,7 @@ type QueueController struct {
 
 func (q *QueueController) SetDefaultsWhereNeeded(replicaCount *int32) {
 	q.Service = common.SetDefault(q.Service, &common.Service{})
+	q.Service.Enabled = common.SetDefault(q.Service.Enabled, ptr.To(false))
 	q.Service.SetDefaultsWhereNeeded(imageName)
 
 	if _, found := q.Service.Resources.Requests[v1.ResourceCPU]; !found {
