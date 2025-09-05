@@ -55,6 +55,10 @@ func (ssn *Session) AddPredicateFn(pf api.PredicateFn) {
 	ssn.PredicateFns = append(ssn.PredicateFns, pf)
 }
 
+func (ssn *Session) AddNodePartitionFn(pf api.NodePartitionFn) {
+	ssn.NodePartitionFns = append(ssn.NodePartitionFns, pf)
+}
+
 func (ssn *Session) AddJobOrderFn(jof common_info.CompareFn) {
 	ssn.JobOrderFns = append(ssn.JobOrderFns, jof)
 }
@@ -339,6 +343,25 @@ func (ssn *Session) PredicateFn(task *pod_info.PodInfo, job *podgroup_info.PodGr
 		}
 	}
 	return nil
+}
+
+func (ssn *Session) NodePartitionFn(job *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo, nodes api.NodePartition) ([]api.NodePartition, error) {
+	var err error
+	partitions := []api.NodePartition{nodes}
+	for _, pfn := range ssn.NodePartitionFns {
+		newPartitions := []api.NodePartition{}
+		for _, partition := range partitions {
+			partitions, err = pfn(job, tasks, partition)
+			if err != nil {
+				log.InfraLogger.V(6).Infof(
+					"Failed to run NodePartitionFn on job %s", job.Name)
+				return nil, err
+			}
+			newPartitions = append(newPartitions, partitions...)
+		}
+		partitions = newPartitions
+	}
+	return partitions, nil
 }
 
 func (ssn *Session) GpuOrderFn(task *pod_info.PodInfo, node *node_info.NodeInfo, gpuIdx string) (float64, error) {

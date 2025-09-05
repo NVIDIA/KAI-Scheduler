@@ -28,8 +28,12 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 )
 
+type NodePartition []*node_info.NodeInfo
+
 // PredicateFn is used to predicate node for task.
 type PredicateFn func(*pod_info.PodInfo, *podgroup_info.PodGroupInfo, *node_info.NodeInfo) error
+
+type NodePartitionFn func(*podgroup_info.PodGroupInfo, []*pod_info.PodInfo, NodePartition) ([]NodePartition, error)
 
 // PrePredicateFn is used to prepare for predicate on pod.
 type PrePredicateFn func(*pod_info.PodInfo, *podgroup_info.PodGroupInfo) error
