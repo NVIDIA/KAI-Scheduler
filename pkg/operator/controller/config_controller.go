@@ -38,10 +38,12 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/deployable"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/known_types"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/pod_group_controller"
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/pod_grouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/queue_controller"
 )
 
 var ConfigReconcilerOperands = []operands.Operand{
+	&pod_grouper.PodGrouper{},
 	&queue_controller.QueueController{},
 	&pod_group_controller.PodGroupController{},
 	&admission.Admission{},
