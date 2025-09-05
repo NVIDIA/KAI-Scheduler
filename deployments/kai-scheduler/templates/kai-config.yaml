@@ -49,3 +49,36 @@ spec:
         resources:
           {{- toYaml .Values.podgroupcontroller.resources | nindent 6 }}
         {{- end }}
+
+  queueController:
+    service:
+      enabled: true
+      image:
+        name: {{ .Values.queuecontroller.image.name }}
+        repository: {{ .Values.global.registry }}
+        tag: {{ .Chart.Version }}
+        pullPolicy: {{ .Values.queuecontroller.image.pullPolicy | default .Values.global.imagePullPolicy }}
+      {{- if .Values.queuecontroller.resources }}
+      resources:
+        {{- toYaml .Values.queuecontroller.resources | nindent 6 }}
+      {{- end }}
+
+  admission:
+    service:
+      enabled: true
+      image:
+        name: {{ .Values.admission.image.name }}
+        repository: {{ .Values.global.registry }}
+        tag: {{ .Chart.Version }}
+        pullPolicy: {{ .Values.admission.image.pullPolicy | default .Values.global.imagePullPolicy }}
+      {{- if .Values.admission.resources }}
+      resources:
+        {{- toYaml .Values.admission.resources | nindent 6 }}
+      {{- end }}
+    gpuSharing: {{ .Values.global.gpuSharing | default false }}
+    queueLabelSelector: false
+    webhook:
+      port: 443
+      targetPort: {{ .Values.admission.ports.webhookPort | default 9443 }}
+      probePort: {{ .Values.admission.ports.probePort | default 8081 }}
+      metricsPort: {{ .Values.admission.ports.metricsPort | default 8080 }}

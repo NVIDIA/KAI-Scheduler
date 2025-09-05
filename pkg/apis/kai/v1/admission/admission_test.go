@@ -22,7 +22,7 @@ var _ = Describe("Admission", func() {
 		var replicaCount int32
 		replicaCount = 1
 		Admission.SetDefaultsWhereNeeded(&replicaCount)
-		Expect(*Admission.Service.Enabled).To(Equal(false))
+		Expect(*Admission.Service.Enabled).To(Equal(true))
 		Expect(*Admission.Service.Image.Name).To(Equal("admission"))
 		Expect(*Admission.Replicas).To(Equal(int32(1)))
 	})
