@@ -36,7 +36,6 @@ type Admission struct {
 
 func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
 	b.Service = common.SetDefault(b.Service, &common.Service{})
-	b.Service.Enabled = common.SetDefault(b.Service.Enabled, ptr.To(false))
 	b.Service.SetDefaultsWhereNeeded(imageName)
 
 	b.Service.Resources = common.SetDefault(b.Service.Resources, &common.Resources{})
