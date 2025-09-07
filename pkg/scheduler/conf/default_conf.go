@@ -19,6 +19,7 @@ func GetDefaultSchedulerConfiguration() *SchedulerConfiguration {
 					{Name: "gpusharingorder"},
 					{Name: "gpupack"},
 					{Name: "resourcetype"},
+					{Name: "subgrouporder"},
 					{Name: "taskorder"},
 					{Name: "nominatednode"},
 					{Name: "dynamicresources"},
