@@ -569,10 +569,10 @@ func getAllocateTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0", Tasks: []*tasks_fake.TestTaskBasic{
-						{
-							State: pod_status.Pending,
+							{
+								State: pod_status.Pending,
+							},
 						},
-					},
 					}, {
 						Name:                "pending_job1",
 						RequiredGPUsPerTask: 1,
