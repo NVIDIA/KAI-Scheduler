@@ -91,15 +91,26 @@ func (su *defaultStatusUpdater) updatePodGroup(
 		_, err = su.kubeaischedClient.SchedulingV2alpha2().PodGroups(podGroup.Namespace).UpdateStatus(
 			ctx, podGroup, metav1.UpdateOptions{},
 		)
+		if err != nil {
+			log.StatusUpdaterLogger.Errorf("Failed to update pod group status %s/%s: %v", podGroup.Namespace, podGroup.Name, err)
+		} else {
+			log.StatusUpdaterLogger.V(1).Infof("Updated pod group status successfully %s/%s", podGroup.Namespace, podGroup.Name)
+		}
 	}
 	if len(updateData.patchData) > 0 {
 		_, err = su.kubeaischedClient.SchedulingV2alpha2().PodGroups(podGroup.Namespace).Patch(
 			ctx, podGroup.Name, types.JSONPatchType, updateData.patchData, metav1.PatchOptions{}, updateData.subResources...,
 		)
+		if err != nil {
+			log.StatusUpdaterLogger.Errorf("Failed to update pod group body %s/%s: %v", podGroup.Namespace, podGroup.Name, err)
+		} else {
+			log.StatusUpdaterLogger.V(1).Infof("Updated pod group body successfully %s/%s", podGroup.Namespace, podGroup.Name)
+		}
 	}
 	if err != nil {
-		log.StatusUpdaterLogger.Errorf("Failed to update pod group %s/%s: %v", podGroup.Namespace, podGroup.Name, err)
+		log.StatusUpdaterLogger.Errorf("Failed to update pod group status or body %s/%s: %v", podGroup.Namespace, podGroup.Name, err)
 	} else {
+		log.StatusUpdaterLogger.V(1).Infof("Updated pod group status and body successfully %s/%s", podGroup.Namespace, podGroup.Name)
 		// Move the update to the applied cache
 		su.appliedPodGroupUpdates.Store(key, updateData)
 		su.inFlightPodGroups.Delete(key)
