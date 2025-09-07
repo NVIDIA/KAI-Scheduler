@@ -48,6 +48,9 @@ func (r *StatusReconciler) ReconcileStatus(ctx context.Context, object objectWit
 	if err := r.reconcileCondition(ctx, object, r.getAvailableCondition(ctx, object.GetGeneration())); err != nil {
 		return err
 	}
+	if err := r.reconcileCondition(ctx, object, r.getPrometheusOperatorCondition(ctx, object.GetGeneration())); err != nil {
+		return err
+	}
 	return r.reconcileCondition(ctx, object, r.getDependenciesFulfilledCondition(object.GetGeneration()))
 }
 
@@ -161,6 +164,50 @@ func (r *StatusReconciler) getDependenciesFulfilledCondition(gen int64) metav1.C
 		Status:             metav1.ConditionTrue,
 		Reason:             string(kaiv1.DependenciesFulfilled),
 		Message:            "Dependencies are fulfilled",
+		ObservedGeneration: gen,
+		LastTransitionTime: metav1.Now(),
+	}
+}
+
+func (r *StatusReconciler) getPrometheusOperatorCondition(ctx context.Context, gen int64) metav1.Condition {
+	// Check if Prometheus operator is installed by looking for the CRD
+	crd := &metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CustomResourceDefinition",
+			APIVersion: "apiextensions.k8s.io/v1",
+		},
+	}
+
+	err := r.Client.Get(ctx, client.ObjectKey{
+		Name: "prometheuses.monitoring.coreos.com",
+	}, crd)
+
+	if err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return metav1.Condition{
+				Type:               "PrometheusOperatorInstalled",
+				Status:             metav1.ConditionFalse,
+				Reason:             "PrometheusOperatorCheckFailed",
+				Message:            err.Error(),
+				ObservedGeneration: gen,
+				LastTransitionTime: metav1.Now(),
+			}
+		}
+		return metav1.Condition{
+			Type:               "PrometheusOperatorInstalled",
+			Status:             metav1.ConditionFalse,
+			Reason:             "PrometheusOperatorNotFound",
+			Message:            "Prometheus Operator not found in cluster",
+			ObservedGeneration: gen,
+			LastTransitionTime: metav1.Now(),
+		}
+	}
+
+	return metav1.Condition{
+		Type:               "PrometheusOperatorInstalled",
+		Status:             metav1.ConditionTrue,
+		Reason:             "PrometheusOperatorFound",
+		Message:            "Prometheus Operator is installed and available",
 		ObservedGeneration: gen,
 		LastTransitionTime: metav1.Now(),
 	}

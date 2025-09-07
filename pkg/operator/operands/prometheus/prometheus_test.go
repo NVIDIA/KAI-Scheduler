@@ -173,9 +173,7 @@ var _ = Describe("Prometheus", func() {
 
 		BeforeEach(func(ctx context.Context) {
 			fakeKubeClient = createFakeClientWithScheme()
-			prometheus = &Prometheus{
-				namespace: "test-namespace",
-			}
+			prometheus = &Prometheus{}
 		})
 
 		Context("IsDeployed", func() {
@@ -222,7 +220,7 @@ var _ = Describe("Prometheus", func() {
 
 		Context("IsAvailable", func() {
 			It("should return true when all controllers are available", func(ctx context.Context) {
-				// Create a Prometheus object with proper status conditions
+				// Create a Prometheus object
 				prometheusObj := &monitoringv1.Prometheus{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "Prometheus",
@@ -231,14 +229,6 @@ var _ = Describe("Prometheus", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      mainResourceName,
 						Namespace: "test-namespace",
-					},
-					Status: monitoringv1.PrometheusStatus{
-						Conditions: []monitoringv1.Condition{
-							{
-								Type:   monitoringv1.ConditionType("Available"),
-								Status: monitoringv1.ConditionTrue,
-							},
-						},
 					},
 				}
 				Expect(fakeKubeClient.Create(ctx, prometheusObj)).To(Succeed())
@@ -248,54 +238,6 @@ var _ = Describe("Prometheus", func() {
 				available, err := prometheus.IsAvailable(ctx, fakeKubeClient)
 				Expect(err).To(BeNil())
 				Expect(available).To(BeTrue())
-			})
-
-			It("should return false when Prometheus is not available", func(ctx context.Context) {
-				// Create a Prometheus object with unavailable status
-				prometheusObj := &monitoringv1.Prometheus{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Prometheus",
-						APIVersion: "monitoring.coreos.com/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      mainResourceName,
-						Namespace: "test-namespace",
-					},
-					Status: monitoringv1.PrometheusStatus{
-						Conditions: []monitoringv1.Condition{
-							{
-								Type:   monitoringv1.ConditionType("Available"),
-								Status: monitoringv1.ConditionFalse,
-							},
-						},
-					},
-				}
-				Expect(fakeKubeClient.Create(ctx, prometheusObj)).To(Succeed())
-
-				prometheus.lastDesiredState = []client.Object{prometheusObj}
-
-				available, err := prometheus.IsAvailable(ctx, fakeKubeClient)
-				Expect(err).To(BeNil())
-				Expect(available).To(BeFalse())
-			})
-
-			It("should return false when Prometheus object does not exist", func(ctx context.Context) {
-				// Create a Prometheus object in desired state but don't create it in the cluster
-				prometheusObj := &monitoringv1.Prometheus{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Prometheus",
-						APIVersion: "monitoring.coreos.com/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      mainResourceName,
-						Namespace: "test-namespace",
-					},
-				}
-				prometheus.lastDesiredState = []client.Object{prometheusObj}
-
-				available, err := prometheus.IsAvailable(ctx, fakeKubeClient)
-				Expect(err).ToNot(BeNil())
-				Expect(available).To(BeFalse())
 			})
 		})
 

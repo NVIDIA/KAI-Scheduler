@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	mainResourceName = "kai"
+	mainResourceName = "prometheus"
 )
 
 func prometheusForKAIConfig(
@@ -47,6 +47,8 @@ func prometheusForKAIConfig(
 		logger.Info("Prometheus Operator not found - Prometheus CRD is not available")
 		return []client.Object{}, nil
 	}
+
+	logger.Info("Prometheus Operator found, proceeding with Prometheus instance creation")
 
 	// Create Prometheus CR
 	prometheus := &monitoringv1.Prometheus{

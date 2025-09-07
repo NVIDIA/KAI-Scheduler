@@ -9,7 +9,7 @@ import (
 )
 
 type Prometheus struct {
-	// Enabled defines whether a Prometheus instance should be deployed
+	// Enabled defines whether Prometheus should be deployed
 	// +kubebuilder:validation:Optional
 	Enabled *bool `json:"enabled,omitempty"`
 }
