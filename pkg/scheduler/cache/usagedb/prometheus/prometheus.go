@@ -54,9 +54,9 @@ func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface
 	queryResolution := params.GetExtraDurationParamOrDefault("queryResolution", 1*time.Minute)
 
 	allocationMetricsMap := map[string]string{
-		"gpu":    params.GetExtraStringParamOrDefault("gpuAllocationMetric", "kai_queue_allocated_gpus"),
-		"cpu":    params.GetExtraStringParamOrDefault("cpuAllocationMetric", "kai_queue_allocated_cpu_cores"),
-		"memory": params.GetExtraStringParamOrDefault("memoryAllocationMetric", "kai_queue_allocated_memory_bytes"),
+		"nvidia.com/gpu": params.GetExtraStringParamOrDefault("gpuAllocationMetric", "kai_queue_allocated_gpus"),
+		"cpu":            params.GetExtraStringParamOrDefault("cpuAllocationMetric", "kai_queue_allocated_cpu_cores"),
+		"memory":         params.GetExtraStringParamOrDefault("memoryAllocationMetric", "kai_queue_allocated_memory_bytes"),
 	}
 
 	return &PrometheusClient{
@@ -95,8 +95,13 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 func (p *PrometheusClient) queryResourceUsage(ctx context.Context, allocationMetric string) (map[common_info.QueueID]float64, error) {
 	queueUsage := make(map[common_info.QueueID]float64)
 
+	decayedAllocationMetric := allocationMetric
+	if p.usageParams.HalfLifePeriod != nil {
+		decayedAllocationMetric = fmt.Sprintf("((%s) * (%s))", allocationMetric, getExponentialDecayQuery(p.usageParams.HalfLifePeriod))
+	}
+
 	usageQuery := fmt.Sprintf("sum_over_time((%s)[%s:%s])",
-		allocationMetric,
+		decayedAllocationMetric,
 		p.usageParams.WindowSize.String(),
 		p.queryResolution.String(),
 	)
@@ -108,7 +113,7 @@ func (p *PrometheusClient) queryResourceUsage(ctx context.Context, allocationMet
 
 	// Log warnings if exist
 	for _, w := range warnings {
-		log.InfraLogger.V(3).Warnf("Warning querying cluster usage metric %s: %s", allocationMetric, w)
+		log.InfraLogger.V(3).Warnf("Warning querying cluster usage metric %s: %s", decayedAllocationMetric, w)
 	}
 
 	if usageResult.Type() != model.ValVector {
@@ -117,7 +122,7 @@ func (p *PrometheusClient) queryResourceUsage(ctx context.Context, allocationMet
 
 	usageVector := usageResult.(model.Vector)
 	if len(usageVector) == 0 {
-		return nil, fmt.Errorf("no data returned for cluster usage metric %s", allocationMetric)
+		return nil, fmt.Errorf("no data returned for cluster usage metric %s", decayedAllocationMetric)
 	}
 
 	for _, usageSample := range usageVector {
@@ -128,4 +133,15 @@ func (p *PrometheusClient) queryResourceUsage(ctx context.Context, allocationMet
 	}
 
 	return queueUsage, nil
+}
+
+func getExponentialDecayQuery(halfLifePeriod *time.Duration) string {
+	if halfLifePeriod == nil {
+		return ""
+	}
+
+	halfLifeSeconds := halfLifePeriod.Seconds()
+	now := time.Now().Unix()
+
+	return fmt.Sprintf("0.5^((%d - time()) / %f)", now, halfLifeSeconds)
 }

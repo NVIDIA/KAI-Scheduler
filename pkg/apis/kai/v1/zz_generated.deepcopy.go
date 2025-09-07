@@ -11,6 +11,7 @@ package v1
 
 import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/admission"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/node_scale_adjuster"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_group_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_grouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
@@ -104,6 +105,11 @@ func (in *ConfigSpec) DeepCopyInto(out *ConfigSpec) {
 	if in.PodGroupController != nil {
 		in, out := &in.PodGroupController, &out.PodGroupController
 		*out = new(pod_group_controller.PodGroupController)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.NodeScaleAdjuster != nil {
+		in, out := &in.NodeScaleAdjuster, &out.NodeScaleAdjuster
+		*out = new(node_scale_adjuster.NodeScaleAdjuster)
 		(*in).DeepCopyInto(*out)
 	}
 }

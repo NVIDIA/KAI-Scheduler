@@ -5,6 +5,7 @@ package test_utils
 
 import (
 	"os"
+	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 	"strconv"
 	"time"
 
@@ -44,6 +45,7 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 	testMetadata TestTopologyBasic,
 	controller *Controller,
 	createCacheMockIfNotExists bool,
+	topologies []*kueuev1alpha1.Topology,
 ) *framework.Session {
 	ssn := framework.Session{
 		Nodes: nodesInfoMap,
@@ -56,6 +58,7 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 		},
 		Queues:        queueInfoMap,
 		PodGroupInfos: jobInfoMap,
+		Topologies:    topologies,
 	}
 	ssn.OverrideMaxNumberConsolidationPreemptees(-1)
 	ssn.OverrideAllowConsolidatingReclaim(true)
@@ -256,7 +259,7 @@ func BuildSession(testMetadata TestTopologyBasic, controller *Controller) *frame
 		testMetadata.Mocks.Cache == nil
 
 	return CreateFakeSession(&schedulerConfig, nodesInfoMap, jobsInfoMap, queueInfoMap, testMetadata,
-		controller, createCacheMockIfNotExists)
+		controller, createCacheMockIfNotExists, testMetadata.Topologies)
 }
 
 func mergeQueues(queuesMaps ...map[common_info.QueueID]*queue_info.QueueInfo) map[common_info.QueueID]*queue_info.QueueInfo {

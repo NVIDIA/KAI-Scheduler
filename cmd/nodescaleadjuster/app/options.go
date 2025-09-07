@@ -19,6 +19,10 @@ type Options struct {
 	ScalingPodAppLabel       string
 	ScalingPodServiceAccount string
 	EnableLeaderElection     bool
+
+	// k8s client options
+	Qps   int
+	Burst int
 }
 
 // NewOptions creates a new Options
@@ -51,4 +55,6 @@ func (o *Options) AddFlags() {
 		"leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.IntVar(&o.Qps, "qps", 50, "Queries per second to the K8s API server")
+	flag.IntVar(&o.Burst, "burst", 300, "Burst to the K8s API server")
 }

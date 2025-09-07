@@ -47,6 +47,7 @@ type TestNodeBasic struct {
 	CPUMillis       float64
 	GpuMemorySynced *bool
 	MaxTaskNum      *int
+	Labels          map[string]string
 }
 
 func BuildNodesInfoMap(Nodes map[string]TestNodeBasic, tasksToNodeMap map[string]pod_info.PodsMap,
@@ -120,6 +121,9 @@ func buildNodeInfo(
 		migEnabledLabelKey:               migEnabledLabel,
 		commonconstants.MigStrategyLabel: string(nodeMetadata.MigStrategy),
 		tasks_fake.NodeAffinityKey:       nodeName,
+	}
+	for labelKey, labelValue := range nodeMetadata.Labels {
+		node.Labels[labelKey] = labelValue
 	}
 	if nodeMetadata.GPUMemory > 0 {
 		node.Labels[node_info.GpuMemoryLabel] = strconv.Itoa(nodeMetadata.GPUMemory)
