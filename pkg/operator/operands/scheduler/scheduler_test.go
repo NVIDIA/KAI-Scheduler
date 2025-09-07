@@ -1,3 +1,6 @@
+// Copyright 2025 NVIDIA CORPORATION
+// SPDX-License-Identifier: Apache-2.0
+
 package scheduler
 
 import (
@@ -157,7 +160,7 @@ tiers:
 
 		It("Should create different configmap for spread", func(ctx context.Context) {
 			spreadShard := shard.DeepCopy()
-			spreadShard.Spec.Args.PlacementStrategy = &kaiv1.PlacementStrategy{
+			spreadShard.Spec.PlacementStrategy = &kaiv1.PlacementStrategy{
 				Cpu: ptr.To("spread"),
 				Gpu: ptr.To("spread"),
 			}
