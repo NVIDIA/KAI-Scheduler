@@ -1325,6 +1325,10 @@ spec:
                     description: PodLabelSelector filters pods for webhooks and pod
                       grouper
                     type: object
+                  prometheusEnabled:
+                    description: PrometheusEnabled defines whether Prometheus should
+                      be enabled
+                    type: boolean
                   queueLabelKey:
                     description: QueueLabelKey specifies the pod label key whose value
                       will be the queue name of the pod.
@@ -1955,6 +1959,13 @@ spec:
                             type: object
                         type: object
                     type: object
+                type: object
+              prometheus:
+                description: Prometheus specifies configuration for Prometheus monitoring
+                properties:
+                  enabled:
+                    description: Enabled defines whether Prometheus should be deployed
+                    type: boolean
                 type: object
               queueController:
                 description: QueueController specifies configuration for the queue

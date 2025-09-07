@@ -10,6 +10,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/node_scale_adjuster"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_group_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_grouper"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
@@ -70,6 +71,10 @@ type ConfigSpec struct {
 	// NodeScaleAdjuster specifies configuration for the node-scale-adjuster
 	// +kubebuilder:validation:Optional
 	NodeScaleAdjuster *node_scale_adjuster.NodeScaleAdjuster `json:"nodeScaleAdjuster,omitempty"`
+
+	// Prometheus specifies configuration for Prometheus monitoring
+	// +kubebuilder:validation:Optional
+	Prometheus *prometheus.Prometheus `json:"prometheus,omitempty"`
 }
 
 func (c *ConfigSpec) SetDefaultsWhereNeeded() {
@@ -96,6 +101,9 @@ func (c *ConfigSpec) SetDefaultsWhereNeeded() {
 
 	c.NodeScaleAdjuster = common.SetDefault(c.NodeScaleAdjuster, &node_scale_adjuster.NodeScaleAdjuster{})
 	c.NodeScaleAdjuster.SetDefaultsWhereNeeded()
+
+	c.Prometheus = common.SetDefault(c.Prometheus, &prometheus.Prometheus{})
+	c.Prometheus.SetDefaultsWhereNeeded()
 }
 
 // ConfigStatus defines the observed state of Config
