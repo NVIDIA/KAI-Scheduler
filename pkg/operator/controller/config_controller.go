@@ -40,6 +40,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/node_scale_adjuster"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/pod_group_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/pod_grouper"
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/prometheus"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/queue_controller"
 )
 
@@ -50,6 +51,7 @@ var ConfigReconcilerOperands = []operands.Operand{
 	&pod_group_controller.PodGroupController{},
 	&node_scale_adjuster.NodeScaleAdjuster{},
 	&admission.Admission{},
+	&prometheus.Prometheus{},
 }
 
 // ConfigReconciler reconciles a Config object
@@ -74,6 +76,7 @@ func (r *ConfigReconciler) SetOperands(ops []operands.Operand) {
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="nvidia.com",resources=clusterpolicies,verbs=get;list;watch
+// +kubebuilder:rbac:groups="monitoring.coreos.com",resources=prometheuses,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

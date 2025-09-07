@@ -61,6 +61,10 @@ type GlobalConfig struct {
 	// PodLabelSelector filters pods for webhooks and pod grouper
 	// +kubebuilder:validation:Optional
 	PodLabelSelector map[string]string `json:"podLabelSelector,omitempty"`
+
+	// PrometheusEnabled defines whether Prometheus should be enabled
+	// +kubebuilder:validation:Optional
+	PrometheusEnabled *bool `json:"prometheusEnabled,omitempty"`
 }
 
 func (g *GlobalConfig) SetDefaultWhereNeeded() {

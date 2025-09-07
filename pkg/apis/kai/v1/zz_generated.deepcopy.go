@@ -15,6 +15,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/node_scale_adjuster"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_group_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_grouper"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -116,6 +117,11 @@ func (in *ConfigSpec) DeepCopyInto(out *ConfigSpec) {
 	if in.NodeScaleAdjuster != nil {
 		in, out := &in.NodeScaleAdjuster, &out.NodeScaleAdjuster
 		*out = new(node_scale_adjuster.NodeScaleAdjuster)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Prometheus != nil {
+		in, out := &in.Prometheus, &out.Prometheus
+		*out = new(prometheus.Prometheus)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -222,6 +228,11 @@ func (in *GlobalConfig) DeepCopyInto(out *GlobalConfig) {
 		for key, val := range *in {
 			(*out)[key] = val
 		}
+	}
+	if in.PrometheusEnabled != nil {
+		in, out := &in.PrometheusEnabled, &out.PrometheusEnabled
+		*out = new(bool)
+		**out = **in
 	}
 }
 
