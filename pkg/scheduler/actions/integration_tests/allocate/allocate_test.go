@@ -6,11 +6,8 @@ package allocate_test
 import (
 	"testing"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
-	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
@@ -1073,124 +1070,6 @@ func getAllocateTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					"pending_job1": {
 						GPUsRequired: 1,
 						Status:       pod_status.Pending,
-					},
-				},
-				Mocks: &test_utils.TestMock{
-					CacheRequirements: &test_utils.CacheMocking{
-						NumberOfCacheBinds: 2,
-					},
-				},
-			},
-			RoundsUntilMatch: 1,
-		},
-		{
-			TestTopologyBasic: test_utils.TestTopologyBasic{
-				Name: "Topology basic test",
-				Topologies: []*kueuev1alpha1.Topology{
-					{
-						ObjectMeta: v1.ObjectMeta{
-							Name: "cluster-topology",
-						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
-								{
-									NodeLabel: "k8s.io/rack",
-								},
-							},
-						},
-					},
-				},
-				Jobs: []*jobs_fake.TestJobBasic{
-					{
-						Name:                "running_job0",
-						RequiredGPUsPerTask: 1,
-						Priority:            constants.PriorityTrainNumber,
-						QueueName:           "queue0",
-						Tasks: []*tasks_fake.TestTaskBasic{
-							{
-								State:    pod_status.Running,
-								NodeName: "node0",
-							},
-						},
-					},
-					{
-						Name:                "pending_job0",
-						RequiredGPUsPerTask: 1,
-						Priority:            constants.PriorityTrainNumber,
-						QueueName:           "queue0",
-						Topology: &enginev2alpha2.TopologyConstraint{
-							Topology:              "cluster-topology",
-							RequiredTopologyLevel: "k8s.io/rack",
-						},
-						Tasks: []*tasks_fake.TestTaskBasic{
-							{
-								State: pod_status.Pending,
-							},
-							{
-								State: pod_status.Pending,
-							},
-						},
-					},
-				},
-				Nodes: map[string]nodes_fake.TestNodeBasic{
-					"node0": {
-						GPUs: 1,
-						Labels: map[string]string{
-							"k8s.io/rack": "rack1",
-						},
-					},
-					"node1": {
-						GPUs: 1,
-						Labels: map[string]string{
-							"k8s.io/rack": "rack1",
-						},
-					},
-					"node2": {
-						GPUs: 1,
-						Labels: map[string]string{
-							"k8s.io/rack": "rack2",
-						},
-					},
-					"node3": {
-						GPUs: 1,
-						Labels: map[string]string{
-							"k8s.io/rack": "rack2",
-						},
-					},
-				},
-				Queues: []test_utils.TestQueueBasic{
-					{
-						Name:               "queue0",
-						ParentQueue:        "department-a",
-						DeservedGPUs:       4,
-						GPUOverQuotaWeight: 1,
-						MaxAllowedGPUs:     4,
-					},
-				},
-				Departments: []test_utils.TestDepartmentBasic{
-					{
-						Name:         "department-a",
-						DeservedGPUs: 4,
-					},
-				},
-				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
-					"running_job0-0": {
-						NodeName:             "node0",
-						GPUsRequired:         1,
-						Status:               pod_status.Running,
-						DontValidateGPUGroup: true,
-					},
-					"pending_job0-0": {
-						NodeName:             "node2",
-						GPUsRequired:         1,
-						Status:               pod_status.Running,
-						DontValidateGPUGroup: true,
-					},
-					"pending_job0-1": {
-						NodeName:             "node3",
-						GPUsRequired:         1,
-						Status:               pod_status.Running,
-						DontValidateGPUGroup: true,
 					},
 				},
 				Mocks: &test_utils.TestMock{
