@@ -33,9 +33,6 @@ type Scheduler struct {
 }
 
 func (s *Scheduler) SetDefaultsWhereNeeded(replicaCount *int32) {
-	if s.Service == nil {
-		s.Service = &common.Service{}
-	}
 	s.Service = common.SetDefault(s.Service, &common.Service{})
 	s.Service.Enabled = common.SetDefault(s.Service.Enabled, ptr.To(false))
 	s.Service.SetDefaultsWhereNeeded(defaultImageName)
@@ -65,7 +62,7 @@ func (s *Scheduler) SetDefaultsWhereNeeded(replicaCount *int32) {
 type Service struct {
 	// Type specifies the service type
 	// +kubebuilder:validation:Optional
-	Type v1.ServiceType `json:"type,omitempty"`
+	Type *v1.ServiceType `json:"type,omitempty"`
 
 	// Port specifies the service port
 	// +kubebuilder:validation:Optional
@@ -77,13 +74,7 @@ type Service struct {
 }
 
 func (service *Service) SetDefaultsWhereNeeded() {
-	if service.Type == "" {
-		service.Type = v1.ServiceTypeClusterIP
-	}
-	if service.Port == nil {
-		service.Port = ptr.To(8080)
-	}
-	if service.TargetPort == nil {
-		service.TargetPort = ptr.To(8080)
-	}
+	service.Type = common.SetDefault(service.Type, ptr.To(v1.ServiceTypeClusterIP))
+	service.Port = common.SetDefault(service.Port, ptr.To(8080))
+	service.TargetPort = common.SetDefault(service.TargetPort, ptr.To(8080))
 }

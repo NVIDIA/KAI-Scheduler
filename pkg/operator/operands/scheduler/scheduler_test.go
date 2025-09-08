@@ -40,6 +40,7 @@ var _ = Describe("Scheduler", func() {
 
 		kaiConfig = &kaiv1.Config{}
 		kaiConfig.Spec.SetDefaultsWhereNeeded()
+		kaiConfig.Spec.Scheduler.Service.Enabled = ptr.To(true)
 		shard = &kaiv1.SchedulingShard{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "default",

@@ -492,7 +492,7 @@ func TestServiceForShard(t *testing.T) {
 						SchedulerService: &kaiv1scheduler.Service{
 							Port:       ptr.To(8080),
 							TargetPort: ptr.To(8080),
-							Type:       corev1.ServiceTypeClusterIP,
+							Type:       ptr.To(corev1.ServiceTypeClusterIP),
 						},
 					},
 				},
@@ -512,7 +512,7 @@ func TestServiceForShard(t *testing.T) {
 						SchedulerService: &kaiv1scheduler.Service{
 							Port:       ptr.To(80),
 							TargetPort: ptr.To(80),
-							Type:       corev1.ServiceTypeLoadBalancer,
+							Type:       ptr.To(corev1.ServiceTypeLoadBalancer),
 						},
 					},
 				},
