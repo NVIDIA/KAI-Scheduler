@@ -71,6 +71,7 @@ rules:
   - kai.scheduler
   resources:
   - configs
+  - schedulingshards
   verbs:
   - create
   - delete
@@ -83,12 +84,14 @@ rules:
   - kai.scheduler
   resources:
   - configs/finalizers
+  - schedulingshards/finalizers
   verbs:
   - update
 - apiGroups:
   - kai.scheduler
   resources:
   - configs/status
+  - schedulingshards/status
   verbs:
   - get
   - patch

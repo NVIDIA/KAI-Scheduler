@@ -23,7 +23,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	app.InitOperands(controller.ConfigReconcilerOperands)
+	app.InitOperands(controller.ConfigReconcilerOperands, controller.OperandsForShard)
 
 	err = app.Run()
 	if err != nil {

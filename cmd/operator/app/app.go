@@ -47,6 +47,7 @@ func init() {
 type App struct {
 	manager          manager.Manager
 	configReconciler *controller.ConfigReconciler
+	shardReconciler  *controller.SchedulingShardReconciler
 }
 
 func New() (*App, error) {
@@ -93,15 +94,20 @@ func New() (*App, error) {
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}
+	shardReconciler := controller.NewSchedulingShardReconciler(
+		mgr.GetClient(), mgr.GetScheme(),
+	)
 
 	return &App{
 		manager:          mgr,
 		configReconciler: configReconciler,
+		shardReconciler:  shardReconciler,
 	}, nil
 }
 
-func (app *App) InitOperands(configOperands []operands.Operand) {
+func (app *App) InitOperands(configOperands []operands.Operand, shardOperandsForShard func(*kaiv1.SchedulingShard) []operands.Operand) {
 	app.configReconciler.SetOperands(configOperands)
+	app.shardReconciler.SetOperands(shardOperandsForShard)
 }
 
 func (app *App) Run() error {
@@ -109,6 +115,10 @@ func (app *App) Run() error {
 	var err error
 	if err = app.configReconciler.SetupWithManager(app.manager); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Config")
+		os.Exit(1)
+	}
+	if err = app.shardReconciler.SetupWithManager(app.manager); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SchedulingShard")
 		os.Exit(1)
 	}
 
