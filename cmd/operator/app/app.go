@@ -105,8 +105,9 @@ func New() (*App, error) {
 	}, nil
 }
 
-func (app *App) InitOperands(configOperands []operands.Operand) {
+func (app *App) InitOperands(configOperands []operands.Operand, shardOperandsForShard func(*kaiv1.SchedulingShard) []operands.Operand) {
 	app.configReconciler.SetOperands(configOperands)
+	app.shardReconciler.SetOperands(shardOperandsForShard)
 }
 
 func (app *App) Run() error {

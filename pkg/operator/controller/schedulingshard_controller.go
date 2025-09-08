@@ -37,12 +37,19 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/scheduler"
 )
 
+func OperandsForShard(shard *kaiv1.SchedulingShard) []operands.Operand {
+	return []operands.Operand{
+		scheduler.NewSchedulerForShard(shard),
+	}
+}
+
 // SchedulingShardReconciler reconciles a SchedulingShard object
 type SchedulingShardReconciler struct {
 	client.Client
-	Scheme             *runtime.Scheme
-	deployablePerShard map[string]*deployable.DeployableOperands
-	statusReconcilers  map[string]*status_reconciler.StatusReconciler
+	Scheme                *runtime.Scheme
+	shardOperandsForShard func(*kaiv1.SchedulingShard) []operands.Operand
+	deployablePerShard    map[string]*deployable.DeployableOperands
+	statusReconcilers     map[string]*status_reconciler.StatusReconciler
 }
 
 func NewSchedulingShardReconciler(client client.Client, scheme *runtime.Scheme) *SchedulingShardReconciler {
@@ -52,6 +59,10 @@ func NewSchedulingShardReconciler(client client.Client, scheme *runtime.Scheme) 
 		deployablePerShard: map[string]*deployable.DeployableOperands{},
 		statusReconcilers:  map[string]*status_reconciler.StatusReconciler{},
 	}
+}
+
+func (r *SchedulingShardReconciler) SetOperands(shardOperandsForShard func(*kaiv1.SchedulingShard) []operands.Operand) {
+	r.shardOperandsForShard = shardOperandsForShard
 }
 
 // +kubebuilder:rbac:groups=kai.scheduler,resources=schedulingshards,verbs=get;list;watch;create;update;patch;delete
@@ -73,7 +84,7 @@ func (r *SchedulingShardReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	shard.Spec.SetDefaultsWhereNeeded()
 
 	r.deployablePerShard[shard.Name] = deployable.New(
-		[]operands.Operand{scheduler.NewSchedulerForShard(shard)},
+		r.shardOperandsForShard(shard),
 		known_types.SchedulingShardRegisteredCollectable,
 	)
 	r.deployablePerShard[shard.Name].RegisterFieldsInheritFromClusterObjects(&admissionv1.ValidatingWebhookConfiguration{},
