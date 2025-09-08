@@ -629,6 +629,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				"rack",
 				"zone",
 				"datacenter",
+				"root",
 			},
 			expectedError: "",
 		},
@@ -786,6 +787,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				"rack",
 				"zone",
 				"datacenter",
+				"root",
 			},
 			expectedError: "",
 		},
@@ -820,6 +822,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			expectedLevels: []string{
 				"zone",
 				"datacenter",
+				"root",
 			},
 			expectedError: "",
 		},
@@ -851,6 +854,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			},
 			expectedLevels: []string{
 				"zone",
+				"root",
 			},
 			expectedError: "",
 		},

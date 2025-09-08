@@ -62,6 +62,9 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 			Root:             NewTopologyDomainInfo(TopologyDomainID("root"), "datacenter", "cluster", 0),
 			TopologyResource: singleTopology,
 		}
+		topologyTree.DomainsByLevel["root"] = map[TopologyDomainID]*TopologyDomainInfo{
+			topologyTree.Root.ID: topologyTree.Root,
+		}
 
 		for _, nodeInfo := range ssn.Nodes {
 			t.addNodeDataToTopology(topologyTree, singleTopology, nodeInfo)
