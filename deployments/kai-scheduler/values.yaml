@@ -67,7 +67,6 @@ queuecontroller:
   image:
     name: queuecontroller
     pullPolicy: IfNotPresent
-  additionalArgs: []
   certSecretName: queuecontroller-webhook-tls-secret
 
 admission:
@@ -76,7 +75,6 @@ admission:
     name: admission
     pullPolicy: IfNotPresent
   certSecretName: admission-webhook-tls-secret
-  additionalArgs: []
   ports:
     webhookPort: 9443
     metricsPort: 8080
@@ -95,16 +93,3 @@ crdupgrader:
   image:
     name: crd-upgrader
     pullPolicy: IfNotPresent
-
-webhookmanager:
-  image:
-    name: webhookmanager
-    pullPolicy: IfNotPresent
-  resources:
-    limits:
-      cpu: "500m"
-      memory: "256Mi"
-    requests:
-      cpu: "250m"
-      memory: "128Mi"
-

@@ -8,12 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Added configurable plugins hub for podgrouper using interface and RegisterPlugins
+- Initial KAI-operator implementation for managing components
+- PodGroup Controller, Queue Controller, Admission and Scale Adjuster operands to operator lifecycle management
+- Deployment of operator in Helm chart alongside pod group controller
+- Deploy PodGroup Controller, Queue Controller, Admission and Scale Adjuster via operator for streamlined deployment
 
 ### Changed
 - Moved the CRDs into the helm chart so that they are also installed by helm and not only by the crd-upgrader, but removed the external kueue clone of topology CRD from being automatically installed.
+- Updated queue controller image name to align with current deployment standards
 
 ### Fixed
 - Fixed a bug where workload with subgroups would not consider additional tasks above minAvailable
+- Removed webhook manager component as part of operator-based refactoring
 
 ## [v0.8.3] - 20250-8-31
 
