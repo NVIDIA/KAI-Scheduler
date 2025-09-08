@@ -12,6 +12,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_grouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/scheduler"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,6 +61,10 @@ type ConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	Admission *admission.Admission `json:"admission,omitempty"`
 
+	// Scheduler is the configuration for the scheduler microservice
+	// +kubebuilder:validation:Optional
+	Scheduler *scheduler.Scheduler `json:"scheduler,omitempty"`
+
 	// QueueController specifies configuration for the queue controller
 	// +kubebuilder:validation:Optional
 	QueueController *queue_controller.QueueController `json:"queueController,omitempty"`
@@ -92,6 +97,9 @@ func (c *ConfigSpec) SetDefaultsWhereNeeded() {
 
 	c.PodGrouper = common.SetDefault(c.PodGrouper, &pod_grouper.PodGrouper{})
 	c.PodGrouper.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
+
+	c.Scheduler = common.SetDefault(c.Scheduler, &scheduler.Scheduler{})
+	c.Scheduler.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
 
 	c.PodGroupController = common.SetDefault(c.PodGroupController, &pod_group_controller.PodGroupController{})
 	c.PodGroupController.SetDefaultsWhereNeeded(c.Global.ReplicaCount)

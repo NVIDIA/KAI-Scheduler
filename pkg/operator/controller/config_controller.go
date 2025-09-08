@@ -43,6 +43,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/pod_grouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/prometheus"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/queue_controller"
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/scheduler"
 )
 
 var ConfigReconcilerOperands = []operands.Operand{
@@ -53,6 +54,7 @@ var ConfigReconcilerOperands = []operands.Operand{
 	&node_scale_adjuster.NodeScaleAdjuster{},
 	&admission.Admission{},
 	&prometheus.Prometheus{},
+	&scheduler.SchedulerForConfig{},
 }
 
 // ConfigReconciler reconciles a Config object
