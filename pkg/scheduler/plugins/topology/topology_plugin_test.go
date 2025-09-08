@@ -131,7 +131,6 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 		DetailedFitErrors:           false,
 		ScheduleCSIStorage:          false,
 		FullHierarchyFairness:       true,
-		NodeLevelScheduler:          false,
 		NumOfStatusRecordingWorkers: 1,
 	})
 
