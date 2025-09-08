@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	imageName = "pod-grouper"
+	imageName = "podgrouper"
 )
 
 type PodGrouper struct {
@@ -52,7 +52,6 @@ type Args struct {
 
 func (pg *PodGrouper) SetDefaultsWhereNeeded(replicaCount *int32) {
 	pg.Service = common.SetDefault(pg.Service, &common.Service{})
-	pg.Service.Enabled = common.SetDefault(pg.Service.Enabled, ptr.To(false))
 	pg.Service.SetDefaultsWhereNeeded(imageName)
 
 	if _, found := pg.Service.Resources.Requests[v1.ResourceCPU]; !found {
