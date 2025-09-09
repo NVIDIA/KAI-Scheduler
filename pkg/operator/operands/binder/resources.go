@@ -6,7 +6,6 @@ package binder
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -26,8 +25,7 @@ import (
 )
 
 const (
-	mainResourceName        = "binder"
-	binderWebhookSecretName = "binder-webhook-tls-secret"
+	mainResourceName = "binder"
 )
 
 func deploymentForKAIConfig(
@@ -54,24 +52,6 @@ func deploymentForKAIConfig(
 	deployment.Spec.Strategy.RollingUpdate = nil
 	deployment.Spec.Replicas = config.Replicas
 	deployment.Spec.Template.Spec.Containers[0].Args = buildArgsList(kaiConfig, config, fakeGPU, cdiEnabled)
-	deployment.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
-		{
-			Name:          "webhook",
-			ContainerPort: int32(*config.Webhook.TargetPort),
-		},
-	}
-	deployment.Spec.Template.Spec.Containers[0].ReadinessProbe = &v1.Probe{
-		ProbeHandler: v1.ProbeHandler{
-			HTTPGet: &v1.HTTPGetAction{
-				Path: "/readyz",
-				Port: intstr.IntOrString{
-					Type:   intstr.Int,
-					IntVal: int32(*config.Webhook.ProbePort),
-				},
-			},
-		},
-		InitialDelaySeconds: 5,
-	}
 
 	return []client.Object{deployment}, nil
 }
@@ -110,9 +90,9 @@ func serviceForKAIConfig(
 	service.Spec.Ports = []v1.ServicePort{
 		{
 			Name:       "http-metrics",
-			Port:       int32(*config.Webhook.MetricsPort),
+			Port:       int32(*config.MetricsPort),
 			Protocol:   v1.ProtocolTCP,
-			TargetPort: intstr.FromInt(*config.Webhook.MetricsPort),
+			TargetPort: intstr.FromInt(*config.MetricsPort),
 		},
 	}
 	service.Spec.Selector = map[string]string{
@@ -209,12 +189,10 @@ func buildArgsList(kaiConfig *kaiv1.Config, config *kaiv1binder.Binder, fakeGPU 
 		config.ResourceReservation.Image.Url(),
 		"--scale-adjust-namespace",
 		*kaiConfig.Spec.NodeScaleAdjuster.Args.NodeScaleNamespace,
-		"--webhook-addr",
-		strconv.Itoa(*config.Webhook.TargetPort),
 		"--health-probe-bind-address",
-		fmt.Sprintf(":%d", *config.Webhook.ProbePort),
+		fmt.Sprintf(":%d", *config.ProbePort),
 		"--metrics-bind-address",
-		fmt.Sprintf(":%d", *config.Webhook.MetricsPort),
+		fmt.Sprintf(":%d", *config.MetricsPort),
 		fmt.Sprintf("--cdi-enabled=%t", cdiEnabled),
 	}
 	if config.MaxConcurrentReconciles != nil {

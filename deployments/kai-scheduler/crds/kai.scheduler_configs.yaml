@@ -179,6 +179,12 @@ spec:
                     description: MaxConcurrentReconciles is the maximum number of
                       concurrent reconciles for both pods and BindRequests
                     type: integer
+                  metricsPort:
+                    description: MetricsPort specifies the metrics service port
+                    type: integer
+                  probePort:
+                    description: ProbePort specifies the health check port
+                    type: integer
                   replicas:
                     description: Replicas specifies the number of replicas of the
                       KAI binder service
@@ -323,24 +329,6 @@ spec:
                     description: VolumeBindingTimeoutSeconds specifies the timeout
                       for volume binding in seconds
                     type: integer
-                  webhook:
-                    description: Webhook defines configuration for the binder service
-                    properties:
-                      metricsPort:
-                        description: MetricsPort specifies the metrics service port
-                        type: integer
-                      port:
-                        description: Port specifies the webhook service port
-                        type: integer
-                      probePort:
-                        description: ProbePort specifies the health and readiness
-                          probe port
-                        type: integer
-                      targetPort:
-                        description: TargetPort specifies the webhook service container
-                          port
-                        type: integer
-                    type: object
                 type: object
               global:
                 description: Global defined global configuration of the system

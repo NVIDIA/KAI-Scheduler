@@ -21,10 +21,6 @@ const (
 type Binder struct {
 	Service *common.Service `json:"service,omitempty"`
 
-	// Webhook defines configuration for the binder service
-	// +kubebuilder:validation:Optional
-	Webhook *Webhook `json:"webhook,omitempty"`
-
 	// ResourceReservation controls configuration for the resource reservation functionality
 	// +kubebuilder:validation:Optional
 	ResourceReservation *ResourceReservation `json:"resourceReservation,omitempty"`
@@ -40,6 +36,12 @@ type Binder struct {
 	// VolumeBindingTimeoutSeconds specifies the timeout for volume binding in seconds
 	// +kubebuilder:validation:Optional
 	VolumeBindingTimeoutSeconds *int `json:"volumeBindingTimeoutSeconds,omitempty"`
+
+	// ProbePort specifies the health check port
+	ProbePort *int `json:"probePort,omitempty"`
+
+	// MetricsPort specifies the metrics service port
+	MetricsPort *int `json:"metricsPort,omitempty"`
 }
 
 func (b *Binder) SetDefaultsWhereNeeded(replicaCount *int32) {
@@ -60,40 +62,14 @@ func (b *Binder) SetDefaultsWhereNeeded(replicaCount *int32) {
 		b.Service.Resources.Limits[v1.ResourceMemory] = resource.MustParse("200Mi")
 	}
 
-	b.Webhook = common.SetDefault(b.Webhook, &Webhook{})
-	b.Webhook.SetDefaultsWhereNeeded()
-
 	b.Replicas = common.SetDefault(b.Replicas, ptr.To(ptr.Deref(replicaCount, 1)))
 
 	b.ResourceReservation = common.SetDefault(b.ResourceReservation, &ResourceReservation{})
 	b.ResourceReservation.SetDefaultsWhereNeeded()
 
-}
+	b.ProbePort = common.SetDefault(b.ProbePort, ptr.To(8081))
+	b.MetricsPort = common.SetDefault(b.MetricsPort, ptr.To(8080))
 
-// Webhook defines configuration for the binder webhook
-type Webhook struct {
-	// Port specifies the webhook service port
-	// +kubebuilder:validation:Optional
-	Port *int `json:"port,omitempty"`
-
-	// TargetPort specifies the webhook service container port
-	// +kubebuilder:validation:Optional
-	TargetPort *int `json:"targetPort,omitempty"`
-
-	// ProbePort specifies the health and readiness probe port
-	ProbePort *int `json:"probePort,omitempty"`
-
-	// MetricsPort specifies the metrics service port
-	MetricsPort *int `json:"metricsPort,omitempty"`
-}
-
-// SetDefaultsWhereNeeded sets default fields for unset fields
-func (w *Webhook) SetDefaultsWhereNeeded() {
-
-	w.Port = common.SetDefault(w.Port, ptr.To(443))
-	w.TargetPort = common.SetDefault(w.TargetPort, ptr.To(9443))
-	w.ProbePort = common.SetDefault(w.ProbePort, ptr.To(8081))
-	w.MetricsPort = common.SetDefault(w.MetricsPort, ptr.To(8080))
 }
 
 type ResourceReservation struct {
