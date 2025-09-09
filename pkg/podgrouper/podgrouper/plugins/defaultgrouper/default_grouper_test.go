@@ -299,7 +299,7 @@ func TestGetPodGroupMetadataOnPriorityClassFromDefaultsGroupKindConfigMap(t *tes
 			Namespace: prioritiesConfigMapNamespace,
 		},
 		Data: map[string]string{
-			constants.DefaultPrioritiesConfigMapTypesKey: `[{"typeName":"TestKind","group": "apps",priorityName":"high-priority"},{"typeName":"TestKind","group":"",priorityName":"low-priority"}]`,
+			constants.DefaultPrioritiesConfigMapTypesKey: `[{"typeName":"TestKind","group":"apps","priorityName":"high-priority"},{"typeName":"TestKind","group":"","priorityName":"low-priority"}]`,
 		},
 	}
 	kubeClient := fake.NewFakeClient(highPriorityClass, defaultsConfigmap)
@@ -333,7 +333,7 @@ func TestGetPodGroupMetadataOnPriorityClassFromDefaultsKindConfigMap(t *testing.
 			Namespace: prioritiesConfigMapNamespace,
 		},
 		Data: map[string]string{
-			constants.DefaultPrioritiesConfigMapTypesKey: `[{"typeName":"TestKind","group":"differentgroup",priorityName":"high-priority"},{"typeName":"TestKind","priorityName":"low-priority"}]`,
+			constants.DefaultPrioritiesConfigMapTypesKey: `[{"typeName":"TestKind","group":"differentgroup","priorityName":"high-priority"},{"typeName":"TestKind","priorityName":"low-priority"}]`,
 		},
 	}
 	kubeClient := fake.NewFakeClient(lowPriorityClass, defaultsConfigmap)

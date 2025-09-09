@@ -260,8 +260,8 @@ type workloadTypePriorityConfig struct {
 func prioritiesConfigListToMapping(configs *[]workloadTypePriorityConfig) map[string]string {
 	res := map[string]string{}
 	for _, config := range *configs {
-		goupKind := schema.GroupKind{Group: config.Group, Kind: config.TypeName}.String()
-		res[goupKind] = config.PriorityName
+		groupKind := schema.GroupKind{Group: config.Group, Kind: config.TypeName}.String()
+		res[groupKind] = config.PriorityName
 	}
 	return res
 }
