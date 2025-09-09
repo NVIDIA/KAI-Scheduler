@@ -77,18 +77,18 @@ type MinRuntime struct {
 
 // PlacementStrategy defines the scheduling strategy of NodePool
 type PlacementStrategy struct {
-	// Gpu scheduling strategy (binpack/spread)
+	// GPU scheduling strategy (binpack/spread)
 	// +kubebuilder:validation:Optional
-	Gpu *string `json:"gpu,omitempty"`
+	GPU *string `json:"gpu,omitempty"`
 
-	// Cpu scheduling strategy (binpack/spread)
+	// CPU scheduling strategy (binpack/spread)
 	// +kubebuilder:validation:Optional
-	Cpu *string `json:"cpu,omitempty"`
+	CPU *string `json:"cpu,omitempty"`
 }
 
 func (p *PlacementStrategy) SetDefaultWhereNeeded() {
-	p.Gpu = common.SetDefault(p.Gpu, ptr.To(binpackStrategy))
-	p.Cpu = common.SetDefault(p.Cpu, ptr.To(binpackStrategy))
+	p.GPU = common.SetDefault(p.GPU, ptr.To(binpackStrategy))
+	p.CPU = common.SetDefault(p.CPU, ptr.To(binpackStrategy))
 }
 
 // SchedulingShardStatus defines the observed state of SchedulingShard

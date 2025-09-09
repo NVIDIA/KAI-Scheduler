@@ -75,10 +75,10 @@ spec:
                 description: PlacementStrategy is the placement scheduler strategy
                 properties:
                   cpu:
-                    description: Cpu scheduling strategy (binpack/spread)
+                    description: CPU scheduling strategy (binpack/spread)
                     type: string
                   gpu:
-                    description: Gpu scheduling strategy (binpack/spread)
+                    description: GPU scheduling strategy (binpack/spread)
                     type: string
                 type: object
               queueDepthPerAction:
