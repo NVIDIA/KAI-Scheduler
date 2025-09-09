@@ -88,7 +88,6 @@ type SchedulerCacheParams struct {
 	DetailedFitErrors           bool
 	ScheduleCSIStorage          bool
 	FullHierarchyFairness       bool
-	NodeLevelScheduler          bool
 	AllowConsolidatingReclaim   bool
 	NumOfStatusRecordingWorkers int
 	UpdatePodEvictionCondition  bool
