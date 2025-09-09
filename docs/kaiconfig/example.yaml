@@ -1,0 +1,145 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: kai.scheduler/v1
+kind: Config
+metadata:
+  creationTimestamp: null
+  name: kai-config
+spec:
+  admission:
+    gpuSharing: false
+    queueLabelSelector: false
+    replicas: 1
+    service:
+      enabled: true
+      image:
+        name: admission
+        pullPolicy: IfNotPresent
+        repository: ""
+        tag: ""
+      k8sClientConfig:
+        burst: 100
+        qps: 20
+      resources:
+        limits:
+          cpu: 100m
+          memory: 512Mi
+        requests:
+          cpu: 50m
+          memory: 256Mi
+    webhook:
+      metricsPort: 8080
+      port: 443
+      probePort: 8081
+      targetPort: 9443
+  global:
+    nodePoolLabelKey: ""
+    openshift: false
+    queueLabelKey: kai.scheduler/queue
+    schedulerName: kai-scheduler
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - all
+      runAsNonRoot: true
+      runAsUser: 10000
+  namespace: kai-scheduler
+  nodeScaleAdjuster:
+    args:
+      nodeScaleNamespace: kai-scale-adjust
+      nodeScaleServiceAccount: kai-scale-adjust
+      scalingPodImage:
+        name: scaling-pod
+        pullPolicy: IfNotPresent
+        repository: ""
+        tag: ""
+    service:
+      enabled: false
+      image:
+        name: node-scale-adjuster
+        pullPolicy: IfNotPresent
+        repository: ""
+        tag: ""
+      k8sClientConfig:
+        burst: 100
+        qps: 20
+      resources:
+        limits:
+          cpu: 100m
+          memory: 512Mi
+        requests:
+          cpu: 50m
+          memory: 256Mi
+  podGroupController:
+    replicas: 1
+    service:
+      enabled: true
+      image:
+        name: podgroupcontroller
+        pullPolicy: IfNotPresent
+        repository: ""
+        tag: ""
+      k8sClientConfig:
+        burst: 100
+        qps: 20
+      resources:
+        limits:
+          cpu: 100m
+          memory: 512Mi
+        requests:
+          cpu: 50m
+          memory: 256Mi
+  podGrouper:
+    args: {}
+    k8sClientConfig: {}
+    replicas: 1
+    service:
+      enabled: true
+      image:
+        name: podgrouper
+        pullPolicy: IfNotPresent
+        repository: ""
+        tag: ""
+      k8sClientConfig:
+        burst: 100
+        qps: 20
+      resources:
+        limits:
+          cpu: 100m
+          memory: 512Mi
+        requests:
+          cpu: 50m
+          memory: 256Mi
+  queueController:
+    controllerService:
+      metrics:
+        name: metrics
+        port: 8080
+        targetPort: 8080
+      webhook:
+        name: webhook
+        port: 443
+        targetPort: 9443
+    replicas: 1
+    service:
+      enabled: true
+      image:
+        name: queuecontroller
+        pullPolicy: IfNotPresent
+        repository: ""
+        tag: ""
+      k8sClientConfig:
+        burst: 100
+        qps: 20
+      resources:
+        limits:
+          cpu: 100m
+          memory: 512Mi
+        requests:
+          cpu: 50m
+          memory: 256Mi
+    webhooks:
+      enableValidation: true
+status: {}

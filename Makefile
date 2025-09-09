@@ -34,8 +34,12 @@ $(SERVICE_NAMES):
 	$(MAKE) docker-build-generic SERVICE_NAME=$@
 
 .PHONY: validate
-validate: generate manifests clients gen-license generate-mocks lint
+validate: generate manifests clients gen-license generate-crd-examples generate-mocks lint
 	git diff --exit-code
+
+.PHONY: generate-crd-examples
+generate-crd-examples:
+	go run ./cmd/kaiconfig-gen --out-dir docs/kaiconfig --file-name example.yaml --name kai-config --namespace kai-scheduler
 
 .PHONY: generate-mocks
 generate-mocks: mockgen
