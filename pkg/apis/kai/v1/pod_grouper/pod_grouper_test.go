@@ -23,7 +23,7 @@ var _ = Describe("PodGrouper", func() {
 		replicaCount = 1
 		podGrouper.SetDefaultsWhereNeeded(&replicaCount)
 		Expect(*podGrouper.Service.Enabled).To(Equal(true))
-		Expect(*podGrouper.Service.Image.Name).To(Equal("pod-grouper"))
+		Expect(*podGrouper.Service.Image.Name).To(Equal("podgrouper"))
 		Expect(*podGrouper.Replicas).To(Equal(int32(1)))
 	})
 	It("Set Defaults with replicas", func(ctx context.Context) {
