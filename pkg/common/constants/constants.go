@@ -20,6 +20,10 @@ const (
 	DefaultKAIConfigSingeltonInstanceName = "kai-config"
 	DefaultNodePoolLabelKey               = ""
 
+	DefaultCPUWorkerNodeLabelKey = "node-role.kubernetes.io/cpu-worker"
+	DefaultGPUWorkerNodeLabelKey = "node-role.kubernetes.io/gpu-worker"
+	DefaultMIGWorkerNodeLabelKey = "node-role.kubernetes.io/mig-enabled"
+
 	// Pod Groups
 	PodGrouperWarning   = "PodGrouperWarning"
 	TopOwnerMetadataKey = "kai.scheduler/top-owner-metadata"

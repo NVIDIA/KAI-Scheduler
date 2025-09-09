@@ -72,7 +72,6 @@ func main() {
 		DetailedFitErrors:           snapshot.SchedulerParams.DetailedFitErrors,
 		ScheduleCSIStorage:          snapshot.SchedulerParams.ScheduleCSIStorage,
 		FullHierarchyFairness:       snapshot.SchedulerParams.FullHierarchyFairness,
-		NodeLevelScheduler:          snapshot.SchedulerParams.NodeLevelScheduler,
 		AllowConsolidatingReclaim:   snapshot.SchedulerParams.AllowConsolidatingReclaim,
 		NumOfStatusRecordingWorkers: snapshot.SchedulerParams.NumOfStatusRecordingWorkers,
 	}

@@ -228,7 +228,7 @@ func (dg *DefaultGrouper) getDefaultPriorityClassNameForKind(groupKind *schema.G
 	return ""
 }
 
-// getDefaultPrioritiesPerTypeMapping - returns a map of workload type to default priority class name.
+// getDefaultPrioritiesPerTypeMapping - returns a map of workload groupKind to default priority class name.
 // It fetches the default priorities from a ConfigMap if configured, otherwise returns an empty map.
 func (dg *DefaultGrouper) getDefaultPrioritiesPerTypeMapping() (map[string]string, error) {
 	if dg.defaultPrioritiesConfigMapName == "" || dg.defaultPrioritiesConfigMapNamespace == "" ||
@@ -252,6 +252,7 @@ func (dg *DefaultGrouper) getDefaultPrioritiesPerTypeMapping() (map[string]strin
 // to be able to json-parse the configmap data.
 type workloadTypePriorityConfig struct {
 	TypeName     string `json:"typeName"`
+	Group        string `json:"group"`
 	PriorityName string `json:"priorityName"`
 }
 
@@ -259,7 +260,8 @@ type workloadTypePriorityConfig struct {
 func prioritiesConfigListToMapping(configs *[]workloadTypePriorityConfig) map[string]string {
 	res := map[string]string{}
 	for _, config := range *configs {
-		res[config.TypeName] = config.PriorityName
+		groupKind := schema.GroupKind{Group: config.Group, Kind: config.TypeName}.String()
+		res[groupKind] = config.PriorityName
 	}
 	return res
 }
