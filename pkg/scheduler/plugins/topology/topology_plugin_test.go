@@ -7,6 +7,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	kubeaischedulerver "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -14,7 +16,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	"github.com/stretchr/testify/assert"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -181,7 +182,7 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 	assert.Equal(t, 1, len(topologyTrees))
 	testTopologyObj := topologyTrees["test-topology"]
 	assert.Equal(t, "test-topology", testTopologyObj.Name)
-	assert.Equal(t, 2, len(testTopologyObj.DomainsByLevel))
+	assert.Equal(t, 3, len(testTopologyObj.DomainsByLevel))
 
 	blockDomains := testTopologyObj.DomainsByLevel["test-topology-label/block"]
 	rackDomains := testTopologyObj.DomainsByLevel["test-topology-label/rack"]
