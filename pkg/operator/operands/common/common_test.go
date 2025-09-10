@@ -10,6 +10,7 @@ import (
 	nvidiav1 "github.com/NVIDIA/gpu-operator/api/nvidia/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -39,6 +40,7 @@ var _ = Describe("AllControllersAvailable", func() {
 				}
 				testScheme := scheme.Scheme
 				utilruntime.Must(nvidiav1.AddToScheme(testScheme))
+				utilruntime.Must(monitoringv1.AddToScheme(testScheme))
 				fakeKubeClient := fake.NewClientBuilder().WithScheme(testScheme).
 					WithRuntimeObjects(runtimeExistingObjects...).Build()
 
