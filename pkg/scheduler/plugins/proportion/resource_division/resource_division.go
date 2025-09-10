@@ -165,53 +165,24 @@ func divideUpToFairShare(totalResourceAmount, kValue float64, queues map[common_
 	for {
 		shouldRunAnotherRound := false
 		amountToGiveInCurrentRound := totalResourceAmount
-		totalWeights, totalUsages := getTotalWeightsForUnsatisfied(queues, resourceName)
-		if totalWeights == 0 {
-			break
-		}
 
-		if totalUsages == 0 {
-			totalUsages = 1
-		}
-
-		portions := make(map[common_info.QueueID]float64)
-		totalPortions := 0.0
-		for _, queue := range queues {
-			share := queue.ResourceShare(resourceName)
-			if share.Request <= share.FairShare {
-				// queue is satisfied, no need to give it more resources
-				continue
-			}
-
-			// Normalize queue over quota weight
-			nWeight := share.OverQuotaWeight / totalWeights
-
-			// We assume that usage is normalized to usage/clusterCapacity
-			nUsage := share.GetUsage()
-
-			// Floor portion to 0 if it's negative
-			portion := math.Max(0, nWeight+kValue*(nWeight-nUsage))
-
-			portions[queue.UID] = portion
-			totalPortions += portion
-		}
-
-		if totalPortions == 0 {
+		shareWeightsPerQueue, shareWeightsSum := calcShareWeights(queues, resourceName, kValue)
+		if shareWeightsSum == 0 {
 			break
 		}
 
 		for _, queue := range queues {
-			requested := getRemainingRequested(queue, resourceName)
-			if requested == 0 {
-				continue
-			}
-
 			if totalResourceAmount == 0 {
 				log.InfraLogger.V(7).Infof("no more resources, exiting")
 				break
 			}
 
+			if isQueueSatisfied(queue, resourceName) {
+				continue
+			}
+
 			resourceShare := queue.ResourceShare(resourceName)
+			requested := getRemainingRequested(queue, resourceName)
 			overQuotaWeight := resourceShare.OverQuotaWeight
 			if overQuotaWeight == 0 {
 				continue
@@ -221,11 +192,11 @@ func divideUpToFairShare(totalResourceAmount, kValue float64, queues map[common_
 				"remaining requested: %v, fairShare: %v",
 				resourceName, queue.Name, resourceShare.Deserved, requested, resourceShare.FairShare)
 
-			// normalize portion
-			portion := portions[queue.UID]
-			nPortion := portion / totalPortions
+			// normalize queueWeight
+			queueWeight := shareWeightsPerQueue[queue.UID]
+			normalizedQueueWeight := queueWeight / shareWeightsSum
 
-			fairShare := amountToGiveInCurrentRound * nPortion
+			fairShare := amountToGiveInCurrentRound * normalizedQueueWeight
 			resourceToGive := getResourceToGiveInCurrentRound(fairShare, requested, queue, remainingRequested)
 			if resourceToGive == 0 {
 				continue
@@ -245,6 +216,46 @@ func divideUpToFairShare(totalResourceAmount, kValue float64, queues map[common_
 	}
 
 	return totalResourceAmount, remainingRequested
+}
+
+func calcShareWeights(queues map[common_info.QueueID]*rs.QueueAttributes, resourceName rs.ResourceName, kValue float64) (map[common_info.QueueID]float64, float64) {
+	totalWeights := getTotalWeightsForUnsatisfied(queues, resourceName)
+	if totalWeights == 0 { // If there are no queues that are not satisfied, we can exit early
+		return make(map[common_info.QueueID]float64), 0
+	}
+
+	shareWeightsPerQueue := make(map[common_info.QueueID]float64)
+	shareWeightsSum := 0.0
+	for _, queue := range queues {
+		if isQueueSatisfied(queue, resourceName) {
+			continue
+		}
+		share := queue.ResourceShare(resourceName)
+
+		// Normalize queue over quota weight
+		nWeight := share.OverQuotaWeight / totalWeights
+
+		// We assume that usage is normalized to usage/clusterCapacity
+		nUsage := share.GetUsage()
+
+		// Floor shareWeight to 0 if it's negative
+		shareWeight := math.Max(0, nWeight+kValue*(nWeight-nUsage))
+
+		shareWeightsPerQueue[queue.UID] = shareWeight
+		shareWeightsSum += shareWeight
+	}
+	return shareWeightsPerQueue, shareWeightsSum
+}
+
+func isQueueSatisfied(queue *rs.QueueAttributes, resourceName rs.ResourceName) bool {
+	share := queue.ResourceShare(resourceName)
+	if share.Request <= share.FairShare {
+		return true
+	}
+	if share.MaxAllowed != commonconstants.UnlimitedResourceQuantity && share.MaxAllowed <= share.FairShare {
+		return true
+	}
+	return false
 }
 
 func divideRemainingResource(totalResourceAmount float64, remainingRequested map[common_info.QueueID]*remainingRequestedResource,
@@ -290,24 +301,14 @@ func getResourceToGiveInCurrentRound(fairShare float64, requested float64, queue
 	return resourcesToGive
 }
 
-func getTotalWeightsForUnsatisfied(queues map[common_info.QueueID]*rs.QueueAttributes, resourceName rs.ResourceName) (totalOverQuotaWeights, totalUsages float64) {
+func getTotalWeightsForUnsatisfied(queues map[common_info.QueueID]*rs.QueueAttributes, resourceName rs.ResourceName) (totalOverQuotaWeights float64) {
 	for _, queue := range queues {
 		remainingRequested := getRemainingRequested(queue, resourceName)
-		if remainingRequested <= 0 {
-			continue
+		if remainingRequested > 0 {
+			totalOverQuotaWeights += queue.ResourceShare(resourceName).OverQuotaWeight
 		}
-		totalOverQuotaWeights += queue.ResourceShare(resourceName).OverQuotaWeight
-
-		queueUsage := queue.ResourceShare(resourceName).GetUsage()
-		if queueUsage < 0 {
-			log.InfraLogger.V(1).Warnf("queue <%v> has negative usage score of <%v> for resource <%v>, expected non-negative",
-				queue.Name, queueUsage, resourceName)
-			continue
-		}
-
-		totalUsages += queueUsage
 	}
-	return totalOverQuotaWeights, totalUsages
+	return totalOverQuotaWeights
 }
 
 func getRemainingRequested(queue *rs.QueueAttributes, resourceName rs.ResourceName) float64 {
