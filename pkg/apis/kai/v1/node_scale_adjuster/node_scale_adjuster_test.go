@@ -20,7 +20,7 @@ var _ = Describe("NodeScaleAdjuster", func() {
 	It("Set Defaults", func(ctx context.Context) {
 		adjuster := &NodeScaleAdjuster{}
 		adjuster.SetDefaultsWhereNeeded()
-		Expect(*adjuster.Service.Enabled).To(Equal(false))
+		Expect(*adjuster.Service.Enabled).To(Equal(true))
 		Expect(*adjuster.Service.Image.Name).To(Equal(imageName))
 	})
 })

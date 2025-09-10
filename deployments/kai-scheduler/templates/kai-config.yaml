@@ -82,3 +82,18 @@ spec:
       targetPort: {{ .Values.admission.ports.webhookPort | default 9443 }}
       probePort: {{ .Values.admission.ports.probePort | default 8081 }}
       metricsPort: {{ .Values.admission.ports.metricsPort | default 8080 }}
+
+  nodeScaleAdjuster:
+    service:
+      enabled: {{ .Values.global.clusterAutoscaling }}
+      image:
+        name: {{ .Values.nodescaleadjuster.image.name }}
+        repository: {{ .Values.global.registry }}
+        tag: {{ .Chart.Version }}
+        pullPolicy: {{ .Values.nodescaleadjuster.image.pullPolicy | default .Values.global.imagePullPolicy }}
+      {{- if .Values.nodescaleadjuster.resources }}
+      resources:
+        {{- toYaml .Values.nodescaleadjuster.resources | nindent 6 }}
+      {{- end }}
+    args:
+      nodeScaleNamespace: {{ .Values.nodescaleadjuster.scalingPodNamespace }} 
