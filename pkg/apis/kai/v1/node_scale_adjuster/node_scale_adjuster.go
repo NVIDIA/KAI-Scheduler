@@ -56,7 +56,6 @@ func (args *Args) SetDefaultsWhereNeeded() {
 // SetDefaultsWhereNeeded sets default for unset fields
 func (nsa *NodeScaleAdjuster) SetDefaultsWhereNeeded() {
 	nsa.Service = common.SetDefault(nsa.Service, &common.Service{})
-	nsa.Service.Enabled = common.SetDefault(nsa.Service.Enabled, ptr.To(false))
 	nsa.Service.SetDefaultsWhereNeeded(imageName)
 
 	nsa.Args = common.SetDefault(nsa.Args, &Args{})

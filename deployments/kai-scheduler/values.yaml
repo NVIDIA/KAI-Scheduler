@@ -34,7 +34,6 @@ podgrouper:
   image:
     name: podgrouper
     pullPolicy: IfNotPresent
-  additionalArgs: []
   queueLabelKey: "kai.scheduler/queue"
 
 podgroupcontroller:
@@ -49,7 +48,6 @@ binder:
     pullPolicy: IfNotPresent
   resourceReservationImage:
     name: resourcereservation
-  additionalArgs: []
   ports:
     metricsPort: 8080
   cdi: false
@@ -58,7 +56,6 @@ scheduler:
   image:
     name: scheduler
     pullPolicy: IfNotPresent
-  additionalArgs: []
   placementStrategy: binpack
   ports:
     metricsPort: 8080
@@ -87,7 +84,7 @@ nodescaleadjuster:
     pullPolicy: IfNotPresent
   scalingPodImage:
     name: scalingpod
-  additionalArgs: []
+  scalingPodNamespace: kai-scale-adjust
 
 crdupgrader:
   image:
