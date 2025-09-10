@@ -37,6 +37,9 @@ type UsageParams struct {
 	WindowSize *time.Duration `yaml:"windowSize" json:"windowSize"`
 	// Window type for time-series aggregation. If not set, defaults to sliding.
 	WindowType *WindowType `yaml:"windowType" json:"windowType"`
+	// A cron string used to determine when to reset resource usage for all queues.
+	TumblingWindowCronString string `yaml:"tumblingWindowCronString" json:"tumblingWindowCronString"`
+
 	// ExtraParams are extra parameters for the usage db client, which are client specific.
 	ExtraParams map[string]string `yaml:"extraParams" json:"extraParams"`
 }
