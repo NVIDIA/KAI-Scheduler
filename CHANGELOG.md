@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Removed webhook manager component as part of operator-based refactoring
+- Fixed a bug where the scheduler would not re-try updating podgroup status after failure
 
 ## [v0.8.5] - 20250-09-04
 
