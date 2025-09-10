@@ -8,10 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Added configurable plugins hub for podgrouper using interface and RegisterPlugins
+- config.kai.scheduler CRD that will describe the installation of all KAI-scheduler services for the operator
 - Initial KAI-operator implementation for managing components
 - PodGroup Controller, Queue Controller, Admission and Scale Adjuster operands to operator lifecycle management
 - Deployment of operator in Helm chart alongside pod group controller
 - Deploy PodGroup Controller, Queue Controller, Admission and Scale Adjuster via operator for streamlined deployment
+- schedulingshrards.kai.scheduler CRD that describes partitioning the cluster nodes for different scheduling options.
 
 ### Changed
 - Moved the CRDs into the helm chart so that they are also installed by helm and not only by the crd-upgrader, but removed the external kueue clone of topology CRD from being automatically installed.

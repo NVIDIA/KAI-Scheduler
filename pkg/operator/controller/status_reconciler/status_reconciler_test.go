@@ -28,6 +28,7 @@ var _ = Describe("Status Controller", func() {
 	var (
 		fakeClient client.Client
 		kaiConfig  *kaiv1.Config
+		shard      *kaiv1.SchedulingShard
 	)
 	BeforeEach(func() {
 		scheme := scheme.Scheme
@@ -39,11 +40,17 @@ var _ = Describe("Status Controller", func() {
 				Generation: 1,
 			},
 		}
+		shard = &kaiv1.SchedulingShard{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "default",
+				Generation: 1,
+			},
+		}
 
 		fakeClient = fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithStatusSubresource(&kaiv1.Config{}).
-			WithObjects(kaiConfig).
+			WithStatusSubresource(&kaiv1.Config{}, &kaiv1.SchedulingShard{}).
+			WithObjects(kaiConfig, shard).
 			Build()
 	})
 
@@ -83,7 +90,10 @@ var _ = Describe("Status Controller", func() {
 
 	Describe("reconcileStatus", func() {
 		DescribeTable("should set the reconciling condition", func(
-			isDeployErr bool, isDeployed bool, isAvailableErr bool, isAvailable bool) {
+			getObject func() objectWithConditions,
+			isDeployErr bool, isDeployed bool, isAvailableErr bool, isAvailable bool,
+		) {
+			object := getObject()
 			fakeDeployable := &fakeDeployable{
 				isDeployed:     isDeployed,
 				isDeployedErr:  isDeployErr,
@@ -96,22 +106,28 @@ var _ = Describe("Status Controller", func() {
 				Client:     fakeClient,
 			}
 			err := statusReconciler.ReconcileStatus(
-				context.TODO(), &KAIConfigWithStatusWrapper{Config: kaiConfig},
+				context.TODO(), object,
 			)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(fakeClient.Get(context.TODO(), client.ObjectKeyFromObject(kaiConfig), kaiConfig)).To(Succeed())
+			Expect(fakeClient.Get(context.TODO(), client.ObjectKeyFromObject(object), object.GetInternalObject())).To(Succeed())
 
 			isDeployed = isDeployed && !isDeployErr
 			isAvailable = isAvailable && !isAvailableErr
-			Expect(checkIsDeployed(kaiConfig.Status.Conditions)).To(Equal(isDeployed))
-			Expect(checkIsAvailable(kaiConfig.Status.Conditions)).To(Equal(isAvailable))
+			Expect(checkIsDeployed(object.GetConditions())).To(Equal(isDeployed))
+			Expect(checkIsAvailable(object.GetConditions())).To(Equal(isAvailable))
 		},
-			Entry("no errors, all set", false, true, false, true),
-			Entry("no errors, deployed not avaialbe", false, true, false, false),
-			Entry("no errors, not deployed not avaialbe", false, true, false, false),
-			Entry("error isDeployed", true, false, false, false),
-			Entry("error isAvailable", false, false, true, false),
+			Entry("kai config - no errors, all set", func() objectWithConditions { return &KAIConfigWithStatusWrapper{Config: kaiConfig} }, false, true, false, true),
+			Entry("kai config - no errors, deployed not avaialbe", func() objectWithConditions { return &KAIConfigWithStatusWrapper{Config: kaiConfig} }, false, true, false, false),
+			Entry("kai config - no errors, not deployed not avaialbe", func() objectWithConditions { return &KAIConfigWithStatusWrapper{Config: kaiConfig} }, false, true, false, false),
+			Entry("kai config - error isDeployed", func() objectWithConditions { return &KAIConfigWithStatusWrapper{Config: kaiConfig} }, true, false, false, false),
+			Entry("kai config - error isAvailable", func() objectWithConditions { return &KAIConfigWithStatusWrapper{Config: kaiConfig} }, false, false, true, false),
+
+			Entry("scheduling shard - no errors, all set", func() objectWithConditions { return &SchedulingShardWithStatusWrapper{SchedulingShard: shard} }, false, true, false, true),
+			Entry("scheduling shard - no errors, deployed not avaialbe", func() objectWithConditions { return &SchedulingShardWithStatusWrapper{SchedulingShard: shard} }, false, true, false, false),
+			Entry("scheduling shard - no errors, not deployed not avaialbe", func() objectWithConditions { return &SchedulingShardWithStatusWrapper{SchedulingShard: shard} }, false, true, false, false),
+			Entry("scheduling shard - error isDeployed", func() objectWithConditions { return &SchedulingShardWithStatusWrapper{SchedulingShard: shard} }, true, false, false, false),
+			Entry("scheduling shard - error isAvailable", func() objectWithConditions { return &SchedulingShardWithStatusWrapper{SchedulingShard: shard} }, false, false, true, false),
 		)
 	})
 })
