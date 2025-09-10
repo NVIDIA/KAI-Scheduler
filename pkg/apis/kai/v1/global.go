@@ -62,7 +62,6 @@ type GlobalConfig struct {
 	// +kubebuilder:validation:Optional
 	PodLabelSelector map[string]string `json:"podLabelSelector,omitempty"`
 
-	// PrometheusEnabled defines whether Prometheus should be enabled
 	// +kubebuilder:validation:Optional
 	PrometheusEnabled *bool `json:"prometheusEnabled,omitempty"`
 }
