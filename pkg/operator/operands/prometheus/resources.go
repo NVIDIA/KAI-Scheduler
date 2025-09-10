@@ -48,8 +48,6 @@ func prometheusForKAIConfig(
 		return []client.Object{}, nil
 	}
 
-	logger.Info("Prometheus Operator found, proceeding with Prometheus instance creation")
-
 	// Create Prometheus CR
 	prometheus := &monitoringv1.Prometheus{
 		TypeMeta: metav1.TypeMeta{
