@@ -46,8 +46,13 @@ type Binder struct {
 
 func (b *Binder) SetDefaultsWhereNeeded(replicaCount *int32) {
 	b.Service = common.SetDefault(b.Service, &common.Service{})
-	b.Service.Enabled = common.SetDefault(b.Service.Enabled, ptr.To(false))
-	b.Service.SetDefaultsWhereNeeded(imageName)
+	b.Service.Resources = common.SetDefault(b.Service.Resources, &common.Resources{})
+	if b.Service.Resources.Requests == nil {
+		b.Service.Resources.Requests = v1.ResourceList{}
+	}
+	if b.Service.Resources.Limits == nil {
+		b.Service.Resources.Limits = v1.ResourceList{}
+	}
 
 	if _, found := b.Service.Resources.Requests[v1.ResourceCPU]; !found {
 		b.Service.Resources.Requests[v1.ResourceCPU] = resource.MustParse("50m")
@@ -61,6 +66,8 @@ func (b *Binder) SetDefaultsWhereNeeded(replicaCount *int32) {
 	if _, found := b.Service.Resources.Limits[v1.ResourceMemory]; !found {
 		b.Service.Resources.Limits[v1.ResourceMemory] = resource.MustParse("200Mi")
 	}
+
+	b.Service.SetDefaultsWhereNeeded(imageName)
 
 	b.Replicas = common.SetDefault(b.Replicas, ptr.To(ptr.Deref(replicaCount, 1)))
 
