@@ -24,7 +24,7 @@ const (
 	queueNameLabel = "queue_name"
 )
 
-type queryUsageFunction func(ctx context.Context, allocationMetric string) (map[common_info.QueueID]float64, error)
+type usageWindowQueryFunction func(ctx context.Context, decayedAllocationMetric string) (model.Value, promv1.Warnings, error)
 
 var _ api.Interface = &PrometheusClient{}
 
@@ -37,7 +37,7 @@ type PrometheusClient struct {
 	usageQueryTimeout            time.Duration
 	queryResolution              time.Duration
 	allocationMetricsMap         map[string]string
-	queryUsageFunction           queryUsageFunction
+	usageWindowQuery             usageWindowQueryFunction
 	tumblingWindowCronExpression *cronexpr.Expression
 }
 
@@ -77,15 +77,15 @@ func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface
 	}
 	switch *params.WindowType {
 	case api.TumblingWindow:
-		clientObj.queryUsageFunction = clientObj.queryTumblingWindowUsage
+		clientObj.usageWindowQuery = clientObj.queryTumblingTimeWindow
 
-		cronExpression, err := cronexpr.Parse(params.CronString)
+		cronExpression, err := cronexpr.Parse(params.TumblingWindowCronString)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing cron string '%s' for usage tumbling window: %v", params.CronString, err)
+			return nil, fmt.Errorf("error parsing cron string '%s' for usage tumbling window: %v", params.TumblingWindowCronString, err)
 		}
 		clientObj.tumblingWindowCronExpression = cronExpression
 	case api.SlidingWindow:
-		clientObj.queryUsageFunction = clientObj.querySlidingWindowUsage
+		clientObj.usageWindowQuery = clientObj.querySlidingTimeWindow
 	}
 
 	return clientObj, nil
@@ -98,7 +98,7 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 	usage := queue_info.NewClusterUsage()
 
 	for _, resource := range []v1.ResourceName{commonconstants.GpuResource, v1.ResourceCPU, v1.ResourceMemory} {
-		resourceUsage, err := p.queryUsageFunction(ctx, p.allocationMetricsMap[string(resource)])
+		resourceUsage, err := p.queryResourceUsage(ctx, p.allocationMetricsMap[string(resource)], p.usageWindowQuery)
 		if err != nil {
 			return nil, fmt.Errorf("error querying %s and usage: %v", resource, err)
 		}
@@ -113,7 +113,8 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 	return usage, nil
 }
 
-func (p *PrometheusClient) querySlidingWindowUsage(ctx context.Context, allocationMetric string) (map[common_info.QueueID]float64, error) {
+func (p *PrometheusClient) queryResourceUsage(
+	ctx context.Context, allocationMetric string, queryByWindow usageWindowQueryFunction) (map[common_info.QueueID]float64, error) {
 	queueUsage := make(map[common_info.QueueID]float64)
 
 	decayedAllocationMetric := allocationMetric
@@ -121,15 +122,9 @@ func (p *PrometheusClient) querySlidingWindowUsage(ctx context.Context, allocati
 		decayedAllocationMetric = fmt.Sprintf("((%s) * (%s))", allocationMetric, getExponentialDecayQuery(p.usageParams.HalfLifePeriod))
 	}
 
-	usageQuery := fmt.Sprintf("sum_over_time((%s)[%s:%s])",
-		decayedAllocationMetric,
-		p.usageParams.WindowSize.String(),
-		p.queryResolution.String(),
-	)
-
-	usageResult, warnings, err := p.client.Query(ctx, usageQuery, time.Now())
+	usageResult, warnings, err := queryByWindow(ctx, decayedAllocationMetric)
 	if err != nil {
-		return nil, fmt.Errorf("error running query %s: %v", usageQuery, err)
+		return nil, fmt.Errorf("error querying cluster usage metric %s: %v", decayedAllocationMetric, err)
 	}
 
 	// Log warnings if exist
@@ -156,59 +151,27 @@ func (p *PrometheusClient) querySlidingWindowUsage(ctx context.Context, allocati
 	return queueUsage, nil
 }
 
-func getExponentialDecayQuery(halfLifePeriod *time.Duration) string {
-	if halfLifePeriod == nil {
-		return ""
-	}
-
-	halfLifeSeconds := halfLifePeriod.Seconds()
-	now := time.Now().Unix()
-
-	return fmt.Sprintf("0.5^((%d - time()) / %f)", now, halfLifeSeconds)
-}
-
-func (p *PrometheusClient) queryTumblingWindowUsage(ctx context.Context, allocationMetric string) (map[common_info.QueueID]float64, error) {
-	queuesUsage := make(map[common_info.QueueID]float64)
-
-	usageQuery := fmt.Sprintf("(%s)[%s:%s]",
-		allocationMetric,
+func (p *PrometheusClient) querySlidingTimeWindow(ctx context.Context, decayedAllocationMetric string) (model.Value, promv1.Warnings, error) {
+	usageQuery := fmt.Sprintf("sum_over_time((%s)[%s:%s])",
+		decayedAllocationMetric,
 		p.usageParams.WindowSize.String(),
 		p.queryResolution.String(),
 	)
 
 	usageResult, warnings, err := p.client.Query(ctx, usageQuery, time.Now())
-	if err != nil {
-		return nil, fmt.Errorf("error running query %s: %v", usageQuery, err)
-	}
+	return usageResult, warnings, err
+}
 
-	// Log warnings if exist
-	for _, w := range warnings {
-		log.InfraLogger.V(3).Warnf("Warning querying cluster usage metric %s: %s", allocationMetric, w)
-	}
-
-	if usageResult.Type() != model.ValMatrix {
-		return nil, fmt.Errorf("unexpected query result: got %s, expected matrix", usageResult.Type())
-	}
-
-	usageMatrix := usageResult.(model.Matrix)
-	if len(usageMatrix) == 0 {
-		return nil, fmt.Errorf("no data returned for cluster usage metric %s", allocationMetric)
-	}
-
+func (p *PrometheusClient) queryTumblingTimeWindow(ctx context.Context, decayedAllocationMetric string) (model.Value, promv1.Warnings, error) {
+	usageQuery := fmt.Sprintf("sum_over_time(%s)", decayedAllocationMetric)
 	lastUsageReset := p.getLatestUsageResetTime()
 
-	for _, usageSample := range usageMatrix {
-		queueID := common_info.QueueID(usageSample.Metric[queueNameLabel])
-
-		for _, usagePoint := range usageSample.Values {
-			if usagePoint.Timestamp.Time().Before(lastUsageReset) {
-				continue // Skip data before the last tumbling reset
-			}
-			queuesUsage[queueID] += float64(usagePoint.Value)
-		}
-	}
-
-	return queuesUsage, nil
+	usageResult, warnings, err := p.client.QueryRange(ctx, usageQuery, promv1.Range{
+		Start: lastUsageReset,
+		End:   time.Now(),
+		Step:  p.queryResolution,
+	})
+	return usageResult, warnings, err
 }
 
 func (p *PrometheusClient) getLatestUsageResetTime() time.Time {
@@ -221,4 +184,15 @@ func (p *PrometheusClient) getLatestUsageResetTime() time.Time {
 		nextInWindowReset = p.tumblingWindowCronExpression.Next(nextInWindowReset)
 	}
 	return lastUsageReset
+}
+
+func getExponentialDecayQuery(halfLifePeriod *time.Duration) string {
+	if halfLifePeriod == nil {
+		return ""
+	}
+
+	halfLifeSeconds := halfLifePeriod.Seconds()
+	now := time.Now().Unix()
+
+	return fmt.Sprintf("0.5^((%d - time()) / %f)", now, halfLifeSeconds)
 }
