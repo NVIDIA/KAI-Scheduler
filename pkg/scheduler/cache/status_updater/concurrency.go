@@ -111,6 +111,14 @@ func (su *defaultStatusUpdater) updatePodGroup(
 				podGroup.Namespace, podGroup.Name, patchErr)
 		}
 
+		su.pushToUpdateQueue(
+			&updatePayload{
+				key:        key,
+				objectType: podGroupType,
+			},
+			updateData,
+		)
+
 		return
 	}
 
