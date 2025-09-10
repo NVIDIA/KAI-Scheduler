@@ -5,6 +5,7 @@ package status_reconciler
 
 import (
 	"context"
+	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -188,7 +189,7 @@ func (r *StatusReconciler) getPrometheusOperatorCondition(ctx context.Context, g
 				Type:               "PrometheusOperatorInstalled",
 				Status:             metav1.ConditionFalse,
 				Reason:             "PrometheusOperatorCheckFailed",
-				Message:            err.Error(),
+				Message:            fmt.Sprintf("Failed to check for Prometheus Operator installation: %s", err.Error()),
 				ObservedGeneration: gen,
 				LastTransitionTime: metav1.Now(),
 			}

@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	mainResourceName = "prometheus"
+	mainResourceName = "kai"
 )
 
 func prometheusForKAIConfig(
