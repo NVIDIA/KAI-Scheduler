@@ -1996,6 +1996,11 @@ var _ = Describe("Proportion", func() {
 					testName := testName
 					testData := testData
 					It(testName, func() {
+						for queueName, queue := range testData.queues {
+							if len(queue.UID) == 0 {
+								queue.UID = common_info.QueueID(queueName)
+							}
+						}
 						SetResourcesShare(testData.totalResources, 0, testData.queues)
 						for queueName, queue := range testData.expectedShare {
 							fairShare := queue.GetFairShare()
