@@ -5,11 +5,19 @@ A queue is an object which represents a job queue in the cluster. Queues are an 
 Queues are typically assigned to different consumers in the cluster (users, groups, or initiatives). A workload must belong to a queue in order to be scheduled.
 KAI Scheduler operates with two levels of hierarchical scheduling queue system.
 
+### Default Queue on Fresh Install
+
+After installing KAI Scheduler, a **default unlimited queue** named `default` is automatically created. This queue has no reserved resource quotas, allowing you to schedule workloads immediately—no manual queue setup required.
+
 This command sets up two scheduling queue hierarchies:
-* `default` – A top-level queue that governs resource division of other leaf queues.
+* `default` – Automatically created top-level unlimited queue governing resource distribution for leaf queues.
 * `test` – A leaf queue under the default top-level queue. Workloads should reference this queue.
 
-For this example, these queues do not have resource limits, meaning they can consume cluster resources freely.
+You can start submitting jobs to the `default` queue right away, making onboarding fast and simple. To customize scheduling, you can create additional queues or modify existing ones to set quotas, priorities, and hierarchies.
+
+### Creating Additional Queues
+
+To add custom queues (e.g., a `test` queue), apply your queue configuration:
 ```
 kubectl apply -f queues.yaml
 ```
