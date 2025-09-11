@@ -34,11 +34,12 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/deployable"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/known_types"
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/scheduler"
 )
 
 func OperandsForShard(shard *kaiv1.SchedulingShard) []operands.Operand {
 	return []operands.Operand{
-		// scheduler.NewSchedulerForShard(shard),
+		scheduler.NewSchedulerForShard(shard),
 	}
 }
 
