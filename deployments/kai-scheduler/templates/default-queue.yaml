@@ -1,0 +1,24 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if and .Values.defaultQueue.createDefaultQueue .Release.IsInstall }}
+apiVersion: scheduling.run.ai/v2
+kind: Queue
+metadata:
+    name: default
+spec:
+    displayName: "Default Queue"
+    resources:
+        cpu:
+            quota: {{ .Values.defaultQueue.resources.cpu.quota }}
+            limit: {{ .Values.defaultQueue.resources.cpu.limit }}
+            overQuotaWeight: {{ .Values.defaultQueue.resources.cpu.overQuotaWeight }}
+        gpu:
+            quota: {{ .Values.defaultQueue.resources.gpu.quota }}
+            limit: {{ .Values.defaultQueue.resources.gpu.limit }}
+            overQuotaWeight: {{ .Values.defaultQueue.resources.gpu.overQuotaWeight }}
+        memory:
+            quota: {{ .Values.defaultQueue.resources.memory.quota }}
+            limit: {{ .Values.defaultQueue.resources.memory.limit }}
+            overQuotaWeight: {{ .Values.defaultQueue.resources.memory.overQuotaWeight }}
+{{- end }}
