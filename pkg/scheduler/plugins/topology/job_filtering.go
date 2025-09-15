@@ -39,6 +39,42 @@ type jobAllocationMetaData struct {
 	tasksToAllocate    []*pod_info.PodInfo
 }
 
+func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet) ([]node_info.NodeSet, error) {
+	topologyTree, err := t.getJobTopology(job)
+	if err != nil {
+		return nil, err
+	}
+	if topologyTree == nil {
+		return []node_info.NodeSet{nodeSet}, nil
+	}
+
+	defer t.treeAllocatableCleanup(topologyTree)
+	maxAllocatablePods, err := t.calcTreeAllocatable(job, topologyTree)
+	if err != nil {
+		return nil, err
+	}
+
+	if maxAllocatablePods < len(podgroup_info.GetTasksToAllocate(job, t.subGroupOrderFunc, t.taskOrderFunc, true)) {
+		log.InfraLogger.V(6).Infof("no relevant domains found for job %s, workload topology name: %s",
+			job.PodGroup.Name, topologyTree.Name)
+		return []node_info.NodeSet{}, nil
+	}
+
+	jobAllocatableDomains, err := t.getBestJobAllocatableDomains(job, topologyTree)
+	if err != nil {
+		return nil, err
+	}
+
+	result := node_info.NodeSet{}
+	for _, jobAllocatableDomain := range jobAllocatableDomains {
+		for _, node := range jobAllocatableDomain.Nodes {
+			result = append(result, node)
+		}
+	}
+
+	return []node_info.NodeSet{result}, nil
+}
+
 func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.PodGroupInfo) error {
 	topologyTree, err := t.getJobTopology(job)
 	if err != nil {

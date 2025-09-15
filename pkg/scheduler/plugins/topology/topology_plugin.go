@@ -44,6 +44,7 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	t.nodesInfos = ssn.Nodes
 	t.initializeTopologyTree(topologies, ssn)
 
+	ssn.AddSubsetNodesFn(t.subSetNodesFn)
 	//pre-predicate to generate the whole topology tree and store per workload
 	ssn.AddPrePredicateFn(t.prePredicateFn)
 	//predicate to filter nodes that are related to parts of the tree that cannot accommodate the workload - this is for "required" use only
