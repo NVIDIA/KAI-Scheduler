@@ -67,14 +67,22 @@ func Run() error {
 }
 
 func New() (*App, error) {
+	return NewWithScheme(scheme)
+}
+
+func NewWithScheme(mgrScheme *runtime.Scheme) (*App, error) {
 	var opts Options
 	opts.AddFlags(flag.CommandLine)
 
 	initLogger()
 
+	if mgrScheme == nil {
+		mgrScheme = scheme
+	}
+
 	configs := opts.Configs()
 	mgr, err := ctrl.NewManager(getClientConfigOrDie(opts), ctrl.Options{
-		Scheme: scheme,
+		Scheme: mgrScheme,
 		Client: client.Options{
 			Cache: &client.CacheOptions{
 				Unstructured: true,
