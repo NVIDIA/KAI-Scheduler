@@ -1,5 +1,23 @@
 # Scheduler Core Concepts
 
+- [Scheduler Core Concepts](#scheduler-core-concepts)
+  - [Overview](#overview)
+  - [The Scheduling Cycle](#the-scheduling-cycle)
+  - [Cache](#cache)
+    - [Cache Responsibilities](#cache-responsibilities)
+  - [Snapshots](#snapshots)
+    - [Why Snapshots Matter](#why-snapshots-matter)
+  - [PodGroups](#podgroups)
+  - [Queues](#queues)
+  - [Sessions](#sessions)
+    - [Session Responsibilities](#session-responsibilities)
+  - [Actions Framework](#actions-framework)
+  - [Statements and Transaction Model](#statements-and-transaction-model)
+  - [Scenarios](#scenarios)
+  - [Plugins](#plugins)
+  - [BindRequests](#bindrequests)
+  - [Related Documentation](#related-documentation)
+
 ## Overview
 
 KAI Scheduler uses a sophisticated architecture built around several key concepts that work together to provide efficient, fair, and consistent scheduling decisions. Understanding these concepts is essential for developers working with the scheduler, whether developing plugins, debugging issues, or contributing to the core scheduler.
@@ -66,6 +84,12 @@ PodGroups are automatically created by the pod-grouper component based on worklo
 
 For detailed information about PodGroup creation and gang scheduling, see [Pod Grouper](pod-grouper.md).
 
+## Queues
+
+The scheduler implements a **hierarchical queue system** for resource management and fair sharing. **Queues** represent logical resource containers with quotas, priorities, and limits.
+
+For detailed information, see [Scheduling Queues](../queues/README.md) and [Fairness](../fairness/README.md).
+
 ## Sessions
 
 A **Session** represents the scheduling context for a single cycle. It contains the snapshot data, plugin callbacks, and provides the framework for scheduling operations.
@@ -116,3 +140,5 @@ For detailed information about the binding process and BindRequest lifecycle, se
 - [Binder](binder.md) - Pod binding process
 - [Pod Grouper](pod-grouper.md) - Gang scheduling implementation
 - [Snapshot Plugin](../plugins/snapshot.md) - Snapshot capture and analysis tools
+- [Scheduling Queues](../queues/README.md) - Queue configuration and management
+- [Fairness](../fairness/README.md) - Resource fairness and distribution algorithms
