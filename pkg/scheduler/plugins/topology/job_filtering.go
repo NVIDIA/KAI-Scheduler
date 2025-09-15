@@ -45,7 +45,7 @@ func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []
 	}
 
 	defer t.treeAllocatableCleanup(topologyTree)
-	maxAllocatablePods, err := t.calcTreeAllocatable(job, topologyTree)
+	maxAllocatablePods, err := t.calcTreeAllocatable(job, topologyTree, nodeSet)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +87,17 @@ func (t *topologyPlugin) getJobTopology(job *podgroup_info.PodGroupInfo) (*Topol
 	return topologyTree, nil
 }
 
-func (t *topologyPlugin) calcTreeAllocatable(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo) (int, error) {
+func (t *topologyPlugin) calcTreeAllocatable(job *podgroup_info.PodGroupInfo, topologyTree *TopologyInfo, nodeSet node_info.NodeSet) (int, error) {
 	jobAllocationData, err := initJobAllocationMetadataStruct(job, t)
 	if err != nil {
 		return 0, err
 	}
 
-	return t.calcSubTreeAllocatable(jobAllocationData, topologyTree.Root)
+	nodes := map[string]bool{}
+	for _, node := range nodeSet {
+		nodes[node.Name] = true
+	}
+	return t.calcSubTreeAllocatable(jobAllocationData, topologyTree.Root, nodes)
 }
 
 func initJobAllocationMetadataStruct(job *podgroup_info.PodGroupInfo, t *topologyPlugin) (*jobAllocationMetaData, error) {
@@ -117,7 +121,7 @@ func initJobAllocationMetadataStruct(job *podgroup_info.PodGroupInfo, t *topolog
 }
 
 func (t *topologyPlugin) calcSubTreeAllocatable(
-	jobAllocationData *jobAllocationMetaData, domain *TopologyDomainInfo,
+	jobAllocationData *jobAllocationMetaData, domain *TopologyDomainInfo, nodes map[string]bool,
 ) (int, error) {
 	if domain == nil {
 		return 0, nil
@@ -125,13 +129,16 @@ func (t *topologyPlugin) calcSubTreeAllocatable(
 
 	if len(domain.Children) == 0 {
 		for _, node := range domain.Nodes {
+			if _, inSubset := nodes[node.Name]; !inSubset {
+				continue
+			}
 			domain.AllocatablePods += calcNodeAccommodation(jobAllocationData, node)
 		}
 		return domain.AllocatablePods, nil
 	}
 
 	for _, child := range domain.Children {
-		childAllocatable, err := t.calcSubTreeAllocatable(jobAllocationData, child)
+		childAllocatable, err := t.calcSubTreeAllocatable(jobAllocationData, child, nodes)
 		if err != nil {
 			return 0, err
 		}

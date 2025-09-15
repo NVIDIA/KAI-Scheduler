@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/utils/ptr"
@@ -448,7 +449,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			}
 
 			// Call the function under test
-			subsets, err := plugin.subSetNodesFn(job, nil, nil)
+			subsets, err := plugin.subSetNodesFn(job, nil, maps.Values(nodesInfoMap))
 
 			// Check error
 			if tt.expectedError != "" {
@@ -1227,7 +1228,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			}
 
 			// Call the function under test
-			maxAllocatablePods, err := plugin.calcTreeAllocatable(job, topologyTree)
+			maxAllocatablePods, err := plugin.calcTreeAllocatable(job, topologyTree, maps.Values(session.Nodes))
 			if err != nil {
 				t.Errorf("failed to calc tree allocatable. job: %s, error: %v", job.PodGroup.Name, err)
 			}
