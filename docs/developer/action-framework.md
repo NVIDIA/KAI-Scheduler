@@ -1,7 +1,9 @@
-# Scheduler Actions Framework Documentation
+# Scheduler Actions Framework
 
 ## Overview
 The scheduler uses an action-based system to make scheduling decisions. At a high level, actions generate [scenarios](#1-scenarios), which are simulated and validated ([simulation](#2-simulation)) before being committed to the cluster using a [statement](#3-statement). This allows for complex scheduling logic while maintaining consistency and allowing rollback of failed operations, without needlessly interrupting pods.
+
+For an overview of how actions fit into the broader scheduler architecture, see [Scheduler Core Concepts](scheduler-concepts.md).
 
 ## Scheduling Actions
 
@@ -68,7 +70,7 @@ This sequence ensures that disruptive actions are only performed when necessary,
 Scenarios represent hypothetical scheduling states used to model and evaluate potential scheduling decisions.
 
 **Key components:**
-- **ByNodeScenario**: A scenario-local snapshot of potential pod placements across nodes (not the cluster snapshot). See `docs/developer/concepts/cluster-snapshot.md` for the per-session cluster snapshot concept.
+- **ByNodeScenario**: A scenario-local snapshot of potential pod placements across nodes (not the cluster snapshot). See [Scheduler Core Concepts - Snapshots](scheduler-concepts.md#snapshots) for the per-session cluster snapshot concept.
 - **PodAccumulatedScenarioBuilder**: Constructs progressively more complex scenarios
 - **Scenario Filters**: Validates scenarios against constraints. Used as an optimization to rule out scenarios early, before performing time consuming simulations
 
