@@ -449,7 +449,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			}
 
 			// Call the function under test
-			subsets, err := plugin.subSetNodesFn(job, nil, maps.Values(nodesInfoMap))
+			subsets, err := plugin.subSetNodesFn(job, podgroup_info.GetTasksToAllocate(job, nil, nil, true), maps.Values(nodesInfoMap))
 
 			// Check error
 			if tt.expectedError != "" {
@@ -1228,7 +1228,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			}
 
 			// Call the function under test
-			maxAllocatablePods, err := plugin.calcTreeAllocatable(job, topologyTree, maps.Values(session.Nodes))
+			maxAllocatablePods, err := plugin.calcTreeAllocatable(podgroup_info.GetTasksToAllocate(job, nil, nil, true), topologyTree, maps.Values(session.Nodes))
 			if err != nil {
 				t.Errorf("failed to calc tree allocatable. job: %s, error: %v", job.PodGroup.Name, err)
 			}
@@ -1803,7 +1803,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				taskOrderFunc: tt.taskOrderFunc,
 			}
 
-			result, err := plugin.getBestJobAllocatableDomains(tt.job, tt.topologyTree)
+			result, err := plugin.getBestJobAllocatableDomains(tt.job, len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)), tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {
