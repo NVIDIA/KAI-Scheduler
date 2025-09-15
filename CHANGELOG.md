@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.9.1] - 20250-09-15
+
+### Added
+- Added the option of providing the podgrouper app a scheme object to use
+
 ## [v0.9.0] - 20250-09-10
 
 ### Added
