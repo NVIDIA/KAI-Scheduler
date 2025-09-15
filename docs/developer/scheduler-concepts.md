@@ -70,7 +70,6 @@ For detailed information about PodGroup creation and gang scheduling, see [Pod G
 
 A **Session** represents the scheduling context for a single cycle. It contains the snapshot data, plugin callbacks, and provides the framework for scheduling operations.
 
-<!-- GuyTodo: Validate this -->
 ### Session Responsibilities
 
 - **State Management**: Maintains consistent view of cluster during cycle

@@ -104,6 +104,4 @@ stmt.Commit()              // Apply all changes to the cluster
 stmt.Discard()             // Discard all changes
 ```
 
-<!-- TODO: Add a Session section -->
-
 This documentation covers the main concepts of the scheduler's action framework. For more detailed information about specific implementations or advanced features, please refer to the codebase and tests. Requests and suggestions are welcome.
