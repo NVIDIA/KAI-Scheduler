@@ -83,7 +83,6 @@ type Session struct {
 	PrePredicateFns                       []api.PrePredicateFn
 	PredicateFns                          []api.PredicateFn
 	BindRequestMutateFns                  []api.BindRequestMutateFn
-	CleanAllocationAttemptCacheFns        []api.CleanAllocationAttemptCacheFn
 
 	Config          *conf.SchedulerConfiguration
 	plugins         map[string]Plugin
