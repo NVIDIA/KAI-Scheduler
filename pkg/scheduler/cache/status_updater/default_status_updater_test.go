@@ -605,8 +605,14 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			var podGroups []runtime.Object
+			jobInfos, _, _ := jobs_fake.BuildJobsAndTasksMaps([]*jobs_fake.TestJobBasic{&test.job})
+			for _, job := range jobInfos {
+				podGroups = append(podGroups, job.PodGroup)
+			}
+
 			kubeClient := fake.NewSimpleClientset()
-			kubeAiSchedClient := kubeaischedfake.NewSimpleClientset()
+			kubeAiSchedClient := kubeaischedfake.NewSimpleClientset(podGroups...)
 			recorder := record.NewFakeRecorder(100)
 			statusUpdater := New(kubeClient, kubeAiSchedClient, recorder, 1, false, nodePoolLabelKey)
 			wg := sync.WaitGroup{}
