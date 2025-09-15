@@ -1,7 +1,7 @@
 # Scheduler Actions Framework Documentation
 
 ## Overview
-The scheduler uses an action-based system to make scheduling decisions. At a high level, actions generate scenarios, which are simulated and validated before being committed to the cluster. This allows for complex scheduling logic while maintaining consistency and allowing rollback of failed operations, without needlessly interrupting pods.
+The scheduler uses an action-based system to make scheduling decisions. At a high level, actions generate [scenarios](#1-scenarios), which are simulated and validated ([simulation](#2-simulation)) before being committed to the cluster using a [statement](#3-statement). This allows for complex scheduling logic while maintaining consistency and allowing rollback of failed operations, without needlessly interrupting pods.
 
 ## Scheduling Actions
 
@@ -68,7 +68,7 @@ This sequence ensures that disruptive actions are only performed when necessary,
 Scenarios represent hypothetical scheduling states used to model and evaluate potential scheduling decisions.
 
 **Key components:**
-- **ByNodeScenario**: A snapshot of potential pod placements across nodes
+- **ByNodeScenario**: A scenario-local snapshot of potential pod placements across nodes (not the cluster snapshot). See `docs/developer/concepts/cluster-snapshot.md` for the per-session cluster snapshot concept.
 - **PodAccumulatedScenarioBuilder**: Constructs progressively more complex scenarios
 - **Scenario Filters**: Validates scenarios against constraints. Used as an optimization to rule out scenarios early, before performing time consuming simulations
 
@@ -101,5 +101,7 @@ stmt.Pipeline(pod, node)   // Pipeline a pod to a node (allocate on resources pe
 stmt.Commit()              // Apply all changes to the cluster
 stmt.Discard()             // Discard all changes
 ```
+
+<!-- TODO: Add a Session section -->
 
 This documentation covers the main concepts of the scheduler's action framework. For more detailed information about specific implementations or advanced features, please refer to the codebase and tests. Requests and suggestions are welcome.
