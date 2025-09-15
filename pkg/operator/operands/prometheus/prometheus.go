@@ -34,6 +34,7 @@ func (p *Prometheus) DesiredState(
 		return nil, err
 	}
 
+	p.lastDesiredState = objects
 	// Only check for Prometheus operator if we actually have objects to deploy
 	if len(objects) > 0 {
 		err = p.GetPrometheusOperatorCondition(ctx, runtimeClient, 0)
@@ -42,7 +43,6 @@ func (p *Prometheus) DesiredState(
 		}
 	}
 
-	p.lastDesiredState = objects
 	return objects, nil
 }
 
