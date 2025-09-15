@@ -6,8 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.9.0] - 20250-09-10
+
 ### Added
-- Added configurable plugins hub for podgrouper using interface and RegisterPlugins
 - config.kai.scheduler CRD that will describe the installation of all KAI-scheduler services for the operator
 - Initial KAI-operator implementation for managing components
 - PodGroup Controller, Queue Controller, Admission and Scale Adjuster operands to operator lifecycle management
@@ -20,10 +21,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Updated queue controller image name to align with current deployment standards
 
 ### Fixed
-- Fixed a bug where workload with subgroups would not consider additional tasks above minAvailable
 - Removed webhook manager component as part of operator-based refactoring
 
-## [v0.8.3] - 20250-8-31
+## [v0.8.5] - 20250-09-04
+
+### Added
+- Added configurable plugins hub for podgrouper using interface and RegisterPlugins
+
+## [v0.8.4] - 20250-09-02
+
+### Added
+- Added a plugin to reflect joborder in scheduler http endpoint - Contributed by Saurabh Kumar Singh <singh1203.ss@gmail.com>
+
+### Fixed
+- Fixed a bug where workload with subgroups would not consider additional tasks above minAvailable
+
+## [v0.8.3] - 20250-08-31
 
 ### Removed
 - Removed unused code that required gpu-operator as a dependency

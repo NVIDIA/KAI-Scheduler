@@ -322,6 +322,9 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 			jobTopologyName, preferredPlacement, job.Name,
 		)
 	}
+	if requiredPlacement == "" {
+		relevantLevels = append(relevantLevels, "root")
+	}
 	return relevantLevels, nil
 }
 

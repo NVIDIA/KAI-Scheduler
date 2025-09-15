@@ -18,7 +18,7 @@ const (
 	DefaultResourceReservationName        = "kai-resource-reservation"
 	DefaultScaleAdjustName                = "kai-scale-adjust"
 	DefaultKAIConfigSingeltonInstanceName = "kai-config"
-	DefaultNodePoolLabelKey               = ""
+	DefaultNodePoolLabelKey               = "kai.scheduler/node-pool"
 
 	DefaultCPUWorkerNodeLabelKey = "node-role.kubernetes.io/cpu-worker"
 	DefaultGPUWorkerNodeLabelKey = "node-role.kubernetes.io/gpu-worker"
