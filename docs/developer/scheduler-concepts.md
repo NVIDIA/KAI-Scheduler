@@ -19,9 +19,9 @@
 
 ## Overview
 
-KAI Scheduler uses a sophisticated architecture built around several key concepts that work together to provide efficient, fair, and consistent scheduling decisions. Understanding these concepts is essential for developers working with the scheduler, whether developing plugins, debugging issues, or contributing to the core scheduler.
+KAI Scheduler is built around key concepts that work together to make scheduling decisions. This document explains these concepts for developers working with the scheduler.
 
-The scheduler operates on a **cycle-based model** where each cycle takes a consistent snapshot of the cluster state, makes scheduling decisions through a series of actions, with each action committing/rolling back individual job operations.
+The scheduler runs in **cycles**. Each cycle takes a snapshot of the cluster state and makes scheduling decisions through a series of actions.
 
 ## The Scheduling Cycle
 
@@ -63,7 +63,7 @@ The **Cache** serves as the authoritative source of cluster state, built from Ku
 
 ## Snapshots
 
-**Snapshots** are the foundation of KAI Scheduler's consistency model. A snapshot is a point-in-time capture of the entire cluster state at the beginning of each scheduling cycle.
+A **Snapshot** captures the cluster state at the start of each scheduling cycle.
 
 Snapshots capture all the cluster resources and state information needed for scheduling decisions, including pods, nodes, queues, pod groups, bind requests, and other relevant Kubernetes objects.
 
