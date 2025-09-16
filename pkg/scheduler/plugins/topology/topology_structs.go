@@ -6,8 +6,9 @@ package topology
 import (
 	"strings"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 )
 
 // TopologyDomainID uniquely identifies a topology domain
@@ -50,12 +51,9 @@ type TopologyDomainInfo struct {
 
 	// Number of pods that can be allocated in this domain for the job
 	AllocatablePods int
-
-	// Depth in the tree from root (0 for root)
-	Depth int
 }
 
-func NewTopologyDomainInfo(id TopologyDomainID, name, level string, depth int) *TopologyDomainInfo {
+func NewTopologyDomainInfo(id TopologyDomainID, name, level string) *TopologyDomainInfo {
 	return &TopologyDomainInfo{
 		ID:       id,
 		Name:     name,
@@ -63,7 +61,6 @@ func NewTopologyDomainInfo(id TopologyDomainID, name, level string, depth int) *
 		Parent:   nil,
 		Children: map[TopologyDomainID]*TopologyDomainInfo{},
 		Nodes:    map[string]*node_info.NodeInfo{},
-		Depth:    depth,
 	}
 }
 

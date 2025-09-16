@@ -41,7 +41,7 @@ func (t *topologyPlugin) initializeTopologyTree(ssn *framework.Session) {
 		topologyTree := &TopologyInfo{
 			Name:             singleTopology.Name,
 			DomainsByLevel:   map[string]map[TopologyDomainID]*TopologyDomainInfo{},
-			Root:             NewTopologyDomainInfo(rootDomainId, "", rootLevel, 0),
+			Root:             NewTopologyDomainInfo(rootDomainId, "", rootLevel),
 			TopologyResource: singleTopology,
 		}
 		topologyTree.DomainsByLevel[rootLevel] = map[TopologyDomainID]*TopologyDomainInfo{
@@ -80,7 +80,7 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, singleT
 		}
 		domainInfo, foundDomain := domainsForLevel[domainId]
 		if !foundDomain {
-			domainInfo = NewTopologyDomainInfo(domainId, domainName, level.NodeLabel, levelIndex+1)
+			domainInfo = NewTopologyDomainInfo(domainId, domainName, level.NodeLabel)
 			domainsForLevel[domainId] = domainInfo
 		}
 		domainInfo.AddNode(nodeInfo)
