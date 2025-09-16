@@ -15,7 +15,6 @@ const (
 )
 
 type topologyPlugin struct {
-	nodesInfos    map[string]*node_info.NodeInfo
 	TopologyTrees map[string]*TopologyInfo
 }
 
@@ -31,7 +30,6 @@ func (t *topologyPlugin) Name() string {
 
 func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	topologies := ssn.Topologies
-	t.nodesInfos = ssn.Nodes
 	t.initializeTopologyTree(topologies, ssn)
 
 	ssn.AddSubsetNodesFn(t.subSetNodesFn)

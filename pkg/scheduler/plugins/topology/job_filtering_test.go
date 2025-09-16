@@ -1213,9 +1213,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				PodGroupInfos: jobsInfoMap,
 				Topologies:    []*kueuev1alpha1.Topology{topologyTree.TopologyResource},
 			}
-			plugin := &topologyPlugin{
-				nodesInfos: nodesInfoMap,
-			}
+			plugin := &topologyPlugin{}
 
 			// Call the function under test
 			maxAllocatablePods, err := plugin.calcTreeAllocatable(podgroup_info.GetTasksToAllocate(job, nil, nil, true), topologyTree, maps.Values(session.Nodes))
