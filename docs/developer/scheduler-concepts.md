@@ -101,6 +101,8 @@ A **Session** represents the scheduling context for a single cycle. It contains 
 - **Statement Factory**: Creates Statement objects for actions to use
 - **Resource Accounting**: Tracks resource allocations and usage
 
+For detailed information about session implementation, lifecycle, and plugin integration, see [Plugin Framework](plugin-framework.md).
+
 ## Actions Framework
 
 **Actions** are discrete scheduling operations executed in sequence during each cycle. Each action operates on the session's snapshot data and uses statements to ensure atomicity.
