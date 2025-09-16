@@ -39,6 +39,8 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
+// +kubebuilder:webhook:path=/validate--v1-podgroup,mutating=false,failurePolicy=fail,sideEffects=None,resources=podgroups.scheduling.run.ai,verbs=create;update,groups=core,versions=v2alpha2,name=podgroupcontroller.run.ai,admissionReviewVersions=v1
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v2alpha2.AddToScheme(scheme))
@@ -94,6 +96,11 @@ func Run() error {
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return err
+	}
+
+	if err = (&v2alpha2.PodGroup{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook for podgroup", "webhook", "podgroup")
+		return nil
 	}
 
 	configs := controllers.Configs{

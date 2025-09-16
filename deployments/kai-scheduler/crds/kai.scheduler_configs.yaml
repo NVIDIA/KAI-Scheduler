@@ -1715,13 +1715,30 @@ spec:
               podGroupController:
                 description: PodGroupController specifies configuration for the pod-group-controller
                 properties:
+                  controllerService:
+                    description: ControllerService describes the service for the podgroup-controller
+                    properties:
+                      webhook:
+                        description: Webhook specifies the webhook service spec
+                        properties:
+                          name:
+                            description: Name specifies the name of the port
+                            type: string
+                          port:
+                            description: Port specifies the service port
+                            type: integer
+                          targetPort:
+                            description: TargetPort specifies the pod container port
+                            type: integer
+                        type: object
+                    type: object
                   maxConcurrentReconciles:
                     description: MaxConcurrentReconciles specifies the number of max
                       concurrent reconcile workers
                     type: integer
                   replicas:
-                    description: Replicas specifies the number of replicas of the
-                      pod-group controller
+                    description: Replicas specifies the number podgroup controller
+                      replicas
                     format: int32
                     type: integer
                   service:
@@ -1819,6 +1836,13 @@ spec:
                               More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                             type: object
                         type: object
+                    type: object
+                  webhooks:
+                    description: Webhooks describes the configuration of the podgroup
+                      controller webhooks
+                    properties:
+                      enableValidation:
+                        type: boolean
                     type: object
                 type: object
               podGrouper:
