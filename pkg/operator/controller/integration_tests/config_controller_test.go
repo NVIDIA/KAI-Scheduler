@@ -57,6 +57,8 @@ var _ = Describe("KAIConfigController", Ordered, func() {
 
 	AfterAll(func() {
 		Expect(k8sClient.Delete(context.Background(), kaiConfig)).To(Succeed())
+		os.Unsetenv(v1common.DefaultRepositoryEnvVarName)
+		os.Unsetenv(v1common.DefaultTagEnvVarName)
 	})
 
 	Context("Watching ClusterPolicy", Ordered, func() {
