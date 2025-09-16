@@ -19,7 +19,7 @@ type topologyPlugin struct {
 	TopologyTrees map[string]*TopologyInfo
 }
 
-func New(pluginArgs map[string]string) framework.Plugin {
+func New(_ map[string]string) framework.Plugin {
 	return &topologyPlugin{
 		TopologyTrees: map[string]*TopologyInfo{},
 	}
