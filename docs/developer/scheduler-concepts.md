@@ -78,7 +78,7 @@ For detailed information about snapshots and the snapshot plugin, see [Snapshot 
 
 ## PodGroups
 
-**PodGroups** represent gang scheduling units where multiple pods must be scheduled together as a single atomic operation. They ensure that either all pods in a group are scheduled or none are scheduled.
+**PodGroups** define gang scheduling requirements for workloads, specifying how multiple pods should be scheduled together.
 
 PodGroups are automatically created by the pod-grouper component based on workload types and can specify minimum member requirements, queue assignments, and priority classes.
 
