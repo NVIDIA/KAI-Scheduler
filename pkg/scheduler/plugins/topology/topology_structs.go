@@ -54,7 +54,7 @@ func NewDomainInfo(id DomainID, level string) *DomainInfo {
 }
 
 func (t *DomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
-	t.Nodes[nodeInfo.Node.Name] = nodeInfo
+	t.Nodes[nodeInfo.Name] = nodeInfo
 }
 
 func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, nodeLabels map[string]string) DomainID {
