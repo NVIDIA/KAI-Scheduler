@@ -1,21 +1,22 @@
 # Scheduler Core Concepts
 
-- [Overview](#overview)
-- [The Scheduling Cycle](#the-scheduling-cycle)
-- [Cache](#cache)
-  - [Cache Responsibilities](#cache-responsibilities)
-- [Snapshots](#snapshots)
-  - [Why Snapshots Matter](#why-snapshots-matter)
-- [PodGroups](#podgroups)
-- [Queues](#queues)
-- [Sessions](#sessions)
-  - [Session Responsibilities](#session-responsibilities)
-- [Actions](#actions)
-- [Plugins](#plugins)
-- [Statements and Transaction Model](#statements-and-transaction-model)
-- [Scenarios](#scenarios)
-- [BindRequests](#bindrequests)
-- [Related Documentation](#related-documentation)
+- [Scheduler Core Concepts](#scheduler-core-concepts)
+  - [Overview](#overview)
+  - [The Scheduling Cycle](#the-scheduling-cycle)
+  - [Cache](#cache)
+    - [Cache Responsibilities](#cache-responsibilities)
+  - [Snapshots](#snapshots)
+    - [Why Snapshots Matter](#why-snapshots-matter)
+  - [PodGroups](#podgroups)
+  - [Queues](#queues)
+  - [Sessions](#sessions)
+    - [Session Responsibilities](#session-responsibilities)
+  - [Actions](#actions)
+  - [Plugins](#plugins)
+  - [Statements and Transaction Model](#statements-and-transaction-model)
+  - [Scenarios](#scenarios)
+  - [BindRequests](#bindrequests)
+  - [Related Documentation](#related-documentation)
 
 ## Overview
 
@@ -116,7 +117,7 @@ For detailed information about plugin development, extension points, and example
 
 ## Statements and Transaction Model
 
-**Statements** provide a transaction-like mechanism for scheduling operations, allowing changes to be grouped and either committed or rolled back as a unit. Actions use statements to ensure atomicity when making scheduling decisions.
+**Statements** provide a transaction-like mechanism for scheduling operations, allowing changes to be grouped and either committed or rolled back as a unit. Actions use statements to ensure atomicity when making scheduling decisions. Additionally, statements simulate scheduling scenarios in-memory, enabling evaluation of potential changes before they are committed.
 
 For detailed statement operations and usage patterns, see [Action Framework - Statements](action-framework.md#3-statement).
 
