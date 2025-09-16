@@ -150,6 +150,7 @@ rules:
   resources:
   - podcliques
   - podcliquescalinggroups
+  - podcliquesets
   - podgangsets
   verbs:
   - get
@@ -160,6 +161,7 @@ rules:
   resources:
   - podcliques/finalizers
   - podcliquescalinggroups/finalizers
+  - podcliquesets/finalizers
   - podgangsets/finalizers
   verbs:
   - create

@@ -37,6 +37,23 @@ spec:
     {{- end }}
     replicaCount: {{ .Values.operator.replicaCount | default 1 }}
 
+  binder:
+    service:
+      enabled: true
+      image:
+        name: {{ .Values.binder.image.name }}
+        repository: {{ .Values.global.registry }}
+        tag: {{ .Chart.Version }}
+        pullPolicy: {{ .Values.binder.image.pullPolicy | default .Values.global.imagePullPolicy }}
+      {{- if .Values.binder.resources }}
+      resources:
+        {{- toYaml .Values.binder.resources | nindent 6 }}
+      {{- end }}
+    metricsPort: {{ .Values.binder.ports.metricsPort }}
+    resourceReservation:
+      image:
+        name: {{ .Values.binder.resourceReservationImage.name }}
+
   podGroupController:
     service:
         enabled: true
