@@ -291,11 +291,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 				_ = ctrlClient.Delete(ctx, &webhook)
 			}()
 
-			err := GroupPods(ctx, ctrlClient, podGroupConfig{
-				queueName:    testQueue.Name,
-				podgroupName: "test-podgroup",
-				minMember:    1,
-			}, []*corev1.Pod{testPod})
+			err := GroupPods(ctx, ctrlClient, testQueue.Name, "test-podgroup", []*corev1.Pod{testPod}, 1)
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 
 			// validate that editing the podgroup status fails
