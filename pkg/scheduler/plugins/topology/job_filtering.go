@@ -65,8 +65,8 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 	}
 
 	if maxAllocatablePods < len(podgroup_info.GetTasksToAllocate(job, t.subGroupOrderFunc, t.taskOrderFunc, true)) {
-		log.InfraLogger.V(6).Infof("no relevant domains found for job %s, workload topology name: %s",
-			job.PodGroup.Name, topologyTree.Name)
+		log.InfraLogger.V(6).Infof("no relevant domains found for job <%s/%s>, workload topology name: %s",
+			job.Namespace, job.Name, topologyTree.Name)
 		return nil
 	}
 
@@ -86,14 +86,17 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 }
 
 func (t *topologyPlugin) getJobTopology(job *podgroup_info.PodGroupInfo) (*TopologyInfo, error) {
-	jobTopologyName := job.PodGroup.Spec.TopologyConstraint.Topology
+	if job.TopologyConstraint == nil {
+		return nil, nil
+	}
+	jobTopologyName := job.TopologyConstraint.Topology
 	if jobTopologyName == "" {
 		return nil, nil
 	}
 	topologyTree := t.TopologyTrees[jobTopologyName]
 	if topologyTree == nil {
-		return nil, fmt.Errorf("matching topology tree haven't been found for job %s, workload topology name: %s",
-			job.PodGroup.Name, jobTopologyName)
+		return nil, fmt.Errorf("matching topology tree haven't been found for job <%s/%s>, workload topology name: %s",
+			job.Namespace, job.Name, jobTopologyName)
 	}
 	return topologyTree, nil
 }
@@ -206,7 +209,7 @@ func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGrou
 	// Validate that the domains do not clash with the chosen domain for active pods of the job
 	var relevantDomainsByLevel domainsByLevel
 	if job.GetActiveAllocatedTasksCount() > 0 && jobHasTopologyRequiredConstraint(job) {
-		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(job, topologyTree, job.PodGroup.Spec.TopologyConstraint.RequiredTopologyLevel)
+		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(job, topologyTree, job.TopologyConstraint.RequiredLevel)
 	} else {
 		relevantDomainsByLevel = topologyTree.DomainsByLevel
 	}
@@ -228,12 +231,12 @@ func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGrou
 	}
 
 	if len(maxDepthDomains) == 0 {
-		return nil, fmt.Errorf("no domains found for the job %s, workload topology name: %s",
-			job.PodGroup.Name, topologyTree.Name)
+		return nil, fmt.Errorf("no domains found for the job <%s/%s>, workload topology name: %s",
+			job.Namespace, job.Name, topologyTree.Name)
 	}
 
-	if job.PodGroup.Spec.TopologyConstraint.PreferredTopologyLevel != "" &&
-		maxDepthDomains[0].Level != job.PodGroup.Spec.TopologyConstraint.PreferredTopologyLevel {
+	if job.TopologyConstraint.PreferredLevel != "" &&
+		maxDepthDomains[0].Level != job.TopologyConstraint.PreferredLevel {
 		// If Preferred is defined and we couldn't find a domain on the preferred level,
 		// return a children subset and not a single domain
 		return t.improveChoiceForPreference(maxDepthDomains, job)
@@ -279,16 +282,16 @@ func addSubTreeToDomainMap(domain *TopologyDomainInfo, domainsMap domainsByLevel
 }
 
 func jobHasTopologyRequiredConstraint(job *podgroup_info.PodGroupInfo) bool {
-	return job.PodGroup.Spec.TopologyConstraint.RequiredTopologyLevel != ""
+	return job.TopologyConstraint.RequiredLevel != ""
 }
 
 func (*topologyPlugin) calculateRelevantDomainLevels(
 	job *podgroup_info.PodGroupInfo, jobTopologyName string,
 	topologyTree *TopologyInfo) ([]string, error) {
-	requiredPlacement := job.PodGroup.Spec.TopologyConstraint.RequiredTopologyLevel
-	preferredPlacement := job.PodGroup.Spec.TopologyConstraint.PreferredTopologyLevel
+	requiredPlacement := job.TopologyConstraint.RequiredLevel
+	preferredPlacement := job.TopologyConstraint.PreferredLevel
 	if requiredPlacement == "" && preferredPlacement == "" {
-		return nil, fmt.Errorf("no topology placement annotations found for job %s, workload topology name: %s", job.PodGroup.Name, jobTopologyName)
+		return nil, fmt.Errorf("no topology placement annotations found for job <%s/%s>, workload topology name: %s", job.Namespace, job.Name, jobTopologyName)
 	}
 
 	foundRequiredLevel := false
@@ -385,8 +388,8 @@ func (t *topologyPlugin) predicateFn(pod *pod_info.PodInfo, job *podgroup_info.P
 			}
 			jobDomainsNames = append(jobDomainsNames, domain.Name)
 		}
-		return fmt.Errorf("the node %s is not part of the chosen topology domain for the job %s. The chosen domains are %s",
-			node.Node.Name, job.PodGroup.Name, strings.Join(jobDomainsNames, ", "))
+		return fmt.Errorf("the node %s is not part of the chosen topology domain for the job <%s/%s>. The chosen domains are %s",
+			node.Node.Name, job.Namespace, job.Name, strings.Join(jobDomainsNames, ", "))
 	}
 
 	return nil
@@ -429,7 +432,7 @@ func (t *topologyPlugin) loadAllocatableDomainsFromCache(podGroupUID types.UID) 
 }
 
 func (t *topologyPlugin) cleanAllocationAttemptCache(job *podgroup_info.PodGroupInfo) error {
-	if job.PodGroup.Spec.TopologyConstraint.Topology == "" {
+	if job.TopologyConstraint == nil {
 		return nil
 	}
 

@@ -195,6 +195,7 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 			name: "topology not found - error",
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
+				Namespace:           "test-namespace",
 				RequiredCPUsPerTask: 500,
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
@@ -222,7 +223,7 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 					},
 				}
 			},
-			expectedError:      "matching topology tree haven't been found for job test-job, workload topology name: nonexistent-topology",
+			expectedError:      "matching topology tree haven't been found for job <test-namespace/test-job>, workload topology name: nonexistent-topology",
 			expectedCacheCalls: 0,
 		},
 		{
@@ -450,7 +451,11 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 
 			// Update job with topology constraints based on test case
 			if tt.jobTopologyConstraint != nil {
-				job.PodGroup.Spec.TopologyConstraint = *tt.jobTopologyConstraint
+				job.TopologyConstraint = &podgroup_info.TopologyConstraintInfo{
+					Topology:       tt.jobTopologyConstraint.Topology,
+					RequiredLevel:  tt.jobTopologyConstraint.RequiredTopologyLevel,
+					PreferredLevel: tt.jobTopologyConstraint.PreferredTopologyLevel,
+				}
 			}
 
 			// Call the function under test
@@ -532,16 +537,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			name: "both required and preferred placement specified",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel:  "zone",
-							PreferredTopologyLevel: "rack",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel:  "zone",
+					PreferredLevel: "rack",
 				},
 			},
 			jobTopologyName: "test-topology",
@@ -567,15 +565,8 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			name: "only required placement specified",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel: "zone",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel: "zone",
 				},
 			},
 			jobTopologyName: "test-topology",
@@ -600,16 +591,10 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		{
 			name: "only preferred placement specified",
 			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							PreferredTopologyLevel: "rack",
-						},
-					},
+				Name:      "test-job",
+				Namespace: "test-namespace",
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					PreferredLevel: "rack",
 				},
 			},
 			jobTopologyName: "test-topology",
@@ -636,16 +621,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		{
 			name: "no placement annotations specified",
 			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "test-job",
-						Annotations: map[string]string{},
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{},
-					},
-				},
+				Name:               "test-job",
+				Namespace:          "test-namespace",
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{},
 			},
 			jobTopologyName: "test-topology",
 			topologyTree: &TopologyInfo{
@@ -660,21 +638,14 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				},
 			},
 			expectedLevels: nil,
-			expectedError:  "no topology placement annotations found for job test-job, workload topology name: test-topology",
+			expectedError:  "no topology placement annotations found for job <test-namespace/test-job>, workload topology name: test-topology",
 		},
 		{
 			name: "required placement not found in topology",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel: "nonexistent",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel: "nonexistent",
 				},
 			},
 			jobTopologyName: "test-topology",
@@ -696,15 +667,8 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			name: "preferred placement not found in topology",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							PreferredTopologyLevel: "nonexistent",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					PreferredLevel: "nonexistent",
 				},
 			},
 			jobTopologyName: "test-topology",
@@ -726,15 +690,8 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			name: "required placement at first level",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel: "rack",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel: "rack",
 				},
 			},
 			jobTopologyName: "test-topology",
@@ -759,15 +716,8 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			name: "preferred placement at first level",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							PreferredTopologyLevel: "rack",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					PreferredLevel: "rack",
 				},
 			},
 			jobTopologyName: "test-topology",
@@ -795,15 +745,8 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			name: "preferred placement at middle level",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							PreferredTopologyLevel: "zone",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					PreferredLevel: "zone",
 				},
 			},
 			jobTopologyName: "test-topology",
@@ -830,15 +773,8 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			name: "single level topology with preferred placement",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							PreferredTopologyLevel: "zone",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					PreferredLevel: "zone",
 				},
 			},
 			jobTopologyName: "test-topology",
@@ -862,16 +798,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			name: "complex topology with multiple levels",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel:  "region",
-							PreferredTopologyLevel: "zone",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel:  "region",
+					PreferredLevel: "zone",
 				},
 			},
 			jobTopologyName: "test-topology",
@@ -1398,16 +1327,9 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 					}),
 				},
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel:  "zone",
-							PreferredTopologyLevel: "rack",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel:  "zone",
+					PreferredLevel: "rack",
 				},
 			},
 			topologyTree: &TopologyInfo{
@@ -1461,22 +1383,16 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 		{
 			name: "no domains can allocate the job",
 			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
+				Name:      "test-job",
+				Namespace: "test-namespace",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
 					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
 						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 					}),
 				},
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel: "zone",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel: "zone",
 				},
 			},
 			topologyTree: &TopologyInfo{
@@ -1512,7 +1428,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
 			},
 			expectedDomains: []*TopologyDomainInfo{},
-			expectedError:   "no domains found for the job test-job, workload topology name: test-topology",
+			expectedError:   "no domains found for the job <test-namespace/test-job>, workload topology name: test-topology",
 		},
 		{
 			name: "no relevant domain levels",
@@ -1523,16 +1439,9 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
 					}),
 				},
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel:  "zone",
-							PreferredTopologyLevel: "rack",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel:  "zone",
+					PreferredLevel: "rack",
 				},
 			},
 			topologyTree: &TopologyInfo{
@@ -1573,16 +1482,9 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
 					}),
 				},
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel:  "region",
-							PreferredTopologyLevel: "zone",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel:  "region",
+					PreferredLevel: "zone",
 				},
 			},
 			topologyTree: &TopologyInfo{
@@ -1654,15 +1556,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
 					}),
 				},
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel: "zone",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel: "zone",
 				},
 			},
 			topologyTree: &TopologyInfo{
@@ -1718,15 +1613,8 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
 					}),
 				},
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel: "zone",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel: "zone",
 				},
 			},
 			topologyTree: &TopologyInfo{
@@ -1798,16 +1686,9 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						"pod4": {UID: "pod4", Name: "pod4", Status: pod_status.Pending},
 					}),
 				},
-				PodGroup: &enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-job",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						TopologyConstraint: enginev2alpha2.TopologyConstraint{
-							RequiredTopologyLevel:  "region",
-							PreferredTopologyLevel: "rack",
-						},
-					},
+				TopologyConstraint: &podgroup_info.TopologyConstraintInfo{
+					RequiredLevel:  "region",
+					PreferredLevel: "rack",
 				},
 			},
 			topologyTree: &TopologyInfo{

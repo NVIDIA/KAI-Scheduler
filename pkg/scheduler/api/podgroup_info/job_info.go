@@ -62,6 +62,12 @@ type PodGroupInfos struct {
 	PodGroupInfos []*PodGroupInfo
 }
 
+type TopologyConstraintInfo struct {
+	PreferredLevel string
+	RequiredLevel  string
+	Topology       string
+}
+
 type PodGroupInfo struct {
 	UID common_info.PodGroupID
 
@@ -82,6 +88,7 @@ type PodGroupInfo struct {
 	LastStartTimestamp *time.Time
 	PodGroup           *enginev2alpha2.PodGroup
 	PodGroupUID        types.UID
+	TopologyConstraint *TopologyConstraintInfo
 	SubGroups          map[string]*SubGroupInfo
 
 	StalenessInfo
@@ -163,6 +170,14 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.PodGroup = pg
 	pgi.PodGroupUID = pg.UID
 	pgi.setSubGroups(pg)
+
+	if pg.Spec.TopologyConstraint.Topology != "" {
+		pgi.TopologyConstraint = &TopologyConstraintInfo{
+			Topology:       pg.Spec.TopologyConstraint.Topology,
+			RequiredLevel:  pg.Spec.TopologyConstraint.RequiredTopologyLevel,
+			PreferredLevel: pg.Spec.TopologyConstraint.PreferredTopologyLevel,
+		}
+	}
 
 	if pg.Annotations[commonconstants.StalePodgroupTimeStamp] != "" {
 		staleTimeStamp, err := time.Parse(time.RFC3339, pg.Annotations[commonconstants.StalePodgroupTimeStamp])
