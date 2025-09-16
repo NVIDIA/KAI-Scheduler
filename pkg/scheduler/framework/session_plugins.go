@@ -51,6 +51,10 @@ func (ssn *Session) AddPrePredicateFn(pf api.PrePredicateFn) {
 	ssn.PrePredicateFns = append(ssn.PrePredicateFns, pf)
 }
 
+func (ssn *Session) AddSubsetNodesFn(snf api.SubsetNodesFn) {
+	ssn.SubsetNodesFns = append(ssn.SubsetNodesFns, snf)
+}
+
 func (ssn *Session) AddPredicateFn(pf api.PredicateFn) {
 	ssn.PredicateFns = append(ssn.PredicateFns, pf)
 }
@@ -315,6 +319,39 @@ func (ssn *Session) IsTaskAllocationOnNodeOverCapacityFn(task *pod_info.PodInfo,
 		Message:       "",
 		Details:       nil,
 	}
+}
+
+func (ssn *Session) SubsetNodesFn(podGroup *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo, initNodeSet node_info.NodeSet) ([]node_info.NodeSet, error) {
+	nodeSets := []node_info.NodeSet{initNodeSet}
+	for _, subsetNodesFn := range ssn.SubsetNodesFns {
+		log.InfraLogger.V(7).Infof(
+			"Running plugin func <%v> on podGroup <%s/%s>", subsetNodesFn, podGroup.Namespace, podGroup.Namespace)
+		var newNodeSets []node_info.NodeSet
+		for _, nodeSet := range nodeSets {
+			nodeSubsets, err := subsetNodesFn(podGroup, tasks, nodeSet)
+			if err != nil {
+				return nil, err
+			}
+			newNodeSets = append(newNodeSets, nodeSubsets...)
+		}
+		nodeSets = newNodeSets
+
+		logNodeSetsPluginResult(subsetNodesFn, podGroup, nodeSets)
+	}
+	return nodeSets, nil
+}
+
+func logNodeSetsPluginResult(subsetNodesFn api.SubsetNodesFn, podGroup *podgroup_info.PodGroupInfo, nodeSets []node_info.NodeSet) {
+	nodeSetsByNames := make([]node_info.NodeSet, 0, len(nodeSets))
+	for _, nodeSet := range nodeSets {
+		nodeSetNodeNames := make([]string, 0, len(nodeSets))
+		for _, node := range nodeSet {
+			nodeSetNodeNames = append(nodeSetNodeNames, node.Name)
+		}
+		nodeSetsByNames = append(nodeSetsByNames, nodeSet)
+	}
+	log.InfraLogger.V(7).Infof(
+		"Result of plugin func <%v> on podGroup <%s/%s> is %v", subsetNodesFn, podGroup.Namespace, podGroup.Namespace, nodeSetsByNames)
 }
 
 func (ssn *Session) PrePredicateFn(task *pod_info.PodInfo, job *podgroup_info.PodGroupInfo) error {

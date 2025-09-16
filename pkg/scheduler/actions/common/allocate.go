@@ -27,10 +27,26 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 		return false
 	}
 
+	nodeSets, err := ssn.SubsetNodesFn(job, tasksToAllocate, nodes)
+	if err != nil {
+		log.InfraLogger.Errorf(
+			"Failed to run SubsetNodes on job <%s/%s>", job.Namespace, job.Namespace)
+		return false
+	}
+	for _, nodeSet := range nodeSets {
+		if allocateTaskOnNodeSet(ssn, stmt, nodeSet, job, tasksToAllocate, isPipelineOnly) {
+			return true
+		}
+	}
+	return false
+}
+
+func allocateTaskOnNodeSet(ssn *framework.Session, stmt *framework.Statement, nodeSet node_info.NodeSet,
+	job *podgroup_info.PodGroupInfo, tasksToAllocate []*pod_info.PodInfo, isPipelineOnly bool) bool {
 	defer ssn.CleanAllocationAttemptCache(job)
 	cp := stmt.Checkpoint()
 	for index, task := range tasksToAllocate {
-		success := allocateTask(ssn, stmt, nodes, task, isPipelineOnly)
+		success := allocateTask(ssn, stmt, nodeSet, task, isPipelineOnly)
 		if !success {
 			if err := stmt.Rollback(cp); err != nil {
 				log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.UID, err)
@@ -40,7 +56,6 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 			return false
 		}
 	}
-
 	return true
 }
 
