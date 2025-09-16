@@ -40,9 +40,6 @@ type TopologyDomainInfo struct {
 	// Level in the hierarchy (e.g., "datacenter", "zone", "rack", "node")
 	Level string
 
-	// Parent domain, nil for root
-	Parent *TopologyDomainInfo
-
 	// Child domains
 	Children map[TopologyDomainID]*TopologyDomainInfo
 
@@ -58,7 +55,6 @@ func NewTopologyDomainInfo(id TopologyDomainID, name, level string) *TopologyDom
 		ID:       id,
 		Name:     name,
 		Level:    level,
-		Parent:   nil,
 		Children: map[TopologyDomainID]*TopologyDomainInfo{},
 		Nodes:    map[string]*node_info.NodeInfo{},
 	}
@@ -82,6 +78,5 @@ func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, node
 }
 
 func connectDomainToParent(domain *TopologyDomainInfo, parent *TopologyDomainInfo) {
-	domain.Parent = parent
 	parent.Children[domain.ID] = domain
 }
