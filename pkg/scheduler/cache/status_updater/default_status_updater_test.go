@@ -4,23 +4,30 @@
 package status_updater
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	faketesting "k8s.io/client-go/testing"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 
-	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	kubeaischedfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
+	fakeschedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v2alpha2/fake"
+	kaiv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 type UpdatePodGroupConditionTest struct {
 	name                string
-	podGroup            *enginev2alpha2.PodGroup
-	schedulingCondition *enginev2alpha2.SchedulingCondition
-	expectedConditions  []enginev2alpha2.SchedulingCondition
+	podGroup            *kaiv2alpha2.PodGroup
+	schedulingCondition *kaiv2alpha2.SchedulingCondition
+	expectedConditions  []kaiv2alpha2.SchedulingCondition
 	expectedUpdated     bool
 }
 
@@ -28,13 +35,13 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 	for i, test := range []UpdatePodGroupConditionTest{
 		{
 			name: "No conditions",
-			podGroup: &enginev2alpha2.PodGroup{
-				Status: enginev2alpha2.PodGroupStatus{
-					SchedulingConditions: []enginev2alpha2.SchedulingCondition{},
+			podGroup: &kaiv2alpha2.PodGroup{
+				Status: kaiv2alpha2.PodGroupStatus{
+					SchedulingConditions: []kaiv2alpha2.SchedulingCondition{},
 				},
 			},
-			schedulingCondition: &enginev2alpha2.SchedulingCondition{
-				Type:               enginev2alpha2.UnschedulableOnNodePool,
+			schedulingCondition: &kaiv2alpha2.SchedulingCondition{
+				Type:               kaiv2alpha2.UnschedulableOnNodePool,
 				NodePool:           "default",
 				Reason:             "reason",
 				Message:            "message",
@@ -42,9 +49,9 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 				LastTransitionTime: metav1.Time{},
 				Status:             v1.ConditionTrue,
 			},
-			expectedConditions: []enginev2alpha2.SchedulingCondition{
+			expectedConditions: []kaiv2alpha2.SchedulingCondition{
 				{
-					Type:               enginev2alpha2.UnschedulableOnNodePool,
+					Type:               kaiv2alpha2.UnschedulableOnNodePool,
 					NodePool:           "default",
 					Reason:             "reason",
 					Message:            "message",
@@ -58,11 +65,11 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 		},
 		{
 			name: "Correct transition ID",
-			podGroup: &enginev2alpha2.PodGroup{
-				Status: enginev2alpha2.PodGroupStatus{
-					SchedulingConditions: []enginev2alpha2.SchedulingCondition{
+			podGroup: &kaiv2alpha2.PodGroup{
+				Status: kaiv2alpha2.PodGroupStatus{
+					SchedulingConditions: []kaiv2alpha2.SchedulingCondition{
 						{
-							Type:               enginev2alpha2.UnschedulableOnNodePool,
+							Type:               kaiv2alpha2.UnschedulableOnNodePool,
 							NodePool:           "existingConditionNodepool",
 							Reason:             "reason",
 							Message:            "message",
@@ -73,8 +80,8 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 					},
 				},
 			},
-			schedulingCondition: &enginev2alpha2.SchedulingCondition{
-				Type:               enginev2alpha2.UnschedulableOnNodePool,
+			schedulingCondition: &kaiv2alpha2.SchedulingCondition{
+				Type:               kaiv2alpha2.UnschedulableOnNodePool,
 				NodePool:           "default",
 				Reason:             "reason",
 				Message:            "message",
@@ -82,9 +89,9 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 				LastTransitionTime: metav1.Time{},
 				Status:             v1.ConditionTrue,
 			},
-			expectedConditions: []enginev2alpha2.SchedulingCondition{
+			expectedConditions: []kaiv2alpha2.SchedulingCondition{
 				{
-					Type:         enginev2alpha2.UnschedulableOnNodePool,
+					Type:         kaiv2alpha2.UnschedulableOnNodePool,
 					NodePool:     "existingConditionNodepool",
 					Reason:       "reason",
 					Message:      "message",
@@ -92,7 +99,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 					Status:       v1.ConditionTrue,
 				},
 				{
-					Type:         enginev2alpha2.UnschedulableOnNodePool,
+					Type:         kaiv2alpha2.UnschedulableOnNodePool,
 					NodePool:     "default",
 					Reason:       "reason",
 					Message:      "message",
@@ -105,11 +112,11 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 		},
 		{
 			name: "Override existing condition",
-			podGroup: &enginev2alpha2.PodGroup{
-				Status: enginev2alpha2.PodGroupStatus{
-					SchedulingConditions: []enginev2alpha2.SchedulingCondition{
+			podGroup: &kaiv2alpha2.PodGroup{
+				Status: kaiv2alpha2.PodGroupStatus{
+					SchedulingConditions: []kaiv2alpha2.SchedulingCondition{
 						{
-							Type:               enginev2alpha2.UnschedulableOnNodePool,
+							Type:               kaiv2alpha2.UnschedulableOnNodePool,
 							NodePool:           "existingConditionNodepool",
 							Reason:             "reason",
 							Message:            "message",
@@ -118,7 +125,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 							Status:             v1.ConditionTrue,
 						},
 						{
-							Type:               enginev2alpha2.UnschedulableOnNodePool,
+							Type:               kaiv2alpha2.UnschedulableOnNodePool,
 							NodePool:           "newerConditionNodepool",
 							Reason:             "reason",
 							Message:            "message",
@@ -129,8 +136,8 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 					},
 				},
 			},
-			schedulingCondition: &enginev2alpha2.SchedulingCondition{
-				Type:               enginev2alpha2.UnschedulableOnNodePool,
+			schedulingCondition: &kaiv2alpha2.SchedulingCondition{
+				Type:               kaiv2alpha2.UnschedulableOnNodePool,
 				NodePool:           "existingConditionNodepool",
 				Reason:             "reason",
 				Message:            "message",
@@ -138,9 +145,9 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 				LastTransitionTime: metav1.Time{},
 				Status:             v1.ConditionTrue,
 			},
-			expectedConditions: []enginev2alpha2.SchedulingCondition{
+			expectedConditions: []kaiv2alpha2.SchedulingCondition{
 				{
-					Type:               enginev2alpha2.UnschedulableOnNodePool,
+					Type:               kaiv2alpha2.UnschedulableOnNodePool,
 					NodePool:           "newerConditionNodepool",
 					Reason:             "reason",
 					Message:            "message",
@@ -149,7 +156,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 					Status:             v1.ConditionTrue,
 				},
 				{
-					Type:               enginev2alpha2.UnschedulableOnNodePool,
+					Type:               kaiv2alpha2.UnschedulableOnNodePool,
 					NodePool:           "existingConditionNodepool",
 					Reason:             "reason",
 					Message:            "message",
@@ -163,11 +170,11 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 		},
 		{
 			name: "Don't update if not necessary",
-			podGroup: &enginev2alpha2.PodGroup{
-				Status: enginev2alpha2.PodGroupStatus{
-					SchedulingConditions: []enginev2alpha2.SchedulingCondition{
+			podGroup: &kaiv2alpha2.PodGroup{
+				Status: kaiv2alpha2.PodGroupStatus{
+					SchedulingConditions: []kaiv2alpha2.SchedulingCondition{
 						{
-							Type:               enginev2alpha2.UnschedulableOnNodePool,
+							Type:               kaiv2alpha2.UnschedulableOnNodePool,
 							NodePool:           "newerConditionNodepool",
 							Reason:             "reason",
 							Message:            "message",
@@ -176,7 +183,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 							Status:             v1.ConditionTrue,
 						},
 						{
-							Type:               enginev2alpha2.UnschedulableOnNodePool,
+							Type:               kaiv2alpha2.UnschedulableOnNodePool,
 							NodePool:           "existingConditionNodepool",
 							Reason:             "reason",
 							Message:            "message",
@@ -187,8 +194,8 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 					},
 				},
 			},
-			schedulingCondition: &enginev2alpha2.SchedulingCondition{
-				Type:               enginev2alpha2.UnschedulableOnNodePool,
+			schedulingCondition: &kaiv2alpha2.SchedulingCondition{
+				Type:               kaiv2alpha2.UnschedulableOnNodePool,
 				NodePool:           "existingConditionNodepool",
 				Reason:             "reason",
 				Message:            "message",
@@ -196,9 +203,9 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 				LastTransitionTime: metav1.Time{},
 				Status:             v1.ConditionTrue,
 			},
-			expectedConditions: []enginev2alpha2.SchedulingCondition{
+			expectedConditions: []kaiv2alpha2.SchedulingCondition{
 				{
-					Type:               enginev2alpha2.UnschedulableOnNodePool,
+					Type:               kaiv2alpha2.UnschedulableOnNodePool,
 					NodePool:           "newerConditionNodepool",
 					Reason:             "reason",
 					Message:            "message",
@@ -207,7 +214,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 					Status:             v1.ConditionTrue,
 				},
 				{
-					Type:               enginev2alpha2.UnschedulableOnNodePool,
+					Type:               kaiv2alpha2.UnschedulableOnNodePool,
 					NodePool:           "existingConditionNodepool",
 					Reason:             "reason",
 					Message:            "message",
@@ -221,11 +228,11 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 		},
 		{
 			name: "Update even if just the order is wrong - latest condition by transition ID should be last in the list",
-			podGroup: &enginev2alpha2.PodGroup{
-				Status: enginev2alpha2.PodGroupStatus{
-					SchedulingConditions: []enginev2alpha2.SchedulingCondition{
+			podGroup: &kaiv2alpha2.PodGroup{
+				Status: kaiv2alpha2.PodGroupStatus{
+					SchedulingConditions: []kaiv2alpha2.SchedulingCondition{
 						{
-							Type:               enginev2alpha2.UnschedulableOnNodePool,
+							Type:               kaiv2alpha2.UnschedulableOnNodePool,
 							NodePool:           "existingConditionNodepool",
 							Reason:             "reason",
 							Message:            "message",
@@ -234,7 +241,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 							Status:             v1.ConditionTrue,
 						},
 						{
-							Type:               enginev2alpha2.UnschedulableOnNodePool,
+							Type:               kaiv2alpha2.UnschedulableOnNodePool,
 							NodePool:           "newerConditionNodepool",
 							Reason:             "reason",
 							Message:            "message",
@@ -245,8 +252,8 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 					},
 				},
 			},
-			schedulingCondition: &enginev2alpha2.SchedulingCondition{
-				Type:               enginev2alpha2.UnschedulableOnNodePool,
+			schedulingCondition: &kaiv2alpha2.SchedulingCondition{
+				Type:               kaiv2alpha2.UnschedulableOnNodePool,
 				NodePool:           "existingConditionNodepool",
 				Reason:             "reason",
 				Message:            "message",
@@ -254,9 +261,9 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 				LastTransitionTime: metav1.Time{},
 				Status:             v1.ConditionTrue,
 			},
-			expectedConditions: []enginev2alpha2.SchedulingCondition{
+			expectedConditions: []kaiv2alpha2.SchedulingCondition{
 				{
-					Type:               enginev2alpha2.UnschedulableOnNodePool,
+					Type:               kaiv2alpha2.UnschedulableOnNodePool,
 					NodePool:           "newerConditionNodepool",
 					Reason:             "reason",
 					Message:            "message",
@@ -265,7 +272,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 					Status:             v1.ConditionTrue,
 				},
 				{
-					Type:               enginev2alpha2.UnschedulableOnNodePool,
+					Type:               kaiv2alpha2.UnschedulableOnNodePool,
 					NodePool:           "existingConditionNodepool",
 					Reason:             "reason",
 					Message:            "message",
@@ -279,11 +286,11 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 		},
 		{
 			name: "Squash conditions",
-			podGroup: &enginev2alpha2.PodGroup{
-				Status: enginev2alpha2.PodGroupStatus{
-					SchedulingConditions: []enginev2alpha2.SchedulingCondition{
+			podGroup: &kaiv2alpha2.PodGroup{
+				Status: kaiv2alpha2.PodGroupStatus{
+					SchedulingConditions: []kaiv2alpha2.SchedulingCondition{
 						{
-							Type:               enginev2alpha2.UnschedulableOnNodePool,
+							Type:               kaiv2alpha2.UnschedulableOnNodePool,
 							NodePool:           "existingConditionNodepool",
 							Reason:             "reason",
 							Message:            "message",
@@ -292,7 +299,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 							Status:             v1.ConditionTrue,
 						},
 						{
-							Type:               enginev2alpha2.UnschedulableOnNodePool,
+							Type:               kaiv2alpha2.UnschedulableOnNodePool,
 							NodePool:           "newerConditionNodepool",
 							Reason:             "reason",
 							Message:            "message",
@@ -301,7 +308,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 							Status:             v1.ConditionTrue,
 						},
 						{
-							Type:               enginev2alpha2.UnschedulableOnNodePool,
+							Type:               kaiv2alpha2.UnschedulableOnNodePool,
 							NodePool:           "existingConditionNodepool",
 							Reason:             "reason",
 							Message:            "message",
@@ -312,8 +319,8 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 					},
 				},
 			},
-			schedulingCondition: &enginev2alpha2.SchedulingCondition{
-				Type:               enginev2alpha2.UnschedulableOnNodePool,
+			schedulingCondition: &kaiv2alpha2.SchedulingCondition{
+				Type:               kaiv2alpha2.UnschedulableOnNodePool,
 				NodePool:           "existingConditionNodepool",
 				Reason:             "reason",
 				Message:            "message",
@@ -321,9 +328,9 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 				LastTransitionTime: metav1.Time{},
 				Status:             v1.ConditionTrue,
 			},
-			expectedConditions: []enginev2alpha2.SchedulingCondition{
+			expectedConditions: []kaiv2alpha2.SchedulingCondition{
 				{
-					Type:               enginev2alpha2.UnschedulableOnNodePool,
+					Type:               kaiv2alpha2.UnschedulableOnNodePool,
 					NodePool:           "newerConditionNodepool",
 					Reason:             "reason",
 					Message:            "message",
@@ -332,7 +339,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 					Status:             v1.ConditionTrue,
 				},
 				{
-					Type:               enginev2alpha2.UnschedulableOnNodePool,
+					Type:               kaiv2alpha2.UnschedulableOnNodePool,
 					NodePool:           "existingConditionNodepool",
 					Reason:             "reason",
 					Message:            "message",
@@ -354,7 +361,7 @@ func TestUpdatePodGroupSchedulingCondition(t *testing.T) {
 	}
 }
 
-func assertPodGroupConditions(t *testing.T, actualConditions, expectedConditions []enginev2alpha2.SchedulingCondition) {
+func assertPodGroupConditions(t *testing.T, actualConditions, expectedConditions []kaiv2alpha2.SchedulingCondition) {
 	assert.Equal(t, len(expectedConditions), len(actualConditions))
 	for i, expectedCondition := range expectedConditions {
 		assert.Equal(t, expectedCondition.Status, actualConditions[i].Status)
@@ -368,7 +375,7 @@ func assertPodGroupConditions(t *testing.T, actualConditions, expectedConditions
 
 type UpdatePodGroupStaleTimeStampTest struct {
 	name               string
-	podGroup           *enginev2alpha2.PodGroup
+	podGroup           *kaiv2alpha2.PodGroup
 	staleTimeStamp     *time.Time
 	expectedAnnotation *string
 	expectedUpdated    bool
@@ -378,7 +385,7 @@ func TestUpdatePodGroupStaleTimeStamp(t *testing.T) {
 	for i, test := range []UpdatePodGroupStaleTimeStampTest{
 		{
 			name: "No stale timestamp and no need to update",
-			podGroup: &enginev2alpha2.PodGroup{
+			podGroup: &kaiv2alpha2.PodGroup{
 				ObjectMeta: metav1.ObjectMeta{},
 			},
 			staleTimeStamp:     nil,
@@ -387,7 +394,7 @@ func TestUpdatePodGroupStaleTimeStamp(t *testing.T) {
 		},
 		{
 			name: "Stale timestamp and need to remove",
-			podGroup: &enginev2alpha2.PodGroup{
+			podGroup: &kaiv2alpha2.PodGroup{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						commonconstants.StalePodgroupTimeStamp: "2021-01-01T00:00:00Z",
@@ -400,7 +407,7 @@ func TestUpdatePodGroupStaleTimeStamp(t *testing.T) {
 		},
 		{
 			name: "No stale timestamp and need to add",
-			podGroup: &enginev2alpha2.PodGroup{
+			podGroup: &kaiv2alpha2.PodGroup{
 				ObjectMeta: metav1.ObjectMeta{},
 			},
 			staleTimeStamp:     getTimePointer("2021-01-01T00:00:00Z"),
@@ -409,7 +416,7 @@ func TestUpdatePodGroupStaleTimeStamp(t *testing.T) {
 		},
 		{
 			name: "Existing stale timestamp, no need to update",
-			podGroup: &enginev2alpha2.PodGroup{
+			podGroup: &kaiv2alpha2.PodGroup{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						commonconstants.StalePodgroupTimeStamp: "2021-01-01T00:00:00Z",
@@ -422,7 +429,7 @@ func TestUpdatePodGroupStaleTimeStamp(t *testing.T) {
 		},
 		{
 			name: "Existing stale timestamp, need to update",
-			podGroup: &enginev2alpha2.PodGroup{
+			podGroup: &kaiv2alpha2.PodGroup{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						commonconstants.StalePodgroupTimeStamp: "2020-01-01T00:00:00Z",
@@ -435,7 +442,7 @@ func TestUpdatePodGroupStaleTimeStamp(t *testing.T) {
 		},
 		{
 			name: "Existing invalid value, need to update",
-			podGroup: &enginev2alpha2.PodGroup{
+			podGroup: &kaiv2alpha2.PodGroup{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						commonconstants.StalePodgroupTimeStamp: "quick brown fox",
@@ -473,4 +480,83 @@ func getTimePointer(ts string) *time.Time {
 		panic(err)
 	}
 	return &t
+}
+
+func TestDefaultStatusUpdater_RetryAfterError(t *testing.T) {
+	kubeClient := fake.NewSimpleClientset()
+	kubeAiSchedClient := kubeaischedfake.NewSimpleClientset()
+	recorder := record.NewFakeRecorder(100)
+	statusUpdater := New(kubeClient, kubeAiSchedClient, recorder, 1, false)
+
+	updateCalls := 0
+	// wait with pod groups update until signal is given.
+	kubeAiSchedClient.SchedulingV2alpha2().(*fakeschedulingv2alpha2.FakeSchedulingV2alpha2).PrependReactor(
+		"update", "podgroups", func(action faketesting.Action) (handled bool, ret runtime.Object, err error) {
+			updateCalls += 1
+			return false, nil, errors.New("test")
+		},
+	)
+
+	stopCh := make(chan struct{})
+	statusUpdater.Run(stopCh)
+	defer close(stopCh)
+
+	job := &kaiv2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "retry-test",
+		},
+		Status: kaiv2alpha2.PodGroupStatus{},
+	}
+	jobCopy := job.DeepCopy()
+
+	jobCopy.Status.SchedulingConditions = []kaiv2alpha2.SchedulingCondition{
+		{
+			TransitionID: "1",
+			Type:         kaiv2alpha2.UnschedulableOnNodePool,
+			NodePool:     "test",
+			Reason:       "test",
+			Message:      "test",
+		},
+	}
+
+	patchData, err := getPodGroupPatch(job, jobCopy)
+	assert.NoError(t, err)
+
+	go func() {
+		time.Sleep(time.Millisecond * 75)
+		statusUpdater.pushToUpdateQueue(&updatePayload{
+			key:        "test",
+			objectType: "podgroup",
+		}, &inflightUpdate{
+			object:       job,
+			patchData:    patchData,
+			updateStatus: true,
+			subResources: nil,
+		})
+	}()
+
+	// Wait for an initial update call
+	assert.NoError(t, waitForIncrease(&updateCalls), "failed to wait for initial update call")
+
+	// Wait for a retry after error
+	assert.NoError(t, waitForIncrease(&updateCalls), "update was not retried after error")
+}
+
+func waitForIncrease(callCount *int) error {
+	originalValue := *callCount
+	startTime := time.Now()
+	timeout := time.Second * 5
+
+	for time.Since(startTime) < timeout {
+		if *callCount > originalValue {
+			break
+		}
+		time.Sleep(time.Millisecond * 50)
+	}
+
+	if *callCount > originalValue {
+		return nil
+	}
+	return errors.New("update calls did not increase")
 }

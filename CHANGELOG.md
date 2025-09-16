@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- Fixed a bug where the scheduler would not re-try updating podgroup status after failure
+
+### Fixed
 - kai-scheduler will not ignore pod spec.overhead field
 - Fixed wrong GPU memory unit conversion from node `nvidia.com/gpu.memory` labels
 - Fixed incorrect MIG GPU usage calculation leading to wrong scheduling decision
