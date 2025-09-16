@@ -39,7 +39,7 @@ func (t *topologyPlugin) initializeTopologyTree(ssn *framework.Session) {
 		topologyTree := &TopologyInfo{
 			Name:             singleTopology.Name,
 			DomainsByLevel:   map[string]map[TopologyDomainID]*TopologyDomainInfo{},
-			Root:             NewTopologyDomainInfo(TopologyDomainID("root"), "datacenter", "cluster", 0),
+			Root:             NewTopologyDomainInfo("root", "datacenter", "cluster", 0),
 			TopologyResource: singleTopology,
 		}
 		topologyTree.DomainsByLevel["root"] = map[TopologyDomainID]*TopologyDomainInfo{
