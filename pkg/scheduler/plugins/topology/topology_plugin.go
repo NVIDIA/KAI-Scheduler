@@ -29,14 +29,13 @@ func (t *topologyPlugin) Name() string {
 }
 
 func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
-	topologies := ssn.Topologies
-	t.initializeTopologyTree(topologies, ssn)
+	t.initializeTopologyTree(ssn)
 
 	ssn.AddSubsetNodesFn(t.subSetNodesFn)
 }
 
-func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, ssn *framework.Session) {
-	for _, singleTopology := range topologies {
+func (t *topologyPlugin) initializeTopologyTree(ssn *framework.Session) {
+	for _, singleTopology := range ssn.Topologies {
 		topologyTree := &TopologyInfo{
 			Name:             singleTopology.Name,
 			DomainsByLevel:   map[string]map[TopologyDomainID]*TopologyDomainInfo{},
