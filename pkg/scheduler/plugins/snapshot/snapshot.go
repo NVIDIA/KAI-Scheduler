@@ -12,7 +12,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	k8spolicyv1 "k8s.io/api/policy/v1"
-	resourceapi "k8s.io/api/resource/v1beta1"
+	resourceapi "k8s.io/api/resource/v1"
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 
