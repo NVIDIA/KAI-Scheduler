@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/xyproto/randomstring"
 	corev1 "k8s.io/api/core/v1"
-	resourcev1beta1 "k8s.io/api/resource/v1beta1"
+	resourceapi "k8s.io/api/resource/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -86,7 +86,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			err := DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
 				&corev1.Pod{},
 				&schedulingv2alpha2.PodGroup{},
-				&resourcev1beta1.ResourceClaim{},
+				&resourceapi.ResourceClaim{},
 				&kaiv1alpha2.BindRequest{},
 			)
 			Expect(err).NotTo(HaveOccurred(), "Failed to delete test resources")
@@ -94,7 +94,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			err = WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, interval,
 				&corev1.PodList{},
 				&schedulingv2alpha2.PodGroupList{},
-				&resourcev1beta1.ResourceClaimList{},
+				&resourceapi.ResourceClaimList{},
 				&kaiv1alpha2.BindRequestList{},
 			)
 			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test resources to be deleted")
@@ -282,7 +282,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			err := DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
 				&corev1.Pod{},
 				&schedulingv2alpha2.PodGroup{},
-				&resourcev1beta1.ResourceClaim{},
+				&resourceapi.ResourceClaim{},
 				&kaiv1alpha2.BindRequest{},
 			)
 			Expect(err).NotTo(HaveOccurred(), "Failed to delete test resources")
@@ -290,7 +290,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			err = WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, interval,
 				&corev1.PodList{},
 				&schedulingv2alpha2.PodGroupList{},
-				&resourcev1beta1.ResourceClaimList{},
+				&resourceapi.ResourceClaimList{},
 				&kaiv1alpha2.BindRequestList{},
 			)
 			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test resources to be deleted")
@@ -434,7 +434,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			err := DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
 				&corev1.Pod{},
 				&schedulingv2alpha2.PodGroup{},
-				&resourcev1beta1.ResourceClaim{},
+				&resourceapi.ResourceClaim{},
 				&kaiv1alpha2.BindRequest{},
 			)
 			Expect(err).NotTo(HaveOccurred(), "Failed to delete test resources")
@@ -442,7 +442,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			err = WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, interval,
 				&corev1.PodList{},
 				&schedulingv2alpha2.PodGroupList{},
-				&resourcev1beta1.ResourceClaimList{},
+				&resourceapi.ResourceClaimList{},
 				&kaiv1alpha2.BindRequestList{},
 			)
 			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test resources to be deleted")

@@ -5,9 +5,10 @@ package test_utils
 
 import (
 	"os"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 	"strconv"
 	"time"
+
+	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	. "go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v2"
