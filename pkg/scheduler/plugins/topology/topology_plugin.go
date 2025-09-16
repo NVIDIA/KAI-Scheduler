@@ -31,13 +31,13 @@ func (t *topologyPlugin) Name() string {
 }
 
 func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
-	t.initializeTopologyTree(ssn)
+	t.initializeTopologyTree(ssn.Topologies, ssn.Nodes)
 
 	ssn.AddSubsetNodesFn(t.subSetNodesFn)
 }
 
-func (t *topologyPlugin) initializeTopologyTree(ssn *framework.Session) {
-	for _, singleTopology := range ssn.Topologies {
+func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, nodes map[string]*node_info.NodeInfo) {
+	for _, singleTopology := range topologies {
 		topologyTree := &TopologyInfo{
 			Name: singleTopology.Name,
 			DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
@@ -48,7 +48,7 @@ func (t *topologyPlugin) initializeTopologyTree(ssn *framework.Session) {
 			TopologyResource: singleTopology,
 		}
 
-		for _, nodeInfo := range ssn.Nodes {
+		for _, nodeInfo := range nodes {
 			t.addNodeDataToTopology(topologyTree, singleTopology, nodeInfo)
 		}
 
