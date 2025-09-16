@@ -115,13 +115,11 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
-								Name:  "rack1",
 								Level: "rack",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
 							"rack2.zone1": {
 								ID:    "rack2.zone1",
-								Name:  "rack2",
 								Level: "rack",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -129,7 +127,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 						"zone": {
 							"zone1": {
 								ID:    "zone1",
-								Name:  "zone1",
 								Level: "zone",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -265,7 +262,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 						relevantDomains: []*TopologyDomainInfo{
 							{
 								ID:              "zone1",
-								Name:            "zone1",
 								Level:           "zone",
 								AllocatablePods: 1,
 							},
@@ -312,7 +308,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 						"zone": {
 							"zone1": {
 								ID:    "zone1",
-								Name:  "zone1",
 								Level: "zone",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -365,7 +360,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
-								Name:  "rack1",
 								Level: "rack",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -373,7 +367,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 						"zone": {
 							"zone1": {
 								ID:    "zone1",
-								Name:  "zone1",
 								Level: "zone",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -417,13 +410,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					leafLevel := len(topologyTree.TopologyResource.Spec.Levels) - 1
 					domain := topologyTree.DomainsByLevel[topologyTree.TopologyResource.Spec.Levels[leafLevel].NodeLabel][domainId]
 					for domain != nil {
-						if nodeInfo.Node.Labels == nil {
-							nodeInfo.Node.Labels = map[string]string{
-								domain.Level: domain.Name,
-							}
-						} else {
-							nodeInfo.Node.Labels[domain.Level] = domain.Name
-						}
 						domain.AddNode(nodeInfo)
 						parentDomainId := tt.domainParent[domain.ID]
 						parentDomainLevel := tt.domainLevel[parentDomainId]
@@ -890,13 +876,11 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
-								Name:  "rack1",
 								Level: "rack",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
 							"rack2.zone1": {
 								ID:    "rack2.zone1",
-								Name:  "rack2",
 								Level: "rack",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -904,7 +888,6 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 						"zone": {
 							"zone1": {
 								ID:    "zone1",
-								Name:  "zone1",
 								Level: "zone",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -933,19 +916,16 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			expectedDomains: map[TopologyDomainID]*TopologyDomainInfo{
 				"rack1.zone1": {
 					ID:              "rack1.zone1",
-					Name:            "rack1",
 					Level:           "rack",
 					AllocatablePods: 2,
 				},
 				"rack2.zone1": {
 					ID:              "rack2.zone1",
-					Name:            "rack2",
 					Level:           "rack",
 					AllocatablePods: 2,
 				},
 				"zone1": {
 					ID:              "zone1",
-					Name:            "zone1",
 					Level:           "zone",
 					AllocatablePods: 4,
 				},
@@ -992,13 +972,11 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
-								Name:  "rack1",
 								Level: "rack",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
 							"rack2.zone1": {
 								ID:    "rack2.zone1",
-								Name:  "rack2",
 								Level: "rack",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -1006,7 +984,6 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 						"zone": {
 							"zone1": {
 								ID:    "zone1",
-								Name:  "zone1",
 								Level: "zone",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -1035,19 +1012,16 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			expectedDomains: map[TopologyDomainID]*TopologyDomainInfo{
 				"rack1.zone1": {
 					ID:              "rack1.zone1",
-					Name:            "rack1",
 					Level:           "rack",
 					AllocatablePods: 1, // Can only fit 1 pod
 				},
 				"rack2.zone1": {
 					ID:              "rack2.zone1",
-					Name:            "rack2",
 					Level:           "rack",
 					AllocatablePods: 1, // Can only fit 1 pod
 				},
 				"zone1": {
 					ID:              "zone1",
-					Name:            "zone1",
 					Level:           "zone",
 					AllocatablePods: 2, // Sum of children allocations: 1 + 1
 				},
@@ -1100,13 +1074,11 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
-								Name:  "rack1",
 								Level: "rack",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
 							"rack2.zone1": {
 								ID:    "rack2.zone1",
-								Name:  "rack2",
 								Level: "rack",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -1114,7 +1086,6 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 						"zone": {
 							"zone1": {
 								ID:    "zone1",
-								Name:  "zone1",
 								Level: "zone",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -1143,19 +1114,16 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			expectedDomains: map[TopologyDomainID]*TopologyDomainInfo{
 				"rack1.zone1": {
 					ID:              "rack1.zone1",
-					Name:            "rack1",
 					Level:           "rack",
 					AllocatablePods: 2,
 				},
 				"rack2.zone1": {
 					ID:              "rack2.zone1",
-					Name:            "rack2",
 					Level:           "rack",
 					AllocatablePods: 2,
 				},
 				"zone1": {
 					ID:              "zone1",
-					Name:            "zone1",
 					Level:           "zone",
 					AllocatablePods: 4,
 				},
@@ -1194,7 +1162,6 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 						"zone": {
 							"zone1": {
 								ID:    "zone1",
-								Name:  "zone1",
 								Level: "zone",
 								Nodes: map[string]*node_info.NodeInfo{},
 							},
@@ -1227,13 +1194,6 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				leafLevel := len(topologyTree.TopologyResource.Spec.Levels) - 1
 				domain := topologyTree.DomainsByLevel[topologyTree.TopologyResource.Spec.Levels[leafLevel].NodeLabel][domainId]
 				for domain != nil {
-					if nodeInfo.Node.Labels == nil {
-						nodeInfo.Node.Labels = map[string]string{
-							domain.Level: domain.Name,
-						}
-					} else {
-						nodeInfo.Node.Labels[domain.Level] = domain.Name
-					}
 					domain.AddNode(nodeInfo)
 					parentDomainId := tt.domainParent[domain.ID]
 					parentDomainLevel := tt.domainLevel[parentDomainId]
@@ -1325,13 +1285,11 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"rack": {
 						"rack1.zone1": {
 							ID:              "rack1.zone1",
-							Name:            "rack1",
 							Level:           "rack",
 							AllocatablePods: 2,
 						},
 						"rack2.zone1": {
 							ID:              "rack2.zone1",
-							Name:            "rack2",
 							Level:           "rack",
 							AllocatablePods: 1,
 						},
@@ -1339,7 +1297,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"zone": {
 						"zone1": {
 							ID:              "zone1",
-							Name:            "zone1",
 							Level:           "zone",
 							AllocatablePods: 3,
 						},
@@ -1352,7 +1309,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 			expectedDomains: []*TopologyDomainInfo{
 				{
 					ID:              "rack1.zone1",
-					Name:            "rack1",
 					Level:           "rack",
 					AllocatablePods: 2,
 				},
@@ -1388,7 +1344,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"rack": {
 						"rack1.zone1": {
 							ID:              "rack1.zone1",
-							Name:            "rack1",
 							Level:           "rack",
 							AllocatablePods: 1, // Can only fit 1 pod, job needs 2
 						},
@@ -1396,7 +1351,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"zone": {
 						"zone1": {
 							ID:              "zone1",
-							Name:            "zone1",
 							Level:           "zone",
 							AllocatablePods: 1, // Can only fit 1 pod, job needs 2
 						},
@@ -1437,7 +1391,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"datacenter": {
 						"datacenter1": {
 							ID:              "datacenter1",
-							Name:            "datacenter1",
 							Level:           "datacenter",
 							AllocatablePods: 1,
 						},
@@ -1482,13 +1435,11 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"rack": {
 						"rack1.zone1.region1": {
 							ID:              "rack1.zone1.region1",
-							Name:            "rack1",
 							Level:           "rack",
 							AllocatablePods: 3,
 						},
 						"rack2.zone1.region1": {
 							ID:              "rack2.zone1.region1",
-							Name:            "rack2",
 							Level:           "rack",
 							AllocatablePods: 3,
 						},
@@ -1496,7 +1447,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"zone": {
 						"zone1.region1": {
 							ID:              "zone1.region1",
-							Name:            "zone1",
 							Level:           "zone",
 							AllocatablePods: 6,
 						},
@@ -1504,7 +1454,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"region": {
 						"region1": {
 							ID:              "region1",
-							Name:            "region1",
 							Level:           "region",
 							AllocatablePods: 9,
 						},
@@ -1517,7 +1466,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 			expectedDomains: []*TopologyDomainInfo{
 				{
 					ID:              "zone1.region1",
-					Name:            "zone1",
 					Level:           "zone",
 					AllocatablePods: 6,
 				},
@@ -1552,7 +1500,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"zone": {
 						"zone1": {
 							ID:    "zone1",
-							Name:  "zone1",
 							Level: "zone",
 							Nodes: map[string]*node_info.NodeInfo{
 								"node1": {
@@ -1574,7 +1521,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 			expectedDomains: []*TopologyDomainInfo{
 				{
 					ID:              "zone1",
-					Name:            "zone1",
 					Level:           "zone",
 					AllocatablePods: 2,
 				},
@@ -1609,7 +1555,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"zone": {
 						"zone1": {
 							ID:    "zone1",
-							Name:  "zone1",
 							Level: "zone",
 							Nodes: map[string]*node_info.NodeInfo{
 								"node1": {
@@ -1624,7 +1569,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 						"zone2": {
 							ID:    "zone2",
-							Name:  "zone2",
 							Level: "zone",
 							Nodes: map[string]*node_info.NodeInfo{
 								"node2": {
@@ -1646,7 +1590,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 			expectedDomains: []*TopologyDomainInfo{
 				{
 					ID:              "zone2",
-					Name:            "zone2",
 					Level:           "zone",
 					AllocatablePods: 2,
 				},
@@ -1686,43 +1629,36 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"rack": {
 						"rack1.zone1.region1": {
 							ID:              "rack1.zone1.region1",
-							Name:            "rack1",
 							Level:           "rack",
 							AllocatablePods: 3,
 						},
 						"rack2.zone1.region1": {
 							ID:              "rack2.zone1.region1",
-							Name:            "rack2",
 							Level:           "rack",
 							AllocatablePods: 3,
 						},
 						"rack1.zone2.region1": {
 							ID:              "rack1.zone2.region1",
-							Name:            "rack1",
 							Level:           "rack",
 							AllocatablePods: 2,
 						},
 						"rack2.zone2.region1": {
 							ID:              "rack2.zone1.region1",
-							Name:            "rack2",
 							Level:           "rack",
 							AllocatablePods: 1,
 						},
 						"rack3.zone3.region1": {
 							ID:              "rack3.zone2.region1",
-							Name:            "rack3",
 							Level:           "rack",
 							AllocatablePods: 1,
 						},
 						"rack4.zone2.region1": {
 							ID:              "rack4.zone2.region1",
-							Name:            "rack4",
 							Level:           "rack",
 							AllocatablePods: 1,
 						},
 						"rack5.zone2.region1": {
 							ID:              "rack5.zone2.region1",
-							Name:            "rack5",
 							Level:           "rack",
 							AllocatablePods: 1,
 						},
@@ -1730,19 +1666,16 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"zone": {
 						"zone1.region1": {
 							ID:              "zone1.region1",
-							Name:            "zone1",
 							Level:           "zone",
 							AllocatablePods: 6,
 							Children: map[TopologyDomainID]*TopologyDomainInfo{
 								"rack1.zone1.region1": {
 									ID:              "rack1.zone1.region1",
-									Name:            "rack1",
 									Level:           "rack",
 									AllocatablePods: 3,
 								},
 								"rack2.zone1.region1": {
 									ID:              "rack2.zone1.region1",
-									Name:            "rack2",
 									Level:           "rack",
 									AllocatablePods: 3,
 								},
@@ -1750,37 +1683,31 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 						"zone2.region1": {
 							ID:              "zone2.region1",
-							Name:            "zone2",
 							Level:           "zone",
 							AllocatablePods: 6,
 							Children: map[TopologyDomainID]*TopologyDomainInfo{
 								"rack1.zone2.region1": {
 									ID:              "rack1.zone2.region1",
-									Name:            "rack1",
 									Level:           "rack",
 									AllocatablePods: 2,
 								},
 								"rack2.zone1.region1": {
 									ID:              "rack2.zone1.region1",
-									Name:            "rack2",
 									Level:           "rack",
 									AllocatablePods: 1,
 								},
 								"rack3.zone2.region1": {
 									ID:              "rack3.zone2.region1",
-									Name:            "rack3",
 									Level:           "rack",
 									AllocatablePods: 1,
 								},
 								"rack4.zone2.region1": {
 									ID:              "rack4.zone2.region1",
-									Name:            "rack4",
 									Level:           "rack",
 									AllocatablePods: 1,
 								},
 								"rack5.zone2.region1": {
 									ID:              "rack5.zone2.region1",
-									Name:            "rack5",
 									Level:           "rack",
 									AllocatablePods: 1,
 								},
@@ -1790,7 +1717,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					"region": {
 						"region1": {
 							ID:              "region1",
-							Name:            "region1",
 							Level:           "region",
 							AllocatablePods: 9,
 						},
@@ -1803,13 +1729,11 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 			expectedDomains: []*TopologyDomainInfo{
 				{
 					ID:              "rack1.zone1.region1",
-					Name:            "rack1",
 					Level:           "rack",
 					AllocatablePods: 3,
 				},
 				{
 					ID:              "rack2.zone1.region1",
-					Name:            "rack2",
 					Level:           "rack",
 					AllocatablePods: 3,
 				},
@@ -1865,9 +1789,6 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 				actualDomain := result[i]
 				if actualDomain.ID != expectedDomain.ID {
 					t.Errorf("domain %d: expected ID %s, got %s", i, expectedDomain.ID, actualDomain.ID)
-				}
-				if actualDomain.Name != expectedDomain.Name {
-					t.Errorf("domain %d: expected Name %s, got %s", i, expectedDomain.Name, actualDomain.Name)
 				}
 				if actualDomain.Level != expectedDomain.Level {
 					t.Errorf("domain %d: expected Level %s, got %s", i, expectedDomain.Level, actualDomain.Level)

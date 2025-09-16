@@ -34,9 +34,6 @@ type TopologyDomainInfo struct {
 	// Unique ID of this domain
 	ID TopologyDomainID
 
-	// Name of this domain
-	Name string
-
 	// Level in the hierarchy (e.g., "datacenter", "zone", "rack", "node")
 	Level string
 
@@ -50,10 +47,9 @@ type TopologyDomainInfo struct {
 	AllocatablePods int
 }
 
-func NewTopologyDomainInfo(id TopologyDomainID, name, level string) *TopologyDomainInfo {
+func NewTopologyDomainInfo(id TopologyDomainID, level string) *TopologyDomainInfo {
 	return &TopologyDomainInfo{
 		ID:       id,
-		Name:     name,
 		Level:    level,
 		Children: map[TopologyDomainID]*TopologyDomainInfo{},
 		Nodes:    map[string]*node_info.NodeInfo{},
