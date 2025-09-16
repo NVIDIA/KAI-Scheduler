@@ -8,12 +8,14 @@ import (
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -73,18 +75,46 @@ func prometheusForKAIConfig(
 		return nil, err
 	}
 
-	// If it exists, use the existing spec or merge with our configuration
+	// If it exists, we'll update it with our configuration
 	if err == nil {
-		logger.Info("Prometheus instance already exists", "name", mainResourceName, "namespace", kaiConfig.Spec.Namespace)
-		return []client.Object{prometheus}, nil
+		logger.Info("Prometheus instance already exists, will update with new configuration", "name", mainResourceName, "namespace", kaiConfig.Spec.Namespace)
+		// Continue to set the spec below to update the existing instance
 	}
 
 	// Set the Prometheus spec from configuration
-	// For now, use default configuration - let the Prometheus Operator handle defaults
-	prometheus.Spec = monitoringv1.PrometheusSpec{
-		// Basic configuration - let the Prometheus Operator handle defaults
+	prometheusSpec := monitoringv1.PrometheusSpec{
+		// Basic configuration required for Prometheus Operator to create pods
+		// Using minimal spec to avoid field name issues
 	}
-	logger.Info("Using default Prometheus configuration")
+
+	// Configure TSDB storage if TSDB is configured
+	if config.TSDB != nil {
+		storageSize, err := config.TSDB.CalculateStorageSize(ctx, runtimeClient)
+		if err != nil {
+			logger.Error(err, "Failed to calculate storage size")
+			return nil, err
+		}
+		prometheusSpec.Storage = &monitoringv1.StorageSpec{
+			VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
+				Spec: v1.PersistentVolumeClaimSpec{
+					AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+					Resources: v1.VolumeResourceRequirements{
+						Requests: v1.ResourceList{
+							v1.ResourceStorage: resource.MustParse(storageSize),
+						},
+					},
+				},
+			},
+		}
+
+		// Set retention period if specified
+		if config.TSDB.RetentionPeriod != nil {
+			prometheusSpec.Retention = monitoringv1.Duration(*config.TSDB.RetentionPeriod)
+		}
+	}
+
+	prometheus.Spec = prometheusSpec
+	logger.Info("Using Prometheus configuration with TSDB settings")
 
 	logger.Info("Successfully created Prometheus instance", "name", mainResourceName, "namespace", kaiConfig.Spec.Namespace)
 	return []client.Object{prometheus}, nil

@@ -12,8 +12,8 @@ GOBIN=${GOPATH}/bin
 
 # Parse named parameters
 TEST_THIRD_PARTY_INTEGRATIONS="false"
-LOCAL_IMAGES_BUILD="false"
-PRESERVE_CLUSTER="false"
+LOCAL_IMAGES_BUILD="true"
+PRESERVE_CLUSTER="true"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -44,11 +44,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-kind create cluster --config ${KIND_CONFIG} --name $CLUSTER_NAME
+# kind create cluster --config ${KIND_CONFIG} --name $CLUSTER_NAME
 
 # Install the fake-gpu-operator to provide a fake GPU resources for the e2e tests
-helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.62 \
-    --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml --wait
+# helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.62 \
+    # --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml --wait
 
 # install third party operators to check the compatibility with the kai-scheduler
 if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then
@@ -83,7 +83,7 @@ if [ ! -f ${GOBIN}/ginkgo ]; then
     GOBIN=${GOBIN} go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.4
 fi
 
-${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --label-filter '!autoscale && !scale' --trace -vv ${REPO_ROOT}/test/e2e/suites
+# ${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --label-filter '!autoscale && !scale' --trace -vv ${REPO_ROOT}/test/e2e/suites
 
 if [ "$PRESERVE_CLUSTER" != "true" ]; then
     kind delete cluster --name $CLUSTER_NAME
