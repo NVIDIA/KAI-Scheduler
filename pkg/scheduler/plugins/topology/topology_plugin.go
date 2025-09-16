@@ -37,41 +37,41 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 }
 
 func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, nodes map[string]*node_info.NodeInfo) {
-	for _, singleTopology := range topologies {
+	for _, topology := range topologies {
 		topologyTree := &TopologyInfo{
-			Name: singleTopology.Name,
+			Name: topology.Name,
 			DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
 				rootLevel: {
 					rootDomainId: NewTopologyDomainInfo(rootDomainId, rootLevel),
 				},
 			},
-			TopologyResource: singleTopology,
+			TopologyResource: topology,
 		}
 
 		for _, nodeInfo := range nodes {
-			t.addNodeDataToTopology(topologyTree, singleTopology, nodeInfo)
+			t.addNodeDataToTopology(topologyTree, topology, nodeInfo)
 		}
 
-		t.TopologyTrees[singleTopology.Name] = topologyTree
+		t.TopologyTrees[topology.Name] = topologyTree
 	}
 }
 
-func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, singleTopology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
+func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, topology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
 	// Validate that the node is part of the topology
-	if !isNodePartOfTopology(nodeInfo, singleTopology) {
+	if !isNodePartOfTopology(nodeInfo, topology) {
 		return
 	}
 
 	var nodeContainingChildDomain *TopologyDomainInfo
-	for levelIndex := len(singleTopology.Spec.Levels) - 1; levelIndex >= 0; levelIndex-- {
-		level := singleTopology.Spec.Levels[levelIndex]
+	for levelIndex := len(topology.Spec.Levels) - 1; levelIndex >= 0; levelIndex-- {
+		level := topology.Spec.Levels[levelIndex]
 
 		_, foundLevelLabel := nodeInfo.Node.Labels[level.NodeLabel]
 		if !foundLevelLabel {
 			continue // Skip if the node is not part of this level
 		}
 
-		domainId := calcDomainId(levelIndex, singleTopology.Spec.Levels, nodeInfo.Node.Labels)
+		domainId := calcDomainId(levelIndex, topology.Spec.Levels, nodeInfo.Node.Labels)
 		domainLevel := level.NodeLabel
 		domainsForLevel, foundLevelLabel := topologyTree.DomainsByLevel[domainLevel]
 		if !foundLevelLabel {
