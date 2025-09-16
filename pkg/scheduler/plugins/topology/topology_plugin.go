@@ -106,4 +106,4 @@ func isNodePartOfTopology(nodeInfo *node_info.NodeInfo, singleTopology *kueuev1a
 	return true
 }
 
-func (t *topologyPlugin) OnSessionClose(ssn *framework.Session) {}
+func (t *topologyPlugin) OnSessionClose(_ *framework.Session) {}
