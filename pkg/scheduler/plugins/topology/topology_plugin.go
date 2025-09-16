@@ -6,10 +6,8 @@ package topology
 import (
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
 )
 
 const (
@@ -17,12 +15,9 @@ const (
 )
 
 type topologyPlugin struct {
-	enabled            bool
-	taskOrderFunc      common_info.LessFn
-	subGroupOrderFunc  common_info.LessFn
-	sessionStateGetter k8s_internal.SessionStateProvider
-	nodesInfos         map[string]*node_info.NodeInfo
-	TopologyTrees      map[string]*TopologyInfo
+	enabled       bool
+	nodesInfos    map[string]*node_info.NodeInfo
+	TopologyTrees map[string]*TopologyInfo
 }
 
 func New(pluginArgs map[string]string) framework.Plugin {
@@ -38,9 +33,6 @@ func (t *topologyPlugin) Name() string {
 
 func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	topologies := ssn.Topologies
-	t.taskOrderFunc = ssn.TaskOrderFn
-	t.subGroupOrderFunc = ssn.SubGroupOrderFn
-	t.sessionStateGetter = ssn
 	t.nodesInfos = ssn.Nodes
 	t.initializeTopologyTree(topologies, ssn)
 

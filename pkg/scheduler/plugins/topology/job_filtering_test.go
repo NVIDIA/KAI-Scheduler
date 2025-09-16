@@ -426,18 +426,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 
 			// Setup plugin
 			plugin := &topologyPlugin{
-				sessionStateGetter: sessionStateProvider,
-				nodesInfos:         nodesInfoMap,
 				TopologyTrees: map[string]*TopologyInfo{
 					"test-topology": topologyTree,
-				},
-				taskOrderFunc: func(l, r interface{}) bool {
-					return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
-				},
-				subGroupOrderFunc: func(l, r interface{}) bool {
-					return l.(*podgroup_info.PodGroupInfo).Name < r.(*podgroup_info.PodGroupInfo).Name
-				},
-			}
+				}}
 
 			// Update job with topology constraints based on test case
 			if tt.jobTopologyConstraint != nil {
@@ -1223,8 +1214,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				Topologies:    []*kueuev1alpha1.Topology{topologyTree.TopologyResource},
 			}
 			plugin := &topologyPlugin{
-				sessionStateGetter: session,
-				nodesInfos:         nodesInfoMap,
+				nodesInfos: nodesInfoMap,
 			}
 
 			// Call the function under test
@@ -1799,9 +1789,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := &topologyPlugin{
-				taskOrderFunc: tt.taskOrderFunc,
-			}
+			plugin := &topologyPlugin{}
 
 			result, err := plugin.getBestJobAllocatableDomains(tt.job, len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)), tt.topologyTree)
 
