@@ -61,11 +61,7 @@ func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, node
 	domainsNames := make([]string, leafLevelIndex+1)
 	for levelIndex := leafLevelIndex; levelIndex >= 0; levelIndex-- {
 		levelLabel := levels[levelIndex].NodeLabel
-		levelDomainName, foundLevelOnNode := nodeLabels[levelLabel]
-		if !foundLevelOnNode {
-			levelDomainName = "missing"
-		}
-		domainsNames[levelIndex] = levelDomainName
+		domainsNames[levelIndex] = nodeLabels[levelLabel]
 	}
 	return DomainID(strings.Join(domainsNames, "."))
 }

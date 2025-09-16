@@ -66,11 +66,6 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueue
 	for levelIndex := len(topology.Spec.Levels) - 1; levelIndex >= 0; levelIndex-- {
 		level := topology.Spec.Levels[levelIndex]
 
-		_, foundLevelLabel := nodeInfo.Node.Labels[level.NodeLabel]
-		if !foundLevelLabel {
-			continue // Skip if the node is not part of this level
-		}
-
 		domainId := calcDomainId(levelIndex, topology.Spec.Levels, nodeInfo.Node.Labels)
 		domainLevel := level.NodeLabel
 		domainsForLevel, foundLevelLabel := topologyTree.DomainsByLevel[domainLevel]
