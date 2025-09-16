@@ -24,6 +24,8 @@ github.com/Pallinder/go-randomdata v1.2.0/go.mod h1:yHmJgulpD2Nfrm0cR9tI/+oAgRqC
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/antlr4-go/antlr/v4 v4.13.1 h1:SqQKkuVZ+zWkMMNkjy5FZe5mr5WURWnlpmOuzYWrPrQ=
 github.com/antlr4-go/antlr/v4 v4.13.1/go.mod h1:GKmUxMtwp6ZgGwZSva4eWPC5mS6vUAmOABFgjdkM7Nw=
+github.com/aptible/supercronic v0.2.33 h1:tA/fda6BOBlPSxjAnnD4DqgLdIkasmmEdzgNpZbZ4bU=
+github.com/aptible/supercronic v0.2.33/go.mod h1:cLHAF1blBT8rPL9b4TDc0uOv4T1mdxisGTapLHgULUU=
 github.com/argoproj/argo-workflows/v3 v3.6.4 h1:5+Cc1UwaQE5ka3w7R3hxZ1TK3M6VjDEXA5WSQ/IXrxY=
 github.com/argoproj/argo-workflows/v3 v3.6.4/go.mod h1:2f5zB8CkbNCCO1od+kd1dWkVokqcuyvu+tc+Jwx1MZg=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=

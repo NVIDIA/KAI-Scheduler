@@ -6,12 +6,15 @@ SPDX-License-Identifier: Apache-2.0
 package framework
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 )
 
 func TestMutateBindRequestAnnotations(t *testing.T) {
@@ -85,4 +88,76 @@ func TestMutateBindRequestAnnotations(t *testing.T) {
 			assert.Equal(t, tt.expectedAnnotations, annotations)
 		})
 	}
+}
+
+func TestPartitionMultiImplementation(t *testing.T) {
+	nodes := []*node_info.NodeInfo{
+		{
+			Name: "cluster1rack0-1",
+		},
+		{
+			Name: "cluster0rack0",
+		},
+		{
+			Name: "cluster1rack1-1",
+		},
+		{
+			Name: "cluster0rack1",
+		},
+		{
+			Name: "cluster1rack0-2",
+		},
+		{
+			Name: "cluster1rack1-2",
+		},
+	}
+
+	shardClusterSubseting := func(_ *podgroup_info.PodGroupInfo, _ []*pod_info.PodInfo, nodeset node_info.NodeSet) ([]node_info.NodeSet, error) {
+		var subset1 []*node_info.NodeInfo
+		var subset2 []*node_info.NodeInfo
+		for _, node := range nodeset {
+			if strings.Contains(node.Name, "cluster0") {
+				subset1 = append(subset1, node)
+			} else {
+				subset2 = append(subset2, node)
+			}
+		}
+		return []node_info.NodeSet{subset1, subset2}, nil
+	}
+
+	topologySubseting := func(_ *podgroup_info.PodGroupInfo, _ []*pod_info.PodInfo, nodeset node_info.NodeSet) ([]node_info.NodeSet, error) {
+		var subset1 []*node_info.NodeInfo
+		var subset2 []*node_info.NodeInfo
+		for _, node := range nodeset {
+			if strings.Contains(node.Name, "rack0") {
+				subset1 = append(subset1, node)
+			} else {
+				subset2 = append(subset2, node)
+			}
+		}
+		return []node_info.NodeSet{subset1, subset2}, nil
+	}
+
+	ssn := &Session{}
+
+	ssn.AddSubsetNodesFn(shardClusterSubseting)
+	ssn.AddSubsetNodesFn(topologySubseting)
+
+	partitions, _ := ssn.SubsetNodesFn(podgroup_info.NewPodGroupInfo("a"), nil, nodes)
+
+	assert.Equal(t, 4, len(partitions))
+
+	assert.Equal(t, len(partitions[0]), 1)
+	assert.Equal(t, partitions[0][0].Name, "cluster0rack0")
+
+	assert.Equal(t, len(partitions[1]), 1)
+	assert.Equal(t, partitions[1][0].Name, "cluster0rack1")
+
+	assert.Equal(t, len(partitions[2]), 2)
+	assert.Equal(t, partitions[2][0].Name, "cluster1rack0-1")
+	assert.Equal(t, partitions[2][1].Name, "cluster1rack0-2")
+
+	assert.Equal(t, len(partitions[3]), 2)
+	assert.Equal(t, partitions[3][0].Name, "cluster1rack1-1")
+	assert.Equal(t, partitions[3][1].Name, "cluster1rack1-2")
 }
