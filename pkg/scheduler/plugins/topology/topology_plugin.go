@@ -15,14 +15,12 @@ const (
 )
 
 type topologyPlugin struct {
-	enabled       bool
 	nodesInfos    map[string]*node_info.NodeInfo
 	TopologyTrees map[string]*TopologyInfo
 }
 
 func New(pluginArgs map[string]string) framework.Plugin {
 	return &topologyPlugin{
-		enabled:       true,
 		TopologyTrees: map[string]*TopologyInfo{},
 	}
 }
