@@ -65,7 +65,3 @@ func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, node
 	}
 	return DomainID(strings.Join(domainsNames, "."))
 }
-
-func connectDomainToParent(domain *DomainInfo, parent *DomainInfo) {
-	parent.Children[domain.ID] = domain
-}

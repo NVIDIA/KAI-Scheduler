@@ -82,11 +82,12 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueue
 
 		// Connect the child domain to the current domain. The current node gives us the link
 		if nodeContainingChildDomain != nil {
-			connectDomainToParent(nodeContainingChildDomain, domainInfo)
+			domainInfo.Children[nodeContainingChildDomain.ID] = nodeContainingChildDomain
 		}
 		nodeContainingChildDomain = domainInfo
 	}
-	connectDomainToParent(nodeContainingChildDomain, topologyTree.DomainsByLevel[rootLevel][rootDomainId])
+
+	topologyTree.DomainsByLevel[rootLevel][rootDomainId].Children[nodeContainingChildDomain.ID] = nodeContainingChildDomain
 	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddNode(nodeInfo)
 }
 
