@@ -11,13 +11,13 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 )
 
-// TopologyDomainID uniquely identifies a topology domain
-type TopologyDomainID string
+// DomainID uniquely identifies a topology domain
+type DomainID string
 
-// TopologyInfo represents a topology tree for the cluster
-type TopologyInfo struct {
+// Info represents a topology tree for the cluster
+type Info struct {
 	// Map of all domains by their level for quick lookup
-	DomainsByLevel map[string]map[TopologyDomainID]*TopologyDomainInfo
+	DomainsByLevel map[string]map[DomainID]*DomainInfo
 
 	// Name of this topology configuration
 	Name string
@@ -26,16 +26,16 @@ type TopologyInfo struct {
 	TopologyResource *kueuev1alpha1.Topology
 }
 
-// TopologyDomainInfo represents a node in the topology tree
-type TopologyDomainInfo struct {
+// DomainInfo represents a node in the topology tree
+type DomainInfo struct {
 	// Unique ID of this domain
-	ID TopologyDomainID
+	ID DomainID
 
 	// Level in the hierarchy (e.g., "datacenter", "zone", "rack", "node")
 	Level string
 
 	// Child domains
-	Children map[TopologyDomainID]*TopologyDomainInfo
+	Children map[DomainID]*DomainInfo
 
 	// Nodes that belong to this domain
 	Nodes map[string]*node_info.NodeInfo
@@ -44,20 +44,20 @@ type TopologyDomainInfo struct {
 	AllocatablePods int
 }
 
-func NewTopologyDomainInfo(id TopologyDomainID, level string) *TopologyDomainInfo {
-	return &TopologyDomainInfo{
+func NewDomainInfo(id DomainID, level string) *DomainInfo {
+	return &DomainInfo{
 		ID:       id,
 		Level:    level,
-		Children: map[TopologyDomainID]*TopologyDomainInfo{},
+		Children: map[DomainID]*DomainInfo{},
 		Nodes:    map[string]*node_info.NodeInfo{},
 	}
 }
 
-func (t *TopologyDomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
+func (t *DomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
 	t.Nodes[nodeInfo.Node.Name] = nodeInfo
 }
 
-func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, nodeLabels map[string]string) TopologyDomainID {
+func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, nodeLabels map[string]string) DomainID {
 	domainsNames := make([]string, leafLevelIndex+1)
 	for levelIndex := leafLevelIndex; levelIndex >= 0; levelIndex-- {
 		levelLabel := levels[levelIndex].NodeLabel
@@ -67,9 +67,9 @@ func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, node
 		}
 		domainsNames[levelIndex] = levelDomainName
 	}
-	return TopologyDomainID(strings.Join(domainsNames, "."))
+	return DomainID(strings.Join(domainsNames, "."))
 }
 
-func connectDomainToParent(domain *TopologyDomainInfo, parent *TopologyDomainInfo) {
+func connectDomainToParent(domain *DomainInfo, parent *DomainInfo) {
 	parent.Children[domain.ID] = domain
 }

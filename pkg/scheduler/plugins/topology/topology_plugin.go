@@ -17,12 +17,12 @@ const (
 )
 
 type topologyPlugin struct {
-	TopologyTrees map[string]*TopologyInfo
+	TopologyTrees map[string]*Info
 }
 
 func New(_ map[string]string) framework.Plugin {
 	return &topologyPlugin{
-		TopologyTrees: map[string]*TopologyInfo{},
+		TopologyTrees: map[string]*Info{},
 	}
 }
 
@@ -38,11 +38,11 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 
 func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, nodes map[string]*node_info.NodeInfo) {
 	for _, topology := range topologies {
-		topologyTree := &TopologyInfo{
+		topologyTree := &Info{
 			Name: topology.Name,
-			DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+			DomainsByLevel: map[string]map[DomainID]*DomainInfo{
 				rootLevel: {
-					rootDomainId: NewTopologyDomainInfo(rootDomainId, rootLevel),
+					rootDomainId: NewDomainInfo(rootDomainId, rootLevel),
 				},
 			},
 			TopologyResource: topology,
@@ -56,13 +56,13 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 	}
 }
 
-func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, topology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
+func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
 	// Validate that the node is part of the topology
 	if !isNodePartOfTopology(nodeInfo, topology) {
 		return
 	}
 
-	var nodeContainingChildDomain *TopologyDomainInfo
+	var nodeContainingChildDomain *DomainInfo
 	for levelIndex := len(topology.Spec.Levels) - 1; levelIndex >= 0; levelIndex-- {
 		level := topology.Spec.Levels[levelIndex]
 
@@ -75,12 +75,12 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, topolog
 		domainLevel := level.NodeLabel
 		domainsForLevel, foundLevelLabel := topologyTree.DomainsByLevel[domainLevel]
 		if !foundLevelLabel {
-			topologyTree.DomainsByLevel[level.NodeLabel] = map[TopologyDomainID]*TopologyDomainInfo{}
+			topologyTree.DomainsByLevel[level.NodeLabel] = map[DomainID]*DomainInfo{}
 			domainsForLevel = topologyTree.DomainsByLevel[level.NodeLabel]
 		}
 		domainInfo, foundDomain := domainsForLevel[domainId]
 		if !foundDomain {
-			domainInfo = NewTopologyDomainInfo(domainId, level.NodeLabel)
+			domainInfo = NewDomainInfo(domainId, level.NodeLabel)
 			domainsForLevel[domainId] = domainInfo
 		}
 		domainInfo.AddNode(nodeInfo)
