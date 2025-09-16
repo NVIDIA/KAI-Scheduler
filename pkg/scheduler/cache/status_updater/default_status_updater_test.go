@@ -19,6 +19,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	kaifake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
+	kubeaischedfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	fakeschedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v2alpha2/fake"
 	kaiv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -606,8 +607,14 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			var podGroups []runtime.Object
+			jobInfos, _, _ := jobs_fake.BuildJobsAndTasksMaps([]*jobs_fake.TestJobBasic{&test.job})
+			for _, job := range jobInfos {
+				podGroups = append(podGroups, job.PodGroup)
+			}
+
 			kubeClient := fake.NewSimpleClientset()
-			kubeAiSchedClient := kaifake.NewSimpleClientset()
+			kubeAiSchedClient := kaifake.NewSimpleClientset(podGroups...)
 			recorder := record.NewFakeRecorder(100)
 			statusUpdater := New(kubeClient, kubeAiSchedClient, recorder, 1, false, nodePoolLabelKey)
 			wg := sync.WaitGroup{}
@@ -627,9 +634,7 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 			stopCh := make(chan struct{})
 			statusUpdater.Run(stopCh)
 
-			jobsMap, _, _ := jobs_fake.BuildJobsAndTasksMaps([]*jobs_fake.TestJobBasic{&test.job})
-
-			statusUpdater.RecordJobStatusEvent(jobsMap["test-job"])
+			statusUpdater.RecordJobStatusEvent(jobInfos["test-job"])
 
 			events := []string{}
 			close(recorder.Events)
@@ -732,7 +737,7 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 
 func TestDefaultStatusUpdater_RetryAfterError(t *testing.T) {
 	kubeClient := fake.NewSimpleClientset()
-	kubeAiSchedClient := kaifake.NewSimpleClientset()
+	kubeAiSchedClient := kubeaischedfake.NewSimpleClientset()
 	recorder := record.NewFakeRecorder(100)
 	statusUpdater := New(kubeClient, kubeAiSchedClient, recorder, 1, false, nodePoolLabelKey)
 
@@ -741,7 +746,7 @@ func TestDefaultStatusUpdater_RetryAfterError(t *testing.T) {
 	kubeAiSchedClient.SchedulingV2alpha2().(*fakeschedulingv2alpha2.FakeSchedulingV2alpha2).PrependReactor(
 		"update", "podgroups", func(action faketesting.Action) (handled bool, ret runtime.Object, err error) {
 			updateCalls += 1
-			return false, nil, nil
+			return false, nil, errors.New("test")
 		},
 	)
 
@@ -784,48 +789,10 @@ func TestDefaultStatusUpdater_RetryAfterError(t *testing.T) {
 		})
 	}()
 
-	assert.NoError(t, waitForIncrease(&updateCalls), "update calls did not increase")
+	// Wait for an initial update call
+	assert.NoError(t, waitForIncrease(&updateCalls), "failed to wait for initial update call")
 
-	// Add a reaction to fail the update
-	kubeAiSchedClient.SchedulingV2alpha2().(*fakeschedulingv2alpha2.FakeSchedulingV2alpha2).PrependReactor(
-		"update", "podgroups", func(action faketesting.Action) (handled bool, ret runtime.Object, err error) {
-			return false, nil, errors.New("test")
-		},
-	)
-
-	job = jobCopy.DeepCopy()
-	jobCopy = job.DeepCopy()
-
-	jobCopy.Status.SchedulingConditions = []kaiv2alpha2.SchedulingCondition{
-		{
-			TransitionID: "2",
-			Type:         kaiv2alpha2.UnschedulableOnNodePool,
-			NodePool:     "test",
-			Reason:       "test-2",
-			Message:      "test-2",
-		},
-	}
-
-	patchData, err = getPodGroupPatch(job, jobCopy)
-	assert.NoError(t, err)
-
-	go func() {
-		time.Sleep(time.Millisecond * 75)
-		statusUpdater.pushToUpdateQueue(&updatePayload{
-			key:        "test",
-			objectType: "podgroup",
-		}, &inflightUpdate{
-			object:       job,
-			patchData:    patchData,
-			updateStatus: true,
-			subResources: nil,
-		})
-	}()
-
-	// Wait for first update to get rejected
-	assert.NoError(t, waitForIncrease(&updateCalls), "update calls did not increase after adding error reaction")
-
-	// Wait for retry after error
+	// Wait for a retry after error
 	assert.NoError(t, waitForIncrease(&updateCalls), "update was not retried after error")
 }
 
