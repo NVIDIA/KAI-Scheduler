@@ -633,9 +633,7 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 			stopCh := make(chan struct{})
 			statusUpdater.Run(stopCh)
 
-			jobsMap, _, _ := jobs_fake.BuildJobsAndTasksMaps([]*jobs_fake.TestJobBasic{&test.job})
-
-			statusUpdater.RecordJobStatusEvent(jobsMap["test-job"])
+			statusUpdater.RecordJobStatusEvent(jobInfos["test-job"])
 
 			events := []string{}
 			close(recorder.Events)
