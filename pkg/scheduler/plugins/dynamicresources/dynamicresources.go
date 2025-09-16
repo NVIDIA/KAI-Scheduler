@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
-	resourceapi "k8s.io/api/resource/v1beta1"
+	resourceapi "k8s.io/api/resource/v1"
 	"k8s.io/dynamic-resource-allocation/cel"
 	"k8s.io/dynamic-resource-allocation/structured"
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
