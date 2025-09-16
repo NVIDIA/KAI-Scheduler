@@ -13,6 +13,7 @@ import (
 const (
 	topologyPluginName = "topology"
 	rootLevel          = "root"
+	rootDomainId       = rootLevel
 )
 
 type topologyPlugin struct {
@@ -40,7 +41,7 @@ func (t *topologyPlugin) initializeTopologyTree(ssn *framework.Session) {
 		topologyTree := &TopologyInfo{
 			Name:             singleTopology.Name,
 			DomainsByLevel:   map[string]map[TopologyDomainID]*TopologyDomainInfo{},
-			Root:             NewTopologyDomainInfo("root", "datacenter", rootLevel, 0),
+			Root:             NewTopologyDomainInfo(rootDomainId, "datacenter", rootLevel, 0),
 			TopologyResource: singleTopology,
 		}
 		topologyTree.DomainsByLevel[rootLevel] = map[TopologyDomainID]*TopologyDomainInfo{
