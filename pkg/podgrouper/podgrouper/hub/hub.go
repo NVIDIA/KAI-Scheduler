@@ -257,6 +257,11 @@ func NewDefaultPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Version: "v1alpha1",
 			Kind:    "PodGangSet",
 		}: groveGrouper,
+		{
+			Group:   "grove.io",
+			Version: "v1alpha1",
+			Kind:    "PodCliqueSet",
+		}: groveGrouper,
 	}
 
 	skipTopOwnerGrouper := skiptopowner.NewSkipTopOwnerGrouper(kubeClient, defaultGrouper, table)

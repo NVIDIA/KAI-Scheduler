@@ -71,11 +71,13 @@ func (su *defaultStatusUpdater) updatePod(
 	_, err := su.kubeClient.CoreV1().Pods(pod.Namespace).Patch(
 		ctx, pod.Name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{}, subResources...,
 	)
+
 	if err != nil {
-		log.StatusUpdaterLogger.Errorf("Failed to update pod %s/%s: %v", pod.Namespace, pod.Name, err)
-	} else {
-		su.inFlightPods.Delete(key)
+		log.StatusUpdaterLogger.V(1).Errorf("Failed to patch pod %s/%s: %v", pod.Namespace, pod.Name, err)
+		return
 	}
+
+	su.inFlightPods.Delete(key)
 }
 
 // +kubebuilder:rbac:groups="scheduling.run.ai",resources=podgroups,verbs=update;patch
@@ -86,26 +88,45 @@ func (su *defaultStatusUpdater) updatePodGroup(
 ) {
 	podGroup := updateData.object.(*enginev2alpha2.PodGroup)
 
-	var err error
+	var statusErr, patchErr error
 	if updateData.updateStatus {
-		_, err = su.kubeaischedClient.SchedulingV2alpha2().PodGroups(podGroup.Namespace).UpdateStatus(
+		_, statusErr = su.kaiClient.SchedulingV2alpha2().PodGroups(podGroup.Namespace).UpdateStatus(
 			ctx, podGroup, metav1.UpdateOptions{},
 		)
 	}
+
 	if len(updateData.patchData) > 0 {
-		_, err = su.kubeaischedClient.SchedulingV2alpha2().PodGroups(podGroup.Namespace).Patch(
+		_, patchErr = su.kaiClient.SchedulingV2alpha2().PodGroups(podGroup.Namespace).Patch(
 			ctx, podGroup.Name, types.JSONPatchType, updateData.patchData, metav1.PatchOptions{}, updateData.subResources...,
 		)
 	}
-	if err != nil {
-		log.StatusUpdaterLogger.Errorf("Failed to update pod group %s/%s: %v", podGroup.Namespace, podGroup.Name, err)
-	} else {
-		// Move the update to the applied cache
-		su.appliedPodGroupUpdates.Store(key, updateData)
-		_, loaded := su.inFlightPodGroups.LoadAndDelete(key)
-		if !loaded {
-			su.appliedPodGroupUpdates.Delete(key)
+
+	if statusErr != nil || patchErr != nil {
+		if statusErr != nil {
+			log.StatusUpdaterLogger.V(1).Errorf("Failed to update pod group status %s/%s: %v",
+				podGroup.Namespace, podGroup.Name, statusErr)
 		}
+		if patchErr != nil {
+			log.StatusUpdaterLogger.V(1).Errorf("Failed to patch pod group %s/%s: %v",
+				podGroup.Namespace, podGroup.Name, patchErr)
+		}
+
+		su.pushToUpdateQueue(
+			&updatePayload{
+				key:        key,
+				objectType: podGroupType,
+			},
+			updateData,
+		)
+
+		return
+	}
+
+	// Move the update to the applied cache
+	su.appliedPodGroupUpdates.Store(key, updateData)
+	_, loaded := su.inFlightPodGroups.LoadAndDelete(key)
+	if !loaded {
+		su.appliedPodGroupUpdates.Delete(key)
 	}
 }
 

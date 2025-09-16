@@ -50,7 +50,6 @@ binder:
     name: resourcereservation
   ports:
     metricsPort: 8080
-  cdi: false
 
 scheduler:
   image:
