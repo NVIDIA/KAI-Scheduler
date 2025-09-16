@@ -316,7 +316,7 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 		)
 	}
 	if requiredPlacement == "" {
-		relevantLevels = append(relevantLevels, "root")
+		relevantLevels = append(relevantLevels, rootLevel)
 	}
 	return relevantLevels, nil
 }
