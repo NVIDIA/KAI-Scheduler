@@ -46,6 +46,7 @@ func init() {
 	registerMutatingWebhookConfigurations()
 	registerValidatingWebhookConfigurations()
 	registerCustomResourceDefinitions()
+	registerPrometheus()
 }
 
 func SetupKAIConfigOwned(fn *Collectable) {

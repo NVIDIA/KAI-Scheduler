@@ -38,8 +38,13 @@ func (gg *GroveGrouper) Name() string {
 	return "Grove Grouper"
 }
 
+// PodCliqueSet is the top-level CR in Grove. PodGangSet is the older name and got renamed to PodCLiqueSet.
+// PodGangSet support and rbac will be eventually deprecated.
+
 // +kubebuilder:rbac:groups=grove.io,resources=podgangsets,verbs=get;list;watch
 // +kubebuilder:rbac:groups=grove.io,resources=podgangsets/finalizers,verbs=patch;update;create
+// +kubebuilder:rbac:groups=grove.io,resources=podcliquesets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=grove.io,resources=podcliquesets/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=grove.io,resources=podcliques,verbs=get;list;watch
 // +kubebuilder:rbac:groups=grove.io,resources=podcliques/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=grove.io,resources=podcliquescalinggroups,verbs=get;list;watch
