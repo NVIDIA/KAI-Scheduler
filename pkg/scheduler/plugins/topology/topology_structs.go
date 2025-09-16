@@ -16,9 +16,6 @@ type TopologyDomainID string
 
 // TopologyInfo represents a topology tree for the cluster
 type TopologyInfo struct {
-	// Root of the topology tree
-	Root *TopologyDomainInfo
-
 	// Map of all domains by their level for quick lookup
 	DomainsByLevel map[string]map[TopologyDomainID]*TopologyDomainInfo
 

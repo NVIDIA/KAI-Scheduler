@@ -39,13 +39,13 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 func (t *topologyPlugin) initializeTopologyTree(ssn *framework.Session) {
 	for _, singleTopology := range ssn.Topologies {
 		topologyTree := &TopologyInfo{
-			Name:             singleTopology.Name,
-			DomainsByLevel:   map[string]map[TopologyDomainID]*TopologyDomainInfo{},
-			Root:             NewTopologyDomainInfo(rootDomainId, rootLevel),
+			Name: singleTopology.Name,
+			DomainsByLevel: map[string]map[TopologyDomainID]*TopologyDomainInfo{
+				rootLevel: {
+					rootDomainId: NewTopologyDomainInfo(rootDomainId, rootLevel),
+				},
+			},
 			TopologyResource: singleTopology,
-		}
-		topologyTree.DomainsByLevel[rootLevel] = map[TopologyDomainID]*TopologyDomainInfo{
-			topologyTree.Root.ID: topologyTree.Root,
 		}
 
 		for _, nodeInfo := range ssn.Nodes {
@@ -91,8 +91,8 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, singleT
 		}
 		nodeContainingChildDomain = domainInfo
 	}
-	connectDomainToParent(nodeContainingChildDomain, topologyTree.Root)
-	topologyTree.Root.AddNode(nodeInfo)
+	connectDomainToParent(nodeContainingChildDomain, topologyTree.DomainsByLevel[rootLevel][rootDomainId])
+	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddNode(nodeInfo)
 }
 
 // For a given node to be part of the topology correctly, it must have a label for each level of the topology

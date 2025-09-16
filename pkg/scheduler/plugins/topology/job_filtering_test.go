@@ -134,7 +134,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					},
 				}
 
-				tree.Root = tree.DomainsByLevel["zone"]["zone1"]
+				tree.DomainsByLevel[rootLevel] = map[TopologyDomainID]*TopologyDomainInfo{
+					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
+				}
 
 				// Set parent relationships
 				tree.DomainsByLevel["zone"]["zone1"].Children = map[TopologyDomainID]*TopologyDomainInfo{
@@ -315,7 +317,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					},
 				}
 
-				tree.Root = tree.DomainsByLevel["zone"]["zone1"]
+				tree.DomainsByLevel[rootLevel] = map[TopologyDomainID]*TopologyDomainInfo{
+					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
+				}
 
 				return tree
 			},
@@ -374,7 +378,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					},
 				}
 
-				tree.Root = tree.DomainsByLevel["zone"]["zone1"]
+				tree.DomainsByLevel[rootLevel] = map[TopologyDomainID]*TopologyDomainInfo{
+					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
+				}
 
 				// Set parent relationships
 				tree.DomainsByLevel["zone"]["zone1"].Children = map[TopologyDomainID]*TopologyDomainInfo{
@@ -895,7 +901,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 					},
 				}
 
-				tree.Root = tree.DomainsByLevel["zone"]["zone1"]
+				tree.DomainsByLevel[rootLevel] = map[TopologyDomainID]*TopologyDomainInfo{
+					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
+				}
 
 				// Set parent relationships
 				tree.DomainsByLevel["zone"]["zone1"].Children = map[TopologyDomainID]*TopologyDomainInfo{
@@ -991,7 +999,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 					},
 				}
 
-				tree.Root = tree.DomainsByLevel["zone"]["zone1"]
+				tree.DomainsByLevel[rootLevel] = map[TopologyDomainID]*TopologyDomainInfo{
+					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
+				}
 
 				// Set parent relationships
 				tree.DomainsByLevel["zone"]["zone1"].Children = map[TopologyDomainID]*TopologyDomainInfo{
@@ -1093,7 +1103,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 					},
 				}
 
-				tree.Root = tree.DomainsByLevel["zone"]["zone1"]
+				tree.DomainsByLevel[rootLevel] = map[TopologyDomainID]*TopologyDomainInfo{
+					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
+				}
 
 				// Set parent relationships
 				tree.DomainsByLevel["zone"]["zone1"].Children = map[TopologyDomainID]*TopologyDomainInfo{
@@ -1169,7 +1181,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 					},
 				}
 
-				tree.Root = tree.DomainsByLevel["zone"]["zone1"]
+				tree.DomainsByLevel[rootLevel] = map[TopologyDomainID]*TopologyDomainInfo{
+					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
+				}
 
 				return tree
 			},

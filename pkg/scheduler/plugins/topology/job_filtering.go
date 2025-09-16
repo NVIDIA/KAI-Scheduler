@@ -97,7 +97,7 @@ func (t *topologyPlugin) calcTreeAllocatable(tasks []*pod_info.PodInfo, topology
 	for _, node := range nodeSet {
 		nodes[node.Name] = true
 	}
-	return t.calcSubTreeAllocatable(jobAllocationData, topologyTree.Root, nodes)
+	return t.calcSubTreeAllocatable(jobAllocationData, topologyTree.DomainsByLevel[rootLevel][rootDomainId], nodes)
 }
 
 func initJobAllocationMetadataStruct(tasksToAllocate []*pod_info.PodInfo) (*jobAllocationMetaData, error) {
