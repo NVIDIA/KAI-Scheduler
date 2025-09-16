@@ -10,10 +10,10 @@
 - [Queues](#queues)
 - [Sessions](#sessions)
   - [Session Responsibilities](#session-responsibilities)
-- [Actions Framework](#actions-framework)
+- [Actions](#actions)
+- [Plugins](#plugins)
 - [Statements and Transaction Model](#statements-and-transaction-model)
 - [Scenarios](#scenarios)
-- [Plugins](#plugins)
 - [BindRequests](#bindrequests)
 - [Related Documentation](#related-documentation)
 
@@ -102,11 +102,17 @@ A **Session** represents the scheduling context for a single cycle. It contains 
 
 For detailed information about session implementation, lifecycle, and plugin integration, see [Plugin Framework](plugin-framework.md).
 
-## Actions Framework
+## Actions
 
 **Actions** are discrete scheduling operations executed in sequence during each cycle. Each action operates on the session's snapshot data and uses statements to ensure atomicity.
 
 For detailed information about action types, execution order, and implementation details, see [Action Framework](action-framework.md).
+
+## Plugins
+
+The scheduler uses a plugin-based architecture that allows extending functionality through various extension points. Plugins register callbacks during session lifecycle to influence scheduling behavior.
+
+For detailed information about plugin development, extension points, and examples, see [Plugin Framework](plugin-framework.md).
 
 ## Statements and Transaction Model
 
@@ -119,12 +125,6 @@ For detailed statement operations and usage patterns, see [Action Framework - St
 **Scenarios** represent hypothetical scheduling states used to evaluate potential decisions before committing them. They enable "what-if" modeling and validation of scheduling operations.
 
 For detailed scenario implementation and validation mechanisms, see [Action Framework - Scenarios](action-framework.md#1-scenarios).
-
-## Plugins
-
-The scheduler uses a plugin-based architecture that allows extending functionality through various extension points. Plugins register callbacks during session lifecycle to influence scheduling behavior.
-
-For detailed information about plugin development, extension points, and examples, see [Plugin Framework](plugin-framework.md).
 
 ## BindRequests
 
