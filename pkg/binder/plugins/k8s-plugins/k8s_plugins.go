@@ -44,7 +44,7 @@ func New(
 	var k8sPlugins []common.K8sPlugin
 	k8sFramework := k8s_utils.NewFrameworkHandle(client, informerFactory, nil)
 	k8sFeatures := k8splfeature.Features{
-		EnableVolumeCapacityPriority:    feature.DefaultFeatureGate.Enabled(features.VolumeCapacityPriority),
+		// EnableVolumeCapacityPriority:    feature.DefaultFeatureGate.Enabled(features.VolumeCapacityPriority),
 		EnableDynamicResourceAllocation: feature.DefaultFeatureGate.Enabled(features.DynamicResourceAllocation),
 	}
 
