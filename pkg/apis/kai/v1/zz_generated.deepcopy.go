@@ -17,6 +17,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/pod_grouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/scheduler"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -102,6 +103,11 @@ func (in *ConfigSpec) DeepCopyInto(out *ConfigSpec) {
 	if in.Admission != nil {
 		in, out := &in.Admission, &out.Admission
 		*out = new(admission.Admission)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Scheduler != nil {
+		in, out := &in.Scheduler, &out.Scheduler
+		*out = new(scheduler.Scheduler)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.QueueController != nil {
