@@ -101,10 +101,6 @@ spec:
                       description: Name uniquely identifies the SubGroup within the
                         parent PodGroup.
                       type: string
-                    parent:
-                      description: Parent is an optional attribute that specifies
-                        the name of the parent SubGroup
-                      type: string
                   required:
                   - name
                   type: object
