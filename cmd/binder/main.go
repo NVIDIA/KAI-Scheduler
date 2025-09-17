@@ -47,7 +47,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = app.Run(make(chan struct{}))
+	ctx := ctrl.SetupSignalHandler()
+	err = app.Run(ctx)
 	if err != nil {
 		setupLog.Error(err, "failed to run app")
 		os.Exit(1)

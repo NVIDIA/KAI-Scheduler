@@ -132,7 +132,7 @@ func (app *App) RegisterPlugins(plugins *plugins.BinderPlugins) {
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 
-func (app *App) Run(stopCh chan struct{}) error {
+func (app *App) Run(ctx context.Context) error {
 	var err error
 	go func() {
 		app.manager.GetCache().WaitForCacheSync(context.Background())
@@ -156,8 +156,8 @@ func (app *App) Run(stopCh chan struct{}) error {
 
 	binder := binding.NewBinder(app.Client, app.rrs, app.plugins)
 
-	app.InformerFactory.Start(stopCh)
-	app.InformerFactory.WaitForCacheSync(stopCh)
+	app.InformerFactory.Start(ctx.Done())
+	app.InformerFactory.WaitForCacheSync(ctx.Done())
 
 	reconciler := controllers.NewBindRequestReconciler(
 		app.manager.GetClient(), app.manager.GetScheme(), app.manager.GetEventRecorderFor("binder"), app.reconcilerParams,
@@ -167,13 +167,6 @@ func (app *App) Run(stopCh chan struct{}) error {
 		return err
 	}
 	// +kubebuilder:scaffold:builder
-
-	// Create a context that cancels on either OS signals or when stopCh is closed
-	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
-	go func() {
-		<-stopCh
-		cancel()
-	}()
 
 	setupLog.Info("starting manager")
 	if err = app.manager.Start(ctx); err != nil {

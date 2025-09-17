@@ -32,7 +32,9 @@ var _ = Describe("Binder", Ordered, func() {
 		testDepartment *schedulingv2.Queue
 		testQueue      *schedulingv2.Queue
 		testNode       *corev1.Node
-		stopCh         chan struct{}
+
+		backgroundCtx context.Context
+		cancel        context.CancelFunc
 	)
 
 	BeforeEach(func(ctx context.Context) {
@@ -53,8 +55,8 @@ var _ = Describe("Binder", Ordered, func() {
 		testNode = CreateNodeObject(ctx, ctrlClient, DefaultNodeConfig("test-node"))
 		Expect(ctrlClient.Create(ctx, testNode)).To(Succeed(), "Failed to create test node")
 
-		stopCh = make(chan struct{})
-		err := binder.RunBinder(cfg, stopCh)
+		backgroundCtx, cancel = context.WithCancel(context.Background())
+		err := binder.RunBinder(cfg, backgroundCtx)
 		Expect(err).NotTo(HaveOccurred(), "Failed to run binder")
 	})
 
@@ -72,7 +74,7 @@ var _ = Describe("Binder", Ordered, func() {
 		err = WaitForObjectDeletion(ctx, ctrlClient, testNode, defaultTimeout, interval)
 		Expect(err).NotTo(HaveOccurred(), "Failed to wait for test node to be deleted")
 
-		close(stopCh)
+		cancel()
 	})
 
 	Context("simple pods binder test", func() {
