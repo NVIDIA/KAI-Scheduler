@@ -155,7 +155,7 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 		rawObjects.ResourceClaims = []*resourceapi.ResourceClaim{}
 	}
 
-	rawObjects.ResourceSlices, err = fwork.SharedDRAManager().ResourceSlices().List()
+	rawObjects.ResourceSlices, err = fwork.SharedDRAManager().ResourceSlices().ListWithDeviceTaintRules()
 	if err != nil {
 		log.InfraLogger.Errorf("Error getting raw resource slices: %v", err)
 		rawObjects.ResourceSlices = []*resourceapi.ResourceSlice{}
