@@ -30,6 +30,8 @@
 
 Currently, Run:ai users can submit workloads with associated priority classes that apply to all subordinate pods. The scheduler implicitly assumes that all workloads using priority classes lower than 100 are preemptible, while workloads using priority classes higher than or equal to 100 are non-preemptible.
 
+## Problem Statement
+
 This coupling between priority and preemptibility limits usage flexibility for several important use cases:
 
 1. **High-priority preemptible workloads**: Users may want to submit high-priority workloads that are still preemptible (e.g., high-priority training workloads)
@@ -37,8 +39,6 @@ This coupling between priority and preemptibility limits usage flexibility for s
 3. **Semi-preemptible workloads**: Users may want to submit composite workloads with min-members count where min-members are non-preemptible but additional pods above min-members are preemptible
 
 This document will handle cases 1 and 2. Case 3 will be handled in a separate document.
-
-## Problem Statement
 
 The current implementation creates artificial constraints that prevent users from expressing their true scheduling requirements:
 
