@@ -158,6 +158,8 @@ func (pgi *PodGroupInfo) SetDefaultMinAvailable(minAvailable int32) {
 }
 
 func (pgi *PodGroupInfo) IsPreemptibleJob() bool {
+	// GuyTodo: Change to use the new Preemptible field, defaults to old behavior
+	// GuyTodo: Maybe extract to common as this is also used in the podgroupcontroller
 	return pgi.Priority < constants.PriorityBuildNumber
 }
 

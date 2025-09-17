@@ -48,6 +48,12 @@ type PodGroupSpec struct {
 	// +optional
 	PriorityClassName string `json:"priorityClassName,omitempty" protobuf:"bytes,3,opt,name=priorityClassName"`
 
+	// GuyTodo: Add Preemptibility field
+	// // Preemptibility defines whether this PodGroup can be preempted
+	// // +kubebuilder:validation:Enum=preemptible;non-preemptible;semi-preemptible
+	// // +optional
+	// Preemptibility string `json:"preemptibility,omitempty" protobuf:"bytes,4,opt,name=preemptibility"`
+
 	// The number of pods which will try to run at any instant.
 	Parallelism int32 `json:"parallelism,omitempty" protobuf:"bytes,4,opt,name=parallelism"`
 

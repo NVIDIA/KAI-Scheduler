@@ -20,6 +20,7 @@ const (
 )
 
 func IsPreemptible(ctx context.Context, podGroup *v2alpha2.PodGroup, kubeClient client.Client) (bool, error) {
+	// GuyTODO: Change to use the new Preemptible field, defaults this old behavior
 	priority, err := getPodGroupPriority(ctx, podGroup, kubeClient)
 	if errors.IsNotFound(err) {
 		logger := log.FromContext(ctx)

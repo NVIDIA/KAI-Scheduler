@@ -15,8 +15,9 @@ type SubGroupMetadata struct {
 }
 
 type Metadata struct {
-	Annotations       map[string]string
-	Labels            map[string]string
+	Annotations map[string]string
+	Labels      map[string]string
+	// GuyTodo: Add Preemptibility field
 	PriorityClassName string
 	Queue             string
 	Namespace         string

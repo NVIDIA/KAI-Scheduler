@@ -69,6 +69,7 @@ func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructure
 		Queue:             dg.CalcPodGroupQueue(topOwner, pod),
 		PriorityClassName: dg.CalcPodGroupPriorityClass(topOwner, pod, constants.TrainPriorityClass),
 		MinAvailable:      1,
+		// GuyTodo: Add Preemptibility field
 	}
 
 	annotations := topOwner.GetAnnotations()
