@@ -487,6 +487,16 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 		PodGroup:    pgi.PodGroup,
 		PodGroupUID: pgi.PodGroupUID,
 		SubGroups:   map[string]*SubGroupInfo{},
+		TopologyConstraint: func() *TopologyConstraintInfo {
+			if pgi.TopologyConstraint == nil {
+				return nil
+			}
+			return &TopologyConstraintInfo{
+				Topology:       pgi.TopologyConstraint.Topology,
+				RequiredLevel:  pgi.TopologyConstraint.RequiredLevel,
+				PreferredLevel: pgi.TopologyConstraint.PreferredLevel,
+			}
+		}(),
 
 		PodStatusIndex:       map[pod_status.PodStatus]pod_info.PodsMap{},
 		activeAllocatedCount: ptr.To(0),
