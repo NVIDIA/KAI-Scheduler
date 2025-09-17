@@ -4,12 +4,16 @@
 package main
 
 import (
+	"flag"
 	"os"
 
+	"github.com/spf13/pflag"
+
+	"go.uber.org/zap/zapcore"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/binder/app"
-
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/gpusharing"
 	k8s_plugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/k8s-plugins"
@@ -20,7 +24,18 @@ var (
 )
 
 func main() {
-	app, err := app.New()
+	options := app.InitOptions()
+	opts := zap.Options{
+		Development: true,
+		TimeEncoder: zapcore.ISO8601TimeEncoder,
+	}
+	opts.BindFlags(flag.CommandLine)
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+
+	pflag.Parse()
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	app, err := app.New(options, ctrl.GetConfigOrDie())
 	if err != nil {
 		setupLog.Error(err, "failed to create app")
 		os.Exit(1)
@@ -32,7 +47,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = app.Run()
+	err = app.Run(make(chan struct{}))
 	if err != nil {
 		setupLog.Error(err, "failed to run app")
 		os.Exit(1)
