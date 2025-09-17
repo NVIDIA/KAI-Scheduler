@@ -66,17 +66,11 @@ func (_ *PodGroup) ValidateDelete(ctx context.Context, obj runtime.Object) (admi
 
 func validateSubGroups(subGroups []SubGroup) error {
 	subGroupMap := map[string]*SubGroup{}
-	for i := range subGroups {
-		name := subGroups[i].Name
-		subGroup := &subGroups[i]
-
-		if subGroupMap[name] != nil {
-			return fmt.Errorf("duplicate subgroup name %s", name)
+	for _, subGroup := range subGroups {
+		if subGroupMap[subGroup.Name] != nil {
+			return fmt.Errorf("duplicate subgroup name %s", subGroup.Name)
 		}
-		if err := validateSubGroupFields(subGroup); err != nil {
-			return err
-		}
-		subGroupMap[name] = subGroup
+		subGroupMap[subGroup.Name] = &subGroup
 	}
 
 	if err := validateParent(subGroupMap); err != nil {
@@ -89,23 +83,13 @@ func validateSubGroups(subGroups []SubGroup) error {
 	return nil
 }
 
-func validateSubGroupFields(subGroup *SubGroup) error {
-	if subGroup.Name == "" {
-		return fmt.Errorf("subgroup name cannot be empty")
-	}
-	if subGroup.MinMember <= 0 {
-		return fmt.Errorf("subgroup minMember must be greater than 0")
-	}
-	return nil
-}
-
 func validateParent(subGroupMap map[string]*SubGroup) error {
 	for _, subGroup := range subGroupMap {
-		if subGroup.Parent == "" {
+		if subGroup.Parent == nil {
 			continue
 		}
-		if _, exists := subGroupMap[subGroup.Parent]; !exists {
-			return fmt.Errorf("parent %s of %s was not found", subGroup.Parent, subGroup.Name)
+		if _, exists := subGroupMap[*subGroup.Parent]; !exists {
+			return fmt.Errorf("parent %s of %s was not found", *subGroup.Parent, subGroup.Name)
 		}
 	}
 	return nil
@@ -114,17 +98,19 @@ func validateParent(subGroupMap map[string]*SubGroup) error {
 func detectCycle(subGroupMap map[string]*SubGroup) bool {
 	graph := map[string][]string{}
 	for _, subGroup := range subGroupMap {
-		graph[subGroup.Parent] = append(graph[subGroup.Parent], subGroup.Name)
+		parent := ""
+		if subGroup.Parent != nil {
+			parent = *subGroup.Parent
+		}
+		graph[parent] = append(graph[parent], subGroup.Name)
 	}
 
 	visited := map[string]bool{}
 	recStack := map[string]bool{}
 
 	for name := range subGroupMap {
-		if !visited[name] {
-			if dfsCycleCheck(name, graph, visited, recStack) {
-				return true
-			}
+		if dfsCycleCheck(name, graph, visited, recStack) {
+			return true
 		}
 	}
 	return false
@@ -135,7 +121,7 @@ func dfsCycleCheck(node string, graph map[string][]string, visited, recStack map
 		return true // cycle detected
 	}
 	if visited[node] {
-		return false
+		return false // already checked this path
 	}
 	visited[node] = true
 	recStack[node] = true

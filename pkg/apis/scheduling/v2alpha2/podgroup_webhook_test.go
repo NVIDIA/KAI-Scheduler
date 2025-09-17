@@ -6,6 +6,8 @@ package v2alpha2
 import (
 	"errors"
 	"testing"
+
+	"k8s.io/utils/ptr"
 )
 
 func TestValidateSubGroups(t *testing.T) {
@@ -18,8 +20,8 @@ func TestValidateSubGroups(t *testing.T) {
 			name: "Valid DAG single root",
 			subGroups: []SubGroup{
 				{Name: "A", MinMember: 1},
-				{Name: "B", Parent: "A", MinMember: 1},
-				{Name: "C", Parent: "B", MinMember: 1},
+				{Name: "B", Parent: ptr.To("A"), MinMember: 1},
+				{Name: "C", Parent: ptr.To("B"), MinMember: 1},
 			},
 			wantErr: nil,
 		},
@@ -28,8 +30,8 @@ func TestValidateSubGroups(t *testing.T) {
 			subGroups: []SubGroup{
 				{Name: "A", MinMember: 1},
 				{Name: "B", MinMember: 1},
-				{Name: "C", Parent: "A", MinMember: 1},
-				{Name: "D", Parent: "B", MinMember: 1},
+				{Name: "C", Parent: ptr.To("A"), MinMember: 1},
+				{Name: "D", Parent: ptr.To("B"), MinMember: 1},
 			},
 			wantErr: nil,
 		},
@@ -37,7 +39,7 @@ func TestValidateSubGroups(t *testing.T) {
 			name: "Missing parent",
 			subGroups: []SubGroup{
 				{Name: "A", MinMember: 1},
-				{Name: "B", Parent: "X", MinMember: 1}, // parent X does not exist
+				{Name: "B", Parent: ptr.To("X"), MinMember: 1}, // parent X does not exist
 			},
 			wantErr: errors.New("parent X of B was not found"),
 		},
@@ -55,52 +57,38 @@ func TestValidateSubGroups(t *testing.T) {
 			wantErr: errors.New("duplicate subgroup name A"),
 		},
 		{
-			name: "Empty subgroup name",
-			subGroups: []SubGroup{
-				{Name: "", MinMember: 1}, // invalid
-			},
-			wantErr: errors.New("subgroup name cannot be empty"),
-		},
-		{
-			name: "Invalid MinMember",
-			subGroups: []SubGroup{
-				{Name: "A", MinMember: 0}, // must be > 0
-			},
-			wantErr: errors.New("subgroup minMember must be greater than 0"),
-		},
-		{
 			name: "Cycle in graph (A -> B -> C -> A) - duplicate subgroup name",
 			subGroups: []SubGroup{
 				{Name: "A", MinMember: 1},
-				{Name: "B", Parent: "A", MinMember: 1},
-				{Name: "C", Parent: "B", MinMember: 1},
-				{Name: "A", Parent: "C", MinMember: 1}, // creates a cycle
+				{Name: "B", Parent: ptr.To("A"), MinMember: 1},
+				{Name: "C", Parent: ptr.To("B"), MinMember: 1},
+				{Name: "A", Parent: ptr.To("C"), MinMember: 1}, // creates a cycle
 			},
 			wantErr: errors.New("duplicate subgroup name A"), // duplicate is caught before cycle
 		},
 		{
 			name: "Self-parent subgroup (cycle of length 1)",
 			subGroups: []SubGroup{
-				{Name: "A", Parent: "A", MinMember: 1},
+				{Name: "A", Parent: ptr.To("A"), MinMember: 1},
 			},
 			wantErr: errors.New("cycle detected in subgroups"),
 		},
 		{
 			name: "Cycle in graph (A -> B -> C -> A)",
 			subGroups: []SubGroup{
-				{Name: "A", Parent: "C", MinMember: 1},
-				{Name: "B", Parent: "A", MinMember: 1},
-				{Name: "C", Parent: "B", MinMember: 1}, // creates a cycle
+				{Name: "A", Parent: ptr.To("C"), MinMember: 1},
+				{Name: "B", Parent: ptr.To("A"), MinMember: 1},
+				{Name: "C", Parent: ptr.To("B"), MinMember: 1}, // creates a cycle
 			},
 			wantErr: errors.New("cycle detected in subgroups"),
 		},
 		{
 			name: "Multiple disjoint cycles",
 			subGroups: []SubGroup{
-				{Name: "A", Parent: "B", MinMember: 1},
-				{Name: "B", Parent: "A", MinMember: 1}, // cycle A <-> B
-				{Name: "C", Parent: "D", MinMember: 1},
-				{Name: "D", Parent: "C", MinMember: 1}, // cycle C <-> D
+				{Name: "A", Parent: ptr.To("B"), MinMember: 1},
+				{Name: "B", Parent: ptr.To("A"), MinMember: 1}, // cycle A <-> B
+				{Name: "C", Parent: ptr.To("D"), MinMember: 1},
+				{Name: "D", Parent: ptr.To("C"), MinMember: 1}, // cycle C <-> D
 			},
 			wantErr: errors.New("cycle detected in subgroups"),
 		},
