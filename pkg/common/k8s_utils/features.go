@@ -11,7 +11,9 @@ import (
 
 func GetK8sFeatures() k8splfeature.Features {
 	return k8splfeature.Features{
-		EnableVolumeCapacityPriority:    feature.DefaultFeatureGate.Enabled(features.VolumeCapacityPriority),
-		EnableDynamicResourceAllocation: feature.DefaultFeatureGate.Enabled(features.DynamicResourceAllocation),
+		EnableDynamicResourceAllocation:    feature.DefaultFeatureGate.Enabled(features.DynamicResourceAllocation),
+		EnableDRAResourceClaimDeviceStatus: feature.DefaultFeatureGate.Enabled(features.DRAResourceClaimDeviceStatus),
+		EnableDRAExtendedResource:          feature.DefaultFeatureGate.Enabled(features.DRAExtendedResource),
+		EnableDRADeviceBindingConditions:   feature.DefaultFeatureGate.Enabled(features.DRADeviceBindingConditions),
 	}
 }

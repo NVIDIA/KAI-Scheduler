@@ -6,6 +6,7 @@ package predicates
 import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	ksf "k8s.io/kube-scheduler/framework"
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/interpodaffinity"
 	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/nodeaffinity"
@@ -39,7 +40,7 @@ func predicateNotRequired(_ *v1.Pod) bool {
 }
 
 func emptyPredicatePreFilter(predicateName string) k8s_internal.FitPredicatePreFilter {
-	return func(pod *v1.Pod) (sets.Set[string], *k8sframework.Status) {
+	return func(pod *v1.Pod) (sets.Set[string], *ksf.Status) {
 		log.InfraLogger.V(6).Infof(
 			"Checking pod %s/%s failed predicate: %s", pod.Namespace, pod.Name, predicateName)
 		return nil, nil
@@ -173,7 +174,7 @@ func emptyScoreFn(pluginName string) k8s_internal.ScorePredicate {
 }
 
 func emptyPreScoreFn(_ string) k8s_internal.PreScoreFn {
-	return func(pod *v1.Pod, _ []*k8sframework.NodeInfo) *k8sframework.Status {
+	return func(pod *v1.Pod, _ []ksf.NodeInfo) *ksf.Status {
 		return nil
 	}
 }
