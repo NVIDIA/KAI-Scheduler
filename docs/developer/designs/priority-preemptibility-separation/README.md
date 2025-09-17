@@ -28,7 +28,7 @@
 
 ## Background
 
-Currently, Run:ai users can submit workloads with associated priority classes that apply to all subordinate pods. The scheduler implicitly assumes that all workloads using priority classes lower than 100 are preemptible, while workloads using priority classes higher than or equal to 100 are non-preemptible.
+Currently, KAI-scheduler users can submit workloads with associated priority classes that apply to all subordinate pods. The scheduler implicitly assumes that all workloads using priority classes lower than 100 are preemptible, while workloads using priority classes higher than or equal to 100 are non-preemptible.
 
 ## Problem Statement
 
