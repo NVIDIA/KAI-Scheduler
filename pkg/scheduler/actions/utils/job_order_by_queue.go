@@ -255,7 +255,6 @@ func (jobsOrder *JobsOrderByQueues) buildFuncOrderBetweenQueuesWithJobs(jobsQueu
 
 		var lPending, rPending *podgroup_info.PodGroupInfo
 		if !jobsOrder.jobsOrderInitOptions.VictimQueue {
-			// GuyTodo: Why not use Peek?
 			lPending = jobsQueueMetadataPerQueue[lQueue.UID].jobsInQueue.Pop().(*podgroup_info.PodGroupInfo)
 			jobsQueueMetadataPerQueue[lQueue.UID].jobsInQueue.Push(lPending)
 			rPending = jobsQueueMetadataPerQueue[rQueue.UID].jobsInQueue.Pop().(*podgroup_info.PodGroupInfo)

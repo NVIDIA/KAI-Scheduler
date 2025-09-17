@@ -155,7 +155,6 @@ func buildFilterFuncForPreempt(ssn *framework.Session, preemptor *podgroup_info.
 func getOrderedVictimsQueue(ssn *framework.Session, preemptor *podgroup_info.PodGroupInfo) solvers.GenerateVictimsQueue {
 	return func() *utils.JobsOrderByQueues {
 		filter := buildFilterFuncForPreempt(ssn, preemptor)
-		// GuyAsk: Why iterating the whole session instead of just the jobs in the preemptor's queue?
 		victimsQueue := utils.GetVictimsQueue(ssn, filter)
 		return victimsQueue
 	}
