@@ -17,6 +17,10 @@ import (
 
 func RunBinder(cfg *rest.Config, ctx context.Context) error {
 	options := app.InitOptions()
+
+	options.MetricsAddr = ":8084"
+	options.EnableLeaderElection = false
+
 	app, err := app.New(options, cfg)
 	if err != nil {
 		return err

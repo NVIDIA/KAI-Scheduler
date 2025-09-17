@@ -18,6 +18,7 @@ type Options struct {
 	MaxConcurrentReconciles int
 	LogLevel                int
 	SchedulerName           string
+	EnablePodGroupWebhook   bool
 }
 
 func InitOptions() *Options {
@@ -40,6 +41,7 @@ func InitOptions() *Options {
 		"Log level")
 	flag.StringVar(&options.SchedulerName, "scheduler-name", constants.DefaultSchedulerName,
 		"The name of the scheduler used to schedule pod groups")
-
+	flag.BoolVar(&options.EnablePodGroupWebhook, "enable-podgroup-webhook", true,
+		"Enable podgroup webhook")
 	return options
 }
