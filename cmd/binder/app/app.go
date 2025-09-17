@@ -5,7 +5,6 @@ package app
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"time"
 
@@ -14,9 +13,8 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 
-	"github.com/spf13/pflag"
-	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -25,7 +23,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -60,19 +57,7 @@ type App struct {
 	plugins          *plugins.BinderPlugins
 }
 
-func New() (*App, error) {
-	options := InitOptions()
-	opts := zap.Options{
-		Development: true,
-		TimeEncoder: zapcore.ISO8601TimeEncoder,
-	}
-	opts.BindFlags(flag.CommandLine)
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-
-	pflag.Parse()
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
-	config := ctrl.GetConfigOrDie()
+func New(options *Options, config *rest.Config) (*App, error) {
 	config.QPS = float32(options.QPS)
 	config.Burst = options.Burst
 
@@ -149,7 +134,7 @@ func (app *App) RegisterPlugins(plugins *plugins.BinderPlugins) {
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 
-func (app *App) Run() error {
+func (app *App) Run(stopCh chan struct{}) error {
 	var err error
 	go func() {
 		app.manager.GetCache().WaitForCacheSync(context.Background())
@@ -173,7 +158,6 @@ func (app *App) Run() error {
 
 	binder := binding.NewBinder(app.Client, app.rrs, app.plugins)
 
-	stopCh := make(chan struct{})
 	app.InformerFactory.Start(stopCh)
 	app.InformerFactory.WaitForCacheSync(stopCh)
 
@@ -195,7 +179,6 @@ func (app *App) Run() error {
 }
 
 func createIndexesForResourceReservation(mgr manager.Manager) error {
-
 	if err := mgr.GetFieldIndexer().IndexField(
 		context.Background(), &corev1.Pod{}, "spec.nodeName",
 		func(obj client.Object) []string {
