@@ -77,6 +77,9 @@ type SubGroup struct {
 	// MinMember defines the minimal number of members to run this SubGroup;
 	// if there are not enough resources to start all required members, the scheduler will not start anyone.
 	MinMember int32 `json:"minMember,omitempty"`
+
+	// Parent is an optional attribute that specifies the name of the parent SubGroup
+	Parent string `json:"parent,omitempty"`
 }
 
 // PodGroupStatus defines the observed state of PodGroup
