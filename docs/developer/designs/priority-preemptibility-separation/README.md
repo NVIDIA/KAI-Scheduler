@@ -1,4 +1,4 @@
-# Priority and Preemptibility Separation
+# Priority and Preemptibility Separation (P0)
 
 *Status: Draft*
 
@@ -28,6 +28,8 @@ This coupling between priority and preemptibility limits usage flexibility for s
 2. **Low-priority non-preemptible workloads**: Users may want to submit low-priority workloads (e.g., data processing) that run to completion when granted resources
 3. **Semi-preemptible workloads**: Users may want to submit composite workloads with min-members count where min-members are non-preemptible but additional pods above min-members are preemptible
 
+This document will handle cases 1 and 2. Case 3 will be handled in a separate document.
+
 ## Problem Statement
 
 The current implementation creates artificial constraints that prevent users from expressing their true scheduling requirements:
@@ -43,16 +45,13 @@ The current priority-based preemptibility determination (priority >= 100 = non-p
 ### Goals
 - **Separate priority from preemptibility**: Allow independent configuration of workload priority and preemptibility
 - **Maintain backward compatibility**: Existing workloads without explicit preemptibility configuration should continue to work using the legacy priority-based determination
-- **Support three preemptibility modes**: Preemptible, Non-Preemptible, and Semi-Preemptible
-- **Enable flexible workload composition**: Support workloads where some pods are preemptible and others are not
-- **Provide clear user experience**: Make preemptibility configuration intuitive and visible in UIs and CLIs
+- **Support two preemptibility modes**: Preemptible, Non-Preemptible
 
 ### Non-Goals
-- **P1 features**: Semi-preemptible workloads and min-replicas functionality (addressed separately)
-- **Redesign of existing priority system**: The current priority class system remains unchanged
-- **Changes to queue priority**: Queue-level priority handling is not modified
-- **Modification of existing preemption logic**: Core preemption algorithms remain the same
+- **P1 features**: Semi-preemptible workloads (addressed separately)
 
+
+<!-- GuyContinue -->
 ## Proposal
 
 ### User-Visible Changes
