@@ -170,8 +170,16 @@ func (app *App) Run(stopCh chan struct{}) error {
 	}
 	// +kubebuilder:scaffold:builder
 
+	// Create a context that cancels on either OS signals or when stopCh is closed
+	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
+	defer cancel()
+	go func() {
+		<-stopCh
+		cancel()
+	}()
+
 	setupLog.Info("starting manager")
-	if err = app.manager.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err = app.manager.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		return err
 	}
