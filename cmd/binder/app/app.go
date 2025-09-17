@@ -170,7 +170,6 @@ func (app *App) Run(stopCh chan struct{}) error {
 
 	// Create a context that cancels on either OS signals or when stopCh is closed
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
-	defer cancel()
 	go func() {
 		<-stopCh
 		cancel()
