@@ -267,27 +267,6 @@ func WaitForPodBound(ctx context.Context, c client.Client, podName, namespace st
 		if err != nil {
 			return false, err
 		}
-		// for _, condition := range pod.Status.Conditions {
-		// 	if condition.Type != corev1.PodScheduled {
-		// 		continue
-		// 	}
-
-		// 	if condition.Status == corev1.ConditionTrue {
-		// 		return true, nil
-		// 	}
-		// }
-
-		// var bindRequestList kaiv1alpha2.BindRequestList
-		// err = c.List(ctx, &bindRequestList, client.InNamespace(namespace))
-		// if err != nil {
-		// 	return false, nil // Continue polling
-		// }
-
-		// for _, bindRequest := range bindRequestList.Items {
-		// 	if bindRequest.Spec.PodName == podName && bindRequest.Namespace == namespace {
-		// 		return true, nil
-		// 	}
-		// }
 
 		if pod.Spec.NodeName == "" {
 			return false, nil
