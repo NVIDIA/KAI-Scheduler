@@ -3,18 +3,26 @@
 *Status: Draft*
 
 ## Table of Contents
-1. [Background](#background)
-2. [Problem Statement](#problem-statement)
-3. [Goals / Non-Goals](#goals--non-goals)
-4. [Proposal](#proposal)
-   1. [User-Visible Changes](#user-visible-changes)
-   2. [API Changes](#api-changes)
-   3. [Scheduler Logic Changes](#scheduler-logic-changes)
-   4. [Backward Compatibility](#backward-compatibility)
-5. [Implementation Plan](#implementation-plan)
-6. [Examples](#examples)
-7. [Testing Strategy](#testing-strategy)
-8. [Risks & Mitigations](#risks--mitigations)
+- [Background](#background)
+- [Problem Statement](#problem-statement)
+- [Goals / Non-Goals](#goals-non-goals)
+   * [Goals](#goals)
+   * [Non-Goals](#non-goals)
+- [Proposal](#proposal)
+   * [API Changes](#api-changes)
+      + [1. PodGroup Spec Field](#1-podgroup-spec-field)
+      + [2. Pod Label](#2-pod-label)
+   * [Scheduler Logic Changes](#scheduler-logic-changes)
+      + [1. Preemptibility Determination](#1-preemptibility-determination)
+   * [Backward Compatibility](#backward-compatibility)
+      + [1. Default Behavior Support](#1-default-behavior-support)
+      + [2. Configuration Validation](#2-configuration-validation)
+- [Examples](#examples)
+   * [Example 1: High-Priority Preemptible PodGroup](#example-1-high-priority-preemptible-podgroup)
+   * [Example 2: Low-Priority Non-Preemptible PodGroup](#example-2-low-priority-non-preemptible-podgroup)
+   * [Example 3: External Workload with Explicit Preemptibility](#example-3-external-workload-with-explicit-preemptibility)
+   * [Example 4: Default Behavior PodGroup (Backward Compatible)](#example-4-default-behavior-podgroup-backward-compatible)
+
 
 ---
 
@@ -44,203 +52,115 @@ The current priority-based preemptibility determination (priority >= 100 = non-p
 
 ### Goals
 - **Separate priority from preemptibility**: Allow independent configuration of workload priority and preemptibility
-- **Maintain backward compatibility**: Existing workloads without explicit preemptibility configuration should continue to work using the legacy priority-based determination
+- **Maintain backward compatibility**: Existing workloads without explicit preemptibility configuration should continue to work using the default priority-based determination
 - **Support two preemptibility modes**: Preemptible, Non-Preemptible
 
 ### Non-Goals
 - **P1 features**: Semi-preemptible workloads (addressed separately)
 
 
-<!-- GuyContinue -->
 ## Proposal
 
-### User-Visible Changes
-
-#### 1. New Preemptibility Parameter
-Add a new `preemptibility` parameter to all workload types with three possible values:
-- `Preemptible`: Workload can be preempted by higher-priority workloads
-- `Non-Preemptible`: Workload runs to completion once scheduled
-- `Semi-Preemptible`: Workload has both preemptible and non-preemptible components (P1 feature)
-
-#### 2. Workload API Updates
-All workload types (TrainingWorkload, InteractiveWorkload, InferenceWorkload, etc.) will include:
-```yaml
-spec:
-  preemptibility: "Preemptible"  # or "Non-Preemptible" or "Semi-Preemptible"
-  priorityClassName: "train"     # existing field, now independent of preemptibility
-```
-
-#### 3. UI/CLI Integration
-- Preemptibility parameter will be prominently displayed in workload grids
-- CLI commands will support preemptibility specification
-- Workload creation wizards will include preemptibility selection
+Add a new `preemptibility` parameter at the pod/podgroup level with the following possible values:
+- `preemptible`: PodGroup can be preempted by higher-priority workloads
+- `non-preemptible`: PodGroup runs to completion once scheduled
+- `semi-preemptible`: PodGroup has both preemptible and non-preemptible components (P1 feature)
 
 ### API Changes
 
-#### 1. Workload Type Updates
-All workload CRDs will be updated to include the preemptibility field:
+#### 1. PodGroup Spec Field
+Add a preemptibility field to the PodGroup spec:
+
+```yaml
+spec:
+  preemptibility: "preemptible"  # or "non-preemptible"
+  priorityClassName: "train"     # existing field, now independent of preemptibility
+```
 
 ```go
-type WorkloadSpec struct {
+type PodGroupSpec struct {
     // ... existing fields ...
     
-    // Preemptibility defines whether this workload can be preempted
-    // +kubebuilder:validation:Enum=Preemptible;Non-Preemptible;Semi-Preemptible
-    // +kubebuilder:default=Preemptible
+    // Preemptibility defines whether this PodGroup can be preempted
+    // +kubebuilder:validation:Enum=preemptible;non-preemptible;semi-preemptible
+    // +optional
     Preemptibility string `json:"preemptibility,omitempty"`
 }
 ```
 
-#### 2. PodGroup Annotation
-The PodGrouper will add a preemptibility annotation to PodGroups:
-
-```go
-const (
-    PreemptibilityAnnotationKey = "kai.scheduler/preemptibility"
-)
-
-// Values
-const (
-    PreemptibilityPreemptible     = "Preemptible"
-    PreemptibilityNonPreemptible  = "Non-Preemptible"
-    PreemptibilitySemiPreemptible = "Semi-Preemptible"
-)
-```
-
-#### 3. External Workload Support
-External workloads (Kubernetes native resources) can specify preemptibility via annotations:
+#### 2. Pod Label
+Pods can also specify preemptibility via the `kai.scheduler/preemptibility` label, which is useful for external workloads or cases where PodGroup spec modification is not feasible (same as with priority):
 
 ```yaml
 metadata:
-  annotations:
-    kai.scheduler/preemptibility: "Non-Preemptible"
   labels:
-    runai/priority-class: "train"
+    kai.scheduler/preemptibility: "non-preemptible"
 ```
+
+Creating a Pod with an invalid preemptibility value will result in a fallback to the default priority-based determination.
 
 ### Scheduler Logic Changes
 
 #### 1. Preemptibility Determination
 The scheduler will determine preemptibility using the following precedence:
 
-1. **Explicit preemptibility annotation/label** on PodGroup or workload
-2. **Legacy priority-based determination** (priority >= 100 = non-preemptible) for backward compatibility
+1. **Explicit preemptibility spec field** on PodGroup
+2. **Explicit preemptibility label** on pod (for external workloads)
+3. **Legacy priority-based determination** (priority >= 100 = non-preemptible) for backward compatibility
 
 ```go
 func (pgi *PodGroupInfo) IsPreemptibleJob() bool {
-    // Check for explicit preemptibility annotation
-    if preemptibility, exists := pgi.Annotations[PreemptibilityAnnotationKey]; exists {
-        return preemptibility == PreemptibilityPreemptible
+    // Check for explicit preemptibility in PodGroup spec
+    if pgi.PodGroup.Spec.Preemptibility != "" {
+        return pgi.PodGroup.Spec.Preemptibility == "preemptible"
     }
     
-    // Fall back to legacy priority-based determination
+    // Check for explicit preemptibility label on pods (for external workloads)
+    if preemptibility, exists := pgi.Labels["kai.scheduler/preemptibility"]; exists {
+        return preemptibility == "preemptible"
+    }
+    
+    // Fall back to default priority-based determination
     return pgi.Priority < PriorityBuildNumber
 }
 ```
 
-#### 2. Preemption Filter Updates
-The preemption filter will be updated to respect the new preemptibility determination:
-
-```go
-func buildFilterFuncForPreempt(ssn *framework.Session, preemptor *podgroup_info.PodGroupInfo) func(*podgroup_info.PodGroupInfo) bool {
-    return func(job *podgroup_info.PodGroupInfo) bool {
-        // Use new preemptibility determination
-        if !job.IsPreemptibleJob() {
-            return false
-        }
-        
-        // ... rest of existing logic ...
-    }
-}
-```
-
-#### 3. Quota Validation Updates
-Non-preemptible workloads will continue to be restricted to in-quota resources, but the determination of what constitutes a non-preemptible workload will use the new logic.
+The same logic will be used in the PodGroupController to publish the preemptibility status on the PodGroup (for backward compatibility).
 
 ### Backward Compatibility
 
-#### 1. Legacy Workload Support
-Workloads without explicit preemptibility configuration will continue to use the legacy priority-based determination:
+#### 1. Default Behavior Support
+Workloads without explicit preemptibility configuration will continue to use the priority-based determination as the default behavior:
 - Priority < 100 → Preemptible
 - Priority >= 100 → Non-Preemptible
 
-#### 2. Migration Path
-Users can gradually migrate to explicit preemptibility configuration:
-1. **Phase 1**: Deploy with new scheduler version (backward compatible)
-2. **Phase 2**: Update workloads to use explicit preemptibility (optional)
-3. **Phase 3**: Remove legacy priority-based determination (future version)
-
-#### 3. Configuration Validation
-The scheduler will log warnings when it encounters workloads using legacy priority-based preemptibility determination to encourage migration.
-
-## Implementation Plan
-
-### Phase 1: Core Infrastructure (P0)
-1. **API Updates**
-   - Add preemptibility field to all workload CRDs
-   - Update PodGrouper to handle preemptibility annotations
-   - Add constants and validation
-
-2. **Scheduler Logic**
-   - Update `IsPreemptibleJob()` method
-   - Modify preemption filters
-   - Update quota validation logic
-
-3. **Testing**
-   - Unit tests for new preemptibility logic
-   - Integration tests for backward compatibility
-   - E2E tests for new functionality
-
-### Phase 2: UI/CLI Integration (P0)
-1. **CLI Updates**
-   - Add preemptibility parameter to workload creation commands
-   - Update workload listing to show preemptibility
-
-2. **UI Updates**
-   - Add preemptibility column to workload grids
-   - Update workload creation forms
-   - Add preemptibility indicators
-
-### Phase 3: Documentation and Migration (P0)
-1. **Documentation**
-   - Update user guides
-   - Create migration documentation
-   - Update API documentation
-
-2. **Migration Tools**
-   - Create migration scripts for existing workloads
-   - Provide validation tools
-
-### Phase 4: Semi-Preemptible Support (P1)
-1. **Min-Replicas Implementation**
-   - Add min-replicas support to workload types
-   - Implement semi-preemptible logic in scheduler
-   - Update preemption filters for semi-preemptible workloads
+#### 2. Configuration Validation
+The scheduler will validate preemptibility values and fall back to the default priority-based determination for invalid values.
 
 ## Examples
 
-### Example 1: High-Priority Preemptible Training
+### Example 1: High-Priority Preemptible PodGroup
 ```yaml
-apiVersion: run.ai/v1
-kind: TrainingWorkload
+apiVersion: scheduling.kai.nvidia.com/v2alpha2
+kind: PodGroup
 metadata:
   name: high-priority-training
 spec:
+  preemptibility: "preemptible"
   priorityClassName: "inference"  # High priority (125)
-  preemptibility: "Preemptible"   # But still preemptible
-  # ... rest of spec
+  # ... rest of podgroup spec
 ```
 
-### Example 2: Low-Priority Non-Preemptible Data Processing
+### Example 2: Low-Priority Non-Preemptible PodGroup
 ```yaml
-apiVersion: run.ai/v1
-kind: TrainingWorkload
+apiVersion: scheduling.kai.nvidia.com/v2alpha2
+kind: PodGroup
 metadata:
   name: data-processing
 spec:
-  priorityClassName: "train"      # Low priority (50)
-  preemptibility: "Non-Preemptible"  # But runs to completion
-  # ... rest of spec
+  preemptibility: "non-preemptible"
+  priorityClassName: "train"  # Low priority (50)
+  # ... rest of podgroup spec
 ```
 
 ### Example 3: External Workload with Explicit Preemptibility
@@ -249,76 +169,24 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: external-workload
-  annotations:
-    kai.scheduler/preemptibility: "Non-Preemptible"
-  labels:
-    runai/priority-class: "train"
 spec:
-  # ... deployment spec
+  template:
+    metadata:
+      labels:
+        kai.scheduler/preemptibility: "non-preemptible"
+        runai/priority-class: "train"
+    spec:
+      # ... pod spec
 ```
 
-### Example 4: Legacy Workload (Backward Compatible)
+### Example 4: Default Behavior PodGroup (Backward Compatible)
 ```yaml
-apiVersion: run.ai/v1
-kind: TrainingWorkload
+apiVersion: scheduling.kai.nvidia.com/v2alpha2
+kind: PodGroup
 metadata:
-  name: legacy-workload
+  name: default-behavior-workload
 spec:
-  priorityClassName: "build"  # Priority 100 → Non-Preemptible (legacy behavior)
-  # No preemptibility field → uses legacy determination
-  # ... rest of spec
+  priorityClassName: "build"  # Priority 100 → Non-Preemptible (default behavior)
+  # No preemptibility field → uses default priority-based determination
+  # ... rest of podgroup spec
 ```
-
-## Testing Strategy
-
-### 1. Unit Tests
-- Test preemptibility determination logic
-- Test backward compatibility with legacy workloads
-- Test validation of preemptibility values
-
-### 2. Integration Tests
-- Test PodGrouper annotation handling
-- Test scheduler preemption behavior with new logic
-- Test quota validation with explicit preemptibility
-
-### 3. E2E Tests
-- Test workload creation with explicit preemptibility
-- Test preemption scenarios with mixed preemptibility modes
-- Test backward compatibility with existing workloads
-
-### 4. Performance Tests
-- Ensure no performance regression in scheduling decisions
-- Test scheduler behavior under high load with mixed preemptibility
-
-## Risks & Mitigations
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| **Backward compatibility breakage** | High | Comprehensive testing of legacy workloads, gradual migration path |
-| **User confusion with new parameter** | Medium | Clear documentation, migration guides, UI improvements |
-| **Scheduler performance impact** | Low | Minimal logic changes, performance testing |
-| **Inconsistent preemptibility determination** | Medium | Clear precedence rules, comprehensive validation |
-| **Migration complexity** | Medium | Optional migration, automated tools, clear documentation |
-
----
-
-## Appendix
-
-### Current Priority Classes
-- `train` (50) - Preemptible training workloads
-- `build-preemptible` (75) - Preemptible build/interactive workloads  
-- `build` (100) - Non-preemptible build/interactive workloads
-- `inference` (125) - Non-preemptible inference workloads
-
-### Preemptibility Values
-- `Preemptible` - Workload can be preempted by higher-priority workloads
-- `Non-Preemptible` - Workload runs to completion once scheduled
-- `Semi-Preemptible` - Workload has both preemptible and non-preemptible components (P1)
-
-### Key Files to Modify
-- Workload CRD definitions in `sdk/api/`
-- PodGrouper logic in `kai-scheduler/pkg/podgrouper/`
-- Scheduler preemption logic in `kai-scheduler/pkg/scheduler/actions/preempt/`
-- Preemptibility determination in `kai-scheduler/pkg/podgroupcontroller/utilities/pod-group/`
-
-*End of document*
