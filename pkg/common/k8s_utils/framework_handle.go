@@ -194,12 +194,10 @@ func (f *K8sFramework) Activate(logger klog.Logger, pods map[string]*v1.Pod) {
 
 func (f *K8sFramework) APICacher() k8sframework.APICacher {
 	panic("implement me")
-	return nil
 }
 
 func (f *K8sFramework) APIDispatcher() ksf.APIDispatcher {
 	panic("implement me")
-	return nil
 }
 
 // NewFrameworkHandle creates a FrameworkHandle interface, which is used by k8s plugins.

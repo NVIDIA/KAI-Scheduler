@@ -59,7 +59,4 @@ func TestAddFlags(t *testing.T) {
 	if !utilfeature.DefaultFeatureGate.Enabled(features.DynamicResourceAllocation) {
 		t.Errorf("DynamicResourceAllocation feature gate should be enabled")
 	}
-	if utilfeature.DefaultFeatureGate.Enabled(features.VolumeCapacityPriority) {
-		t.Errorf("VolumeCapacityPriority feature gate should be disabled")
-	}
 }
