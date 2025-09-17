@@ -54,6 +54,7 @@ require (
 	k8s.io/kube-aggregator v0.34.1
 	k8s.io/kube-controller-manager v0.34.1
 	k8s.io/kube-proxy v0.34.1
+	k8s.io/kube-scheduler v0.34.1
 	k8s.io/kubectl v0.34.1
 	k8s.io/kubernetes v1.34.1
 	k8s.io/metrics v0.34.1
@@ -183,7 +184,6 @@ require (
 	k8s.io/cri-api v0.34.1 // indirect
 	k8s.io/csi-translation-lib v0.34.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
-	k8s.io/kube-scheduler v0.34.1 // indirect
 	k8s.io/kubelet v0.34.1 // indirect
 	knative.dev/networking v0.0.0-20250117155906-67d1c274ba6a // indirect
 	sigs.k8s.io/jobset v0.8.1 // indirect

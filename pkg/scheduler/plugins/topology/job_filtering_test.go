@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
+	ksf "k8s.io/kube-scheduler/framework"
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/utils/ptr"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
@@ -258,8 +259,8 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			},
 			setupSessionState: func(provider *mockSessionStateProvider, jobUID types.UID) {
 				state := provider.GetSessionStateForResource(jobUID)
-				(*k8sframework.CycleState)(state).Write(
-					k8sframework.StateKey(topologyPluginName),
+				state.Write(
+					ksf.StateKey(topologyPluginName),
 					&topologyStateData{
 						relevantDomains: []*DomainInfo{
 							{

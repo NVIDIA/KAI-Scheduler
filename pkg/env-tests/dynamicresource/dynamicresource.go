@@ -35,21 +35,19 @@ func CreateNodeResourceSlice(name, driver, nodeName string, deviceCount int) *re
 				ResourceSliceCount: 1,
 				Name:               fmt.Sprintf("%s-%s", driver, nodeName),
 			},
-			NodeName: nodeName,
+			NodeName: ptr.To(nodeName),
 		},
 	}
 
 	for i := range deviceCount {
 		resourceSlice.Spec.Devices = append(resourceSlice.Spec.Devices, resourceapi.Device{
 			Name: fmt.Sprintf("%s-%s-%d", driver, nodeName, i),
-			Basic: &resourceapi.BasicDevice{
-				Attributes: map[resourceapi.QualifiedName]resourceapi.DeviceAttribute{
-					"vendor": {
-						StringValue: ptr.To("nvidia"),
-					},
-					"model": {
-						StringValue: ptr.To("A420"),
-					},
+			Attributes: map[resourceapi.QualifiedName]resourceapi.DeviceAttribute{
+				"vendor": {
+					StringValue: ptr.To("nvidia"),
+				},
+				"model": {
+					StringValue: ptr.To("A420"),
 				},
 			},
 		})
@@ -86,15 +84,17 @@ func CreateResourceClaim(name, namespace string, requests ...DeviceRequest) *res
 		}
 
 		newRequest := resourceapi.DeviceRequest{
-			Name:            request.Name,
-			DeviceClassName: request.Class,
-			Count:           int64(request.Count),
-			AllocationMode:  resourceapi.DeviceAllocationModeExactCount,
+			Name: request.Name,
+			Exactly: &resourceapi.ExactDeviceRequest{
+				DeviceClassName: request.Class,
+				Count:           int64(request.Count),
+				AllocationMode:  resourceapi.DeviceAllocationModeExactCount,
+			},
 		}
 
 		if request.Count == -1 {
-			newRequest.AllocationMode = resourceapi.DeviceAllocationModeAll
-			newRequest.Count = 0
+			newRequest.Exactly.AllocationMode = resourceapi.DeviceAllocationModeAll
+			newRequest.Exactly.Count = 0
 		}
 
 		resourceClaim.Spec.Devices.Requests = append(
