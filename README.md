@@ -30,7 +30,8 @@ Before installing KAI Scheduler, ensure you have:
 - [NVIDIA GPU-Operator](https://github.com/NVIDIA/gpu-operator) installed in order to schedule workloads that request GPU resources
 
 ## Installation
-KAI Scheduler will be installed in `kai-scheduler` namespace. When submitting workloads make sure to use a dedicated namespace.
+KAI Scheduler will be installed in `kai-scheduler` namespace.
+⚠️ When submitting workloads, make sure to use a dedicated namespace. Do not use the `kai-scheduler` namespace for workload submission.
 
 ### Installation Methods
 KAI Scheduler can be installed:

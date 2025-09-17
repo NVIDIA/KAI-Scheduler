@@ -58,9 +58,8 @@ spec:
                 type: boolean
               minMember:
                 description: |-
-                  MinMember defines the minimal number of members/tasks to run the pod group;
-                  if there's not enough resources to start all tasks, the scheduler
-                  will not start anyone.
+                  MinMember defines the minimal number of members to run the PodGroup;
+                  if there are not enough resources to start all required members, the scheduler will not start anyone.
                 format: int32
                 type: integer
               parallelism:
@@ -94,8 +93,8 @@ spec:
                   properties:
                     minMember:
                       description: |-
-                        MinMember defines the minimal number of members/tasks to run this SubGroup;
-                        if there's not enough resources to start all tasks, the scheduler will not start anyone.
+                        MinMember defines the minimal number of members to run this SubGroup;
+                        if there are not enough resources to start all required members, the scheduler will not start anyone.
                       format: int32
                       type: integer
                     name:

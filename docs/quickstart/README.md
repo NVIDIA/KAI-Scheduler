@@ -21,6 +21,9 @@ To schedule a pod using KAI Scheduler, ensure the following:
 2. Set the scheduler name in the pod specification as `kai-scheduler`
 This ensures the pod is placed in the correct scheduling queue and managed by KAI Scheduler.
 
+### ⚠️ Workload namespaces
+When submitting workloads, make sure to use a dedicated namespace. Do not use the `kai-scheduler` namespace for workload submission.
+
 ### Submitting Example Pods
 #### CPU-Only Pods
 To submit a very simple pod that requests CPU and memory resources, use the following command:
