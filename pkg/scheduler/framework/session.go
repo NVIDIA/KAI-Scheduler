@@ -79,10 +79,10 @@ type Session struct {
 	IsNonPreemptibleJobOverQueueQuotaFns  []api.IsJobOverCapacityFn
 	IsJobOverCapacityFns                  []api.IsJobOverCapacityFn
 	IsTaskAllocationOnNodeOverCapacityFns []api.IsTaskAllocationOverCapacityFn
+	SubsetNodesFns                        []api.SubsetNodesFn
 	PrePredicateFns                       []api.PrePredicateFn
 	PredicateFns                          []api.PredicateFn
 	BindRequestMutateFns                  []api.BindRequestMutateFn
-	CleanAllocationAttemptCacheFns        []api.CleanAllocationAttemptCacheFn
 
 	Config          *conf.SchedulerConfiguration
 	plugins         map[string]Plugin

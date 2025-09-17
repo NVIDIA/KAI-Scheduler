@@ -42,7 +42,7 @@ type TestJobBasic struct {
 	DeleteJobInTest                     bool
 	JobNotReadyForSsn                   bool
 	MinAvailable                        *int32
-	Topology                            *enginev2alpha2.TopologyConstraint
+	Topology                            *podgroup_info.TopologyConstraintInfo
 	Tasks                               []*tasks_fake.TestTaskBasic
 	SubGroups                           map[string]*podgroup_info.SubGroupInfo
 	StaleDuration                       *time.Duration
@@ -95,7 +95,7 @@ func BuildJobInfo(
 	uid common_info.PodGroupID, allocatedResource *resource_info.Resource,
 	subGroups map[string]*podgroup_info.SubGroupInfo, taskInfos []*pod_info.PodInfo, priority int32,
 	queueUID common_info.QueueID, jobCreationTime time.Time, minAvailable int32, staleDuration *time.Duration,
-	topologyConstraint *enginev2alpha2.TopologyConstraint) *podgroup_info.PodGroupInfo {
+	topologyConstraint *podgroup_info.TopologyConstraintInfo) *podgroup_info.PodGroupInfo {
 	allTasks := pod_info.PodsMap{}
 	taskStatusIndex := map[pod_status.PodStatus]pod_info.PodsMap{}
 
@@ -124,17 +124,18 @@ func BuildJobInfo(
 	}
 
 	result := &podgroup_info.PodGroupInfo{
-		UID:               uid,
-		Name:              name,
-		Namespace:         namespace,
-		Allocated:         allocatedResource,
-		PodStatusIndex:    taskStatusIndex,
-		Priority:          priority,
-		JobFitErrors:      make(enginev2alpha2.UnschedulableExplanations, 0),
-		NodesFitErrors:    map[common_info.PodID]*common_info.FitErrors{},
-		Queue:             queueUID,
-		CreationTimestamp: metav1.Time{Time: jobCreationTime},
-		SubGroups:         subGroups,
+		UID:                uid,
+		Name:               name,
+		Namespace:          namespace,
+		Allocated:          allocatedResource,
+		PodStatusIndex:     taskStatusIndex,
+		Priority:           priority,
+		JobFitErrors:       make(enginev2alpha2.UnschedulableExplanations, 0),
+		NodesFitErrors:     map[common_info.PodID]*common_info.FitErrors{},
+		Queue:              queueUID,
+		CreationTimestamp:  metav1.Time{Time: jobCreationTime},
+		SubGroups:          subGroups,
+		TopologyConstraint: topologyConstraint,
 		PodGroup: &enginev2alpha2.PodGroup{
 			ObjectMeta: metav1.ObjectMeta{
 				UID:               types.UID(uid),
@@ -145,12 +146,6 @@ func BuildJobInfo(
 			Spec: enginev2alpha2.PodGroupSpec{
 				Queue:     string(queueUID),
 				MinMember: minAvailable,
-				TopologyConstraint: (func() enginev2alpha2.TopologyConstraint {
-					if topologyConstraint != nil {
-						return *topologyConstraint
-					}
-					return enginev2alpha2.TopologyConstraint{}
-				})(),
 			},
 		},
 	}

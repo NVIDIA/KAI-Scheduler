@@ -28,6 +28,9 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 )
 
+// SubsetNodesFn is used to divide the nodes into sets
+type SubsetNodesFn func(podGroup *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet) ([]node_info.NodeSet, error)
+
 // PredicateFn is used to predicate node for task.
 type PredicateFn func(*pod_info.PodInfo, *podgroup_info.PodGroupInfo, *node_info.NodeInfo) error
 
@@ -67,9 +70,6 @@ type OnJobSolutionStartFn func()
 
 // BindRequestMutateFn allows plugins to add annotations before BindRequest creation.
 type BindRequestMutateFn func(pod *pod_info.PodInfo, nodeName string) map[string]string
-
-// CleanAllocationAttemptCacheFn is used to clean the cycle cache after an allocation attempt for a job.
-type CleanAllocationAttemptCacheFn func(job *podgroup_info.PodGroupInfo) error
 
 type SchedulableResult struct {
 	IsSchedulable bool

@@ -4,6 +4,7 @@
 package status_updater
 
 import (
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -605,8 +606,14 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			var podGroups []runtime.Object
+			jobInfos, _, _ := jobs_fake.BuildJobsAndTasksMaps([]*jobs_fake.TestJobBasic{&test.job})
+			for _, job := range jobInfos {
+				podGroups = append(podGroups, job.PodGroup)
+			}
+
 			kubeClient := fake.NewSimpleClientset()
-			kubeAiSchedClient := kubeaischedfake.NewSimpleClientset()
+			kubeAiSchedClient := kubeaischedfake.NewSimpleClientset(podGroups...)
 			recorder := record.NewFakeRecorder(100)
 			statusUpdater := New(kubeClient, kubeAiSchedClient, recorder, 1, false, nodePoolLabelKey)
 			wg := sync.WaitGroup{}
@@ -626,9 +633,7 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 			stopCh := make(chan struct{})
 			statusUpdater.Run(stopCh)
 
-			jobsMap, _, _ := jobs_fake.BuildJobsAndTasksMaps([]*jobs_fake.TestJobBasic{&test.job})
-
-			statusUpdater.RecordJobStatusEvent(jobsMap["test-job"])
+			statusUpdater.RecordJobStatusEvent(jobInfos["test-job"])
 
 			events := []string{}
 			close(recorder.Events)
@@ -727,4 +732,83 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 				test.expectedEvent, events[0])
 		})
 	}
+}
+
+func TestDefaultStatusUpdater_RetryAfterError(t *testing.T) {
+	kubeClient := fake.NewSimpleClientset()
+	kubeAiSchedClient := kubeaischedfake.NewSimpleClientset()
+	recorder := record.NewFakeRecorder(100)
+	statusUpdater := New(kubeClient, kubeAiSchedClient, recorder, 1, false, nodePoolLabelKey)
+
+	updateCalls := 0
+	// wait with pod groups update until signal is given.
+	kubeAiSchedClient.SchedulingV2alpha2().(*fakeschedulingv2alpha2.FakeSchedulingV2alpha2).PrependReactor(
+		"update", "podgroups", func(action faketesting.Action) (handled bool, ret runtime.Object, err error) {
+			updateCalls += 1
+			return false, nil, errors.New("test")
+		},
+	)
+
+	stopCh := make(chan struct{})
+	statusUpdater.Run(stopCh)
+	defer close(stopCh)
+
+	job := &enginev2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "retry-test",
+		},
+		Status: enginev2alpha2.PodGroupStatus{},
+	}
+	jobCopy := job.DeepCopy()
+
+	jobCopy.Status.SchedulingConditions = []enginev2alpha2.SchedulingCondition{
+		{
+			TransitionID: "1",
+			Type:         enginev2alpha2.UnschedulableOnNodePool,
+			NodePool:     "test",
+			Reason:       "test",
+			Message:      "test",
+		},
+	}
+
+	patchData, err := getPodGroupPatch(job, jobCopy)
+	assert.NoError(t, err)
+
+	go func() {
+		time.Sleep(time.Millisecond * 75)
+		statusUpdater.pushToUpdateQueue(&updatePayload{
+			key:        "test",
+			objectType: "podgroup",
+		}, &inflightUpdate{
+			object:       job,
+			patchData:    patchData,
+			updateStatus: true,
+			subResources: nil,
+		})
+	}()
+
+	// Wait for an initial update call
+	assert.NoError(t, waitForIncrease(&updateCalls), "failed to wait for initial update call")
+
+	// Wait for a retry after error
+	assert.NoError(t, waitForIncrease(&updateCalls), "update was not retried after error")
+}
+
+func waitForIncrease(callCount *int) error {
+	originalValue := *callCount
+	startTime := time.Now()
+	timeout := time.Second * 5
+
+	for time.Since(startTime) < timeout {
+		if *callCount > originalValue {
+			break
+		}
+		time.Sleep(time.Millisecond * 50)
+	}
+
+	if *callCount > originalValue {
+		return nil
+	}
+	return errors.New("update calls did not increase")
 }

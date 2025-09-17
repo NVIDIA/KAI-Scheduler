@@ -51,3 +51,9 @@ const (
 func QueueValidatedVersions() []string {
 	return []string{"v2"}
 }
+
+// PodGroupValidatedVersions returns the list of podgroup versions that we validate with a webhook.
+// This will be used by the kai operator when installing webhooks. When changing this, test for backwards compatibility.
+func PodGroupValidatedVersions() []string {
+	return []string{"v2alpha2"}
+}

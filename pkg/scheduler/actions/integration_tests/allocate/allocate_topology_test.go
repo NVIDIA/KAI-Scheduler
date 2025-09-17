@@ -9,9 +9,9 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
-	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
@@ -60,9 +60,9 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &enginev2alpha2.TopologyConstraint{
-							Topology:              "cluster-topology",
-							RequiredTopologyLevel: "k8s.io/rack",
+						Topology: &podgroup_info.TopologyConstraintInfo{
+							Topology:      "cluster-topology",
+							RequiredLevel: "k8s.io/rack",
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -181,9 +181,9 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &enginev2alpha2.TopologyConstraint{
-							Topology:              "cluster-topology",
-							RequiredTopologyLevel: "k8s.io/spine",
+						Topology: &podgroup_info.TopologyConstraintInfo{
+							Topology:      "cluster-topology",
+							RequiredLevel: "k8s.io/spine",
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -292,9 +292,9 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &enginev2alpha2.TopologyConstraint{
-							Topology:              "cluster-topology",
-							RequiredTopologyLevel: "k8s.io/rack",
+						Topology: &podgroup_info.TopologyConstraintInfo{
+							Topology:      "cluster-topology",
+							RequiredLevel: "k8s.io/rack",
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -435,9 +435,9 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &enginev2alpha2.TopologyConstraint{
-							Topology:              "cluster-topology",
-							RequiredTopologyLevel: "k8s.io/rack",
+						Topology: &podgroup_info.TopologyConstraintInfo{
+							Topology:      "cluster-topology",
+							RequiredLevel: "k8s.io/rack",
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -558,9 +558,9 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &enginev2alpha2.TopologyConstraint{
-							Topology:              "cluster-topology",
-							RequiredTopologyLevel: "k8s.io/rack",
+						Topology: &podgroup_info.TopologyConstraintInfo{
+							Topology:      "cluster-topology",
+							RequiredLevel: "k8s.io/rack",
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -700,9 +700,9 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &enginev2alpha2.TopologyConstraint{
-							Topology:               "cluster-topology",
-							PreferredTopologyLevel: "k8s.io/rack",
+						Topology: &podgroup_info.TopologyConstraintInfo{
+							Topology:       "cluster-topology",
+							PreferredLevel: "k8s.io/rack",
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -818,9 +818,9 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &enginev2alpha2.TopologyConstraint{
-							Topology:               "cluster-topology",
-							PreferredTopologyLevel: "k8s.io/rack",
+						Topology: &podgroup_info.TopologyConstraintInfo{
+							Topology:       "cluster-topology",
+							PreferredLevel: "k8s.io/rack",
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -949,10 +949,10 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &enginev2alpha2.TopologyConstraint{
-							Topology:               "cluster-topology",
-							RequiredTopologyLevel:  "k8s.io/rack",
-							PreferredTopologyLevel: "k8s.io/spine",
+						Topology: &podgroup_info.TopologyConstraintInfo{
+							Topology:       "cluster-topology",
+							RequiredLevel:  "k8s.io/rack",
+							PreferredLevel: "k8s.io/spine",
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{

@@ -303,6 +303,11 @@ func (c *ClusterInfo) snapshotPodGroups(
 		err = errors.WithStack(fmt.Errorf("error listing podgroups: %c", err))
 		return nil, err
 	}
+
+	for i := range podGroups {
+		podGroups[i] = podGroups[i].DeepCopy()
+	}
+
 	if c.podGroupSync != nil {
 		c.podGroupSync.SyncPodGroupsWithPendingUpdates(podGroups)
 	}

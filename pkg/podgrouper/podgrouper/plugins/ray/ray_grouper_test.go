@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	rayCluster = &unstructured.Unstructured{
+	autoScalingRayCluster = &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"kind":       "RayCluster",
 			"apiVersion": "ray.io/v1alpha1",
@@ -38,6 +38,7 @@ var (
 				},
 			},
 			"spec": map[string]interface{}{
+				"enableInTreeAutoscaling": true,
 				"headGroupSpec": map[string]interface{}{
 					"replicas":    int64(3),
 					"minReplicas": int64(2),
@@ -55,27 +56,193 @@ var (
 			},
 		},
 	}
+
+	nonAutoScalingRayCluster = &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "RayCluster",
+			"apiVersion": "ray.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "test_ray_cluster",
+				"namespace": "test_namespace",
+				"uid":       "1",
+				"labels": map[string]interface{}{
+					"test_label":                 "test_value",
+					"ray.io/priority-class-name": "ray_train_priority_class",
+				},
+				"annotations": map[string]interface{}{
+					"test_annotation": "test_value",
+				},
+			},
+			"spec": map[string]interface{}{
+				"headGroupSpec": map[string]interface{}{
+					"replicas": int64(3),
+				},
+				"workerGroupSpecs": []interface{}{
+					map[string]interface{}{
+						"replicas":    int64(3),
+						"minReplicas": int64(2),
+					},
+					map[string]interface{}{
+						"replicas":    int64(3),
+						"minReplicas": int64(1),
+					},
+				},
+			},
+		},
+	}
+
+	rayClusterWithSuspendedWorkers = &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "RayCluster",
+			"apiVersion": "ray.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "test_ray_cluster",
+				"namespace": "test_namespace",
+				"uid":       "1",
+				"labels": map[string]interface{}{
+					"test_label": "test_value",
+				},
+				"annotations": map[string]interface{}{
+					"test_annotation": "test_value",
+				},
+			},
+			"spec": map[string]interface{}{
+				"headGroupSpec": map[string]interface{}{
+					"replicas": int64(3),
+				},
+				"workerGroupSpecs": []interface{}{
+					map[string]interface{}{
+						"replicas":    int64(3),
+						"minReplicas": int64(2),
+					},
+					map[string]interface{}{
+						"suspended":   true,
+						"replicas":    int64(3),
+						"minReplicas": int64(1),
+					},
+				},
+			},
+		},
+	}
+
+	rayClusterWithNumOfHosts = &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "RayCluster",
+			"apiVersion": "ray.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "test_ray_cluster",
+				"namespace": "test_namespace",
+				"uid":       "1",
+				"labels": map[string]interface{}{
+					"test_label": "test_value",
+				},
+				"annotations": map[string]interface{}{
+					"test_annotation": "test_value",
+				},
+			},
+			"spec": map[string]interface{}{
+				"headGroupSpec": map[string]interface{}{
+					"replicas": int64(1),
+				},
+				"workerGroupSpecs": []interface{}{
+					map[string]interface{}{
+						"numOfHosts":  int64(2),
+						"replicas":    int64(3),
+						"minReplicas": int64(2),
+					},
+					map[string]interface{}{
+						"numOfHosts":  int64(3),
+						"replicas":    int64(3),
+						"minReplicas": int64(1),
+					},
+				},
+			},
+		},
+	}
 )
 
 func TestGetPodGroupMetadata_RayCluster(t *testing.T) {
 	pod := &v1.Pod{}
 
-	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayCluster).Build()
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(autoScalingRayCluster).Build()
 	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	grouper := NewRayClusterGrouper(rayGrouper)
 
-	podGroupMetadata, err := grouper.GetPodGroupMetadata(rayCluster, pod)
+	podGroupMetadata, err := grouper.GetPodGroupMetadata(autoScalingRayCluster, pod)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "RayCluster", podGroupMetadata.Owner.Kind)
 	assert.Equal(t, "ray.io/v1alpha1", podGroupMetadata.Owner.APIVersion)
 	assert.Equal(t, "1", string(podGroupMetadata.Owner.UID))
-	assert.Equal(t, rayCluster.GetName(), podGroupMetadata.Owner.Name)
+	assert.Equal(t, autoScalingRayCluster.GetName(), podGroupMetadata.Owner.Name)
 	assert.Equal(t, 2, len(podGroupMetadata.Annotations))
 	assert.Equal(t, 1, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
 	assert.Equal(t, int32(5), podGroupMetadata.MinAvailable)
+}
+
+func TestGetPodGroupMetadata_RayCluster_NonAutoScaling(t *testing.T) {
+	pod := &v1.Pod{}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(nonAutoScalingRayCluster).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	grouper := NewRayClusterGrouper(rayGrouper)
+
+	podGroupMetadata, err := grouper.GetPodGroupMetadata(nonAutoScalingRayCluster, pod)
+
+	assert.Nil(t, err)
+	assert.Equal(t, "RayCluster", podGroupMetadata.Owner.Kind)
+	assert.Equal(t, "ray.io/v1alpha1", podGroupMetadata.Owner.APIVersion)
+	assert.Equal(t, "1", string(podGroupMetadata.Owner.UID))
+	assert.Equal(t, nonAutoScalingRayCluster.GetName(), podGroupMetadata.Owner.Name)
+	assert.Equal(t, 2, len(podGroupMetadata.Annotations))
+	assert.Equal(t, 2, len(podGroupMetadata.Labels))
+	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
+	assert.Equal(t, "ray_train_priority_class", podGroupMetadata.PriorityClassName)
+	assert.Equal(t, int32(9), podGroupMetadata.MinAvailable)
+}
+
+func TestGetPodGroupMetadata_RayCluster_SuspendedWorkers(t *testing.T) {
+	pod := &v1.Pod{}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayClusterWithSuspendedWorkers).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	grouper := NewRayClusterGrouper(rayGrouper)
+
+	podGroupMetadata, err := grouper.GetPodGroupMetadata(rayClusterWithSuspendedWorkers, pod)
+
+	assert.Nil(t, err)
+	assert.Equal(t, "RayCluster", podGroupMetadata.Owner.Kind)
+	assert.Equal(t, "ray.io/v1alpha1", podGroupMetadata.Owner.APIVersion)
+	assert.Equal(t, "1", string(podGroupMetadata.Owner.UID))
+	assert.Equal(t, rayClusterWithSuspendedWorkers.GetName(), podGroupMetadata.Owner.Name)
+	assert.Equal(t, 2, len(podGroupMetadata.Annotations))
+	assert.Equal(t, 1, len(podGroupMetadata.Labels))
+	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
+	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
+	assert.Equal(t, int32(6), podGroupMetadata.MinAvailable)
+}
+
+func TestGetPodGroupMetadata_RayCluster_NumOfHosts(t *testing.T) {
+	pod := &v1.Pod{}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayClusterWithNumOfHosts).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	grouper := NewRayClusterGrouper(rayGrouper)
+
+	podGroupMetadata, err := grouper.GetPodGroupMetadata(rayClusterWithNumOfHosts, pod)
+
+	assert.Nil(t, err)
+	assert.Equal(t, "RayCluster", podGroupMetadata.Owner.Kind)
+	assert.Equal(t, "ray.io/v1alpha1", podGroupMetadata.Owner.APIVersion)
+	assert.Equal(t, "1", string(podGroupMetadata.Owner.UID))
+	assert.Equal(t, rayClusterWithNumOfHosts.GetName(), podGroupMetadata.Owner.Name)
+	assert.Equal(t, 2, len(podGroupMetadata.Annotations))
+	assert.Equal(t, 1, len(podGroupMetadata.Labels))
+	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
+	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
+	assert.Equal(t, int32(16), podGroupMetadata.MinAvailable)
 }
 
 func TestGetPodGroupMetadata_RayJob(t *testing.T) {
@@ -102,7 +269,7 @@ func TestGetPodGroupMetadata_RayJob(t *testing.T) {
 
 	pod := &v1.Pod{}
 
-	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayCluster).Build()
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(autoScalingRayCluster).Build()
 	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	grouper := NewRayJobGrouper(rayGrouper)
 
@@ -127,7 +294,7 @@ func TestGetPodGroupMetadata_RayJob_v1(t *testing.T) {
 			"apiVersion": "ray.io/v1",
 			"metadata": map[string]interface{}{
 				"name":      "test_name",
-				"namespace": rayCluster.GetNamespace(),
+				"namespace": autoScalingRayCluster.GetNamespace(),
 				"uid":       "1",
 				"labels": map[string]interface{}{
 					"test_label": "test_value",
@@ -137,14 +304,14 @@ func TestGetPodGroupMetadata_RayJob_v1(t *testing.T) {
 				},
 			},
 			"status": map[string]interface{}{
-				"rayClusterName": rayCluster.GetName(),
+				"rayClusterName": autoScalingRayCluster.GetName(),
 			},
 		},
 	}
 
 	pod := &v1.Pod{}
 
-	rayClusterCopy := rayCluster.DeepCopy()
+	rayClusterCopy := autoScalingRayCluster.DeepCopy()
 	rayClusterCopy.SetAPIVersion("ray.io/v1")
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayClusterCopy).Build()
@@ -189,7 +356,7 @@ func TestGetPodGroupMetadata_RayService(t *testing.T) {
 		},
 	}
 
-	rayClusterCopy := rayCluster.DeepCopy()
+	rayClusterCopy := autoScalingRayCluster.DeepCopy()
 	rayClusterCopy.SetOwnerReferences([]metav1.OwnerReference{
 		{
 			Kind:       "RayService",

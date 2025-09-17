@@ -31,9 +31,9 @@ import (
 
 // PodGroupSpec defines the desired state of PodGroup
 type PodGroupSpec struct {
-	// MinMember defines the minimal number of members/tasks to run the pod group;
-	// if there's not enough resources to start all tasks, the scheduler
-	// will not start anyone.
+	// MinMember defines the minimal number of members to run the PodGroup;
+	// if there are not enough resources to start all required members, the scheduler will not start anyone.
+	// +kubebuilder:validation:Minimum=1
 	MinMember int32 `json:"minMember,omitempty" protobuf:"bytes,1,opt,name=minMember"`
 
 	// Queue defines the queue to allocate resource for PodGroup; if queue does not exist,
@@ -72,12 +72,18 @@ type PodGroupSpec struct {
 }
 
 type SubGroup struct {
-	// Name uniquely identifies the SubGroup within the parent PodGroup.
+	// Name uniquely identifies the SubGroup within the PodGroup.
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// MinMember defines the minimal number of members/tasks to run this SubGroup;
-	// if there's not enough resources to start all tasks, the scheduler will not start anyone.
+	// MinMember defines the minimal number of members to run this SubGroup;
+	// if there are not enough resources to start all required members, the scheduler will not start anyone.
+	// +kubebuilder:validation:Minimum=1
 	MinMember int32 `json:"minMember,omitempty"`
+
+	// Parent is an optional attribute that specifies the name of the parent SubGroup
+	// +kubebuilder:validation:Optional
+	Parent *string `json:"parent,omitempty"`
 }
 
 // PodGroupStatus defines the observed state of PodGroup
