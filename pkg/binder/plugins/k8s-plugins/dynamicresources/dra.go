@@ -104,7 +104,7 @@ func (drp *dynamicResourcesPlugin) bindResourceClaim(ctx context.Context, desire
 	}
 
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		originalClaim, err := drp.client.ResourceV1beta1().ResourceClaims(pod.Namespace).Get(ctx, claimName, v1.GetOptions{})
+		originalClaim, err := drp.client.ResourceV1().ResourceClaims(pod.Namespace).Get(ctx, claimName, v1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -115,7 +115,7 @@ func (drp *dynamicResourcesPlugin) bindResourceClaim(ctx context.Context, desire
 			claim.Status.Allocation = desiredStatus.Allocation
 		}
 
-		_, err = drp.client.ResourceV1beta1().ResourceClaims(pod.Namespace).UpdateStatus(ctx, claim, v1.UpdateOptions{})
+		_, err = drp.client.ResourceV1().ResourceClaims(pod.Namespace).UpdateStatus(ctx, claim, v1.UpdateOptions{})
 
 		return err
 	})
