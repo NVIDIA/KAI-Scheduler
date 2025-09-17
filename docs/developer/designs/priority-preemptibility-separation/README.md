@@ -66,6 +66,8 @@ Add a new `preemptibility` parameter at the pod/podgroup level with the followin
 - `non-preemptible`: PodGroup runs to completion once scheduled
 - `semi-preemptible`: PodGroup has both preemptible and non-preemptible components (P1 feature)
 
+When `preemptibility` is not explicitly set, the system defaults to priority-based preemptibility determination.
+
 ### API Changes
 
 #### 1. PodGroup Spec Field
@@ -82,6 +84,7 @@ type PodGroupSpec struct {
     // ... existing fields ...
     
     // Preemptibility defines whether this PodGroup can be preempted
+    // Defaults to priority-based preemptibility determination (preemptible if priority < 100)
     // +kubebuilder:validation:Enum=preemptible;non-preemptible;semi-preemptible
     // +optional
     Preemptibility string `json:"preemptibility,omitempty"`
@@ -105,25 +108,9 @@ Creating a Pod with an invalid preemptibility value will result in a fallback to
 The scheduler will determine preemptibility using the following precedence:
 
 1. **Explicit preemptibility spec field** on PodGroup
-2. **Explicit preemptibility label** on pod (for external workloads)
-3. **Legacy priority-based determination** (priority >= 100 = non-preemptible) for backward compatibility
-
-```go
-func (pgi *PodGroupInfo) IsPreemptibleJob() bool {
-    // Check for explicit preemptibility in PodGroup spec
-    if pgi.PodGroup.Spec.Preemptibility != "" {
-        return pgi.PodGroup.Spec.Preemptibility == "preemptible"
-    }
-    
-    // Check for explicit preemptibility label on pods (for external workloads)
-    if preemptibility, exists := pgi.Labels["kai.scheduler/preemptibility"]; exists {
-        return preemptibility == "preemptible"
-    }
-    
-    // Fall back to default priority-based determination
-    return pgi.Priority < PriorityBuildNumber
-}
-```
+2. **Explicit preemptibility label** on pod's top owner (for external workloads)
+3. **Explicit preemptibility label** on pod (for external workloads)
+4. **Legacy priority-based determination** (preemptible if priority < 100) for backward compatibility
 
 The same logic will be used in the PodGroupController to publish the preemptibility status on the PodGroup (for backward compatibility).
 
@@ -135,7 +122,7 @@ Workloads without explicit preemptibility configuration will continue to use the
 - Priority >= 100 → Non-Preemptible
 
 #### 2. Configuration Validation
-The scheduler will validate preemptibility values and fall back to the default priority-based determination for invalid values.
+The preemptibility values will be validated and fall back to the default priority-based determination for invalid values.
 
 ## Examples
 
