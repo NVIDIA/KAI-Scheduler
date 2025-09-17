@@ -1,6 +1,8 @@
 package binder
 
 import (
+	"fmt"
+
 	"k8s.io/client-go/rest"
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/binder/app"
@@ -20,7 +22,12 @@ func RunBinder(cfg *rest.Config, stopCh chan struct{}) error {
 	if err != nil {
 		return err
 	}
-	go app.Run(stopCh)
+	go func() {
+		err := app.Run(stopCh)
+		if err != nil {
+			panic(fmt.Errorf("failed to run binder app: %w", err))
+		}
+	}()
 
 	return nil
 }
