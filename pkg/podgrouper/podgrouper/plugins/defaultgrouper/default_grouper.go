@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconsts "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
@@ -68,8 +69,8 @@ func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructure
 		Labels:            dg.CalcPodGroupLabels(topOwner, pod),
 		Queue:             dg.CalcPodGroupQueue(topOwner, pod),
 		PriorityClassName: dg.CalcPodGroupPriorityClass(topOwner, pod, constants.TrainPriorityClass),
+		Preemptibility:    dg.CalcPodGroupPreemptibility(topOwner, pod),
 		MinAvailable:      1,
-		// GuyTodo: Add Preemptibility field
 	}
 
 	annotations := topOwner.GetAnnotations()
@@ -175,6 +176,32 @@ func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstr
 	logger.V(1).Info("No default priority class found for group kind, using default fallback",
 		"groupKind", groupKind.String(), "defaultFallback", defaultPriorityClassForJob)
 	return defaultPriorityClassForJob
+}
+
+func (dg *DefaultGrouper) CalcPodGroupPreemptibility(topOwner *unstructured.Unstructured, pod *v1.Pod) v2alpha2.Preemptibility {
+	if preemptibility, found := topOwner.GetLabels()[constants.PreemptibilityLabelKey]; found &&
+		dg.validatePreemptibilityLabel(preemptibility) {
+		return v2alpha2.Preemptibility(preemptibility)
+	} else if preemptibility, found = pod.GetLabels()[constants.PreemptibilityLabelKey]; found &&
+		dg.validatePreemptibilityLabel(preemptibility) {
+		return v2alpha2.Preemptibility(preemptibility)
+	}
+
+	logger.V(1).Info("No preemptibility label found", "topOwner", topOwner.GetName(), "pod", pod.GetName())
+
+	return ""
+}
+
+func (dg *DefaultGrouper) validatePreemptibilityLabel(val string) bool {
+	validValues := []string{string(v2alpha2.Preemptible), string(v2alpha2.NonPreemptible), ""}
+
+	for _, validValue := range validValues {
+		if val == validValue {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (dg *DefaultGrouper) calcPodGroupPriorityClass(topOwner *unstructured.Unstructured, pod *v1.Pod) string {
