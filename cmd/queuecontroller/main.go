@@ -18,11 +18,10 @@ func main() {
 	initLogger()
 
 	clientConfig := ctrl.GetConfigOrDie()
-	var opts app.Options
-	opts.AddFlags(flag.CommandLine)
+	opts := app.InitOptions()
 
 	ctx := ctrl.SetupSignalHandler()
-	if err := app.Run(&opts, clientConfig, ctx); err != nil {
+	if err := app.Run(opts, clientConfig, ctx); err != nil {
 		fmt.Printf("Error while running the app: %v", err)
 		os.Exit(1)
 	}
