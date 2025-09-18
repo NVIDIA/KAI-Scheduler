@@ -191,7 +191,7 @@ func calcNextAllocationTestPodResources(previousTestResources, maxPodResources *
 }
 
 func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGroupInfo, taskToAllocateCount int, topologyTree *Info) ([]*DomainInfo, error) {
-	relevantLevels, err := t.calculateRelevantDomainLevels(job, topologyTree.Name, topologyTree)
+	relevantLevels, err := t.calculateRelevantDomainLevels(job, topologyTree)
 	if err != nil {
 		return nil, err
 	}
@@ -274,47 +274,47 @@ func jobHasTopologyRequiredConstraint(job *podgroup_info.PodGroupInfo) bool {
 }
 
 func (*topologyPlugin) calculateRelevantDomainLevels(
-	job *podgroup_info.PodGroupInfo, jobTopologyName string,
+	job *podgroup_info.PodGroupInfo,
 	topologyTree *Info) ([]DomainLevel, error) {
-	requiredPlacement := job.TopologyConstraint.RequiredLevel
-	preferredPlacement := job.TopologyConstraint.PreferredLevel
+	requiredPlacement := DomainLevel(job.TopologyConstraint.RequiredLevel)
+	preferredPlacement := DomainLevel(job.TopologyConstraint.PreferredLevel)
 	if requiredPlacement == "" && preferredPlacement == "" {
-		return nil, fmt.Errorf("no topology placement annotations found for job <%s/%s>, workload topology name: %s", job.Namespace, job.Name, jobTopologyName)
+		return nil, fmt.Errorf("no topology placement annotations found for job <%s/%s>, workload topology name: %s", job.Namespace, job.Name, topologyTree.Name)
 	}
 
 	foundRequiredLevel := false
 	foundPreferredLevel := false
-	relevantLevels := []DomainLevel{}
-	abovePreferredLevel := preferredPlacement == ""
-	for i := len(topologyTree.TopologyResource.Spec.Levels) - 1; i >= 0; i-- {
-		level := topologyTree.TopologyResource.Spec.Levels[i]
-		if preferredPlacement != "" && preferredPlacement == level.NodeLabel {
-			foundPreferredLevel = true
-			abovePreferredLevel = true
-		}
 
-		if !abovePreferredLevel {
-			continue
-		}
-		relevantLevels = append(relevantLevels, DomainLevel(level.NodeLabel))
+	levels := make([]DomainLevel, len(topologyTree.TopologyResource.Spec.Levels)+1)
+	levels[len(levels)-1] = rootLevel
+	for i, level := range topologyTree.TopologyResource.Spec.Levels {
+		levels[len(levels)-2-i] = DomainLevel(level.NodeLabel)
+	}
 
-		if requiredPlacement != "" && requiredPlacement == level.NodeLabel {
+	var relevantLevels []DomainLevel
+	for _, level := range levels {
+		if level == requiredPlacement {
 			foundRequiredLevel = true
-			break // Next level won't fulfill the required placement
+			relevantLevels = append(relevantLevels, level)
+			break
+		}
+		if level == preferredPlacement {
+			foundPreferredLevel = true
+		}
+		if foundPreferredLevel {
+			relevantLevels = append(relevantLevels, level)
 		}
 	}
+
 	if requiredPlacement != "" && !foundRequiredLevel {
 		return nil, fmt.Errorf("the topology %s doesn't have a level matching the required(%s) specified for the job %s",
-			jobTopologyName, requiredPlacement, job.Name,
+			topologyTree.Name, requiredPlacement, job.Name,
 		)
 	}
 	if preferredPlacement != "" && !foundPreferredLevel {
 		return nil, fmt.Errorf("the topology %s doesn't have a level matching the preferred(%s) specified for the job %s",
-			jobTopologyName, preferredPlacement, job.Name,
+			topologyTree.Name, preferredPlacement, job.Name,
 		)
-	}
-	if requiredPlacement == "" {
-		relevantLevels = append(relevantLevels, rootLevel)
 	}
 	return relevantLevels, nil
 }
