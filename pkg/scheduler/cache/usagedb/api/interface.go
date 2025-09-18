@@ -4,6 +4,7 @@
 package api
 
 import (
+	"maps"
 	"time"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
@@ -17,6 +18,15 @@ type UsageDBConfig struct {
 	ConnectionString       string       `yaml:"connectionString" json:"connectionString"`
 	ConnectionStringEnvVar string       `yaml:"connectionStringEnvVar" json:"connectionStringEnvVar"`
 	UsageParams            *UsageParams `yaml:"usageParams" json:"usageParams"`
+}
+
+func (c *UsageDBConfig) DeepCopy() *UsageDBConfig {
+	return &UsageDBConfig{
+		ClientType:             c.ClientType,
+		ConnectionString:       c.ConnectionString,
+		ConnectionStringEnvVar: c.ConnectionStringEnvVar,
+		UsageParams:            c.UsageParams.DeepCopy(),
+	}
 }
 
 // GetUsageParams returns the usage params if set, and default params if not set.
@@ -42,4 +52,14 @@ type UsageParams struct {
 
 	// ExtraParams are extra parameters for the usage db client, which are client specific.
 	ExtraParams map[string]string `yaml:"extraParams" json:"extraParams"`
+}
+
+func (up *UsageParams) DeepCopy() *UsageParams {
+	return &UsageParams{
+		HalfLifePeriod:           up.HalfLifePeriod,
+		WindowSize:               up.WindowSize,
+		WindowType:               up.WindowType,
+		TumblingWindowCronString: up.TumblingWindowCronString,
+		ExtraParams:              maps.Clone(up.ExtraParams),
+	}
 }
