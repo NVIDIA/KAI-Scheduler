@@ -33,11 +33,11 @@ import (
 
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
@@ -158,7 +158,10 @@ func (pgi *PodGroupInfo) SetDefaultMinAvailable(minAvailable int32) {
 }
 
 func (pgi *PodGroupInfo) IsPreemptibleJob() bool {
-	return pgi.Priority < constants.PriorityBuildNumber
+	isPreemptible, _ := pg.IsPreemptible(pgi.PodGroup.Spec.Preemptibility, func() (int32, error) {
+		return pgi.Priority, nil
+	})
+	return isPreemptible
 }
 
 func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {

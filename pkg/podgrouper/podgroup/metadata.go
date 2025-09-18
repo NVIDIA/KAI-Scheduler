@@ -4,6 +4,7 @@
 package podgroup
 
 import (
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -19,6 +20,7 @@ type Metadata struct {
 	Annotations       map[string]string
 	Labels            map[string]string
 	PriorityClassName string
+	Preemptibility    v2alpha2.Preemptibility
 	Queue             string
 	Namespace         string
 	Name              string

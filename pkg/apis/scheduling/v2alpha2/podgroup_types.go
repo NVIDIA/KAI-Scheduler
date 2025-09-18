@@ -49,6 +49,11 @@ type PodGroupSpec struct {
 	// +optional
 	PriorityClassName string `json:"priorityClassName,omitempty" protobuf:"bytes,3,opt,name=priorityClassName"`
 
+	// Preemptibility determines if this PodGroup can be preempted by higher priority workloads.
+	// When unspecified, preemptibility is determined by the PriorityClass value - values below 100 are considered preemptible.
+	// +optional
+	Preemptibility Preemptibility `json:"preemptibility,omitempty" protobuf:"bytes,4,opt,name=preemptibility"`
+
 	// The number of pods which will try to run at any instant.
 	Parallelism int32 `json:"parallelism,omitempty" protobuf:"bytes,4,opt,name=parallelism"`
 
@@ -70,6 +75,19 @@ type PodGroupSpec struct {
 	// SubGroups defines finer-grained subsets of pods within the PodGroup with individual scheduling constraints
 	SubGroups []SubGroup `json:"subGroups,omitempty"`
 }
+
+// Preemptibility defines whether this PodGroup can be preempted
+//
+// Supported values are:
+// - `preemptible` - PodGroup can be preempted by higher-priority workloads
+// - `non-preemptible` - PodGroup runs to completion once scheduled
+// +kubebuilder:validation:Enum=preemptible;non-preemptible
+type Preemptibility string
+
+const (
+	Preemptible    Preemptibility = "preemptible"
+	NonPreemptible Preemptibility = "non-preemptible"
+)
 
 type SubGroup struct {
 	// Name uniquely identifies the SubGroup within the PodGroup.

@@ -4,10 +4,11 @@
 package constants
 
 const (
-	PodGroupNamePrefix = "pg"
-	ProjectLabelKey    = "project"
-	PriorityLabelKey   = "priorityClassName"
-	UserLabelKey       = "user"
+	PodGroupNamePrefix     = "pg"
+	ProjectLabelKey        = "project"
+	PriorityLabelKey       = "priorityClassName"
+	PreemptibilityLabelKey = "kai.scheduler/preemptibility"
+	UserLabelKey           = "user"
 
 	BuildPriorityClass     = "build"
 	TrainPriorityClass     = "train"
