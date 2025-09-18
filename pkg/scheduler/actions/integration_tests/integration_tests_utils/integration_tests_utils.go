@@ -49,12 +49,22 @@ func RunTests(t *testing.T, testsMetadata []TestTopologyMetadata) {
 }
 
 func RunTest(t *testing.T, testMetadata TestTopologyMetadata, testNumber int, controller *Controller) {
+	buf, err := log.InitLoggersIntoBuffer(4)
+	if err != nil {
+		t.Fatalf("Failed to initialize loggers: %v", err)
+	}
 	t.Logf("Running test number: %v, test name: %v", testNumber, testMetadata.TestTopologyBasic.Name)
 	ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
 
 	runRoundsUntilMatch(testMetadata, controller, &ssn)
-	test_utils.MatchExpectedAndRealTasks(t, testNumber, testMetadata.TestTopologyBasic, ssn)
+	matchFailed := test_utils.MatchExpectedAndRealTasks(t, testNumber, testMetadata.TestTopologyBasic, ssn)
+	if matchFailed {
+		t.Errorf("Test scheduler log: \n")
+		t.Log(buf.String())
+		t.Log("\n\n")
+	}
 	runRoundsAfterAndMatch(t, testMetadata, controller, ssn, testNumber)
+
 }
 
 func runRoundsAfterAndMatch(t *testing.T, testMetadata TestTopologyMetadata, controller *Controller, ssn *framework.Session, testNumber int) {

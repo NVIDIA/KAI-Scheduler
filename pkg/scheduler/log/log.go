@@ -4,6 +4,7 @@
 package log
 
 import (
+	"bytes"
 	"fmt"
 	"hash/fnv"
 
@@ -182,4 +183,30 @@ func InitLoggers(logLevel int) error {
 	StatusUpdaterLogger = newSchedulerLogger(logLevel, logger)
 	StatusUpdaterLogger.SetSessionID("status-updater")
 	return nil
+}
+
+func InitLoggersIntoBuffer(logLevel int) (*bytes.Buffer, error) {
+	// Create a bytes.Buffer to capture log output
+	var buf bytes.Buffer
+
+	// Create a custom WriteSyncer that writes to the buffer
+	writerSyncer := zapcore.AddSync(&buf)
+
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	core := zapcore.NewCore(
+		&sessionIDEncoder{
+			Encoder: zapcore.NewConsoleEncoder(encoderConfig),
+		},
+		writerSyncer,
+		zapcore.InfoLevel, // Set the desired log level
+	)
+
+	logger := zap.New(core).WithOptions(zap.AddCaller()).Sugar()
+	InfraLogger = newSchedulerLogger(logLevel, logger)
+	InfraLogger.SetSessionID("infra")
+	StatusUpdaterLogger = newSchedulerLogger(logLevel, logger)
+	StatusUpdaterLogger.SetSessionID("status-updater")
+	return &buf, nil
 }
