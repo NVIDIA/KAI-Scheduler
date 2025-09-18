@@ -148,7 +148,7 @@ func (t *topologyPlugin) calcSubTreeAllocatable(
 func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *node_info.NodeInfo) int {
 	allocatablePodsCount := 0
 	for _, resourceRepresentorPod := range jobAllocationMetaData.allocationTestPods {
-		if node.IsTaskAllocatable(resourceRepresentorPod) {
+		if node.IsTaskAllocatableOnReleasingOrIdle(resourceRepresentorPod) {
 			allocatablePodsCount++
 		} else {
 			break
@@ -164,7 +164,7 @@ func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *n
 				ResReq: calcNextAllocationTestPodResources(latestTestPod.ResReq, jobAllocationMetaData.maxPodResources),
 			}
 			jobAllocationMetaData.allocationTestPods = append(jobAllocationMetaData.allocationTestPods, iAllocationsTestPod)
-			if node.IsTaskAllocatable(iAllocationsTestPod) {
+			if node.IsTaskAllocatableOnReleasingOrIdle(iAllocationsTestPod) {
 				allocatablePodsCount++
 			} else {
 				break
