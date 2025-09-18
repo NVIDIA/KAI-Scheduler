@@ -12,18 +12,17 @@ import (
 
 const (
 	topologyPluginName = "topology"
+	rootLevel          = "root"
+	rootDomainId       = rootLevel
 )
 
 type topologyPlugin struct {
-	enabled       bool
-	nodesInfos    map[string]*node_info.NodeInfo
-	TopologyTrees map[string]*TopologyInfo
+	TopologyTrees map[string]*Info
 }
 
-func New(pluginArgs map[string]string) framework.Plugin {
+func New(_ map[string]string) framework.Plugin {
 	return &topologyPlugin{
-		enabled:       true,
-		TopologyTrees: map[string]*TopologyInfo{},
+		TopologyTrees: map[string]*Info{},
 	}
 }
 
@@ -32,70 +31,64 @@ func (t *topologyPlugin) Name() string {
 }
 
 func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
-	topologies := ssn.Topologies
-	t.nodesInfos = ssn.Nodes
-	t.initializeTopologyTree(topologies, ssn)
+	t.initializeTopologyTree(ssn.Topologies, ssn.Nodes)
 
 	ssn.AddSubsetNodesFn(t.subSetNodesFn)
 }
 
-func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, ssn *framework.Session) {
-	for _, singleTopology := range topologies {
-		topologyTree := &TopologyInfo{
-			Name:             singleTopology.Name,
-			DomainsByLevel:   map[string]map[TopologyDomainID]*TopologyDomainInfo{},
-			Root:             NewTopologyDomainInfo(TopologyDomainID("root"), "datacenter", "cluster", 0),
-			TopologyResource: singleTopology,
-		}
-		topologyTree.DomainsByLevel["root"] = map[TopologyDomainID]*TopologyDomainInfo{
-			topologyTree.Root.ID: topologyTree.Root,
-		}
-
-		for _, nodeInfo := range ssn.Nodes {
-			t.addNodeDataToTopology(topologyTree, singleTopology, nodeInfo)
+func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, nodes map[string]*node_info.NodeInfo) {
+	for _, topology := range topologies {
+		topologyTree := &Info{
+			Name: topology.Name,
+			DomainsByLevel: map[DomainLevel]LevelDomainInfos{
+				rootLevel: {
+					rootDomainId: NewDomainInfo(rootDomainId, rootLevel),
+				},
+			},
+			TopologyResource: topology,
 		}
 
-		t.TopologyTrees[singleTopology.Name] = topologyTree
+		for _, nodeInfo := range nodes {
+			t.addNodeDataToTopology(topologyTree, topology, nodeInfo)
+		}
+
+		t.TopologyTrees[topology.Name] = topologyTree
 	}
 }
 
-func (*topologyPlugin) addNodeDataToTopology(topologyTree *TopologyInfo, singleTopology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
+func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
 	// Validate that the node is part of the topology
-	if !isNodePartOfTopology(nodeInfo, singleTopology) {
+	if !isNodePartOfTopology(nodeInfo, topology) {
 		return
 	}
 
-	var nodeContainingChildDomain *TopologyDomainInfo
-	for levelIndex := len(singleTopology.Spec.Levels) - 1; levelIndex >= 0; levelIndex-- {
-		level := singleTopology.Spec.Levels[levelIndex]
+	var nodeContainingChildDomain *DomainInfo
+	for levelIndex := len(topology.Spec.Levels) - 1; levelIndex >= 0; levelIndex-- {
+		level := topology.Spec.Levels[levelIndex]
 
-		domainName, foundLevelLabel := nodeInfo.Node.Labels[level.NodeLabel]
-		if !foundLevelLabel {
-			continue // Skip if the node is not part of this level
-		}
-
-		domainId := calcDomainId(levelIndex, singleTopology.Spec.Levels, nodeInfo.Node.Labels)
-		domainLevel := level.NodeLabel
+		domainId := calcDomainId(levelIndex, topology.Spec.Levels, nodeInfo.Node.Labels)
+		domainLevel := DomainLevel(level.NodeLabel)
 		domainsForLevel, foundLevelLabel := topologyTree.DomainsByLevel[domainLevel]
 		if !foundLevelLabel {
-			topologyTree.DomainsByLevel[level.NodeLabel] = map[TopologyDomainID]*TopologyDomainInfo{}
-			domainsForLevel = topologyTree.DomainsByLevel[level.NodeLabel]
+			topologyTree.DomainsByLevel[domainLevel] = map[DomainID]*DomainInfo{}
+			domainsForLevel = topologyTree.DomainsByLevel[domainLevel]
 		}
 		domainInfo, foundDomain := domainsForLevel[domainId]
 		if !foundDomain {
-			domainInfo = NewTopologyDomainInfo(domainId, domainName, level.NodeLabel, levelIndex+1)
+			domainInfo = NewDomainInfo(domainId, domainLevel)
 			domainsForLevel[domainId] = domainInfo
 		}
 		domainInfo.AddNode(nodeInfo)
 
 		// Connect the child domain to the current domain. The current node gives us the link
 		if nodeContainingChildDomain != nil {
-			connectDomainToParent(nodeContainingChildDomain, domainInfo)
+			domainInfo.Children[nodeContainingChildDomain.ID] = nodeContainingChildDomain
 		}
 		nodeContainingChildDomain = domainInfo
 	}
-	connectDomainToParent(nodeContainingChildDomain, topologyTree.Root)
-	topologyTree.Root.AddNode(nodeInfo)
+
+	topologyTree.DomainsByLevel[rootLevel][rootDomainId].Children[nodeContainingChildDomain.ID] = nodeContainingChildDomain
+	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddNode(nodeInfo)
 }
 
 // For a given node to be part of the topology correctly, it must have a label for each level of the topology
@@ -108,4 +101,4 @@ func isNodePartOfTopology(nodeInfo *node_info.NodeInfo, singleTopology *kueuev1a
 	return true
 }
 
-func (t *topologyPlugin) OnSessionClose(ssn *framework.Session) {}
+func (t *topologyPlugin) OnSessionClose(_ *framework.Session) {}
