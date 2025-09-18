@@ -111,7 +111,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
@@ -306,7 +306,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"zone": {
 							"zone1": {
 								ID:    "zone1",
@@ -360,7 +360,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
@@ -878,7 +878,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
@@ -976,7 +976,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
@@ -1080,7 +1080,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
@@ -1170,7 +1170,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"zone": {
 							"zone1": {
 								ID:    "zone1",
@@ -1295,7 +1295,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 					"rack": {
 						"rack1.zone1": {
 							ID:              "rack1.zone1",
@@ -1354,7 +1354,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 					"rack": {
 						"rack1.zone1": {
 							ID:              "rack1.zone1",
@@ -1401,7 +1401,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 					"datacenter": {
 						"datacenter1": {
 							ID:              "datacenter1",
@@ -1445,7 +1445,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 					"rack": {
 						"rack1.zone1.region1": {
 							ID:              "rack1.zone1.region1",
@@ -1510,7 +1510,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 					"zone": {
 						"zone1": {
 							ID:    "zone1",
@@ -1565,7 +1565,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 					"zone": {
 						"zone1": {
 							ID:    "zone1",
@@ -1639,7 +1639,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 					"rack": {
 						"rack1.zone1.region1": {
 							ID:              "rack1.zone1.region1",

@@ -16,7 +16,9 @@ type DomainID string
 
 type DomainLevel string
 
-type domainsByLevel map[DomainLevel]map[DomainID]*DomainInfo
+type LevelDomainInfos map[DomainID]*DomainInfo
+
+type domainsByLevel map[DomainLevel]LevelDomainInfos
 
 // Info represents a topology tree for the cluster
 type Info struct {

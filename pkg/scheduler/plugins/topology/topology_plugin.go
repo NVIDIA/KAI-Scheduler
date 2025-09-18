@@ -40,7 +40,7 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 	for _, topology := range topologies {
 		topologyTree := &Info{
 			Name: topology.Name,
-			DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
+			DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 				rootLevel: {
 					rootDomainId: NewDomainInfo(rootDomainId, rootLevel),
 				},
