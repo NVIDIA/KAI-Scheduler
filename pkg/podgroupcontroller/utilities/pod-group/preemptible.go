@@ -13,7 +13,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 
-	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/resources/podgroup"
+	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
 )
 
 const (
