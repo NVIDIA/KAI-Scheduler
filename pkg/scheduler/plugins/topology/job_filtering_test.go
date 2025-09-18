@@ -65,7 +65,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 		setupTopologyTree     func() *Info
 		setupSessionState     func(provider *mockSessionStateProvider, jobUID types.UID)
 		domainParent          map[DomainID]DomainID
-		domainLevel           map[DomainID]string
+		domainLevel           map[DomainID]DomainLevel
 		expectedError         string
 		expectedNodes         map[string]bool
 	}{
@@ -111,7 +111,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
@@ -150,7 +150,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				"rack1.zone1": "zone1",
 				"rack2.zone1": "zone1",
 			},
-			domainLevel: map[DomainID]string{
+			domainLevel: map[DomainID]DomainLevel{
 				"zone1": "zone",
 			},
 			expectedError: "",
@@ -306,7 +306,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 						"zone": {
 							"zone1": {
 								ID:    "zone1",
@@ -360,7 +360,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
@@ -392,7 +392,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			domainParent: map[DomainID]DomainID{
 				"rack1.zone1": "zone1",
 			},
-			domainLevel: map[DomainID]string{
+			domainLevel: map[DomainID]DomainLevel{
 				"zone1": "zone",
 			},
 			expectedError: "the topology test-topology doesn't have a level matching the required(nonexistent-level) specified for the job test-job",
@@ -414,7 +414,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				for nodeName, domainId := range tt.nodesToDomains {
 					nodeInfo := nodesInfoMap[nodeName]
 					leafLevel := len(topologyTree.TopologyResource.Spec.Levels) - 1
-					domain := topologyTree.DomainsByLevel[topologyTree.TopologyResource.Spec.Levels[leafLevel].NodeLabel][domainId]
+					domain := topologyTree.DomainsByLevel[DomainLevel(topologyTree.TopologyResource.Spec.Levels[leafLevel].NodeLabel)][domainId]
 					for domain != nil {
 						domain.AddNode(nodeInfo)
 						parentDomainId := tt.domainParent[domain.ID]
@@ -485,7 +485,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		job             *podgroup_info.PodGroupInfo
 		jobTopologyName string
 		topologyTree    *Info
-		expectedLevels  []string
+		expectedLevels  []DomainLevel
 		expectedError   string
 	}{
 		{
@@ -510,7 +510,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 					},
 				},
 			},
-			expectedLevels: []string{
+			expectedLevels: []DomainLevel{
 				"rack",
 				"zone",
 			},
@@ -537,7 +537,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 					},
 				},
 			},
-			expectedLevels: []string{
+			expectedLevels: []DomainLevel{
 				"rack",
 				"zone",
 			},
@@ -565,7 +565,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 					},
 				},
 			},
-			expectedLevels: []string{
+			expectedLevels: []DomainLevel{
 				"rack",
 				"zone",
 				"datacenter",
@@ -662,7 +662,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 					},
 				},
 			},
-			expectedLevels: []string{
+			expectedLevels: []DomainLevel{
 				"rack",
 			},
 			expectedError: "",
@@ -688,7 +688,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 					},
 				},
 			},
-			expectedLevels: []string{
+			expectedLevels: []DomainLevel{
 				"rack",
 				"zone",
 				"datacenter",
@@ -717,7 +717,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 					},
 				},
 			},
-			expectedLevels: []string{
+			expectedLevels: []DomainLevel{
 				"zone",
 				"datacenter",
 				"root",
@@ -743,7 +743,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 					},
 				},
 			},
-			expectedLevels: []string{
+			expectedLevels: []DomainLevel{
 				"zone",
 				"root",
 			},
@@ -772,7 +772,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 					},
 				},
 			},
-			expectedLevels: []string{
+			expectedLevels: []DomainLevel{
 				"zone",
 				"region",
 			},
@@ -837,7 +837,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 		nodesToDomains             map[string]DomainID
 		setupTopologyTree          func() *Info
 		domainParent               map[DomainID]DomainID
-		domainLevel                map[DomainID]string
+		domainLevel                map[DomainID]DomainLevel
 		expectedMaxAllocatablePods int
 		expectedDomains            map[DomainID]*DomainInfo
 	}{
@@ -878,7 +878,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
@@ -917,7 +917,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				"rack1.zone1": "zone1",
 				"rack2.zone1": "zone1",
 			},
-			domainLevel: map[DomainID]string{
+			domainLevel: map[DomainID]DomainLevel{
 				"zone1": "zone",
 			},
 			expectedMaxAllocatablePods: 4,
@@ -976,7 +976,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
@@ -1015,7 +1015,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				"rack1.zone1": "zone1",
 				"rack2.zone1": "zone1",
 			},
-			domainLevel: map[DomainID]string{
+			domainLevel: map[DomainID]DomainLevel{
 				"zone1": "zone",
 			},
 			expectedMaxAllocatablePods: 2,
@@ -1080,7 +1080,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 						"rack": {
 							"rack1.zone1": {
 								ID:    "rack1.zone1",
@@ -1119,7 +1119,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				"rack1.zone1": "zone1",
 				"rack2.zone1": "zone1",
 			},
-			domainLevel: map[DomainID]string{
+			domainLevel: map[DomainID]DomainLevel{
 				"zone1": "zone",
 			},
 			expectedMaxAllocatablePods: 4,
@@ -1170,7 +1170,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 							},
 						},
 					},
-					DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+					DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 						"zone": {
 							"zone1": {
 								ID:    "zone1",
@@ -1206,7 +1206,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			for nodeName, domainId := range tt.nodesToDomains {
 				nodeInfo := nodesInfoMap[nodeName]
 				leafLevel := len(topologyTree.TopologyResource.Spec.Levels) - 1
-				domain := topologyTree.DomainsByLevel[topologyTree.TopologyResource.Spec.Levels[leafLevel].NodeLabel][domainId]
+				domain := topologyTree.DomainsByLevel[DomainLevel(topologyTree.TopologyResource.Spec.Levels[leafLevel].NodeLabel)][domainId]
 				for domain != nil {
 					domain.AddNode(nodeInfo)
 					parentDomainId := tt.domainParent[domain.ID]
@@ -1295,7 +1295,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 					"rack": {
 						"rack1.zone1": {
 							ID:              "rack1.zone1",
@@ -1354,7 +1354,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 					"rack": {
 						"rack1.zone1": {
 							ID:              "rack1.zone1",
@@ -1401,7 +1401,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 					"datacenter": {
 						"datacenter1": {
 							ID:              "datacenter1",
@@ -1445,7 +1445,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 					"rack": {
 						"rack1.zone1.region1": {
 							ID:              "rack1.zone1.region1",
@@ -1510,7 +1510,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 					"zone": {
 						"zone1": {
 							ID:    "zone1",
@@ -1565,7 +1565,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 					"zone": {
 						"zone1": {
 							ID:    "zone1",
@@ -1639,7 +1639,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 						},
 					},
 				},
-				DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+				DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 					"rack": {
 						"rack1.zone1.region1": {
 							ID:              "rack1.zone1.region1",

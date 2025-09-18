@@ -187,7 +187,7 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 	blockDomains := testTopologyObj.DomainsByLevel["test-topology-label/block"]
 	rackDomains := testTopologyObj.DomainsByLevel["test-topology-label/rack"]
 
-	assert.Equal(t, "test-topology-label/block", blockDomains["test-block-1"].Level)
+	assert.Equal(t, DomainLevel("test-topology-label/block"), blockDomains["test-block-1"].Level)
 	assert.Equal(t, 2, len(blockDomains["test-block-1"].Children))
 
 	assert.Equal(t, 0, len(rackDomains["test-block-1.test-rack-1"].Children))

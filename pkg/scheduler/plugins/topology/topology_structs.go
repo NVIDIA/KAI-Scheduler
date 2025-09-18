@@ -14,10 +14,14 @@ import (
 // DomainID uniquely identifies a topology domain
 type DomainID string
 
+type DomainLevel string
+
+type domainsByLevel map[DomainLevel]map[DomainID]*DomainInfo
+
 // Info represents a topology tree for the cluster
 type Info struct {
 	// Map of all domains by their level for quick lookup
-	DomainsByLevel map[string]map[DomainID]*DomainInfo
+	DomainsByLevel domainsByLevel
 
 	// Name of this topology configuration
 	Name string
@@ -32,7 +36,7 @@ type DomainInfo struct {
 	ID DomainID
 
 	// Level in the hierarchy (e.g., "datacenter", "zone", "rack", "node")
-	Level string
+	Level DomainLevel
 
 	// Child domains
 	Children map[DomainID]*DomainInfo
@@ -44,7 +48,7 @@ type DomainInfo struct {
 	AllocatablePods int
 }
 
-func NewDomainInfo(id DomainID, level string) *DomainInfo {
+func NewDomainInfo(id DomainID, level DomainLevel) *DomainInfo {
 	return &DomainInfo{
 		ID:       id,
 		Level:    level,

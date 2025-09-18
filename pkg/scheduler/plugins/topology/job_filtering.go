@@ -17,8 +17,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
-type domainsByLevel map[string]map[DomainID]*DomainInfo
-
 type topologyStateData struct {
 	relevantDomains []*DomainInfo
 }
@@ -201,7 +199,7 @@ func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGrou
 	// Validate that the domains do not clash with the chosen domain for active pods of the job
 	var relevantDomainsByLevel domainsByLevel
 	if job.GetActiveAllocatedTasksCount() > 0 && jobHasTopologyRequiredConstraint(job) {
-		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(job, topologyTree, job.TopologyConstraint.RequiredLevel)
+		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(job, topologyTree, DomainLevel(job.TopologyConstraint.RequiredLevel))
 	} else {
 		relevantDomainsByLevel = topologyTree.DomainsByLevel
 	}
@@ -226,7 +224,7 @@ func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGrou
 	}
 
 	if job.TopologyConstraint.PreferredLevel != "" &&
-		maxDepthDomains[0].Level != job.TopologyConstraint.PreferredLevel {
+		maxDepthDomains[0].Level != DomainLevel(job.TopologyConstraint.PreferredLevel) {
 		// If Preferred is defined and we couldn't find a domain on the preferred level,
 		// return a children subset and not a single domain
 		return t.improveChoiceForPreference(maxDepthDomains, taskToAllocateCount)
@@ -236,7 +234,7 @@ func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGrou
 	return []*DomainInfo{maxDepthDomains[0]}, nil
 }
 
-func getRelevantDomainsWithAllocatedPods(job *podgroup_info.PodGroupInfo, topologyTree *Info, requiredLevel string) domainsByLevel {
+func getRelevantDomainsWithAllocatedPods(job *podgroup_info.PodGroupInfo, topologyTree *Info, requiredLevel DomainLevel) domainsByLevel {
 	relevantDomainsByLevel := domainsByLevel{}
 	for _, domainAtRequiredLevel := range topologyTree.DomainsByLevel[requiredLevel] {
 		activePodsInDomain := countActiveJobPodsInDomain(job, domainAtRequiredLevel)
@@ -277,7 +275,7 @@ func jobHasTopologyRequiredConstraint(job *podgroup_info.PodGroupInfo) bool {
 
 func (*topologyPlugin) calculateRelevantDomainLevels(
 	job *podgroup_info.PodGroupInfo, jobTopologyName string,
-	topologyTree *Info) ([]string, error) {
+	topologyTree *Info) ([]DomainLevel, error) {
 	requiredPlacement := job.TopologyConstraint.RequiredLevel
 	preferredPlacement := job.TopologyConstraint.PreferredLevel
 	if requiredPlacement == "" && preferredPlacement == "" {
@@ -286,7 +284,7 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 
 	foundRequiredLevel := false
 	foundPreferredLevel := false
-	relevantLevels := []string{}
+	relevantLevels := []DomainLevel{}
 	abovePreferredLevel := preferredPlacement == ""
 	for i := len(topologyTree.TopologyResource.Spec.Levels) - 1; i >= 0; i-- {
 		level := topologyTree.TopologyResource.Spec.Levels[i]
@@ -298,7 +296,7 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 		if !abovePreferredLevel {
 			continue
 		}
-		relevantLevels = append(relevantLevels, level.NodeLabel)
+		relevantLevels = append(relevantLevels, DomainLevel(level.NodeLabel))
 
 		if requiredPlacement != "" && requiredPlacement == level.NodeLabel {
 			foundRequiredLevel = true

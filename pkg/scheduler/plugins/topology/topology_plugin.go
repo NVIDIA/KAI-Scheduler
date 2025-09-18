@@ -40,7 +40,7 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 	for _, topology := range topologies {
 		topologyTree := &Info{
 			Name: topology.Name,
-			DomainsByLevel: map[string]map[DomainID]*DomainInfo{
+			DomainsByLevel: map[DomainLevel]map[DomainID]*DomainInfo{
 				rootLevel: {
 					rootDomainId: NewDomainInfo(rootDomainId, rootLevel),
 				},
@@ -67,15 +67,15 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueue
 		level := topology.Spec.Levels[levelIndex]
 
 		domainId := calcDomainId(levelIndex, topology.Spec.Levels, nodeInfo.Node.Labels)
-		domainLevel := level.NodeLabel
+		domainLevel := DomainLevel(level.NodeLabel)
 		domainsForLevel, foundLevelLabel := topologyTree.DomainsByLevel[domainLevel]
 		if !foundLevelLabel {
-			topologyTree.DomainsByLevel[level.NodeLabel] = map[DomainID]*DomainInfo{}
-			domainsForLevel = topologyTree.DomainsByLevel[level.NodeLabel]
+			topologyTree.DomainsByLevel[domainLevel] = map[DomainID]*DomainInfo{}
+			domainsForLevel = topologyTree.DomainsByLevel[domainLevel]
 		}
 		domainInfo, foundDomain := domainsForLevel[domainId]
 		if !foundDomain {
-			domainInfo = NewDomainInfo(domainId, level.NodeLabel)
+			domainInfo = NewDomainInfo(domainId, domainLevel)
 			domainsForLevel[domainId] = domainInfo
 		}
 		domainInfo.AddNode(nodeInfo)
