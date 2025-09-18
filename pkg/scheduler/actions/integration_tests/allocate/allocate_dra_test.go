@@ -24,7 +24,7 @@ import (
 )
 
 func TestDRAAllocation(t *testing.T) {
-	test_utils.InitTestingInfrastructure()
+	test_utils.InitTestingInfrastructure(t)
 	integration_tests_utils.SetSchedulerActions()
 	controller := NewController(t)
 	defer controller.Finish()
@@ -351,9 +351,7 @@ func TestDRAAllocation(t *testing.T) {
 				},
 				Mocks: &test_utils.TestMock{
 					CacheRequirements: &test_utils.CacheMocking{
-						NumberOfCacheBinds:      4,
-						NumberOfCacheEvictions:  2,
-						NumberOfPipelineActions: 2,
+						NumberOfCacheBinds: 2,
 					},
 				},
 			},

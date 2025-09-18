@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
+	"testing"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/buffer"
@@ -40,6 +41,8 @@ type schedulerLogger struct {
 	sessionLogger *zap.SugaredLogger
 	actionLogger  *zap.SugaredLogger
 }
+
+var unitestLogsBuffer *bytes.Buffer
 
 var emptyLogger = zap.NewNop().Sugar()
 
@@ -187,10 +190,10 @@ func InitLoggers(logLevel int) error {
 
 func InitLoggersIntoBuffer(logLevel int) (*bytes.Buffer, error) {
 	// Create a bytes.Buffer to capture log output
-	var buf bytes.Buffer
+	unitestLogsBuffer = &bytes.Buffer{}
 
 	// Create a custom WriteSyncer that writes to the buffer
-	writerSyncer := zapcore.AddSync(&buf)
+	writerSyncer := zapcore.AddSync(unitestLogsBuffer)
 
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
@@ -208,5 +211,11 @@ func InitLoggersIntoBuffer(logLevel int) (*bytes.Buffer, error) {
 	InfraLogger.SetSessionID("infra")
 	StatusUpdaterLogger = newSchedulerLogger(logLevel, logger)
 	StatusUpdaterLogger.SetSessionID("status-updater")
-	return &buf, nil
+	return unitestLogsBuffer, nil
+}
+
+func UnitestOutputSchedulerLogs(t *testing.T) {
+	t.Errorf("Test scheduler log: \n")
+	t.Log(unitestLogsBuffer.String())
+	t.Log("\n\n")
 }

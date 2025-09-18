@@ -35,6 +35,7 @@ import (
 )
 
 var SchedulerVerbosity = flag.String("vv", "", "Scheduler's verbosity")
+var testingContext *testing.T
 
 type TestTopologyBasic struct {
 	Name string
@@ -324,6 +325,9 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 
 func GetTestCacheMock(controller *Controller, testMocks *TestMock, additionalObjects []runtime.Object) *cache.MockCache {
 	cacheMock := cache.NewMockCache(controller)
+	if testingContext != nil {
+		cache.TestingContext = testingContext
+	}
 	cacheRequirements := &CacheMocking{}
 	if testMocks != nil {
 		cacheRequirements = testMocks.CacheRequirements
@@ -375,7 +379,7 @@ func CreateFloat64Pointer(x float64) *float64 {
 	return &x
 }
 
-func InitTestingInfrastructure() {
+func InitTestingInfrastructure(t ...*testing.T) {
 	actions.InitDefaultActions()
 	plugins.InitDefaultPlugins()
 
@@ -386,5 +390,9 @@ func InitTestingInfrastructure() {
 				fmt.Printf("Failed to initialize loggers: %v", err)
 			}
 		}
+	}
+
+	if len(t) > 0 {
+		testingContext = t[0]
 	}
 }
