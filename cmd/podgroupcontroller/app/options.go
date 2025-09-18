@@ -43,5 +43,6 @@ func InitOptions() *Options {
 		"The name of the scheduler used to schedule pod groups")
 	flag.BoolVar(&options.EnablePodGroupWebhook, "enable-podgroup-webhook", true,
 		"Enable podgroup webhook")
+
 	return options
 }
