@@ -1270,7 +1270,7 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 		expectedError   string
 	}{
 		{
-			name: "single domain with minimum distance",
+			name: "return multi domain",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
@@ -1324,6 +1324,11 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 					ID:              "rack1.zone1",
 					Level:           "rack",
 					AllocatablePods: 2,
+				},
+				{
+					ID:              "zone1",
+					Level:           "zone",
+					AllocatablePods: 3,
 				},
 			},
 			expectedError: "",
@@ -1482,6 +1487,11 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 					Level:           "zone",
 					AllocatablePods: 6,
 				},
+				{
+					ID:              "region1",
+					Level:           "region",
+					AllocatablePods: 9,
+				},
 			},
 			expectedError: "",
 		},
@@ -1610,7 +1620,7 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			expectedError: "",
 		},
 		{
-			name: "Return children subset",
+			name: "Return multiple levels of domains",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
@@ -1741,14 +1751,19 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			expectedDomains: []*DomainInfo{
 				{
-					ID:              "rack1.zone1.region1",
-					Level:           "rack",
-					AllocatablePods: 3,
+					ID:              "zone1.region1",
+					Level:           "zone",
+					AllocatablePods: 6,
 				},
 				{
-					ID:              "rack2.zone1.region1",
-					Level:           "rack",
-					AllocatablePods: 3,
+					ID:              "zone2.region1",
+					Level:           "zone",
+					AllocatablePods: 6,
+				},
+				{
+					ID:              "region1",
+					Level:           "region",
+					AllocatablePods: 9,
 				},
 			},
 			expectedError: "",
