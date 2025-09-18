@@ -538,7 +538,6 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				},
 			},
 			expectedLevels: []DomainLevel{
-				"rack",
 				"zone",
 			},
 			expectedError: "",
@@ -784,7 +783,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &topologyPlugin{}
 
-			result, err := plugin.calculateRelevantDomainLevels(tt.job, tt.jobTopologyName, tt.topologyTree)
+			result, err := plugin.calculateRelevantDomainLevels(tt.job, tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {
@@ -1188,7 +1187,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				return tree
 			},
 			expectedMaxAllocatablePods: 0,
-			expectedDomains:            map[DomainID]*DomainInfo{
+			expectedDomains: map[DomainID]*DomainInfo{
 				// No domains should have allocations since no nodes can accommodate the job
 			},
 		},
