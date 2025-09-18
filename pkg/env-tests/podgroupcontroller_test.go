@@ -142,7 +142,7 @@ var _ = Describe("PodGroupController", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test pod to be bound")
 
 			// Wait for podgroup status allocated resources to be updated
-			err = wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, func(ctx context.Context) (bool, error) {
+			err = wait.PollUntilContextTimeout(ctx, interval, defaultTimeout, true, func(ctx context.Context) (bool, error) {
 				err := ctrlClient.Get(ctx, client.ObjectKey{Name: "test-podgroup", Namespace: testNamespace.Name}, &podgroup)
 				if err != nil {
 					return false, err
