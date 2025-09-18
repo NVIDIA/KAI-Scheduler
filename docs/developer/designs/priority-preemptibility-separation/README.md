@@ -161,7 +161,7 @@ spec:
     metadata:
       labels:
         kai.scheduler/preemptibility: "non-preemptible"
-        runai/priority-class: "train"
+        priorityClassName: "train"
     spec:
       # ... pod spec
 ```
