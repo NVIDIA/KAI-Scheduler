@@ -326,7 +326,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			expectedError: "",
 		},
 		{
-			name: "getBestJobAllocatableDomains constrain definition error",
+			name: "getJobAllocatableDomains constrain definition error",
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
 				RequiredCPUsPerTask: 500,
@@ -1260,7 +1260,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 	}
 }
 
-func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
+func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 	tests := []struct {
 		name            string
 		job             *podgroup_info.PodGroupInfo
@@ -1759,7 +1759,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &topologyPlugin{}
 
-			result, err := plugin.getBestJobAllocatableDomains(tt.job, len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)), tt.topologyTree)
+			result, err := plugin.getJobAllocatableDomains(tt.job, len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)), tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {
