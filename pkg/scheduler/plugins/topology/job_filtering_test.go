@@ -326,7 +326,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			expectedError: "",
 		},
 		{
-			name: "getBestJobAllocatableDomains constrain definition error",
+			name: "getJobAllocatableDomains constrain definition error",
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
 				RequiredCPUsPerTask: 500,
@@ -1260,7 +1260,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 	}
 }
 
-func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
+func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 	tests := []struct {
 		name            string
 		job             *podgroup_info.PodGroupInfo
@@ -1270,7 +1270,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 		expectedError   string
 	}{
 		{
-			name: "single domain with minimum distance",
+			name: "return multi domain",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
@@ -1324,6 +1324,11 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					ID:              "rack1.zone1",
 					Level:           "rack",
 					AllocatablePods: 2,
+				},
+				{
+					ID:              "zone1",
+					Level:           "zone",
+					AllocatablePods: 3,
 				},
 			},
 			expectedError: "",
@@ -1482,6 +1487,11 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 					Level:           "zone",
 					AllocatablePods: 6,
 				},
+				{
+					ID:              "region1",
+					Level:           "region",
+					AllocatablePods: 9,
+				},
 			},
 			expectedError: "",
 		},
@@ -1610,7 +1620,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 			expectedError: "",
 		},
 		{
-			name: "Return children subset",
+			name: "Return multiple levels of domains",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
 				SubGroups: map[string]*podgroup_info.SubGroupInfo{
@@ -1741,14 +1751,19 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 			},
 			expectedDomains: []*DomainInfo{
 				{
-					ID:              "rack1.zone1.region1",
-					Level:           "rack",
-					AllocatablePods: 3,
+					ID:              "zone1.region1",
+					Level:           "zone",
+					AllocatablePods: 6,
 				},
 				{
-					ID:              "rack2.zone1.region1",
-					Level:           "rack",
-					AllocatablePods: 3,
+					ID:              "zone2.region1",
+					Level:           "zone",
+					AllocatablePods: 6,
+				},
+				{
+					ID:              "region1",
+					Level:           "region",
+					AllocatablePods: 9,
 				},
 			},
 			expectedError: "",
@@ -1759,7 +1774,7 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &topologyPlugin{}
 
-			result, err := plugin.getBestJobAllocatableDomains(tt.job, len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)), tt.topologyTree)
+			result, err := plugin.getJobAllocatableDomains(tt.job, len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)), tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {
