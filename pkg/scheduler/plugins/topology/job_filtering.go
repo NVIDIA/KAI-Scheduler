@@ -54,7 +54,7 @@ func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []
 		return []node_info.NodeSet{}, nil
 	}
 
-	jobAllocatableDomains, err := t.getBestJobAllocatableDomains(job, len(tasks), topologyTree)
+	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, len(tasks), topologyTree)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func calcNextAllocationTestPodResources(previousTestResources, maxPodResources *
 	return nPlus1Resources
 }
 
-func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGroupInfo, taskToAllocateCount int, topologyTree *Info) ([]*DomainInfo, error) {
+func (t *topologyPlugin) getJobAllocatableDomains(job *podgroup_info.PodGroupInfo, taskToAllocateCount int, topologyTree *Info) ([]*DomainInfo, error) {
 	relevantLevels, err := t.calculateRelevantDomainLevels(job, topologyTree)
 	if err != nil {
 		return nil, err
