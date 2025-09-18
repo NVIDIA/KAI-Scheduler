@@ -5,14 +5,15 @@ package pod_group
 
 import (
 	"context"
+	"fmt"
 
 	schedulingv1 "k8s.io/api/scheduling/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+
+	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/resources/podgroup"
 )
 
 const (
@@ -20,23 +21,14 @@ const (
 )
 
 func IsPreemptible(ctx context.Context, podGroup *v2alpha2.PodGroup, kubeClient client.Client) (bool, error) {
-	// GuyTODO: Change to use the new Preemptible field, defaults this old behavior
-	priority, err := getPodGroupPriority(ctx, podGroup, kubeClient)
-	if errors.IsNotFound(err) {
-		logger := log.FromContext(ctx)
-		logger.Info(
-			"Priority Class not found",
-			"podGroup", podGroup.Name,
-			"namespace", podGroup.Namespace,
-			"priorityClass", podGroup.Spec.PriorityClassName,
-		)
-		return true, nil
-	}
+	isPreemptible, err := pg.IsPreemptible(podGroup.Spec.Preemptibility, func() (int32, error) {
+		return getPodGroupPriority(ctx, podGroup, kubeClient)
+	})
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to determine podgroup's preemptibility: %w", err)
 	}
 
-	return priority < PriorityBuildNumber, nil
+	return isPreemptible, nil
 }
 
 func getPodGroupPriority(ctx context.Context, podGroup *v2alpha2.PodGroup, kubeClient client.Client) (int32, error) {
