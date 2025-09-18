@@ -538,7 +538,6 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				},
 			},
 			expectedLevels: []DomainLevel{
-				"rack",
 				"zone",
 			},
 			expectedError: "",
@@ -784,7 +783,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &topologyPlugin{}
 
-			result, err := plugin.calculateRelevantDomainLevels(tt.job, tt.jobTopologyName, tt.topologyTree)
+			result, err := plugin.calculateRelevantDomainLevels(tt.job, tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {
