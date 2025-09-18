@@ -351,7 +351,8 @@ func TestDRAAllocation(t *testing.T) {
 				},
 				Mocks: &test_utils.TestMock{
 					CacheRequirements: &test_utils.CacheMocking{
-						NumberOfCacheBinds: 2,
+						NumberOfCacheBinds:     2,
+						NumberOfCacheEvictions: 1,
 					},
 				},
 			},

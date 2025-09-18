@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
+	"os"
 	"testing"
 
 	"go.uber.org/zap"
@@ -215,6 +216,12 @@ func InitLoggersIntoBuffer(logLevel int) (*bytes.Buffer, error) {
 }
 
 func UnitestOutputSchedulerLogs(t *testing.T) {
+	fmt.Println("Test scheduler log:")
+	fmt.Println(unitestLogsBuffer.String())
+	fmt.Println("--------------------------------")
+	fmt.Fprintf(os.Stderr, "Test scheduler log: \n")
+	fmt.Fprintf(os.Stderr, "%s", unitestLogsBuffer.String())
+	fmt.Fprintf(os.Stderr, "--------------------------------\n")
 	t.Errorf("Test scheduler log: \n")
 	t.Log(unitestLogsBuffer.String())
 	t.Log("\n\n")
