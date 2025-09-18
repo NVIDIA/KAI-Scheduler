@@ -43,7 +43,6 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 
 func allocateTaskOnNodeSet(ssn *framework.Session, stmt *framework.Statement, nodeSet node_info.NodeSet,
 	job *podgroup_info.PodGroupInfo, tasksToAllocate []*pod_info.PodInfo, isPipelineOnly bool) bool {
-	defer ssn.CleanAllocationAttemptCache(job)
 	cp := stmt.Checkpoint()
 	for index, task := range tasksToAllocate {
 		success := allocateTask(ssn, stmt, nodeSet, task, isPipelineOnly)

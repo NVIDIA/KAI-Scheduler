@@ -4,11 +4,12 @@
 package topology
 
 import (
-	"errors"
 	"slices"
 	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/utils/ptr"
@@ -53,22 +54,21 @@ func (m *mockSessionStateProvider) GetSessionStateForResource(uid types.UID) k8s
 	return k8s_internal.SessionState(state)
 }
 
-func TestTopologyPlugin_prePredicateFn(t *testing.T) {
+func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 	tests := []struct {
-		name                    string
-		job                     *jobs_fake.TestJobBasic
-		jobTopologyConstraint   *enginev2alpha2.TopologyConstraint
-		allocatedPodGroups      []*jobs_fake.TestJobBasic
-		nodes                   map[string]nodes_fake.TestNodeBasic
-		nodesToDomains          map[string]TopologyDomainID
-		setupTopologyTree       func() *TopologyInfo
-		setupSessionState       func(provider *mockSessionStateProvider, jobUID types.UID)
-		expectedError           string
-		expectedCacheCalls      int
-		expectedRelevantDomains []*TopologyDomainInfo
+		name                  string
+		job                   *jobs_fake.TestJobBasic
+		jobTopologyConstraint *enginev2alpha2.TopologyConstraint
+		allocatedPodGroups    []*jobs_fake.TestJobBasic
+		nodes                 map[string]nodes_fake.TestNodeBasic
+		nodesToDomains        map[string]TopologyDomainID
+		setupTopologyTree     func() *TopologyInfo
+		setupSessionState     func(provider *mockSessionStateProvider, jobUID types.UID)
+		expectedError         string
+		expectedNodes         map[string]bool
 	}{
 		{
-			name: "successful topology allocation - cache right",
+			name: "successful topology allocation - right nodes",
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
 				RequiredCPUsPerTask: 500,
@@ -147,14 +147,9 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 
 				return tree
 			},
-			expectedError:      "",
-			expectedCacheCalls: 2,
-			expectedRelevantDomains: []*TopologyDomainInfo{
-				{
-					ID:    "rack1.zone1",
-					Name:  "rack1",
-					Level: "rack",
-				},
+			expectedError: "",
+			expectedNodes: map[string]bool{
+				"node-1": true,
 			},
 		},
 		{
@@ -188,8 +183,7 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 					},
 				}
 			},
-			expectedError:      "",
-			expectedCacheCalls: 0,
+			expectedError: "",
 		},
 		{
 			name: "topology not found - error",
@@ -223,8 +217,7 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 					},
 				}
 			},
-			expectedError:      "matching topology tree haven't been found for job <test-namespace/test-job>, workload topology name: nonexistent-topology",
-			expectedCacheCalls: 0,
+			expectedError: "matching topology tree haven't been found for job <test-namespace/test-job>, workload topology name: nonexistent-topology",
 		},
 		{
 			name: "cache already populated - early return",
@@ -274,8 +267,7 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 				)
 				provider.GetSessionStateCallCount = 0 // Do not count this test data initialization as a call
 			},
-			expectedError:      "",
-			expectedCacheCalls: 1, // read once and return, do not write
+			expectedError: "",
 		},
 		{
 			name: "insufficient allocatable pods - no domains found",
@@ -325,8 +317,7 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 
 				return tree
 			},
-			expectedError:      "",
-			expectedCacheCalls: 1,
+			expectedError: "",
 		},
 		{
 			name: "getBestJobAllocatableDomains constrain definition error",
@@ -393,8 +384,7 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 
 				return tree
 			},
-			expectedError:      "the topology test-topology doesn't have a level matching the required(nonexistent-level) specified for the job test-job",
-			expectedCacheCalls: 1,
+			expectedError: "the topology test-topology doesn't have a level matching the required(nonexistent-level) specified for the job test-job",
 		},
 	}
 
@@ -436,18 +426,9 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 
 			// Setup plugin
 			plugin := &topologyPlugin{
-				sessionStateGetter: sessionStateProvider,
-				nodesInfos:         nodesInfoMap,
 				TopologyTrees: map[string]*TopologyInfo{
 					"test-topology": topologyTree,
-				},
-				taskOrderFunc: func(l, r interface{}) bool {
-					return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
-				},
-				subGroupOrderFunc: func(l, r interface{}) bool {
-					return l.(*podgroup_info.PodGroupInfo).Name < r.(*podgroup_info.PodGroupInfo).Name
-				},
-			}
+				}}
 
 			// Update job with topology constraints based on test case
 			if tt.jobTopologyConstraint != nil {
@@ -459,7 +440,7 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 			}
 
 			// Call the function under test
-			err := plugin.prePredicateFn(nil, job)
+			subsets, err := plugin.subSetNodesFn(job, podgroup_info.GetTasksToAllocate(job, nil, nil, true), maps.Values(nodesInfoMap))
 
 			// Check error
 			if tt.expectedError != "" {
@@ -478,46 +459,14 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 				return
 			}
 
-			// Check cache write if expected
-			if tt.expectedCacheCalls >= 2 { // >=2 because the first call is read, the second is write
-				state := sessionStateProvider.GetSessionStateForResource(types.UID(job.PodGroupUID))
-				stateData, err := (*k8sframework.CycleState)(state).Read(k8sframework.StateKey(topologyPluginName))
-				if err != nil {
-					t.Errorf("failed to read state data: %v", err)
-					return
+			// Verify nodes
+			if tt.expectedNodes != nil {
+				if subsets == nil {
+					t.Errorf("expected subsets to be filled with %v, but got nil", tt.expectedNodes)
 				}
-
-				topologyState := stateData.(*topologyStateData)
-				if len(topologyState.relevantDomains) != len(tt.expectedRelevantDomains) {
-					t.Errorf("expected %d relevant domains, got %d",
-						len(tt.expectedRelevantDomains), len(topologyState.relevantDomains))
-					return
-				}
-
-				for i, expectedDomain := range tt.expectedRelevantDomains {
-					if i >= len(topologyState.relevantDomains) {
-						t.Errorf("expected domain at index %d not found", i)
-						continue
-					}
-
-					actualDomain := topologyState.relevantDomains[i]
-					if actualDomain.ID != expectedDomain.ID {
-						t.Errorf("domain %d: expected ID %s, got %s", i, expectedDomain.ID, actualDomain.ID)
-					}
-					if actualDomain.Level != expectedDomain.Level {
-						t.Errorf("domain %d: expected Level %s, got %s", i, expectedDomain.Level, actualDomain.Level)
-					}
-				}
-			} else {
-				// Verify no cache write occurred
-				testGetSessionStateCallCount := sessionStateProvider.GetSessionStateCallCount
-
-				state := sessionStateProvider.GetSessionStateForResource(types.UID(job.PodGroupUID))
-				_, err := (*k8sframework.CycleState)(state).Read(k8sframework.StateKey(topologyPluginName))
-				if err == nil && testGetSessionStateCallCount > 1 { // >1 because the first call is read, the second is write
-					t.Errorf("expected no cache write, but found more than 1 sessionState call (the first is read, the second is write)")
-				} else if !errors.Is(err, k8sframework.ErrNotFound) && tt.expectedCacheCalls == 0 {
-					t.Errorf("expected ErrNotFound error, but got: %v", err)
+				for _, node := range subsets[0] {
+					_, ok := tt.expectedNodes[node.Name]
+					assert.True(t, ok, "expected node %s to be in subset %v", node.Name, tt.expectedNodes)
 				}
 			}
 		})
@@ -1265,12 +1214,11 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				Topologies:    []*kueuev1alpha1.Topology{topologyTree.TopologyResource},
 			}
 			plugin := &topologyPlugin{
-				sessionStateGetter: session,
-				nodesInfos:         nodesInfoMap,
+				nodesInfos: nodesInfoMap,
 			}
 
 			// Call the function under test
-			maxAllocatablePods, err := plugin.calcTreeAllocatable(job, topologyTree)
+			maxAllocatablePods, err := plugin.calcTreeAllocatable(podgroup_info.GetTasksToAllocate(job, nil, nil, true), topologyTree, maps.Values(session.Nodes))
 			if err != nil {
 				t.Errorf("failed to calc tree allocatable. job: %s, error: %v", job.PodGroup.Name, err)
 			}
@@ -1841,11 +1789,9 @@ func TestTopologyPlugin_getBestJobAllocatableDomains(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := &topologyPlugin{
-				taskOrderFunc: tt.taskOrderFunc,
-			}
+			plugin := &topologyPlugin{}
 
-			result, err := plugin.getBestJobAllocatableDomains(tt.job, tt.topologyTree)
+			result, err := plugin.getBestJobAllocatableDomains(tt.job, len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)), tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {

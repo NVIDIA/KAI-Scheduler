@@ -61,6 +61,7 @@ spec:
                   MinMember defines the minimal number of members to run the PodGroup;
                   if there are not enough resources to start all required members, the scheduler will not start anyone.
                 format: int32
+                minimum: 1
                 type: integer
               parallelism:
                 description: The number of pods which will try to run at any instant.
@@ -96,10 +97,16 @@ spec:
                         MinMember defines the minimal number of members to run this SubGroup;
                         if there are not enough resources to start all required members, the scheduler will not start anyone.
                       format: int32
+                      minimum: 1
                       type: integer
                     name:
                       description: Name uniquely identifies the SubGroup within the
-                        parent PodGroup.
+                        PodGroup.
+                      minLength: 1
+                      type: string
+                    parent:
+                      description: Parent is an optional attribute that specifies
+                        the name of the parent SubGroup
                       type: string
                   required:
                   - name
