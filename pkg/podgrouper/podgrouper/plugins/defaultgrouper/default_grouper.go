@@ -187,7 +187,7 @@ func (dg *DefaultGrouper) CalcPodGroupPreemptibility(topOwner *unstructured.Unst
 		return v2alpha2.Preemptibility(preemptibility)
 	}
 
-	logger.V(1).Info("No preemptibility label found", "topOwner", topOwner.GetName(), "pod", pod.GetName())
+	logger.V(1).Info("No valid preemptibility label found", "topOwner", topOwner.GetName(), "pod", pod.GetName())
 
 	return ""
 }
