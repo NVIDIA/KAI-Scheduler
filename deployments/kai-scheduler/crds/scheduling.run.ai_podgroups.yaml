@@ -67,11 +67,12 @@ spec:
                 format: int32
                 type: integer
               preemptibility:
-                description: Preemptibility defines whether this PodGroup can be preempted
+                description: |-
+                  Preemptibility determines if this PodGroup can be preempted by higher priority workloads.
+                  When unspecified, preemptibility is determined by the PriorityClass value - values below 100 are considered preemptible.
                 enum:
                 - preemptible
                 - non-preemptible
-                - semi-preemptible
                 type: string
               priorityClassName:
                 description: |-

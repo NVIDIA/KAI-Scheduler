@@ -20,6 +20,7 @@ limitations under the License.
 package v2alpha2
 
 import (
+	"fmt"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -48,10 +49,10 @@ type PodGroupSpec struct {
 	// +optional
 	PriorityClassName string `json:"priorityClassName,omitempty" protobuf:"bytes,3,opt,name=priorityClassName"`
 
-	// Preemptibility defines whether this PodGroup can be preempted
-	// +kubebuilder:validation:Enum=preemptible;non-preemptible;semi-preemptible
+	// Preemptibility determines if this PodGroup can be preempted by higher priority workloads.
+	// When unspecified, preemptibility is determined by the PriorityClass value - values below 100 are considered preemptible.
 	// +optional
-	Preemptibility string `json:"preemptibility,omitempty" protobuf:"bytes,4,opt,name=preemptibility"`
+	Preemptibility Preemptibility `json:"preemptibility,omitempty" protobuf:"bytes,4,opt,name=preemptibility"`
 
 	// The number of pods which will try to run at any instant.
 	Parallelism int32 `json:"parallelism,omitempty" protobuf:"bytes,4,opt,name=parallelism"`
@@ -73,6 +74,30 @@ type PodGroupSpec struct {
 
 	// SubGroups defines finer-grained subsets of pods within the PodGroup with individual scheduling constraints
 	SubGroups []SubGroup `json:"subGroups,omitempty"`
+}
+
+// Preemptibility defines whether this PodGroup can be preempted
+//
+// Supported values are:
+// - `preemptible` - PodGroup can be preempted by higher-priority workloads
+// - `non-preemptible` - PodGroup runs to completion once scheduled
+// +kubebuilder:validation:Enum=preemptible;non-preemptible
+type Preemptibility string
+
+const (
+	Preemptible    Preemptibility = "preemptible"
+	NonPreemptible Preemptibility = "non-preemptible"
+)
+
+func ParsePreemptibility(preemptibility string) (Preemptibility, error) {
+	switch preemptibility {
+	case string(Preemptible):
+		return Preemptible, nil
+	case string(NonPreemptible):
+		return NonPreemptible, nil
+	}
+
+	return "", fmt.Errorf("invalid preemptibility: %s", preemptibility)
 }
 
 type SubGroup struct {
