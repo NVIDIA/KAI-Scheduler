@@ -6,10 +6,8 @@ package topology
 import (
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
 )
 
 const (
@@ -17,12 +15,9 @@ const (
 )
 
 type topologyPlugin struct {
-	enabled            bool
-	taskOrderFunc      common_info.LessFn
-	subGroupOrderFunc  common_info.LessFn
-	sessionStateGetter k8s_internal.SessionStateProvider
-	nodesInfos         map[string]*node_info.NodeInfo
-	TopologyTrees      map[string]*TopologyInfo
+	enabled       bool
+	nodesInfos    map[string]*node_info.NodeInfo
+	TopologyTrees map[string]*TopologyInfo
 }
 
 func New(pluginArgs map[string]string) framework.Plugin {
@@ -38,20 +33,10 @@ func (t *topologyPlugin) Name() string {
 
 func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	topologies := ssn.Topologies
-	t.taskOrderFunc = ssn.TaskOrderFn
-	t.subGroupOrderFunc = ssn.SubGroupOrderFn
-	t.sessionStateGetter = ssn
 	t.nodesInfos = ssn.Nodes
 	t.initializeTopologyTree(topologies, ssn)
 
-	//pre-predicate to generate the whole topology tree and store per workload
-	ssn.AddPrePredicateFn(t.prePredicateFn)
-	//predicate to filter nodes that are related to parts of the tree that cannot accommodate the workload - this is for "required" use only
-	ssn.AddPredicateFn(t.predicateFn)
-	//node order to sort the nodes according to topology nodes score - this is for "prefer" use only
-	ssn.AddNodeOrderFn(t.nodeOrderFn)
-	//clean cycle cache after an allocation attempt for a job
-	ssn.AddCleanAllocationAttemptCacheFn(t.cleanAllocationAttemptCache)
+	ssn.AddSubsetNodesFn(t.subSetNodesFn)
 }
 
 func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, ssn *framework.Session) {

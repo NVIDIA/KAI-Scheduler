@@ -412,20 +412,6 @@ func (ssn *Session) NodeOrderFn(task *pod_info.PodInfo, node *node_info.NodeInfo
 	return priorityScore, nil
 }
 
-func (ssn *Session) AddCleanAllocationAttemptCacheFn(fn api.CleanAllocationAttemptCacheFn) {
-	ssn.CleanAllocationAttemptCacheFns = append(ssn.CleanAllocationAttemptCacheFns, fn)
-}
-
-func (ssn *Session) CleanAllocationAttemptCache(job *podgroup_info.PodGroupInfo) {
-	for _, cleaner := range ssn.CleanAllocationAttemptCacheFns {
-		err := cleaner(job)
-		if err != nil {
-			log.InfraLogger.V(6).Infof(
-				"Failed to run CleanAllocationAttemptCache on job %s", job.Name)
-		}
-	}
-}
-
 func (ssn *Session) IsRestrictNodeSchedulingEnabled() bool {
 	return ssn.SchedulerParams.RestrictSchedulingNodes
 }

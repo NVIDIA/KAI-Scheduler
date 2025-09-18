@@ -1,17 +1,13 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package binder
 
 import (
-	"flag"
-	"os"
+	"context"
+	"fmt"
 
-	"github.com/spf13/pflag"
-
-	"go.uber.org/zap/zapcore"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"k8s.io/client-go/rest"
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/binder/app"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
@@ -19,40 +15,25 @@ import (
 	k8s_plugins "github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/k8s-plugins"
 )
 
-var (
-	setupLog = ctrl.Log.WithName("setup")
-)
-
-func main() {
+func RunBinder(cfg *rest.Config, ctx context.Context) error {
 	options := app.InitOptions()
-	opts := zap.Options{
-		Development: true,
-		TimeEncoder: zapcore.ISO8601TimeEncoder,
-	}
-	opts.BindFlags(flag.CommandLine)
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-
-	pflag.Parse()
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
-	app, err := app.New(options, ctrl.GetConfigOrDie())
+	app, err := app.New(options, cfg)
 	if err != nil {
-		setupLog.Error(err, "failed to create app")
-		os.Exit(1)
+		return err
 	}
 
 	err = registerPlugins(app)
 	if err != nil {
-		setupLog.Error(err, "failed to register plugins")
-		os.Exit(1)
+		return err
 	}
+	go func() {
+		err := app.Run(ctx)
+		if err != nil {
+			panic(fmt.Errorf("failed to run binder app: %w", err))
+		}
+	}()
 
-	ctx := ctrl.SetupSignalHandler()
-	err = app.Run(ctx)
-	if err != nil {
-		setupLog.Error(err, "failed to run app")
-		os.Exit(1)
-	}
+	return nil
 }
 
 func registerPlugins(app *app.App) error {

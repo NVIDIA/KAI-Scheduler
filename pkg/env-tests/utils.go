@@ -259,6 +259,23 @@ func WaitForPodUnschedulable(ctx context.Context, c client.Client, podName, name
 	})
 }
 
+// WaitForPodBound waits for a pod to be bound (have a NodeName set)
+func WaitForPodBound(ctx context.Context, c client.Client, podName, namespace string, timeout, interval time.Duration) error {
+	return wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+		var pod corev1.Pod
+		err := c.Get(ctx, client.ObjectKey{Name: podName, Namespace: namespace}, &pod)
+		if err != nil {
+			return false, err
+		}
+
+		if pod.Spec.NodeName == "" {
+			return false, nil
+		}
+
+		return true, nil
+	})
+}
+
 func DeleteAllInNamespace(ctx context.Context, c client.Client, namespace string, resources ...client.Object) error {
 	for _, resource := range resources {
 		err := c.DeleteAllOf(ctx, resource, client.InNamespace(namespace), client.GracePeriodSeconds(0))

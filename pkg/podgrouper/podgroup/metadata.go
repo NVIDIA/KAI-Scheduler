@@ -12,6 +12,7 @@ import (
 type SubGroupMetadata struct {
 	Name           string
 	MinAvailable   int32
+	Parent         *string
 	PodsReferences []*types.NamespacedName
 }
 

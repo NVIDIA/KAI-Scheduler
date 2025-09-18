@@ -118,6 +118,7 @@ func (h *Handler) createPodGroupForMetadata(podGroupMetadata Metadata) *scheduli
 			schedulingv2alpha2.SubGroup{
 				Name:      subGroup.Name,
 				MinMember: subGroup.MinAvailable,
+				Parent:    subGroup.Parent,
 			})
 	}
 
