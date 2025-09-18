@@ -59,14 +59,16 @@ func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []
 		return nil, err
 	}
 
-	result := node_info.NodeSet{}
+	var domainNodeSets []node_info.NodeSet
 	for _, jobAllocatableDomain := range jobAllocatableDomains {
+		var domainNodeSet node_info.NodeSet
 		for _, node := range jobAllocatableDomain.Nodes {
-			result = append(result, node)
+			domainNodeSet = append(domainNodeSet, node)
 		}
+		domainNodeSets = append(domainNodeSets, domainNodeSet)
 	}
 
-	return []node_info.NodeSet{result}, nil
+	return domainNodeSets, nil
 }
 
 func (t *topologyPlugin) getJobTopology(job *podgroup_info.PodGroupInfo) (*Info, error) {
