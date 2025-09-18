@@ -1989,6 +1989,42 @@ spec:
                     description: Enabled defines whether a Prometheus instance should
                       be deployed
                     type: boolean
+                  status:
+                    description: Status defines the observed state of the Prometheus
+                      TSDB
+                    properties:
+                      reason:
+                        description: Reason defines the reason for the current state
+                        type: string
+                      state:
+                        description: State defines the current state of the TSDB
+                        type: string
+                    type: object
+                  tsdb:
+                    description: TSDB defines the configuration for Prometheus TSDB
+                      storage
+                    properties:
+                      connection:
+                        description: Connection defines the connection configuration
+                          for TSDB
+                        properties:
+                          authSecretName:
+                            description: AuthSecretName defines the name of the secret
+                              containing authentication credentials
+                            type: string
+                          url:
+                            description: URL defines the connection URL for TSDB
+                            type: string
+                        type: object
+                      retentionPeriod:
+                        description: RetentionPeriod defines how long to retain data
+                          (e.g., "2w", "1d", "30d")
+                        type: string
+                      sampleFrequency:
+                        description: SampleFrequency defines the frequency of sampling
+                          (e.g., "1m", "30s", "5m")
+                        type: string
+                    type: object
                 type: object
               queueController:
                 description: QueueController specifies configuration for the queue
