@@ -18,6 +18,7 @@ func RunQueueController(cfg *rest.Config, ctx context.Context) error {
 
 	opts.EnableLeaderElection = false
 	opts.MetricsAddress = ":8084"
+	opts.EnableWebhook = false
 
 	flag.Parse()
 
