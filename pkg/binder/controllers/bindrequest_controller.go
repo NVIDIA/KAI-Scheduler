@@ -178,6 +178,7 @@ func (r *BindRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				time.Duration(r.params.RateLimiterBaseDelaySeconds)*time.Second,
 				time.Duration(r.params.RateLimiterMaxDelaySeconds)*time.Second,
 			),
+			SkipNameValidation: &[]bool{true}[0],
 		}).
 		Complete(r)
 }
