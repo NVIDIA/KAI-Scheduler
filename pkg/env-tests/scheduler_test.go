@@ -562,7 +562,6 @@ var _ = Describe("Scheduler", Ordered, func() {
 		})
 
 		It("Schedule pods with rack topology constraints", func(ctx context.Context) {
-
 			// schedule a single gpu pod outside of the topology to try and "pull" the topology constraint workload pods outside of a valid rack
 			binPackingPullPod := CreatePodObject(testNamespace.Name, "bin-packing-pull-pod", corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{constants.GpuResource: resource.MustParse("1")},

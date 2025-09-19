@@ -63,6 +63,7 @@ func (r *PodReconciler) SetupWithManager(
 				time.Duration(params.RateLimiterBaseDelaySeconds)*time.Second,
 				time.Duration(params.RateLimiterMaxDelaySeconds)*time.Second,
 			),
+			SkipNameValidation: &[]bool{true}[0],
 		}).
 		Owns(&corev1.ConfigMap{}).
 		Complete(r)
