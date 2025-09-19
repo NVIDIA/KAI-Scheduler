@@ -17,6 +17,7 @@ const (
 type Options struct {
 	EnableLeaderElection    bool
 	SchedulingQueueLabelKey string
+	EnableWebhook           bool
 
 	MetricsAddress                 string
 	MetricsNamespace               string
@@ -33,6 +34,7 @@ func InitOptions() *Options {
 
 	flag.BoolVar(&o.EnableLeaderElection, "leader-elect", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&o.SchedulingQueueLabelKey, "queue-label-key", constants.DefaultQueueLabel, "Scheduling queue label key name.")
+	flag.BoolVar(&o.EnableWebhook, "enable-webhook", true, "Enable webhook for controller manager.")
 	flag.StringVar(&o.MetricsAddress, "metrics-listen-address", defaultMetricsAddress, "The address the metrics endpoint binds to.")
 	flag.StringVar(&o.MetricsNamespace, "metrics-namespace", constants.DefaultMetricsNamespace, "Metrics namespace.")
 	flag.Var(&o.QueueLabelToMetricLabel, "queue-label-to-metric-label", "Map of queue label keys to metric label keys, e.g. 'foo=bar,baz=qux'.")
