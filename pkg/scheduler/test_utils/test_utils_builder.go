@@ -5,9 +5,10 @@ package test_utils
 
 import (
 	"os"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 	"strconv"
 	"time"
+
+	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	. "go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v2"
@@ -23,6 +24,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
@@ -46,6 +48,7 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 	controller *Controller,
 	createCacheMockIfNotExists bool,
 	topologies []*kueuev1alpha1.Topology,
+	clusterPodAffinityInfo *cache.K8sClusterPodAffinityInfo,
 ) *framework.Session {
 	ssn := framework.Session{
 		Nodes: nodesInfoMap,
@@ -65,7 +68,7 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 	ssn.OverrideSchedulerName(schedulerName)
 
 	if controller != nil || createCacheMockIfNotExists {
-		ssn.Cache = GetTestCacheMock(controller, testMetadata.Mocks, getDRAObjects(testMetadata))
+		ssn.Cache = GetTestCacheMock(controller, testMetadata.Mocks, getDRAObjects(testMetadata), clusterPodAffinityInfo)
 	}
 
 	if schedulerConfig != nil {
@@ -246,7 +249,9 @@ func BuildSession(testMetadata TestTopologyBasic, controller *Controller) *frame
 
 	addDefaultDepartmentIfNeeded(&testMetadata)
 	jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(testMetadata.Jobs)
-	nodesInfoMap := nodes_fake.BuildNodesInfoMap(testMetadata.Nodes, tasksToNodeMap)
+
+	clusterPodAffinityInfo := cache.NewK8sClusterPodAffinityInfo()
+	nodesInfoMap := nodes_fake.BuildNodesInfoMap(testMetadata.Nodes, tasksToNodeMap, clusterPodAffinityInfo)
 	queueInfoMap := BuildQueueInfoMap(testMetadata)
 
 	departmentInfoMap := BuildDepartmentInfoMap(testMetadata)
@@ -259,7 +264,7 @@ func BuildSession(testMetadata TestTopologyBasic, controller *Controller) *frame
 		testMetadata.Mocks.Cache == nil
 
 	return CreateFakeSession(&schedulerConfig, nodesInfoMap, jobsInfoMap, queueInfoMap, testMetadata,
-		controller, createCacheMockIfNotExists, testMetadata.Topologies)
+		controller, createCacheMockIfNotExists, testMetadata.Topologies, clusterPodAffinityInfo)
 }
 
 func mergeQueues(queuesMaps ...map[common_info.QueueID]*queue_info.QueueInfo) map[common_info.QueueID]*queue_info.QueueInfo {
