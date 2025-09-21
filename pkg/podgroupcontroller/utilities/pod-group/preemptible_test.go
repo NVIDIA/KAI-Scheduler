@@ -16,7 +16,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 )
 
-func TestIsPreemptibleJob(t *testing.T) {
+func TestIsPreemptible(t *testing.T) {
 	type args struct {
 		podGroup                 *v2alpha2.PodGroup
 		inClusterPriorityClasses []client.Object
@@ -154,6 +154,54 @@ func TestIsPreemptibleJob(t *testing.T) {
 			false,
 			false,
 		},
+		{
+			"Priority class not found - use global default priority class",
+			args{
+				&v2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "n1",
+					},
+					Spec: v2alpha2.PodGroupSpec{
+						PriorityClassName: "c2",
+					},
+				},
+				[]client.Object{
+					&schedulingv1.PriorityClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "c1",
+						},
+						GlobalDefault: true,
+						Value:         125,
+					},
+				},
+			},
+			false,
+			false,
+		},
+		{
+			"Both specific and global default priority classes not found - use system default priority",
+			args{
+				&v2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "n1",
+					},
+					Spec: v2alpha2.PodGroupSpec{
+						PriorityClassName: "c2",
+					},
+				},
+				[]client.Object{
+					&schedulingv1.PriorityClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "c1",
+						},
+						Value: 125,
+					},
+				},
+			},
+			// Assuming system default priority is below non-preemptible threshold
+			true,
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -167,11 +215,11 @@ func TestIsPreemptibleJob(t *testing.T) {
 
 			got, err := IsPreemptible(context.TODO(), tt.args.podGroup, kubeClient)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("IsPreemptibleJob() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("IsPreemptible() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("IsPreemptibleJob() got = %v, want %v", got, tt.want)
+				t.Errorf("IsPreemptible() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
