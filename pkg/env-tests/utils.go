@@ -143,7 +143,6 @@ func GroupPods(ctx context.Context, c client.Client, podGroupConfig podGroupConf
 			Name:      podGroupConfig.podgroupName,
 			Namespace: pods[0].Namespace,
 			Labels: map[string]string{
-				commonconsts.AppLabelName:      "engine-e2e",
 				commonconsts.DefaultQueueLabel: podGroupConfig.queueName,
 			},
 		},
