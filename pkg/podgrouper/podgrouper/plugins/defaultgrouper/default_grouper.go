@@ -179,29 +179,21 @@ func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstr
 }
 
 func (dg *DefaultGrouper) CalcPodGroupPreemptibility(topOwner *unstructured.Unstructured, pod *v1.Pod) v2alpha2.Preemptibility {
-	if preemptibility, found := topOwner.GetLabels()[constants.PreemptibilityLabelKey]; found &&
-		dg.validatePreemptibilityLabel(preemptibility) {
-		return v2alpha2.Preemptibility(preemptibility)
-	} else if preemptibility, found = pod.GetLabels()[constants.PreemptibilityLabelKey]; found &&
-		dg.validatePreemptibilityLabel(preemptibility) {
-		return v2alpha2.Preemptibility(preemptibility)
+	if preemptibility, found := topOwner.GetLabels()[constants.PreemptibilityLabelKey]; found {
+		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibility); err == nil {
+			return preemptibility
+		} else {
+			logger.Error(err, "Invalid preemptibility label found on top owner", "topOwner", topOwner.GetName())
+		}
+	} else if preemptibility, found = pod.GetLabels()[constants.PreemptibilityLabelKey]; found {
+		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibility); err == nil {
+			return preemptibility
+		}
 	}
 
 	logger.V(1).Info("No valid preemptibility label found", "topOwner", topOwner.GetName(), "pod", pod.GetName())
 
 	return ""
-}
-
-func (dg *DefaultGrouper) validatePreemptibilityLabel(val string) bool {
-	validValues := []string{string(v2alpha2.Preemptible), string(v2alpha2.NonPreemptible), ""}
-
-	for _, validValue := range validValues {
-		if val == validValue {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (dg *DefaultGrouper) calcPodGroupPriorityClass(topOwner *unstructured.Unstructured, pod *v1.Pod) string {

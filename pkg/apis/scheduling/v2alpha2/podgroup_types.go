@@ -20,6 +20,7 @@ limitations under the License.
 package v2alpha2
 
 import (
+	"fmt"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -88,6 +89,20 @@ const (
 	Preemptible    Preemptibility = "preemptible"
 	NonPreemptible Preemptibility = "non-preemptible"
 )
+
+func ParsePreemptibility(value string) (Preemptibility, error) {
+	switch value {
+	case string(Preemptible):
+		return Preemptible, nil
+	case string(NonPreemptible):
+		return NonPreemptible, nil
+	case "":
+		// Empty value is valid and represents the default priority-based preemptibility
+		return "", nil
+	default:
+		return "", fmt.Errorf("invalid preemptibility value: %s", value)
+	}
+}
 
 type SubGroup struct {
 	// Name uniquely identifies the SubGroup within the PodGroup.
