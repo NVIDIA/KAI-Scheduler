@@ -16,7 +16,7 @@ func IsPreemptible(preemptibility v2alpha2.Preemptibility, getPriority func() (i
 	default:
 		priority, err := getPriority()
 		if err != nil {
-			return false, fmt.Errorf("failed to get priority: %w", err)
+			return false, fmt.Errorf("failed to get podgroup's priority: %w", err)
 		}
 		return priority < constants.PriorityBuildNumber, nil
 	}

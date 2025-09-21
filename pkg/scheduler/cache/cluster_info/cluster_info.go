@@ -30,6 +30,7 @@ import (
 
 	kubeAiSchedulerinfo "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/informers/externalversions"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -414,7 +415,7 @@ func (c *ClusterInfo) snapshotTopologies() ([]*kueue.Topology, error) {
 }
 
 func getDefaultPriority(dataLister data_lister.DataLister) (int32, error) {
-	defaultPriority, found := int32(50), false
+	defaultPriority, found := int32(constants.DefaultPodGroupPriority), false
 	priorityClasses, err := dataLister.ListPriorityClasses()
 	if err != nil {
 		err = errors.WithStack(fmt.Errorf("error listing priorityclasses: %c", err))
