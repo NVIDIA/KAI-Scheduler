@@ -16,7 +16,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	rs "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/resource_share"
 )
 
@@ -71,10 +70,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.Preemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -219,11 +219,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityBuildNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.NonPreemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -285,11 +285,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityBuildNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.NonPreemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -375,11 +375,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityBuildNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.NonPreemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -441,11 +441,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityBuildNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.NonPreemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -532,11 +532,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityBuildNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.NonPreemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -601,11 +601,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityBuildNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.NonPreemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -670,11 +670,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityTrainNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.Preemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -739,11 +739,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityTrainNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.Preemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -811,11 +811,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityBuildNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.NonPreemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -883,11 +883,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityBuildNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.NonPreemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -955,11 +955,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityTrainNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.Preemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
@@ -1027,11 +1027,11 @@ var _ = Describe("Capacity Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:         "job-a",
-						Namespace:    "team-a",
-						Queue:        "leaf-queue",
-						Priority:     constants.PriorityTrainNumber,
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "leaf-queue",
+						Preemptibility: v2alpha2.Preemptible,
+						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
 						SubGroups: map[string]*podgroup_info.SubGroupInfo{
 							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {

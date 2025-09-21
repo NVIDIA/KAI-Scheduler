@@ -19,19 +19,15 @@ import (
 	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
 )
 
-const (
-	PriorityBuildNumber = 100
-)
-
 func IsPreemptible(ctx context.Context, podGroup *v2alpha2.PodGroup, kubeClient client.Client) (bool, error) {
-	isPreemptible, err := pg.IsPreemptible(podGroup.Spec.Preemptibility, func() (int32, error) {
+	preemptability, err := pg.CalculatePreemptibility(podGroup.Spec.Preemptibility, func() (int32, error) {
 		return getPodGroupPriority(ctx, podGroup, kubeClient)
 	})
 	if err != nil {
 		return false, fmt.Errorf("failed to determine podgroup's preemptibility: %w", err)
 	}
 
-	return isPreemptible, nil
+	return preemptability == v2alpha2.Preemptible, nil
 }
 
 func getPodGroupPriority(ctx context.Context, podGroup *v2alpha2.PodGroup, kubeClient client.Client) (int32, error) {

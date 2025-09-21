@@ -31,6 +31,7 @@ import (
 	kubeAiSchedulerinfo "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/informers/externalversions"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -329,6 +330,10 @@ func (c *ClusterInfo) snapshotPodGroups(
 		log.InfraLogger.V(7).Infof("The priority of job <%s/%s> is <%s/%d>", podGroup.Namespace, podGroup.Name,
 			podGroup.Spec.PriorityClassName, podGroupInfo.Priority)
 
+		podGroupInfo.Preemptibility = getPodGroupPreemptibility(podGroup.Spec.Preemptibility, podGroupInfo.Priority)
+		log.InfraLogger.V(7).Infof("The preemptibility of job <%s/%s> is <%s>", podGroup.Namespace, podGroup.Name,
+			podGroupInfo.Preemptibility)
+
 		c.setPodGroupWithIndex(podGroup, podGroupInfo)
 		rawPods, err := c.dataLister.ListPodByIndex(podByPodGroupIndexerName, podGroup.Name)
 		if err != nil {
@@ -448,6 +453,14 @@ func getPodGroupPriority(
 		return defaultPriority
 	}
 	return chosenPriorityClass.Value
+}
+
+func getPodGroupPreemptibility(preemptibility enginev2alpha2.Preemptibility, priority int32) enginev2alpha2.Preemptibility {
+	preemptability, _ := pg.CalculatePreemptibility(preemptibility, func() (int32, error) {
+		return priority, nil
+	})
+
+	return preemptability
 }
 
 func filterUnmarkedNodes(nodes []*v1.Node) []*v1.Node {

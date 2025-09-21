@@ -308,6 +308,7 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 			ssn := newPrioritySession()
 			ssn.Queues = tt.queues
 			ssn.PodGroupInfos = tt.initJobs
+
 			proportion.New(map[string]string{}).OnSessionOpen(ssn)
 
 			activeDepartments := scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
