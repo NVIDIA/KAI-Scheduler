@@ -1,42 +1,67 @@
 # Fairness
-KAI Scheduler utilizes hierarchical scheduling queues, where a leaf queue can represent an individual researcher or a group of researchers working on the same project. 
-Additional levels of hierarchy can be added to group multiple scheduling queues together, enabling the application of resource distribution rules to these groups.
 
-Before proceeding, make sure you are familiar with the concepts of [Scheduling Queues](../queues/README.md)
+KAI Scheduler implements hierarchical fair-share scheduling using multi-level queues to distribute cluster resources equitably across users and projects.
 
-## Resource Division Algorithm
-At the start of each scheduling cycle, the resources in the cluster are allocated across the various scheduling queues. 
-First, the total available resources are distributed among the top-level queues, with each receiving a fair share. 
-Then, the fair share of each top-level queue is further divided among its direct child queues. 
+> **Prerequisites**: Familiarity with [Scheduling Queues](../queues/README.md) concepts
 
-This process is carried out in the following order:
-1. Quota resources are allocated to all queues.
-2. If there are remaining resources, the queues are sorted by priority. Within each priority group, additional resources are distributed based on the over-quota weight assigned to each queue.
+## Table of Contents
+- [Resource Allocation](#resource-allocation)
+- [Fair Share Calculation](#fair-share-calculation)
+- [Reclaim Strategies](#reclaim-strategies)
+- [Configuration](#configuration)
 
-These two steps are repeated across all hierarchy levels until every leaf queue receives its fair share. Queues that have already received their full requested resources will not be allocated any further resources.
+## Resource Allocation
 
-## Fair Share
-Once the fair share for each queue is calculated, it serves two primary purposes:
-1. Queue Order - Queues with a fair share further below their allocation will be prioritized for scheduling.
-2. Reclaim action – When reclamation is required, the scheduler compares the **Saturation Ratio** (`Allocated / FairShare`) of queues that share the same parent. A queue can only reclaim resources if, **after** the transfer, its utilisation ratio remains lower than that of every sibling queue. For more details see the reclaim strategies.
+Resources are allocated hierarchically across queue levels:
+
+1. **Quota allocation**: Guaranteed resources distributed first
+2. **Over-quota distribution**: Remaining resources allocated by priority and weight
+3. **Hierarchical propagation**: Process repeated at each queue level
+
+```mermaid
+graph TD
+    A[Cluster Resources] --> B[Top-level Queues]
+    B --> C[Child Queues]
+    C --> D[Leaf Queues]
+    
+    B --> E[Quota: 40%]
+    B --> F[Over-quota: 60%]
+    
+    E --> G[Priority-based]
+    F --> H[Weight-based]
+```
+
+## Fair Share Calculation
+
+Fair share determines queue scheduling priority and reclaim eligibility:
+
+- **Scheduling Priority**: Queues below fair share are prioritized
+- **Saturation Ratio**: `Allocated / FairShare` used for reclaim decisions
+- **Reclaim Eligibility**: Queues can only reclaim if their saturation ratio remains lowest among siblings
 
 ## Reclaim Strategies
-There are two main reclaim strategies:
-1. Workloads from queues with resources below their fair share can evict workloads from queues that have exceeded their fair share.
-2. Workloads from queues under their quota can evict workloads from queues that have exceeded their quota.
 
-In both strategies, the scheduler ensures that the relative ordering is preserved: a queue that had the lowest utilisation ratio in its level before reclamation will still have the lowest ratio afterwards. Likewise, a queue that was below its quota will remain below its quota.
-The scheduler will prioritize the first strategy.
+### Strategy 1: Fair Share Reclaim
+Queues below fair share can evict workloads from queues above fair share.
 
-### Reclaim Ratio Adjustment
-The Saturation Ratio comparison can be adjusted using the `reclaimerUtilizationMultiplier` plugin argument. This multiplier is applied to the reclaimer's Saturation Ratio before comparison:
-- Values > 1.0 make it harder for jobs to reclaim resources (more conservative)
-- Minimum value is 1.0 (standard comparison, default)
-- Values < 1.0 are not allowed and will be set to 1.0 - These values could cause infinite reclaim cycles that we want to avoid.
+### Strategy 2: Quota Reclaim  
+Queues under quota can evict workloads from queues over quota.
 
-Example configuration:
+> **Priority**: Strategy 1 is preferred over Strategy 2
+
+## Configuration
+
+### Reclaim Sensitivity
+Adjust reclaim aggressiveness using `reclaimerUtilizationMultiplier`:
+
 ```yaml
 pluginArguments:
   proportion:
-    reclaimerUtilizationMultiplier: "1.2"  # Makes reclamation 20% more conservative
+    reclaimerUtilizationMultiplier: "1.2"  # 20% more conservative
 ```
+
+| Value | Behavior |
+|-------|----------|
+| `1.0` | Standard comparison (default) |
+| `> 1.0` | More conservative reclaim |
+| `< 1.0` | Not allowed (prevents infinite cycles) |
