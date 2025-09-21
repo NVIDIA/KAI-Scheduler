@@ -18,7 +18,9 @@ func main() {
 	initLogger()
 
 	clientConfig := ctrl.GetConfigOrDie()
-	opts := app.InitOptions()
+	opts := app.InitOptions(flag.CommandLine)
+
+	flag.Parse()
 
 	ctx := ctrl.SetupSignalHandler()
 	if err := app.Run(opts, clientConfig, ctx); err != nil {
@@ -33,6 +35,5 @@ func initLogger() {
 		TimeEncoder: zapcore.ISO8601TimeEncoder,
 	}
 	logOptions.BindFlags(flag.CommandLine)
-	flag.Parse()
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&logOptions)))
 }

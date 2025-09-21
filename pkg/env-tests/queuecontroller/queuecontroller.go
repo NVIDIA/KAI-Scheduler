@@ -14,7 +14,7 @@ import (
 )
 
 func RunQueueController(cfg *rest.Config, ctx context.Context) error {
-	opts := app.InitOptions()
+	opts := app.InitOptions(flag.NewFlagSet("", flag.ContinueOnError))
 
 	opts.EnableLeaderElection = false
 	opts.MetricsAddress = ":8084"
