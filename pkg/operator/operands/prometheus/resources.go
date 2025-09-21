@@ -77,7 +77,6 @@ func prometheusForKAIConfig(
 
 	// If it exists, we'll update it with our configuration
 	if err == nil {
-		logger.Info("Prometheus instance already exists, will update with new configuration", "name", mainResourceName, "namespace", kaiConfig.Spec.Namespace)
 		// Continue to set the spec below to update the existing instance
 	}
 
@@ -97,7 +96,8 @@ func prometheusForKAIConfig(
 		prometheusSpec.Storage = &monitoringv1.StorageSpec{
 			VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 				Spec: v1.PersistentVolumeClaimSpec{
-					AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+					StorageClassName: config.TSDB.StorageClassName,
+					AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 					Resources: v1.VolumeResourceRequirements{
 						Requests: v1.ResourceList{
 							v1.ResourceStorage: resource.MustParse(storageSize),
@@ -114,17 +114,14 @@ func prometheusForKAIConfig(
 	}
 
 	prometheus.Spec = prometheusSpec
-	logger.Info("Using Prometheus configuration with TSDB settings")
 
-	logger.Info("Successfully created Prometheus instance", "name", mainResourceName, "namespace", kaiConfig.Spec.Namespace)
 	return []client.Object{prometheus}, nil
 }
 
 func CheckPrometheusOperatorInstalled(ctx context.Context, runtimeClient client.Reader) (bool, error) {
 	logger := log.FromContext(ctx)
 
-	// Check if the Prometheus CRD exists
-	// This is a simple way to check if the Prometheus Operator is installed
+	// Check if the Prometheus CRD exists	// This is a simple way to check if the Prometheus Operator is installed
 	crd := &metav1.PartialObjectMetadata{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",

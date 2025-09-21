@@ -26,10 +26,6 @@ type Prometheus struct {
 	// TSDB defines the configuration for Prometheus TSDB storage
 	// +kubebuilder:validation:Optional
 	TSDB *TSDB `json:"tsdb,omitempty"`
-
-	// Status defines the observed state of the Prometheus TSDB
-	// +kubebuilder:validation:Optional
-	Status *TSDBStatus `json:"status,omitempty"`
 }
 
 type TSDB struct {
@@ -41,9 +37,17 @@ type TSDB struct {
 	// +kubebuilder:validation:Optional
 	RetentionPeriod *string `json:"retentionPeriod,omitempty"`
 
-	// SampleFrequency defines the frequency of sampling (e.g., "1m", "30s", "5m")
+	// SampleInterval defines the interval of sampling (e.g., "1m", "30s", "5m")
 	// +kubebuilder:validation:Optional
-	SampleFrequency *string `json:"sampleFrequency,omitempty"`
+	SampleInterval *string `json:"sampleInterval,omitempty"`
+
+	// StorageSize defines the size of the storage (e.g., "20Gi", "30Gi")
+	// +kubebuilder:validation:Optional
+	StorageSize *string `json:"storageSize,omitempty"`
+
+	// StorageClassName defines the name of the storage class (e.g., "standard", "premium")
+	// +kubebuilder:validation:Optional
+	StorageClassName *string `json:"storageClassName,omitempty"`
 }
 
 type Connection struct {
@@ -54,16 +58,6 @@ type Connection struct {
 	// AuthSecretName defines the name of the secret containing authentication credentials
 	// +kubebuilder:validation:Optional
 	AuthSecretName *string `json:"authSecretName,omitempty"`
-}
-
-type TSDBStatus struct {
-	// State defines the current state of the TSDB
-	// +kubebuilder:validation:Optional
-	State *string `json:"state,omitempty"`
-
-	// Reason defines the reason for the current state
-	// +kubebuilder:validation:Optional
-	Reason *string `json:"reason,omitempty"`
 }
 
 func (p *Prometheus) SetDefaultsWhereNeeded() {
@@ -88,17 +82,26 @@ func (t *TSDB) SetDefaultsWhereNeeded() {
 		t.RetentionPeriod = ptr.To("2w")
 	}
 
-	if t.SampleFrequency == nil {
-		t.SampleFrequency = ptr.To("1m")
+	if t.SampleInterval == nil {
+		t.SampleInterval = ptr.To("1m")
 	}
 
 	if t.Connection == nil {
 		t.Connection = &Connection{}
 	}
+
+	if t.StorageClassName == nil {
+		t.StorageClassName = ptr.To("standard")
+	}
 }
 
 // CalculateStorageSize estimates the required storage size based on TSDB parameters according to design
 func (t *TSDB) CalculateStorageSize(ctx context.Context, client client.Reader) (string, error) {
+
+	if t.StorageSize != nil {
+		return *t.StorageSize, nil
+	}
+
 	logger := log.FromContext(ctx)
 	defaultStorageSize := "30Gi"
 	// Get number of NodePools (SchedulingShards)
@@ -123,7 +126,7 @@ func (t *TSDB) CalculateStorageSize(ctx context.Context, client client.Reader) (
 	}
 
 	// Parse sample frequency to minutes
-	sampleFrequencyMinutes, err := t.parseDurationToMinutes(t.SampleFrequency)
+	sampleIntervalMinutes, err := t.parseDurationToMinutes(t.SampleInterval)
 	if err != nil {
 		logger.Error(err, "Failed to parse sample frequency")
 		return defaultStorageSize, err // Fallback to default
@@ -131,20 +134,21 @@ func (t *TSDB) CalculateStorageSize(ctx context.Context, client client.Reader) (
 
 	// Calculate storage size using the formula
 	sampleSize := 2.0           // [bytes]
-	recordedResourcesLen := 5.0 //
-	storageSizeGi := ((sampleSize * recordedResourcesLen * float64(nodePools) * float64(numQueues) * float64(retentionMinutes)) / float64(sampleFrequencyMinutes)) / (1024 * 1024 * 1024)
-
-	logger.Info("Calculated storage size",
-		"nodePools", nodePools,
-		"numQueues", numQueues,
-		"retentionMinutes", retentionMinutes,
-		"sampleFrequencyMinutes", sampleFrequencyMinutes,
-		"storageSizeGi", storageSizeGi)
+	recordedResourcesLen := 5.0 // overspec the storage size for future growth
+	storageSizeGi := ((sampleSize * recordedResourcesLen * float64(nodePools) * float64(numQueues) * float64(retentionMinutes)) / float64(sampleIntervalMinutes)) / (1024 * 1024 * 1024)
 
 	// Convert to Gi string, ensuring minimum of 1Gi
 	if storageSizeGi < 1.0 {
 		storageSizeGi = 1.0
 	}
+
+	logger.Info("Calculated storage size",
+		"nodePools", nodePools,
+		"numQueues", numQueues,
+		"retentionMinutes", retentionMinutes,
+		"sampleIntervalMinutes", sampleIntervalMinutes,
+		"storageSizeGi", storageSizeGi)
+
 	return fmt.Sprintf("%.0fGi", storageSizeGi), nil
 }
 

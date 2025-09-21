@@ -1989,17 +1989,6 @@ spec:
                     description: Enabled defines whether a Prometheus instance should
                       be deployed
                     type: boolean
-                  status:
-                    description: Status defines the observed state of the Prometheus
-                      TSDB
-                    properties:
-                      reason:
-                        description: Reason defines the reason for the current state
-                        type: string
-                      state:
-                        description: State defines the current state of the TSDB
-                        type: string
-                    type: object
                   tsdb:
                     description: TSDB defines the configuration for Prometheus TSDB
                       storage
@@ -2020,9 +2009,17 @@ spec:
                         description: RetentionPeriod defines how long to retain data
                           (e.g., "2w", "1d", "30d")
                         type: string
-                      sampleFrequency:
-                        description: SampleFrequency defines the frequency of sampling
+                      sampleInterval:
+                        description: SampleInterval defines the interval of sampling
                           (e.g., "1m", "30s", "5m")
+                        type: string
+                      storageClassName:
+                        description: StorageClassName defines the name of the storage
+                          class (e.g., "standard", "premium")
+                        type: string
+                      storageSize:
+                        description: StorageSize defines the size of the storage (e.g.,
+                          "20Gi", "30Gi")
                         type: string
                     type: object
                 type: object

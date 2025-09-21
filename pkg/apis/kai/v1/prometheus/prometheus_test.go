@@ -77,7 +77,7 @@ var _ = Describe("TSDB CalculateStorageSize", func() {
 		It("should calculate correct storage size for large scale deployment", func() {
 			tsdb := &TSDB{
 				RetentionPeriod: stringPtr("2w"),
-				SampleFrequency: stringPtr("1m"),
+				SampleInterval:  stringPtr("1m"),
 			}
 			tsdb.SetDefaultsWhereNeeded()
 
@@ -98,7 +98,7 @@ var _ = Describe("TSDB CalculateStorageSize", func() {
 		It("should handle different retention periods correctly", func() {
 			tsdb := &TSDB{
 				RetentionPeriod: stringPtr("1d"),
-				SampleFrequency: stringPtr("30s"),
+				SampleInterval:  stringPtr("30s"),
 			}
 			tsdb.SetDefaultsWhereNeeded()
 
@@ -126,7 +126,7 @@ var _ = Describe("TSDB CalculateStorageSize", func() {
 		It("should use default values and calculate minimal storage", func() {
 			tsdb := &TSDB{
 				RetentionPeriod: stringPtr("2w"),
-				SampleFrequency: stringPtr("1m"),
+				SampleInterval:  stringPtr("1m"),
 			}
 			tsdb.SetDefaultsWhereNeeded()
 
@@ -147,7 +147,7 @@ var _ = Describe("TSDB CalculateStorageSize", func() {
 		It("should handle empty cluster gracefully", func() {
 			tsdb := &TSDB{
 				RetentionPeriod: stringPtr("1w"),
-				SampleFrequency: stringPtr("5m"),
+				SampleInterval:  stringPtr("5m"),
 			}
 			tsdb.SetDefaultsWhereNeeded()
 
@@ -180,7 +180,7 @@ var _ = Describe("TSDB CalculateStorageSize", func() {
 		It("should handle invalid duration formats", func() {
 			tsdb := &TSDB{
 				RetentionPeriod: stringPtr("invalid"),
-				SampleFrequency: stringPtr("1m"),
+				SampleInterval:  stringPtr("1m"),
 			}
 			tsdb.SetDefaultsWhereNeeded()
 
