@@ -1,18 +1,19 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package podgroup
+package podgroup_test
 
 import (
 	"errors"
 	"testing"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsPreemptible(t *testing.T) {
+func TestCalculatePreemptibility(t *testing.T) {
 	tests := []struct {
 		name           string
 		preemptibility v2alpha2.Preemptibility
@@ -73,7 +74,7 @@ func TestIsPreemptible(t *testing.T) {
 			name:           "unspecified with priority getter error",
 			preemptibility: "",
 			getPriority:    func() (int32, error) { return 0, errors.New("priority lookup failed") },
-			expectedResult: v2alpha2.NonPreemptible,
+			expectedResult: "",
 			expectedError:  true,
 		},
 		{
@@ -108,7 +109,7 @@ func TestIsPreemptible(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := CalculatePreemptibility(tt.preemptibility, tt.getPriority)
+			result, err := pg.CalculatePreemptibility(tt.preemptibility, tt.getPriority)
 
 			if tt.expectedError {
 				assert.Error(t, err)
