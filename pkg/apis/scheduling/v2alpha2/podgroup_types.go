@@ -52,7 +52,6 @@ type PodGroupSpec struct {
 
 	// Preemptibility determines if this PodGroup can be preempted by higher priority workloads.
 	// When unspecified, preemptibility is determined by the PriorityClass value - values below 100 are considered preemptible.
-	// +optional
 	Preemptibility Preemptibility `json:"preemptibility,omitempty" protobuf:"bytes,4,opt,name=preemptibility"`
 
 	// The number of pods which will try to run at any instant.
@@ -82,7 +81,11 @@ type PodGroupSpec struct {
 // Supported values are:
 // - `preemptible` - PodGroup can be preempted by higher-priority workloads
 // - `non-preemptible` - PodGroup runs to completion once scheduled
+//
+// Defaults to priority-based preemptibility determination (preemptible if priority < 100)
+//
 // +kubebuilder:validation:Enum=preemptible;non-preemptible
+// +optional
 type Preemptibility string
 
 const (
