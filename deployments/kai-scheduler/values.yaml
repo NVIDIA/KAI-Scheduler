@@ -92,7 +92,9 @@ crdupgrader:
 
 defaultQueue:
   createDefaultQueue: true
-  resources:
+  parentName: default
+  childName: test
+  parentResources:
     cpu:
       quota: 0
       limit: -1
@@ -103,5 +105,18 @@ defaultQueue:
       overQuotaWeight: 1
     memory:
       quota: 0
+      limit: -1
+      overQuotaWeight: 1
+  childResources:
+    cpu:
+      quota: -1
+      limit: -1
+      overQuotaWeight: 1
+    gpu:
+      quota: -1
+      limit: -1
+      overQuotaWeight: 1
+    memory:
+      quota: -1
       limit: -1
       overQuotaWeight: 1
