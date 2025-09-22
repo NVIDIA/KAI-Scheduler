@@ -74,7 +74,7 @@ func TestAddFlags(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(expected, s) {
-		difference := diff.ObjectDiff(expected, s)
+		difference := diff.ObjectGoPrintSideBySide(expected, s)
 		t.Errorf("Got different run options than expected.\nGot: %+v\nExpected: %+v\ndiff: %s", s, expected, difference)
 	}
 
