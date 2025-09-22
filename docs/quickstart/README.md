@@ -20,6 +20,8 @@ To add custom queues, apply your queue configuration:
 ```
 kubectl apply -f queues.yaml
 ```
+For detailed configuration options, refer to the [Scheduling Queues](../queues/README.md) documentation.
+
 Pods can now be assigned to the new queue and submitted to the cluster for scheduling.
 
 ### Assigning Pods to Queues
