@@ -58,3 +58,7 @@ type SessionScoreFns struct {
 type SessionStateProvider interface {
 	GetSessionStateForResource(podUID types.UID) SessionState
 }
+
+type NodeListProvider interface {
+	GetNodes() []ksf.NodeInfo
+}
