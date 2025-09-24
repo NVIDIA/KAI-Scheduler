@@ -49,13 +49,13 @@ func NewInsufficientGpuMemoryCapacity(requested, capacity int64, distributedTask
 /*************** Converters ***************/
 
 func FitPrePredicateConverter(
+	nodeListProvider NodeListProvider,
 	stateProvider SessionStateProvider,
 	nodePreFilter NodePreFilter,
 ) FitPredicatePreFilter {
 	return func(pod *v1.Pod) (sets.Set[string], *ksf.Status) {
 		state := stateProvider.GetK8sStateForPod(pod.UID)
-		// TODO: fix node list
-		result, status := nodePreFilter.PreFilter(context.Background(), state, pod, nil)
+		result, status := nodePreFilter.PreFilter(context.Background(), state, pod, nodeListProvider.GetNodes())
 		if status != nil {
 			return nil, status
 		}
