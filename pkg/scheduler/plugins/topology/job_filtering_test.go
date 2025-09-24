@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
-	ksf "k8s.io/kube-scheduler/framework"
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/utils/ptr"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
@@ -64,7 +63,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 		nodes                 map[string]nodes_fake.TestNodeBasic
 		nodesToDomains        map[string]DomainID
 		setupTopologyTree     func() *Info
-		setupSessionState     func(provider *mockSessionStateProvider, jobUID types.UID)
 		domainParent          map[DomainID]DomainID
 		domainLevel           map[DomainID]DomainLevel
 		expectedError         string
@@ -257,22 +255,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					},
 				}
 			},
-			setupSessionState: func(provider *mockSessionStateProvider, jobUID types.UID) {
-				state := provider.GetSessionStateForResource(jobUID)
-				state.Write(
-					ksf.StateKey(topologyPluginName),
-					&topologyStateData{
-						relevantDomains: []*DomainInfo{
-							{
-								ID:              "zone1",
-								Level:           "zone",
-								AllocatablePods: 1,
-							},
-						},
-					},
-				)
-				provider.GetSessionStateCallCount = 0 // Do not count this test data initialization as a call
-			},
 			expectedError: "",
 		},
 		{
@@ -423,12 +405,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 						domain = topologyTree.DomainsByLevel[parentDomainLevel][parentDomainId]
 					}
 				}
-			}
-
-			// Setup session state provider
-			sessionStateProvider := newMockSessionStateProvider()
-			if tt.setupSessionState != nil {
-				tt.setupSessionState(sessionStateProvider, types.UID(job.PodGroupUID))
 			}
 
 			// Setup plugin
