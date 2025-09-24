@@ -12,24 +12,13 @@ KAI Scheduler implements hierarchical fair-share scheduling using multi-level qu
 
 ## Resource Allocation
 
+> Resource Allocation is done on each scheduling cycle
+
 Resources are allocated hierarchically across queue levels:
 
 1. **Quota allocation**: Guaranteed resources distributed first
 2. **Over-quota distribution**: Remaining resources allocated by priority and weight
 3. **Hierarchical propagation**: Process repeated at each queue level
-
-```mermaid
-graph TD
-    A[Cluster Resources] --> B[Top-level Queues]
-    B --> C[Child Queues]
-    C --> D[Leaf Queues]
-    
-    B --> E[Quota: 40%]
-    B --> F[Over-quota: 60%]
-    
-    E --> G[Priority-based]
-    F --> H[Weight-based]
-```
 
 ## Fair Share Calculation
 
@@ -40,14 +29,14 @@ Fair share determines queue scheduling priority and reclaim eligibility:
 - **Reclaim Eligibility**: Queues can only reclaim if their saturation ratio remains lowest among siblings
 
 ## Reclaim Strategies
+KAI scheduler uses two main reclaim strategies:
+1. **Fair Share Reclaim** - Workloads from queues with resources below their fair share can evict workloads from queues that have exceeded their fair share.
+2. **Quota Reclaim** - Workloads from queues under their quota can evict workloads from queues that have exceeded their quota.
 
-### Strategy 1: Fair Share Reclaim
-Queues below fair share can evict workloads from queues above fair share.
+In both strategies, the scheduler ensures that the **relative ordering is preserved**: a queue that had the lowest utilisation ratio in its level before reclamation will still have the lowest ratio afterwards. Likewise, a queue that was below its quota will remain below its quota.
+The scheduler will prioritize the first strategy.
 
-### Strategy 2: Quota Reclaim  
-Queues under quota can evict workloads from queues over quota.
-
-> **Priority**: Strategy 1 is preferred over Strategy 2
+> **Priority**: The scheduler prioritize Fair-Share reclaim over Quota reclaim
 
 ## Configuration
 
