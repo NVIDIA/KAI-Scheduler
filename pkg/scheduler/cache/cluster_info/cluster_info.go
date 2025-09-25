@@ -456,6 +456,7 @@ func getPodGroupPriority(
 }
 
 func getPodGroupPreemptibility(preemptibility enginev2alpha2.Preemptibility, priority int32) enginev2alpha2.Preemptibility {
+	// Ignoring the error since getPriority argument never fails
 	preemptability, _ := pg.CalculatePreemptibility(preemptibility, func() (int32, error) {
 		return priority, nil
 	})
