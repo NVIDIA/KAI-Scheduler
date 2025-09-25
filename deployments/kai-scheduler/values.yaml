@@ -55,9 +55,6 @@ scheduler:
   image:
     name: scheduler
     pullPolicy: IfNotPresent
-  placementStrategy: binpack
-  ports:
-    metricsPort: 8080
 
 queuecontroller:
   image:

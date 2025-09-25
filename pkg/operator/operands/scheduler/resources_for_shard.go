@@ -6,6 +6,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -70,7 +71,7 @@ func deploymentForShard(
 			"configMapVersion": schedulerConfig.ResourceVersion,
 		},
 	}
-	deployment.Spec.Template.Spec.ServiceAccountName = *kaiConfig.Spec.Global.SchedulerName
+	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccountName
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
 		{
 			MountPath: configMountPath,
@@ -254,8 +255,12 @@ func buildArgsList(
 		"--namespace", kaiConfig.Spec.Namespace,
 		"--nodepool-label-key", *kaiConfig.Spec.Global.NodePoolLabelKey,
 		"--partition-label-value", shard.Spec.PartitionLabelValue,
-		// TODO: uncomment after binder merge
-		// "--resource-reservation-app-label", *kaiConfig.Spec.Binder.ResourceReservation.AppLabel,
+		"--resource-reservation-app-label", *kaiConfig.Spec.Binder.ResourceReservation.AppLabel,
+	}
+
+	if kaiConfig.Spec.Scheduler.SchedulerService.Port != nil {
+		portNumberString := strconv.Itoa(*kaiConfig.Spec.Scheduler.SchedulerService.Port)
+		args = append(args, "--listen-address", portNumberString)
 	}
 
 	if kaiConfig.Spec.QueueController.MetricsNamespace != nil {
