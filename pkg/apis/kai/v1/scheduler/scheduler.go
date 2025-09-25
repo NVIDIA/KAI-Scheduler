@@ -34,7 +34,6 @@ type Scheduler struct {
 
 func (s *Scheduler) SetDefaultsWhereNeeded(replicaCount *int32) {
 	s.Service = common.SetDefault(s.Service, &common.Service{})
-	s.Service.Enabled = common.SetDefault(s.Service.Enabled, ptr.To(false))
 
 	s.Service.Resources = common.SetDefault(s.Service.Resources, &common.Resources{})
 	if s.Service.Resources.Requests == nil {
