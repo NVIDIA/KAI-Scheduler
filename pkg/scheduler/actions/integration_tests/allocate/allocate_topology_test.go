@@ -488,7 +488,7 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-0": {
-						NodeName:             "node1",
+						NodeName:             "node0",
 						GPUsRequired:         1,
 						Status:               pod_status.Running,
 						DontValidateGPUGroup: true,

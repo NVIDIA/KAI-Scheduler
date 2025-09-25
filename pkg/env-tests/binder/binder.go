@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/spf13/pflag"
+
 	"k8s.io/client-go/rest"
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/binder/app"
@@ -16,7 +18,11 @@ import (
 )
 
 func RunBinder(cfg *rest.Config, ctx context.Context) error {
-	options := app.InitOptions()
+	options := app.InitOptions(pflag.NewFlagSet("binder-test", pflag.ContinueOnError))
+
+	options.MetricsAddr = ":8084"
+	options.EnableLeaderElection = false
+
 	app, err := app.New(options, cfg)
 	if err != nil {
 		return err

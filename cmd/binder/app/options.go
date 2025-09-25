@@ -31,10 +31,12 @@ type Options struct {
 	VolumeBindingTimeoutSeconds          int
 }
 
-func InitOptions() *Options {
+func InitOptions(fs *pflag.FlagSet) *Options {
 	options := &Options{}
 
-	fs := pflag.CommandLine
+	if fs == nil {
+		fs = pflag.CommandLine
+	}
 
 	fs.StringVar(&options.SchedulerName,
 		"scheduler-name", constants.DefaultSchedulerName,

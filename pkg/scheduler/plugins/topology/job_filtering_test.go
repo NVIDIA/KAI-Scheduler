@@ -405,7 +405,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			jobName := tt.job.Name
 			clusterPodGroups := append(tt.allocatedPodGroups, tt.job)
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(clusterPodGroups)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.nodes, tasksToNodeMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.nodes, tasksToNodeMap, nil)
 			job := jobsInfoMap[common_info.PodGroupID(jobName)]
 
 			// Setup topology tree
@@ -538,7 +538,6 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				},
 			},
 			expectedLevels: []DomainLevel{
-				"rack",
 				"zone",
 			},
 			expectedError: "",
@@ -784,7 +783,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &topologyPlugin{}
 
-			result, err := plugin.calculateRelevantDomainLevels(tt.job, tt.jobTopologyName, tt.topologyTree)
+			result, err := plugin.calculateRelevantDomainLevels(tt.job, tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {
@@ -1199,7 +1198,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			jobName := tt.job.Name
 			clusterPodGroups := append(tt.allocatedPodGroups, tt.job)
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(clusterPodGroups)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.nodes, tasksToNodeMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.nodes, tasksToNodeMap, nil)
 			job := jobsInfoMap[common_info.PodGroupID(jobName)]
 
 			topologyTree := tt.setupTopologyTree()
