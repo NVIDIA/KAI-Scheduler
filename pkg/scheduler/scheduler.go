@@ -30,8 +30,6 @@ import (
 	"k8s.io/client-go/rest"
 
 	kubeaischedulerver "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
-	featuregates "github.com/NVIDIA/KAI-scheduler/pkg/common/feature_gates"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	schedcache "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
@@ -40,7 +38,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins"
 
 	kueue "sigs.k8s.io/kueue/client-go/clientset/versioned"
 )
@@ -55,27 +52,13 @@ type Scheduler struct {
 
 func NewScheduler(
 	config *rest.Config,
-	schedulerConfPath string,
+	schedulerConf *conf.SchedulerConfiguration,
 	schedulerParams *conf.SchedulerParams,
 	mux *http.ServeMux,
 ) (*Scheduler, error) {
 	kubeClient, kubeAiSchedulerClient, kueueClient := newClients(config)
 
-	actions.InitDefaultActions()
-	plugins.InitDefaultPlugins()
-
-	if err := featuregates.SetDRAFeatureGate(config); err != nil {
-		log.InfraLogger.Errorf("Failed to set DRA feature gate: ", err)
-		return nil, err
-	}
-
-	// Load configuration of scheduler
-	schedConfig, err := conf_util.ResolveConfigurationFromFile(schedulerConfPath)
-	if err != nil {
-		return nil, fmt.Errorf("error resolving configuration from file: %v", err)
-	}
-
-	usageDBClient, err := getUsageDBClient(schedConfig.UsageDBConfig)
+	usageDBClient, err := getUsageDBClient(schedulerConf.UsageDBConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error getting usage db client: %v", err)
 	}
@@ -84,6 +67,7 @@ func NewScheduler(
 		KubeClient:                  kubeClient,
 		KAISchedulerClient:          kubeAiSchedulerClient,
 		KueueClient:                 kueueClient,
+		UsageDBParams:               schedulerConf.UsageDBConfig.GetUsageParams(),
 		UsageDBClient:               usageDBClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
@@ -96,7 +80,7 @@ func NewScheduler(
 	}
 
 	scheduler := &Scheduler{
-		config:          schedConfig,
+		config:          schedulerConf,
 		schedulerParams: schedulerParams,
 		cache:           schedcache.New(schedulerCacheParams),
 		schedulePeriod:  schedulerParams.SchedulePeriod,
