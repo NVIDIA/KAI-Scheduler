@@ -15,6 +15,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/flowcontrol"
 	featuregate "k8s.io/component-base/featuregate/testing"
 	"k8s.io/kubernetes/pkg/features"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -63,6 +64,9 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
+
+	// Effectively disable rate limiting
+	cfg.RateLimiter = flowcontrol.NewFakeAlwaysRateLimiter()
 
 	// Add any scheme registration here if needed for your custom CRDs
 	kaiv2.AddToScheme(scheme.Scheme)
