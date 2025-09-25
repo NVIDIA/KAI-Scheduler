@@ -107,7 +107,7 @@ func TestStatement_Evict_Unevict(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
 			ssn := &Session{}
 			ssn.PodGroupInfos = jobsInfoMap
 			ssn.Nodes = nodesInfoMap
@@ -255,7 +255,7 @@ func TestStatement_Evict(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
 			task := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{
@@ -401,7 +401,7 @@ func TestStatement_Evict_Undo_Undo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
 			task := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{
@@ -626,7 +626,7 @@ func TestStatement_Pipeline_Unpipeline(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
 			ssn := &Session{}
 			ssn.PodGroupInfos = jobsInfoMap
 			ssn.Nodes = nodesInfoMap
@@ -759,7 +759,7 @@ func TestStatement_Pipeline(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
 			pipelinedTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{
@@ -885,7 +885,7 @@ func TestStatement_Pipeline_Undo_Undo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
 			pipelinedTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{
@@ -996,7 +996,7 @@ func TestStatement_Allocate_Unallocate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
 			ssn := &Session{}
 			ssn.PodGroupInfos = jobsInfoMap
 			ssn.Nodes = nodesInfoMap
@@ -1105,7 +1105,7 @@ func TestStatement_Allocate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
 			allocatedTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{
@@ -1208,7 +1208,7 @@ func TestStatement_Allocate_Undo_Undo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
 			allocatedTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 
 			s := &Statement{

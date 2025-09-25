@@ -193,7 +193,7 @@ func TestStatement_Checkpoint(t *testing.T) {
 			},
 		}
 		jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(clusterTopology.Jobs)
-		nodesInfoMap := nodes_fake.BuildNodesInfoMap(clusterTopology.Nodes, tasksToNodeMap)
+		nodesInfoMap := nodes_fake.BuildNodesInfoMap(clusterTopology.Nodes, tasksToNodeMap, nil)
 		ssn := &Session{}
 		ssn.PodGroupInfos = jobsInfoMap
 		ssn.Nodes = nodesInfoMap

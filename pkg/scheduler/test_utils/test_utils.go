@@ -297,7 +297,10 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 	}
 }
 
-func GetTestCacheMock(controller *Controller, testMocks *TestMock, additionalObjects []runtime.Object) *cache.MockCache {
+func GetTestCacheMock(
+	controller *Controller, testMocks *TestMock, additionalObjects []runtime.Object,
+	clusterPodAffinityInfo *cache.K8sClusterPodAffinityInfo,
+) *cache.MockCache {
 	cacheMock := cache.NewMockCache(controller)
 	cacheRequirements := &CacheMocking{}
 	if testMocks != nil {
@@ -322,7 +325,7 @@ func GetTestCacheMock(controller *Controller, testMocks *TestMock, additionalObj
 	informerFactory.WaitForCacheSync(ctx.Done())
 
 	cacheMock.EXPECT().KubeInformerFactory().AnyTimes().Return(informerFactory)
-	cacheMock.EXPECT().SnapshotSharedLister().AnyTimes().Return(cache.NewK8sClusterPodAffinityInfo())
+	cacheMock.EXPECT().SnapshotSharedLister().AnyTimes().Return(clusterPodAffinityInfo)
 
 	k8sPlugins := k8splugins.InitializeInternalPlugins(
 		cacheMock.KubeClient(), cacheMock.KubeInformerFactory(), cacheMock.SnapshotSharedLister(),
