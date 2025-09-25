@@ -10,7 +10,7 @@ SPDX-License-Identifier: Apache-2.0
 package v1alpha2
 
 import (
-	v1 "k8s.io/api/resource/v1"
+	"k8s.io/api/resource/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
