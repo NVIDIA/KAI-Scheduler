@@ -25,7 +25,7 @@ var _ = Describe("Scheduler", func() {
 		var replicaCount int32 = 1
 		scheduler.SetDefaultsWhereNeeded(&replicaCount)
 		Expect(scheduler.Service).NotTo(BeNil())
-		Expect(*scheduler.Service.Enabled).To(Equal(false))
+		Expect(*scheduler.Service.Enabled).To(Equal(true))
 		Expect(*scheduler.Service.Image.Name).To(Equal("scheduler"))
 		Expect(scheduler.Service.Resources.Requests[v1.ResourceCPU]).To(Equal(resource.MustParse("250m")))
 		Expect(scheduler.Service.Resources.Requests[v1.ResourceMemory]).To(Equal(resource.MustParse("512Mi")))
