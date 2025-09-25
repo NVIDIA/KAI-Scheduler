@@ -6,6 +6,8 @@ apiVersion: scheduling.run.ai/v2
 kind: Queue
 metadata:
     name: {{ .Values.defaultQueue.parentName }}
+    annotations:
+        helm.sh/resource-policy: keep
 spec:
     resources:
         cpu:
@@ -25,6 +27,8 @@ apiVersion: scheduling.run.ai/v2
 kind: Queue
 metadata:
     name: {{ .Values.defaultQueue.childName }}
+    annotations:
+        helm.sh/resource-policy: keep
 spec:
     parentQueue: {{ .Values.defaultQueue.parentName }}
     resources:

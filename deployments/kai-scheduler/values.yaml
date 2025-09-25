@@ -92,8 +92,8 @@ crdupgrader:
 
 defaultQueue:
   createDefaultQueue: true
-  parentName: default
-  childName: test
+  parentName: default-parent-queue
+  childName: default-queue
   parentResources:
     cpu:
       quota: 0
