@@ -10,6 +10,7 @@ rules:
   - ""
   resources:
   - configmaps
+  - persistentvolumeclaims
   - secrets
   - serviceaccounts
   - services
@@ -112,6 +113,14 @@ rules:
   - nvidia.com
   resources:
   - clusterpolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - scheduling.run.ai
+  resources:
+  - queues
   verbs:
   - get
   - list

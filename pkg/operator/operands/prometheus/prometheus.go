@@ -5,11 +5,9 @@ package prometheus
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -35,13 +33,6 @@ func (p *Prometheus) DesiredState(
 	}
 
 	p.lastDesiredState = objects
-	// Only check for Prometheus operator if we actually have objects to deploy
-	if len(objects) > 0 {
-		err = p.GetPrometheusOperatorCondition(ctx, runtimeClient, 0)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	return objects, nil
 }
@@ -82,28 +73,4 @@ func (b *Prometheus) IsAvailable(ctx context.Context, readerClient client.Reader
 
 func (b *Prometheus) Name() string {
 	return "KAI-prometheus"
-}
-
-func (p *Prometheus) GetPrometheusOperatorCondition(ctx context.Context, readerClient client.Reader, gen int64) error {
-	// Check if Prometheus operator is installed by looking for the CRD
-	// returns an error if the CRD is not found to be handled by DeployableOperands
-	crd := &metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-	}
-
-	err := readerClient.Get(ctx, client.ObjectKey{
-		Name: "prometheuses.monitoring.coreos.com",
-	}, crd)
-
-	if err != nil {
-		if client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("failed to check for Prometheus Operator installation: %s", err.Error())
-		}
-		return fmt.Errorf("failed to check for Prometheus Operator installation: %s", err.Error())
-	}
-
-	return nil
 }
