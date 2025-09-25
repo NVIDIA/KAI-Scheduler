@@ -82,6 +82,7 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic) (
 			job.MinAvailable = pointer.Int32(int32(len(job.Tasks)))
 		}
 
+		// Error is ignored because the priority function is guaranteed to succeed
 		preemptibility, _ := pg.CalculatePreemptibility(job.Preemptibility,
 			func() (int32, error) { return job.Priority, nil })
 		job.Preemptibility = preemptibility
