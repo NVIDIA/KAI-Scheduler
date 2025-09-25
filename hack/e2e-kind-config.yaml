@@ -14,9 +14,3 @@ nodes:
 - role: worker
   labels:
     run.ai/simulated-gpu-node-pool: default
-containerdConfigPatches:
-- |-
-  [plugins."io.containerd.grpc.v1.cri".registry]
-    config_path = "/etc/containerd/certs.d"
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5000"]
-      endpoint = ["http://localhost:5000"]

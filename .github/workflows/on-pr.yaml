@@ -94,15 +94,16 @@ jobs:
       - name: Create image cache directory
         run: mkdir images
 
-      - name: Cache for helm chart
+      - name: Cache for docker images and helm chart
         uses: actions/cache@v4
         with:
           path: images
-          key:  helm-chart-${{ github.sha }}
+          key:  images-${{ github.sha }}
 
       - name: Build docker images
         run: |
           make build DOCKER_BUILDX_ADDITIONAL_ARGS=--load VERSION=$PACKAGE_VERSION
+          docker save $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION) | gzip > images/docker_images.tgz
 
       - name: Build helm chart
         run: |
@@ -123,7 +124,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: images
-          key:  helm-chart-${{ github.sha }}
+          key:  images-${{ github.sha }}
 
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.10.0
@@ -132,23 +133,14 @@ jobs:
           version: v0.26.0
           config: ./hack/e2e-kind-config.yaml
 
-      - name: Start local Docker registry
-        run: |
-          docker run -d --name registry --network kind -p 5000:5000 registry:2
-
-      - name: Build and push images to local registry
+      - name: Load docker images to kind
+        working-directory: images
         env:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
-          make build DOCKER_BUILDX_ADDITIONAL_ARGS=--load VERSION=$PACKAGE_VERSION
+          docker load < docker_images.tgz
           for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
-            # Tag image for local registry
-            local_image="localhost:5000/$(echo $image | cut -d'/' -f2-)"
-            docker tag $image $local_image
-            # Push to local registry
-            docker push $local_image
-            # Update image reference in helm chart
-            sed -i "s|$image|$local_image|g" ./images/kai-scheduler-$PACKAGE_VERSION.tgz
+            kind load docker-image $image --name kind
           done
 
       - name: Deploy fake gpu operator
@@ -171,13 +163,13 @@ jobs:
         run: |
           go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.4
 
+      - name: Delete images from disk
+        env:
+          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
+        run: |
+          docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
+          rm -rf images
 
       - name: Run e2e tests
         run: |
           ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv --label-filter '!autoscale && !scale' ./test/e2e/suites
-
-      - name: Cleanup local registry
-        if: always()
-        run: |
-          docker stop registry || true
-          docker rm registry || true
