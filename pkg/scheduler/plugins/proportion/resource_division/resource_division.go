@@ -166,6 +166,12 @@ func divideUpToFairShare(totalResourceAmount, kValue float64, queues map[common_
 		shouldRunAnotherRound := false
 		amountToGiveInCurrentRound := totalResourceAmount
 
+		if len(queues) == 1 {
+			queue := maps.Values(queues)[0]
+			queue.AddResourceShare(resourceName, totalResourceAmount)
+			return 0, remainingRequested
+		}
+
 		shareWeightsPerQueue, shareWeightsSum := calcShareWeights(queues, resourceName, kValue)
 		if shareWeightsSum == 0 {
 			break
