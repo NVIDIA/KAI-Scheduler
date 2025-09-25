@@ -39,6 +39,12 @@ type UsageParams struct {
 	WindowType *WindowType `yaml:"windowType" json:"windowType"`
 	// A cron string used to determine when to reset resource usage for all queues.
 	TumblingWindowCronString string `yaml:"tumblingWindowCronString" json:"tumblingWindowCronString"`
+	// Fetch interval of the usage. Default is 1 minute.
+	FetchInterval *time.Duration `yaml:"fetchInterval" json:"fetchInterval"`
+	// Staleness period of the usage. Default is 5 minutes.
+	StalenessPeriod *time.Duration `yaml:"stalenessPeriod" json:"stalenessPeriod"`
+	// Wait timeout of the usage. Default is 1 minute.
+	WaitTimeout *time.Duration `yaml:"waitTimeout" json:"waitTimeout"`
 
 	// ExtraParams are extra parameters for the usage db client, which are client specific.
 	ExtraParams map[string]string `yaml:"extraParams" json:"extraParams"`
