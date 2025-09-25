@@ -163,6 +163,10 @@ jobs:
         run: |
           go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.4
 
+      - name: Setup SSH for debugging
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ failure() }}
+
       - name: Delete images from disk
         env:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
