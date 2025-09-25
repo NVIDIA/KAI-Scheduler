@@ -143,6 +143,9 @@ jobs:
             kind load docker-image $image --name kind
           done
 
+      - name: Setup SSH for debugging
+        uses: mxschmitt/action-tmate@v3
+
       - name: Deploy fake gpu operator
         run: |
           helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
@@ -154,10 +157,17 @@ jobs:
         run: |
           helm upgrade -i kai-scheduler ./images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
             --set "global.gpuSharing=true" --debug --wait
+      
+      - name: Setup SSH for debugging
+        uses: mxschmitt/action-tmate@v3
+
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
           go-version: 1.22
+      
+      - name: Setup SSH for debugging
+        uses: mxschmitt/action-tmate@v3
 
       - name: Install ginkgo
         run: |
@@ -165,7 +175,6 @@ jobs:
 
       - name: Setup SSH for debugging
         uses: mxschmitt/action-tmate@v3
-        if: ${{ failure() }}
 
       - name: Delete images from disk
         env:
