@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -66,19 +67,12 @@ func prometheusForKAIConfig(
 	}
 
 	// Check if Prometheus already exists
-	err = runtimeClient.Get(ctx, types.NamespacedName{
-		Name:      mainResourceName,
-		Namespace: kaiConfig.Spec.Namespace,
-	}, prometheus)
-	if err != nil && !errors.IsNotFound(err) {
+	prom, err := common.ObjectForKAIConfig(ctx, runtimeClient, prometheus, mainResourceName, kaiConfig.Spec.Namespace)
+	if err != nil {
 		logger.Error(err, "Failed to check for existing Prometheus instance")
 		return nil, err
 	}
-
-	// If it exists, we'll update it with our configuration
-	if err == nil {
-		// Continue to set the spec below to update the existing instance
-	}
+	prometheus = prom.(*monitoringv1.Prometheus)
 
 	// Set the Prometheus spec from configuration
 	prometheusSpec := monitoringv1.PrometheusSpec{
