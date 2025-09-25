@@ -477,7 +477,7 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 			// Check cache write if expected
 			if tt.expectedCacheCalls >= 2 { // >=2 because the first call is read, the second is write
 				state := sessionStateProvider.GetSessionStateForResource(types.UID(job.PodGroupUID))
-				stateData, err := (*k8sframework.CycleState)(state).Read(k8sframework.StateKey(topologyPluginName))
+				stateData, err := (ksf.CycleState)(state).Read(ksf.StateKey(topologyPluginName))
 				if err != nil {
 					t.Errorf("failed to read state data: %v", err)
 					return
@@ -509,10 +509,10 @@ func TestTopologyPlugin_prePredicateFn(t *testing.T) {
 				testGetSessionStateCallCount := sessionStateProvider.GetSessionStateCallCount
 
 				state := sessionStateProvider.GetSessionStateForResource(types.UID(job.PodGroupUID))
-				_, err := (*k8sframework.CycleState)(state).Read(k8sframework.StateKey(topologyPluginName))
+				_, err := (ksf.CycleState)(state).Read(ksf.StateKey(topologyPluginName))
 				if err == nil && testGetSessionStateCallCount > 1 { // >1 because the first call is read, the second is write
 					t.Errorf("expected no cache write, but found more than 1 sessionState call (the first is read, the second is write)")
-				} else if !errors.Is(err, k8sframework.ErrNotFound) && tt.expectedCacheCalls == 0 {
+				} else if !errors.Is(err, ksf.ErrNotFound) && tt.expectedCacheCalls == 0 {
 					t.Errorf("expected ErrNotFound error, but got: %v", err)
 				}
 			}
