@@ -67,6 +67,14 @@ spec:
                 description: The number of pods which will try to run at any instant.
                 format: int32
                 type: integer
+              preemptibility:
+                description: |-
+                  Preemptibility determines if this PodGroup can be preempted by higher priority workloads.
+                  When unspecified, preemptibility is determined by the PriorityClass value - values below 100 are considered preemptible.
+                enum:
+                - preemptible
+                - non-preemptible
+                type: string
               priorityClassName:
                 description: |-
                   If specified, indicates the PodGroup's priority. "system-node-critical" and

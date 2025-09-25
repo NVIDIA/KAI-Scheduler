@@ -8,9 +8,9 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	rs "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/resource_share"
 )
 
@@ -154,10 +154,10 @@ var _ = Describe("Quota Policy Check", func() {
 						},
 					},
 					job: &podgroup_info.PodGroupInfo{
-						Name:      "job-a",
-						Namespace: "team-a",
-						Queue:     "queue1",
-						Priority:  constants.PriorityTrainNumber,
+						Name:           "job-a",
+						Namespace:      "team-a",
+						Queue:          "queue1",
+						Preemptibility: v2alpha2.Preemptible,
 					},
 					requestedShare: rs.ResourceQuantities{
 						rs.GpuResource: 10,
@@ -184,7 +184,6 @@ var _ = Describe("Quota Policy Check", func() {
 						Name:      "job-a",
 						Namespace: "team-a",
 						Queue:     "queue1",
-						Priority:  constants.PriorityBuildNumber,
 					},
 					requestedShare: rs.ResourceQuantities{
 						rs.GpuResource: 1,
@@ -211,7 +210,6 @@ var _ = Describe("Quota Policy Check", func() {
 						Name:      "job-a",
 						Namespace: "team-a",
 						Queue:     "queue1",
-						Priority:  constants.PriorityBuildNumber,
 					},
 					requestedShare: rs.ResourceQuantities{
 						rs.GpuResource: 10,
@@ -264,7 +262,6 @@ var _ = Describe("Quota Policy Check", func() {
 						Name:      "job-a",
 						Namespace: "team-a",
 						Queue:     "leaf-queue",
-						Priority:  constants.PriorityBuildNumber,
 					},
 					requestedShare: rs.ResourceQuantities{
 						rs.GpuResource: 1,
@@ -317,7 +314,6 @@ var _ = Describe("Quota Policy Check", func() {
 						Name:      "job-a",
 						Namespace: "team-a",
 						Queue:     "leaf-queue",
-						Priority:  constants.PriorityBuildNumber,
 					},
 					requestedShare: rs.ResourceQuantities{
 						rs.GpuResource: 1,
