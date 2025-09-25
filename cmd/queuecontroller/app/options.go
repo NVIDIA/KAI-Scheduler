@@ -17,6 +17,7 @@ const (
 type Options struct {
 	EnableLeaderElection    bool
 	SchedulingQueueLabelKey string
+	EnableWebhook           bool
 
 	MetricsAddress                 string
 	MetricsNamespace               string
@@ -28,13 +29,18 @@ type Options struct {
 	Burst int
 }
 
-func (o *Options) AddFlags(fs *flag.FlagSet) {
+func InitOptions(fs *flag.FlagSet) *Options {
+	o := &Options{}
+
 	fs.BoolVar(&o.EnableLeaderElection, "leader-elect", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	fs.StringVar(&o.SchedulingQueueLabelKey, "queue-label-key", constants.DefaultQueueLabel, "Scheduling queue label key name.")
+	fs.BoolVar(&o.EnableWebhook, "enable-webhook", true, "Enable webhook for controller manager.")
 	fs.StringVar(&o.MetricsAddress, "metrics-listen-address", defaultMetricsAddress, "The address the metrics endpoint binds to.")
 	fs.StringVar(&o.MetricsNamespace, "metrics-namespace", constants.DefaultMetricsNamespace, "Metrics namespace.")
 	fs.Var(&o.QueueLabelToMetricLabel, "queue-label-to-metric-label", "Map of queue label keys to metric label keys, e.g. 'foo=bar,baz=qux'.")
 	fs.Var(&o.QueueLabelToDefaultMetricValue, "queue-label-to-default-metric-value", "Map of queue label keys to default metric values, in case the label doesn't exist on the queue, e.g. 'foo=1,baz=0'.")
 	fs.IntVar(&o.Qps, "qps", 50, "Queries per second to the K8s API server")
 	fs.IntVar(&o.Burst, "burst", 300, "Burst to the K8s API server")
+
+	return o
 }
