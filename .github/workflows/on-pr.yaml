@@ -130,7 +130,7 @@ jobs:
         uses: helm/kind-action@v1.10.0
         with:
           cluster_name: kind
-          version: v0.26.0
+          version: v0.30.0
           config: ./hack/e2e-kind-config.yaml
 
       - name: Load docker images to kind
