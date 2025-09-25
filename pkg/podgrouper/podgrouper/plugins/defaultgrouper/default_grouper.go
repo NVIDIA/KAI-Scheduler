@@ -69,7 +69,7 @@ func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructure
 		Labels:            dg.CalcPodGroupLabels(topOwner, pod),
 		Queue:             dg.CalcPodGroupQueue(topOwner, pod),
 		PriorityClassName: dg.CalcPodGroupPriorityClass(topOwner, pod, constants.TrainPriorityClass),
-		Preemptibility:    dg.CalcPodGroupPreemptibility(topOwner, pod),
+		Preemptibility:    dg.calcPodGroupPreemptibility(topOwner, pod),
 		MinAvailable:      1,
 	}
 
@@ -178,7 +178,7 @@ func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstr
 	return defaultPriorityClassForJob
 }
 
-func (dg *DefaultGrouper) CalcPodGroupPreemptibility(topOwner *unstructured.Unstructured, pod *v1.Pod) v2alpha2.Preemptibility {
+func (dg *DefaultGrouper) calcPodGroupPreemptibility(topOwner *unstructured.Unstructured, pod *v1.Pod) v2alpha2.Preemptibility {
 	if preemptibility, found := topOwner.GetLabels()[constants.PreemptibilityLabelKey]; found {
 		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibility); err == nil {
 			return preemptibility

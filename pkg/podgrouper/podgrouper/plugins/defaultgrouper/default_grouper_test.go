@@ -848,7 +848,7 @@ func TestCalcPodGroupPreemptibility(t *testing.T) {
 			}
 
 			defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-			preemptibility := defaultGrouper.CalcPodGroupPreemptibility(owner, pod)
+			preemptibility := defaultGrouper.calcPodGroupPreemptibility(owner, pod)
 
 			assert.Equal(t, tt.expectedResult, string(preemptibility))
 		})
