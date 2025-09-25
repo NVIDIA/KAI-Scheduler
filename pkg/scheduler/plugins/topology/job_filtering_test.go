@@ -11,12 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
-	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/utils/ptr"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -25,34 +23,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
 )
-
-// Mock session state provider for testing
-type mockSessionStateProvider struct {
-	states                   map[types.UID]*k8sframework.CycleState
-	GetSessionStateCallCount int
-}
-
-func newMockSessionStateProvider() *mockSessionStateProvider {
-	return &mockSessionStateProvider{
-		states:                   make(map[types.UID]*k8sframework.CycleState),
-		GetSessionStateCallCount: 0,
-	}
-}
-
-func (m *mockSessionStateProvider) GetSessionStateForResource(uid types.UID) k8s_internal.SessionState {
-	m.GetSessionStateCallCount++
-	if state, exists := m.states[uid]; exists {
-		return k8s_internal.SessionState(state)
-	}
-	state := k8sframework.NewCycleState()
-	m.states[uid] = state
-	return k8s_internal.SessionState(state)
-}
 
 func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 	tests := []struct {
