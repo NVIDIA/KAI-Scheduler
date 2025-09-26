@@ -1,0 +1,17 @@
+{{- if .Release.IsInstall }}
+apiVersion: kai.scheduler/v1
+kind: SchedulingShard
+metadata:
+  name: default
+spec:
+  partitionLabelValue: ""
+  {{- if .Values.scheduler.placementStrategy }}
+  placementStrategy:
+    gpu: {{ .Values.scheduler.placementStrategy }}
+    cpu: {{ .Values.scheduler.placementStrategy }}
+  {{- end }}
+  {{- if and .Values.scheduler.ports .Values.scheduler.ports.metricsPort }}
+  args:
+    listen-address: ":{{ .Values.scheduler.ports.metricsPort }}"
+  {{- end }}
+{{- end}}
