@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
-	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
+	ksf "k8s.io/kube-scheduler/framework"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -27,7 +27,7 @@ type topologyStateData struct {
 	relevantDomains []*TopologyDomainInfo
 }
 
-func (t *topologyStateData) Clone() k8sframework.StateData {
+func (t *topologyStateData) Clone() ksf.StateData {
 	return &topologyStateData{
 		relevantDomains: t.relevantDomains,
 	}
@@ -76,9 +76,9 @@ func (t *topologyPlugin) prePredicateFn(_ *pod_info.PodInfo, job *podgroup_info.
 	}
 
 	//Save results to cycle cache
-	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetSessionStateForResource(job.PodGroupUID))
+	cycleJobState := (ksf.CycleState)(t.sessionStateGetter.GetSessionStateForResource(job.PodGroupUID))
 	cycleJobState.Write(
-		k8sframework.StateKey(topologyPluginName),
+		ksf.StateKey(topologyPluginName),
 		&topologyStateData{relevantDomains: jobAllocatableDomain},
 	)
 
@@ -413,13 +413,13 @@ func (t *topologyPlugin) nodeOrderFn(pod *pod_info.PodInfo, node *node_info.Node
 }
 
 func (t *topologyPlugin) loadAllocatableDomainsFromCache(podGroupUID types.UID) ([]*TopologyDomainInfo, error) {
-	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetSessionStateForResource(podGroupUID))
+	cycleJobState := (ksf.CycleState)(t.sessionStateGetter.GetSessionStateForResource(podGroupUID))
 	if cycleJobState == nil {
 		return nil, nil
 	}
-	jobTopologyStateData, err := cycleJobState.Read(k8sframework.StateKey(topologyPluginName))
+	jobTopologyStateData, err := cycleJobState.Read(ksf.StateKey(topologyPluginName))
 	if err != nil {
-		if errors.Is(err, k8sframework.ErrNotFound) {
+		if errors.Is(err, ksf.ErrNotFound) {
 			return nil, nil
 		}
 		return nil, err
@@ -433,10 +433,10 @@ func (t *topologyPlugin) cleanAllocationAttemptCache(job *podgroup_info.PodGroup
 		return nil
 	}
 
-	cycleJobState := (*k8sframework.CycleState)(t.sessionStateGetter.GetSessionStateForResource(job.PodGroupUID))
+	cycleJobState := (ksf.CycleState)(t.sessionStateGetter.GetSessionStateForResource(job.PodGroupUID))
 	if cycleJobState == nil {
 		return nil
 	}
-	cycleJobState.Delete(k8sframework.StateKey(topologyPluginName))
+	cycleJobState.Delete(ksf.StateKey(topologyPluginName))
 	return nil
 }
