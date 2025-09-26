@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
-	resourceapi "k8s.io/api/resource/v1beta1"
+	resourceapi "k8s.io/api/resource/v1"
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 
@@ -156,7 +156,7 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 		rawObjects.ResourceClaims = []*resourceapi.ResourceClaim{}
 	}
 
-	rawObjects.ResourceSlices, err = fwork.SharedDRAManager().ResourceSlices().List()
+	rawObjects.ResourceSlices, err = fwork.SharedDRAManager().ResourceSlices().ListWithDeviceTaintRules()
 	if err != nil {
 		log.InfraLogger.Errorf("Error getting raw resource slices: %v", err)
 		rawObjects.ResourceSlices = []*resourceapi.ResourceSlice{}

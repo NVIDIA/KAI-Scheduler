@@ -90,8 +90,6 @@ func New() (*App, error) {
 		return nil, err
 	}
 
-	config.SetDRAFeatureGate(mgr)
-
 	configReconciler := &controller.ConfigReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),

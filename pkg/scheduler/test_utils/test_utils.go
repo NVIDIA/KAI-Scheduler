@@ -316,9 +316,9 @@ func GetTestCacheMock(
 
 	informerFactory := informers.NewSharedInformerFactory(cacheMock.KubeClient(), 0)
 
-	informerFactory.Resource().V1beta1().ResourceClaims().Informer()
-	informerFactory.Resource().V1beta1().ResourceSlices().Informer()
-	informerFactory.Resource().V1beta1().DeviceClasses().Informer()
+	informerFactory.Resource().V1().ResourceClaims().Informer()
+	informerFactory.Resource().V1().ResourceSlices().Informer()
+	informerFactory.Resource().V1().DeviceClasses().Informer()
 
 	ctx := context.Background()
 	informerFactory.Start(ctx.Done())
