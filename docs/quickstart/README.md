@@ -8,8 +8,8 @@ KAI Scheduler operates with two levels of hierarchical scheduling queue system.
 ### Default Queue on Fresh Install
 
 After installing KAI Scheduler, a **two-level queue hierarchy** is automatically created:
-* `default` – Top-level (parent) queue. By default, this queue has no reserved resource quotas, allowing governance of resource distribution for its leaf queues.
-* `test` – Leaf (child) queue under the `default` top-level queue. Workloads should reference this queue.
+* `default-parent-queue` – Top-level (parent) queue. By default, this queue has no reserved resource quotas, allowing governance of resource distribution for its leaf queues.
+* `default-queue` – Leaf (child) queue under the `default-parent-queue` top-level queue. Workloads should reference this queue.
 
 No manual queue setup is required. Both queues will exist immediately after installation, allowing you to start submitting workloads right away.
 To customize scheduling, you can create additional queues or modify existing ones to set quotas, priorities, and hierarchies.
