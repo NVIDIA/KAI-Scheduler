@@ -34,29 +34,29 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: admission
-    namespace: kai-scheduler
+    namespace: {{ .Release.Namespace }}
   - kind: ServiceAccount
     name: binder
-    namespace: kai-scheduler
+    namespace: {{ .Release.Namespace }}
   - kind: ServiceAccount
     name: kai-operator
-    namespace: kai-scheduler
+    namespace: {{ .Release.Namespace }}
   - kind: ServiceAccount
     name: pod-grouper
-    namespace: kai-scheduler
+    namespace: {{ .Release.Namespace }}
   - kind: ServiceAccount
     name: podgroup-controller
-    namespace: kai-scheduler
+    namespace: {{ .Release.Namespace }}
   - kind: ServiceAccount
     name: queue-controller
-    namespace: kai-scheduler
+    namespace: {{ .Release.Namespace }}
   - kind: ServiceAccount
     name: scheduler
-    namespace: kai-scheduler
+    namespace: {{ .Release.Namespace }}
   - kind: ServiceAccount
     name: node-scale-adjuster
-    namespace: kai-scheduler
+    namespace: {{ .Release.Namespace }}
   - kind: ServiceAccount
     name: kai-scheduler-crd-manager
-    namespace: kai-scheduler
+    namespace: {{ .Release.Namespace }}
 {{- end }}
