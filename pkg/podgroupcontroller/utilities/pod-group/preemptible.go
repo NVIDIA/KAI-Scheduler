@@ -37,17 +37,21 @@ func getPodGroupPriority(ctx context.Context, podGroup *v2alpha2.PodGroup, kubeC
 		"priorityClassName", podGroup.Spec.PriorityClassName)
 
 	// Try to get the specific priority class
-	if priority, err := getSpecificPriorityClass(ctx, podGroup.Spec.PriorityClassName, kubeClient); err == nil {
+	priority, err := getSpecificPriorityClass(ctx, podGroup.Spec.PriorityClassName, kubeClient)
+	if err == nil {
 		return priority, nil
-	} else if !errors.IsNotFound(err) {
+	}
+	if !errors.IsNotFound(err) {
 		return -1, fmt.Errorf("failed to get priority class %s: %w", podGroup.Spec.PriorityClassName, err)
 	}
 
 	// Priority class not found, try to get global default
 	logger.Info("Priority Class not found, trying to get global default priority class")
-	if priority, err := getGlobalDefaultPriorityClass(ctx, kubeClient); err == nil {
+	priority, err = getGlobalDefaultPriorityClass(ctx, kubeClient)
+	if err == nil {
 		return priority, nil
-	} else if !errors.IsNotFound(err) {
+	}
+	if !errors.IsNotFound(err) {
 		return -1, fmt.Errorf("failed to get global default priority class: %w", err)
 	}
 
