@@ -1399,8 +1399,8 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			name: "return multi domain",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+				PodSets: map[string]*subgroup_info.PodSet{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
 						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 					}),
@@ -1464,8 +1464,8 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			job: &podgroup_info.PodGroupInfo{
 				Name:      "test-job",
 				Namespace: "test-namespace",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+				PodSets: map[string]*subgroup_info.PodSet{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
 						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 					}),
@@ -1511,8 +1511,8 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			name: "no relevant domain levels",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+				PodSets: map[string]*subgroup_info.PodSet{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
 					}),
 				},
@@ -1551,8 +1551,8 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			name: "complex topology with multiple levels",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 3).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+				PodSets: map[string]*subgroup_info.PodSet{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 3).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
 						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
@@ -1625,8 +1625,8 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			name: "mixed task statuses - some pending, some running",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+				PodSets: map[string]*subgroup_info.PodSet{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Running, NodeName: "node1"},
 						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
@@ -1680,8 +1680,8 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			name: "mixed task statuses with required constraint - choose zone with existing pods",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+				PodSets: map[string]*subgroup_info.PodSet{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Running, NodeName: "node2"},
 						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
@@ -1749,8 +1749,8 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			name: "Return multiple levels of domains",
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 4).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+				PodSets: map[string]*subgroup_info.PodSet{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 4).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
 						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},

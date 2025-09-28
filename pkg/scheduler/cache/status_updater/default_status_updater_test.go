@@ -569,15 +569,15 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 						State: pod_status.Pending,
 					},
 				},
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					"sub-group-1": func() *subgroup_info.SubGroupInfo {
-						subGroup := subgroup_info.NewSubGroupInfo("sub-group-1", 1)
+				SubGroups: map[string]*subgroup_info.PodSet{
+					"sub-group-1": func() *subgroup_info.PodSet {
+						subGroup := subgroup_info.NewPodSet("sub-group-1", 1)
 						subGroup.AssignTask(&pod_info.PodInfo{UID: "test-task1", Status: pod_status.Pending})
 						subGroup.AssignTask(&pod_info.PodInfo{UID: "test-task2", Status: pod_status.Pending})
 						return subGroup
 					}(),
-					"sub-group-2": func() *subgroup_info.SubGroupInfo {
-						subGroup := subgroup_info.NewSubGroupInfo("sub-group-2", 2)
+					"sub-group-2": func() *subgroup_info.PodSet {
+						subGroup := subgroup_info.NewPodSet("sub-group-2", 2)
 						subGroup.AssignTask(&pod_info.PodInfo{UID: "test-task3", Status: pod_status.Pending})
 						return subGroup
 					}(),
@@ -668,8 +668,8 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 				Name:      "job-pg",
 				Namespace: "job-ns",
 				UID:       "job-uid",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 5).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+				PodSets: map[string]*subgroup_info.PodSet{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 5).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 						"pod-1": {
 							UID:    "pod-1",
 							Name:   "pod-1",
@@ -691,14 +691,14 @@ func TestDefaultStatusUpdater_RecordStaleJobEvent(t *testing.T) {
 				Name:      "job-pg",
 				Namespace: "job-ns",
 				UID:       "job-uid",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					"sub-group-0": func() *subgroup_info.SubGroupInfo {
-						subGroup := subgroup_info.NewSubGroupInfo("sub-group-0", 1)
+				PodSets: map[string]*subgroup_info.PodSet{
+					"sub-group-0": func() *subgroup_info.PodSet {
+						subGroup := subgroup_info.NewPodSet("sub-group-0", 1)
 						subGroup.AssignTask(&pod_info.PodInfo{UID: "pod-1", Status: pod_status.Running})
 						return subGroup
 					}(),
-					"sub-group-1": func() *subgroup_info.SubGroupInfo {
-						subGroup := subgroup_info.NewSubGroupInfo("sub-group-1", 2)
+					"sub-group-1": func() *subgroup_info.PodSet {
+						subGroup := subgroup_info.NewPodSet("sub-group-1", 2)
 						subGroup.AssignTask(&pod_info.PodInfo{UID: "pod-2", Status: pod_status.Running})
 						return subGroup
 					}(),

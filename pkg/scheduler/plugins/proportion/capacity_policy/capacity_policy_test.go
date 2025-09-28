@@ -76,8 +76,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:    "team-a",
 						Queue:        "leaf-queue",
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -138,8 +138,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:    "team-a",
 						Queue:        "leaf-queue",
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -225,8 +225,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -291,8 +291,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -381,8 +381,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -447,8 +447,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -538,8 +538,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -607,8 +607,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -676,8 +676,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityTrainNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -745,8 +745,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityTrainNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -817,8 +817,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -889,8 +889,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -961,8 +961,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityTrainNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",
@@ -1033,8 +1033,8 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityTrainNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
 								"task-a": {
 									UID:       "task-a",
 									Job:       "job-a",

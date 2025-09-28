@@ -178,7 +178,7 @@ func (pp *proportionPlugin) getVictimResources(victim *api.VictimInfo) []*resour
 
 // splitVictimTasks safely splits victim tasks into elastic and core tasks
 // Returns (elasticTasks, coreTasks)
-func splitVictimTasks(tasks []*pod_info.PodInfo, subGroups map[string]*subgroup_info.SubGroupInfo) ([]*pod_info.PodInfo, []*pod_info.PodInfo) {
+func splitVictimTasks(tasks []*pod_info.PodInfo, subGroups map[string]*subgroup_info.PodSet) ([]*pod_info.PodInfo, []*pod_info.PodInfo) {
 	subGroupsToTasks := map[string][]*pod_info.PodInfo{}
 	for _, task := range tasks {
 		subGroupName := podgroup_info.DefaultSubGroup
