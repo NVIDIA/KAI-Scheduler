@@ -13,6 +13,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 )
 
@@ -87,8 +88,8 @@ func TestFeasibleNodes(t *testing.T) {
 		{
 			name: "no nodes",
 			job: &podgroup_info.PodGroupInfo{
-				SubGroups: map[string]*podgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
 							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeRegular,
@@ -103,8 +104,8 @@ func TestFeasibleNodes(t *testing.T) {
 		{
 			name: "CPU only job",
 			job: &podgroup_info.PodGroupInfo{
-				SubGroups: map[string]*podgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
 							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeRegular,
@@ -119,8 +120,8 @@ func TestFeasibleNodes(t *testing.T) {
 		{
 			name: "whole GPU job",
 			job: &podgroup_info.PodGroupInfo{
-				SubGroups: map[string]*podgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
 							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeRegular,
@@ -137,8 +138,8 @@ func TestFeasibleNodes(t *testing.T) {
 		{
 			name: "distributed whole GPU job",
 			job: &podgroup_info.PodGroupInfo{
-				SubGroups: map[string]*podgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
 							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeRegular,
@@ -161,8 +162,8 @@ func TestFeasibleNodes(t *testing.T) {
 		{
 			name: "Mixed requests (whole GPU and CPU pods)",
 			job: &podgroup_info.PodGroupInfo{
-				SubGroups: map[string]*podgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 2).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
 							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeRegular,
@@ -183,8 +184,8 @@ func TestFeasibleNodes(t *testing.T) {
 		{
 			name: "Fraction GPU job",
 			job: &podgroup_info.PodGroupInfo{
-				SubGroups: map[string]*podgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
 							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeFraction,
@@ -201,8 +202,8 @@ func TestFeasibleNodes(t *testing.T) {
 		{
 			name: "GPU Memory job",
 			job: &podgroup_info.PodGroupInfo{
-				SubGroups: map[string]*podgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
 							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeGpuMemory,
@@ -220,8 +221,8 @@ func TestFeasibleNodes(t *testing.T) {
 		{
 			name: "MIG job",
 			job: &podgroup_info.PodGroupInfo{
-				SubGroups: map[string]*podgroup_info.SubGroupInfo{
-					podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 						"pod1": &pod_info.PodInfo{
 							UID:                 "pod1",
 							ResourceRequestType: pod_info.RequestTypeMigInstance,

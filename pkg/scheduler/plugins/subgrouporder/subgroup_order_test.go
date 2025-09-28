@@ -10,7 +10,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 )
 
 func makeAllocatedPodInfo(subGroupName string, taskIndex int) *pod_info.PodInfo {
@@ -21,8 +21,8 @@ func makeAllocatedPodInfo(subGroupName string, taskIndex int) *pod_info.PodInfo 
 	}
 }
 
-func makeSubGroupInfoWithAllocated(minAvailable int32, numAllocated int, name string) *podgroup_info.SubGroupInfo {
-	sg := podgroup_info.NewSubGroupInfo(name, minAvailable)
+func makeSubGroupInfoWithAllocated(minAvailable int32, numAllocated int, name string) *subgroup_info.SubGroupInfo {
+	sg := subgroup_info.NewSubGroupInfo(name, minAvailable)
 	for i := 0; i < numAllocated; i++ {
 		pod := makeAllocatedPodInfo(name, i)
 		sg.AssignTask(pod)

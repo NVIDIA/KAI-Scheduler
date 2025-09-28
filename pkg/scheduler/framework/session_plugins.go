@@ -28,6 +28,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
@@ -253,8 +254,8 @@ func (ssn *Session) TaskOrderFn(l, r interface{}) bool {
 }
 
 func (ssn *Session) SubGroupOrderFn(l, r interface{}) bool {
-	lSubGroup := l.(*podgroup_info.SubGroupInfo)
-	rSubGroup := r.(*podgroup_info.SubGroupInfo)
+	lSubGroup := l.(*subgroup_info.SubGroupInfo)
+	rSubGroup := r.(*subgroup_info.SubGroupInfo)
 	for _, compareTasks := range ssn.SubGroupsOrderFns {
 		if comparison := compareTasks(lSubGroup, rSubGroup); comparison != 0 {
 			return comparison < 0

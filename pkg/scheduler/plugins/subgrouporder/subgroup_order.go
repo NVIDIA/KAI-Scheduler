@@ -4,7 +4,7 @@
 package subgrouporder
 
 import (
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
 
@@ -32,8 +32,8 @@ func (sgop *subGroupOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 }
 
 func SubGroupOrderFn(l, r interface{}) int {
-	lv := l.(*podgroup_info.SubGroupInfo)
-	rv := r.(*podgroup_info.SubGroupInfo)
+	lv := l.(*subgroup_info.SubGroupInfo)
+	rv := r.(*subgroup_info.SubGroupInfo)
 
 	lNumActiveTasks := lv.GetNumActiveAllocatedTasks()
 	rNumActiveTasks := rv.GetNumActiveAllocatedTasks()

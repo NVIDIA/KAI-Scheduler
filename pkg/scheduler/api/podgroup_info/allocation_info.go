@@ -9,6 +9,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/scheduler_util"
@@ -37,7 +38,7 @@ func GetTasksToAllocate(
 	numSubGroupsToAllocate := 0
 
 	for !subGroupPriorityQueue.Empty() && (numSubGroupsToAllocate < maxNumSubGroups) {
-		nextSubGroup := subGroupPriorityQueue.Pop().(*SubGroupInfo)
+		nextSubGroup := subGroupPriorityQueue.Pop().(*subgroup_info.SubGroupInfo)
 		taskPriorityQueue := getTasksPriorityQueue(nextSubGroup, taskOrderFn, isRealAllocation)
 		if taskPriorityQueue.Empty() {
 			continue
@@ -99,10 +100,10 @@ func GetTasksToAllocateInitResource(
 }
 
 func getTasksPriorityQueue(
-	subGroup *SubGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
+	subGroup *subgroup_info.SubGroupInfo, taskOrderFn common_info.LessFn, isRealAllocation bool,
 ) *scheduler_util.PriorityQueue {
 	priorityQueue := scheduler_util.NewPriorityQueue(taskOrderFn, scheduler_util.QueueCapacityInfinite)
-	for _, task := range subGroup.podInfos {
+	for _, task := range subGroup.GetPodInfos() {
 		if task.ShouldAllocate(isRealAllocation) {
 			priorityQueue.Push(task)
 		}
@@ -119,7 +120,7 @@ func getTasksFromQueue(priorityQueue *scheduler_util.PriorityQueue, maxNumTasks 
 	return tasksToAllocate
 }
 
-func getSubGroupsPriorityQueue(subGroups map[string]*SubGroupInfo,
+func getSubGroupsPriorityQueue(subGroups map[string]*subgroup_info.SubGroupInfo,
 	subGroupOrderFn common_info.LessFn) *scheduler_util.PriorityQueue {
 	priorityQueue := scheduler_util.NewPriorityQueue(subGroupOrderFn, scheduler_util.QueueCapacityInfinite)
 	for _, subGroup := range subGroups {
@@ -128,17 +129,17 @@ func getSubGroupsPriorityQueue(subGroups map[string]*SubGroupInfo,
 	return priorityQueue
 }
 
-func getNumTasksToAllocate(subGroup *SubGroupInfo, isRealAllocation bool) int {
+func getNumTasksToAllocate(subGroup *subgroup_info.SubGroupInfo, isRealAllocation bool) int {
 	numAllocatedTasks := subGroup.GetNumActiveAllocatedTasks()
-	if numAllocatedTasks >= int(subGroup.minAvailable) {
+	if numAllocatedTasks >= int(subGroup.GetMinAvailable()) {
 		numTasksToAllocate := getNumAllocatableTasks(subGroup, isRealAllocation)
 		return int(math.Min(float64(numTasksToAllocate), 1))
 	} else {
-		return int(subGroup.minAvailable) - numAllocatedTasks
+		return int(subGroup.GetMinAvailable()) - numAllocatedTasks
 	}
 }
 
-func getNumAllocatableTasks(subGroup *SubGroupInfo, isRealAllocation bool) int {
+func getNumAllocatableTasks(subGroup *subgroup_info.SubGroupInfo, isRealAllocation bool) int {
 	numTasksToAllocate := 0
 	for _, task := range subGroup.GetPodInfos() {
 		if task.ShouldAllocate(isRealAllocation) {
