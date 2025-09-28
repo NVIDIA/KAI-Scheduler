@@ -38,6 +38,7 @@ import (
 	scheduling "k8s.io/kubernetes/pkg/scheduler/framework/plugins/volumebinding"
 	"k8s.io/kubernetes/pkg/scheduler/metrics"
 	"k8s.io/kubernetes/pkg/scheduler/util/assumecache"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // This is a stand-in for K8sFramework Handle that kubernetes uses for its plugins.
@@ -66,14 +67,13 @@ func (f *K8sFramework) SharedDRAManager() k8sframework.SharedDRAManager {
 	var err error
 	if f.resourceSliceTracker == nil {
 		f.resourceSliceTracker, err = resourceslicetracker.StartTracker(context.Background(), resourceslicetracker.Options{
-			// TODO: set EnableDeviceTaints and EnableConsumableCapacity
 			SliceInformer: f.informerFactory.Resource().V1().ResourceSlices(),
 			TaintInformer: f.informerFactory.Resource().V1alpha3().DeviceTaintRules(),
 			ClassInformer: f.informerFactory.Resource().V1().DeviceClasses(),
 			KubeClient:    f.kubeClient,
 		})
 		if err != nil {
-			// TODO: log error
+			log.Log.Error(err, "Failed to create resource slice tracker")
 			return nil
 		}
 	}
