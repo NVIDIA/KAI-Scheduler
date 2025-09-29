@@ -414,6 +414,7 @@ func kaiConfigForPrometheus() *kaiv1.Config {
 	kaiConfig.Spec.Prometheus = &kaiprometheus.Prometheus{
 		Enabled: ptr.To(true),
 	}
+	kaiConfig.Spec.Prometheus.SetDefaultsWhereNeeded()
 	kaiConfig.Spec.Namespace = "test-namespace"
 
 	return kaiConfig

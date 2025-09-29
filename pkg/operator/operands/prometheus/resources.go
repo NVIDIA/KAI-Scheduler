@@ -81,8 +81,8 @@ func prometheusForKAIConfig(
 	}
 
 	// Configure TSDB storage if TSDB is configured
-	if config.TSDB != nil {
-		storageSize, err := config.TSDB.CalculateStorageSize(ctx, runtimeClient)
+	if config != nil {
+		storageSize, err := config.CalculateStorageSize(ctx, runtimeClient)
 		if err != nil {
 			logger.Error(err, "Failed to calculate storage size")
 			return nil, err
@@ -90,7 +90,7 @@ func prometheusForKAIConfig(
 		prometheusSpec.Storage = &monitoringv1.StorageSpec{
 			VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 				Spec: v1.PersistentVolumeClaimSpec{
-					StorageClassName: config.TSDB.StorageClassName,
+					StorageClassName: config.StorageClassName,
 					AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 					Resources: v1.VolumeResourceRequirements{
 						Requests: v1.ResourceList{
@@ -102,8 +102,8 @@ func prometheusForKAIConfig(
 		}
 
 		// Set retention period if specified
-		if config.TSDB.RetentionPeriod != nil {
-			prometheusSpec.Retention = monitoringv1.Duration(*config.TSDB.RetentionPeriod)
+		if config.RetentionPeriod != nil {
+			prometheusSpec.Retention = monitoringv1.Duration(*config.RetentionPeriod)
 		}
 	}
 

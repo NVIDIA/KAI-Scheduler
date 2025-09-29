@@ -75,7 +75,7 @@ var _ = Describe("TSDB CalculateStorageSize", func() {
 		})
 
 		It("should calculate correct storage size for large scale deployment", func() {
-			tsdb := &TSDB{
+			tsdb := &Prometheus{
 				RetentionPeriod: stringPtr("2w"),
 				SampleInterval:  stringPtr("1m"),
 			}
@@ -96,7 +96,7 @@ var _ = Describe("TSDB CalculateStorageSize", func() {
 		})
 
 		It("should handle different retention periods correctly", func() {
-			tsdb := &TSDB{
+			tsdb := &Prometheus{
 				RetentionPeriod: stringPtr("1d"),
 				SampleInterval:  stringPtr("30s"),
 			}
@@ -124,7 +124,7 @@ var _ = Describe("TSDB CalculateStorageSize", func() {
 		})
 
 		It("should use default values and calculate minimal storage", func() {
-			tsdb := &TSDB{
+			tsdb := &Prometheus{
 				RetentionPeriod: stringPtr("2w"),
 				SampleInterval:  stringPtr("1m"),
 			}
@@ -145,7 +145,7 @@ var _ = Describe("TSDB CalculateStorageSize", func() {
 		})
 
 		It("should handle empty cluster gracefully", func() {
-			tsdb := &TSDB{
+			tsdb := &Prometheus{
 				RetentionPeriod: stringPtr("1w"),
 				SampleInterval:  stringPtr("5m"),
 			}
@@ -172,13 +172,13 @@ var _ = Describe("TSDB CalculateStorageSize", func() {
 		})
 
 		It("should handle nil TSDB gracefully", func() {
-			var tsdb *TSDB
+			var tsdb *Prometheus
 			// This should not panic
 			Expect(func() { tsdb.SetDefaultsWhereNeeded() }).ToNot(Panic())
 		})
 
 		It("should handle invalid duration formats", func() {
-			tsdb := &TSDB{
+			tsdb := &Prometheus{
 				RetentionPeriod: stringPtr("invalid"),
 				SampleInterval:  stringPtr("1m"),
 			}

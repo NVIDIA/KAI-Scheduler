@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
@@ -22,16 +23,6 @@ type Prometheus struct {
 	// Enabled defines whether a Prometheus instance should be deployed
 	// +kubebuilder:validation:Optional
 	Enabled *bool `json:"enabled,omitempty"`
-
-	// TSDB defines the configuration for Prometheus TSDB storage
-	// +kubebuilder:validation:Optional
-	TSDB *TSDB `json:"tsdb,omitempty"`
-}
-
-type TSDB struct {
-	// Connection defines the connection configuration for TSDB
-	// +kubebuilder:validation:Optional
-	Connection *Connection `json:"connection,omitempty"`
 
 	// RetentionPeriod defines how long to retain data (e.g., "2w", "1d", "30d")
 	// +kubebuilder:validation:Optional
@@ -45,88 +36,54 @@ type TSDB struct {
 	// +kubebuilder:validation:Optional
 	StorageSize *string `json:"storageSize,omitempty"`
 
-	// StorageClassName defines the name of the storage class (e.g., "standard", "premium")
+	// StorageClassName defines the name of the storageClass that will be used to store the TSDB data. defaults to "standard".
 	// +kubebuilder:validation:Optional
 	StorageClassName *string `json:"storageClassName,omitempty"`
-}
-
-type Connection struct {
-	// URL defines the connection URL for TSDB
-	// +kubebuilder:validation:Optional
-	URL *string `json:"url,omitempty"`
-
-	// AuthSecretName defines the name of the secret containing authentication credentials
-	// +kubebuilder:validation:Optional
-	AuthSecretName *string `json:"authSecretName,omitempty"`
 }
 
 func (p *Prometheus) SetDefaultsWhereNeeded() {
 	if p == nil {
 		return
 	}
-	if p.Enabled == nil {
-		p.Enabled = ptr.To(false)
-	}
+	p.Enabled = common.SetDefault(p.Enabled, ptr.To(false))
+	p.RetentionPeriod = common.SetDefault(p.RetentionPeriod, ptr.To("2w"))
+	p.SampleInterval = common.SetDefault(p.SampleInterval, ptr.To("1m"))
+	p.StorageClassName = common.SetDefault(p.StorageClassName, ptr.To("standard"))
 
-	if p.TSDB == nil {
-		p.TSDB = &TSDB{}
-	}
-	p.TSDB.SetDefaultsWhereNeeded()
-}
-
-func (t *TSDB) SetDefaultsWhereNeeded() {
-	if t == nil {
-		return
-	}
-	if t.RetentionPeriod == nil {
-		t.RetentionPeriod = ptr.To("2w")
-	}
-
-	if t.SampleInterval == nil {
-		t.SampleInterval = ptr.To("1m")
-	}
-
-	if t.Connection == nil {
-		t.Connection = &Connection{}
-	}
-
-	if t.StorageClassName == nil {
-		t.StorageClassName = ptr.To("standard")
-	}
 }
 
 // CalculateStorageSize estimates the required storage size based on TSDB parameters according to design
-func (t *TSDB) CalculateStorageSize(ctx context.Context, client client.Reader) (string, error) {
+func (p *Prometheus) CalculateStorageSize(ctx context.Context, client client.Reader) (string, error) {
 
-	if t.StorageSize != nil {
-		return *t.StorageSize, nil
+	if p.StorageSize != nil {
+		return *p.StorageSize, nil
 	}
 
 	logger := log.FromContext(ctx)
 	defaultStorageSize := "30Gi"
 	// Get number of NodePools (SchedulingShards)
-	nodePools, err := t.getNodePoolCount(ctx, client)
+	nodePools, err := p.getNodePoolCount(ctx, client)
 	if err != nil {
 		logger.Error(err, "Failed to get NodePool count")
 		return defaultStorageSize, err // Fallback to default
 	}
 
 	// Get number of Queues
-	numQueues, err := t.getQueueCount(ctx, client)
+	numQueues, err := p.getQueueCount(ctx, client)
 	if err != nil {
 		logger.Error(err, "Failed to get Queue count")
 		return defaultStorageSize, err // Fallback to default
 	}
 
 	// Parse retention period to minutes
-	retentionMinutes, err := t.parseDurationToMinutes(t.RetentionPeriod)
+	retentionMinutes, err := p.parseDurationToMinutes(p.RetentionPeriod)
 	if err != nil {
 		logger.Error(err, "Failed to parse retention period")
 		return defaultStorageSize, err // Fallback to default
 	}
 
 	// Parse sample frequency to minutes
-	sampleIntervalMinutes, err := t.parseDurationToMinutes(t.SampleInterval)
+	sampleIntervalMinutes, err := p.parseDurationToMinutes(p.SampleInterval)
 	if err != nil {
 		logger.Error(err, "Failed to parse sample frequency")
 		return defaultStorageSize, err // Fallback to default
@@ -153,7 +110,7 @@ func (t *TSDB) CalculateStorageSize(ctx context.Context, client client.Reader) (
 }
 
 // getNodePoolCount returns the number of NodePools (SchedulingShards) in the cluster
-func (t *TSDB) getNodePoolCount(ctx context.Context, client client.Reader) (int, error) {
+func (p *Prometheus) getNodePoolCount(ctx context.Context, client client.Reader) (int, error) {
 	// Use unstructured objects to avoid import cycles
 	logger := log.FromContext(ctx)
 	shardList := &unstructured.UnstructuredList{}
@@ -176,7 +133,7 @@ func (t *TSDB) getNodePoolCount(ctx context.Context, client client.Reader) (int,
 }
 
 // getQueueCount returns the number of Queues in the cluster
-func (t *TSDB) getQueueCount(ctx context.Context, client client.Reader) (int, error) {
+func (p *Prometheus) getQueueCount(ctx context.Context, client client.Reader) (int, error) {
 	logger := log.FromContext(ctx)
 
 	// Get all Queue CRs from Group scheduling.run.ai
@@ -202,7 +159,7 @@ func (t *TSDB) getQueueCount(ctx context.Context, client client.Reader) (int, er
 }
 
 // parseDurationToMinutes parses duration strings like "2w", "1d", "30m", "1h" to minutes
-func (t *TSDB) parseDurationToMinutes(duration *string) (int, error) {
+func (p *Prometheus) parseDurationToMinutes(duration *string) (int, error) {
 	if duration == nil {
 		return 0, fmt.Errorf("duration is nil")
 	}
@@ -216,7 +173,7 @@ func (t *TSDB) parseDurationToMinutes(duration *string) (int, error) {
 	durationValue, err := time.ParseDuration(durationStr)
 	if err != nil {
 		// Try to parse custom formats like "2w", "1d"
-		return t.parseCustomDuration(durationStr)
+		return p.parseCustomDuration(durationStr)
 	}
 
 	minutes := int(durationValue.Minutes())
@@ -227,7 +184,7 @@ func (t *TSDB) parseDurationToMinutes(duration *string) (int, error) {
 }
 
 // parseCustomDuration parses custom duration formats like "2w", "1d", "30m"
-func (t *TSDB) parseCustomDuration(durationStr string) (int, error) {
+func (p *Prometheus) parseCustomDuration(durationStr string) (int, error) {
 	if len(durationStr) < 2 {
 		return 0, fmt.Errorf("invalid duration format: %s", durationStr)
 	}
