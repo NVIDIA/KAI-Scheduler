@@ -50,8 +50,8 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						QueueName:           "queue0",
 						Priority:            constants.PriorityTrainNumber,
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 1),
-							"sub1": subgroup_info.NewPodSet("sub1", 1),
+							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
+							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -106,8 +106,8 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						QueueName:           "queue0",
 						Priority:            constants.PriorityTrainNumber,
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 1),
-							"sub1": subgroup_info.NewPodSet("sub1", 1),
+							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
+							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -177,8 +177,8 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 2),
-							"sub1": subgroup_info.NewPodSet("sub1", 2),
+							"sub0": subgroup_info.NewPodSet("sub0", 2, nil),
+							"sub1": subgroup_info.NewPodSet("sub1", 2, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -265,8 +265,8 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 2),
-							"sub1": subgroup_info.NewPodSet("sub1", 1),
+							"sub0": subgroup_info.NewPodSet("sub0", 2, nil),
+							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -369,8 +369,8 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 2),
-							"sub1": subgroup_info.NewPodSet("sub1", 1),
+							"sub0": subgroup_info.NewPodSet("sub0", 2, nil),
+							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -473,8 +473,8 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 1),
-							"sub1": subgroup_info.NewPodSet("sub1", 2),
+							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
+							"sub1": subgroup_info.NewPodSet("sub1", 2, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -544,8 +544,8 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 1),
-							"sub1": subgroup_info.NewPodSet("sub1", 1),
+							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
+							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -576,8 +576,8 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 1),
-							"sub1": subgroup_info.NewPodSet("sub1", 1),
+							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
+							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{

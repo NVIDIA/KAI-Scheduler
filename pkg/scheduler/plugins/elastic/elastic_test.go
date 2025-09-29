@@ -32,7 +32,8 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{}),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+							WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{}),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -40,7 +41,8 @@ func TestJobOrderFn(t *testing.T) {
 				lPods: []*pod_info.PodInfo{},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{}),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+							WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{}),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -54,7 +56,7 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -69,7 +71,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -90,7 +92,7 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -105,7 +107,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -126,7 +128,7 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -141,7 +143,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -162,7 +164,7 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -177,7 +179,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -198,7 +200,7 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -213,7 +215,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 				},
 				rPods: []*pod_info.PodInfo{},
@@ -225,7 +227,7 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -240,7 +242,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -267,7 +269,7 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -282,7 +284,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -315,7 +317,7 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -330,7 +332,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -357,7 +359,7 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -372,7 +374,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 3),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 3, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -399,7 +401,7 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -420,7 +422,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -441,7 +443,7 @@ func TestJobOrderFn(t *testing.T) {
 			args: args{
 				l: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),
@@ -462,7 +464,7 @@ func TestJobOrderFn(t *testing.T) {
 				},
 				r: &podgroup_info.PodGroupInfo{
 					PodSets: map[string]*subgroup_info.PodSet{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1),
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 					Allocated:      resource_info.EmptyResource(),

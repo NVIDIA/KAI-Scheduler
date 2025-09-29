@@ -12,18 +12,15 @@ type SubGroupInfo struct {
 	topologyConstraint *topology_info.TopologyConstraintInfo
 }
 
-func newSubGroupInfo(name string) *SubGroupInfo {
+func newSubGroupInfo(name string, topologyConstraint *topology_info.TopologyConstraintInfo) *SubGroupInfo {
 	return &SubGroupInfo{
-		name: name,
+		name:               name,
+		topologyConstraint: topologyConstraint,
 	}
 }
 
 func (sgi *SubGroupInfo) GetName() string {
 	return sgi.name
-}
-
-func (sgi *SubGroupInfo) AddTopologyConstraint(tc *topology_info.TopologyConstraintInfo) {
-	sgi.topologyConstraint = tc
 }
 
 func (sgi *SubGroupInfo) GetTopologyConstraint() *topology_info.TopologyConstraintInfo {

@@ -197,7 +197,7 @@ func Test_GetTasksToAllocate(t *testing.T) {
 			pg := NewPodGroupInfo("pg")
 			for subGroupName, pods := range tt.subGroupTasks {
 				if _, exists := pg.GetSubGroups()[subGroupName]; !exists {
-					pg.PodSets[subGroupName] = subgroup_info.NewPodSet(subGroupName, tt.minAvailMap[subGroupName])
+					pg.PodSets[subGroupName] = subgroup_info.NewPodSet(subGroupName, tt.minAvailMap[subGroupName], nil)
 				}
 				for _, pod := range pods {
 					pg.AddTaskInfo(pod)
@@ -372,7 +372,7 @@ func Test_getTasksPriorityQueue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sg := subgroup_info.NewPodSet("subGroup1", 1)
+			sg := subgroup_info.NewPodSet("subGroup1", 1, nil)
 			for _, task := range tt.tasks {
 				if task.Status == pod_status.Releasing && !tt.isRealAllocation {
 					task.IsVirtualStatus = true
@@ -440,7 +440,7 @@ func Test_getNumTasksToAllocate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sg := subgroup_info.NewPodSet("sg", int32(tt.minAvailable))
+			sg := subgroup_info.NewPodSet("sg", int32(tt.minAvailable), nil)
 			for i, status := range tt.taskStatuses {
 				task := simpleTask(
 					fmt.Sprintf("task-%d", i),
@@ -513,7 +513,7 @@ func Test_getNumAllocatableTasks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sg := subgroup_info.NewPodSet("test-subgroup", 1)
+			sg := subgroup_info.NewPodSet("test-subgroup", 1, nil)
 			for i, status := range tt.taskStatuses {
 				p := simpleTask(
 					fmt.Sprintf("test-task-%d", i),

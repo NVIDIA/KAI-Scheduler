@@ -13,7 +13,7 @@ import (
 func TestNewPodSet(t *testing.T) {
 	name := "my-subgroup"
 	minAvailable := int32(4)
-	podSet := NewPodSet(name, minAvailable)
+	podSet := NewPodSet(name, minAvailable, nil)
 
 	if podSet.name != name {
 		t.Errorf("Expected name %s, got %s", name, podSet.name)
@@ -26,14 +26,8 @@ func TestNewPodSet(t *testing.T) {
 	}
 }
 
-func TestClone(t *testing.T) {
-	podSet := NewPodSet("test", 1)
-	podSet.AssignTask(&pod_info.PodInfo{UID: "pod1", Status: pod_status.Pending})
-	podSet.AssignTask(&pod_info.PodInfo{UID: "pod2", Status: pod_status.Running})
-}
-
 func TestWithPodInfos(t *testing.T) {
-	podSet := NewPodSet("test", 1)
+	podSet := NewPodSet("test", 1, nil)
 
 	// Pre-populate with a pod that should be cleared
 	podSet.AssignTask(&pod_info.PodInfo{UID: "old", Status: pod_status.Running})
@@ -77,7 +71,7 @@ func TestWithPodInfos(t *testing.T) {
 
 func TestGetMinAvailable(t *testing.T) {
 	minAvailable := int32(3)
-	podSet := NewPodSet("test", minAvailable)
+	podSet := NewPodSet("test", minAvailable, nil)
 
 	if got := podSet.GetMinAvailable(); got != minAvailable {
 		t.Errorf("GetMinAvailable() = %d, want %d", got, minAvailable)
@@ -85,7 +79,7 @@ func TestGetMinAvailable(t *testing.T) {
 }
 
 func TestSetMinAvailable(t *testing.T) {
-	podSet := NewPodSet("test", 8)
+	podSet := NewPodSet("test", 8, nil)
 	newMinAvailable := int32(5)
 	podSet.SetMinAvailable(newMinAvailable)
 
@@ -95,7 +89,7 @@ func TestSetMinAvailable(t *testing.T) {
 }
 
 func TestGetPodInfos(t *testing.T) {
-	podSet := NewPodSet("test", 2)
+	podSet := NewPodSet("test", 2, nil)
 
 	// Should be empty initially
 	if podInfos := podSet.GetPodInfos(); len(podInfos) != 0 {
@@ -115,7 +109,7 @@ func TestGetPodInfos(t *testing.T) {
 }
 
 func TestAddTaskInfoToPodSet(t *testing.T) {
-	podSet := NewPodSet("test", 1)
+	podSet := NewPodSet("test", 1, nil)
 	podInfo := &pod_info.PodInfo{
 		UID:    "pod-1",
 		Status: pod_status.Pending,
@@ -181,7 +175,7 @@ func TestIsReadyForScheduling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			podSet := NewPodSet("test", tt.minAvailable)
+			podSet := NewPodSet("test", tt.minAvailable, nil)
 			for _, pod := range tt.pods {
 				podSet.AssignTask(pod)
 			}
@@ -221,7 +215,7 @@ func TestIsGangSatisfied(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			podSet := NewPodSet("test", tt.minAvailable)
+			podSet := NewPodSet("test", tt.minAvailable, nil)
 			for _, pod := range tt.pods {
 				podSet.AssignTask(pod)
 			}
@@ -233,7 +227,7 @@ func TestIsGangSatisfied(t *testing.T) {
 }
 
 func TestGetNumAliveTasks(t *testing.T) {
-	podSet := NewPodSet("test", 2)
+	podSet := NewPodSet("test", 2, nil)
 	pods := []*pod_info.PodInfo{
 		{UID: "1", Status: pod_status.Running},
 		{UID: "2", Status: pod_status.Pending},
@@ -252,7 +246,7 @@ func TestGetNumAliveTasks(t *testing.T) {
 }
 
 func TestGetNumActiveUsedTasks(t *testing.T) {
-	podSet := NewPodSet("test", 2)
+	podSet := NewPodSet("test", 2, nil)
 	pods := []*pod_info.PodInfo{
 		{UID: "1", Status: pod_status.Running},
 		{UID: "2", Status: pod_status.Pipelined},
@@ -272,7 +266,7 @@ func TestGetNumActiveUsedTasks(t *testing.T) {
 }
 
 func TestGetNumGatedTasks(t *testing.T) {
-	podSet := NewPodSet("test", 2)
+	podSet := NewPodSet("test", 2, nil)
 	pods := []*pod_info.PodInfo{
 		{UID: "1", Status: pod_status.Gated},
 		{UID: "2", Status: pod_status.Running},
@@ -291,7 +285,7 @@ func TestGetNumGatedTasks(t *testing.T) {
 }
 
 func TestGetNumPendingTasks(t *testing.T) {
-	podSet := NewPodSet("test", 2)
+	podSet := NewPodSet("test", 2, nil)
 	pods := []*pod_info.PodInfo{
 		{UID: "1", Status: pod_status.Pending},
 		{UID: "2", Status: pod_status.Running},
@@ -345,7 +339,7 @@ func TestIsElastic(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		podSet := NewPodSet("test", 2)
+		podSet := NewPodSet("test", 2, nil)
 		for _, pod := range test.pods {
 			podSet.AssignTask(pod)
 		}
@@ -397,7 +391,7 @@ func TestGetNumActiveAllocatedTasks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			podSet := NewPodSet("test", 1)
+			podSet := NewPodSet("test", 1, nil)
 			for _, pod := range tt.pods {
 				podSet.AssignTask(pod)
 			}

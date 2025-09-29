@@ -11,26 +11,30 @@ import (
 
 func TestNewSubGroupInfo(t *testing.T) {
 	name := "my-subgroup"
-	sgi := newSubGroupInfo(name)
+	topologyConstraint := &topology_info.TopologyConstraintInfo{}
+	sgi := newSubGroupInfo(name, topologyConstraint)
 
 	if sgi.name != name {
 		t.Errorf("Expected name %s, got %s", name, sgi.name)
+	}
+
+	if sgi.topologyConstraint != topologyConstraint {
+		t.Errorf("Expected topologyConstraint %v, got %v", topologyConstraint, sgi.topologyConstraint)
 	}
 }
 
 func TestGetName(t *testing.T) {
 	name := "test-subgroup"
-	sgi := newSubGroupInfo(name)
+	sgi := newSubGroupInfo(name, &topology_info.TopologyConstraintInfo{})
 
 	if got := sgi.GetName(); got != name {
 		t.Errorf("GetName() = %q, want %q", got, name)
 	}
 }
 
-func TestAddTopologyConstraint(t *testing.T) {
-	sgi := newSubGroupInfo("test-subgroup")
+func TestGetTopologyConstraint(t *testing.T) {
 	tc := &topology_info.TopologyConstraintInfo{}
-	sgi.AddTopologyConstraint(tc)
+	sgi := newSubGroupInfo("test-subgroup", tc)
 	if sgi.GetTopologyConstraint() != tc {
 		t.Error("AddTopologyConstraint() did not add the topology constraint")
 	}

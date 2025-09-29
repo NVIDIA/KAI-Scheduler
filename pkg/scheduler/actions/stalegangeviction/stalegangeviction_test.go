@@ -250,8 +250,8 @@ func TestStaleGangEviction(t *testing.T) {
 						QueueName:    "q-1",
 						MinAvailable: pointer.Int32(3),
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub-group-0": subgroup_info.NewPodSet("sub-group-0", 2),
-							"sub-group-1": subgroup_info.NewPodSet("sub-group-1", 1),
+							"sub-group-0": subgroup_info.NewPodSet("sub-group-0", 2, nil),
+							"sub-group-1": subgroup_info.NewPodSet("sub-group-1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -330,8 +330,8 @@ func TestStaleGangEviction(t *testing.T) {
 						QueueName:    "q-1",
 						MinAvailable: pointer.Int32(3),
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub-group-0": subgroup_info.NewPodSet("sub-group-0", 2),
-							"sub-group-1": subgroup_info.NewPodSet("sub-group-1", 1),
+							"sub-group-0": subgroup_info.NewPodSet("sub-group-0", 2, nil),
+							"sub-group-1": subgroup_info.NewPodSet("sub-group-1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{

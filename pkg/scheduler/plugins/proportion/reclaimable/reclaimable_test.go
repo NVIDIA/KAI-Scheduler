@@ -557,7 +557,7 @@ var _ = Describe("Reclaimable - Single department", func() {
 			Name:  "reclaimee",
 			Queue: "p2",
 			PodSets: map[string]*subgroup_info.PodSet{
-				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(reclaimeePods),
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).WithPodInfos(reclaimeePods),
 			},
 		}
 		reclaimees = []*podgroup_info.PodGroupInfo{reclaimee}
@@ -709,7 +709,7 @@ var _ = Describe("Reclaimable - Multiple departments", func() {
 			Name:  "reclaimee",
 			Queue: "p2",
 			PodSets: map[string]*subgroup_info.PodSet{
-				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(reclaimeePods),
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).WithPodInfos(reclaimeePods),
 			},
 		}
 		reclaimees = []*podgroup_info.PodGroupInfo{reclaimee}
@@ -823,7 +823,7 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			Name:  "reclaimee",
 			Queue: "right-leaf",
 			PodSets: map[string]*subgroup_info.PodSet{
-				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(reclaimeePods),
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).WithPodInfos(reclaimeePods),
 			},
 		}
 	})
@@ -1026,7 +1026,7 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			Name:  "reclaimee",
 			Queue: "left-leaf2",
 			PodSets: map[string]*subgroup_info.PodSet{
-				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).WithPodInfos(pod_info.PodsMap{
 					"1": &pod_info.PodInfo{
 						UID: "1",
 						ResReq: &resource_info.ResourceRequirements{
@@ -1084,15 +1084,16 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			Name:  "reclaimee2",
 			Queue: "d2-project-1",
 			PodSets: map[string]*subgroup_info.PodSet{
-				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
-					"1": &pod_info.PodInfo{
-						UID: "1",
-						ResReq: &resource_info.ResourceRequirements{
-							GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+					WithPodInfos(pod_info.PodsMap{
+						"1": &pod_info.PodInfo{
+							UID: "1",
+							ResReq: &resource_info.ResourceRequirements{
+								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
+							},
+							Status: pod_status.Running,
 						},
-						Status: pod_status.Running,
-					},
-				}),
+					}),
 			},
 		}
 
@@ -1142,15 +1143,16 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 			Name:  "reclaimee2",
 			Queue: "d2-project-1",
 			PodSets: map[string]*subgroup_info.PodSet{
-				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
-					"1": &pod_info.PodInfo{
-						UID: "1",
-						ResReq: &resource_info.ResourceRequirements{
-							GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+					WithPodInfos(pod_info.PodsMap{
+						"1": &pod_info.PodInfo{
+							UID: "1",
+							ResReq: &resource_info.ResourceRequirements{
+								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
+							},
+							Status: pod_status.Running,
 						},
-						Status: pod_status.Running,
-					},
-				}),
+					}),
 			},
 		}
 

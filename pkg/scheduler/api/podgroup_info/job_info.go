@@ -115,7 +115,7 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 		},
 
 		PodSets: map[string]*subgroup_info.PodSet{
-			DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1),
+			DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil),
 		},
 
 		LastStartTimestamp:   nil,
@@ -149,7 +149,7 @@ func (pgi *PodGroupInfo) SetDefaultMinAvailable(minAvailable int32) {
 	}
 
 	if _, exists := pgi.PodSets[DefaultSubGroup]; !exists {
-		pgi.PodSets[DefaultSubGroup] = subgroup_info.NewPodSet(DefaultSubGroup, 0)
+		pgi.PodSets[DefaultSubGroup] = subgroup_info.NewPodSet(DefaultSubGroup, 0, nil)
 	}
 	pgi.PodSets[DefaultSubGroup].SetMinAvailable(minAvailable)
 }
@@ -216,7 +216,7 @@ func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) {
 	}
 	defaultSubGroup, found := pgi.PodSets[DefaultSubGroup]
 	if !found {
-		pgi.PodSets[DefaultSubGroup] = subgroup_info.NewPodSet(DefaultSubGroup, max(podGroup.Spec.MinMember, 1))
+		pgi.PodSets[DefaultSubGroup] = subgroup_info.NewPodSet(DefaultSubGroup, max(podGroup.Spec.MinMember, 1), nil)
 	} else {
 		defaultSubGroup.SetMinAvailable(max(podGroup.Spec.MinMember, 1))
 	}
@@ -504,7 +504,7 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 
 	for _, podSet := range pgi.PodSets {
 		info.PodSets[podSet.GetName()] = subgroup_info.NewPodSet(
-			podSet.GetName(), podSet.GetMinAvailable(),
+			podSet.GetName(), podSet.GetMinAvailable(), nil,
 		)
 	}
 

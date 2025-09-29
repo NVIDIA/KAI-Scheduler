@@ -119,7 +119,7 @@ func BuildJobInfo(
 			subGroup.AssignTask(taskInfo)
 		} else {
 			if subGroups[podgroup_info.DefaultSubGroup] == nil {
-				subGroups[podgroup_info.DefaultSubGroup] = subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, minAvailable)
+				subGroups[podgroup_info.DefaultSubGroup] = subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, minAvailable, nil)
 			}
 			subGroups[podgroup_info.DefaultSubGroup].AssignTask(taskInfo)
 		}

@@ -47,7 +47,7 @@ var _ = Describe("MinRuntime Plugin", func() {
 			UID:   uid,
 			Queue: queue,
 			PodSets: map[string]*subgroup_info.PodSet{
-				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, minAvailable),
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, minAvailable, nil),
 			},
 			PodStatusIndex: make(map[pod_status.PodStatus]pod_info.PodsMap),
 			NodesFitErrors: make(map[common_info.PodID]*common_info.FitErrors),

@@ -67,8 +67,8 @@ func getReclaimSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 1),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 1),
+							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
+							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -160,8 +160,8 @@ func getReclaimSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 1),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 1),
+							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
+							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -271,8 +271,8 @@ func getReclaimSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 1),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 1),
+							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
+							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -386,8 +386,8 @@ func getReclaimSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 1),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 1),
+							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
+							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -457,8 +457,8 @@ func getReclaimSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 1),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 1),
+							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
+							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -563,8 +563,8 @@ func getReclaimSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
 						SubGroups: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 2),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 2),
+							"sub-0": subgroup_info.NewPodSet("sub-0", 2, nil),
+							"sub-1": subgroup_info.NewPodSet("sub-1", 2, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{

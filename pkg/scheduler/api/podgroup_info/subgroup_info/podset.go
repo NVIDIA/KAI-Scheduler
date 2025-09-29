@@ -8,6 +8,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 )
 
 type PodSet struct {
@@ -22,9 +23,9 @@ type PodSet struct {
 	numAliveTasks           int
 }
 
-func NewPodSet(name string, minAvailable int32) *PodSet {
+func NewPodSet(name string, minAvailable int32, topologyConstraint *topology_info.TopologyConstraintInfo) *PodSet {
 	return &PodSet{
-		SubGroupInfo:            *newSubGroupInfo(name),
+		SubGroupInfo:            *newSubGroupInfo(name, topologyConstraint),
 		minAvailable:            minAvailable,
 		podInfos:                pod_info.PodsMap{},
 		podStatusIndex:          map[pod_status.PodStatus]pod_info.PodsMap{},
@@ -36,7 +37,8 @@ func NewPodSet(name string, minAvailable int32) *PodSet {
 }
 
 func FromSubGroup(subGroup *schedulingv2.SubGroup) *PodSet {
-	return NewPodSet(subGroup.Name, subGroup.MinMember)
+	// will be changed in the future so it will also contain topology constraint
+	return NewPodSet(subGroup.Name, subGroup.MinMember, nil)
 }
 
 func (ps *PodSet) GetMinAvailable() int32 {

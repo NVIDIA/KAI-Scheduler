@@ -1400,10 +1400,11 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
 				PodSets: map[string]*subgroup_info.PodSet{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
-						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
-					}),
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil).
+						WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
+							"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
+						}),
 				},
 				TopologyConstraint: &topology_info.TopologyConstraintInfo{
 					RequiredLevel:  "zone",
@@ -1465,10 +1466,11 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 				Name:      "test-job",
 				Namespace: "test-namespace",
 				PodSets: map[string]*subgroup_info.PodSet{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
-						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
-					}),
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil).
+						WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
+							"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
+						}),
 				},
 				TopologyConstraint: &topology_info.TopologyConstraintInfo{
 					RequiredLevel: "zone",
@@ -1512,9 +1514,10 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
 				PodSets: map[string]*subgroup_info.PodSet{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
-					}),
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+						WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
+						}),
 				},
 				TopologyConstraint: &topology_info.TopologyConstraintInfo{
 					RequiredLevel:  "zone",
@@ -1552,11 +1555,12 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
 				PodSets: map[string]*subgroup_info.PodSet{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 3).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
-						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
-						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
-					}),
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 3, nil).
+						WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
+							"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
+							"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
+						}),
 				},
 				TopologyConstraint: &topology_info.TopologyConstraintInfo{
 					RequiredLevel:  "region",
@@ -1626,11 +1630,12 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
 				PodSets: map[string]*subgroup_info.PodSet{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Running, NodeName: "node1"},
-						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
-						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
-					}),
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil).
+						WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Running, NodeName: "node1"},
+							"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
+							"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
+						}),
 				},
 				TopologyConstraint: &topology_info.TopologyConstraintInfo{
 					RequiredLevel: "zone",
@@ -1681,11 +1686,12 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
 				PodSets: map[string]*subgroup_info.PodSet{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Running, NodeName: "node2"},
-						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
-						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
-					}),
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil).
+						WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Running, NodeName: "node2"},
+							"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
+							"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
+						}),
 				},
 				TopologyConstraint: &topology_info.TopologyConstraintInfo{
 					RequiredLevel: "zone",
@@ -1750,12 +1756,13 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			job: &podgroup_info.PodGroupInfo{
 				Name: "test-job",
 				PodSets: map[string]*subgroup_info.PodSet{
-					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 4).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-						"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
-						"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
-						"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
-						"pod4": {UID: "pod4", Name: "pod4", Status: pod_status.Pending},
-					}),
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 4, nil).
+						WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
+							"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
+							"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
+							"pod4": {UID: "pod4", Name: "pod4", Status: pod_status.Pending},
+						}),
 				},
 				TopologyConstraint: &topology_info.TopologyConstraintInfo{
 					RequiredLevel:  "region",
