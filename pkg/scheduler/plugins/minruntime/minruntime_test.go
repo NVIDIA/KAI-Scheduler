@@ -7,15 +7,17 @@ import (
 	"fmt"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type TestScenario struct {
@@ -44,8 +46,8 @@ var _ = Describe("MinRuntime Plugin", func() {
 		pg := &podgroup_info.PodGroupInfo{
 			UID:   uid,
 			Queue: queue,
-			SubGroups: map[string]*podgroup_info.SubGroupInfo{
-				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable),
+			SubGroups: map[string]*subgroup_info.SubGroupInfo{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable),
 			},
 			PodStatusIndex: make(map[pod_status.PodStatus]pod_info.PodsMap),
 			NodesFitErrors: make(map[common_info.PodID]*common_info.FitErrors),

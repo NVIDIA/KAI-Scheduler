@@ -14,7 +14,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/allocate"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
@@ -49,9 +49,9 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						RequiredGPUsPerTask: 1,
 						QueueName:           "queue0",
 						Priority:            constants.PriorityTrainNumber,
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub0": podgroup_info.NewSubGroupInfo("sub0", 1),
-							"sub1": podgroup_info.NewSubGroupInfo("sub1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub0": subgroup_info.NewSubGroupInfo("sub0", 1),
+							"sub1": subgroup_info.NewSubGroupInfo("sub1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -105,9 +105,9 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						RequiredGPUsPerTask: 1,
 						QueueName:           "queue0",
 						Priority:            constants.PriorityTrainNumber,
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub0": podgroup_info.NewSubGroupInfo("sub0", 1),
-							"sub1": podgroup_info.NewSubGroupInfo("sub1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub0": subgroup_info.NewSubGroupInfo("sub0", 1),
+							"sub1": subgroup_info.NewSubGroupInfo("sub1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -176,9 +176,9 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub0": podgroup_info.NewSubGroupInfo("sub0", 2),
-							"sub1": podgroup_info.NewSubGroupInfo("sub1", 2),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub0": subgroup_info.NewSubGroupInfo("sub0", 2),
+							"sub1": subgroup_info.NewSubGroupInfo("sub1", 2),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -264,9 +264,9 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub0": podgroup_info.NewSubGroupInfo("sub0", 2),
-							"sub1": podgroup_info.NewSubGroupInfo("sub1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub0": subgroup_info.NewSubGroupInfo("sub0", 2),
+							"sub1": subgroup_info.NewSubGroupInfo("sub1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -368,9 +368,9 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub0": podgroup_info.NewSubGroupInfo("sub0", 2),
-							"sub1": podgroup_info.NewSubGroupInfo("sub1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub0": subgroup_info.NewSubGroupInfo("sub0", 2),
+							"sub1": subgroup_info.NewSubGroupInfo("sub1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -472,9 +472,9 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "pending_job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub0": podgroup_info.NewSubGroupInfo("sub0", 1),
-							"sub1": podgroup_info.NewSubGroupInfo("sub1", 2),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub0": subgroup_info.NewSubGroupInfo("sub0", 1),
+							"sub1": subgroup_info.NewSubGroupInfo("sub1", 2),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -543,9 +543,9 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "pending_job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub0": podgroup_info.NewSubGroupInfo("sub0", 1),
-							"sub1": podgroup_info.NewSubGroupInfo("sub1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub0": subgroup_info.NewSubGroupInfo("sub0", 1),
+							"sub1": subgroup_info.NewSubGroupInfo("sub1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -575,9 +575,9 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "pending_job1",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub0": podgroup_info.NewSubGroupInfo("sub0", 1),
-							"sub1": podgroup_info.NewSubGroupInfo("sub1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub0": subgroup_info.NewSubGroupInfo("sub0", 1),
+							"sub1": subgroup_info.NewSubGroupInfo("sub1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{

@@ -32,6 +32,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 )
 
 func jobInfoEqual(l, r *PodGroupInfo) bool {
@@ -74,7 +75,7 @@ func TestAddTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case01_uid,
 				Allocated: common_info.BuildResource("4000m", "4G"),
-				SubGroups: map[string]*SubGroupInfo{DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{DefaultSubGroup: subgroup_info.NewSubGroupInfo(DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 					case01_task1.UID: case01_task1,
 					case01_task2.UID: case01_task2,
 					case01_task3.UID: case01_task3,
@@ -155,7 +156,7 @@ func TestDeleteTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case01_uid,
 				Allocated: common_info.BuildResource("3000m", "3G"),
-				SubGroups: map[string]*SubGroupInfo{DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{DefaultSubGroup: subgroup_info.NewSubGroupInfo(DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 					case01_task1.UID: case01_task1,
 					case01_task2.UID: case01_task2,
 					case01_task3.UID: case01_task3,
@@ -177,7 +178,7 @@ func TestDeleteTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case02_uid,
 				Allocated: common_info.BuildResource("3000m", "3G"),
-				SubGroups: map[string]*SubGroupInfo{DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{DefaultSubGroup: subgroup_info.NewSubGroupInfo(DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 					case02_task1.UID: case02_task1,
 					case02_task2.UID: case02_task2,
 					case02_task3.UID: case02_task3,
@@ -523,8 +524,8 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 			name: "job with subgroups - all ready",
 			job: &PodGroupInfo{
 				UID: "test-pg",
-				SubGroups: map[string]*SubGroupInfo{
-					"sb-1": NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					"sb-1": subgroup_info.NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
 						"111": pod_info.NewTaskInfo(
 							&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -548,7 +549,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 								}},
 						),
 					}),
-					"sb-2": NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
+					"sb-2": subgroup_info.NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
 						"333": pod_info.NewTaskInfo(
 							&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -569,8 +570,8 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 			name: "job with subgroups - some already running",
 			job: &PodGroupInfo{
 				UID: "test-pg",
-				SubGroups: map[string]*SubGroupInfo{
-					"sb-1": NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					"sb-1": subgroup_info.NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
 						"111": pod_info.NewTaskInfo(
 							&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -594,7 +595,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 								}},
 						),
 					}),
-					"sb-2": NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
+					"sb-2": subgroup_info.NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
 						"333": pod_info.NewTaskInfo(
 							&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -615,8 +616,8 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 			name: "job with subgroups - more then minAvailable",
 			job: &PodGroupInfo{
 				UID: "test-pg",
-				SubGroups: map[string]*SubGroupInfo{
-					"sb-1": NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					"sb-1": subgroup_info.NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
 						"111": pod_info.NewTaskInfo(
 							&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -651,7 +652,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 								}},
 						),
 					}),
-					"sb-2": NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
+					"sb-2": subgroup_info.NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
 						"444": pod_info.NewTaskInfo(
 							&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -672,8 +673,8 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 			name: "job with subgroups - one is not ready",
 			job: &PodGroupInfo{
 				UID: "test-pg",
-				SubGroups: map[string]*SubGroupInfo{
-					"sb-1": NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
+				SubGroups: map[string]*subgroup_info.SubGroupInfo{
+					"sb-1": subgroup_info.NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
 						"111": pod_info.NewTaskInfo(
 							&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -686,7 +687,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 								}},
 						),
 					}),
-					"sb-2": NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
+					"sb-2": subgroup_info.NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
 						"333": pod_info.NewTaskInfo(
 							&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -950,10 +951,10 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 			job: func() *PodGroupInfo {
 				pgi := NewPodGroupInfo("test-podgroup")
 
-				sg1 := NewSubGroupInfo("sg1", 1)
+				sg1 := subgroup_info.NewSubGroupInfo("sg1", 1)
 				pgi.SubGroups["sg1"] = sg1
 
-				sg2 := NewSubGroupInfo("sg2", 1)
+				sg2 := subgroup_info.NewSubGroupInfo("sg2", 1)
 				pgi.SubGroups["sg2"] = sg2
 
 				task1 := pod_info.NewTaskInfo(&v1.Pod{
@@ -992,9 +993,9 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 			job: func() *PodGroupInfo {
 				pgi := NewPodGroupInfo("test-podgroup")
 
-				sg1 := NewSubGroupInfo("sg1", 1)
-				sg2 := NewSubGroupInfo("sg2", 1)
-				pgi.SubGroups = map[string]*SubGroupInfo{
+				sg1 := subgroup_info.NewSubGroupInfo("sg1", 1)
+				sg2 := subgroup_info.NewSubGroupInfo("sg2", 1)
+				pgi.SubGroups = map[string]*subgroup_info.SubGroupInfo{
 					"sg1": sg1,
 					"sg2": sg2,
 				}

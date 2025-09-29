@@ -22,6 +22,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants/labels"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/resources_fake"
@@ -46,7 +47,7 @@ type TestJobBasic struct {
 	MinAvailable                        *int32
 	Topology                            *podgroup_info.TopologyConstraintInfo
 	Tasks                               []*tasks_fake.TestTaskBasic
-	SubGroups                           map[string]*podgroup_info.SubGroupInfo
+	SubGroups                           map[string]*subgroup_info.SubGroupInfo
 	StaleDuration                       *time.Duration
 }
 
@@ -100,9 +101,9 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic) (
 func BuildJobInfo(
 	name, namespace string,
 	uid common_info.PodGroupID, allocatedResource *resource_info.Resource,
-	subGroups map[string]*podgroup_info.SubGroupInfo, taskInfos []*pod_info.PodInfo, priority int32,
-	preemptibility enginev2alpha2.Preemptibility, queueUID common_info.QueueID, jobCreationTime time.Time,
-	minAvailable int32, staleDuration *time.Duration, topologyConstraint *podgroup_info.TopologyConstraintInfo) *podgroup_info.PodGroupInfo {
+	subGroups map[string]*subgroup_info.SubGroupInfo, taskInfos []*pod_info.PodInfo, priority int32, preemptibility enginev2alpha2.Preemptibility,
+	queueUID common_info.QueueID, jobCreationTime time.Time, minAvailable int32, staleDuration *time.Duration,
+	topologyConstraint *podgroup_info.TopologyConstraintInfo) *podgroup_info.PodGroupInfo {
 	allTasks := pod_info.PodsMap{}
 	taskStatusIndex := map[pod_status.PodStatus]pod_info.PodsMap{}
 
@@ -115,7 +116,7 @@ func BuildJobInfo(
 	}
 
 	if subGroups == nil {
-		subGroups = map[string]*podgroup_info.SubGroupInfo{}
+		subGroups = map[string]*subgroup_info.SubGroupInfo{}
 	}
 
 	for _, taskInfo := range taskInfos {
@@ -124,7 +125,7 @@ func BuildJobInfo(
 			subGroup.AssignTask(taskInfo)
 		} else {
 			if subGroups[podgroup_info.DefaultSubGroup] == nil {
-				subGroups[podgroup_info.DefaultSubGroup] = podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable)
+				subGroups[podgroup_info.DefaultSubGroup] = subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable)
 			}
 			subGroups[podgroup_info.DefaultSubGroup].AssignTask(taskInfo)
 		}

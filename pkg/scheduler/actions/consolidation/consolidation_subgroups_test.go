@@ -13,7 +13,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/consolidation"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
@@ -70,9 +70,9 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "pending_job0",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
-							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": subgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -160,9 +160,9 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "pending_job0",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
-							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": subgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -291,9 +291,9 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "pending_job0",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
-							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": subgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -353,9 +353,9 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "running_job",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
-							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": subgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -445,9 +445,9 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "running_job1",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
-							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": subgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -540,8 +540,8 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "running_job0",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
