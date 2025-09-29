@@ -6,12 +6,68 @@ metadata:
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-weight": "-1"
-    "helm.sh/hook-delete-policy": hook-failed
+    "helm.sh/hook-delete-policy": before-hook-creation
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: false
+allowedCapabilities: null
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+groups: []
+priority: 1
+readOnlyRootFilesystem: false
+requiredDropCapabilities: null
 runAsUser:
   type: MustRunAs
   uid: 10000
 seLinuxContext:
   type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+users:
+- system:serviceaccount:{{ .Release.Namespace }}:admission
+- system:serviceaccount:{{ .Release.Namespace }}:binder
+- system:serviceaccount:{{ .Release.Namespace }}:kai-operator
+- system:serviceaccount:{{ .Release.Namespace }}:pod-grouper
+- system:serviceaccount:{{ .Release.Namespace }}:podgroup-controller
+- system:serviceaccount:{{ .Release.Namespace }}:queue-controller
+- system:serviceaccount:{{ .Release.Namespace }}:scheduler
+- system:serviceaccount:{{ .Release.Namespace }}:node-scale-adjuster
+- system:serviceaccount:{{ .Release.Namespace }}:kai-scheduler-crd-manager
+volumes:
+- awsElasticBlockStore
+- azureDisk
+- azureFile
+- cephFS
+- cinder
+- configMap
+- csi
+- downwardAPI
+- emptyDir
+- ephemeral
+- fc
+- flexVolume
+- flocker
+- gcePersistentDisk
+- gitRepo
+- glusterfs
+- iscsi
+- nfs
+- persistentVolumeClaim
+- photonPersistentDisk
+- portworxVolume
+- projected
+- quobyte
+- rbd
+- scaleIO
+- secret
+- storageOS
+- vsphere
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -20,7 +76,7 @@ metadata:
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-weight": "-1"
-    "helm.sh/hook-delete-policy": hook-failed
+    "helm.sh/hook-delete-policy": before-hook-creation
 rules:
   - apiGroups:
       - security.openshift.io
@@ -38,7 +94,7 @@ metadata:
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-weight": "-1"
-    "helm.sh/hook-delete-policy": hook-failed
+    "helm.sh/hook-delete-policy": before-hook-creation
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
