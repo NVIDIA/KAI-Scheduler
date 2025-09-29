@@ -129,6 +129,11 @@ func BuildJobInfo(
 		}
 	}
 
+	subGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	for _, subGroup := range subGroups {
+		subGroupSet.AddPodSet(subGroup)
+	}
+
 	result := &podgroup_info.PodGroupInfo{
 		UID:            uid,
 		Name:           name,
@@ -142,6 +147,7 @@ func BuildJobInfo(
 		NodesFitErrors:     map[common_info.PodID]*common_info.FitErrors{},
 		Queue:              queueUID,
 		CreationTimestamp:  metav1.Time{Time: jobCreationTime},
+		RootSubGroupSet:    subGroupSet,
 		PodSets:            subGroups,
 		TopologyConstraint: topologyConstraint,
 		PodGroup: &enginev2alpha2.PodGroup{
