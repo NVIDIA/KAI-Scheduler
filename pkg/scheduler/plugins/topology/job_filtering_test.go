@@ -69,6 +69,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 		domainParent          map[DomainID]DomainID
 		domainLevel           map[DomainID]DomainLevel
 		expectedError         string
+		expectedJobFitError   string
 		expectedNodes         map[string]bool
 	}{
 		{
@@ -225,7 +226,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					},
 				}
 			},
-			expectedError: "matching topology tree haven't been found for job <test-namespace/test-job>, workload topology name: nonexistent-topology",
+			expectedJobFitError: "Matching topology nonexistent-topology does not exist",
 		},
 		{
 			name: "cache already populated - early return",
@@ -460,6 +461,15 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					t.Errorf("expected error '%s', but got '%s'", tt.expectedError, err.Error())
 				}
 				return
+			}
+
+			if tt.expectedJobFitError != "" {
+				if job.JobFitErrors == nil || len(job.JobFitErrors) == 0 {
+					t.Errorf("expected job fit error '%s', but got nil", tt.expectedJobFitError)
+				}
+				if job.JobFitErrors[0].Message != tt.expectedJobFitError {
+					t.Errorf("expected job fit error '%s', but got '%s'", tt.expectedJobFitError, job.JobFitErrors[0].Message)
+				}
 			}
 
 			if err != nil {
