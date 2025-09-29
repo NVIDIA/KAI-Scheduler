@@ -23,6 +23,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants/labels"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/resources_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
@@ -43,7 +44,7 @@ type TestJobBasic struct {
 	DeleteJobInTest                     bool
 	JobNotReadyForSsn                   bool
 	MinAvailable                        *int32
-	Topology                            *podgroup_info.TopologyConstraintInfo
+	Topology                            *topology_info.TopologyConstraintInfo
 	Tasks                               []*tasks_fake.TestTaskBasic
 	SubGroups                           map[string]*subgroup_info.SubGroupInfo
 	StaleDuration                       *time.Duration
@@ -96,7 +97,7 @@ func BuildJobInfo(
 	uid common_info.PodGroupID, allocatedResource *resource_info.Resource,
 	subGroups map[string]*subgroup_info.SubGroupInfo, taskInfos []*pod_info.PodInfo, priority int32,
 	queueUID common_info.QueueID, jobCreationTime time.Time, minAvailable int32, staleDuration *time.Duration,
-	topologyConstraint *podgroup_info.TopologyConstraintInfo) *podgroup_info.PodGroupInfo {
+	topologyConstraint *topology_info.TopologyConstraintInfo) *podgroup_info.PodGroupInfo {
 	allTasks := pod_info.PodsMap{}
 	taskStatusIndex := map[pod_status.PodStatus]pod_info.PodsMap{}
 

@@ -38,6 +38,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
@@ -63,12 +64,6 @@ type PodGroupInfos struct {
 	PodGroupInfos []*PodGroupInfo
 }
 
-type TopologyConstraintInfo struct {
-	PreferredLevel string
-	RequiredLevel  string
-	Topology       string
-}
-
 type PodGroupInfo struct {
 	UID common_info.PodGroupID
 
@@ -89,7 +84,7 @@ type PodGroupInfo struct {
 	LastStartTimestamp *time.Time
 	PodGroup           *enginev2alpha2.PodGroup
 	PodGroupUID        types.UID
-	TopologyConstraint *TopologyConstraintInfo
+	TopologyConstraint *topology_info.TopologyConstraintInfo
 	SubGroups          map[string]*subgroup_info.SubGroupInfo
 
 	StalenessInfo
@@ -173,7 +168,7 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.setSubGroups(pg)
 
 	if pg.Spec.TopologyConstraint.Topology != "" {
-		pgi.TopologyConstraint = &TopologyConstraintInfo{
+		pgi.TopologyConstraint = &topology_info.TopologyConstraintInfo{
 			Topology:       pg.Spec.TopologyConstraint.Topology,
 			RequiredLevel:  pg.Spec.TopologyConstraint.RequiredTopologyLevel,
 			PreferredLevel: pg.Spec.TopologyConstraint.PreferredTopologyLevel,
@@ -488,11 +483,11 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 		PodGroup:    pgi.PodGroup,
 		PodGroupUID: pgi.PodGroupUID,
 		SubGroups:   map[string]*subgroup_info.SubGroupInfo{},
-		TopologyConstraint: func() *TopologyConstraintInfo {
+		TopologyConstraint: func() *topology_info.TopologyConstraintInfo {
 			if pgi.TopologyConstraint == nil {
 				return nil
 			}
-			return &TopologyConstraintInfo{
+			return &topology_info.TopologyConstraintInfo{
 				Topology:       pgi.TopologyConstraint.Topology,
 				RequiredLevel:  pgi.TopologyConstraint.RequiredLevel,
 				PreferredLevel: pgi.TopologyConstraint.PreferredLevel,
