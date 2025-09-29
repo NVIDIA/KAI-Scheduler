@@ -40,8 +40,6 @@ spec:
           capabilities:
             drop:
             - ALL
-          seccompProfile:
-            type: RuntimeDefault
         {{- else if .Values.global.securityContext }}
         securityContext:
           {{- toYaml .Values.global.securityContext | nindent 10 }}
