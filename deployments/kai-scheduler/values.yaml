@@ -109,14 +109,14 @@ defaultQueue:
       overQuotaWeight: 1
   childResources:
     cpu:
-      quota: -1
+      quota: 0
       limit: -1
       overQuotaWeight: 1
     gpu:
-      quota: -1
+      quota: 0
       limit: -1
       overQuotaWeight: 1
     memory:
-      quota: -1
+      quota: 0
       limit: -1
       overQuotaWeight: 1
