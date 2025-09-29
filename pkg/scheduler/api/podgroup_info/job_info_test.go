@@ -62,6 +62,15 @@ func TestAddTaskInfo(t *testing.T) {
 	case01_pod4 := common_info.BuildPod(case01_ns, "p4", "n1", v1.PodPending, common_info.BuildResourceList("1000m", "1G"), []metav1.OwnerReference{case01_owner}, make(map[string]string), podAnnotations)
 	case01_task4 := pod_info.NewTaskInfo(case01_pod4)
 
+	subGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	defaultSubGroup := subgroup_info.NewPodSet(DefaultSubGroup, 1, nil).WithPodInfos(pod_info.PodsMap{
+		case01_task1.UID: case01_task1,
+		case01_task2.UID: case01_task2,
+		case01_task3.UID: case01_task3,
+		case01_task4.UID: case01_task4,
+	})
+	subGroupSet.AddPodSet(defaultSubGroup)
+
 	tests := []struct {
 		name     string
 		uid      common_info.PodGroupID
@@ -73,15 +82,10 @@ func TestAddTaskInfo(t *testing.T) {
 			uid:  case01_uid,
 			pods: []*v1.Pod{case01_pod1, case01_pod2, case01_pod3, case01_pod4},
 			expected: &PodGroupInfo{
-				UID:       case01_uid,
-				Allocated: common_info.BuildResource("4000m", "4G"),
-				PodSets: map[string]*subgroup_info.PodSet{DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil).
-					WithPodInfos(pod_info.PodsMap{
-						case01_task1.UID: case01_task1,
-						case01_task2.UID: case01_task2,
-						case01_task3.UID: case01_task3,
-						case01_task4.UID: case01_task4,
-					})},
+				UID:             case01_uid,
+				Allocated:       common_info.BuildResource("4000m", "4G"),
+				RootSubGroupSet: subGroupSet,
+				PodSets:         map[string]*subgroup_info.PodSet{DefaultSubGroup: defaultSubGroup},
 				PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
 					pod_status.Running: {
 						case01_task2.UID: case01_task2,
@@ -154,50 +158,64 @@ func TestDeleteTaskInfo(t *testing.T) {
 			uid:    case01_uid,
 			pods:   []*v1.Pod{case01_pod1, case01_pod2, case01_pod3},
 			rmPods: []*v1.Pod{case01_pod2},
-			expected: &PodGroupInfo{
-				UID:       case01_uid,
-				Allocated: common_info.BuildResource("3000m", "3G"),
-				PodSets: map[string]*subgroup_info.PodSet{DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil).
+			expected: func() *PodGroupInfo {
+				subGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+				defaultSubGroup := subgroup_info.NewPodSet(DefaultSubGroup, 1, nil).
 					WithPodInfos(pod_info.PodsMap{
 						case01_task1.UID: case01_task1,
 						case01_task2.UID: case01_task2,
 						case01_task3.UID: case01_task3,
-					})},
-				PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
-					pod_status.Pending: {case01_task1.UID: case01_task1},
-					pod_status.Running: {case01_task3.UID: case01_task3},
-				},
-				activeAllocatedCount: ptr.To(1),
-				JobFitErrors:         make(v2alpha2.UnschedulableExplanations, 0),
-				NodesFitErrors:       map[common_info.PodID]*common_info.FitErrors{},
-			},
+					})
+				subGroupSet.AddPodSet(defaultSubGroup)
+
+				return &PodGroupInfo{
+					UID:             case01_uid,
+					Allocated:       common_info.BuildResource("3000m", "3G"),
+					RootSubGroupSet: subGroupSet,
+					PodSets:         map[string]*subgroup_info.PodSet{DefaultSubGroup: defaultSubGroup},
+					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+						pod_status.Pending: {case01_task1.UID: case01_task1},
+						pod_status.Running: {case01_task3.UID: case01_task3},
+					},
+					activeAllocatedCount: ptr.To(1),
+					JobFitErrors:         make(v2alpha2.UnschedulableExplanations, 0),
+					NodesFitErrors:       map[common_info.PodID]*common_info.FitErrors{},
+				}
+			}(),
 		},
 		{
 			name:   "add 2 pending owner pod, 1 running owner pod, remove 1 pending owner pod",
 			uid:    case02_uid,
 			pods:   []*v1.Pod{case02_pod1, case02_pod2, case02_pod3},
 			rmPods: []*v1.Pod{case02_pod2},
-			expected: &PodGroupInfo{
-				UID:       case02_uid,
-				Allocated: common_info.BuildResource("3000m", "3G"),
-				PodSets: map[string]*subgroup_info.PodSet{DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil).
+			expected: func() *PodGroupInfo {
+				subGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+				defaultSubGroup := subgroup_info.NewPodSet(DefaultSubGroup, 1, nil).
 					WithPodInfos(pod_info.PodsMap{
 						case02_task1.UID: case02_task1,
 						case02_task2.UID: case02_task2,
 						case02_task3.UID: case02_task3,
-					})},
-				PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
-					pod_status.Pending: {
-						case02_task1.UID: case02_task1,
+					})
+				subGroupSet.AddPodSet(defaultSubGroup)
+
+				return &PodGroupInfo{
+					UID:             case02_uid,
+					Allocated:       common_info.BuildResource("3000m", "3G"),
+					RootSubGroupSet: subGroupSet,
+					PodSets:         map[string]*subgroup_info.PodSet{DefaultSubGroup: defaultSubGroup},
+					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+						pod_status.Pending: {
+							case02_task1.UID: case02_task1,
+						},
+						pod_status.Running: {
+							case02_task3.UID: case02_task3,
+						},
 					},
-					pod_status.Running: {
-						case02_task3.UID: case02_task3,
-					},
-				},
-				activeAllocatedCount: ptr.To(1),
-				JobFitErrors:         make(v2alpha2.UnschedulableExplanations, 0),
-				NodesFitErrors:       map[common_info.PodID]*common_info.FitErrors{},
-			},
+					activeAllocatedCount: ptr.To(1),
+					JobFitErrors:         make(v2alpha2.UnschedulableExplanations, 0),
+					NodesFitErrors:       map[common_info.PodID]*common_info.FitErrors{},
+				}
+			}(),
 		},
 	}
 
