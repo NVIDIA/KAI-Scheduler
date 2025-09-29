@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 )
 
 const RootSubGroupSetName = ""
@@ -25,7 +26,15 @@ func FromPodGroup(podGroup *v2alpha2.PodGroup) (*SubGroupSet, error) {
 		children[parentName] = append(children[parentName], subGroup.Name)
 	}
 
-	root := NewSubGroupSet(RootSubGroupSetName, nil)
+	var topologyConstraint *topology_info.TopologyConstraintInfo
+	if podGroup.Spec.TopologyConstraint.Topology != "" {
+		topologyConstraint = &topology_info.TopologyConstraintInfo{
+			Topology:       podGroup.Spec.TopologyConstraint.Topology,
+			RequiredLevel:  podGroup.Spec.TopologyConstraint.RequiredTopologyLevel,
+			PreferredLevel: podGroup.Spec.TopologyConstraint.PreferredTopologyLevel,
+		}
+	}
+	root := NewSubGroupSet(RootSubGroupSetName, topologyConstraint)
 	subGroupSets := map[string]*SubGroupSet{
 		RootSubGroupSetName: root,
 	}
