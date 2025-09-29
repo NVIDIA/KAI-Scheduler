@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package podgroup_info
+package subgroup_info
 
 import (
 	"testing"

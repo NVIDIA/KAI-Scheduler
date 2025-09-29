@@ -42,6 +42,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
@@ -978,8 +979,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+					SubGroups: map[string]*subgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
 							"test-pod": {
 								UID: "test-pod",
 							},
@@ -1035,8 +1036,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
+					SubGroups: map[string]*subgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
 					},
 				},
 			},
@@ -1058,8 +1059,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
+					SubGroups: map[string]*subgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
 					},
 				},
 			},
@@ -1088,8 +1089,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
+					SubGroups: map[string]*subgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
 					},
 				},
 			},
@@ -1183,8 +1184,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				func() *podgroup_info.PodGroupInfo {
-					subGroup0 := podgroup_info.NewSubGroupInfo("SubGroup-0", 1)
-					subGroup1 := podgroup_info.NewSubGroupInfo("SubGroup-1", 2)
+					subGroup0 := subgroup_info.NewSubGroupInfo("SubGroup-0", 1)
+					subGroup1 := subgroup_info.NewSubGroupInfo("SubGroup-1", 2)
 
 					subGroup0.AssignTask(&pod_info.PodInfo{UID: "pod-0", SubGroupName: "SubGroup-0"})
 					subGroup1.AssignTask(&pod_info.PodInfo{UID: "pod-1", SubGroupName: "SubGroup-1"})
@@ -1193,7 +1194,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 					return &podgroup_info.PodGroupInfo{
 						Name:  "podGroup-0",
 						Queue: "queue-0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
 							"SubGroup-0": subGroup0,
 							"SubGroup-1": subGroup1,
 						},
