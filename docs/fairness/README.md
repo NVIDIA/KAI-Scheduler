@@ -16,7 +16,7 @@ KAI Scheduler implements hierarchical fair-share scheduling using multi-level qu
 
 Resources are allocated hierarchically across queue levels:
 
-1. **Quota allocation**: Guaranteed resources distributed first
+1. **Quota allocation**: Deserved resources distributed first
 2. **Over-quota distribution**: Remaining resources allocated by priority and weight
 3. **Hierarchical propagation**: Process repeated at each queue level
 

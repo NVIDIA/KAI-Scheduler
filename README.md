@@ -82,7 +82,7 @@ We’d love to hear from you! Here are the best ways to connect:
 
 ### Contributing
 Contributions are encouraged and appreciated! 
-Please have a look at KAI-scheduler's [contribution guide](https://github.com/NVIDIA/KAI-Scheduler/blob/main/CHANGELOG.md) before submitting PRs.
+Please have a look at KAI-scheduler's [contribution guide](https://github.com/NVIDIA/KAI-Scheduler/blob/main/CONTRIBUTING.md) before submitting PRs.
 
 ### Slack
 Join the [CNCF Slack](https://communityinviter.com/apps/cloud-native/cncf) first and visit the [#kai-scheduler](https://cloud-native.slack.com/archives/kai-scheduler) channel.
