@@ -143,17 +143,6 @@ func (pgi *PodGroupInfo) GetSubGroups() map[string]*subgroup_info.PodSet {
 	return pgi.PodSets
 }
 
-func (pgi *PodGroupInfo) SetDefaultMinAvailable(minAvailable int32) {
-	if pgi.PodSets == nil {
-		pgi.PodSets = map[string]*subgroup_info.PodSet{}
-	}
-
-	if _, exists := pgi.PodSets[DefaultSubGroup]; !exists {
-		pgi.PodSets[DefaultSubGroup] = subgroup_info.NewPodSet(DefaultSubGroup, 0, nil)
-	}
-	pgi.PodSets[DefaultSubGroup].SetMinAvailable(minAvailable)
-}
-
 func (pgi *PodGroupInfo) IsPreemptibleJob() bool {
 	return pgi.Priority < constants.PriorityBuildNumber
 }

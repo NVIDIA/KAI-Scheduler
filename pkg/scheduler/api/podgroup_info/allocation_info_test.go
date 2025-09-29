@@ -218,7 +218,7 @@ func Test_GetTasksToAllocate(t *testing.T) {
 
 func Test_GetTasksToAllocateRequestedGPUs(t *testing.T) {
 	pg := NewPodGroupInfo("test-podgroup")
-	pg.SetDefaultMinAvailable(1)
+	pg.GetSubGroups()[DefaultSubGroup].SetMinAvailable(1)
 	task := simpleTask("p1", "", pod_status.Pending)
 	// manually set up a fake ResReq that returns 2 for GPUs and 1000 for GpuMemory
 	task.ResReq = resource_info.NewResourceRequirements(2, 1000, 2000)
@@ -237,7 +237,7 @@ func Test_GetTasksToAllocateInitResource(t *testing.T) {
 		t.Error("empty resource expected for nil pg")
 	}
 
-	pg.SetDefaultMinAvailable(1)
+	pg.GetSubGroups()[DefaultSubGroup].SetMinAvailable(1)
 	task := simpleTask("p", "", pod_status.Pending)
 	task.ResReq = resource_info.NewResourceRequirements(0, 5000, 0)
 	pg.AddTaskInfo(task)
