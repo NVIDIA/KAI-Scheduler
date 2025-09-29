@@ -37,7 +37,7 @@ Help us keep the docs clear and useful by fixing typos, updating outdated inform
 ### Pull Request Checklist
 Before introducing major changes, we strongly recommend opening a PR that outlines your proposed design.
 Each pull request should meet the following requirements:
-- All tests pass – Run the full test suite locally with: `make build && validate test`
+- All tests pass – Run the full test suite locally with: `make build validate test`
 - Test coverage – Add or update tests for any affected code.
 - Documentation – Update relevant documentation to reflect your changes.
 - Changes logged - If your changes warrant logging - like behavior changes (including bugfixes) or new features - add them to the [Changelog](CHANGELOG.md)
