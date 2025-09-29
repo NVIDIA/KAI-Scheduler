@@ -24,7 +24,7 @@ var (
 )
 
 func main() {
-	options := app.InitOptions()
+	options := app.InitOptions(nil)
 	opts := zap.Options{
 		Development: true,
 		TimeEncoder: zapcore.ISO8601TimeEncoder,

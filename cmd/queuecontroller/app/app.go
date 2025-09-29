@@ -4,10 +4,8 @@
 package app
 
 import (
-	"flag"
+	"context"
 	"fmt"
-
-	"go.uber.org/zap/zapcore"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
@@ -15,13 +13,13 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/controllers"
@@ -47,17 +45,12 @@ func init() {
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 
-func Run() error {
-	var opts Options
-	opts.AddFlags(flag.CommandLine)
-
-	initLogger()
-
+func Run(opts *Options, clientConfig *rest.Config, ctx context.Context) error {
 	metrics.InitMetrics(opts.MetricsNamespace, opts.QueueLabelToMetricLabel.Get(), opts.QueueLabelToDefaultMetricValue.Get())
 	setupLog.Info(fmt.Sprintf("Queue metrics initialized and registered with namespace: %s", opts.MetricsNamespace))
 
 	var err error
-	options := ctrl.Options{
+	ctrlOptions := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: opts.MetricsAddress,
@@ -66,19 +59,20 @@ func Run() error {
 		LeaderElectionID: "ov3xj497.kai.scheduler",
 	}
 
-	clientConfig := ctrl.GetConfigOrDie()
 	clientConfig.QPS = float32(opts.Qps)
 	clientConfig.Burst = opts.Burst
 
-	mgr, err := ctrl.NewManager(clientConfig, options)
+	mgr, err := ctrl.NewManager(clientConfig, ctrlOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return nil
 	}
 
-	if err = (&v2.Queue{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook for queue v2", "webhook", "Queue")
-		return nil
+	if opts.EnableWebhook {
+		if err = (&v2.Queue{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook for queue v2", "webhook", "Queue")
+			return nil
+		}
 	}
 
 	if err = (&controllers.QueueReconciler{
@@ -100,20 +94,10 @@ func Run() error {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		return err
 	}
 
 	return nil
-}
-
-func initLogger() {
-	logOptions := zap.Options{
-		Development: true,
-		TimeEncoder: zapcore.ISO8601TimeEncoder,
-	}
-	logOptions.BindFlags(flag.CommandLine)
-	flag.Parse()
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&logOptions)))
 }

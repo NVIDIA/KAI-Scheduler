@@ -281,8 +281,8 @@ func createPodOfTask(job *TestJobBasic, taskIndex int,
 	task *tasks_fake.TestTaskBasic, podResourceList *v1.ResourceList,
 	gpuFraction string, gpuMemory string, gpuGroups []string) *v1.Pod {
 	podName := fmt.Sprintf("%s-%d", job.Name, taskIndex)
-	podOfTask := tasks_fake.BuildPod(podName, job.Namespace, task.NodeName, task.NodeAffinityNames, v1.PodPending, *podResourceList, gpuFraction, gpuMemory,
-		gpuGroups, job.Name, task.RequiredMigInstances, task.ResourceClaimNames, task.ResourceClaimTemplates)
+	podOfTask := tasks_fake.BuildPod(podName, job.Namespace, task, v1.PodPending, *podResourceList, gpuFraction, gpuMemory,
+		gpuGroups, job.Name)
 
 	if task.Priority != nil {
 		podOfTask.Labels[labels.TaskOrderLabelKey] = strconv.Itoa(int(*task.Priority))
