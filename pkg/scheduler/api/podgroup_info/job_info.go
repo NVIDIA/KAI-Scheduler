@@ -38,7 +38,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
@@ -85,9 +84,8 @@ type PodGroupInfo struct {
 	PodGroup           *enginev2alpha2.PodGroup
 	PodGroupUID        types.UID
 
-	TopologyConstraint *topology_info.TopologyConstraintInfo
-	RootSubGroupSet    *subgroup_info.SubGroupSet
-	PodSets            map[string]*subgroup_info.PodSet
+	RootSubGroupSet *subgroup_info.SubGroupSet
+	PodSets         map[string]*subgroup_info.PodSet
 
 	StalenessInfo
 
@@ -163,14 +161,6 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 			pg.Namespace, pg.Name)
 	}
 
-	if pg.Spec.TopologyConstraint.Topology != "" {
-		pgi.TopologyConstraint = &topology_info.TopologyConstraintInfo{
-			Topology:       pg.Spec.TopologyConstraint.Topology,
-			RequiredLevel:  pg.Spec.TopologyConstraint.RequiredTopologyLevel,
-			PreferredLevel: pg.Spec.TopologyConstraint.PreferredTopologyLevel,
-		}
-	}
-
 	if pg.Annotations[commonconstants.StalePodgroupTimeStamp] != "" {
 		staleTimeStamp, err := time.Parse(time.RFC3339, pg.Annotations[commonconstants.StalePodgroupTimeStamp])
 		if err != nil {
@@ -209,7 +199,14 @@ func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) error {
 		return err
 	}
 	pgi.RootSubGroupSet = rootSubGroupSet
-	pgi.PodSets = rootSubGroupSet.GetPodSets()
+	podSets := rootSubGroupSet.GetPodSets()
+	if len(podSets) > 0 {
+		pgi.PodSets = podSets
+	} else {
+		for _, podSet := range pgi.PodSets {
+			rootSubGroupSet.AddPodSet(podSet)
+		}
+	}
 	return nil
 }
 
@@ -475,17 +472,6 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 
 		PodGroup:    pgi.PodGroup,
 		PodGroupUID: pgi.PodGroupUID,
-
-		TopologyConstraint: func() *topology_info.TopologyConstraintInfo {
-			if pgi.TopologyConstraint == nil {
-				return nil
-			}
-			return &topology_info.TopologyConstraintInfo{
-				Topology:       pgi.TopologyConstraint.Topology,
-				RequiredLevel:  pgi.TopologyConstraint.RequiredLevel,
-				PreferredLevel: pgi.TopologyConstraint.PreferredLevel,
-			}
-		}(),
 
 		PodStatusIndex:       map[pod_status.PodStatus]pod_info.PodsMap{},
 		activeAllocatedCount: ptr.To(0),
