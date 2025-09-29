@@ -6,9 +6,11 @@ package allocate_test
 import (
 	"testing"
 
+	. "go.uber.org/mock/gomock"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/allocate"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
@@ -20,7 +22,19 @@ import (
 )
 
 func TestHandleTopologyAllocation(t *testing.T) {
-	integration_tests_utils.RunTests(t, getTopologyTestsMetadata())
+	test_utils.InitTestingInfrastructure()
+	controller := NewController(t)
+	defer controller.Finish()
+
+	for testNumber, testMetadata := range getTopologyTestsMetadata() {
+		t.Logf("Running test %d: %s", testNumber, testMetadata.TestTopologyBasic.Name)
+
+		ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
+		allocateAction := allocate.New()
+		allocateAction.Execute(ssn)
+
+		test_utils.MatchExpectedAndRealTasks(t, testNumber, testMetadata.TestTopologyBasic, ssn)
+	}
 }
 
 func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
@@ -125,13 +139,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					"pending_job0-0": {
 						NodeName:             "node2",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-1": {
 						NodeName:             "node3",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 				},
@@ -230,13 +244,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					"pending_job0-0": {
 						NodeName:             "node2",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-1": {
 						NodeName:             "node3",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 				},
@@ -341,13 +355,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					"pending_job0-0": {
 						NodeName:             "node1",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-1": {
 						NodeName:             "node1",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 				},
@@ -472,25 +486,25 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					"pending_job0-0": {
 						NodeName:             "node2",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-1": {
 						NodeName:             "node2",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-2": {
 						NodeName:             "node3",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-3": {
 						NodeName:             "node3",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 				},
@@ -595,13 +609,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					"pending_job0-0": {
 						NodeName:             "node0",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-1": {
 						NodeName:             "node1",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 				},
@@ -858,13 +872,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					"pending_job0-0": {
 						NodeName:             "node1",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-1": {
 						NodeName:             "node1",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 				},
@@ -982,13 +996,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					"pending_job0-0": {
 						NodeName:             "node0",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-1": {
 						NodeName:             "node1",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 				},
@@ -1148,13 +1162,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					"pending_job0-0": {
 						NodeName:             "node2",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-1": {
 						NodeName:             "node3",
 						GPUsRequired:         1,
-						Status:               pod_status.Running,
+						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 				},

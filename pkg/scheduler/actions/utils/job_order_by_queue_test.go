@@ -15,6 +15,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
@@ -54,8 +55,8 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 					testPod: {},
 				},
 			},
-			SubGroups: map[string]*podgroup_info.SubGroupInfo{
-				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+			SubGroups: map[string]*subgroup_info.SubGroupInfo{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 					testPod: {
 						UID: testPod,
 					},
@@ -71,8 +72,8 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 					testPod: {},
 				},
 			},
-			SubGroups: map[string]*podgroup_info.SubGroupInfo{
-				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+			SubGroups: map[string]*subgroup_info.SubGroupInfo{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 					testPod: {
 						UID: testPod,
 					},
@@ -88,8 +89,8 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 					testPod: {},
 				},
 			},
-			SubGroups: map[string]*podgroup_info.SubGroupInfo{
-				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+			SubGroups: map[string]*subgroup_info.SubGroupInfo{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 					testPod: {
 						UID: testPod,
 					},
@@ -105,8 +106,8 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 					testPod: {},
 				},
 			},
-			SubGroups: map[string]*podgroup_info.SubGroupInfo{
-				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+			SubGroups: map[string]*subgroup_info.SubGroupInfo{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 					testPod: {
 						UID: testPod,
 					},
@@ -377,8 +378,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 							},
 						},
 					},
-					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+					SubGroups: map[string]*subgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 							testPod: {
 								UID: testPod,
 							},
@@ -399,8 +400,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								},
 							},
 						},
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 								testPod: {
 									UID: testPod,
 								},
@@ -436,8 +437,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								},
 							},
 						},
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 								testPod: {
 									UID: testPod,
 								},
@@ -459,8 +460,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 							},
 						},
 					},
-					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+					SubGroups: map[string]*subgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 							testPod: {
 								UID: testPod,
 							},
@@ -482,8 +483,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								},
 							},
 						},
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 								testPod: {
 									UID: testPod,
 								},
@@ -502,8 +503,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								},
 							},
 						},
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 								testPod: {
 									UID: testPod,
 								},
@@ -539,8 +540,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								},
 							},
 						},
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 								testPod: {
 									UID: testPod,
 								},
@@ -562,8 +563,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 							},
 						},
 					},
-					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+					SubGroups: map[string]*subgroup_info.SubGroupInfo{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 							testPod: {
 								UID: testPod,
 							},
@@ -585,8 +586,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								},
 							},
 						},
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 								testPod: {
 									UID: testPod,
 								},
@@ -605,8 +606,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 								},
 							},
 						},
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 								testPod: {
 									UID: testPod,
 								},
@@ -693,8 +694,8 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 								},
 							},
 						},
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 								testPod: {
 									UID: testPod,
 								},
@@ -717,8 +718,8 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 								},
 							},
 						},
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 0).WithPodInfos(pod_info.PodsMap{
 								testPod: {
 									UID: testPod,
 								},

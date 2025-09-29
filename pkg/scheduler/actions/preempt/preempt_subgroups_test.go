@@ -12,7 +12,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/preempt"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
@@ -65,9 +65,9 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityBuildNumber,
 						QueueName:           "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
-							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": subgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -145,9 +145,9 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 2,
 						Priority:            constants.PriorityBuildNumber,
 						QueueName:           "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
-							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": subgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -224,9 +224,9 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityBuildNumber,
 						QueueName:           "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
-							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": subgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -324,9 +324,9 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityBuildNumber,
 						QueueName:           "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
-							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": subgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -407,9 +407,9 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 1),
-							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 1),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 1),
+							"sub-1": subgroup_info.NewSubGroupInfo("sub-1", 1),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
@@ -503,9 +503,9 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
-							"sub-0": podgroup_info.NewSubGroupInfo("sub-0", 2),
-							"sub-1": podgroup_info.NewSubGroupInfo("sub-1", 2),
+						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+							"sub-0": subgroup_info.NewSubGroupInfo("sub-0", 2),
+							"sub-1": subgroup_info.NewSubGroupInfo("sub-1", 2),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{

@@ -133,14 +133,22 @@ jobs:
           version: v0.26.0
           config: ./hack/e2e-kind-config.yaml
 
-      - name: Load docker images to kind
+      - name: Deploy image registry
+        run: |
+          kubectl apply -f ./hack/local_registry.yaml
+          kubectl wait --for=condition=available --timeout=60s deployment/registry -n kube-registry
+
+      - name: Load docker images to registry
         working-directory: images
         env:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
+          kubectl port-forward -n kube-registry deploy/registry 5000:5000 &
           docker load < docker_images.tgz
           for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
-            kind load docker-image $image --name kind
+            new_image=$(echo "$image" | sed -E 's|.*/([^/]+:[^/]+)$|localhost:5000/\1|')
+            docker tag $image $new_image
+            docker push $new_image
           done
 
       - name: Deploy fake gpu operator
@@ -153,7 +161,7 @@ jobs:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
           helm upgrade -i kai-scheduler ./images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
-            --set "global.gpuSharing=true" --debug --wait
+            --set "global.gpuSharing=true" --set "global.registry=localhost:30100" --debug --wait
       - name: Set up Go
         uses: actions/setup-go@v2
         with:

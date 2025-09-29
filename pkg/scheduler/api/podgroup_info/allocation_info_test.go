@@ -13,6 +13,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/scheduler_util"
 )
@@ -35,8 +36,8 @@ func tasksOrderFn(l, r interface{}) bool {
 }
 
 func subGroupOrderFn(l, r interface{}) bool {
-	lSubGroup := l.(*SubGroupInfo)
-	rSubGroup := r.(*SubGroupInfo)
+	lSubGroup := l.(*subgroup_info.SubGroupInfo)
+	rSubGroup := r.(*subgroup_info.SubGroupInfo)
 	return lSubGroup.GetName() < rSubGroup.GetName()
 }
 
@@ -196,7 +197,7 @@ func Test_GetTasksToAllocate(t *testing.T) {
 			pg := NewPodGroupInfo("pg")
 			for subGroupName, pods := range tt.subGroupTasks {
 				if _, exists := pg.SubGroups[subGroupName]; !exists {
-					pg.SubGroups[subGroupName] = NewSubGroupInfo(subGroupName, tt.minAvailMap[subGroupName])
+					pg.SubGroups[subGroupName] = subgroup_info.NewSubGroupInfo(subGroupName, tt.minAvailMap[subGroupName])
 				}
 				for _, pod := range pods {
 					pg.AddTaskInfo(pod)
@@ -371,7 +372,7 @@ func Test_getTasksPriorityQueue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sg := NewSubGroupInfo("subGroup1", 1)
+			sg := subgroup_info.NewSubGroupInfo("subGroup1", 1)
 			for _, task := range tt.tasks {
 				if task.Status == pod_status.Releasing && !tt.isRealAllocation {
 					task.IsVirtualStatus = true
@@ -439,7 +440,7 @@ func Test_getNumTasksToAllocate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sg := NewSubGroupInfo("sg", int32(tt.minAvailable))
+			sg := subgroup_info.NewSubGroupInfo("sg", int32(tt.minAvailable))
 			for i, status := range tt.taskStatuses {
 				task := simpleTask(
 					fmt.Sprintf("task-%d", i),
@@ -512,7 +513,7 @@ func Test_getNumAllocatableTasks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sg := NewSubGroupInfo("test-subgroup", 1)
+			sg := subgroup_info.NewSubGroupInfo("test-subgroup", 1)
 			for i, status := range tt.taskStatuses {
 				p := simpleTask(
 					fmt.Sprintf("test-task-%d", i),

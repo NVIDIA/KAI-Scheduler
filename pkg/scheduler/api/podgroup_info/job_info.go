@@ -36,6 +36,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
@@ -89,7 +90,7 @@ type PodGroupInfo struct {
 	PodGroup           *enginev2alpha2.PodGroup
 	PodGroupUID        types.UID
 	TopologyConstraint *TopologyConstraintInfo
-	SubGroups          map[string]*SubGroupInfo
+	SubGroups          map[string]*subgroup_info.SubGroupInfo
 
 	StalenessInfo
 
@@ -117,8 +118,8 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 			Stale:     false,
 		},
 
-		SubGroups: map[string]*SubGroupInfo{
-			DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1),
+		SubGroups: map[string]*subgroup_info.SubGroupInfo{
+			DefaultSubGroup: subgroup_info.NewSubGroupInfo(DefaultSubGroup, 1),
 		},
 
 		LastStartTimestamp:   nil,
@@ -142,17 +143,17 @@ func (pgi *PodGroupInfo) GetAllPodsMap() pod_info.PodsMap {
 	return allPods
 }
 
-func (pgi *PodGroupInfo) GetSubGroups() map[string]*SubGroupInfo {
+func (pgi *PodGroupInfo) GetSubGroups() map[string]*subgroup_info.SubGroupInfo {
 	return pgi.SubGroups
 }
 
 func (pgi *PodGroupInfo) SetDefaultMinAvailable(minAvailable int32) {
 	if pgi.SubGroups == nil {
-		pgi.SubGroups = map[string]*SubGroupInfo{}
+		pgi.SubGroups = map[string]*subgroup_info.SubGroupInfo{}
 	}
 
 	if _, exists := pgi.SubGroups[DefaultSubGroup]; !exists {
-		pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, 0)
+		pgi.SubGroups[DefaultSubGroup] = subgroup_info.NewSubGroupInfo(DefaultSubGroup, 0)
 	}
 	pgi.SubGroups[DefaultSubGroup].SetMinAvailable(minAvailable)
 }
@@ -207,19 +208,19 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 
 func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) {
 	if len(podGroup.Spec.SubGroups) > 0 {
-		pgi.SubGroups = map[string]*SubGroupInfo{}
+		pgi.SubGroups = map[string]*subgroup_info.SubGroupInfo{}
 		for _, sg := range podGroup.Spec.SubGroups {
-			subGroupInfo := FromSubGroup(&sg)
-			pgi.SubGroups[subGroupInfo.name] = subGroupInfo
+			subGroupInfo := subgroup_info.FromSubGroup(&sg)
+			pgi.SubGroups[subGroupInfo.GetName()] = subGroupInfo
 		}
 		return
 	}
 	if pgi.SubGroups == nil {
-		pgi.SubGroups = map[string]*SubGroupInfo{}
+		pgi.SubGroups = map[string]*subgroup_info.SubGroupInfo{}
 	}
 	defaultSubGroup, found := pgi.SubGroups[DefaultSubGroup]
 	if !found {
-		pgi.SubGroups[DefaultSubGroup] = NewSubGroupInfo(DefaultSubGroup, max(podGroup.Spec.MinMember, 1))
+		pgi.SubGroups[DefaultSubGroup] = subgroup_info.NewSubGroupInfo(DefaultSubGroup, max(podGroup.Spec.MinMember, 1))
 	} else {
 		defaultSubGroup.SetMinAvailable(max(podGroup.Spec.MinMember, 1))
 	}
@@ -486,7 +487,7 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 
 		PodGroup:    pgi.PodGroup,
 		PodGroupUID: pgi.PodGroupUID,
-		SubGroups:   map[string]*SubGroupInfo{},
+		SubGroups:   map[string]*subgroup_info.SubGroupInfo{},
 		TopologyConstraint: func() *TopologyConstraintInfo {
 			if pgi.TopologyConstraint == nil {
 				return nil
@@ -505,7 +506,9 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 	pgi.CreationTimestamp.DeepCopyInto(&info.CreationTimestamp)
 
 	for _, subGroup := range pgi.SubGroups {
-		info.SubGroups[subGroup.name] = NewSubGroupInfo(subGroup.name, subGroup.minAvailable)
+		info.SubGroups[subGroup.GetName()] = subgroup_info.NewSubGroupInfo(
+			subGroup.GetName(), subGroup.GetMinAvailable(),
+		)
 	}
 
 	for _, task := range tasks {
@@ -520,7 +523,7 @@ func (pgi *PodGroupInfo) String() string {
 
 	for _, subGroup := range pgi.GetSubGroups() {
 		res = res + fmt.Sprintf("\t\t subGroup %s: minAvailable(%v)\n",
-			subGroup.name, subGroup.minAvailable)
+			subGroup.GetName(), subGroup.GetMinAvailable())
 	}
 
 	i := 0
