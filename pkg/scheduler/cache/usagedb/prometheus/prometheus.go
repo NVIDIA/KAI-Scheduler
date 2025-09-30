@@ -115,6 +115,12 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 	usage := queue_info.NewClusterUsage()
 
 	for _, resource := range []v1.ResourceName{commonconstants.GpuResource, v1.ResourceCPU, v1.ResourceMemory} {
+		capacityForResource, found := capacity[resource]
+		if !found {
+			capacityForResource = 1
+			log.InfraLogger.V(3).Warnf("Capacity for %s not found, setting to 1", resource)
+		}
+
 		resourceUsage, err := p.queryResourceUsage(ctx, p.allocationMetricsMap[string(resource)], p.usageWindowQuery)
 		if err != nil {
 			return nil, fmt.Errorf("error querying %s and usage: %v", resource, err)
@@ -123,7 +129,7 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 			if _, exists := usage.Queues[queueID]; !exists {
 				usage.Queues[queueID] = queue_info.QueueUsage{}
 			}
-			usage.Queues[queueID][resource] = queueResourceUsage / capacity[resource]
+			usage.Queues[queueID][resource] = queueResourceUsage / capacityForResource
 		}
 	}
 
