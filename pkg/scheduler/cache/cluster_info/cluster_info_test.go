@@ -979,12 +979,13 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*subgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
-							"test-pod": {
-								UID: "test-pod",
-							},
-						}),
+					PodSets: map[string]*subgroup_info.PodSet{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+							WithPodInfos(pod_info.PodsMap{
+								"test-pod": {
+									UID: "test-pod",
+								},
+							}),
 					},
 				},
 			},
@@ -1036,8 +1037,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*subgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
+					PodSets: map[string]*subgroup_info.PodSet{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 				},
 			},
@@ -1059,8 +1060,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*subgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
+					PodSets: map[string]*subgroup_info.PodSet{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 				},
 			},
@@ -1089,8 +1090,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*subgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
+					PodSets: map[string]*subgroup_info.PodSet{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 				},
 			},
@@ -1184,8 +1185,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				func() *podgroup_info.PodGroupInfo {
-					subGroup0 := subgroup_info.NewSubGroupInfo("SubGroup-0", 1)
-					subGroup1 := subgroup_info.NewSubGroupInfo("SubGroup-1", 2)
+					subGroup0 := subgroup_info.NewPodSet("SubGroup-0", 1, nil)
+					subGroup1 := subgroup_info.NewPodSet("SubGroup-1", 2, nil)
 
 					subGroup0.AssignTask(&pod_info.PodInfo{UID: "pod-0", SubGroupName: "SubGroup-0"})
 					subGroup1.AssignTask(&pod_info.PodInfo{UID: "pod-1", SubGroupName: "SubGroup-1"})
@@ -1194,7 +1195,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 					return &podgroup_info.PodGroupInfo{
 						Name:  "podGroup-0",
 						Queue: "queue-0",
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"SubGroup-0": subGroup0,
 							"SubGroup-1": subGroup1,
 						},

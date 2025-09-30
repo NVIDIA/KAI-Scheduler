@@ -89,3 +89,34 @@ crdupgrader:
   image:
     name: crd-upgrader
     pullPolicy: IfNotPresent
+
+defaultQueue:
+  createDefaultQueue: true
+  parentName: default-parent-queue
+  childName: default-queue
+  parentResources:
+    cpu:
+      quota: 0
+      limit: -1
+      overQuotaWeight: 1
+    gpu:
+      quota: 0
+      limit: -1
+      overQuotaWeight: 1
+    memory:
+      quota: 0
+      limit: -1
+      overQuotaWeight: 1
+  childResources:
+    cpu:
+      quota: 0
+      limit: -1
+      overQuotaWeight: 1
+    gpu:
+      quota: 0
+      limit: -1
+      overQuotaWeight: 1
+    memory:
+      quota: 0
+      limit: -1
+      overQuotaWeight: 1

@@ -46,7 +46,7 @@ type TestJobBasic struct {
 	MinAvailable                        *int32
 	Topology                            *topology_info.TopologyConstraintInfo
 	Tasks                               []*tasks_fake.TestTaskBasic
-	SubGroups                           map[string]*subgroup_info.SubGroupInfo
+	SubGroups                           map[string]*subgroup_info.PodSet
 	StaleDuration                       *time.Duration
 }
 
@@ -95,7 +95,7 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic) (
 func BuildJobInfo(
 	name, namespace string,
 	uid common_info.PodGroupID, allocatedResource *resource_info.Resource,
-	subGroups map[string]*subgroup_info.SubGroupInfo, taskInfos []*pod_info.PodInfo, priority int32,
+	subGroups map[string]*subgroup_info.PodSet, taskInfos []*pod_info.PodInfo, priority int32,
 	queueUID common_info.QueueID, jobCreationTime time.Time, minAvailable int32, staleDuration *time.Duration,
 	topologyConstraint *topology_info.TopologyConstraintInfo) *podgroup_info.PodGroupInfo {
 	allTasks := pod_info.PodsMap{}
@@ -110,7 +110,7 @@ func BuildJobInfo(
 	}
 
 	if subGroups == nil {
-		subGroups = map[string]*subgroup_info.SubGroupInfo{}
+		subGroups = map[string]*subgroup_info.PodSet{}
 	}
 
 	for _, taskInfo := range taskInfos {
@@ -119,7 +119,7 @@ func BuildJobInfo(
 			subGroup.AssignTask(taskInfo)
 		} else {
 			if subGroups[podgroup_info.DefaultSubGroup] == nil {
-				subGroups[podgroup_info.DefaultSubGroup] = subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable)
+				subGroups[podgroup_info.DefaultSubGroup] = subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, minAvailable, nil)
 			}
 			subGroups[podgroup_info.DefaultSubGroup].AssignTask(taskInfo)
 		}
@@ -136,7 +136,7 @@ func BuildJobInfo(
 		NodesFitErrors:     map[common_info.PodID]*common_info.FitErrors{},
 		Queue:              queueUID,
 		CreationTimestamp:  metav1.Time{Time: jobCreationTime},
-		SubGroups:          subGroups,
+		PodSets:            subGroups,
 		TopologyConstraint: topologyConstraint,
 		PodGroup: &enginev2alpha2.PodGroup{
 			ObjectMeta: metav1.ObjectMeta{

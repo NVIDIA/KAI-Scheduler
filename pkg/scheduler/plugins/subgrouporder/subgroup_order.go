@@ -32,8 +32,8 @@ func (sgop *subGroupOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 }
 
 func SubGroupOrderFn(l, r interface{}) int {
-	lv := l.(*subgroup_info.SubGroupInfo)
-	rv := r.(*subgroup_info.SubGroupInfo)
+	lv := l.(*subgroup_info.PodSet)
+	rv := r.(*subgroup_info.PodSet)
 
 	lNumActiveTasks := lv.GetNumActiveAllocatedTasks()
 	rNumActiveTasks := rv.GetNumActiveAllocatedTasks()

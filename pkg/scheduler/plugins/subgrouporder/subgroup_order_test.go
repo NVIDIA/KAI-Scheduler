@@ -21,8 +21,8 @@ func makeAllocatedPodInfo(subGroupName string, taskIndex int) *pod_info.PodInfo 
 	}
 }
 
-func makeSubGroupInfoWithAllocated(minAvailable int32, numAllocated int, name string) *subgroup_info.SubGroupInfo {
-	sg := subgroup_info.NewSubGroupInfo(name, minAvailable)
+func makeSubGroupInfoWithAllocated(minAvailable int32, numAllocated int, name string) *subgroup_info.PodSet {
+	sg := subgroup_info.NewPodSet(name, minAvailable, nil)
 	for i := 0; i < numAllocated; i++ {
 		pod := makeAllocatedPodInfo(name, i)
 		sg.AssignTask(pod)
