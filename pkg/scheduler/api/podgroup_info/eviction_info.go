@@ -31,7 +31,7 @@ func getTasksToEvictWithSubGroups(
 	var tasksToEvict []*pod_info.PodInfo
 	numEvictedSubGroups := 0
 	for !subGroupPriorityQueue.Empty() && (numEvictedSubGroups < maxNumOfSubGroups) {
-		nextSubGroup := subGroupPriorityQueue.Pop().(*subgroup_info.SubGroupInfo)
+		nextSubGroup := subGroupPriorityQueue.Pop().(*subgroup_info.PodSet)
 
 		tasksPriorityQueue := getTasksToEvictPriorityQueue(nextSubGroup, reverseTaskOrderFn)
 		maxTasksToEvict := getMaxTasksToEvict(nextSubGroup)
@@ -45,7 +45,7 @@ func getTasksToEvictWithSubGroups(
 }
 
 func getNumOfSubGroupsToEvict(podGroupInfo *PodGroupInfo) int {
-	for _, subGroup := range podGroupInfo.SubGroups {
+	for _, subGroup := range podGroupInfo.GetSubGroups() {
 		allocatedTasks := subGroup.GetNumActiveAllocatedTasks()
 
 		// If there is at least one subgroup above minAvailable - a single task is evicted
@@ -53,10 +53,10 @@ func getNumOfSubGroupsToEvict(podGroupInfo *PodGroupInfo) int {
 			return 1
 		}
 	}
-	return len(podGroupInfo.SubGroups)
+	return len(podGroupInfo.GetSubGroups())
 }
 
-func getMaxTasksToEvict(subGroup *subgroup_info.SubGroupInfo) int {
+func getMaxTasksToEvict(subGroup *subgroup_info.PodSet) int {
 	numAllocatedTasks := subGroup.GetNumActiveAllocatedTasks()
 	if numAllocatedTasks > int(subGroup.GetMinAvailable()) {
 		return 1
@@ -65,7 +65,7 @@ func getMaxTasksToEvict(subGroup *subgroup_info.SubGroupInfo) int {
 }
 
 func getTasksToEvictPriorityQueue(
-	subGroup *subgroup_info.SubGroupInfo, taskOrderFn common_info.LessFn,
+	subGroup *subgroup_info.PodSet, taskOrderFn common_info.LessFn,
 ) *scheduler_util.PriorityQueue {
 	podPriorityQueue := scheduler_util.NewPriorityQueue(taskOrderFn, scheduler_util.QueueCapacityInfinite)
 	for _, task := range subGroup.GetPodInfos() {

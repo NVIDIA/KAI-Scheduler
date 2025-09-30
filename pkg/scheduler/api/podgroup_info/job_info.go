@@ -38,6 +38,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
@@ -62,12 +63,6 @@ type PodGroupInfos struct {
 	PodGroupInfos []*PodGroupInfo
 }
 
-type TopologyConstraintInfo struct {
-	PreferredLevel string
-	RequiredLevel  string
-	Topology       string
-}
-
 type PodGroupInfo struct {
 	UID common_info.PodGroupID
 
@@ -89,8 +84,9 @@ type PodGroupInfo struct {
 	LastStartTimestamp *time.Time
 	PodGroup           *enginev2alpha2.PodGroup
 	PodGroupUID        types.UID
-	TopologyConstraint *TopologyConstraintInfo
-	SubGroups          map[string]*subgroup_info.SubGroupInfo
+
+	TopologyConstraint *topology_info.TopologyConstraintInfo
+	PodSets            map[string]*subgroup_info.PodSet
 
 	StalenessInfo
 
@@ -118,8 +114,8 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 			Stale:     false,
 		},
 
-		SubGroups: map[string]*subgroup_info.SubGroupInfo{
-			DefaultSubGroup: subgroup_info.NewSubGroupInfo(DefaultSubGroup, 1),
+		PodSets: map[string]*subgroup_info.PodSet{
+			DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil),
 		},
 
 		LastStartTimestamp:   nil,
@@ -135,7 +131,7 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 
 func (pgi *PodGroupInfo) GetAllPodsMap() pod_info.PodsMap {
 	allPods := pod_info.PodsMap{}
-	for _, subGroup := range pgi.SubGroups {
+	for _, subGroup := range pgi.PodSets {
 		for podId, podInfo := range subGroup.GetPodInfos() {
 			allPods[podId] = podInfo
 		}
@@ -143,19 +139,8 @@ func (pgi *PodGroupInfo) GetAllPodsMap() pod_info.PodsMap {
 	return allPods
 }
 
-func (pgi *PodGroupInfo) GetSubGroups() map[string]*subgroup_info.SubGroupInfo {
-	return pgi.SubGroups
-}
-
-func (pgi *PodGroupInfo) SetDefaultMinAvailable(minAvailable int32) {
-	if pgi.SubGroups == nil {
-		pgi.SubGroups = map[string]*subgroup_info.SubGroupInfo{}
-	}
-
-	if _, exists := pgi.SubGroups[DefaultSubGroup]; !exists {
-		pgi.SubGroups[DefaultSubGroup] = subgroup_info.NewSubGroupInfo(DefaultSubGroup, 0)
-	}
-	pgi.SubGroups[DefaultSubGroup].SetMinAvailable(minAvailable)
+func (pgi *PodGroupInfo) GetSubGroups() map[string]*subgroup_info.PodSet {
+	return pgi.PodSets
 }
 
 func (pgi *PodGroupInfo) IsPreemptibleJob() bool {
@@ -173,7 +158,7 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.setSubGroups(pg)
 
 	if pg.Spec.TopologyConstraint.Topology != "" {
-		pgi.TopologyConstraint = &TopologyConstraintInfo{
+		pgi.TopologyConstraint = &topology_info.TopologyConstraintInfo{
 			Topology:       pg.Spec.TopologyConstraint.Topology,
 			RequiredLevel:  pg.Spec.TopologyConstraint.RequiredTopologyLevel,
 			PreferredLevel: pg.Spec.TopologyConstraint.PreferredTopologyLevel,
@@ -208,19 +193,19 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 
 func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) {
 	if len(podGroup.Spec.SubGroups) > 0 {
-		pgi.SubGroups = map[string]*subgroup_info.SubGroupInfo{}
+		pgi.PodSets = map[string]*subgroup_info.PodSet{}
 		for _, sg := range podGroup.Spec.SubGroups {
 			subGroupInfo := subgroup_info.FromSubGroup(&sg)
-			pgi.SubGroups[subGroupInfo.GetName()] = subGroupInfo
+			pgi.PodSets[subGroupInfo.GetName()] = subGroupInfo
 		}
 		return
 	}
-	if pgi.SubGroups == nil {
-		pgi.SubGroups = map[string]*subgroup_info.SubGroupInfo{}
+	if pgi.PodSets == nil {
+		pgi.PodSets = map[string]*subgroup_info.PodSet{}
 	}
-	defaultSubGroup, found := pgi.SubGroups[DefaultSubGroup]
+	defaultSubGroup, found := pgi.PodSets[DefaultSubGroup]
 	if !found {
-		pgi.SubGroups[DefaultSubGroup] = subgroup_info.NewSubGroupInfo(DefaultSubGroup, max(podGroup.Spec.MinMember, 1))
+		pgi.PodSets[DefaultSubGroup] = subgroup_info.NewPodSet(DefaultSubGroup, max(podGroup.Spec.MinMember, 1), nil)
 	} else {
 		defaultSubGroup.SetMinAvailable(max(podGroup.Spec.MinMember, 1))
 	}
@@ -244,13 +229,13 @@ func (pgi *PodGroupInfo) AddTaskInfo(ti *pod_info.PodInfo) {
 	if ti.SubGroupName != "" {
 		taskSubGroupName = ti.SubGroupName
 	}
-	subGroup, found := pgi.SubGroups[taskSubGroupName]
+	podSet, found := pgi.PodSets[taskSubGroupName]
 	if !found {
 		log.InfraLogger.Warningf("AddTaskInfo for task <%s/%s> of podGroup: <%s/%s>: SubGroup not found <%s>", ti.Namespace, ti.Name, pgi.Namespace, pgi.Name, taskSubGroupName)
 		return
 	}
 
-	subGroup.AssignTask(ti)
+	podSet.AssignTask(ti)
 	pgi.addTaskIndex(ti)
 
 	if pod_status.AllocatedStatus(ti.Status) {
@@ -402,8 +387,8 @@ func (pgi *PodGroupInfo) GetTasksActiveAllocatedReqResource() *resource_info.Res
 }
 
 func (pgi *PodGroupInfo) IsReadyForScheduling() bool {
-	for _, subGroup := range pgi.GetSubGroups() {
-		if !subGroup.IsReadyForScheduling() {
+	for _, podSet := range pgi.PodSets {
+		if !podSet.IsReadyForScheduling() {
 			return false
 		}
 	}
@@ -411,8 +396,8 @@ func (pgi *PodGroupInfo) IsReadyForScheduling() bool {
 }
 
 func (pgi *PodGroupInfo) IsElastic() bool {
-	for _, subGroup := range pgi.GetSubGroups() {
-		if subGroup.IsElastic() {
+	for _, podSet := range pgi.PodSets {
+		if podSet.IsElastic() {
 			return true
 		}
 	}
@@ -428,8 +413,8 @@ func (pgi *PodGroupInfo) IsStale() bool {
 	if totalActivePods == 0 {
 		return false
 	}
-	for _, subGroup := range pgi.GetSubGroups() {
-		if !subGroup.IsGangSatisfied() {
+	for _, podSet := range pgi.PodSets {
+		if !podSet.IsGangSatisfied() {
 			return true
 		}
 	}
@@ -437,8 +422,8 @@ func (pgi *PodGroupInfo) IsStale() bool {
 }
 
 func (pgi *PodGroupInfo) IsGangSatisfied() bool {
-	for _, subGroup := range pgi.SubGroups {
-		if !subGroup.IsGangSatisfied() {
+	for _, podSet := range pgi.PodSets {
+		if !podSet.IsGangSatisfied() {
 			return false
 		}
 	}
@@ -446,10 +431,10 @@ func (pgi *PodGroupInfo) IsGangSatisfied() bool {
 }
 
 func (pgi *PodGroupInfo) ShouldPipelineJob() bool {
-	for _, subGroup := range pgi.SubGroups {
+	for _, podSet := range pgi.PodSets {
 		hasPipelinedTask := false
 		activeAllocatedTasksCount := 0
-		for _, task := range subGroup.GetPodInfos() {
+		for _, task := range podSet.GetPodInfos() {
 			if task.Status == pod_status.Pipelined {
 				log.InfraLogger.V(7).Infof("task: <%v/%v> was pipelined to node: <%v>",
 					task.Namespace, task.Name, task.NodeName)
@@ -459,9 +444,9 @@ func (pgi *PodGroupInfo) ShouldPipelineJob() bool {
 			}
 		}
 
-		if hasPipelinedTask && activeAllocatedTasksCount < int(subGroup.GetMinAvailable()) {
+		if hasPipelinedTask && activeAllocatedTasksCount < int(podSet.GetMinAvailable()) {
 			log.InfraLogger.V(7).Infof("Subgroup: <%v/%v> has pipelined tasks, and not enough allocated pods for minAvailable <%v>. Pipeline all.",
-				pgi.UID, subGroup.GetName(), subGroup.GetMinAvailable())
+				pgi.UID, podSet.GetName(), podSet.GetMinAvailable())
 			return true
 		}
 	}
@@ -488,12 +473,13 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 
 		PodGroup:    pgi.PodGroup,
 		PodGroupUID: pgi.PodGroupUID,
-		SubGroups:   map[string]*subgroup_info.SubGroupInfo{},
-		TopologyConstraint: func() *TopologyConstraintInfo {
+
+		PodSets: map[string]*subgroup_info.PodSet{},
+		TopologyConstraint: func() *topology_info.TopologyConstraintInfo {
 			if pgi.TopologyConstraint == nil {
 				return nil
 			}
-			return &TopologyConstraintInfo{
+			return &topology_info.TopologyConstraintInfo{
 				Topology:       pgi.TopologyConstraint.Topology,
 				RequiredLevel:  pgi.TopologyConstraint.RequiredLevel,
 				PreferredLevel: pgi.TopologyConstraint.PreferredLevel,
@@ -506,9 +492,9 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 
 	pgi.CreationTimestamp.DeepCopyInto(&info.CreationTimestamp)
 
-	for _, subGroup := range pgi.SubGroups {
-		info.SubGroups[subGroup.GetName()] = subgroup_info.NewSubGroupInfo(
-			subGroup.GetName(), subGroup.GetMinAvailable(),
+	for _, podSet := range pgi.PodSets {
+		info.PodSets[podSet.GetName()] = subgroup_info.NewPodSet(
+			podSet.GetName(), podSet.GetMinAvailable(), nil,
 		)
 	}
 
@@ -522,9 +508,9 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 func (pgi *PodGroupInfo) String() string {
 	res := ""
 
-	for _, subGroup := range pgi.GetSubGroups() {
+	for _, podSet := range pgi.PodSets {
 		res = res + fmt.Sprintf("\t\t subGroup %s: minAvailable(%v)\n",
-			subGroup.GetName(), subGroup.GetMinAvailable())
+			podSet.GetName(), podSet.GetMinAvailable())
 	}
 
 	i := 0

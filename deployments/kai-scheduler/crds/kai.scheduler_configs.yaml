@@ -1266,6 +1266,18 @@ spec:
                             x-kubernetes-list-type: atomic
                         type: object
                     type: object
+                  connection:
+                    description: Connection defines the connection configuration for
+                      TSDB
+                    properties:
+                      authSecretName:
+                        description: AuthSecretName defines the name of the secret
+                          containing authentication credentials
+                        type: string
+                      url:
+                        description: URL defines the connection URL for TSDB
+                        type: string
+                    type: object
                   daemonsetsTolerations:
                     description: DaemonsetsTolerations defines additional tolerations
                       for daemonsets in cluster
@@ -1989,6 +2001,22 @@ spec:
                     description: Enabled defines whether a Prometheus instance should
                       be deployed
                     type: boolean
+                  retentionPeriod:
+                    description: RetentionPeriod defines how long to retain data (e.g.,
+                      "2w", "1d", "30d")
+                    type: string
+                  sampleInterval:
+                    description: SampleInterval defines the interval of sampling (e.g.,
+                      "1m", "30s", "5m")
+                    type: string
+                  storageClassName:
+                    description: StorageClassName defines the name of the storageClass
+                      that will be used to store the TSDB data. defaults to "standard".
+                    type: string
+                  storageSize:
+                    description: StorageSize defines the size of the storage (e.g.,
+                      "20Gi", "30Gi")
+                    type: string
                 type: object
               queueController:
                 description: QueueController specifies configuration for the queue

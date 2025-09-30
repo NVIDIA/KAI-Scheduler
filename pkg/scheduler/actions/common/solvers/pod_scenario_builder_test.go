@@ -103,7 +103,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 
 		It("returns scenario with all tasks in single groups when minAvailable is amount of pods", func() {
 			for _, podGroupInfo := range ssn.PodGroupInfos {
-				podGroupInfo.SetDefaultMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
+				podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].SetMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.GetAllPodsMap()))
 			}
 			scenarioBuilder = NewPodAccumulatedScenarioBuilder(ssn, reclaimerJob, []*podgroup_info.PodGroupInfo{},
@@ -129,7 +129,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 		It("returns scenarios that have the same recorded victims", func() {
 			ssn, _ = initializeSession(3, 2)
 			for _, podGroupInfo := range ssn.PodGroupInfos {
-				podGroupInfo.SetDefaultMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
+				podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].SetMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.GetAllPodsMap()))
 			}
 			submitQueue := createQueue("team-a")
@@ -163,7 +163,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 		It("returns scenarios that have correct number of potential victims", func() {
 			ssn, _ = initializeSession(3, 2)
 			for _, podGroupInfo := range ssn.PodGroupInfos {
-				podGroupInfo.SetDefaultMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
+				podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].SetMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.GetAllPodsMap()))
 			}
 			submitQueue := createQueue("team-a")
@@ -202,7 +202,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			ssn, _ = initializeSession(1, 3)
 			minAvailable := 1
 			for _, podGroupInfo := range ssn.PodGroupInfos {
-				podGroupInfo.SetDefaultMinAvailable(int32(minAvailable))
+				podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].SetMinAvailable(int32(minAvailable))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(minAvailable)
 			}
 			submitQueue := createQueue("team-a")
@@ -243,7 +243,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			ssn, _ = initializeSession(1, 4)
 			minAvailable := 2
 			for _, podGroupInfo := range ssn.PodGroupInfos {
-				podGroupInfo.SetDefaultMinAvailable(int32(minAvailable))
+				podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].SetMinAvailable(int32(minAvailable))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(minAvailable)
 			}
 			submitQueue := createQueue("team-a")

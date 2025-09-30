@@ -75,12 +75,13 @@ func TestAddTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case01_uid,
 				Allocated: common_info.BuildResource("4000m", "4G"),
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{DefaultSubGroup: subgroup_info.NewSubGroupInfo(DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
-					case01_task1.UID: case01_task1,
-					case01_task2.UID: case01_task2,
-					case01_task3.UID: case01_task3,
-					case01_task4.UID: case01_task4,
-				})},
+				PodSets: map[string]*subgroup_info.PodSet{DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil).
+					WithPodInfos(pod_info.PodsMap{
+						case01_task1.UID: case01_task1,
+						case01_task2.UID: case01_task2,
+						case01_task3.UID: case01_task3,
+						case01_task4.UID: case01_task4,
+					})},
 				PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
 					pod_status.Running: {
 						case01_task2.UID: case01_task2,
@@ -156,11 +157,12 @@ func TestDeleteTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case01_uid,
 				Allocated: common_info.BuildResource("3000m", "3G"),
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{DefaultSubGroup: subgroup_info.NewSubGroupInfo(DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
-					case01_task1.UID: case01_task1,
-					case01_task2.UID: case01_task2,
-					case01_task3.UID: case01_task3,
-				})},
+				PodSets: map[string]*subgroup_info.PodSet{DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil).
+					WithPodInfos(pod_info.PodsMap{
+						case01_task1.UID: case01_task1,
+						case01_task2.UID: case01_task2,
+						case01_task3.UID: case01_task3,
+					})},
 				PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
 					pod_status.Pending: {case01_task1.UID: case01_task1},
 					pod_status.Running: {case01_task3.UID: case01_task3},
@@ -178,11 +180,12 @@ func TestDeleteTaskInfo(t *testing.T) {
 			expected: &PodGroupInfo{
 				UID:       case02_uid,
 				Allocated: common_info.BuildResource("3000m", "3G"),
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{DefaultSubGroup: subgroup_info.NewSubGroupInfo(DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
-					case02_task1.UID: case02_task1,
-					case02_task2.UID: case02_task2,
-					case02_task3.UID: case02_task3,
-				})},
+				PodSets: map[string]*subgroup_info.PodSet{DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil).
+					WithPodInfos(pod_info.PodsMap{
+						case02_task1.UID: case02_task1,
+						case02_task2.UID: case02_task2,
+						case02_task3.UID: case02_task3,
+					})},
 				PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
 					pod_status.Pending: {
 						case02_task1.UID: case02_task1,
@@ -524,44 +527,46 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 			name: "job with subgroups - all ready",
 			job: &PodGroupInfo{
 				UID: "test-pg",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					"sb-1": subgroup_info.NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
-						"111": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "111",
-									Name:      "task1",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodPending,
-								}},
-						),
-						"222": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "222",
-									Name:      "task2",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodPending,
-								}},
-						),
-					}),
-					"sb-2": subgroup_info.NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
-						"333": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "333",
-									Name:      "task3",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodPending,
-								}},
-						),
-					}),
+				PodSets: map[string]*subgroup_info.PodSet{
+					"sb-1": subgroup_info.NewPodSet("sb-1", 2, nil).
+						WithPodInfos(pod_info.PodsMap{
+							"111": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "111",
+										Name:      "task1",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodPending,
+									}},
+							),
+							"222": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "222",
+										Name:      "task2",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodPending,
+									}},
+							),
+						}),
+					"sb-2": subgroup_info.NewPodSet("sb-2", 1, nil).
+						WithPodInfos(pod_info.PodsMap{
+							"333": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "333",
+										Name:      "task3",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodPending,
+									}},
+							),
+						}),
 				},
 			},
 			expected: true,
@@ -570,44 +575,46 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 			name: "job with subgroups - some already running",
 			job: &PodGroupInfo{
 				UID: "test-pg",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					"sb-1": subgroup_info.NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
-						"111": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "111",
-									Name:      "task1",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodPending,
-								}},
-						),
-						"222": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "222",
-									Name:      "task2",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodPending,
-								}},
-						),
-					}),
-					"sb-2": subgroup_info.NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
-						"333": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "333",
-									Name:      "task3",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodRunning,
-								}},
-						),
-					}),
+				PodSets: map[string]*subgroup_info.PodSet{
+					"sb-1": subgroup_info.NewPodSet("sb-1", 2, nil).
+						WithPodInfos(pod_info.PodsMap{
+							"111": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "111",
+										Name:      "task1",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodPending,
+									}},
+							),
+							"222": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "222",
+										Name:      "task2",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodPending,
+									}},
+							),
+						}),
+					"sb-2": subgroup_info.NewPodSet("sb-2", 1, nil).
+						WithPodInfos(pod_info.PodsMap{
+							"333": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "333",
+										Name:      "task3",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodRunning,
+									}},
+							),
+						}),
 				},
 			},
 			expected: true,
@@ -616,55 +623,57 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 			name: "job with subgroups - more then minAvailable",
 			job: &PodGroupInfo{
 				UID: "test-pg",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					"sb-1": subgroup_info.NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
-						"111": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "111",
-									Name:      "task1",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodPending,
-								}},
-						),
-						"222": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "222",
-									Name:      "task2",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodPending,
-								}},
-						),
-						"333": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "333",
-									Name:      "task3",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodPending,
-								}},
-						),
-					}),
-					"sb-2": subgroup_info.NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
-						"444": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "444",
-									Name:      "task4",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodPending,
-								}},
-						),
-					}),
+				PodSets: map[string]*subgroup_info.PodSet{
+					"sb-1": subgroup_info.NewPodSet("sb-1", 2, nil).
+						WithPodInfos(pod_info.PodsMap{
+							"111": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "111",
+										Name:      "task1",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodPending,
+									}},
+							),
+							"222": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "222",
+										Name:      "task2",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodPending,
+									}},
+							),
+							"333": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "333",
+										Name:      "task3",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodPending,
+									}},
+							),
+						}),
+					"sb-2": subgroup_info.NewPodSet("sb-2", 1, nil).
+						WithPodInfos(pod_info.PodsMap{
+							"444": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "444",
+										Name:      "task4",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodPending,
+									}},
+							),
+						}),
 				},
 			},
 			expected: true,
@@ -673,33 +682,35 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 			name: "job with subgroups - one is not ready",
 			job: &PodGroupInfo{
 				UID: "test-pg",
-				SubGroups: map[string]*subgroup_info.SubGroupInfo{
-					"sb-1": subgroup_info.NewSubGroupInfo("sb-1", 2).WithPodInfos(pod_info.PodsMap{
-						"111": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "111",
-									Name:      "task1",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodPending,
-								}},
-						),
-					}),
-					"sb-2": subgroup_info.NewSubGroupInfo("sb-2", 1).WithPodInfos(pod_info.PodsMap{
-						"333": pod_info.NewTaskInfo(
-							&v1.Pod{
-								ObjectMeta: metav1.ObjectMeta{
-									UID:       "333",
-									Name:      "task3",
-									Namespace: "ns1",
-								},
-								Status: v1.PodStatus{
-									Phase: v1.PodPending,
-								}},
-						),
-					}),
+				PodSets: map[string]*subgroup_info.PodSet{
+					"sb-1": subgroup_info.NewPodSet("sb-1", 2, nil).
+						WithPodInfos(pod_info.PodsMap{
+							"111": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "111",
+										Name:      "task1",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodPending,
+									}},
+							),
+						}),
+					"sb-2": subgroup_info.NewPodSet("sb-2", 1, nil).
+						WithPodInfos(pod_info.PodsMap{
+							"333": pod_info.NewTaskInfo(
+								&v1.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										UID:       "333",
+										Name:      "task3",
+										Namespace: "ns1",
+									},
+									Status: v1.PodStatus{
+										Phase: v1.PodPending,
+									}},
+							),
+						}),
 				},
 			},
 			expected: false,
@@ -708,7 +719,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 
 	for _, test := range tests {
 		if test.minAvailable != nil {
-			test.job.SetDefaultMinAvailable(*test.minAvailable)
+			test.job.GetSubGroups()[DefaultSubGroup].SetMinAvailable(*test.minAvailable)
 		}
 		result := test.job.IsReadyForScheduling()
 		if result != test.expected {
@@ -860,7 +871,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 			name: "empty PodGroupInfo, not stale",
 			job: func() *PodGroupInfo {
 				pgi := NewPodGroupInfo("test-podgroup")
-				pgi.SetDefaultMinAvailable(1)
+				pgi.GetSubGroups()[DefaultSubGroup].SetMinAvailable(1)
 				return pgi
 			}(),
 			expected: false,
@@ -878,7 +889,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 				}
 				task := pod_info.NewTaskInfo(pod)
 				pgi := NewPodGroupInfo("test-podgroup", task)
-				pgi.SetDefaultMinAvailable(1)
+				pgi.GetSubGroups()[DefaultSubGroup].SetMinAvailable(1)
 				return pgi
 			}(),
 			expected: false,
@@ -905,7 +916,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 				task1 := pod_info.NewTaskInfo(pod1)
 				task2 := pod_info.NewTaskInfo(pod2)
 				pgi := NewPodGroupInfo("test-podgroup", task1, task2)
-				pgi.SetDefaultMinAvailable(2)
+				pgi.GetSubGroups()[DefaultSubGroup].SetMinAvailable(2)
 				return pgi
 			}(),
 			expected: false,
@@ -923,7 +934,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 				}
 				task := pod_info.NewTaskInfo(pod)
 				pgi := NewPodGroupInfo("test-podgroup", task)
-				pgi.SetDefaultMinAvailable(2)
+				pgi.GetSubGroups()[DefaultSubGroup].SetMinAvailable(2)
 				return pgi
 			}(),
 			expected: true,
@@ -941,7 +952,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 				}
 				task := pod_info.NewTaskInfo(pod)
 				pgi := NewPodGroupInfo("test-podgroup", task)
-				pgi.SetDefaultMinAvailable(1)
+				pgi.GetSubGroups()[DefaultSubGroup].SetMinAvailable(1)
 				return pgi
 			}(),
 			expected: false,
@@ -951,11 +962,11 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 			job: func() *PodGroupInfo {
 				pgi := NewPodGroupInfo("test-podgroup")
 
-				sg1 := subgroup_info.NewSubGroupInfo("sg1", 1)
-				pgi.SubGroups["sg1"] = sg1
+				sg1 := subgroup_info.NewPodSet("sg1", 1, nil)
+				pgi.PodSets["sg1"] = sg1
 
-				sg2 := subgroup_info.NewSubGroupInfo("sg2", 1)
-				pgi.SubGroups["sg2"] = sg2
+				sg2 := subgroup_info.NewPodSet("sg2", 1, nil)
+				pgi.PodSets["sg2"] = sg2
 
 				task1 := pod_info.NewTaskInfo(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -993,9 +1004,9 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 			job: func() *PodGroupInfo {
 				pgi := NewPodGroupInfo("test-podgroup")
 
-				sg1 := subgroup_info.NewSubGroupInfo("sg1", 1)
-				sg2 := subgroup_info.NewSubGroupInfo("sg2", 1)
-				pgi.SubGroups = map[string]*subgroup_info.SubGroupInfo{
+				sg1 := subgroup_info.NewPodSet("sg1", 1, nil)
+				sg2 := subgroup_info.NewPodSet("sg2", 1, nil)
+				pgi.PodSets = map[string]*subgroup_info.PodSet{
 					"sg1": sg1,
 					"sg2": sg2,
 				}

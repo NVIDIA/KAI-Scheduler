@@ -30,7 +30,7 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 	nodeSets, err := ssn.SubsetNodesFn(job, tasksToAllocate, nodes)
 	if err != nil {
 		log.InfraLogger.Errorf(
-			"Failed to run SubsetNodes on job <%s/%s>", job.Namespace, job.Namespace)
+			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
 		return false
 	}
 	for _, nodeSet := range nodeSets {
