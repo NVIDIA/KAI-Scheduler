@@ -34,17 +34,6 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	t.initializeTopologyTree(ssn.Topologies, ssn.Nodes)
 
 	ssn.AddSubsetNodesFn(t.subSetNodesFn)
-
-	// GuyTodo: Add NodeOrderFn to prioritize nodes within the most specific domain level. Order by domains from bottom to top lexicographically.
-	// Example:
-	// N1:R1:Z1
-	// N2:R1:Z1
-	// N3:R2:Z1
-	// N4:R2:Z1
-	// N5:R3:Z2
-	// N6:R3:Z2
-	// N7:R4:Z2
-	// N8:R4:Z2
 }
 
 func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, nodes map[string]*node_info.NodeInfo) {

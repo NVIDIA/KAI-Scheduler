@@ -3,8 +3,6 @@
 
 package scores
 
-// TODO: Enhance scoring precision to allow for more than 10 distinct
-// score levels per category while maintaining proper category hierarchy
 const (
 	MaxHighDensity = 9
 	ResourceType   = 10
