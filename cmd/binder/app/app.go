@@ -25,6 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
+	draversionawareclient "github.com/NVIDIA/KAI-scheduler/pkg/common/resources/dra_version_aware_client"
+
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/controllers"
@@ -99,7 +101,7 @@ func New(options *Options, config *rest.Config) (*App, error) {
 		return nil, err
 	}
 
-	kubeClient := kubernetes.NewForConfigOrDie(config)
+	kubeClient := draversionawareclient.NewDRAAwareClient(kubernetes.NewForConfigOrDie(config))
 	informerFactory := informers.NewSharedInformerFactory(kubeClient, 0)
 
 	rrs := resourcereservation.NewService(options.FakeGPUNodes, clientWithWatch, options.ResourceReservationPodImage,

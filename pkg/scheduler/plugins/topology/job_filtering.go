@@ -6,24 +6,12 @@ package topology
 import (
 	"fmt"
 
-	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
-
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 )
-
-type topologyStateData struct {
-	relevantDomains []*DomainInfo
-}
-
-func (t *topologyStateData) Clone() k8sframework.StateData {
-	return &topologyStateData{
-		relevantDomains: t.relevantDomains,
-	}
-}
 
 type jobAllocationMetaData struct {
 	maxPodResources    *resource_info.ResourceRequirements

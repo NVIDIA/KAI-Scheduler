@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package featuregates
 
 import (
 	"strconv"
@@ -9,33 +9,29 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	featureutil "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/client-go/discovery"
+	discovery "k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/kubernetes/pkg/features"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
-	expectedVersion = "v1alpha3"
+	minimalSupportedVersion = "v1beta1"
 )
 
-func SetDRAFeatureGate(mgr ctrl.Manager) {
-	if !IsDynamicResourcesEnabled(mgr.GetConfig()) {
-		return
+func SetDRAFeatureGate(config *rest.Config) error {
+	// Create a DiscoveryClient
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return err
 	}
-
-	_ = featureutil.DefaultMutableFeatureGate.OverrideDefault(features.DynamicResourceAllocation, true)
+	enabled := IsDynamicResourcesEnabled(discoveryClient)
+	return featureutil.DefaultMutableFeatureGate.SetFromMap(
+		map[string]bool{string(features.DynamicResourceAllocation): enabled})
 }
 
-func IsDynamicResourcesEnabled(restConfig *rest.Config) bool {
+func IsDynamicResourcesEnabled(discoveryClient discovery.DiscoveryInterface) bool {
 	logger := log.Log.WithName("feature-gates")
-	// Create a DiscoveryClient
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
-	if err != nil {
-		logger.Error(err, "Failed to create discovery client")
-		return false
-	}
 
 	// Get API server version
 	serverVersion, err := discoveryClient.ServerVersion()
@@ -74,7 +70,7 @@ func IsDynamicResourcesEnabled(restConfig *rest.Config) bool {
 
 	// Check if the DRA API group is supported
 	for _, groupVersion := range resourceGroup.Versions {
-		if version.CompareKubeAwareVersionStrings(groupVersion.Version, expectedVersion) >= 0 {
+		if version.CompareKubeAwareVersionStrings(groupVersion.Version, minimalSupportedVersion) >= 0 {
 			return true
 		}
 	}

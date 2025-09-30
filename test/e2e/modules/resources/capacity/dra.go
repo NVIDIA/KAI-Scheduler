@@ -34,7 +34,7 @@ func SkipIfInsufficientDynamicResources(clientset kubernetes.Interface, deviceCl
 }
 
 func ListDevicesByNode(clientset kubernetes.Interface, deviceClass string) map[string]int {
-	resourceSlices, err := clientset.ResourceV1beta1().ResourceSlices().List(context.TODO(), metav1.ListOptions{})
+	resourceSlices, err := clientset.ResourceV1().ResourceSlices().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			ginkgo.Skip("DRA is not enabled in the cluster, skipping")
@@ -44,7 +44,7 @@ func ListDevicesByNode(clientset kubernetes.Interface, deviceClass string) map[s
 
 	devicesByNode := map[string]int{}
 	for _, slice := range resourceSlices.Items {
-		if slice.Spec.NodeName == "" {
+		if slice.Spec.NodeName == nil || *slice.Spec.NodeName == "" {
 			continue
 		}
 
@@ -54,11 +54,11 @@ func ListDevicesByNode(clientset kubernetes.Interface, deviceClass string) map[s
 			continue
 		}
 
-		if _, ok := devicesByNode[slice.Spec.NodeName]; !ok {
-			devicesByNode[slice.Spec.NodeName] = 0
+		if _, ok := devicesByNode[*slice.Spec.NodeName]; !ok {
+			devicesByNode[*slice.Spec.NodeName] = 0
 		}
 
-		devicesByNode[slice.Spec.NodeName] = devicesByNode[slice.Spec.NodeName] + len(slice.Spec.Devices)
+		devicesByNode[*slice.Spec.NodeName] = devicesByNode[*slice.Spec.NodeName] + len(slice.Spec.Devices)
 	}
 
 	return devicesByNode
