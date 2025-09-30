@@ -42,18 +42,18 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: queuecontroller
+  name: queue-controller
   namespace: kai-scheduler
   labels:
     accounting: kai-scheduler
 spec:
-  jobLabel: queuecontroller
+  jobLabel: queue-controller
   namespaceSelector:
     matchNames:
       - kai-scheduler
   selector:
     matchLabels:
-      app: queuecontroller
+      app: queue-controller
   endpoints:
     - port: metrics
 ---
