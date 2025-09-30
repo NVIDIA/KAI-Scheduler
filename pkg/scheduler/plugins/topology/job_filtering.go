@@ -13,7 +13,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
 type topologyStateData struct {
@@ -33,9 +32,13 @@ type jobAllocationMetaData struct {
 }
 
 func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet) ([]node_info.NodeSet, error) {
-	topologyTree, err := t.getJobTopology(job)
-	if err != nil {
-		return nil, err
+	topologyTree, found := t.getJobTopology(job)
+	if !found {
+		job.SetJobFitError(
+			podgroup_info.PodSchedulingErrors,
+			fmt.Sprintf("Matching topology %s does not exist", job.TopologyConstraint.Topology),
+			nil)
+		return []node_info.NodeSet{}, nil
 	}
 	if topologyTree == nil {
 		return []node_info.NodeSet{nodeSet}, nil
@@ -48,8 +51,10 @@ func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []
 	}
 
 	if maxAllocatablePods < len(tasks) {
-		log.InfraLogger.V(6).Infof("no relevant domains found for job %s, workload topology name: %s",
-			job.PodGroup.Name, topologyTree.Name)
+		job.SetJobFitError(
+			podgroup_info.PodSchedulingErrors,
+			fmt.Sprintf("No relevant domains found for workload in topology tree: %s", topologyTree.Name),
+			nil)
 		return []node_info.NodeSet{}, nil
 	}
 
@@ -70,20 +75,19 @@ func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []
 	return domainNodeSets, nil
 }
 
-func (t *topologyPlugin) getJobTopology(job *podgroup_info.PodGroupInfo) (*Info, error) {
+func (t *topologyPlugin) getJobTopology(job *podgroup_info.PodGroupInfo) (*Info, bool) {
 	if job.TopologyConstraint == nil {
-		return nil, nil
+		return nil, true
 	}
 	jobTopologyName := job.TopologyConstraint.Topology
 	if jobTopologyName == "" {
-		return nil, nil
+		return nil, true
 	}
 	topologyTree := t.TopologyTrees[jobTopologyName]
 	if topologyTree == nil {
-		return nil, fmt.Errorf("matching topology tree haven't been found for job <%s/%s>, workload topology name: %s",
-			job.Namespace, job.Name, jobTopologyName)
+		return nil, false
 	}
-	return topologyTree, nil
+	return topologyTree, true
 }
 
 func (t *topologyPlugin) calcTreeAllocatable(tasks []*pod_info.PodInfo, topologyTree *Info, nodeSet node_info.NodeSet) (int, error) {

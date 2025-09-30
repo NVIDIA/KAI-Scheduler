@@ -76,17 +76,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:    "team-a",
 						Queue:        "leaf-queue",
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
+									},
+								}),
 						},
 					},
 					expectedResult: true,
@@ -138,17 +139,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:    "team-a",
 						Queue:        "leaf-queue",
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
+									},
+								}),
 						},
 					},
 					expectedResult: false,
@@ -225,17 +227,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
+									},
+								}),
 						},
 					},
 					expectedResult: true,
@@ -291,17 +294,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
+									},
+								}),
 						},
 					},
 					expectedResult: false,
@@ -381,17 +385,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
+									},
+								}),
 						},
 					},
 					expectedResult: true,
@@ -447,17 +452,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirementsWithGpus(1),
+									},
+								}),
 						},
 					},
 					expectedResult: false,
@@ -538,17 +544,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirements(0, 1000, 0),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirements(0, 1000, 0),
+									},
+								}),
 						},
 					},
 					node: &node_info.NodeInfo{
@@ -607,17 +614,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirements(0, 1000, 0),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirements(0, 1000, 0),
+									},
+								}),
 						},
 					},
 					node: &node_info.NodeInfo{
@@ -676,17 +684,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityTrainNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirements(0, 1000, 0),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirements(0, 1000, 0),
+									},
+								}),
 						},
 					},
 					node: &node_info.NodeInfo{
@@ -745,17 +754,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityTrainNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirements(0, 1000, 0),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirements(0, 1000, 0),
+									},
+								}),
 						},
 					},
 					node: &node_info.NodeInfo{
@@ -817,17 +827,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirements(0, 500, 0),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirements(0, 500, 0),
+									},
+								}),
 						},
 					},
 					node: &node_info.NodeInfo{
@@ -889,17 +900,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityBuildNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirements(0, 1100, 0),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirements(0, 1100, 0),
+									},
+								}),
 						},
 					},
 					node: &node_info.NodeInfo{
@@ -961,17 +973,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityTrainNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirements(0, 500, 0),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirements(0, 500, 0),
+									},
+								}),
 						},
 					},
 					node: &node_info.NodeInfo{
@@ -1033,17 +1046,18 @@ var _ = Describe("Capacity Policy Check", func() {
 						Queue:        "leaf-queue",
 						Priority:     constants.PriorityTrainNumber,
 						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
-						SubGroups: map[string]*subgroup_info.SubGroupInfo{
-							podgroup_info.DefaultSubGroup: subgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
-								"task-a": {
-									UID:       "task-a",
-									Job:       "job-a",
-									Name:      "task-a",
-									Namespace: "team-a",
-									Status:    pod_status.Pending,
-									ResReq:    resource_info.NewResourceRequirements(0, 1100, 0),
-								},
-							}),
+						PodSets: map[string]*subgroup_info.PodSet{
+							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+									"task-a": {
+										UID:       "task-a",
+										Job:       "job-a",
+										Name:      "task-a",
+										Namespace: "team-a",
+										Status:    pod_status.Pending,
+										ResReq:    resource_info.NewResourceRequirements(0, 1100, 0),
+									},
+								}),
 						},
 					},
 					node: &node_info.NodeInfo{
