@@ -76,6 +76,10 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 		addSessionPlugins(&ssn, schedulerConfig.Plugins, createCacheMockIfNotExists, schedulerConfig.CachePlugins)
 	}
 
+	// Some plugins are using informers wrappers (such as the DRA manager) which require a moment to sync
+	// without this some tests might have flaky results.
+	time.Sleep(time.Millisecond)
+
 	return &ssn
 }
 
