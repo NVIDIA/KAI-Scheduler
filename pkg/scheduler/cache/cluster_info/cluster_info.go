@@ -330,7 +330,7 @@ func (c *ClusterInfo) snapshotPodGroups(
 		log.InfraLogger.V(7).Infof("The priority of job <%s/%s> is <%s/%d>", podGroup.Namespace, podGroup.Name,
 			podGroup.Spec.PriorityClassName, podGroupInfo.Priority)
 
-		podGroupInfo.Preemptibility = getPodGroupPreemptibility(podGroup.Spec.Preemptibility, podGroupInfo.Priority)
+		podGroupInfo.Preemptibility = pg.CalculatePreemptibility(podGroup.Spec.Preemptibility, podGroupInfo.Priority)
 		log.InfraLogger.V(7).Infof("The preemptibility of job <%s/%s> is <%s>", podGroup.Namespace, podGroup.Name,
 			podGroupInfo.Preemptibility)
 
@@ -453,15 +453,6 @@ func getPodGroupPriority(
 		return defaultPriority
 	}
 	return chosenPriorityClass.Value
-}
-
-func getPodGroupPreemptibility(preemptibility enginev2alpha2.Preemptibility, priority int32) enginev2alpha2.Preemptibility {
-	// Error is ignored because the priority function is guaranteed to succeed
-	preemptability, _ := pg.CalculatePreemptibility(preemptibility, func() (int32, error) {
-		return priority, nil
-	})
-
-	return preemptability
 }
 
 func filterUnmarkedNodes(nodes []*v1.Node) []*v1.Node {

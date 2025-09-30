@@ -20,12 +20,11 @@ import (
 )
 
 func IsPreemptible(ctx context.Context, podGroup *v2alpha2.PodGroup, kubeClient client.Client) (bool, error) {
-	preemptability, err := pg.CalculatePreemptibility(podGroup.Spec.Preemptibility, func() (int32, error) {
-		return getPodGroupPriority(ctx, podGroup, kubeClient)
-	})
+	priority, err := getPodGroupPriority(ctx, podGroup, kubeClient)
 	if err != nil {
-		return false, fmt.Errorf("failed to determine podgroup's preemptibility: %w", err)
+		return false, fmt.Errorf("failed to determine podgroup's priority: %w", err)
 	}
+	preemptability := pg.CalculatePreemptibility(podGroup.Spec.Preemptibility, priority)
 
 	return preemptability == v2alpha2.Preemptible, nil
 }
