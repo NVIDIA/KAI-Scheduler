@@ -11,12 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
-	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/utils/ptr"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -27,34 +25,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
 )
-
-// Mock session state provider for testing
-type mockSessionStateProvider struct {
-	states                   map[types.UID]*k8sframework.CycleState
-	GetSessionStateCallCount int
-}
-
-func newMockSessionStateProvider() *mockSessionStateProvider {
-	return &mockSessionStateProvider{
-		states:                   make(map[types.UID]*k8sframework.CycleState),
-		GetSessionStateCallCount: 0,
-	}
-}
-
-func (m *mockSessionStateProvider) GetSessionStateForResource(uid types.UID) k8s_internal.SessionState {
-	m.GetSessionStateCallCount++
-	if state, exists := m.states[uid]; exists {
-		return k8s_internal.SessionState(state)
-	}
-	state := k8sframework.NewCycleState()
-	m.states[uid] = state
-	return k8s_internal.SessionState(state)
-}
 
 func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 	tests := []struct {
@@ -65,7 +39,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 		nodes                 map[string]nodes_fake.TestNodeBasic
 		nodesToDomains        map[string]DomainID
 		setupTopologyTree     func() *Info
-		setupSessionState     func(provider *mockSessionStateProvider, jobUID types.UID)
 		domainParent          map[DomainID]DomainID
 		domainLevel           map[DomainID]DomainLevel
 		expectedError         string
@@ -259,22 +232,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					},
 				}
 			},
-			setupSessionState: func(provider *mockSessionStateProvider, jobUID types.UID) {
-				state := provider.GetSessionStateForResource(jobUID)
-				(*k8sframework.CycleState)(state).Write(
-					k8sframework.StateKey(topologyPluginName),
-					&topologyStateData{
-						relevantDomains: []*DomainInfo{
-							{
-								ID:              "zone1",
-								Level:           "zone",
-								AllocatablePods: 1,
-							},
-						},
-					},
-				)
-				provider.GetSessionStateCallCount = 0 // Do not count this test data initialization as a call
-			},
 			expectedError: "",
 		},
 		{
@@ -425,12 +382,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 						domain = topologyTree.DomainsByLevel[parentDomainLevel][parentDomainId]
 					}
 				}
-			}
-
-			// Setup session state provider
-			sessionStateProvider := newMockSessionStateProvider()
-			if tt.setupSessionState != nil {
-				tt.setupSessionState(sessionStateProvider, types.UID(job.PodGroupUID))
 			}
 
 			// Setup plugin

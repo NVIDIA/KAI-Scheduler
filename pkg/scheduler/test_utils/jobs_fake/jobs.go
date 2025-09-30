@@ -17,6 +17,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -36,6 +37,7 @@ type TestJobBasic struct {
 	RequiredMemoryPerTask               float64
 	RequiredMultiFractionDevicesPerTask *uint64
 	Priority                            int32
+	Preemptibility                      enginev2alpha2.Preemptibility
 	Name                                string
 	Namespace                           string
 	QueueName                           string
@@ -82,8 +84,10 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic) (
 			job.MinAvailable = pointer.Int32(int32(len(job.Tasks)))
 		}
 
+		job.Preemptibility = pg.CalculatePreemptibility(job.Preemptibility, job.Priority)
+
 		jobInfo := BuildJobInfo(
-			jobName, job.Namespace, jobUID, jobAllocatedResource, job.SubGroups, taskInfos, job.Priority, queueUID,
+			jobName, job.Namespace, jobUID, jobAllocatedResource, job.SubGroups, taskInfos, job.Priority, job.Preemptibility, queueUID,
 			jobCreationTime, *job.MinAvailable, job.StaleDuration, job.Topology,
 		)
 		jobsInfoMap[common_info.PodGroupID(job.Name)] = jobInfo
@@ -95,7 +99,7 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic) (
 func BuildJobInfo(
 	name, namespace string,
 	uid common_info.PodGroupID, allocatedResource *resource_info.Resource,
-	subGroups map[string]*subgroup_info.PodSet, taskInfos []*pod_info.PodInfo, priority int32,
+	subGroups map[string]*subgroup_info.PodSet, taskInfos []*pod_info.PodInfo, priority int32, preemptibility enginev2alpha2.Preemptibility,
 	queueUID common_info.QueueID, jobCreationTime time.Time, minAvailable int32, staleDuration *time.Duration,
 	topologyConstraint *topology_info.TopologyConstraintInfo) *podgroup_info.PodGroupInfo {
 	allTasks := pod_info.PodsMap{}
@@ -126,12 +130,14 @@ func BuildJobInfo(
 	}
 
 	result := &podgroup_info.PodGroupInfo{
-		UID:                uid,
-		Name:               name,
-		Namespace:          namespace,
-		Allocated:          allocatedResource,
-		PodStatusIndex:     taskStatusIndex,
-		Priority:           priority,
+		UID:            uid,
+		Name:           name,
+		Namespace:      namespace,
+		Allocated:      allocatedResource,
+		PodStatusIndex: taskStatusIndex,
+		Priority:       priority,
+		Preemptibility: preemptibility,
+
 		JobFitErrors:       make(enginev2alpha2.UnschedulableExplanations, 0),
 		NodesFitErrors:     map[common_info.PodID]*common_info.FitErrors{},
 		Queue:              queueUID,

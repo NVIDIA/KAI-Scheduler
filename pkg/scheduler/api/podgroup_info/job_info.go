@@ -39,7 +39,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
@@ -73,7 +72,8 @@ type PodGroupInfo struct {
 
 	Queue common_info.QueueID
 
-	Priority int32
+	Priority       int32
+	Preemptibility enginev2alpha2.Preemptibility
 
 	JobFitErrors   enginev2alpha2.UnschedulableExplanations
 	NodesFitErrors map[common_info.PodID]*common_info.FitErrors
@@ -144,7 +144,7 @@ func (pgi *PodGroupInfo) GetSubGroups() map[string]*subgroup_info.PodSet {
 }
 
 func (pgi *PodGroupInfo) IsPreemptibleJob() bool {
-	return pgi.Priority < constants.PriorityBuildNumber
+	return pgi.Preemptibility == enginev2alpha2.Preemptible
 }
 
 func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
@@ -459,11 +459,12 @@ func (pgi *PodGroupInfo) Clone() *PodGroupInfo {
 
 func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo {
 	info := &PodGroupInfo{
-		UID:       pgi.UID,
-		Name:      pgi.Name,
-		Namespace: pgi.Namespace,
-		Queue:     pgi.Queue,
-		Priority:  pgi.Priority,
+		UID:            pgi.UID,
+		Name:           pgi.Name,
+		Namespace:      pgi.Namespace,
+		Queue:          pgi.Queue,
+		Priority:       pgi.Priority,
+		Preemptibility: pgi.Preemptibility,
 
 		Allocated: resource_info.EmptyResource(),
 
