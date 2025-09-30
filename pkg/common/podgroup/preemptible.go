@@ -7,8 +7,9 @@ import (
 	"fmt"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 )
+
+const nonPreemptiblePriorityThreshold = 100
 
 // CalculatePreemptibility computes the preemptibility of a podgroup.
 // When preemptibility is not explicitly specified, the determination is based on the podgroup's priority.
@@ -25,7 +26,7 @@ func CalculatePreemptibility(preemptibility v2alpha2.Preemptibility, getPriority
 		return "", fmt.Errorf("failed to get podgroup's priority: %w", err)
 	}
 
-	if priority < constants.PriorityBuildNumber {
+	if priority < nonPreemptiblePriorityThreshold {
 		return v2alpha2.Preemptible, nil
 	}
 	return v2alpha2.NonPreemptible, nil
