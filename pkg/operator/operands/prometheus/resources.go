@@ -72,7 +72,12 @@ func prometheusForKAIConfig(
 		logger.Error(err, "Failed to check for existing Prometheus instance")
 		return nil, err
 	}
-	prometheus = prom.(*monitoringv1.Prometheus)
+	var ok bool
+	prometheus, ok = prom.(*monitoringv1.Prometheus)
+	if !ok {
+		logger.Error(nil, "Failed to cast object to Prometheus type")
+		return nil, err
+	}
 
 	// Set the Prometheus spec from configuration
 	prometheusSpec := monitoringv1.PrometheusSpec{
@@ -80,36 +85,57 @@ func prometheusForKAIConfig(
 		// Using minimal spec to avoid field name issues
 	}
 
-	// Configure TSDB storage if TSDB is configured
-	if config != nil {
-		storageSize, err := config.CalculateStorageSize(ctx, runtimeClient)
-		if err != nil {
-			logger.Error(err, "Failed to calculate storage size")
-			return nil, err
-		}
-		prometheusSpec.Storage = &monitoringv1.StorageSpec{
-			VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
-				Spec: v1.PersistentVolumeClaimSpec{
-					StorageClassName: config.StorageClassName,
-					AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
-					Resources: v1.VolumeResourceRequirements{
-						Requests: v1.ResourceList{
-							v1.ResourceStorage: resource.MustParse(storageSize),
-						},
+	// Configure TSDB storage
+	storageSize, err := config.CalculateStorageSize(ctx, runtimeClient)
+	if err != nil {
+		logger.Error(err, "Failed to calculate storage size")
+		return nil, err
+	}
+	prometheusSpec.Storage = &monitoringv1.StorageSpec{
+		VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
+			Spec: v1.PersistentVolumeClaimSpec{
+				StorageClassName: config.StorageClassName,
+				AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+				Resources: v1.VolumeResourceRequirements{
+					Requests: v1.ResourceList{
+						v1.ResourceStorage: resource.MustParse(storageSize),
 					},
 				},
 			},
-		}
+		},
+	}
 
-		// Set retention period if specified
-		if config.RetentionPeriod != nil {
-			prometheusSpec.Retention = monitoringv1.Duration(*config.RetentionPeriod)
+	// Set retention period if specified
+	if config.RetentionPeriod != nil {
+		prometheusSpec.Retention = monitoringv1.Duration(*config.RetentionPeriod)
+	}
+
+	// Configure ServiceMonitor selector to match KAI ServiceMonitors
+	if config.ServiceMonitor != nil && *config.ServiceMonitor.Enabled {
+		prometheusSpec.ServiceMonitorSelector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"accounting": mainResourceName,
+			},
 		}
+		prometheusSpec.ServiceMonitorNamespaceSelector = &metav1.LabelSelector{}
 	}
 
 	prometheus.Spec = prometheusSpec
 
-	return []client.Object{prometheus}, nil
+	var objects []client.Object
+	objects = append(objects, prometheus)
+
+	// Create ServiceMonitors if enabled
+	if config.ServiceMonitor != nil && config.ServiceMonitor.Enabled != nil && *config.ServiceMonitor.Enabled {
+		serviceMonitors, err := serviceMonitorsForKAIConfig(ctx, runtimeClient, kaiConfig)
+		if err != nil {
+			logger.Error(err, "Failed to create ServiceMonitor instances")
+			return nil, err
+		}
+		objects = append(objects, serviceMonitors...)
+	}
+
+	return objects, nil
 }
 
 func CheckPrometheusOperatorInstalled(ctx context.Context, runtimeClient client.Reader) (bool, error) {
@@ -137,5 +163,106 @@ func CheckPrometheusOperatorInstalled(ctx context.Context, runtimeClient client.
 	}
 
 	logger.Info("Prometheus CRD found", "crd", "prometheuses.monitoring.coreos.com")
+	return true, nil
+}
+
+func serviceMonitorsForKAIConfig(
+	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
+) ([]client.Object, error) {
+	logger := log.FromContext(ctx)
+	config := kaiConfig.Spec.Prometheus
+
+	// Check if ServiceMonitor CRD is available
+	hasServiceMonitorCRD, err := checkServiceMonitorCRDAvailable(ctx, runtimeClient)
+	if err != nil {
+		logger.Error(err, "Failed to check for ServiceMonitor CRD")
+		return nil, err
+	}
+
+	if !hasServiceMonitorCRD {
+		logger.Info("ServiceMonitor CRD not found - ServiceMonitor resources cannot be created")
+		return []client.Object{}, nil
+	}
+
+	var serviceMonitors []client.Object
+
+	// Create ServiceMonitor for each KAI service
+	for _, kaiService := range common.KaiServicesForServiceMonitor {
+		serviceMonitor := &monitoringv1.ServiceMonitor{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ServiceMonitor",
+				APIVersion: "monitoring.coreos.com/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      kaiService.Name,
+				Namespace: kaiConfig.Spec.Namespace,
+				Labels: map[string]string{
+					"app":        mainResourceName,
+					"accounting": mainResourceName,
+				},
+			},
+		}
+		serviceMonitorObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, serviceMonitor, kaiService.Name, kaiConfig.Spec.Namespace)
+		if err != nil {
+			logger.Error(err, "Failed to check for existing ServiceMonitor instance", "service", kaiService.Name)
+			return nil, err
+		}
+
+		// Set the ServiceMonitor spec from configuration
+		serviceMonitorSpec := monitoringv1.ServiceMonitorSpec{
+			JobLabel: kaiService.JobLabel,
+			NamespaceSelector: monitoringv1.NamespaceSelector{
+				MatchNames: []string{kaiConfig.Spec.Namespace},
+			},
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": kaiService.Name,
+				},
+			},
+			Endpoints: []monitoringv1.Endpoint{
+				{
+					Port: kaiService.Port,
+				},
+			},
+		}
+
+		// Apply ServiceMonitor configuration if available
+		if config.ServiceMonitor != nil {
+			if config.ServiceMonitor.Interval != nil {
+				serviceMonitorSpec.Endpoints[0].Interval = monitoringv1.Duration(*config.ServiceMonitor.Interval)
+			}
+			if config.ServiceMonitor.ScrapeTimeout != nil {
+				serviceMonitorSpec.Endpoints[0].ScrapeTimeout = monitoringv1.Duration(*config.ServiceMonitor.ScrapeTimeout)
+			}
+			if config.ServiceMonitor.BearerTokenFile != nil {
+				serviceMonitorSpec.Endpoints[0].BearerTokenFile = *config.ServiceMonitor.BearerTokenFile
+			}
+		}
+		serviceMonitorObj.(*monitoringv1.ServiceMonitor).Spec = serviceMonitorSpec
+		serviceMonitors = append(serviceMonitors, serviceMonitorObj)
+	}
+	return serviceMonitors, nil
+}
+
+func checkServiceMonitorCRDAvailable(ctx context.Context, runtimeClient client.Reader) (bool, error) {
+	// Check if ServiceMonitor CRD exists
+	crd := &metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CustomResourceDefinition",
+			APIVersion: "apiextensions.k8s.io/v1",
+		},
+	}
+
+	err := runtimeClient.Get(ctx, types.NamespacedName{
+		Name: "servicemonitors.monitoring.coreos.com",
+	}, crd)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
 	return true, nil
 }
