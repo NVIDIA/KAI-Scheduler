@@ -79,7 +79,7 @@ func (r *ConfigReconciler) SetOperands(ops []operands.Operand) {
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="nvidia.com",resources=clusterpolicies,verbs=get;list;watch
-// +kubebuilder:rbac:groups="monitoring.coreos.com",resources=prometheuses,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="monitoring.coreos.com",resources=prometheuses;servicemonitors,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="scheduling.run.ai",resources=queues,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
