@@ -11,7 +11,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
-	"github.com/samber/lo"
 )
 
 type jobAllocationMetaData struct {
@@ -52,9 +51,14 @@ func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []
 		return nil, err
 	}
 
-	domainNodeSets := lo.Map(jobAllocatableDomains, func(domain *DomainInfo, _ int) node_info.NodeSet {
-		return lo.Values(domain.Nodes)
-	})
+	var domainNodeSets []node_info.NodeSet
+	for _, jobAllocatableDomain := range jobAllocatableDomains {
+		var domainNodeSet node_info.NodeSet
+		for _, node := range jobAllocatableDomain.Nodes {
+			domainNodeSet = append(domainNodeSet, node)
+		}
+		domainNodeSets = append(domainNodeSets, domainNodeSet)
+	}
 
 	return domainNodeSets, nil
 }
@@ -215,7 +219,8 @@ func (t *topologyPlugin) getJobAllocatableDomains(job *podgroup_info.PodGroupInf
 func getRelevantDomainsWithAllocatedPods(job *podgroup_info.PodGroupInfo, topologyTree *Info, requiredLevel DomainLevel) domainsByLevel {
 	relevantDomainsByLevel := domainsByLevel{}
 	for _, domainAtRequiredLevel := range topologyTree.DomainsByLevel[requiredLevel] {
-		if !hasActiveJobPodInDomain(job, domainAtRequiredLevel) {
+		activePodsInDomain := countActiveJobPodsInDomain(job, domainAtRequiredLevel)
+		if activePodsInDomain == 0 {
 			continue // if the domain at the top level does not have any active pods, then any domains under the subtree cannot satisfy the required constraint for both active and pending pods
 		}
 		addSubTreeToDomainMap(domainAtRequiredLevel, relevantDomainsByLevel)
@@ -223,16 +228,17 @@ func getRelevantDomainsWithAllocatedPods(job *podgroup_info.PodGroupInfo, topolo
 	return relevantDomainsByLevel
 }
 
-func hasActiveJobPodInDomain(job *podgroup_info.PodGroupInfo, domain *DomainInfo) bool {
+func countActiveJobPodsInDomain(job *podgroup_info.PodGroupInfo, domain *DomainInfo) int {
+	activePodsInDomain := 0
 	for _, pod := range job.GetAllPodsMap() {
 		if pod_status.IsActiveAllocatedStatus(pod.Status) {
 			podInDomain := domain.Nodes[pod.NodeName] != nil
 			if podInDomain {
-				return true
+				activePodsInDomain++
 			}
 		}
 	}
-	return false
+	return activePodsInDomain
 }
 
 func addSubTreeToDomainMap(domain *DomainInfo, domainsMap domainsByLevel) {
