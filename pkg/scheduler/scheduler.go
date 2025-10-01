@@ -32,6 +32,7 @@ import (
 	kubeaischedulerver "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	schedcache "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
+	api "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
@@ -63,11 +64,16 @@ func NewScheduler(
 		return nil, fmt.Errorf("error getting usage db client: %v", err)
 	}
 
+	var usageDBParams *api.UsageParams
+	if schedulerConf.UsageDBConfig != nil {
+		usageDBParams = schedulerConf.UsageDBConfig.GetUsageParams()
+	}
+
 	schedulerCacheParams := &schedcache.SchedulerCacheParams{
 		KubeClient:                  kubeClient,
 		KAISchedulerClient:          kubeAiSchedulerClient,
 		KueueClient:                 kueueClient,
-		UsageDBParams:               schedulerConf.UsageDBConfig.GetUsageParams(),
+		UsageDBParams:               usageDBParams,
 		UsageDBClient:               usageDBClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
