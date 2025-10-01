@@ -11,7 +11,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
-	"github.com/samber/lo"
 )
 
 type jobAllocationMetaData struct {
@@ -52,9 +51,14 @@ func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []
 		return nil, err
 	}
 
-	domainNodeSets := lo.Map(jobAllocatableDomains, func(domain *DomainInfo, _ int) node_info.NodeSet {
-		return lo.Values(domain.Nodes)
-	})
+	var domainNodeSets []node_info.NodeSet
+	for _, jobAllocatableDomain := range jobAllocatableDomains {
+		var domainNodeSet node_info.NodeSet
+		for _, node := range jobAllocatableDomain.Nodes {
+			domainNodeSet = append(domainNodeSet, node)
+		}
+		domainNodeSets = append(domainNodeSets, domainNodeSet)
+	}
 
 	return domainNodeSets, nil
 }
