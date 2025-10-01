@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
+	ksf "k8s.io/kube-scheduler/framework"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -85,6 +86,16 @@ func (ssn *Session) GetK8sStateForPod(uid types.UID) k8s_internal.SessionState {
 	}
 	ssn.k8sPodState[uid] = k8s_internal.NewSessionState()
 	return ssn.k8sPodState[uid]
+}
+
+func (ssn *Session) GetNodes() []ksf.NodeInfo {
+	nodes, err := ssn.Cache.SnapshotSharedLister().List()
+	if err != nil {
+		log.InfraLogger.Errorf("Failed to list nodes: ", err)
+		return nil
+	}
+
+	return nodes
 }
 
 func (ssn *Session) BindPod(pod *pod_info.PodInfo) error {
