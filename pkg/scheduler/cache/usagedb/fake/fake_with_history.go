@@ -21,7 +21,6 @@ import (
 type FakeWithHistoryClient struct {
 	resourceUsage      *queue_info.ClusterUsage
 	resourceUsageMutex sync.RWMutex
-	resourceUsageErr   error
 
 	usageParams *api.UsageParams
 	// each entry is an allocation per second
