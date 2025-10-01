@@ -86,7 +86,7 @@ func (tc *TestContext) TestContextCleanup(ctx context.Context) {
 	wait.ForNoReservationPods(ctx, tc.ControllerClient)
 
 	wait.ForRunningSystemComponentEvent(ctx, tc.ControllerClient, "binder")
-	wait.ForRunningSystemComponentEvent(ctx, tc.ControllerClient, "scheduler")
+	wait.ForRunningSystemComponentEvent(ctx, tc.ControllerClient, "kai-scheduler-default")
 }
 
 func (tc *TestContext) ClusterCleanup(ctx context.Context) {
