@@ -20,6 +20,8 @@ limitations under the License.
 package conf
 
 import (
+	"maps"
+	"slices"
 	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -59,31 +61,74 @@ type SchedulerConfiguration struct {
 	UsageDBConfig *usagedbapi.UsageDBConfig `yaml:"usageDBConfig,omitempty" json:"usageDBConfig,omitempty"`
 }
 
+func (s *SchedulerConfiguration) DeepCopy() *SchedulerConfiguration {
+	copy := SchedulerConfiguration{
+		Actions:             s.Actions,
+		Tiers:               slices.Clone(s.Tiers),
+		QueueDepthPerAction: maps.Clone(s.QueueDepthPerAction),
+		UsageDBConfig:       s.UsageDBConfig.DeepCopy(),
+	}
+
+	return &copy
+}
+
 // Tier defines plugin tier
 type Tier struct {
 	Plugins []PluginOption `yaml:"plugins" json:"plugins"`
+}
+
+func (t *Tier) DeepCopy() *Tier {
+	copy := Tier{
+		Plugins: make([]PluginOption, len(t.Plugins)),
+	}
+	for i, plugin := range t.Plugins {
+		copy.Plugins[i] = *plugin.DeepCopy()
+	}
+	return &copy
 }
 
 // PluginOption defines the options of plugin
 type PluginOption struct {
 	// The name of Plugin
 	Name string `yaml:"name" json:"name"`
+
 	// JobOrderDisabled defines whether jobOrderFn is disabled
+	// Deprecated: To disable, don't set this plugin in the config
 	JobOrderDisabled bool `yaml:"disableJobOrder" json:"disableJobOrder"`
 	// TaskOrderDisabled defines whether taskOrderFn is disabled
 	TaskOrderDisabled bool `yaml:"disableTaskOrder" json:"disableTaskOrder"`
+	// Deprecated: To disable, don't set this plugin in the config
 	// PreemptableDisabled defines whether preemptableFn is disabled
 	PreemptableDisabled bool `yaml:"disablePreemptable" json:"disablePreemptable"`
 	// ReclaimableDisabled defines whether reclaimableFn is disabled
+	// Deprecated: To disable, don't set this plugin in the config
 	ReclaimableDisabled bool `yaml:"disableReclaimable" json:"disableReclaimable"`
 	// QueueOrderDisabled defines whether queueOrderFn is disabled
 	QueueOrderDisabled bool `yaml:"disableQueueOrder" json:"disableQueueOrder"`
+	// Deprecated: To disable, don't set this plugin in the config
 	// PredicateDisabled defines whether predicateFn is disabled
 	PredicateDisabled bool `yaml:"disablePredicate" json:"disablePredicate"`
 	// NodeOrderDisabled defines whether NodeOrderFn is disabled
+	// Deprecated: To disable, don't set this plugin in the config
 	NodeOrderDisabled bool `yaml:"disableNodeOrder" json:"disableNodeOrder"`
+
 	// Arguments defines the different arguments that can be given to different plugins
 	Arguments map[string]string `yaml:"arguments" json:"arguments"`
+}
+
+func (p *PluginOption) DeepCopy() *PluginOption {
+	copy := PluginOption{
+		Name:      p.Name,
+		Arguments: maps.Clone(p.Arguments),
+	}
+	copy.JobOrderDisabled = p.JobOrderDisabled
+	copy.TaskOrderDisabled = p.TaskOrderDisabled
+	copy.PreemptableDisabled = p.PreemptableDisabled
+	copy.ReclaimableDisabled = p.ReclaimableDisabled
+	copy.QueueOrderDisabled = p.QueueOrderDisabled
+	copy.PredicateDisabled = p.PredicateDisabled
+	copy.NodeOrderDisabled = p.NodeOrderDisabled
+	return &copy
 }
 
 type SchedulingNodePoolParams struct {
