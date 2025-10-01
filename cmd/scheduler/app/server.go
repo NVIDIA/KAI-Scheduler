@@ -47,9 +47,12 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/app/options"
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/profiling"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/version"
 )
 
@@ -160,8 +163,17 @@ func Run(opt *options.ServerOption, config *restclient.Config, mux *http.ServeMu
 	}
 	metrics.InitMetrics(opt.MetricsNamespace)
 
+	actions.InitDefaultActions()
+	plugins.InitDefaultPlugins()
+
+	// Load configuration of scheduler
+	schedConfig, err := conf_util.ResolveConfigurationFromFile(opt.SchedulerConf)
+	if err != nil {
+		return fmt.Errorf("error resolving configuration from file: %v", err)
+	}
+
 	scheduler, err := scheduler.NewScheduler(config,
-		opt.SchedulerConf,
+		schedConfig,
 		BuildSchedulerParams(opt),
 		mux,
 	)

@@ -85,6 +85,7 @@ type SchedulerCacheParams struct {
 	KubeClient                  kubernetes.Interface
 	KAISchedulerClient          kubeaischedulerver.Interface
 	KueueClient                 kueueclient.Interface
+	UsageDBParams               *usageapi.UsageParams
 	UsageDBClient               usageapi.Interface
 	DetailedFitErrors           bool
 	ScheduleCSIStorage          bool
@@ -161,7 +162,10 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 	sc.podGroupLister = sc.kubeAiSchedulerInformerFactory.Scheduling().V2alpha2().PodGroups().Lister()
 
 	if schedulerCacheParams.UsageDBClient != nil {
-		sc.usageLister = usagedb.NewUsageLister(schedulerCacheParams.UsageDBClient, nil, nil, nil)
+		sc.usageLister = usagedb.NewUsageLister(schedulerCacheParams.UsageDBClient,
+			schedulerCacheParams.UsageDBParams.FetchInterval,
+			schedulerCacheParams.UsageDBParams.StalenessPeriod,
+			schedulerCacheParams.UsageDBParams.WaitTimeout)
 	}
 
 	clusterInfo, err := cluster_info.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, sc.usageLister, sc.schedulingNodePoolParams,
