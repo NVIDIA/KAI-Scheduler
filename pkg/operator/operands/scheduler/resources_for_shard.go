@@ -270,6 +270,12 @@ func buildArgsList(
 	// Dynamically apply valid scheduler flags from shard args, ignoring unknown flags
 	flagSet.VisitAll(func(flag *pflag.Flag) {
 		if value, found := shard.Spec.Args[flag.Name]; found {
+			if flag.Value.Type() == "bool" {
+				parsedBool, err := strconv.ParseBool(value)
+				if err != nil || !parsedBool {
+					return
+				}
+			}
 			args = append(args, "--"+flag.Name, value)
 		}
 	})
