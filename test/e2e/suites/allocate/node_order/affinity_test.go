@@ -38,8 +38,8 @@ var _ = Describe("Affinity", Ordered, func() {
 
 	BeforeAll(func(ctx context.Context) {
 		testCtx = testcontext.GetConnectivity(ctx, Default)
-		parentQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), "")
-		childQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), parentQueue.Name)
+		parentQueue := queue.CreateQueueObject("parent-"+utils.GenerateRandomK8sName(10), "")
+		childQueue := queue.CreateQueueObject("test-queue-"+utils.GenerateRandomK8sName(10), parentQueue.Name)
 		testCtx.InitQueues([]*v2.Queue{childQueue, parentQueue})
 		namespace = queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
 		capacity.SkipIfInsufficientClusterTopologyResources(testCtx.KubeClientset, []capacity.ResourceList{
@@ -72,6 +72,7 @@ var _ = Describe("Affinity", Ordered, func() {
 	BeforeEach(func(ctx context.Context) {
 		var err error
 		pod = rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
+		pod.Name = "running-" + pod.Name
 		maps.Copy(pod.Labels, podLabels)
 		pod, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod)
 		Expect(err).To(Succeed())
@@ -85,8 +86,9 @@ var _ = Describe("Affinity", Ordered, func() {
 	})
 
 	Context("Pod Affinity", func() {
-		It("schedules the a new pod with matching labels pod affinity", func(ctx context.Context) {
+		It("schedules the new pod with matching labels pod affinity", func(ctx context.Context) {
 			testedPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
+			testedPod.Name = "pod-with-affinity-" + pod.Name
 			testedPod.Spec.Affinity = &v1.Affinity{
 				PodAffinity: &v1.PodAffinity{
 					PreferredDuringSchedulingIgnoredDuringExecution: weightedPodAffinityTerm,
@@ -102,8 +104,9 @@ var _ = Describe("Affinity", Ordered, func() {
 			Expect(testedPod.Spec.NodeName).To(Equal(pod.Spec.NodeName))
 		})
 
-		It("schedules the a new pod NOT with matching labels pod anti-affinity", func(ctx context.Context) {
+		It("schedules the new pod NOT with matching labels pod anti-affinity", func(ctx context.Context) {
 			testedPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
+			testedPod.Name = "pod-with-anti-affinity-" + pod.Name
 			testedPod.Spec.Affinity = &v1.Affinity{
 				PodAntiAffinity: &v1.PodAntiAffinity{
 					PreferredDuringSchedulingIgnoredDuringExecution: weightedPodAffinityTerm,
