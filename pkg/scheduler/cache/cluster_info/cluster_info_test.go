@@ -1192,9 +1192,14 @@ func TestSnapshotPodGroups(t *testing.T) {
 					subGroup1.AssignTask(&pod_info.PodInfo{UID: "pod-1", SubGroupName: "SubGroup-1"})
 					subGroup1.AssignTask(&pod_info.PodInfo{UID: "pod-2", SubGroupName: "SubGroup-1"})
 
+					subGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+					subGroupSet.AddPodSet(subGroup0)
+					subGroupSet.AddPodSet(subGroup1)
+
 					return &podgroup_info.PodGroupInfo{
-						Name:  "podGroup-0",
-						Queue: "queue-0",
+						Name:            "podGroup-0",
+						Queue:           "queue-0",
+						RootSubGroupSet: subGroupSet,
 						PodSets: map[string]*subgroup_info.PodSet{
 							"SubGroup-0": subGroup0,
 							"SubGroup-1": subGroup1,
@@ -1688,6 +1693,7 @@ func TestPodGroupWithIndex(t *testing.T) {
 		},
 	)
 	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
+	assert.Equal(t, types.UID("ABC"), podGroupInfo.PodGroupUID)
 }
 
 func TestPodGroupWithIndexNonMatching(t *testing.T) {
@@ -1708,6 +1714,61 @@ func TestPodGroupWithIndexNonMatching(t *testing.T) {
 		},
 	)
 	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
+	assert.Equal(t, types.UID("ABC"), podGroupInfo.PodGroupUID)
+}
+
+func TestPodGroupWithIndexNoSubGroups(t *testing.T) {
+	podGroup := &enginev2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: "ABC",
+		},
+		Spec: enginev2alpha2.PodGroupSpec{
+			MinMember: 2,
+		},
+	}
+	podGroupInfo := podgroup_info.NewPodGroupInfo("MyTest")
+	clusterInfo := newClusterInfoTests(t,
+		clusterInfoTestParams{
+			kubeObjects:         []runtime.Object{},
+			kaiSchedulerObjects: []runtime.Object{},
+			kueueObjects:        []runtime.Object{},
+		},
+	)
+	assert.Equal(t, int32(1), podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].GetMinAvailable())
+	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
+	assert.Equal(t, int32(2), podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].GetMinAvailable())
+}
+
+func TestPodGroupWithIndexWithSubGroups(t *testing.T) {
+	podGroup := &enginev2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: "ABC",
+		},
+		Spec: enginev2alpha2.PodGroupSpec{
+			MinMember: 3,
+			SubGroups: []enginev2alpha2.SubGroup{
+				{
+					Name:      "sub-a",
+					MinMember: 1,
+				},
+				{
+					Name:      "sub-b",
+					MinMember: 2,
+				},
+			},
+		},
+	}
+	podGroupInfo := podgroup_info.NewPodGroupInfo("MyTest")
+	clusterInfo := newClusterInfoTests(t,
+		clusterInfoTestParams{
+			kubeObjects:         []runtime.Object{},
+			kaiSchedulerObjects: []runtime.Object{},
+			kueueObjects:        []runtime.Object{},
+		},
+	)
+	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
+	assert.Equal(t, int32(1), podGroupInfo.GetSubGroups()["sub-a"].GetMinAvailable())
+	assert.Equal(t, int32(2), podGroupInfo.GetSubGroups()["sub-b"].GetMinAvailable())
 }
 
 func TestIsPodGroupUpForScheduler(t *testing.T) {

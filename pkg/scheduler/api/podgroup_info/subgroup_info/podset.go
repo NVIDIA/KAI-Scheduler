@@ -4,7 +4,6 @@
 package subgroup_info
 
 import (
-	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -34,11 +33,6 @@ func NewPodSet(name string, minAvailable int32, topologyConstraint *topology_inf
 		numActiveUsedTasks:      0,
 		numAliveTasks:           0,
 	}
-}
-
-func FromSubGroup(subGroup *schedulingv2.SubGroup) *PodSet {
-	// will be changed in the future so it will also contain topology constraint
-	return NewPodSet(subGroup.Name, subGroup.MinMember, nil)
 }
 
 func (ps *PodSet) GetMinAvailable() int32 {

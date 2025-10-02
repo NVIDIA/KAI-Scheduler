@@ -86,6 +86,7 @@ type PodGroupInfo struct {
 	PodGroupUID        types.UID
 
 	TopologyConstraint *topology_info.TopologyConstraintInfo
+	RootSubGroupSet    *subgroup_info.SubGroupSet
 	PodSets            map[string]*subgroup_info.PodSet
 
 	StalenessInfo
@@ -100,6 +101,9 @@ type PodGroupInfo struct {
 }
 
 func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *PodGroupInfo {
+	defaultSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	defaultSubGroupSet.AddPodSet(subgroup_info.NewPodSet(DefaultSubGroup, 1, nil))
+
 	podGroupInfo := &PodGroupInfo{
 		UID:       uid,
 		Allocated: resource_info.EmptyResource(),
@@ -113,10 +117,8 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 			TimeStamp: nil,
 			Stale:     false,
 		},
-
-		PodSets: map[string]*subgroup_info.PodSet{
-			DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil),
-		},
+		RootSubGroupSet: defaultSubGroupSet,
+		PodSets:         defaultSubGroupSet.GetPodSets(),
 
 		LastStartTimestamp:   nil,
 		activeAllocatedCount: ptr.To(0),
@@ -155,7 +157,11 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.CreationTimestamp = pg.GetCreationTimestamp()
 	pgi.PodGroup = pg
 	pgi.PodGroupUID = pg.UID
-	pgi.setSubGroups(pg)
+	err := pgi.setSubGroups(pg)
+	if err != nil {
+		log.InfraLogger.V(7).Warnf("Failed to set subgroups for podgroup <%s> err: %v",
+			pg.Namespace, pg.Name)
+	}
 
 	if pg.Spec.TopologyConstraint.Topology != "" {
 		pgi.TopologyConstraint = &topology_info.TopologyConstraintInfo{
@@ -191,24 +197,20 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 		pgi.Name, pgi.PodGroupUID)
 }
 
-func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) {
-	if len(podGroup.Spec.SubGroups) > 0 {
-		pgi.PodSets = map[string]*subgroup_info.PodSet{}
-		for _, sg := range podGroup.Spec.SubGroups {
-			subGroupInfo := subgroup_info.FromSubGroup(&sg)
-			pgi.PodSets[subGroupInfo.GetName()] = subGroupInfo
+func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) error {
+	if len(podGroup.Spec.SubGroups) == 0 {
+		if defaultSubGroup, found := pgi.PodSets[DefaultSubGroup]; found {
+			defaultSubGroup.SetMinAvailable(max(podGroup.Spec.MinMember, 1))
 		}
-		return
+		return nil
 	}
-	if pgi.PodSets == nil {
-		pgi.PodSets = map[string]*subgroup_info.PodSet{}
+	rootSubGroupSet, err := subgroup_info.FromPodGroup(podGroup)
+	if err != nil {
+		return err
 	}
-	defaultSubGroup, found := pgi.PodSets[DefaultSubGroup]
-	if !found {
-		pgi.PodSets[DefaultSubGroup] = subgroup_info.NewPodSet(DefaultSubGroup, max(podGroup.Spec.MinMember, 1), nil)
-	} else {
-		defaultSubGroup.SetMinAvailable(max(podGroup.Spec.MinMember, 1))
-	}
+	pgi.RootSubGroupSet = rootSubGroupSet
+	pgi.PodSets = rootSubGroupSet.GetPodSets()
+	return nil
 }
 
 func (pgi *PodGroupInfo) addTaskIndex(ti *pod_info.PodInfo) {
@@ -474,7 +476,6 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 		PodGroup:    pgi.PodGroup,
 		PodGroupUID: pgi.PodGroupUID,
 
-		PodSets: map[string]*subgroup_info.PodSet{},
 		TopologyConstraint: func() *topology_info.TopologyConstraintInfo {
 			if pgi.TopologyConstraint == nil {
 				return nil
@@ -492,11 +493,8 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 
 	pgi.CreationTimestamp.DeepCopyInto(&info.CreationTimestamp)
 
-	for _, podSet := range pgi.PodSets {
-		info.PodSets[podSet.GetName()] = subgroup_info.NewPodSet(
-			podSet.GetName(), podSet.GetMinAvailable(), nil,
-		)
-	}
+	info.RootSubGroupSet = pgi.RootSubGroupSet.Clone()
+	info.PodSets = info.RootSubGroupSet.GetPodSets()
 
 	for _, task := range tasks {
 		info.AddTaskInfo(task.Clone())
