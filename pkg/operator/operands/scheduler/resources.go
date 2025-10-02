@@ -14,12 +14,18 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 )
 
+const (
+	serviceAccountName = "scheduler"
+)
+
 func serviceAccountForKAIConfig(
 	ctx context.Context, readerClient client.Reader,
 	kaiConfig *kaiv1.Config,
 ) (*corev1.ServiceAccount, error) {
-	sa, err := common.ObjectForKAIConfig(ctx, readerClient, &corev1.ServiceAccount{}, *kaiConfig.Spec.Global.SchedulerName,
-		kaiConfig.Spec.Namespace)
+	sa, err := common.ObjectForKAIConfig(
+		ctx, readerClient, &corev1.ServiceAccount{},
+		serviceAccountName, kaiConfig.Spec.Namespace,
+	)
 	if err != nil {
 		return nil, err
 	}

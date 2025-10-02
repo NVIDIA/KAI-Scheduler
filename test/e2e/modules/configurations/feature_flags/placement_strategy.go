@@ -6,11 +6,14 @@ package feature_flags
 
 import (
 	"context"
-	"fmt"
-	"slices"
-	"strings"
 
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/configurations"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	testContext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -24,38 +27,17 @@ const (
 func SetPlacementStrategy(
 	ctx context.Context, testCtx *testContext.TestContext, strategy string,
 ) error {
-	return updateKaiSchedulerConfigMap(ctx, testCtx, func() (*config, error) {
-		placementArguments := map[string]string{
-			gpuResource: strategy, cpuResource: strategy,
-		}
-
-		innerConfig := config{}
-
-		actions := []string{"allocate"}
-		if placementArguments[gpuResource] != SpreadStrategy && placementArguments[cpuResource] != SpreadStrategy {
-			actions = append(actions, "consolidation")
-		}
-		actions = append(actions, []string{"reclaim", "preempt", "stalegangeviction"}...)
-
-		innerConfig.Actions = strings.Join(actions, ", ")
-
-		innerConfig.Tiers = slices.Clone(defaultKaiSchedulerPlugins)
-		innerConfig.Tiers[0].Plugins = append(
-			innerConfig.Tiers[0].Plugins,
-			plugin{Name: fmt.Sprintf("gpu%s", strings.Replace(placementArguments[gpuResource], "bin", "", 1))},
-			plugin{
-				Name:      "nodeplacement",
-				Arguments: placementArguments,
-			},
-		)
-
-		if placementArguments[gpuResource] == binpackStrategy {
-			innerConfig.Tiers[0].Plugins = append(
-				innerConfig.Tiers[0].Plugins,
-				plugin{Name: "gpusharingorder"},
-			)
-		}
-
-		return &innerConfig, nil
-	})
+	if err := configurations.PatchSchedulingShard(
+		ctx, testCtx, "default",
+		func(shard *kaiv1.SchedulingShard) {
+			shard.Spec.PlacementStrategy.CPU = ptr.To(strategy)
+			shard.Spec.PlacementStrategy.GPU = ptr.To(strategy)
+		},
+	); err != nil {
+		return err
+	}
+	wait.WaitForDeploymentPodsRunning(
+		ctx, testCtx.ControllerClient, constant.SchedulerDeploymentName, constants.DefaultKAINamespace,
+	)
+	return nil
 }

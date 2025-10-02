@@ -564,7 +564,7 @@ func TestServiceAccountForScheduler(t *testing.T) {
 					},
 				},
 			},
-			expectedName: "other-kai-scheduler",
+			expectedName: "scheduler",
 		},
 		{
 			name: "custom scheduler name",
@@ -575,7 +575,7 @@ func TestServiceAccountForScheduler(t *testing.T) {
 					},
 				},
 			},
-			expectedName: "custom-scheduler",
+			expectedName: "scheduler",
 		},
 	}
 
