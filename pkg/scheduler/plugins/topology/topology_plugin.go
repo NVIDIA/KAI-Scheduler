@@ -23,19 +23,19 @@ type topologyName = string
 type topologyPlugin struct {
 	TopologyTrees map[topologyName]*Info
 
-	// Cache for storing the lowest common domain for each task during scheduling
-	taskLowestCommonDomains map[common_info.PodID]*DomainInfo
-
 	// Cache for storing node set to domain by topology name
 	nodeSetToDomain map[topologyName]map[nodeSetID]*DomainInfo
+
+	jobNodeScores map[common_info.PodGroupID]map[string]float64
 
 	session *framework.Session
 }
 
 func New(_ map[string]string) framework.Plugin {
 	return &topologyPlugin{
-		TopologyTrees: map[topologyName]*Info{},
-		session:       nil,
+		TopologyTrees:   map[topologyName]*Info{},
+		nodeSetToDomain: map[topologyName]map[nodeSetID]*DomainInfo{},
+		session:         nil,
 	}
 }
 
@@ -73,6 +73,7 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 
 		t.TopologyTrees[topology.Name] = topologyTree
 
+		t.nodeSetToDomain[topology.Name] = map[nodeSetID]*DomainInfo{}
 		domains := []*DomainInfo{}
 		for _, levelDomains := range topologyTree.DomainsByLevel {
 			for _, domain := range levelDomains {
@@ -111,12 +112,12 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueue
 
 		// Connect the child domain to the current domain. The current node gives us the link
 		if nodeContainingChildDomain != nil {
-			domainInfo.Children[nodeContainingChildDomain.ID] = nodeContainingChildDomain
+			domainInfo.AddChild(nodeContainingChildDomain)
 		}
 		nodeContainingChildDomain = domainInfo
 	}
 
-	topologyTree.DomainsByLevel[rootLevel][rootDomainId].Children[nodeContainingChildDomain.ID] = nodeContainingChildDomain
+	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddChild(nodeContainingChildDomain)
 	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddNode(nodeInfo)
 }
 

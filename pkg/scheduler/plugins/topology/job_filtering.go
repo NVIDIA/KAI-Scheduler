@@ -4,14 +4,16 @@
 package topology
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
 type jobAllocationMetaData struct {
@@ -41,7 +43,10 @@ func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []
 		return nil, err
 	}
 
+	// GuyTodo: Maybe we should sort afterwards for needed domains instead of sorting the whole tree.
+	// Sorting so we can traverse the tree in-order later on for node scoring.
 	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId])
+	log.InfraLogger.V(7).Infof("Tree sorted: %+v", topologyTree.DomainsByLevel[rootLevel][rootDomainId])
 
 	if maxAllocatablePods < len(tasks) {
 		job.SetJobFitError(
@@ -314,10 +319,13 @@ func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
 	}
 }
 
-// Only sort children, not nodes.
 func sortTree(root *DomainInfo) {
-	sort.Slice(root.Children, func(i, j int) bool {
-		return root.Children[i].AllocatablePods > root.Children[j].AllocatablePods
+	if root == nil {
+		return
+	}
+
+	slices.SortStableFunc(root.Children, func(i, j *DomainInfo) int {
+		return cmp.Compare(i.AllocatablePods, j.AllocatablePods)
 	})
 
 	for _, child := range root.Children {

@@ -41,7 +41,7 @@ type DomainInfo struct {
 	Level DomainLevel
 
 	// Child domains
-	Children map[DomainID]*DomainInfo
+	Children []*DomainInfo
 
 	// Nodes that belong to this domain
 	Nodes map[string]*node_info.NodeInfo
@@ -54,13 +54,23 @@ func NewDomainInfo(id DomainID, level DomainLevel) *DomainInfo {
 	return &DomainInfo{
 		ID:       id,
 		Level:    level,
-		Children: map[DomainID]*DomainInfo{},
+		Children: []*DomainInfo{},
 		Nodes:    map[string]*node_info.NodeInfo{},
 	}
 }
 
 func (t *DomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
 	t.Nodes[nodeInfo.Name] = nodeInfo
+}
+
+func (t *DomainInfo) AddChild(child *DomainInfo) {
+	// Check if child already exists to avoid duplicates
+	for _, existingChild := range t.Children {
+		if existingChild.ID == child.ID {
+			return
+		}
+	}
+	t.Children = append(t.Children, child)
 }
 
 func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, nodeLabels map[string]string) DomainID {
