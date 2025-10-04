@@ -243,6 +243,7 @@ func (ssn *Session) OrderedNodesByTask(nodes []*node_info.NodeInfo, task *pod_in
 		wg         sync.WaitGroup
 	)
 
+	// GuyAsk: Why don't we pass the whole node list to plugins for scoring?
 	ssn.NodePreOrderFn(task, nodes)
 
 	for _, node := range nodes {

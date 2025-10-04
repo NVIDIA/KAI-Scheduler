@@ -5,6 +5,7 @@ package topology
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -32,11 +33,15 @@ func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []
 		return []node_info.NodeSet{nodeSet}, nil
 	}
 
-	defer t.treeAllocatableCleanup(topologyTree)
+	// defer t.treeAllocatableCleanup(topologyTree)
+	// Not cleaning the tree after since we need it later on for node scoring. The tree will be cleaned up in the next subset nodes call.
+	t.treeAllocatableCleanup(topologyTree)
 	maxAllocatablePods, err := t.calcTreeAllocatable(tasks, topologyTree, nodeSet)
 	if err != nil {
 		return nil, err
 	}
+
+	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId])
 
 	if maxAllocatablePods < len(tasks) {
 		job.SetJobFitError(
@@ -306,5 +311,16 @@ func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
 		for _, domain := range levelDomains {
 			domain.AllocatablePods = 0
 		}
+	}
+}
+
+// Only sort children, not nodes.
+func sortTree(root *DomainInfo) {
+	sort.Slice(root.Children, func(i, j int) bool {
+		return root.Children[i].AllocatablePods > root.Children[j].AllocatablePods
+	})
+
+	for _, child := range root.Children {
+		sortTree(child)
 	}
 }
