@@ -8,6 +8,8 @@ import (
 	"context"
 
 	"github.com/onsi/gomega"
+	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -98,6 +100,11 @@ func (tc *TestContext) ClusterCleanup(ctx context.Context) {
 		err = rd.DeleteNamespace(ctx, tc.KubeClientset, namespace.Name)
 		tc.asserter.Expect(err).To(gomega.Succeed())
 	}
+
+	wait.ForNamespacesToBeDeleted(ctx, tc.ControllerClient, lo.Map(namespaces.Items, func(item corev1.Namespace, _ int) string {
+		return item.Name
+	}))
+
 	tc.deleteAllQueues(ctx)
 
 	err = rd.DeleteAllStorageObjects(ctx, tc.ControllerClient)

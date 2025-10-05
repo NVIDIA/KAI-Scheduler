@@ -23,6 +23,7 @@ require (
 	github.com/prometheus/common v0.66.1
 	github.com/ray-project/kuberay/ray-operator v1.4.2
 	github.com/run-ai/kwok-operator v0.0.0-20240926063032-05b6364bc7c7
+	github.com/samber/lo v1.47.0
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/xhit/go-str2duration/v2 v2.1.0
@@ -143,7 +144,6 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
-	github.com/samber/lo v1.47.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cobra v1.10.1 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect

@@ -37,6 +37,7 @@ type PrometheusClient struct {
 	usageQueryTimeout            time.Duration
 	queryResolution              time.Duration
 	allocationMetricsMap         map[string]string
+	capacityMetricsMap           map[string]string
 	usageWindowQuery             usageWindowQueryFunction
 	tumblingWindowCronExpression *cronexpr.Expression
 }
@@ -62,6 +63,12 @@ func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface
 		"memory":         params.GetExtraStringParamOrDefault("memoryAllocationMetric", "kai_queue_allocated_memory_bytes"),
 	}
 
+	capacityMetricsMap := map[string]string{
+		"nvidia.com/gpu": params.GetExtraStringParamOrDefault("gpuCapacityMetric", "sum(kube_node_status_capacity{resource=\"nvidia_com_gpu\"})"),
+		"cpu":            params.GetExtraStringParamOrDefault("cpuCapacityMetric", "sum(kube_node_status_capacity{resource=\"cpu\"})"),
+		"memory":         params.GetExtraStringParamOrDefault("memoryCapacityMetric", "sum(kube_node_status_capacity{resource=\"memory\"})"),
+	}
+
 	clientObj := &PrometheusClient{
 		client:      v1api,
 		promClient:  client,
@@ -70,6 +77,7 @@ func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface
 		usageQueryTimeout:    usageQueryTimeout,
 		queryResolution:      queryResolution,
 		allocationMetricsMap: allocationMetricsMap,
+		capacityMetricsMap:   capacityMetricsMap,
 	}
 
 	if params.WindowType == nil {
@@ -95,9 +103,24 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 	ctx, cancel := context.WithTimeout(context.Background(), p.usageQueryTimeout)
 	defer cancel()
 
+	capacity := map[v1.ResourceName]float64{}
+	for _, resource := range []v1.ResourceName{commonconstants.GpuResource, v1.ResourceCPU, v1.ResourceMemory} {
+		resourceCapacity, err := p.queryResourceCapacity(ctx, p.capacityMetricsMap[string(resource)], p.usageWindowQuery)
+		if err != nil {
+			return nil, fmt.Errorf("error querying %s and capacity: %v", resource, err)
+		}
+		capacity[resource] = resourceCapacity
+	}
+
 	usage := queue_info.NewClusterUsage()
 
 	for _, resource := range []v1.ResourceName{commonconstants.GpuResource, v1.ResourceCPU, v1.ResourceMemory} {
+		capacityForResource, found := capacity[resource]
+		if !found {
+			capacityForResource = 1
+			log.InfraLogger.V(3).Warnf("Capacity for %s not found, setting to 1", resource)
+		}
+
 		resourceUsage, err := p.queryResourceUsage(ctx, p.allocationMetricsMap[string(resource)], p.usageWindowQuery)
 		if err != nil {
 			return nil, fmt.Errorf("error querying %s and usage: %v", resource, err)
@@ -106,11 +129,39 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 			if _, exists := usage.Queues[queueID]; !exists {
 				usage.Queues[queueID] = queue_info.QueueUsage{}
 			}
-			usage.Queues[queueID][resource] = queueResourceUsage
+			usage.Queues[queueID][resource] = queueResourceUsage / capacityForResource
 		}
 	}
 
 	return usage, nil
+}
+
+func (p *PrometheusClient) queryResourceCapacity(ctx context.Context, capacityMetric string, queryByWindow usageWindowQueryFunction) (float64, error) {
+	decayedCapacityMetric := capacityMetric
+	if p.usageParams.HalfLifePeriod != nil {
+		decayedCapacityMetric = fmt.Sprintf("((%s) * (%s))", capacityMetric, getExponentialDecayQuery(p.usageParams.HalfLifePeriod))
+	}
+
+	capacityResult, warnings, err := queryByWindow(ctx, decayedCapacityMetric)
+	if err != nil {
+		return 0, fmt.Errorf("error querying cluster capacity metric %s: %v", decayedCapacityMetric, err)
+	}
+
+	// Log warnings if exist
+	for _, w := range warnings {
+		log.InfraLogger.V(3).Warnf("Warning querying cluster capacity metric %s: %s", decayedCapacityMetric, w)
+	}
+
+	if capacityResult.Type() != model.ValVector {
+		return 0, fmt.Errorf("unexpected query result: got %s, expected vector", capacityResult.Type())
+	}
+
+	capacityVector := capacityResult.(model.Vector)
+	if len(capacityVector) == 0 {
+		return 0, fmt.Errorf("no data returned for cluster capacity metric %s", decayedCapacityMetric)
+	}
+
+	return float64(capacityVector[0].Value), nil
 }
 
 func (p *PrometheusClient) queryResourceUsage(
