@@ -8,15 +8,20 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/scores"
 )
 
+// GuyTodo: Make it run once for the job, not for each task
+// GuyTodo: Run up to the preferred topology level, not for all levels
+// GuyTodo: Make this whole functionality not run when there is no preferred topology level specified for the job
+// GuyTodo: Make sure we respect the node topology level
 func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_info.NodeInfo) error {
 	job := t.session.PodGroupInfos[task.Job]
+	preferredLevel := job.TopologyConstraint.PreferredLevel
 
 	domain, ok := t.nodeSetToDomain[job.TopologyConstraint.Topology][getNodeSetID(nodes)]
 	if !ok {
 		return fmt.Errorf("domain for node set %s not found", getNodeSetID(nodes))
 	}
 
-	t.jobNodeScores[job.UID] = calculateNodeScores(domain)
+	t.jobNodeScores[job.UID] = calculateNodeScores(domain, DomainLevel(preferredLevel))
 
 	return nil
 }
@@ -25,28 +30,31 @@ func (t *topologyPlugin) nodeOrderFn(task *pod_info.PodInfo, node *node_info.Nod
 	return t.jobNodeScores[task.Job][node.Name], nil
 }
 
-func calculateNodeScores(domain *DomainInfo) map[string]float64 {
-	orderedLeafDomains := getOrderedLeafDomains(domain)
+func calculateNodeScores(domain *DomainInfo, preferredLevel DomainLevel) map[string]float64 {
+	orderedPreferredLevelDomains := getLevelDomains(domain, preferredLevel)
 
 	nodeScores := make(map[string]float64)
-	for i, leafDomain := range orderedLeafDomains {
+	for i, leafDomain := range orderedPreferredLevelDomains {
 		for _, node := range leafDomain.Nodes {
 			// Score nodes by their domain's order
-			nodeScores[node.Name] = (float64(len(orderedLeafDomains)-i) / float64(len(orderedLeafDomains))) * scores.Topology
+			nodeScores[node.Name] = (float64(len(orderedPreferredLevelDomains)-i) / float64(len(orderedPreferredLevelDomains))) * scores.Topology
 		}
 	}
 
 	return nodeScores
 }
 
-func getOrderedLeafDomains(domain *DomainInfo) []*DomainInfo {
-	orderedLeafDomains := []*DomainInfo{}
-	if len(domain.Children) == 0 {
-		return append(orderedLeafDomains, domain)
+func getLevelDomains(root *DomainInfo, level DomainLevel) []*DomainInfo {
+	if root.Level == level {
+		return []*DomainInfo{root}
+	}
+	if len(root.Children) == 0 {
+		return []*DomainInfo{}
 	}
 
-	for _, childDomain := range domain.Children {
-		orderedLeafDomains = append(orderedLeafDomains, getOrderedLeafDomains(childDomain)...)
+	levelDomains := []*DomainInfo{}
+	for _, childDomain := range root.Children {
+		levelDomains = append(levelDomains, getLevelDomains(childDomain, level)...)
 	}
-	return orderedLeafDomains
+	return levelDomains
 }

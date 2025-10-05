@@ -35,6 +35,7 @@ func New(_ map[string]string) framework.Plugin {
 	return &topologyPlugin{
 		TopologyTrees:   map[topologyName]*Info{},
 		nodeSetToDomain: map[topologyName]map[nodeSetID]*DomainInfo{},
+		jobNodeScores:   map[common_info.PodGroupID]map[string]float64{},
 		session:         nil,
 	}
 }
