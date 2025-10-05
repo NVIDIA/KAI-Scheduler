@@ -390,7 +390,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			}
 
 			// Call the function under test
-			subsets, err := plugin.subSetNodesFn(job, podgroup_info.GetTasksToAllocate(job, nil, nil, true), maps.Values(nodesInfoMap))
+			subsets, err := plugin.subSetNodesFn(job, job.RootSubGroupSet, podgroup_info.GetTasksToAllocate(job, nil, nil, true), maps.Values(nodesInfoMap))
 
 			// Check error
 			if tt.expectedError != "" {
@@ -1840,7 +1840,7 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			for _, podSet := range tt.job.PodSets {
 				tt.job.RootSubGroupSet.AddPodSet(podSet)
 			}
-			result, err := plugin.getJobAllocatableDomains(tt.job, len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)), tt.topologyTree)
+			result, err := plugin.getJobAllocatableDomains(tt.job, tt.job.RootSubGroupSet, len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)), tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {
