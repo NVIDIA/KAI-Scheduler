@@ -24,7 +24,7 @@ func FromPodGroup(podGroup *v2alpha2.PodGroup) (*SubGroupSet, error) {
 		children[parentName] = append(children[parentName], subGroup.Name)
 	}
 
-	root := NewSubGroupSet(fmt.Sprintf("%s/%s", podGroup.Namespace, podGroup.Name), nil)
+	root := NewSubGroupSet(RootSubGroupSetName, nil)
 	subGroupSets := map[string]*SubGroupSet{
 		RootSubGroupSetName: root,
 	}
