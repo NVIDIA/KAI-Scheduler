@@ -21,7 +21,7 @@ type jobAllocationMetaData struct {
 }
 
 func (t *topologyPlugin) subSetNodesFn(
-	job *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet,
+	job *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet,
 ) ([]node_info.NodeSet, error) {
 	topologyTree, found := t.getJobTopology(job)
 	if !found {

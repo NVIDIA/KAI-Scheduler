@@ -322,14 +322,14 @@ func (ssn *Session) IsTaskAllocationOnNodeOverCapacityFn(task *pod_info.PodInfo,
 	}
 }
 
-func (ssn *Session) SubsetNodesFn(podGroup *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo, initNodeSet node_info.NodeSet) ([]node_info.NodeSet, error) {
+func (ssn *Session) SubsetNodesFn(podGroup *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, tasks []*pod_info.PodInfo, initNodeSet node_info.NodeSet) ([]node_info.NodeSet, error) {
 	nodeSets := []node_info.NodeSet{initNodeSet}
 	for _, subsetNodesFn := range ssn.SubsetNodesFns {
 		log.InfraLogger.V(7).Infof(
 			"Running plugin func <%v> on podGroup <%s/%s>", subsetNodesFn, podGroup.Namespace, podGroup.Namespace)
 		var newNodeSets []node_info.NodeSet
 		for _, nodeSet := range nodeSets {
-			nodeSubsets, err := subsetNodesFn(podGroup, tasks, nodeSet)
+			nodeSubsets, err := subsetNodesFn(podGroup, subGroupSet, tasks, nodeSet)
 			if err != nil {
 				return nil, err
 			}

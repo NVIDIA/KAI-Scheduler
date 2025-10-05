@@ -15,6 +15,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 )
 
 func TestMutateBindRequestAnnotations(t *testing.T) {
@@ -112,7 +113,7 @@ func TestPartitionMultiImplementation(t *testing.T) {
 		},
 	}
 
-	shardClusterSubseting := func(_ *podgroup_info.PodGroupInfo, _ []*pod_info.PodInfo, nodeset node_info.NodeSet) ([]node_info.NodeSet, error) {
+	shardClusterSubseting := func(_ *podgroup_info.PodGroupInfo, _ *subgroup_info.SubGroupSet, _ []*pod_info.PodInfo, nodeset node_info.NodeSet) ([]node_info.NodeSet, error) {
 		var subset1 []*node_info.NodeInfo
 		var subset2 []*node_info.NodeInfo
 		for _, node := range nodeset {
@@ -125,7 +126,7 @@ func TestPartitionMultiImplementation(t *testing.T) {
 		return []node_info.NodeSet{subset1, subset2}, nil
 	}
 
-	topologySubseting := func(_ *podgroup_info.PodGroupInfo, _ []*pod_info.PodInfo, nodeset node_info.NodeSet) ([]node_info.NodeSet, error) {
+	topologySubseting := func(_ *podgroup_info.PodGroupInfo, _ *subgroup_info.SubGroupSet, _ []*pod_info.PodInfo, nodeset node_info.NodeSet) ([]node_info.NodeSet, error) {
 		var subset1 []*node_info.NodeInfo
 		var subset2 []*node_info.NodeInfo
 		for _, node := range nodeset {
@@ -143,7 +144,7 @@ func TestPartitionMultiImplementation(t *testing.T) {
 	ssn.AddSubsetNodesFn(shardClusterSubseting)
 	ssn.AddSubsetNodesFn(topologySubseting)
 
-	partitions, _ := ssn.SubsetNodesFn(podgroup_info.NewPodGroupInfo("a"), nil, nodes)
+	partitions, _ := ssn.SubsetNodesFn(podgroup_info.NewPodGroupInfo("a"), nil, nil, nodes)
 
 	assert.Equal(t, 4, len(partitions))
 
