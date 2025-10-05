@@ -17,6 +17,18 @@ func (up *UsageParams) SetDefaults() {
 		windowType := SlidingWindow
 		up.WindowType = &windowType
 	}
+	if up.FetchInterval == nil {
+		fetchInterval := 1 * time.Minute
+		up.FetchInterval = &fetchInterval
+	}
+	if up.StalenessPeriod == nil {
+		stalenessPeriod := 5 * time.Minute
+		up.StalenessPeriod = &stalenessPeriod
+	}
+	if up.WaitTimeout == nil {
+		waitTimeout := 1 * time.Minute
+		up.WaitTimeout = &waitTimeout
+	}
 }
 
 // WindowType defines the type of time window for aggregating usage data
