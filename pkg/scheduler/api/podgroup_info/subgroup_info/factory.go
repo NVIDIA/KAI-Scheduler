@@ -41,11 +41,19 @@ func FromPodGroup(podGroup *v2alpha2.PodGroup) (*SubGroupSet, error) {
 	podSets := map[string]*PodSet{}
 
 	for name, subGroup := range allSubGroups {
+		var topologyConstrainInfo *topology_info.TopologyConstraintInfo
+		if subGroup.TopologyConstraint != nil {
+			topologyConstrainInfo = &topology_info.TopologyConstraintInfo{
+				Topology:       subGroup.TopologyConstraint.Topology,
+				RequiredLevel:  subGroup.TopologyConstraint.RequiredTopologyLevel,
+				PreferredLevel: subGroup.TopologyConstraint.PreferredTopologyLevel,
+			}
+		}
 		_, hasChildren := children[name]
 		if hasChildren {
-			subGroupSets[name] = NewSubGroupSet(name, nil)
+			subGroupSets[name] = NewSubGroupSet(name, topologyConstrainInfo)
 		} else {
-			podSets[name] = NewPodSet(name, subGroup.MinMember, nil)
+			podSets[name] = NewPodSet(name, subGroup.MinMember, topologyConstrainInfo)
 		}
 	}
 
