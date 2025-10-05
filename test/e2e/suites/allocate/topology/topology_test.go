@@ -196,7 +196,7 @@ var _ = Describe("Topology", Ordered, func() {
 		})
 	}, MustPassRepeatedly(3))
 
-	FContext("Topology - 8 nodes", func() {
+	Context("Topology - 8 nodes", func() {
 		const numNodesInTestTopology = 8
 
 		BeforeEach(func(ctx context.Context) {
