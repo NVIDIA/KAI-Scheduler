@@ -34,14 +34,14 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 		return false
 	}
 	for _, nodeSet := range nodeSets {
-		if allocateTaskOnNodeSet(ssn, stmt, nodeSet, job, tasksToAllocate, isPipelineOnly) {
+		if allocateTasksOnNodeSet(ssn, stmt, nodeSet, job, tasksToAllocate, isPipelineOnly) {
 			return true
 		}
 	}
 	return false
 }
 
-func allocateTaskOnNodeSet(ssn *framework.Session, stmt *framework.Statement, nodeSet node_info.NodeSet,
+func allocateTasksOnNodeSet(ssn *framework.Session, stmt *framework.Statement, nodeSet node_info.NodeSet,
 	job *podgroup_info.PodGroupInfo, tasksToAllocate []*pod_info.PodInfo, isPipelineOnly bool) bool {
 	cp := stmt.Checkpoint()
 	for index, task := range tasksToAllocate {
