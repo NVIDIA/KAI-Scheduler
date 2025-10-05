@@ -53,7 +53,7 @@ func (sgs *SubGroupSet) GetChildPodSets() []*PodSet {
 func (sgs *SubGroupSet) Clone() *SubGroupSet {
 	root := NewSubGroupSet(sgs.name, sgs.topologyConstraint)
 	for _, podSet := range sgs.podSets {
-		clonePodSet := NewPodSet(podSet.GetName(), podSet.GetMinAvailable(), podSet.GetTopologyConstraint())
+		clonePodSet := podSet.Clone()
 		root.AddPodSet(clonePodSet)
 	}
 	for _, subGroup := range sgs.groups {

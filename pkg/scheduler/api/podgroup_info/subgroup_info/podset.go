@@ -133,3 +133,7 @@ func (ps *PodSet) GetNumGatedTasks() int {
 func (ps *PodSet) GetNumPendingTasks() int {
 	return len(ps.podStatusIndex[pod_status.Pending])
 }
+
+func (ps *PodSet) Clone() *PodSet {
+	return NewPodSet(ps.GetName(), ps.GetMinAvailable(), ps.GetTopologyConstraint())
+}
