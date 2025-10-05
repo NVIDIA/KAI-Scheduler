@@ -5,6 +5,7 @@ package subgroup_info
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 )
@@ -86,5 +87,5 @@ func formatParentName(parentName *string) string {
 	if parentName == nil {
 		return RootSubGroupSetName
 	}
-	return *parentName
+	return strings.ToLower(*parentName)
 }
