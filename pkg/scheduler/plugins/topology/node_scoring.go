@@ -11,7 +11,6 @@ import (
 // GuyTodo: Make it run once for the job, not for each task
 // GuyTodo: Run up to the preferred topology level, not for all levels
 // GuyTodo: Make this whole functionality not run when there is no preferred topology level specified for the job
-// GuyTodo: Make sure we respect the node topology level
 func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_info.NodeInfo) error {
 	job := t.session.PodGroupInfos[task.Job]
 	preferredLevel := job.TopologyConstraint.PreferredLevel
