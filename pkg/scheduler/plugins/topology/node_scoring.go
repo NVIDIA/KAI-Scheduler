@@ -17,7 +17,7 @@ func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_in
 	}
 
 	domain, ok := t.nodeSetToDomain[job.TopologyConstraint.Topology][getNodeSetID(nodes)]
-	if !ok {
+	if !ok || domain == nil {
 		return fmt.Errorf("domain for node set %s not found", getNodeSetID(nodes))
 	}
 
@@ -54,7 +54,7 @@ func calculateNodeScores(domain *DomainInfo, preferredLevel DomainLevel) map[str
 	for i, leafDomain := range orderedPreferredLevelDomains {
 		for _, node := range leafDomain.Nodes {
 			// Score nodes by their domain's order
-			score := (float64(len(orderedPreferredLevelDomains)-i) / float64(len(orderedPreferredLevelDomains))) * 10
+			score := (float64(i+1) / float64(len(orderedPreferredLevelDomains))) * 10
 			// Round down the score to the nearest integer to prevent interference between plugins
 			// (ensures topology scores remain higher than other lower-priority plugin scores)
 			normalizedScore := math.Floor(score) * scores.Topology
