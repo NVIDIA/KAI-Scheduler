@@ -12,8 +12,7 @@ import (
 
 func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_info.NodeInfo) error {
 	job := t.getTaskJob(task)
-
-	if t.jobNodeScores[job.UID] != nil || job.TopologyConstraint == nil || job.TopologyConstraint.PreferredLevel == "" {
+	if job.TopologyConstraint == nil || job.TopologyConstraint.PreferredLevel == "" {
 		return nil
 	}
 
@@ -22,23 +21,30 @@ func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_in
 		return fmt.Errorf("domain for node set %s not found", getNodeSetID(nodes))
 	}
 
-	t.jobNodeScores[job.UID] = calculateNodeScores(domain, DomainLevel(job.TopologyConstraint.PreferredLevel))
+	// Avoid recalculating node scores for the same domain
+	if t.jobDomainNodeScores[job.UID].domainID == domain.ID {
+		return nil
+	}
+
+	t.jobDomainNodeScores[job.UID] = domainNodeScores{
+		domainID:   domain.ID,
+		nodeScores: calculateNodeScores(domain, DomainLevel(job.TopologyConstraint.PreferredLevel)),
+	}
 
 	return nil
 }
 
 func (t *topologyPlugin) nodeOrderFn(task *pod_info.PodInfo, node *node_info.NodeInfo) (float64, error) {
 	job := t.getTaskJob(task)
-
 	if job.TopologyConstraint == nil || job.TopologyConstraint.PreferredLevel == "" {
 		return 0, nil
 	}
 
-	if t.jobNodeScores[job.UID] == nil {
+	if t.jobDomainNodeScores[job.UID].domainID == "" {
 		return 0, fmt.Errorf("node scores for job %s not found", task.Job)
 	}
 
-	return t.jobNodeScores[job.UID][node.Name], nil
+	return t.jobDomainNodeScores[job.UID].nodeScores[node.Name], nil
 }
 
 func calculateNodeScores(domain *DomainInfo, preferredLevel DomainLevel) map[string]float64 {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -22,8 +23,7 @@ type jobAllocationMetaData struct {
 }
 
 func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet) ([]node_info.NodeSet, error) {
-	// Invalidate the job node scores cache
-	t.jobNodeScores[job.UID] = nil
+	t.invalidateJobDomainNodeScores()
 
 	topologyTree, found := t.getJobTopology(job)
 	if !found {
@@ -316,6 +316,10 @@ func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
 			domain.AllocatablePods = 0
 		}
 	}
+}
+
+func (t *topologyPlugin) invalidateJobDomainNodeScores() {
+	t.jobDomainNodeScores = make(map[common_info.PodGroupID]domainNodeScores)
 }
 
 func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {

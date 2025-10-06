@@ -26,17 +26,22 @@ type topologyPlugin struct {
 	// Cache for storing node set to domain by topology name
 	nodeSetToDomain map[topologyName]map[nodeSetID]*DomainInfo
 
-	jobNodeScores map[common_info.PodGroupID]map[string]float64
+	jobDomainNodeScores map[common_info.PodGroupID]domainNodeScores
 
 	session *framework.Session
 }
 
+type domainNodeScores struct {
+	domainID   DomainID
+	nodeScores map[string]float64
+}
+
 func New(_ map[string]string) framework.Plugin {
 	return &topologyPlugin{
-		TopologyTrees:   map[topologyName]*Info{},
-		nodeSetToDomain: map[topologyName]map[nodeSetID]*DomainInfo{},
-		jobNodeScores:   map[common_info.PodGroupID]map[string]float64{},
-		session:         nil,
+		TopologyTrees:       map[topologyName]*Info{},
+		nodeSetToDomain:     map[topologyName]map[nodeSetID]*DomainInfo{},
+		jobDomainNodeScores: map[common_info.PodGroupID]domainNodeScores{},
+		session:             nil,
 	}
 }
 
