@@ -2,6 +2,7 @@ package topology
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -49,7 +50,11 @@ func calculateNodeScores(domain *DomainInfo, preferredLevel DomainLevel) map[str
 	for i, leafDomain := range orderedPreferredLevelDomains {
 		for _, node := range leafDomain.Nodes {
 			// Score nodes by their domain's order
-			nodeScores[node.Name] = (float64(len(orderedPreferredLevelDomains)-i) / float64(len(orderedPreferredLevelDomains))) * scores.Topology
+			score := (float64(len(orderedPreferredLevelDomains)-i) / float64(len(orderedPreferredLevelDomains))) * 10
+			// Round down the score to the nearest integer to prevent interference between plugins
+			// (ensures topology scores remain higher than other lower-priority plugin scores)
+			normalizedScore := math.Floor(score) * scores.Topology
+			nodeScores[node.Name] = normalizedScore
 		}
 	}
 
