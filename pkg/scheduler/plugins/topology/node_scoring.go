@@ -5,14 +5,17 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/scores"
 )
 
-// GuyTodo: Make it run once for the job, not for each task
-// GuyTodo: Run up to the preferred topology level, not for all levels
-// GuyTodo: Make this whole functionality not run when there is no preferred topology level specified for the job
 func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_info.NodeInfo) error {
-	job := t.session.PodGroupInfos[task.Job]
+	job := t.getTaskJob(task)
+
+	if t.jobNodeScores[job.UID] != nil || job.TopologyConstraint == nil || job.TopologyConstraint.PreferredLevel == "" {
+		return nil
+	}
+
 	preferredLevel := job.TopologyConstraint.PreferredLevel
 
 	domain, ok := t.nodeSetToDomain[job.TopologyConstraint.Topology][getNodeSetID(nodes)]
@@ -26,7 +29,17 @@ func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_in
 }
 
 func (t *topologyPlugin) nodeOrderFn(task *pod_info.PodInfo, node *node_info.NodeInfo) (float64, error) {
-	return t.jobNodeScores[task.Job][node.Name], nil
+	job := t.getTaskJob(task)
+
+	if job.TopologyConstraint == nil || job.TopologyConstraint.PreferredLevel == "" {
+		return 0, nil
+	}
+
+	if t.jobNodeScores[job.UID] == nil {
+		return 0, fmt.Errorf("node scores for job %s not found", task.Job)
+	}
+
+	return t.jobNodeScores[job.UID][node.Name], nil
 }
 
 func calculateNodeScores(domain *DomainInfo, preferredLevel DomainLevel) map[string]float64 {
@@ -56,4 +69,8 @@ func getLevelDomains(root *DomainInfo, level DomainLevel) []*DomainInfo {
 		levelDomains = append(levelDomains, getLevelDomains(childDomain, level)...)
 	}
 	return levelDomains
+}
+
+func (t *topologyPlugin) getTaskJob(task *pod_info.PodInfo) *podgroup_info.PodGroupInfo {
+	return t.session.PodGroupInfos[task.Job]
 }

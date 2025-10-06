@@ -22,6 +22,9 @@ type jobAllocationMetaData struct {
 }
 
 func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet) ([]node_info.NodeSet, error) {
+	// Invalidate the job node scores cache
+	t.jobNodeScores[job.UID] = nil
+
 	topologyTree, found := t.getJobTopology(job)
 	if !found {
 		job.SetJobFitError(
