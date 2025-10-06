@@ -17,14 +17,12 @@ func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_in
 		return nil
 	}
 
-	preferredLevel := job.TopologyConstraint.PreferredLevel
-
 	domain, ok := t.nodeSetToDomain[job.TopologyConstraint.Topology][getNodeSetID(nodes)]
 	if !ok {
 		return fmt.Errorf("domain for node set %s not found", getNodeSetID(nodes))
 	}
 
-	t.jobNodeScores[job.UID] = calculateNodeScores(domain, DomainLevel(preferredLevel))
+	t.jobNodeScores[job.UID] = calculateNodeScores(domain, DomainLevel(job.TopologyConstraint.PreferredLevel))
 
 	return nil
 }
