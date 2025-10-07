@@ -46,6 +46,9 @@ func SetShardArg(ctx context.Context, testCtx *testcontext.TestContext, shardNam
 			if value == nil {
 				delete(shard.Spec.Args, argName)
 			} else {
+				if shard.Spec.Args == nil {
+					shard.Spec.Args = map[string]string{}
+				}
 				shard.Spec.Args[argName] = *value
 			}
 		},
