@@ -126,3 +126,7 @@ spec:
       resources:
         {{- toYaml .Values.scheduler.resources | nindent 6 }}
       {{- end }}
+    {{- if and .Values.scheduler.ports .Values.scheduler.ports.metricsPort }}
+    schedulerService:
+      port: {{ .Values.scheduler.ports.metricsPort }}
+    {{- end }}

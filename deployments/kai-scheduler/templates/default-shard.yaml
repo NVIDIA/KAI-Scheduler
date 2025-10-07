@@ -13,8 +13,4 @@ spec:
     gpu: {{ .Values.scheduler.placementStrategy }}
     cpu: {{ .Values.scheduler.placementStrategy }}
   {{- end }}
-  {{- if and .Values.scheduler.ports .Values.scheduler.ports.metricsPort }}
-  args:
-    listen-address: ":{{ .Values.scheduler.ports.metricsPort }}"
-  {{- end }}
 {{- end}}

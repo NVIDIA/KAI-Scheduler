@@ -263,7 +263,7 @@ func buildArgsList(
 
 	if kaiConfig.Spec.Scheduler.SchedulerService.Port != nil {
 		portNumberString := strconv.Itoa(*kaiConfig.Spec.Scheduler.SchedulerService.Port)
-		args = append(args, fmt.Sprintf("--%s=%s", "listen-address", portNumberString))
+		args = append(args, fmt.Sprintf("--%s=:%s", "listen-address", portNumberString))
 	}
 
 	if kaiConfig.Spec.QueueController.MetricsNamespace != nil {
