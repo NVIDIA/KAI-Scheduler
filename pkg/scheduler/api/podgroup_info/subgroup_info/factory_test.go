@@ -11,17 +11,33 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 )
 
 type wantGroup struct {
-	Name    string
-	Groups  []*wantGroup
-	PodSets []*wantPodSet
+	Name               string
+	Groups             []*wantGroup
+	PodSets            []*wantPodSet
+	TopologyConstraint *topology_info.TopologyConstraintInfo
 }
 
 type wantPodSet struct {
-	Name      string
-	MinMember int32
+	Name               string
+	MinMember          int32
+	TopologyConstraint *topology_info.TopologyConstraintInfo
+}
+
+func equalTopologyConstraint(got, want *topology_info.TopologyConstraintInfo) bool {
+	if got == nil && want == nil {
+		return true
+	}
+	if got == nil || want == nil {
+		return false
+	}
+
+	return got.Topology == want.Topology &&
+		got.RequiredLevel == want.RequiredLevel &&
+		got.PreferredLevel == want.PreferredLevel
 }
 
 func checkGroupStructure(t *testing.T, got *SubGroupSet, want *wantGroup) {
@@ -30,6 +46,9 @@ func checkGroupStructure(t *testing.T, got *SubGroupSet, want *wantGroup) {
 	}
 	if got.GetName() != want.Name {
 		t.Fatalf("expected SubGroupSet name %q, got %q", want.Name, got.GetName())
+	}
+	if !equalTopologyConstraint(got.GetTopologyConstraint(), want.TopologyConstraint) {
+		t.Fatalf("expected topology constraint %q, got %q", want.TopologyConstraint, got.GetTopologyConstraint())
 	}
 	// Check PodSets
 	if len(got.podSets) != len(want.PodSets) {
@@ -42,14 +61,23 @@ func checkGroupStructure(t *testing.T, got *SubGroupSet, want *wantGroup) {
 				if used[i] {
 					continue
 				}
-				if gp.GetName() == wp.Name && gp.GetMinAvailable() == wp.MinMember {
-					used[i] = true
-					found = true
-					break
+				if gp.GetName() != wp.Name {
+					continue
+				}
+				used[i] = true
+				found = true
+
+				if gp.GetMinAvailable() != wp.MinMember {
+					t.Errorf("SubGroupSet %q: expected minMember %v got %v",
+						wp.Name, wp.MinMember, gp.GetMinAvailable())
+				}
+				if !equalTopologyConstraint(gp.GetTopologyConstraint(), wp.TopologyConstraint) {
+					t.Errorf("SubGroupSet %q: expected topology constraint %q got %q",
+						wp.Name, wp.TopologyConstraint, gp.GetTopologyConstraint())
 				}
 			}
 			if !found {
-				t.Errorf("SubGroupSet %q: expected podSet %q with MinMember %d not found", want.Name, wp.Name, wp.MinMember)
+				t.Errorf("SubGroupSet %q: expected podSet %q not found", want.Name, wp.Name)
 			}
 		}
 	}
@@ -61,11 +89,12 @@ func checkGroupStructure(t *testing.T, got *SubGroupSet, want *wantGroup) {
 	for _, wantChild := range want.Groups {
 		found := false
 		for _, gotChild := range got.groups {
-			if gotChild.GetName() == wantChild.Name {
-				checkGroupStructure(t, gotChild, wantChild)
-				found = true
-				break
+			if gotChild.GetName() != wantChild.Name {
+				continue
 			}
+			checkGroupStructure(t, gotChild, wantChild)
+			found = true
+			break
 		}
 		if !found {
 			t.Errorf("SubGroupSet %q: expected group child %q not found among %v", want.Name, wantChild.Name, childrenNames(got.groups))
@@ -100,7 +129,7 @@ func TestFromPodGroup_FullTree(t *testing.T) {
 				},
 			},
 			want: &wantGroup{
-				Name: "ns1/jobA",
+				Name: RootSubGroupSetName,
 				Groups: []*wantGroup{
 					{
 						Name:    "sg1",
@@ -124,7 +153,7 @@ func TestFromPodGroup_FullTree(t *testing.T) {
 				},
 			},
 			want: &wantGroup{
-				Name: "ns2/jobB",
+				Name: RootSubGroupSetName,
 				Groups: []*wantGroup{
 					{
 						Name: "rootchild",
@@ -142,13 +171,108 @@ func TestFromPodGroup_FullTree(t *testing.T) {
 			},
 		},
 		{
+			name: "podgroup with global topology constraint",
+			podGroup: &v2alpha2.PodGroup{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns3", Name: "jobC"},
+				Spec: v2alpha2.PodGroupSpec{
+					TopologyConstraint: v2alpha2.TopologyConstraint{
+						Topology:               "topology",
+						PreferredTopologyLevel: "zone",
+					},
+					SubGroups: []v2alpha2.SubGroup{
+						{
+							Name:      "rootchild",
+							Parent:    nil,
+							MinMember: 3,
+							TopologyConstraint: &v2alpha2.TopologyConstraint{
+								Topology:              "topology",
+								RequiredTopologyLevel: "rack",
+							},
+						},
+					},
+				},
+			},
+			want: &wantGroup{
+				Name:   RootSubGroupSetName,
+				Groups: nil,
+				PodSets: []*wantPodSet{
+					{
+						Name: "rootchild",
+						TopologyConstraint: &topology_info.TopologyConstraintInfo{
+							Topology:      "topology",
+							RequiredLevel: "rack",
+						},
+						MinMember: 3,
+					},
+				},
+				TopologyConstraint: &topology_info.TopologyConstraintInfo{
+					Topology:       "topology",
+					PreferredLevel: "zone",
+				},
+			},
+		},
+		{
+			name: "subgroups with topology constraints",
+			podGroup: &v2alpha2.PodGroup{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns4", Name: "jobD"},
+				Spec: v2alpha2.PodGroupSpec{
+					SubGroups: []v2alpha2.SubGroup{
+						{Name: "rootchild", Parent: nil, TopologyConstraint: &v2alpha2.TopologyConstraint{
+							Topology:               "topology",
+							PreferredTopologyLevel: "zone",
+						}},
+						{Name: "leaf1", Parent: ptr.To("rootchild"), MinMember: 2, TopologyConstraint: &v2alpha2.TopologyConstraint{
+							Topology:              "topology",
+							RequiredTopologyLevel: "rack",
+						}},
+						{Name: "leaf2", Parent: ptr.To("rootchild"), MinMember: 3, TopologyConstraint: &v2alpha2.TopologyConstraint{
+							Topology:              "topology",
+							RequiredTopologyLevel: "host",
+						}},
+					},
+				},
+			},
+			want: &wantGroup{
+				Name: RootSubGroupSetName,
+				Groups: []*wantGroup{
+					{
+						Name:   "rootchild",
+						Groups: nil,
+						PodSets: []*wantPodSet{
+							{
+								Name:      "leaf1",
+								MinMember: 2,
+								TopologyConstraint: &topology_info.TopologyConstraintInfo{
+									Topology:      "topology",
+									RequiredLevel: "rack",
+								},
+							},
+							{
+								Name:      "leaf2",
+								MinMember: 3,
+								TopologyConstraint: &topology_info.TopologyConstraintInfo{
+									Topology:      "topology",
+									RequiredLevel: "host",
+								},
+							},
+						},
+						TopologyConstraint: &topology_info.TopologyConstraintInfo{
+							Topology:       "topology",
+							PreferredLevel: "zone",
+						},
+					},
+				},
+				PodSets: nil,
+			},
+		},
+		{
 			name: "empty subgroups",
 			podGroup: &v2alpha2.PodGroup{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns3", Name: "empty"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns5", Name: "empty"},
 				Spec:       v2alpha2.PodGroupSpec{SubGroups: nil},
 			},
 			want: &wantGroup{
-				Name:    "ns3/empty",
+				Name:    RootSubGroupSetName,
 				Groups:  nil,
 				PodSets: nil,
 			},
@@ -156,7 +280,7 @@ func TestFromPodGroup_FullTree(t *testing.T) {
 		{
 			name: "parent not found",
 			podGroup: &v2alpha2.PodGroup{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns4", Name: "bad"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns6", Name: "bad"},
 				Spec: v2alpha2.PodGroupSpec{
 					SubGroups: []v2alpha2.SubGroup{
 						{Name: "sg1", Parent: ptr.To("nonexistent"), MinMember: 2},
@@ -169,7 +293,7 @@ func TestFromPodGroup_FullTree(t *testing.T) {
 		{
 			name: "subgroup set parent not found",
 			podGroup: &v2alpha2.PodGroup{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns5", Name: "bad"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns7", Name: "bad"},
 				Spec: v2alpha2.PodGroupSpec{
 					SubGroups: []v2alpha2.SubGroup{
 						{Name: "p1", Parent: nil},
@@ -184,7 +308,7 @@ func TestFromPodGroup_FullTree(t *testing.T) {
 		{
 			name: "duplicate subgroup names",
 			podGroup: &v2alpha2.PodGroup{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns6", Name: "dup"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns8", Name: "dup"},
 				Spec: v2alpha2.PodGroupSpec{
 					SubGroups: []v2alpha2.SubGroup{
 						{Name: "sg", Parent: nil},
