@@ -6,6 +6,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -70,7 +71,7 @@ func deploymentForShard(
 			"configMapVersion": schedulerConfig.ResourceVersion,
 		},
 	}
-	deployment.Spec.Template.Spec.ServiceAccountName = *kaiConfig.Spec.Global.SchedulerName
+	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccountName
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
 		{
 			MountPath: configMountPath,
@@ -146,10 +147,13 @@ func configMapForShard(
 				{Name: "elastic"},
 				{Name: "kubeflow"},
 				{Name: "ray"},
+				{Name: "subgrouporder"},
 				{Name: "taskorder"},
 				{Name: "nominatednode"},
-				{Name: "snapshot"},
 				{Name: "dynamicresources"},
+				{Name: "minruntime"},
+				{Name: "topology"},
+				{Name: "snapshot"},
 			},
 		},
 	}
@@ -249,23 +253,27 @@ func buildArgsList(
 	so.AddFlags(flagSet)
 
 	args := []string{
-		"--scheduler-conf", configName,
-		"--scheduler-name", *kaiConfig.Spec.Global.SchedulerName,
-		"--namespace", kaiConfig.Spec.Namespace,
-		"--nodepool-label-key", *kaiConfig.Spec.Global.NodePoolLabelKey,
-		"--partition-label-value", shard.Spec.PartitionLabelValue,
-		// TODO: uncomment after binder merge
-		// "--resource-reservation-app-label", *kaiConfig.Spec.Binder.ResourceReservation.AppLabel,
+		fmt.Sprintf("--%s=%s", "scheduler-conf", configName),
+		fmt.Sprintf("--%s=%s", "scheduler-name", *kaiConfig.Spec.Global.SchedulerName),
+		fmt.Sprintf("--%s=%s", "namespace", kaiConfig.Spec.Namespace),
+		fmt.Sprintf("--%s=%s", "nodepool-label-key", *kaiConfig.Spec.Global.NodePoolLabelKey),
+		fmt.Sprintf("--%s=%s", "partition-label-value", shard.Spec.PartitionLabelValue),
+		fmt.Sprintf("--%s=%s", "resource-reservation-app-label", *kaiConfig.Spec.Binder.ResourceReservation.AppLabel),
+	}
+
+	if kaiConfig.Spec.Scheduler.SchedulerService.Port != nil {
+		portNumberString := strconv.Itoa(*kaiConfig.Spec.Scheduler.SchedulerService.Port)
+		args = append(args, fmt.Sprintf("--%s=:%s", "listen-address", portNumberString))
 	}
 
 	if kaiConfig.Spec.QueueController.MetricsNamespace != nil {
-		args = append(args, "--metrics-namespace", *kaiConfig.Spec.QueueController.MetricsNamespace)
+		args = append(args, fmt.Sprintf("--%s=%s", "metrics-namespace", *kaiConfig.Spec.QueueController.MetricsNamespace))
 	}
 
 	// Dynamically apply valid scheduler flags from shard args, ignoring unknown flags
 	flagSet.VisitAll(func(flag *pflag.Flag) {
 		if value, found := shard.Spec.Args[flag.Name]; found {
-			args = append(args, "--"+flag.Name, value)
+			args = append(args, fmt.Sprintf("--%s=%v", flag.Name, value))
 		}
 	})
 
@@ -274,7 +282,7 @@ func buildArgsList(
 	}
 	schedulerConfig := kaiConfig.Spec.Scheduler
 	if schedulerConfig.Replicas != nil && *schedulerConfig.Replicas > 1 {
-		args = append(args, "--leader-elect")
+		args = append(args, "--leader-elect=true")
 	}
 
 	return args, nil

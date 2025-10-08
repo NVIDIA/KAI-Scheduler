@@ -109,6 +109,7 @@ func (h *Handler) createPodGroupForMetadata(podGroupMetadata Metadata) *scheduli
 			Queue:             podGroupMetadata.Queue,
 			PriorityClassName: podGroupMetadata.PriorityClassName,
 			SubGroups:         []schedulingv2alpha2.SubGroup{},
+			Preemptibility:    podGroupMetadata.Preemptibility,
 		},
 	}
 

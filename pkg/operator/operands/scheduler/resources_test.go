@@ -55,11 +55,11 @@ func TestDeploymentForShard(t *testing.T) {
 				},
 			},
 			expected: []string{
-				"--scheduler-conf", configMountPath,
-				"--scheduler-name", "other-kai-scheduler",
-				"--namespace", "default",
-				"--nodepool-label-key", "nodepool",
-				"--partition-label-value", "partition-1",
+				fmt.Sprintf("--scheduler-conf=%s", configMountPath),
+				"--scheduler-name=other-kai-scheduler",
+				"--namespace=default",
+				"--nodepool-label-key=nodepool",
+				"--partition-label-value=partition-1",
 			},
 			notExpected: []string{"--leader-elect"},
 		},
@@ -79,17 +79,19 @@ func TestDeploymentForShard(t *testing.T) {
 			shard: &kaiv1.SchedulingShard{
 				Spec: kaiv1.SchedulingShardSpec{
 					Args: map[string]string{
-						"v":               "5",
-						"enable-profiler": "true",
+						"v":                       "5",
+						"enable-profiler":         "true",
+						"full-hierarchy-fairness": "false",
 					},
 				},
 			},
 			expected: []string{
-				"--scheduler-conf", configMountPath,
-				"--scheduler-name", "other-kai-scheduler",
-				"--namespace", "default",
-				"--v", "5",
-				"--enable-profiler", "true",
+				fmt.Sprintf("--scheduler-conf=%s", configMountPath),
+				"--scheduler-name=other-kai-scheduler",
+				"--namespace=default",
+				"--v=5",
+				"--enable-profiler=true",
+				"--full-hierarchy-fairness=false",
 			},
 		},
 		{
@@ -107,10 +109,10 @@ func TestDeploymentForShard(t *testing.T) {
 			},
 			shard: &kaiv1.SchedulingShard{},
 			expected: []string{
-				"--scheduler-conf", configMountPath,
-				"--scheduler-name", "other-kai-scheduler",
-				"--namespace", "default",
-				"--leader-elect",
+				fmt.Sprintf("--scheduler-conf=%s", configMountPath),
+				"--scheduler-name=other-kai-scheduler",
+				"--namespace=default",
+				"--leader-elect=true",
 			},
 		},
 	}
@@ -344,10 +346,13 @@ tiers:
   - name: elastic
   - name: kubeflow
   - name: ray
+  - name: subgrouporder
   - name: taskorder
   - name: nominatednode
-  - name: snapshot
   - name: dynamicresources
+  - name: minruntime
+  - name: topology
+  - name: snapshot
   - name: gpupack
   - name: nodeplacement
     arguments:
@@ -393,10 +398,13 @@ tiers:
   - name: elastic
   - name: kubeflow
   - name: ray
+  - name: subgrouporder
   - name: taskorder
   - name: nominatednode
-  - name: snapshot
   - name: dynamicresources
+  - name: minruntime
+  - name: topology
+  - name: snapshot
   - name: gpuspread
   - name: nodeplacement
     arguments:
@@ -564,7 +572,7 @@ func TestServiceAccountForScheduler(t *testing.T) {
 					},
 				},
 			},
-			expectedName: "other-kai-scheduler",
+			expectedName: "scheduler",
 		},
 		{
 			name: "custom scheduler name",
@@ -575,7 +583,7 @@ func TestServiceAccountForScheduler(t *testing.T) {
 					},
 				},
 			},
-			expectedName: "custom-scheduler",
+			expectedName: "scheduler",
 		},
 	}
 

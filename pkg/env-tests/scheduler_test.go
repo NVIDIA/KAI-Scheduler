@@ -62,7 +62,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 		Expect(ctrlClient.Create(ctx, testNode)).To(Succeed(), "Failed to create test node")
 
 		stopCh = make(chan struct{})
-		err := scheduler.RunScheduler(cfg, stopCh)
+		err := scheduler.RunScheduler(cfg, nil, stopCh)
 		Expect(err).NotTo(HaveOccurred(), "Failed to run scheduler")
 	})
 

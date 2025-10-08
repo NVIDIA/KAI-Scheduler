@@ -219,8 +219,7 @@ func (t *topologyPlugin) getJobAllocatableDomains(job *podgroup_info.PodGroupInf
 func getRelevantDomainsWithAllocatedPods(job *podgroup_info.PodGroupInfo, topologyTree *Info, requiredLevel DomainLevel) domainsByLevel {
 	relevantDomainsByLevel := domainsByLevel{}
 	for _, domainAtRequiredLevel := range topologyTree.DomainsByLevel[requiredLevel] {
-		activePodsInDomain := countActiveJobPodsInDomain(job, domainAtRequiredLevel)
-		if activePodsInDomain == 0 {
+		if !hasActiveJobPodInDomain(job, domainAtRequiredLevel) {
 			continue // if the domain at the top level does not have any active pods, then any domains under the subtree cannot satisfy the required constraint for both active and pending pods
 		}
 		addSubTreeToDomainMap(domainAtRequiredLevel, relevantDomainsByLevel)
@@ -228,17 +227,16 @@ func getRelevantDomainsWithAllocatedPods(job *podgroup_info.PodGroupInfo, topolo
 	return relevantDomainsByLevel
 }
 
-func countActiveJobPodsInDomain(job *podgroup_info.PodGroupInfo, domain *DomainInfo) int {
-	activePodsInDomain := 0
+func hasActiveJobPodInDomain(job *podgroup_info.PodGroupInfo, domain *DomainInfo) bool {
 	for _, pod := range job.GetAllPodsMap() {
 		if pod_status.IsActiveAllocatedStatus(pod.Status) {
 			podInDomain := domain.Nodes[pod.NodeName] != nil
 			if podInDomain {
-				activePodsInDomain++
+				return true
 			}
 		}
 	}
-	return activePodsInDomain
+	return false
 }
 
 func addSubTreeToDomainMap(domain *DomainInfo, domainsMap domainsByLevel) {

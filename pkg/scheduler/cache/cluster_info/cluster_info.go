@@ -30,6 +30,8 @@ import (
 
 	kubeAiSchedulerinfo "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/informers/externalversions"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -328,6 +330,10 @@ func (c *ClusterInfo) snapshotPodGroups(
 		log.InfraLogger.V(7).Infof("The priority of job <%s/%s> is <%s/%d>", podGroup.Namespace, podGroup.Name,
 			podGroup.Spec.PriorityClassName, podGroupInfo.Priority)
 
+		podGroupInfo.Preemptibility = pg.CalculatePreemptibility(podGroup.Spec.Preemptibility, podGroupInfo.Priority)
+		log.InfraLogger.V(7).Infof("The preemptibility of job <%s/%s> is <%s>", podGroup.Namespace, podGroup.Name,
+			podGroupInfo.Preemptibility)
+
 		c.setPodGroupWithIndex(podGroup, podGroupInfo)
 		rawPods, err := c.dataLister.ListPodByIndex(podByPodGroupIndexerName, podGroup.Name)
 		if err != nil {
@@ -414,7 +420,7 @@ func (c *ClusterInfo) snapshotTopologies() ([]*kueue.Topology, error) {
 }
 
 func getDefaultPriority(dataLister data_lister.DataLister) (int32, error) {
-	defaultPriority, found := int32(50), false
+	defaultPriority, found := int32(constants.DefaultPodGroupPriority), false
 	priorityClasses, err := dataLister.ListPriorityClasses()
 	if err != nil {
 		err = errors.WithStack(fmt.Errorf("error listing priorityclasses: %c", err))
