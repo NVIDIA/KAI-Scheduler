@@ -173,7 +173,7 @@ func serviceMonitorsForKAIConfig(
 	config := kaiConfig.Spec.Prometheus
 
 	// Check if ServiceMonitor CRD is available
-	hasServiceMonitorCRD, err := checkServiceMonitorCRDAvailable(ctx, runtimeClient)
+	hasServiceMonitorCRD, err := common.CheckServiceMonitorCRDAvailable(ctx, runtimeClient)
 	if err != nil {
 		logger.Error(err, "Failed to check for ServiceMonitor CRD")
 		return nil, err
@@ -242,27 +242,4 @@ func serviceMonitorsForKAIConfig(
 		serviceMonitors = append(serviceMonitors, serviceMonitorObj)
 	}
 	return serviceMonitors, nil
-}
-
-func checkServiceMonitorCRDAvailable(ctx context.Context, runtimeClient client.Reader) (bool, error) {
-	// Check if ServiceMonitor CRD exists
-	crd := &metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-	}
-
-	err := runtimeClient.Get(ctx, types.NamespacedName{
-		Name: "servicemonitors.monitoring.coreos.com",
-	}, crd)
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return true, nil
 }

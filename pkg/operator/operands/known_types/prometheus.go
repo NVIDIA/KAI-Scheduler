@@ -6,9 +6,9 @@ package known_types
 import (
 	"context"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -31,17 +31,17 @@ func registerPrometheus() {
 	collectable := &Collectable{
 		Collect: getCurrentPrometheusState,
 		InitWithManager: func(ctx context.Context, mgr manager.Manager) error {
-			// Check if Prometheus CRD exists before registering the indexer
-			if !isPrometheusCRDAvailable(ctx, mgr.GetClient()) {
-				log.FromContext(ctx).Info("Prometheus CRD not available, skipping Prometheus resource management")
-				return nil
+			// Try to register the indexer, but don't fail if the CRD is not available
+			log.FromContext(ctx).Info("Attempting to register Prometheus resource management")
+			err := mgr.GetFieldIndexer().IndexField(ctx, &monitoringv1.Prometheus{}, CollectableOwnerKey, prometheusIndexer)
+			if err != nil {
+				log.FromContext(ctx).Info("Prometheus CRD not available, skipping field indexer registration", "error", err)
+				return nil // Don't fail the test if CRD is not available
 			}
-			log.FromContext(ctx).Info("Prometheus CRD available, registering Prometheus resource management")
-			return mgr.GetFieldIndexer().IndexField(ctx, &monitoringv1.Prometheus{}, CollectableOwnerKey, prometheusIndexer)
+			log.FromContext(ctx).Info("Successfully registered Prometheus resource management")
+			return nil
 		},
 		InitWithBuilder: func(builder *builder.Builder) *builder.Builder {
-			// Only register the watch if Prometheus CRD is available
-			// We'll check this at runtime in the InitWithManager
 			return builder
 		},
 		InitWithFakeClientBuilder: func(fakeClientBuilder *fake.ClientBuilder) {
@@ -54,17 +54,17 @@ func registerPrometheus() {
 	serviceMonitorCollectable := &Collectable{
 		Collect: getCurrentServiceMonitorState,
 		InitWithManager: func(ctx context.Context, mgr manager.Manager) error {
-			// Check if ServiceMonitor CRD exists before registering the indexer
-			if !isServiceMonitorCRDAvailable(ctx, mgr.GetClient()) {
-				log.FromContext(ctx).Info("ServiceMonitor CRD not available, skipping ServiceMonitor resource management")
-				return nil
+			// Try to register the indexer, but don't fail if the CRD is not available
+			log.FromContext(ctx).Info("Attempting to register ServiceMonitor resource management")
+			err := mgr.GetFieldIndexer().IndexField(ctx, &monitoringv1.ServiceMonitor{}, CollectableOwnerKey, serviceMonitorIndexer)
+			if err != nil {
+				log.FromContext(ctx).Info("ServiceMonitor CRD not available, skipping field indexer registration", "error", err)
+				return nil // Don't fail the test if CRD is not available
 			}
-			log.FromContext(ctx).Info("ServiceMonitor CRD available, registering ServiceMonitor resource management")
-			return mgr.GetFieldIndexer().IndexField(ctx, &monitoringv1.ServiceMonitor{}, CollectableOwnerKey, serviceMonitorIndexer)
+			log.FromContext(ctx).Info("Successfully registered ServiceMonitor resource management")
+			return nil
 		},
 		InitWithBuilder: func(builder *builder.Builder) *builder.Builder {
-			// Only register the watch if ServiceMonitor CRD is available
-			// We'll check this at runtime in the InitWithManager
 			return builder
 		},
 		InitWithFakeClientBuilder: func(fakeClientBuilder *fake.ClientBuilder) {
@@ -74,26 +74,15 @@ func registerPrometheus() {
 	SetupKAIConfigOwned(serviceMonitorCollectable)
 }
 
-func isPrometheusCRDAvailable(ctx context.Context, client client.Client) bool {
-	crd := &metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-	}
-
-	err := client.Get(ctx, types.NamespacedName{
-		Name: "prometheuses.monitoring.coreos.com",
-	}, crd)
-
-	return err == nil
-}
-
 func getCurrentPrometheusState(ctx context.Context, runtimeClient client.Client, reconciler client.Object) (map[string]client.Object, error) {
 	result := map[string]client.Object{}
 
 	// Check if Prometheus CRD is available before trying to list resources
-	if !isPrometheusCRDAvailable(ctx, runtimeClient) {
+	hasPrometheusCRD, err := common.CheckPrometheusCRDAvailable(ctx, runtimeClient)
+	if err != nil {
+		return nil, err
+	}
+	if !hasPrometheusCRD {
 		return result, nil
 	}
 
@@ -101,7 +90,7 @@ func getCurrentPrometheusState(ctx context.Context, runtimeClient client.Client,
 	reconcilerKey := getReconcilerKey(reconciler)
 
 	// Try to list with field selector first, but fall back to listing all if field indexer is not available
-	err := runtimeClient.List(ctx, prometheusList, client.MatchingFields{CollectableOwnerKey: reconcilerKey})
+	err = runtimeClient.List(ctx, prometheusList, client.MatchingFields{CollectableOwnerKey: reconcilerKey})
 	if err != nil {
 		// If field indexer is not available, fall back to listing all Prometheus resources
 		// and filter by owner reference manually
@@ -137,26 +126,15 @@ func serviceMonitorIndexer(object client.Object) []string {
 	return []string{getOwnerKey(owner)}
 }
 
-func isServiceMonitorCRDAvailable(ctx context.Context, client client.Client) bool {
-	crd := &metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-	}
-
-	err := client.Get(ctx, types.NamespacedName{
-		Name: "servicemonitors.monitoring.coreos.com",
-	}, crd)
-
-	return err == nil
-}
-
 func getCurrentServiceMonitorState(ctx context.Context, runtimeClient client.Client, reconciler client.Object) (map[string]client.Object, error) {
 	result := map[string]client.Object{}
 
 	// Check if ServiceMonitor CRD is available before trying to list resources
-	if !isServiceMonitorCRDAvailable(ctx, runtimeClient) {
+	hasServiceMonitorCRD, err := common.CheckServiceMonitorCRDAvailable(ctx, runtimeClient)
+	if err != nil {
+		return nil, err
+	}
+	if !hasServiceMonitorCRD {
 		return result, nil
 	}
 
@@ -164,7 +142,7 @@ func getCurrentServiceMonitorState(ctx context.Context, runtimeClient client.Cli
 	reconcilerKey := getReconcilerKey(reconciler)
 
 	// Try to list with field selector first, but fall back to listing all if field indexer is not available
-	err := runtimeClient.List(ctx, serviceMonitorList, client.MatchingFields{CollectableOwnerKey: reconcilerKey})
+	err = runtimeClient.List(ctx, serviceMonitorList, client.MatchingFields{CollectableOwnerKey: reconcilerKey})
 	if err != nil {
 		// If field indexer is not available, fall back to listing all ServiceMonitor resources
 		// and filter by owner reference manually
