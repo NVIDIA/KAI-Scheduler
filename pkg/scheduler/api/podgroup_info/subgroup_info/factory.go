@@ -14,16 +14,9 @@ import (
 const RootSubGroupSetName = ""
 
 func FromPodGroup(podGroup *v2alpha2.PodGroup) (*SubGroupSet, error) {
-	allSubGroups := map[string]*v2alpha2.SubGroup{}
-	children := map[string][]string{}
-
-	for _, subGroup := range podGroup.Spec.SubGroups {
-		if _, found := allSubGroups[subGroup.Name]; found {
-			return nil, fmt.Errorf("subgroup <%s> already exists", subGroup.Name)
-		}
-		allSubGroups[subGroup.Name] = &subGroup
-		parentName := formatParentName(subGroup.Parent)
-		children[parentName] = append(children[parentName], subGroup.Name)
+	allSubGroups, children, err := mapSubGroupsAndChildren(podGroup)
+	if err != nil {
+		return nil, err
 	}
 
 	var topologyConstraint *topology_info.TopologyConstraintInfo
@@ -39,7 +32,35 @@ func FromPodGroup(podGroup *v2alpha2.PodGroup) (*SubGroupSet, error) {
 		RootSubGroupSetName: root,
 	}
 	podSets := map[string]*PodSet{}
+	createSubGroupInfos(allSubGroups, children, subGroupSets, podSets)
 
+	err = addToParent(allSubGroups, subGroupSets, podSets)
+	if err != nil {
+		return nil, err
+	}
+
+	return root, nil
+}
+
+func mapSubGroupsAndChildren(podGroup *v2alpha2.PodGroup) (map[string]*v2alpha2.SubGroup, map[string][]string, error) {
+	allSubGroups := map[string]*v2alpha2.SubGroup{}
+	children := map[string][]string{}
+
+	for _, subGroup := range podGroup.Spec.SubGroups {
+		if _, found := allSubGroups[subGroup.Name]; found {
+			return nil, nil, fmt.Errorf("subgroup <%s> already exists", subGroup.Name)
+		}
+		allSubGroups[subGroup.Name] = &subGroup
+		parentName := formatParentName(subGroup.Parent)
+		children[parentName] = append(children[parentName], subGroup.Name)
+	}
+
+	return allSubGroups, children, nil
+}
+
+func createSubGroupInfos(allSubGroups map[string]*v2alpha2.SubGroup, children map[string][]string,
+	subGroupSets map[string]*SubGroupSet, podSets map[string]*PodSet,
+) {
 	for name, subGroup := range allSubGroups {
 		var topologyConstrainInfo *topology_info.TopologyConstraintInfo
 		if subGroup.TopologyConstraint != nil {
@@ -56,14 +77,10 @@ func FromPodGroup(podGroup *v2alpha2.PodGroup) (*SubGroupSet, error) {
 			podSets[name] = NewPodSet(name, subGroup.MinMember, topologyConstrainInfo)
 		}
 	}
+}
 
-	for name, podSet := range podSets {
-		subGroup := allSubGroups[name]
-		if err := addPodSetToParent(podSet, subGroup.Parent, subGroupSets); err != nil {
-			return nil, err
-		}
-	}
-
+func addToParent(allSubGroups map[string]*v2alpha2.SubGroup, subGroupSets map[string]*SubGroupSet,
+	podSets map[string]*PodSet) error {
 	for name, subGroupSet := range subGroupSets {
 		if name == RootSubGroupSetName {
 			continue
@@ -71,11 +88,18 @@ func FromPodGroup(podGroup *v2alpha2.PodGroup) (*SubGroupSet, error) {
 
 		subGroup := allSubGroups[name]
 		if err := addSubGroupSetToParent(subGroupSet, subGroup.Parent, subGroupSets); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return root, nil
+	for name, podSet := range podSets {
+		subGroup := allSubGroups[name]
+		if err := addPodSetToParent(podSet, subGroup.Parent, subGroupSets); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func addSubGroupSetToParent(subGroupSet *SubGroupSet, parentName *string, subGroupSets map[string]*SubGroupSet) error {
