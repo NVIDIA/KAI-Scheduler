@@ -15,6 +15,9 @@ import (
 	test_utils "github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common/test_utils"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	corev1 "k8s.io/api/core/v1"                                                // nolint:unused
+	rbacv1 "k8s.io/api/rbac/v1"                                                // nolint:unused
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1" // nolint:unused
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
@@ -31,6 +34,9 @@ func createFakeClientWithScheme() client.Client {
 	testScheme := runtime.NewScheme()
 	Expect(kaiv1.AddToScheme(testScheme)).To(Succeed())
 	Expect(monitoringv1.AddToScheme(testScheme)).To(Succeed())
+	Expect(corev1.AddToScheme(testScheme)).To(Succeed())
+	Expect(rbacv1.AddToScheme(testScheme)).To(Succeed())
+	Expect(apiextensionsv1.AddToScheme(testScheme)).To(Succeed())
 
 	return fake.NewClientBuilder().WithScheme(testScheme).Build()
 }
@@ -83,7 +89,7 @@ var _ = Describe("Prometheus", func() {
 			It("should return Prometheus object when Prometheus Operator is installed", func(ctx context.Context) {
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(1))
+				Expect(len(objects)).To(Equal(4)) // ServiceAccount, ClusterRole, ClusterRoleBinding, Prometheus
 
 				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 				Expect(prometheusObj).NotTo(BeNil())
@@ -110,7 +116,7 @@ var _ = Describe("Prometheus", func() {
 
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(1))
+				Expect(len(objects)).To(Equal(4)) // ServiceAccount, ClusterRole, ClusterRoleBinding, Prometheus
 
 				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 				Expect(prometheusObj).NotTo(BeNil())
@@ -360,7 +366,7 @@ var _ = Describe("prometheusForKAIConfig", func() {
 		It("should create new Prometheus object when none exists", func(ctx context.Context) {
 			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 			Expect(err).To(BeNil())
-			Expect(len(objects)).To(Equal(1))
+			Expect(len(objects)).To(Equal(4)) // ServiceAccount, ClusterRole, ClusterRoleBinding, Prometheus
 
 			prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 			Expect(prometheusObj).NotTo(BeNil())
@@ -389,7 +395,7 @@ var _ = Describe("prometheusForKAIConfig", func() {
 
 			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 			Expect(err).To(BeNil())
-			Expect(len(objects)).To(Equal(1))
+			Expect(len(objects)).To(Equal(4)) // ServiceAccount, ClusterRole, ClusterRoleBinding, Prometheus
 
 			prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 			Expect(prometheusObj).NotTo(BeNil())
