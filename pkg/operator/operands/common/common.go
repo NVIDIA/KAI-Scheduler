@@ -15,6 +15,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
@@ -207,4 +208,49 @@ func AddK8sClientConfigToArgs(k8sClientConfig *kaiv1common.K8sClientConfig, args
 			args = append(args, "--burst", strconv.Itoa(*k8sClientConfig.Burst))
 		}
 	}
+}
+
+func CheckServiceMonitorCRDAvailable(ctx context.Context, runtimeClient client.Reader) (bool, error) {
+	// Check if ServiceMonitor CRD exists
+	crd := &metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CustomResourceDefinition",
+			APIVersion: "apiextensions.k8s.io/v1",
+		},
+	}
+
+	err := runtimeClient.Get(ctx, types.NamespacedName{
+		Name: "servicemonitors.monitoring.coreos.com",
+	}, crd)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
+func CheckPrometheusCRDAvailable(ctx context.Context, client client.Client) (bool, error) {
+	crd := &metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CustomResourceDefinition",
+			APIVersion: "apiextensions.k8s.io/v1",
+		},
+	}
+
+	err := client.Get(ctx, types.NamespacedName{
+		Name: "prometheuses.monitoring.coreos.com",
+	}, crd)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }
