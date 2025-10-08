@@ -6,9 +6,9 @@ package env_tests
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
+	"github.com/go-gota/gota/dataframe"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/xyproto/randomstring"
@@ -180,11 +180,29 @@ var _ = Describe("Time Aware Fairness", Ordered, func() {
 			}
 
 			allocationHistory := usageClient.GetAllocationHistory()
-			csv := allocationHistory.ToTsv()
-			// write csv to file
-			err := os.WriteFile("allocation_history.tsv", []byte(csv), 0644)
-			Expect(err).NotTo(HaveOccurred(), "Failed to write allocation history to file")
-			fmt.Println(csv)
+			df := allocationHistory.ToDataFrame()
+
+			// Sum allocations for each queue
+			queueSums := df.GroupBy("QueueID").Aggregation([]dataframe.AggregationType{dataframe.Aggregation_SUM}, []string{"Allocation"})
+
+			// Convert queueSums dataframe to map from queueID to sum
+			queueSumMap := make(map[string]float64)
+			for i := 0; i < queueSums.Nrow(); i++ {
+				queueID := queueSums.Elem(i, 0).String()
+				allocation := queueSums.Elem(i, 1).Float()
+				queueSumMap[queueID] = allocation
+			}
+
+			// Assert that test-queue1 and test-queue2 allocations sum to approximately the department allocation
+			// Small difference could happen due to queue controller non-atomic updates
+			Expect(queueSumMap[testQueue1.Name]+queueSumMap[testQueue2.Name]).To(
+				BeNumerically("~", queueSumMap[testDepartment.Name], queueSumMap[testDepartment.Name]*0.1),
+				"Sum of queue1 and queue2 should equal department allocation")
+
+			// Assert that test-queue1 and test-queue2 have approximately equal allocations (within 10%)
+			Expect(queueSumMap[testQueue1.Name]).To(
+				BeNumerically("~", queueSumMap[testQueue2.Name], queueSumMap[testQueue2.Name]*0.1),
+				"Queue1 and Queue2 should have approximately equal allocations")
 		})
 	})
 })

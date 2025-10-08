@@ -4,17 +4,14 @@
 package fake
 
 import (
-	"fmt"
-	"maps"
 	"math"
-	"slices"
-	"strings"
 	"sync"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
+	"github.com/go-gota/gota/dataframe"
+	"github.com/go-gota/gota/series"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -105,29 +102,29 @@ func (f *FakeWithHistoryClient) GetAllocationHistory() AllocationHistory {
 type AllocationHistory []map[common_info.QueueID]queue_info.QueueUsage
 type ClusterCapacityHistory []map[v1.ResourceName]float64
 
-func (a AllocationHistory) ToTsv() string {
-	allQueues := make(map[string]bool)
-	for _, allocation := range a {
-		for queueID := range allocation {
-			allQueues[string(queueID)] = true
-		}
-	}
-	sortedQueues := slices.Collect(maps.Keys(allQueues))
-	slices.Sort(sortedQueues)
-	csv := "t\t"
-	csv += strings.Join(sortedQueues, "\t")
-	csv += "\n"
+func (a AllocationHistory) ToDataFrame() dataframe.DataFrame {
+	var times []int
+	var queueIDs []string
+	var resources []string
+	var allocations []float64
 
-	for t, allocation := range a {
-		csv += fmt.Sprintf("%d\t", t)
-		for _, queueID := range sortedQueues {
-			allocation, exists := allocation[common_info.QueueID(queueID)]
-			if !exists {
-				allocation = queue_info.QueueUsage{}
+	for timeIndex, queueAllocations := range a {
+		for queueID, queueUsage := range queueAllocations {
+			for resourceName, allocation := range queueUsage {
+				times = append(times, timeIndex)
+				queueIDs = append(queueIDs, string(queueID))
+				resources = append(resources, string(resourceName))
+				allocations = append(allocations, allocation)
 			}
-			csv += fmt.Sprintf("%f\t", allocation[constants.GpuResource])
 		}
-		csv += "\n"
 	}
-	return csv
+
+	df := dataframe.New(
+		series.New(times, series.Int, "Time"),
+		series.New(queueIDs, series.String, "QueueID"),
+		series.New(resources, series.String, "Resource"),
+		series.New(allocations, series.Float, "Allocation"),
+	)
+
+	return df
 }
