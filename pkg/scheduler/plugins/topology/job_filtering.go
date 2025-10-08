@@ -197,7 +197,7 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 
 	// Validate that the domains do not clash with the chosen domain for active pods of the job
 	var relevantDomainsByLevel domainsByLevel
-	if hasActiveAllocatedTasks(subGroupSet) && jobHasTopologyRequiredConstraint(subGroupSet) {
+	if hasActiveAllocatedTasks(subGroupSet) && hasTopologyRequiredConstraint(subGroupSet) {
 		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(subGroupSet, topologyTree,
 			DomainLevel(subGroupSet.GetTopologyConstraint().RequiredLevel))
 	} else {
@@ -269,7 +269,7 @@ func addSubTreeToDomainMap(domain *DomainInfo, domainsMap domainsByLevel) {
 	domainsMap[domain.Level][domain.ID] = domain
 }
 
-func jobHasTopologyRequiredConstraint(subGroupSet *subgroup_info.SubGroupSet) bool {
+func hasTopologyRequiredConstraint(subGroupSet *subgroup_info.SubGroupSet) bool {
 	return subGroupSet.GetTopologyConstraint().RequiredLevel != ""
 }
 
