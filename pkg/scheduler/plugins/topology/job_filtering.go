@@ -197,7 +197,7 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 
 	// Validate that the domains do not clash with the chosen domain for active pods of the job
 	var relevantDomainsByLevel domainsByLevel
-	if getActiveAllocatedTasksCount(subGroupSet) > 0 && jobHasTopologyRequiredConstraint(subGroupSet) {
+	if hasActiveAllocatedTasks(subGroupSet) && jobHasTopologyRequiredConstraint(subGroupSet) {
 		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(subGroupSet, topologyTree,
 			DomainLevel(subGroupSet.GetTopologyConstraint().RequiredLevel))
 	} else {
@@ -223,12 +223,13 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 	return domains, nil
 }
 
-func getActiveAllocatedTasksCount(subGroupSet *subgroup_info.SubGroupSet) int {
-	activeAllocatedCount := 0
+func hasActiveAllocatedTasks(subGroupSet *subgroup_info.SubGroupSet) bool {
 	for _, podSet := range subGroupSet.GetPodSets() {
-		activeAllocatedCount += podSet.GetNumActiveAllocatedTasks()
+		if podSet.GetNumActiveAllocatedTasks() > 0 {
+			return true
+		}
 	}
-	return activeAllocatedCount
+	return false
 }
 
 func getRelevantDomainsWithAllocatedPods(
