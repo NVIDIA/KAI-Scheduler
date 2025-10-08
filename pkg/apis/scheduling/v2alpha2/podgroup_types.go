@@ -121,7 +121,7 @@ type SubGroup struct {
 	// +kubebuilder:validation:Optional
 	Parent *string `json:"parent,omitempty"`
 
-	// TopologyConstraint defines the topology constraints for this PodGroup
+	// TopologyConstraint defines the topology constraints for this SubGroup
 	TopologyConstraint *TopologyConstraint `json:"topologyConstraint,omitempty"`
 }
 

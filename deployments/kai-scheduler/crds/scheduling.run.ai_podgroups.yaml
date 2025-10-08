@@ -118,7 +118,7 @@ spec:
                       type: string
                     topologyConstraint:
                       description: TopologyConstraint defines the topology constraints
-                        for this PodGroup
+                        for this SubGroup
                       properties:
                         preferredTopologyLevel:
                           description: |-
