@@ -43,6 +43,12 @@ type Prometheus struct {
 	// ServiceMonitor defines ServiceMonitor configuration for KAI services
 	// +kubebuilder:validation:Optional
 	ServiceMonitor *ServiceMonitor `json:"serviceMonitor,omitempty"`
+
+	// ExternalPrometheusUrl defines the URL of an external Prometheus instance to use
+	// When set, KAI will not deploy its own Prometheus but will configure ServiceMonitors
+	// for the external instance and validate connectivity
+	// +kubebuilder:validation:Optional
+	ExternalPrometheusUrl *string `json:"externalPrometheusUrl,omitempty"`
 }
 
 func (p *Prometheus) SetDefaultsWhereNeeded() {
