@@ -7,14 +7,26 @@ KAI Scheduler implements hierarchical fair-share scheduling using multi-level qu
 ### Fair Share Simulator - coming soon
 
 ## Table of Contents
+- [What is fair-share?](#what-is-fair-share)
 - [Resource Allocation](#resource-allocation)
-- [Fair Share Calculation](#fair-share-calculation)
-- [Reclaim Strategies](#reclaim-strategies)
+- [Fair Share Calculation](#fair-share-algorithm)
+- [Reclaim Strategies](#reclaim-resources)
 - [Configuration](#configuration)
+
+## What is fair-share?
+Fair-share based allocation of resources is an algorithm or algorithms used to determine how to distribute resources between
+consumers with the intent of achieving equal or "fair" distribution of resources.
+
+In KAI-scheduler, we aim to achieve priority based equal distribution of free resources, while maintaining a guarantee of bare-minimum allocation for each queue. Idle resouces are reclaimable by KAI-scheduler as part of the fair-share algorithm, increasing resource usage.
+
+### Philosophy
+1. Deserved quota for a queue will always be allocted to it
+2. Surplus resources will be allocated based on priority
 
 ## Resource Allocation
 
 > Resource Allocation is done on each scheduling cycle
+
 
 ### Fair-Share Algorithm
 
@@ -23,8 +35,9 @@ Resource allocation and fair-share calculation is done on each scheduling cycle.
 1. **Top-level distribution**: Total available resources are disributed to top-level queues according with respect to **deserved** quota.
     * **Hierarchical division**: Each queue's resources are further distributed among its child queues
     * **Recursive allocation**: The process continues down the queue hierarchy until all levels are allocated
-2. **Over-quota share**: if resources remain unallocated after all deserved quotas are distributed, a fair share of the over quota part is calculated based on **priority** and **weight** attributes
-3. **Job scheduling**: The scheduler schedules jobs from each queue to utilize their allocated resources, aiming to keep actual usage as close to the fair share as possible  
+2. **Over-quota share**: if resources remain unallocated after all deserved quotas are distributed, a fair share of the over quota part is calculated based on **priority** and **weight** attributes. 
+    * Queues with the same priority will be reclaimed propotionaly to their weight
+3. **Job scheduling**: The scheduler schedules jobs from each queue to utilize their allocated resources, aiming to keep actual usage **as close to the fair share as possible**
 
 > Deserved resouces calculation:
 ```python
