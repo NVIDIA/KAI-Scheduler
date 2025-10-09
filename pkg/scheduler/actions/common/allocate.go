@@ -27,7 +27,8 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 		return false
 	}
 
-	nodeSets, err := ssn.SubsetNodesFn(job, job.RootSubGroupSet, tasksToAllocate, nodes)
+	podSets := job.RootSubGroupSet.GetAllPodSets()
+	nodeSets, err := ssn.SubsetNodesFn(job, &job.RootSubGroupSet.SubGroupInfo, podSets, tasksToAllocate, nodes)
 	if err != nil {
 		log.InfraLogger.Errorf(
 			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)

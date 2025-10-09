@@ -21,14 +21,15 @@ type jobAllocationMetaData struct {
 }
 
 func (t *topologyPlugin) subSetNodesFn(
-	job *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet,
+	job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo, podSets map[string]*subgroup_info.PodSet,
+	tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet,
 ) ([]node_info.NodeSet, error) {
-	topologyTree, found := t.getJobTopology(subGroupSet)
+	topologyTree, found := t.getJobTopology(subGroup)
 	if !found {
 		job.SetJobFitError(
 			podgroup_info.PodSchedulingErrors,
 			fmt.Sprintf("Matching topology %s does not exist",
-				subGroupSet.GetTopologyConstraint().Topology),
+				subGroup.GetTopologyConstraint().Topology),
 			nil)
 		return []node_info.NodeSet{}, nil
 	}
@@ -50,7 +51,7 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{}, nil
 	}
 
-	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroupSet, len(tasks), topologyTree)
+	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroup, podSets, len(tasks), topologyTree)
 	if err != nil {
 		return nil, err
 	}
@@ -67,11 +68,11 @@ func (t *topologyPlugin) subSetNodesFn(
 	return domainNodeSets, nil
 }
 
-func (t *topologyPlugin) getJobTopology(subGroupSet *subgroup_info.SubGroupSet) (*Info, bool) {
-	if subGroupSet.GetTopologyConstraint() == nil {
+func (t *topologyPlugin) getJobTopology(subGroup *subgroup_info.SubGroupInfo) (*Info, bool) {
+	if subGroup.GetTopologyConstraint() == nil {
 		return nil, true
 	}
-	jobTopologyName := subGroupSet.GetTopologyConstraint().Topology
+	jobTopologyName := subGroup.GetTopologyConstraint().Topology
 	if jobTopologyName == "" {
 		return nil, true
 	}
@@ -188,18 +189,19 @@ func calcNextAllocationTestPodResources(previousTestResources, maxPodResources *
 }
 
 func (t *topologyPlugin) getJobAllocatableDomains(
-	job *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, taskToAllocateCount int, topologyTree *Info,
+	job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo, podSets map[string]*subgroup_info.PodSet,
+	taskToAllocateCount int, topologyTree *Info,
 ) ([]*DomainInfo, error) {
-	relevantLevels, err := t.calculateRelevantDomainLevels(subGroupSet, topologyTree)
+	relevantLevels, err := t.calculateRelevantDomainLevels(subGroup, topologyTree)
 	if err != nil {
 		return nil, err
 	}
 
 	// Validate that the domains do not clash with the chosen domain for active pods of the job
 	var relevantDomainsByLevel domainsByLevel
-	if hasActiveAllocatedTasks(subGroupSet) && hasTopologyRequiredConstraint(subGroupSet) {
-		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(subGroupSet, topologyTree,
-			DomainLevel(subGroupSet.GetTopologyConstraint().RequiredLevel))
+	if hasActiveAllocatedTasks(podSets) && hasTopologyRequiredConstraint(subGroup) {
+		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(podSets, topologyTree,
+			DomainLevel(subGroup.GetTopologyConstraint().RequiredLevel))
 	} else {
 		relevantDomainsByLevel = topologyTree.DomainsByLevel
 	}
@@ -223,8 +225,8 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 	return domains, nil
 }
 
-func hasActiveAllocatedTasks(subGroupSet *subgroup_info.SubGroupSet) bool {
-	for _, podSet := range subGroupSet.GetPodSets() {
+func hasActiveAllocatedTasks(podSets map[string]*subgroup_info.PodSet) bool {
+	for _, podSet := range podSets {
 		if podSet.GetNumActiveAllocatedTasks() > 0 {
 			return true
 		}
@@ -233,11 +235,11 @@ func hasActiveAllocatedTasks(subGroupSet *subgroup_info.SubGroupSet) bool {
 }
 
 func getRelevantDomainsWithAllocatedPods(
-	subGroupSet *subgroup_info.SubGroupSet, topologyTree *Info, requiredLevel DomainLevel,
+	podSets map[string]*subgroup_info.PodSet, topologyTree *Info, requiredLevel DomainLevel,
 ) domainsByLevel {
 	relevantDomainsByLevel := domainsByLevel{}
 	for _, domainAtRequiredLevel := range topologyTree.DomainsByLevel[requiredLevel] {
-		if !hasActiveJobPodInDomain(subGroupSet, domainAtRequiredLevel) {
+		if !hasActiveJobPodInDomain(podSets, domainAtRequiredLevel) {
 			continue // if the domain at the top level does not have any active pods, then any domains under the subtree cannot satisfy the required constraint for both active and pending pods
 		}
 		addSubTreeToDomainMap(domainAtRequiredLevel, relevantDomainsByLevel)
@@ -245,8 +247,8 @@ func getRelevantDomainsWithAllocatedPods(
 	return relevantDomainsByLevel
 }
 
-func hasActiveJobPodInDomain(subGroupSet *subgroup_info.SubGroupSet, domain *DomainInfo) bool {
-	for _, podSet := range subGroupSet.GetPodSets() {
+func hasActiveJobPodInDomain(podSets map[string]*subgroup_info.PodSet, domain *DomainInfo) bool {
+	for _, podSet := range podSets {
 		for _, pod := range podSet.GetPodInfos() {
 			if pod_status.IsActiveAllocatedStatus(pod.Status) {
 				podInDomain := domain.Nodes[pod.NodeName] != nil
@@ -269,19 +271,19 @@ func addSubTreeToDomainMap(domain *DomainInfo, domainsMap domainsByLevel) {
 	domainsMap[domain.Level][domain.ID] = domain
 }
 
-func hasTopologyRequiredConstraint(subGroupSet *subgroup_info.SubGroupSet) bool {
-	return subGroupSet.GetTopologyConstraint().RequiredLevel != ""
+func hasTopologyRequiredConstraint(subGroup *subgroup_info.SubGroupInfo) bool {
+	return subGroup.GetTopologyConstraint().RequiredLevel != ""
 }
 
 func (*topologyPlugin) calculateRelevantDomainLevels(
-	subGroupSet *subgroup_info.SubGroupSet, topologyTree *Info,
+	subGroup *subgroup_info.SubGroupInfo, topologyTree *Info,
 ) ([]DomainLevel, error) {
-	topologyConstraint := subGroupSet.GetTopologyConstraint()
+	topologyConstraint := subGroup.GetTopologyConstraint()
 	requiredPlacement := DomainLevel(topologyConstraint.RequiredLevel)
 	preferredPlacement := DomainLevel(topologyConstraint.PreferredLevel)
 	if requiredPlacement == "" && preferredPlacement == "" {
 		return nil, fmt.Errorf("no topology constraints were found for subgroup %s, with topology name %s",
-			subGroupSet.GetName(), topologyTree.Name)
+			subGroup.GetName(), topologyTree.Name)
 	}
 
 	foundRequiredLevel := false

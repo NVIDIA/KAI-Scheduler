@@ -116,7 +116,7 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 			Stale:     false,
 		},
 		RootSubGroupSet: defaultSubGroupSet,
-		PodSets:         defaultSubGroupSet.GetPodSets(),
+		PodSets:         defaultSubGroupSet.GetAllPodSets(),
 
 		LastStartTimestamp:   nil,
 		activeAllocatedCount: ptr.To(0),
@@ -199,7 +199,7 @@ func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) error {
 		return err
 	}
 	pgi.RootSubGroupSet = rootSubGroupSet
-	podSets := rootSubGroupSet.GetPodSets()
+	podSets := rootSubGroupSet.GetAllPodSets()
 	if len(podSets) > 0 {
 		pgi.PodSets = podSets
 	} else {
@@ -480,7 +480,7 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 	pgi.CreationTimestamp.DeepCopyInto(&info.CreationTimestamp)
 
 	info.RootSubGroupSet = pgi.RootSubGroupSet.Clone()
-	info.PodSets = info.RootSubGroupSet.GetPodSets()
+	info.PodSets = info.RootSubGroupSet.GetAllPodSets()
 
 	for _, task := range tasks {
 		info.AddTaskInfo(task.Clone())
