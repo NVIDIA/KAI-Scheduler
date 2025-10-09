@@ -48,6 +48,10 @@ spec:
                     description: GPUSharing enables GPU sharing functionality for
                       the admission service
                     type: boolean
+                  mutatingWebhookConfigurationName:
+                    description: MutatingWebhookConfigurationName is the name of the
+                      MutatingWebhookConfiguration for the admission service
+                    type: string
                   queueLabelSelector:
                     description: QueueLabelSelector enables the queue label MatchExpression
                       in webhooks
@@ -153,6 +157,10 @@ spec:
                             type: object
                         type: object
                     type: object
+                  validatingWebhookConfigurationName:
+                    description: ValidatingWebhookConfigurationName is the name of
+                      the ValidatingWebhookConfiguration for the admission service
+                    type: string
                   webhook:
                     description: Webhook defines configuration for the admission service
                     properties:
@@ -1846,7 +1854,13 @@ spec:
                       controller webhooks
                     properties:
                       enableValidation:
+                        description: EnableValidation enables the validation webhook
+                          for the pod group controller
                         type: boolean
+                      webhookConfigurationNamePrefix:
+                        description: WebhookConfigurationNamePrefix is the prefix
+                          used for webhook configuration names
+                        type: string
                     type: object
                 type: object
               podGrouper:
@@ -2162,7 +2176,13 @@ spec:
                       controller webhooks
                     properties:
                       enableValidation:
+                        description: EnableValidation enables the validation webhook
+                          for the queue controller
                         type: boolean
+                      webhookConfigurationNamePrefix:
+                        description: WebhookConfigurationNamePrefix is the prefix
+                          used for webhook configuration names
+                        type: string
                     type: object
                 type: object
               scheduler:
