@@ -89,7 +89,7 @@ var _ = Describe("Prometheus", func() {
 			It("should return Prometheus object when Prometheus Operator is installed", func(ctx context.Context) {
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(4)) // ServiceAccount, ClusterRole, ClusterRoleBinding, Prometheus
+				Expect(len(objects)).To(Equal(2)) // ServiceAccount, Prometheus
 
 				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 				Expect(prometheusObj).NotTo(BeNil())
@@ -116,7 +116,7 @@ var _ = Describe("Prometheus", func() {
 
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(4)) // ServiceAccount, ClusterRole, ClusterRoleBinding, Prometheus
+				Expect(len(objects)).To(Equal(2)) // ServiceAccount, Prometheus
 
 				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 				Expect(prometheusObj).NotTo(BeNil())
@@ -366,7 +366,7 @@ var _ = Describe("prometheusForKAIConfig", func() {
 		It("should create new Prometheus object when none exists", func(ctx context.Context) {
 			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 			Expect(err).To(BeNil())
-			Expect(len(objects)).To(Equal(4)) // ServiceAccount, ClusterRole, ClusterRoleBinding, Prometheus
+			Expect(len(objects)).To(Equal(2)) // ServiceAccount, Prometheus
 
 			prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 			Expect(prometheusObj).NotTo(BeNil())
@@ -395,7 +395,7 @@ var _ = Describe("prometheusForKAIConfig", func() {
 
 			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 			Expect(err).To(BeNil())
-			Expect(len(objects)).To(Equal(4)) // ServiceAccount, ClusterRole, ClusterRoleBinding, Prometheus
+			Expect(len(objects)).To(Equal(2)) // ServiceAccount, Prometheus
 
 			prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 			Expect(prometheusObj).NotTo(BeNil())
