@@ -7,7 +7,6 @@ import (
 	"context"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -132,22 +131,6 @@ func prometheusForKAIConfig(
 		return nil, err
 	}
 	objects = append(objects, serviceAccount)
-
-	// Create ClusterRole for Prometheus
-	clusterRole, err := createPrometheusClusterRole(ctx, runtimeClient, kaiConfig)
-	if err != nil {
-		logger.Error(err, "Failed to create Prometheus ClusterRole")
-		return nil, err
-	}
-	objects = append(objects, clusterRole)
-
-	// Create ClusterRoleBinding for Prometheus
-	clusterRoleBinding, err := createPrometheusClusterRoleBinding(ctx, runtimeClient, kaiConfig)
-	if err != nil {
-		logger.Error(err, "Failed to create Prometheus ClusterRoleBinding")
-		return nil, err
-	}
-	objects = append(objects, clusterRoleBinding)
 
 	// Set the service account name in the Prometheus spec
 	prometheus.Spec.ServiceAccountName = mainResourceName + "-prometheus"
@@ -299,83 +282,4 @@ func createPrometheusServiceAccount(
 		return nil, err
 	}
 	return saObj, nil
-}
-
-// createPrometheusClusterRole creates a ClusterRole for Prometheus
-func createPrometheusClusterRole(
-	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
-) (client.Object, error) {
-	clusterRoleName := mainResourceName + "-prometheus"
-
-	clusterRole := &rbacv1.ClusterRole{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterRole",
-			APIVersion: "rbac.authorization.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: clusterRoleName,
-			Labels: map[string]string{
-				"app": mainResourceName,
-			},
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"nodes", "nodes/proxy", "services", "endpoints", "pods"},
-				Verbs:     []string{"get", "list", "watch"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"configmaps"},
-				Verbs:     []string{"get"},
-			},
-		},
-	}
-
-	// Check if ClusterRole already exists
-	crObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, clusterRole, clusterRoleName, "")
-	if err != nil {
-		return nil, err
-	}
-	return crObj, nil
-}
-
-// createPrometheusClusterRoleBinding creates a ClusterRoleBinding for Prometheus
-func createPrometheusClusterRoleBinding(
-	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
-) (client.Object, error) {
-	clusterRoleBindingName := mainResourceName + "-prometheus"
-	serviceAccountName := mainResourceName + "-prometheus"
-
-	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterRoleBinding",
-			APIVersion: "rbac.authorization.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: clusterRoleBindingName,
-			Labels: map[string]string{
-				"app": mainResourceName,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     clusterRoleBindingName,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      serviceAccountName,
-				Namespace: kaiConfig.Spec.Namespace,
-			},
-		},
-	}
-
-	// Check if ClusterRoleBinding already exists
-	crbObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, clusterRoleBinding, clusterRoleBindingName, "")
-	if err != nil {
-		return nil, err
-	}
-	return crbObj, nil
 }
