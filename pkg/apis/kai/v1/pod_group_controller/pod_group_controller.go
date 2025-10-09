@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	imageName = "podgroupcontroller"
+	imageName                      = "podgroupcontroller"
+	defaultValidatingWebhookPrefix = "kai-podgroup-validation-"
 )
 
 type PodGroupController struct {
@@ -96,9 +97,16 @@ func (p *PortMapping) SetDefaultsWhereNeeded() {
 }
 
 type PodGroupControllerWebhooks struct {
+	// EnableValidation enables the validation webhook for the pod group controller
+	// +kubebuilder:validation:Optional
 	EnableValidation *bool `json:"enableValidation,omitempty"`
+
+	// WebhookConfigurationNamePrefix is the prefix used for webhook configuration names
+	// +kubebuilder:validation:Optional
+	WebhookConfigurationNamePrefix *string `json:"webhookConfigurationNamePrefix,omitempty"`
 }
 
 func (q *PodGroupControllerWebhooks) SetDefaultsWhereNeeded() {
 	q.EnableValidation = common.SetDefault(q.EnableValidation, ptr.To(true))
+	q.WebhookConfigurationNamePrefix = common.SetDefault(q.WebhookConfigurationNamePrefix, ptr.To(defaultValidatingWebhookPrefix))
 }

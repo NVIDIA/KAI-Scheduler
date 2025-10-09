@@ -28,8 +28,7 @@ const (
 	appName        = deploymentName
 	serviceName    = deploymentName
 
-	validatingWebhookPrefix = "kai-podgroup-validation-"
-	podGroupWebhookName     = "podgroup-validation.kai.scheduler"
+	podGroupWebhookName = "podgroup-validation.kai.scheduler"
 
 	secretName = "podgroup-webhook-tls-secret"
 	certKey    = "tls.crt"
@@ -163,7 +162,7 @@ func validatingWCForKAIConfig(
 	for _, version := range constants.PodGroupValidatedVersions() {
 		validatingWebhookConfiguration := &admissionv1.ValidatingWebhookConfiguration{}
 
-		webhookName := fmt.Sprintf("%s%s", validatingWebhookPrefix, version)
+		webhookName := fmt.Sprintf("%s%s", *kaiConfig.Spec.PodGroupController.Webhooks.WebhookConfigurationNamePrefix, version)
 		err = runtimeClient.Get(ctx, types.NamespacedName{Name: webhookName}, validatingWebhookConfiguration)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
