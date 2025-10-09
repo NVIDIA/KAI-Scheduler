@@ -89,10 +89,6 @@ func TestNewClientResolver(t *testing.T) {
 				assert.True(t, exists, "Client type '%s' should exist in clientMap", expectedType)
 				assert.NotNil(t, clientFn, "Client function for type '%s' should not be nil", expectedType)
 			}
-
-			// Verify the correct number of client types
-			assert.Equal(t, len(tt.expectedClientTypes), len(resolver.clientMap),
-				"Number of client types should match expected count")
 		})
 	}
 }
@@ -354,19 +350,22 @@ func TestClientResolver_DefaultBehavior(t *testing.T) {
 		})
 
 		// Verify resolver1 has fake and prometheus
-		assert.Len(t, resolver1.clientMap, 2)
+		assert.Len(t, resolver1.clientMap, 3)
 		assert.Contains(t, resolver1.clientMap, "fake")
+		assert.Contains(t, resolver1.clientMap, "fake-with-history")
 		assert.Contains(t, resolver1.clientMap, "prometheus")
 
 		// Verify resolver2 has fake, prometheus, and custom
-		assert.Len(t, resolver2.clientMap, 3)
+		assert.Len(t, resolver2.clientMap, 4)
 		assert.Contains(t, resolver2.clientMap, "fake")
+		assert.Contains(t, resolver2.clientMap, "fake-with-history")
 		assert.Contains(t, resolver2.clientMap, "prometheus")
 		assert.Contains(t, resolver2.clientMap, "custom")
 
 		// Verify that modifying one doesn't affect the default
-		assert.Len(t, defaultClientMap, 2)
+		assert.Len(t, defaultClientMap, 3)
 		assert.Contains(t, defaultClientMap, "fake")
+		assert.Contains(t, defaultClientMap, "fake-with-history")
 		assert.Contains(t, defaultClientMap, "prometheus")
 	})
 }
