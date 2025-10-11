@@ -327,8 +327,11 @@ func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
 		return
 	}
 
-	slices.SortStableFunc(root.Children, func(i, j *DomainInfo) int {
-		return cmp.Compare(i.AllocatablePods, j.AllocatablePods)
+	slices.SortFunc(root.Children, func(i, j *DomainInfo) int {
+		if c := cmp.Compare(i.AllocatablePods, j.AllocatablePods); c != 0 {
+			return c
+		}
+		return cmp.Compare(i.ID, j.ID)
 	})
 
 	if root.Level == maxDepthLevel {
