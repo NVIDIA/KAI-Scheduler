@@ -59,6 +59,7 @@ func (p *Prometheus) SetDefaultsWhereNeeded() {
 	p.RetentionPeriod = common.SetDefault(p.RetentionPeriod, ptr.To("2w"))
 	p.SampleInterval = common.SetDefault(p.SampleInterval, ptr.To("1m"))
 	p.StorageClassName = common.SetDefault(p.StorageClassName, ptr.To("standard"))
+	p.ExternalPrometheusUrl = common.SetDefault(p.ExternalPrometheusUrl, nil)
 
 	p.ServiceMonitor = common.SetDefault(p.ServiceMonitor, &ServiceMonitor{})
 	p.ServiceMonitor.SetDefaultsWhereNeeded()
