@@ -17,6 +17,7 @@ func RunPodGroupController(cfg *rest.Config, ctx context.Context) error {
 	options.MetricsAddr = ":8082"
 	options.ProbeAddr = ":8083"
 	options.EnablePodGroupWebhook = false
+
 	options.EnableLeaderElection = false
 
 	go func() {
