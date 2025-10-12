@@ -146,10 +146,13 @@ tiers:
         - name: elastic
         - name: kubeflow
         - name: ray
+        - name: subgrouporder
         - name: taskorder
         - name: nominatednode
-        - name: snapshot
         - name: dynamicresources
+        - name: minruntime
+        - name: topology
+        - name: snapshot
         - name: gpupack
         - name: nodeplacement
           arguments:
@@ -181,10 +184,13 @@ tiers:
         - name: elastic
         - name: kubeflow
         - name: ray
+        - name: subgrouporder
         - name: taskorder
         - name: nominatednode
-        - name: snapshot
         - name: dynamicresources
+        - name: minruntime
+        - name: topology
+        - name: snapshot
         - name: gpuspread
         - name: nodeplacement
           arguments:

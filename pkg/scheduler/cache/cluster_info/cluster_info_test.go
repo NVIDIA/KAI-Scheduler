@@ -42,6 +42,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
@@ -978,12 +979,13 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
-							"test-pod": {
-								UID: "test-pod",
-							},
-						}),
+					PodSets: map[string]*subgroup_info.PodSet{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+							WithPodInfos(pod_info.PodsMap{
+								"test-pod": {
+									UID: "test-pod",
+								},
+							}),
 					},
 				},
 			},
@@ -1035,8 +1037,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
+					PodSets: map[string]*subgroup_info.PodSet{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 				},
 			},
@@ -1058,8 +1060,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
+					PodSets: map[string]*subgroup_info.PodSet{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 				},
 			},
@@ -1088,8 +1090,8 @@ func TestSnapshotPodGroups(t *testing.T) {
 				{
 					Name:  "podGroup-0",
 					Queue: "queue-0",
-					SubGroups: map[string]*podgroup_info.SubGroupInfo{
-						podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1),
+					PodSets: map[string]*subgroup_info.PodSet{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil),
 					},
 				},
 			},
@@ -1183,17 +1185,22 @@ func TestSnapshotPodGroups(t *testing.T) {
 			},
 			results: []*podgroup_info.PodGroupInfo{
 				func() *podgroup_info.PodGroupInfo {
-					subGroup0 := podgroup_info.NewSubGroupInfo("SubGroup-0", 1)
-					subGroup1 := podgroup_info.NewSubGroupInfo("SubGroup-1", 2)
+					subGroup0 := subgroup_info.NewPodSet("SubGroup-0", 1, nil)
+					subGroup1 := subgroup_info.NewPodSet("SubGroup-1", 2, nil)
 
 					subGroup0.AssignTask(&pod_info.PodInfo{UID: "pod-0", SubGroupName: "SubGroup-0"})
 					subGroup1.AssignTask(&pod_info.PodInfo{UID: "pod-1", SubGroupName: "SubGroup-1"})
 					subGroup1.AssignTask(&pod_info.PodInfo{UID: "pod-2", SubGroupName: "SubGroup-1"})
 
+					subGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+					subGroupSet.AddPodSet(subGroup0)
+					subGroupSet.AddPodSet(subGroup1)
+
 					return &podgroup_info.PodGroupInfo{
-						Name:  "podGroup-0",
-						Queue: "queue-0",
-						SubGroups: map[string]*podgroup_info.SubGroupInfo{
+						Name:            "podGroup-0",
+						Queue:           "queue-0",
+						RootSubGroupSet: subGroupSet,
+						PodSets: map[string]*subgroup_info.PodSet{
 							"SubGroup-0": subGroup0,
 							"SubGroup-1": subGroup1,
 						},
@@ -1686,6 +1693,7 @@ func TestPodGroupWithIndex(t *testing.T) {
 		},
 	)
 	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
+	assert.Equal(t, types.UID("ABC"), podGroupInfo.PodGroupUID)
 }
 
 func TestPodGroupWithIndexNonMatching(t *testing.T) {
@@ -1706,6 +1714,61 @@ func TestPodGroupWithIndexNonMatching(t *testing.T) {
 		},
 	)
 	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
+	assert.Equal(t, types.UID("ABC"), podGroupInfo.PodGroupUID)
+}
+
+func TestPodGroupWithIndexNoSubGroups(t *testing.T) {
+	podGroup := &enginev2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: "ABC",
+		},
+		Spec: enginev2alpha2.PodGroupSpec{
+			MinMember: 2,
+		},
+	}
+	podGroupInfo := podgroup_info.NewPodGroupInfo("MyTest")
+	clusterInfo := newClusterInfoTests(t,
+		clusterInfoTestParams{
+			kubeObjects:         []runtime.Object{},
+			kaiSchedulerObjects: []runtime.Object{},
+			kueueObjects:        []runtime.Object{},
+		},
+	)
+	assert.Equal(t, int32(1), podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].GetMinAvailable())
+	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
+	assert.Equal(t, int32(2), podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].GetMinAvailable())
+}
+
+func TestPodGroupWithIndexWithSubGroups(t *testing.T) {
+	podGroup := &enginev2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: "ABC",
+		},
+		Spec: enginev2alpha2.PodGroupSpec{
+			MinMember: 3,
+			SubGroups: []enginev2alpha2.SubGroup{
+				{
+					Name:      "sub-a",
+					MinMember: 1,
+				},
+				{
+					Name:      "sub-b",
+					MinMember: 2,
+				},
+			},
+		},
+	}
+	podGroupInfo := podgroup_info.NewPodGroupInfo("MyTest")
+	clusterInfo := newClusterInfoTests(t,
+		clusterInfoTestParams{
+			kubeObjects:         []runtime.Object{},
+			kaiSchedulerObjects: []runtime.Object{},
+			kueueObjects:        []runtime.Object{},
+		},
+	)
+	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
+	assert.Equal(t, int32(1), podGroupInfo.GetSubGroups()["sub-a"].GetMinAvailable())
+	assert.Equal(t, int32(2), podGroupInfo.GetSubGroups()["sub-b"].GetMinAvailable())
 }
 
 func TestIsPodGroupUpForScheduler(t *testing.T) {

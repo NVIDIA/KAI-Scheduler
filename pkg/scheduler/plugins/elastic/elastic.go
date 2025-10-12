@@ -55,7 +55,7 @@ func JobOrderFn(l, r interface{}) int {
 
 func minAvailableState(pgi *podgroup_info.PodGroupInfo) (bool, bool, bool) {
 	exactlyAtMinAvailable := true
-	for _, subGroup := range pgi.SubGroups {
+	for _, subGroup := range pgi.GetSubGroups() {
 		numAllocatedTasks := int32(subGroup.GetNumActiveAllocatedTasks())
 		if numAllocatedTasks < subGroup.GetMinAvailable() {
 			return true, false, false

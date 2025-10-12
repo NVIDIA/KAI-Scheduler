@@ -10,6 +10,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 )
 
 func TestGetTasksToEvict_Table(t *testing.T) {
@@ -22,8 +23,8 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 		{
 			name: "WithoutSubGroups_EvictOne",
 			job: &PodGroupInfo{
-				SubGroups: map[string]*SubGroupInfo{
-					DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+				PodSets: map[string]*subgroup_info.PodSet{
+					DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil).WithPodInfos(pod_info.PodsMap{
 						"pod-a": simpleTask("pod-a", "", pod_status.Running),
 						"pod-b": simpleTask("pod-b", "", pod_status.Running),
 						"pod-c": simpleTask("pod-c", "", pod_status.Running),
@@ -36,8 +37,8 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 		{
 			name: "WithoutSubGroups_EmptyQueue",
 			job: &PodGroupInfo{
-				SubGroups: map[string]*SubGroupInfo{
-					DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 1),
+				PodSets: map[string]*subgroup_info.PodSet{
+					DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil),
 				},
 			},
 			expectedHasMoreTasks: false,
@@ -46,11 +47,12 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 		{
 			name: "WithoutSubGroups_MultipleEvict",
 			job: &PodGroupInfo{
-				SubGroups: map[string]*SubGroupInfo{
-					DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 2).WithPodInfos(pod_info.PodsMap{
-						"pod-a": simpleTask("pod-a", "", pod_status.Running),
-						"pod-b": simpleTask("pod-b", "", pod_status.Running),
-					}),
+				PodSets: map[string]*subgroup_info.PodSet{
+					DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 2, nil).
+						WithPodInfos(pod_info.PodsMap{
+							"pod-a": simpleTask("pod-a", "", pod_status.Running),
+							"pod-b": simpleTask("pod-b", "", pod_status.Running),
+						}),
 				},
 			},
 			expectedHasMoreTasks: false,
@@ -60,9 +62,9 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 			name: "WithSubGroups_SingleEvict",
 			job: func() *PodGroupInfo {
 				pg := NewPodGroupInfo("pg1")
-				pg.SetDefaultMinAvailable(2)
-				pg.SubGroups["sg1"] = NewSubGroupInfo("sg1", 1)
-				pg.SubGroups["sg2"] = NewSubGroupInfo("sg2", 1)
+				pg.GetSubGroups()[DefaultSubGroup].SetMinAvailable(2)
+				pg.PodSets["sg1"] = subgroup_info.NewPodSet("sg1", 1, nil)
+				pg.PodSets["sg2"] = subgroup_info.NewPodSet("sg2", 1, nil)
 
 				pg.AddTaskInfo(simpleTask("pod-1", "sg1", pod_status.Running))
 				pg.AddTaskInfo(simpleTask("pod-2", "sg1", pod_status.Running))
@@ -75,15 +77,15 @@ func TestGetTasksToEvict_Table(t *testing.T) {
 		{
 			name: "WithSubGroups_EvictAll",
 			job: func() *PodGroupInfo {
-				sub1 := NewSubGroupInfo("sg1", 1)
+				sub1 := subgroup_info.NewPodSet("sg1", 1, nil)
 				sub1.AssignTask(simpleTask("pod-1", "sg1", pod_status.Running))
 
-				sub2 := NewSubGroupInfo("sg2", 1)
+				sub2 := subgroup_info.NewPodSet("sg2", 1, nil)
 				sub2.AssignTask(simpleTask("pod-2", "sg2", pod_status.Running))
 
 				return &PodGroupInfo{
-					SubGroups: map[string]*SubGroupInfo{
-						DefaultSubGroup: NewSubGroupInfo(DefaultSubGroup, 2),
+					PodSets: map[string]*subgroup_info.PodSet{
+						DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 2, nil),
 						"sg1":           sub1,
 						"sg2":           sub2,
 					},

@@ -28,6 +28,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
@@ -253,8 +254,8 @@ func (ssn *Session) TaskOrderFn(l, r interface{}) bool {
 }
 
 func (ssn *Session) SubGroupOrderFn(l, r interface{}) bool {
-	lSubGroup := l.(*podgroup_info.SubGroupInfo)
-	rSubGroup := r.(*podgroup_info.SubGroupInfo)
+	lSubGroup := l.(*subgroup_info.PodSet)
+	rSubGroup := r.(*subgroup_info.PodSet)
 	for _, compareTasks := range ssn.SubGroupsOrderFns {
 		if comparison := compareTasks(lSubGroup, rSubGroup); comparison != 0 {
 			return comparison < 0
@@ -263,7 +264,9 @@ func (ssn *Session) SubGroupOrderFn(l, r interface{}) bool {
 	return lSubGroup.GetName() < rSubGroup.GetName()
 }
 
-func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo) bool {
+func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo,
+	lVictims, rVictims []*podgroup_info.PodGroupInfo,
+) bool {
 	for _, qof := range ssn.QueueOrderFns {
 		if j := qof(lQ, rQ, lJob, rJob, lVictims, rVictims); j != 0 {
 			return j < 0
@@ -321,14 +324,17 @@ func (ssn *Session) IsTaskAllocationOnNodeOverCapacityFn(task *pod_info.PodInfo,
 	}
 }
 
-func (ssn *Session) SubsetNodesFn(podGroup *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo, initNodeSet node_info.NodeSet) ([]node_info.NodeSet, error) {
+func (ssn *Session) SubsetNodesFn(
+	podGroup *podgroup_info.PodGroupInfo, subGroupInfo *subgroup_info.SubGroupInfo,
+	podSets map[string]*subgroup_info.PodSet, tasks []*pod_info.PodInfo, initNodeSet node_info.NodeSet,
+) ([]node_info.NodeSet, error) {
 	nodeSets := []node_info.NodeSet{initNodeSet}
 	for _, subsetNodesFn := range ssn.SubsetNodesFns {
 		log.InfraLogger.V(7).Infof(
 			"Running plugin func <%v> on podGroup <%s/%s>", subsetNodesFn, podGroup.Namespace, podGroup.Namespace)
 		var newNodeSets []node_info.NodeSet
 		for _, nodeSet := range nodeSets {
-			nodeSubsets, err := subsetNodesFn(podGroup, tasks, nodeSet)
+			nodeSubsets, err := subsetNodesFn(podGroup, subGroupInfo, podSets, tasks, nodeSet)
 			if err != nil {
 				return nil, err
 			}

@@ -1,0 +1,16 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Release.IsInstall }}
+apiVersion: kai.scheduler/v1
+kind: SchedulingShard
+metadata:
+  name: default
+spec:
+  partitionLabelValue: ""
+  {{- if .Values.scheduler.placementStrategy }}
+  placementStrategy:
+    gpu: {{ .Values.scheduler.placementStrategy }}
+    cpu: {{ .Values.scheduler.placementStrategy }}
+  {{- end }}
+{{- end}}

@@ -10,11 +10,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	resourcev1beta1 "k8s.io/api/resource/v1beta1"
+	resourceapi "k8s.io/api/resource/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/flowcontrol"
 	featuregate "k8s.io/component-base/featuregate/testing"
 	"k8s.io/kubernetes/pkg/features"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,11 +65,14 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
+	// Effectively disable rate limiting
+	cfg.RateLimiter = flowcontrol.NewFakeAlwaysRateLimiter()
+
 	// Add any scheme registration here if needed for your custom CRDs
 	kaiv2.AddToScheme(scheme.Scheme)
 	kaiv1alpha2.AddToScheme(scheme.Scheme)
 	kaiv2v2alpha2.AddToScheme(scheme.Scheme)
-	resourcev1beta1.AddToScheme(scheme.Scheme)
+	resourceapi.AddToScheme(scheme.Scheme)
 	kueuev1alpha1.AddToScheme(scheme.Scheme)
 	// +kubebuilder:scaffold:scheme
 

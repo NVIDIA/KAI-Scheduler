@@ -6,6 +6,9 @@ kind: Config
 metadata:
   name: kai-config
   namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "3"
 spec:
   namespace: {{ .Release.Namespace }}
   global:
@@ -114,3 +117,19 @@ spec:
       {{- end }}
     args:
       nodeScaleNamespace: {{ .Values.nodescaleadjuster.scalingPodNamespace }} 
+
+  scheduler:
+    service:
+      image:
+        name: {{ .Values.scheduler.image.name }}
+        repository: {{ .Values.global.registry }}
+        tag: {{ .Chart.Version }}
+        pullPolicy: {{ .Values.scheduler.image.pullPolicy | default .Values.global.imagePullPolicy }}
+      {{- if .Values.scheduler.resources }}
+      resources:
+        {{- toYaml .Values.scheduler.resources | nindent 6 }}
+      {{- end }}
+    {{- if and .Values.scheduler.ports .Values.scheduler.ports.metricsPort }}
+    schedulerService:
+      port: {{ .Values.scheduler.ports.metricsPort }}
+    {{- end }}

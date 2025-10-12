@@ -43,8 +43,8 @@ var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered,
 			Gpu:      resource.MustParse("2"),
 			PodCount: 2,
 		})
-		parentQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), "")
-		childQueue := queue.CreateQueueObjectWithGpuResource(utils.GenerateRandomK8sName(10),
+		parentQueue := queue.CreateQueueObject("parent-"+utils.GenerateRandomK8sName(10), "")
+		childQueue := queue.CreateQueueObjectWithGpuResource("test-queue-"+utils.GenerateRandomK8sName(10),
 			v2.QueueResource{
 				Quota:           1,
 				OverQuotaWeight: 1,
@@ -52,13 +52,13 @@ var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered,
 			}, parentQueue.Name)
 		testCtx.InitQueues([]*v2.Queue{childQueue, parentQueue})
 
-		lowPriority = utils.GenerateRandomK8sName(10)
+		lowPriority = "low-" + utils.GenerateRandomK8sName(10)
 		lowPriorityValue := utils.RandomIntBetween(0, constant.NonPreemptiblePriorityThreshold-2)
 		_, err := testCtx.KubeClientset.SchedulingV1().PriorityClasses().
 			Create(ctx, rd.CreatePriorityClass(lowPriority, lowPriorityValue), metav1.CreateOptions{})
 		Expect(err).To(Succeed())
 
-		highPriority = utils.GenerateRandomK8sName(10)
+		highPriority = "high-" + utils.GenerateRandomK8sName(10)
 		_, err = testCtx.KubeClientset.SchedulingV1().PriorityClasses().
 			Create(ctx, rd.CreatePriorityClass(highPriority, lowPriorityValue+1), metav1.CreateOptions{})
 		Expect(err).To(Succeed())
@@ -76,57 +76,61 @@ var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered,
 
 	It("PriorityClass as a label", func(ctx context.Context) {
 		configurations.DisableScheduler(ctx, testCtx)
-		lowPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
+		lowPriorityPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
 				constants.GpuResource: resource.MustParse("1"),
 			},
 		})
-		lowPod.Labels[priorityClassLabelName] = lowPriority
-		_, err := rd.CreatePod(ctx, testCtx.KubeClientset, lowPod)
+		lowPriorityPod.Name = "low-priority-pod"
+		lowPriorityPod.Labels[priorityClassLabelName] = lowPriority
+		_, err := rd.CreatePod(ctx, testCtx.KubeClientset, lowPriorityPod)
 		Expect(err).NotTo(HaveOccurred())
 
-		highPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
+		highPriorityPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
 				constants.GpuResource: resource.MustParse("1"),
 			},
 		})
-		highPod.Labels[priorityClassLabelName] = highPriority
-		_, err = rd.CreatePod(ctx, testCtx.KubeClientset, highPod)
+		highPriorityPod.Name = "high-priority-pod"
+		highPriorityPod.Labels[priorityClassLabelName] = highPriority
+		_, err = rd.CreatePod(ctx, testCtx.KubeClientset, highPriorityPod)
 		Expect(err).NotTo(HaveOccurred())
 
 		wait.WaitForPodGroupsToBeReady(ctx, testCtx.ControllerClient,
 			queue.GetConnectedNamespaceToQueue(testCtx.Queues[0]), 2)
 
 		configurations.EnableScheduler(ctx, testCtx)
-		wait.ForPodScheduled(ctx, testCtx.ControllerClient, highPod)
-		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, lowPod)
+		wait.ForPodScheduled(ctx, testCtx.ControllerClient, highPriorityPod)
+		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, lowPriorityPod)
 	})
 
 	It("PriorityClass in pod.spec", func(ctx context.Context) {
 		configurations.DisableScheduler(ctx, testCtx)
-		lowPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
+		lowPriorityPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
 				constants.GpuResource: resource.MustParse("1"),
 			},
 		})
-		lowPod.Spec.PriorityClassName = lowPriority
-		_, err := rd.CreatePod(ctx, testCtx.KubeClientset, lowPod)
+		lowPriorityPod.Name = "low-priority-pod"
+		lowPriorityPod.Spec.PriorityClassName = lowPriority
+		_, err := rd.CreatePod(ctx, testCtx.KubeClientset, lowPriorityPod)
 		Expect(err).NotTo(HaveOccurred())
 
-		highPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
+		highPriorityPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
 				constants.GpuResource: resource.MustParse("1"),
 			},
 		})
-		highPod.Spec.PriorityClassName = highPriority
-		_, err = rd.CreatePod(ctx, testCtx.KubeClientset, highPod)
+		highPriorityPod.Name = "high-priority-pod"
+		highPriorityPod.Spec.PriorityClassName = highPriority
+		_, err = rd.CreatePod(ctx, testCtx.KubeClientset, highPriorityPod)
 		Expect(err).NotTo(HaveOccurred())
 
 		wait.WaitForPodGroupsToBeReady(ctx, testCtx.ControllerClient,
 			queue.GetConnectedNamespaceToQueue(testCtx.Queues[0]), 2)
 
 		configurations.EnableScheduler(ctx, testCtx)
-		wait.ForPodScheduled(ctx, testCtx.ControllerClient, highPod)
-		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, lowPod)
+		wait.ForPodScheduled(ctx, testCtx.ControllerClient, highPriorityPod)
+		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, lowPriorityPod)
 	})
 })

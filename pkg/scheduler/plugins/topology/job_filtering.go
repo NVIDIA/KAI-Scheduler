@@ -5,27 +5,14 @@ package topology
 
 import (
 	"fmt"
-	"sort"
-
-	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
-
-type topologyStateData struct {
-	relevantDomains []*DomainInfo
-}
-
-func (t *topologyStateData) Clone() k8sframework.StateData {
-	return &topologyStateData{
-		relevantDomains: t.relevantDomains,
-	}
-}
 
 type jobAllocationMetaData struct {
 	maxPodResources    *resource_info.ResourceRequirements
@@ -33,10 +20,18 @@ type jobAllocationMetaData struct {
 	tasksToAllocate    []*pod_info.PodInfo
 }
 
-func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet) ([]node_info.NodeSet, error) {
-	topologyTree, err := t.getJobTopology(job)
-	if err != nil {
-		return nil, err
+func (t *topologyPlugin) subSetNodesFn(
+	job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo, podSets map[string]*subgroup_info.PodSet,
+	tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet,
+) ([]node_info.NodeSet, error) {
+	topologyTree, found := t.getJobTopology(subGroup)
+	if !found {
+		job.SetJobFitError(
+			podgroup_info.PodSchedulingErrors,
+			fmt.Sprintf("Matching topology %s does not exist",
+				subGroup.GetTopologyConstraint().Topology),
+			nil)
+		return []node_info.NodeSet{}, nil
 	}
 	if topologyTree == nil {
 		return []node_info.NodeSet{nodeSet}, nil
@@ -49,40 +44,43 @@ func (t *topologyPlugin) subSetNodesFn(job *podgroup_info.PodGroupInfo, tasks []
 	}
 
 	if maxAllocatablePods < len(tasks) {
-		log.InfraLogger.V(6).Infof("no relevant domains found for job %s, workload topology name: %s",
-			job.PodGroup.Name, topologyTree.Name)
+		job.SetJobFitError(
+			podgroup_info.PodSchedulingErrors,
+			fmt.Sprintf("No relevant domains found for workload in topology tree: %s", topologyTree.Name),
+			nil)
 		return []node_info.NodeSet{}, nil
 	}
 
-	jobAllocatableDomains, err := t.getBestJobAllocatableDomains(job, len(tasks), topologyTree)
+	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroup, podSets, len(tasks), topologyTree)
 	if err != nil {
 		return nil, err
 	}
 
-	result := node_info.NodeSet{}
+	var domainNodeSets []node_info.NodeSet
 	for _, jobAllocatableDomain := range jobAllocatableDomains {
+		var domainNodeSet node_info.NodeSet
 		for _, node := range jobAllocatableDomain.Nodes {
-			result = append(result, node)
+			domainNodeSet = append(domainNodeSet, node)
 		}
+		domainNodeSets = append(domainNodeSets, domainNodeSet)
 	}
 
-	return []node_info.NodeSet{result}, nil
+	return domainNodeSets, nil
 }
 
-func (t *topologyPlugin) getJobTopology(job *podgroup_info.PodGroupInfo) (*Info, error) {
-	if job.TopologyConstraint == nil {
-		return nil, nil
+func (t *topologyPlugin) getJobTopology(subGroup *subgroup_info.SubGroupInfo) (*Info, bool) {
+	if subGroup.GetTopologyConstraint() == nil {
+		return nil, true
 	}
-	jobTopologyName := job.TopologyConstraint.Topology
+	jobTopologyName := subGroup.GetTopologyConstraint().Topology
 	if jobTopologyName == "" {
-		return nil, nil
+		return nil, true
 	}
 	topologyTree := t.TopologyTrees[jobTopologyName]
 	if topologyTree == nil {
-		return nil, fmt.Errorf("matching topology tree haven't been found for job <%s/%s>, workload topology name: %s",
-			job.Namespace, job.Name, jobTopologyName)
+		return nil, false
 	}
-	return topologyTree, nil
+	return topologyTree, true
 }
 
 func (t *topologyPlugin) calcTreeAllocatable(tasks []*pod_info.PodInfo, topologyTree *Info, nodeSet node_info.NodeSet) (int, error) {
@@ -147,7 +145,7 @@ func (t *topologyPlugin) calcSubTreeAllocatable(
 func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *node_info.NodeInfo) int {
 	allocatablePodsCount := 0
 	for _, resourceRepresentorPod := range jobAllocationMetaData.allocationTestPods {
-		if node.IsTaskAllocatable(resourceRepresentorPod) {
+		if node.IsTaskAllocatableOnReleasingOrIdle(resourceRepresentorPod) {
 			allocatablePodsCount++
 		} else {
 			break
@@ -163,7 +161,7 @@ func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *n
 				ResReq: calcNextAllocationTestPodResources(latestTestPod.ResReq, jobAllocationMetaData.maxPodResources),
 			}
 			jobAllocationMetaData.allocationTestPods = append(jobAllocationMetaData.allocationTestPods, iAllocationsTestPod)
-			if node.IsTaskAllocatable(iAllocationsTestPod) {
+			if node.IsTaskAllocatableOnReleasingOrIdle(iAllocationsTestPod) {
 				allocatablePodsCount++
 			} else {
 				break
@@ -190,55 +188,58 @@ func calcNextAllocationTestPodResources(previousTestResources, maxPodResources *
 	return nPlus1Resources
 }
 
-func (t *topologyPlugin) getBestJobAllocatableDomains(job *podgroup_info.PodGroupInfo, taskToAllocateCount int, topologyTree *Info) ([]*DomainInfo, error) {
-	relevantLevels, err := t.calculateRelevantDomainLevels(job, topologyTree)
+func (t *topologyPlugin) getJobAllocatableDomains(
+	job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo, podSets map[string]*subgroup_info.PodSet,
+	taskToAllocateCount int, topologyTree *Info,
+) ([]*DomainInfo, error) {
+	relevantLevels, err := t.calculateRelevantDomainLevels(subGroup, topologyTree)
 	if err != nil {
 		return nil, err
 	}
 
 	// Validate that the domains do not clash with the chosen domain for active pods of the job
 	var relevantDomainsByLevel domainsByLevel
-	if job.GetActiveAllocatedTasksCount() > 0 && jobHasTopologyRequiredConstraint(job) {
-		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(job, topologyTree, DomainLevel(job.TopologyConstraint.RequiredLevel))
+	if hasActiveAllocatedTasks(podSets) && hasTopologyRequiredConstraint(subGroup) {
+		relevantDomainsByLevel = getRelevantDomainsWithAllocatedPods(podSets, topologyTree,
+			DomainLevel(subGroup.GetTopologyConstraint().RequiredLevel))
 	} else {
 		relevantDomainsByLevel = topologyTree.DomainsByLevel
 	}
 
-	maxDepthDomains := []*DomainInfo{}
+	var domains []*DomainInfo
 	for _, level := range relevantLevels {
 		for _, domain := range relevantDomainsByLevel[level] {
 			if domain.AllocatablePods < taskToAllocateCount { // Filter domains that cannot allocate the job
 				continue
 			}
 
-			maxDepthDomains = append(maxDepthDomains, domain)
-		}
-		if len(maxDepthDomains) > 0 {
-			break
+			domains = append(domains, domain)
 		}
 	}
 
-	if len(maxDepthDomains) == 0 {
+	if len(domains) == 0 {
 		return nil, fmt.Errorf("no domains found for the job <%s/%s>, workload topology name: %s",
 			job.Namespace, job.Name, topologyTree.Name)
 	}
 
-	if job.TopologyConstraint.PreferredLevel != "" &&
-		maxDepthDomains[0].Level != DomainLevel(job.TopologyConstraint.PreferredLevel) {
-		// If Preferred is defined and we couldn't find a domain on the preferred level,
-		// return a children subset and not a single domain
-		return t.improveChoiceForPreference(maxDepthDomains, taskToAllocateCount)
-	}
-
-	// For stage 1, return a single domain
-	return []*DomainInfo{maxDepthDomains[0]}, nil
+	return domains, nil
 }
 
-func getRelevantDomainsWithAllocatedPods(job *podgroup_info.PodGroupInfo, topologyTree *Info, requiredLevel DomainLevel) domainsByLevel {
+func hasActiveAllocatedTasks(podSets map[string]*subgroup_info.PodSet) bool {
+	for _, podSet := range podSets {
+		if podSet.GetNumActiveAllocatedTasks() > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func getRelevantDomainsWithAllocatedPods(
+	podSets map[string]*subgroup_info.PodSet, topologyTree *Info, requiredLevel DomainLevel,
+) domainsByLevel {
 	relevantDomainsByLevel := domainsByLevel{}
 	for _, domainAtRequiredLevel := range topologyTree.DomainsByLevel[requiredLevel] {
-		activePodsInDomain := countActiveJobPodsInDomain(job, domainAtRequiredLevel)
-		if activePodsInDomain == 0 {
+		if !hasActiveJobPodInDomain(podSets, domainAtRequiredLevel) {
 			continue // if the domain at the top level does not have any active pods, then any domains under the subtree cannot satisfy the required constraint for both active and pending pods
 		}
 		addSubTreeToDomainMap(domainAtRequiredLevel, relevantDomainsByLevel)
@@ -246,17 +247,18 @@ func getRelevantDomainsWithAllocatedPods(job *podgroup_info.PodGroupInfo, topolo
 	return relevantDomainsByLevel
 }
 
-func countActiveJobPodsInDomain(job *podgroup_info.PodGroupInfo, domain *DomainInfo) int {
-	activePodsInDomain := 0
-	for _, pod := range job.GetAllPodsMap() {
-		if pod_status.IsActiveAllocatedStatus(pod.Status) {
-			podInDomain := domain.Nodes[pod.NodeName] != nil
-			if podInDomain {
-				activePodsInDomain++
+func hasActiveJobPodInDomain(podSets map[string]*subgroup_info.PodSet, domain *DomainInfo) bool {
+	for _, podSet := range podSets {
+		for _, pod := range podSet.GetPodInfos() {
+			if pod_status.IsActiveAllocatedStatus(pod.Status) {
+				podInDomain := domain.Nodes[pod.NodeName] != nil
+				if podInDomain {
+					return true
+				}
 			}
 		}
 	}
-	return activePodsInDomain
+	return false
 }
 
 func addSubTreeToDomainMap(domain *DomainInfo, domainsMap domainsByLevel) {
@@ -269,17 +271,19 @@ func addSubTreeToDomainMap(domain *DomainInfo, domainsMap domainsByLevel) {
 	domainsMap[domain.Level][domain.ID] = domain
 }
 
-func jobHasTopologyRequiredConstraint(job *podgroup_info.PodGroupInfo) bool {
-	return job.TopologyConstraint.RequiredLevel != ""
+func hasTopologyRequiredConstraint(subGroup *subgroup_info.SubGroupInfo) bool {
+	return subGroup.GetTopologyConstraint().RequiredLevel != ""
 }
 
 func (*topologyPlugin) calculateRelevantDomainLevels(
-	job *podgroup_info.PodGroupInfo,
-	topologyTree *Info) ([]DomainLevel, error) {
-	requiredPlacement := DomainLevel(job.TopologyConstraint.RequiredLevel)
-	preferredPlacement := DomainLevel(job.TopologyConstraint.PreferredLevel)
+	subGroup *subgroup_info.SubGroupInfo, topologyTree *Info,
+) ([]DomainLevel, error) {
+	topologyConstraint := subGroup.GetTopologyConstraint()
+	requiredPlacement := DomainLevel(topologyConstraint.RequiredLevel)
+	preferredPlacement := DomainLevel(topologyConstraint.PreferredLevel)
 	if requiredPlacement == "" && preferredPlacement == "" {
-		return nil, fmt.Errorf("no topology placement annotations found for job <%s/%s>, workload topology name: %s", job.Namespace, job.Name, topologyTree.Name)
+		return nil, fmt.Errorf("no topology constraints were found for subgroup %s, with topology name %s",
+			subGroup.GetName(), topologyTree.Name)
 	}
 
 	foundRequiredLevel := false
@@ -307,50 +311,15 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 	}
 
 	if requiredPlacement != "" && !foundRequiredLevel {
-		return nil, fmt.Errorf("the topology %s doesn't have a level matching the required(%s) specified for the job %s",
-			topologyTree.Name, requiredPlacement, job.Name,
-		)
+		return nil, fmt.Errorf("topology %s doesn't have a required domain level named %s",
+			topologyTree.Name, requiredPlacement)
 	}
 	if preferredPlacement != "" && !foundPreferredLevel {
-		return nil, fmt.Errorf("the topology %s doesn't have a level matching the preferred(%s) specified for the job %s",
-			topologyTree.Name, preferredPlacement, job.Name,
+		return nil, fmt.Errorf("topology %s doesn't have a preferred domain level named %s",
+			topologyTree.Name, preferredPlacement,
 		)
 	}
 	return relevantLevels, nil
-}
-
-func (t *topologyPlugin) improveChoiceForPreference(maxDepthDomains []*DomainInfo, taskToAllocateCount int) ([]*DomainInfo, error) {
-	// Look for a subgroup of children domains that allows the job to be allocated
-	// and return the one with the least number of domains required for the allocation
-	bestChildrenSubset := []*DomainInfo{}
-	for _, domain := range maxDepthDomains {
-		childDomainSubset := getJobAllocatableChildrenSubset(domain, taskToAllocateCount)
-		if len(bestChildrenSubset) == 0 || len(childDomainSubset) < len(bestChildrenSubset) {
-			bestChildrenSubset = childDomainSubset
-		}
-	}
-	return bestChildrenSubset, nil
-}
-
-func getJobAllocatableChildrenSubset(domain *DomainInfo, taskToAllocateCount int) []*DomainInfo {
-	children := make([]*DomainInfo, 0, len(domain.Children))
-	for _, child := range domain.Children {
-		children = append(children, child)
-	}
-	sort.SliceStable(children, func(i, j int) bool {
-		return children[i].AllocatablePods > children[j].AllocatablePods
-	})
-
-	allocatablePodsSum := 0
-	childDomainSubset := []*DomainInfo{}
-	for _, childDomain := range children {
-		allocatablePodsSum += childDomain.AllocatablePods
-		childDomainSubset = append(childDomainSubset, childDomain)
-		if allocatablePodsSum >= taskToAllocateCount {
-			break
-		}
-	}
-	return childDomainSubset
 }
 
 func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {

@@ -11,6 +11,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	rs "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/resource_share"
 
@@ -555,8 +556,8 @@ var _ = Describe("Reclaimable - Single department", func() {
 		reclaimee := &podgroup_info.PodGroupInfo{
 			Name:  "reclaimee",
 			Queue: "p2",
-			SubGroups: map[string]*podgroup_info.SubGroupInfo{
-				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(reclaimeePods),
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).WithPodInfos(reclaimeePods),
 			},
 		}
 		reclaimees = []*podgroup_info.PodGroupInfo{reclaimee}
@@ -707,8 +708,8 @@ var _ = Describe("Reclaimable - Multiple departments", func() {
 		reclaimee := &podgroup_info.PodGroupInfo{
 			Name:  "reclaimee",
 			Queue: "p2",
-			SubGroups: map[string]*podgroup_info.SubGroupInfo{
-				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(reclaimeePods),
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).WithPodInfos(reclaimeePods),
 			},
 		}
 		reclaimees = []*podgroup_info.PodGroupInfo{reclaimee}
@@ -821,8 +822,8 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 		reclaimee = &podgroup_info.PodGroupInfo{
 			Name:  "reclaimee",
 			Queue: "right-leaf",
-			SubGroups: map[string]*podgroup_info.SubGroupInfo{
-				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(reclaimeePods),
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).WithPodInfos(reclaimeePods),
 			},
 		}
 	})
@@ -1024,8 +1025,8 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 		reclaimee2 := &podgroup_info.PodGroupInfo{
 			Name:  "reclaimee",
 			Queue: "left-leaf2",
-			SubGroups: map[string]*podgroup_info.SubGroupInfo{
-				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).WithPodInfos(pod_info.PodsMap{
 					"1": &pod_info.PodInfo{
 						UID: "1",
 						ResReq: &resource_info.ResourceRequirements{
@@ -1082,16 +1083,17 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 		reclaimee2 := &podgroup_info.PodGroupInfo{
 			Name:  "reclaimee2",
 			Queue: "d2-project-1",
-			SubGroups: map[string]*podgroup_info.SubGroupInfo{
-				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
-					"1": &pod_info.PodInfo{
-						UID: "1",
-						ResReq: &resource_info.ResourceRequirements{
-							GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+					WithPodInfos(pod_info.PodsMap{
+						"1": &pod_info.PodInfo{
+							UID: "1",
+							ResReq: &resource_info.ResourceRequirements{
+								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
+							},
+							Status: pod_status.Running,
 						},
-						Status: pod_status.Running,
-					},
-				}),
+					}),
 			},
 		}
 
@@ -1140,16 +1142,17 @@ var _ = Describe("Reclaimable - Multiple hierarchy levels", func() {
 		reclaimee2 := &podgroup_info.PodGroupInfo{
 			Name:  "reclaimee2",
 			Queue: "d2-project-1",
-			SubGroups: map[string]*podgroup_info.SubGroupInfo{
-				podgroup_info.DefaultSubGroup: podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, 1).WithPodInfos(pod_info.PodsMap{
-					"1": &pod_info.PodInfo{
-						UID: "1",
-						ResReq: &resource_info.ResourceRequirements{
-							GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+					WithPodInfos(pod_info.PodsMap{
+						"1": &pod_info.PodInfo{
+							UID: "1",
+							ResReq: &resource_info.ResourceRequirements{
+								GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithGpus(1, 0),
+							},
+							Status: pod_status.Running,
 						},
-						Status: pod_status.Running,
-					},
-				}),
+					}),
 			},
 		}
 

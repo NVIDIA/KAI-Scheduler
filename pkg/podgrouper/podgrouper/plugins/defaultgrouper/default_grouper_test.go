@@ -57,6 +57,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	assert.Equal(t, 1, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
+	assert.Empty(t, podGroupMetadata.Preemptibility)
 	assert.Empty(t, podGroupMetadata.PreferredTopologyLevel)
 	assert.Empty(t, podGroupMetadata.RequiredTopologyLevel)
 	assert.Empty(t, podGroupMetadata.Topology)
@@ -735,5 +736,121 @@ func priorityClassObj(name string, value int32) *schedulingv1.PriorityClass {
 			Name: name,
 		},
 		Value: value,
+	}
+}
+
+// TestCalcPodGroupPreemptibility tests for the CalcPodGroupPreemptibility method
+func TestCalcPodGroupPreemptibility(t *testing.T) {
+	tests := []struct {
+		name           string
+		ownerLabels    map[string]interface{}
+		podLabels      map[string]string
+		expectedResult string
+	}{
+		{
+			name: "valid preemptible from owner",
+			ownerLabels: map[string]interface{}{
+				"kai.scheduler/preemptibility": "preemptible",
+			},
+			podLabels:      nil,
+			expectedResult: "preemptible",
+		},
+		{
+			name: "valid non-preemptible from owner",
+			ownerLabels: map[string]interface{}{
+				"kai.scheduler/preemptibility": "non-preemptible",
+			},
+			podLabels:      nil,
+			expectedResult: "non-preemptible",
+		},
+		{
+			name:        "valid preemptible from pod",
+			ownerLabels: nil,
+			podLabels: map[string]string{
+				"kai.scheduler/preemptibility": "preemptible",
+			},
+			expectedResult: "preemptible",
+		},
+		{
+			name:        "valid non-preemptible from pod",
+			ownerLabels: nil,
+			podLabels: map[string]string{
+				"kai.scheduler/preemptibility": "non-preemptible",
+			},
+			expectedResult: "non-preemptible",
+		},
+		{
+			name: "invalid value from owner",
+			ownerLabels: map[string]interface{}{
+				"kai.scheduler/preemptibility": "invalid-value",
+			},
+			podLabels:      nil,
+			expectedResult: "",
+		},
+		{
+			name:        "invalid value from pod",
+			ownerLabels: nil,
+			podLabels: map[string]string{
+				"kai.scheduler/preemptibility": "invalid-value",
+			},
+			expectedResult: "",
+		},
+		{
+			name:           "no labels",
+			ownerLabels:    nil,
+			podLabels:      nil,
+			expectedResult: "",
+		},
+		{
+			name: "owner overrides pod",
+			ownerLabels: map[string]interface{}{
+				"kai.scheduler/preemptibility": "non-preemptible",
+			},
+			podLabels: map[string]string{
+				"kai.scheduler/preemptibility": "preemptible",
+			},
+			expectedResult: "non-preemptible",
+		},
+		{
+			name: "owner invalid pod valid",
+			ownerLabels: map[string]interface{}{
+				"kai.scheduler/preemptibility": "invalid-value",
+			},
+			podLabels: map[string]string{
+				"kai.scheduler/preemptibility": "preemptible",
+			},
+			expectedResult: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create owner with labels
+			owner := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind":       "test_kind",
+					"apiVersion": "test_version",
+					"metadata": map[string]interface{}{
+						"name":      "test_name",
+						"namespace": "test_namespace",
+						"uid":       "1",
+						"labels":    tt.ownerLabels,
+					},
+				},
+			}
+
+			// Create pod with labels
+			pod := &v1.Pod{}
+			if tt.podLabels != nil {
+				pod.ObjectMeta = v12.ObjectMeta{
+					Labels: tt.podLabels,
+				}
+			}
+
+			defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
+			preemptibility := defaultGrouper.calcPodGroupPreemptibility(owner, pod)
+
+			assert.Equal(t, tt.expectedResult, string(preemptibility))
+		})
 	}
 }

@@ -27,21 +27,22 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 		return false
 	}
 
-	nodeSets, err := ssn.SubsetNodesFn(job, tasksToAllocate, nodes)
+	podSets := job.RootSubGroupSet.GetAllPodSets()
+	nodeSets, err := ssn.SubsetNodesFn(job, &job.RootSubGroupSet.SubGroupInfo, podSets, tasksToAllocate, nodes)
 	if err != nil {
 		log.InfraLogger.Errorf(
-			"Failed to run SubsetNodes on job <%s/%s>", job.Namespace, job.Namespace)
+			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
 		return false
 	}
 	for _, nodeSet := range nodeSets {
-		if allocateTaskOnNodeSet(ssn, stmt, nodeSet, job, tasksToAllocate, isPipelineOnly) {
+		if allocateTasksOnNodeSet(ssn, stmt, nodeSet, job, tasksToAllocate, isPipelineOnly) {
 			return true
 		}
 	}
 	return false
 }
 
-func allocateTaskOnNodeSet(ssn *framework.Session, stmt *framework.Statement, nodeSet node_info.NodeSet,
+func allocateTasksOnNodeSet(ssn *framework.Session, stmt *framework.Statement, nodeSet node_info.NodeSet,
 	job *podgroup_info.PodGroupInfo, tasksToAllocate []*pod_info.PodInfo, isPipelineOnly bool) bool {
 	cp := stmt.Checkpoint()
 	for index, task := range tasksToAllocate {

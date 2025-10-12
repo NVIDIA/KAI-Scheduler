@@ -20,7 +20,7 @@ import (
 func RunBinder(cfg *rest.Config, ctx context.Context) error {
 	options := app.InitOptions(pflag.NewFlagSet("binder-test", pflag.ContinueOnError))
 
-	options.MetricsAddr = ":8084"
+	options.MetricsAddr = ":8085"
 	options.EnableLeaderElection = false
 
 	app, err := app.New(options, cfg)

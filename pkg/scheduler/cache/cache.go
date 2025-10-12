@@ -43,6 +43,7 @@ import (
 	enginelisters "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/listers/scheduling/v2alpha2"
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	draversionawareclient "github.com/NVIDIA/KAI-scheduler/pkg/common/resources/dra_version_aware_client"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
@@ -84,6 +85,7 @@ type SchedulerCacheParams struct {
 	KubeClient                  kubernetes.Interface
 	KAISchedulerClient          kubeaischedulerver.Interface
 	KueueClient                 kueueclient.Interface
+	UsageDBParams               *usageapi.UsageParams
 	UsageDBClient               usageapi.Interface
 	DetailedFitErrors           bool
 	ScheduleCSIStorage          bool
@@ -128,7 +130,7 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 		detailedFitErrors:        schedulerCacheParams.DetailedFitErrors,
 		scheduleCSIStorage:       schedulerCacheParams.ScheduleCSIStorage,
 		fullHierarchyFairness:    schedulerCacheParams.FullHierarchyFairness,
-		kubeClient:               schedulerCacheParams.KubeClient,
+		kubeClient:               draversionawareclient.NewDRAAwareClient(schedulerCacheParams.KubeClient),
 		kubeAiSchedulerClient:    schedulerCacheParams.KAISchedulerClient,
 		kueueClient:              schedulerCacheParams.KueueClient,
 	}
@@ -160,7 +162,10 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 	sc.podGroupLister = sc.kubeAiSchedulerInformerFactory.Scheduling().V2alpha2().PodGroups().Lister()
 
 	if schedulerCacheParams.UsageDBClient != nil {
-		sc.usageLister = usagedb.NewUsageLister(schedulerCacheParams.UsageDBClient, nil, nil, nil)
+		sc.usageLister = usagedb.NewUsageLister(schedulerCacheParams.UsageDBClient,
+			schedulerCacheParams.UsageDBParams.FetchInterval,
+			schedulerCacheParams.UsageDBParams.StalenessPeriod,
+			schedulerCacheParams.UsageDBParams.WaitTimeout)
 	}
 
 	clusterInfo, err := cluster_info.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, sc.usageLister, sc.schedulingNodePoolParams,

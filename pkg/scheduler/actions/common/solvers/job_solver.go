@@ -124,14 +124,14 @@ func getPartialJobRepresentative(
 	jobRepresentative := job.CloneWithTasks(pendingTasks)
 	subGroupsMinAvailable := map[string]int{}
 	for _, pendingTask := range pendingTasks {
-		if _, found := jobRepresentative.SubGroups[pendingTask.SubGroupName]; found {
+		if _, found := jobRepresentative.GetSubGroups()[pendingTask.SubGroupName]; found {
 			subGroupsMinAvailable[pendingTask.SubGroupName] += 1
 		} else {
 			subGroupsMinAvailable[podgroup_info.DefaultSubGroup] += 1
 		}
 	}
 	for subGroupName, minAvailable := range subGroupsMinAvailable {
-		subGroup, found := jobRepresentative.SubGroups[subGroupName]
+		subGroup, found := jobRepresentative.GetSubGroups()[subGroupName]
 		if !found {
 			log.InfraLogger.V(2).Warnf("Couldn't find SubGroup with name %s for job %s",
 				subGroupName, job.NamespacedName,

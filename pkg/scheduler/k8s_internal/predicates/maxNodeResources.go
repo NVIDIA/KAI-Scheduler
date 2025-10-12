@@ -10,6 +10,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	v1 "k8s.io/api/core/v1"
+	ksf "k8s.io/kube-scheduler/framework"
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -46,22 +47,22 @@ func (_ *MaxNodeResourcesPredicate) isFilterRequired(_ *v1.Pod) bool {
 	return false
 }
 
-func (mnr *MaxNodeResourcesPredicate) PreFilter(_ context.Context, _ *k8sframework.CycleState, pod *v1.Pod) (
-	*k8sframework.PreFilterResult, *k8sframework.Status) {
+func (mnr *MaxNodeResourcesPredicate) PreFilter(_ context.Context, _ ksf.CycleState, pod *v1.Pod, _ []ksf.NodeInfo) (
+	*k8sframework.PreFilterResult, *ksf.Status) {
 
 	podInfo := pod_info.NewTaskInfo(pod)
 
 	if podInfo.ResReq.GPUs() > mnr.maxResources.GPUs() {
-		return nil, k8sframework.NewStatus(k8sframework.Unschedulable,
+		return nil, ksf.NewStatus(ksf.Unschedulable,
 			mnr.buildUnschedulableMessage(podInfo, "GPU", mnr.maxResources.GPUs(), ""))
 	}
 	if podInfo.ResReq.Cpu() > mnr.maxResources.Cpu() {
-		return nil, k8sframework.NewStatus(k8sframework.Unschedulable,
+		return nil, ksf.NewStatus(ksf.Unschedulable,
 			mnr.buildUnschedulableMessage(podInfo, "CPU",
 				mnr.maxResources.Cpu()/resource_info.MilliCPUToCores, "cores"))
 	}
 	if podInfo.ResReq.Memory() > mnr.maxResources.Memory() {
-		return nil, k8sframework.NewStatus(k8sframework.Unschedulable,
+		return nil, ksf.NewStatus(ksf.Unschedulable,
 			mnr.buildUnschedulableMessage(podInfo, "memory",
 				mnr.maxResources.Memory()/resource_info.MemoryToGB, "GB"))
 	}
@@ -75,7 +76,7 @@ func (mnr *MaxNodeResourcesPredicate) PreFilter(_ context.Context, _ *k8sframewo
 				units = "GB"
 				maxVal = float64(rrQuant) / resource_info.MemoryToGB
 			}
-			return nil, k8sframework.NewStatus(k8sframework.Unschedulable,
+			return nil, ksf.NewStatus(ksf.Unschedulable,
 				mnr.buildUnschedulableMessage(podInfo, string(rName), float64(maxVal), units))
 		}
 	}

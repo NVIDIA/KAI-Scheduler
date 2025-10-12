@@ -1,55 +1,36 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package podgroup_info
+package subgroup_info
 
 import (
 	"testing"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 )
 
-func TestNewSubGroupInfo(t *testing.T) {
+func TestNewPodSet(t *testing.T) {
 	name := "my-subgroup"
 	minAvailable := int32(4)
-	sgi := NewSubGroupInfo(name, minAvailable)
+	podSet := NewPodSet(name, minAvailable, nil)
 
-	if sgi.name != name {
-		t.Errorf("Expected name %s, got %s", name, sgi.name)
+	if podSet.name != name {
+		t.Errorf("Expected name %s, got %s", name, podSet.name)
 	}
-	if sgi.minAvailable != minAvailable {
-		t.Errorf("Expected minAvailable %d, got %d", minAvailable, sgi.minAvailable)
+	if podSet.minAvailable != minAvailable {
+		t.Errorf("Expected minAvailable %d, got %d", minAvailable, podSet.minAvailable)
 	}
-	if len(sgi.podInfos) != 0 {
-		t.Errorf("Expected empty podInfos, got %d items", len(sgi.podInfos))
-	}
-}
-
-func TestFromSubGroup(t *testing.T) {
-	subGroup := &v2alpha2.SubGroup{
-		Name:      "test-subgroup",
-		MinMember: 3,
-	}
-
-	sgi := FromSubGroup(subGroup)
-	if sgi.name != subGroup.Name {
-		t.Errorf("Expected name %s, got %s", subGroup.Name, sgi.name)
-	}
-	if sgi.minAvailable != subGroup.MinMember {
-		t.Errorf("Expected minAvailable %d, got %d", subGroup.MinMember, sgi.minAvailable)
-	}
-	if len(sgi.podInfos) != 0 {
-		t.Errorf("Expected empty podInfos, got %d items", len(sgi.podInfos))
+	if len(podSet.GetPodInfos()) != 0 {
+		t.Errorf("Expected empty podInfos, got %d items", len(podSet.GetPodInfos()))
 	}
 }
 
 func TestWithPodInfos(t *testing.T) {
-	sgi := NewSubGroupInfo("test", 1)
+	podSet := NewPodSet("test", 1, nil)
 
 	// Pre-populate with a pod that should be cleared
-	sgi.AssignTask(&pod_info.PodInfo{UID: "old", Status: pod_status.Running})
+	podSet.AssignTask(&pod_info.PodInfo{UID: "old", Status: pod_status.Running})
 
 	// Prepare new pod infos
 	p1 := &pod_info.PodInfo{UID: "pod1", Status: pod_status.Pending}
@@ -59,9 +40,9 @@ func TestWithPodInfos(t *testing.T) {
 		"pod2": p2,
 	}
 
-	sgi.WithPodInfos(replacement)
+	podSet.WithPodInfos(replacement)
 
-	gotInfos := sgi.GetPodInfos()
+	gotInfos := podSet.GetPodInfos()
 	if len(gotInfos) != 2 {
 		t.Errorf("expected len(podInfos)==2, got %d", len(gotInfos))
 	}
@@ -77,57 +58,48 @@ func TestWithPodInfos(t *testing.T) {
 	}
 
 	// Check counters based on status
-	if want := 2; sgi.GetNumAliveTasks() != want {
-		t.Errorf("GetNumAliveTasks() = %d, want %d", sgi.GetNumAliveTasks(), want)
+	if want := 2; podSet.GetNumAliveTasks() != want {
+		t.Errorf("GetNumAliveTasks() = %d, want %d", podSet.GetNumAliveTasks(), want)
 	}
-	if want := 1; sgi.GetNumActiveAllocatedTasks() != want {
-		t.Errorf("GetNumActiveAllocatedTasks() = %d, want %d", sgi.GetNumActiveAllocatedTasks(), want)
+	if want := 1; podSet.GetNumActiveAllocatedTasks() != want {
+		t.Errorf("GetNumActiveAllocatedTasks() = %d, want %d", podSet.GetNumActiveAllocatedTasks(), want)
 	}
-	if want := 1; sgi.GetNumPendingTasks() != want {
-		t.Errorf("GetNumPendingTasks() = %d, want %d", sgi.GetNumPendingTasks(), want)
-	}
-}
-
-func TestGetName(t *testing.T) {
-	name := "test-subgroup"
-	sgi := NewSubGroupInfo(name, 1)
-
-	if got := sgi.GetName(); got != name {
-		t.Errorf("GetName() = %q, want %q", got, name)
+	if want := 1; podSet.GetNumPendingTasks() != want {
+		t.Errorf("GetNumPendingTasks() = %d, want %d", podSet.GetNumPendingTasks(), want)
 	}
 }
 
 func TestGetMinAvailable(t *testing.T) {
 	minAvailable := int32(3)
-	sgi := NewSubGroupInfo("test", minAvailable)
+	podSet := NewPodSet("test", minAvailable, nil)
 
-	if got := sgi.GetMinAvailable(); got != minAvailable {
+	if got := podSet.GetMinAvailable(); got != minAvailable {
 		t.Errorf("GetMinAvailable() = %d, want %d", got, minAvailable)
 	}
 }
 
 func TestSetMinAvailable(t *testing.T) {
-	sgi := NewSubGroupInfo("test", 8)
+	podSet := NewPodSet("test", 8, nil)
 	newMinAvailable := int32(5)
-	sgi.SetMinAvailable(newMinAvailable)
+	podSet.SetMinAvailable(newMinAvailable)
 
-	if got := sgi.GetMinAvailable(); got != newMinAvailable {
+	if got := podSet.GetMinAvailable(); got != newMinAvailable {
 		t.Errorf("After SetMinAvailable(%d), GetMinAvailable() = %d", newMinAvailable, got)
 	}
 }
 
 func TestGetPodInfos(t *testing.T) {
-	sgi := NewSubGroupInfo("test", 2)
+	podSet := NewPodSet("test", 2, nil)
 
 	// Should be empty initially
-	if podInfos := sgi.GetPodInfos(); len(podInfos) != 0 {
+	if podInfos := podSet.GetPodInfos(); len(podInfos) != 0 {
 		t.Errorf("Expected empty podInfos from GetPodInfos, got %d items", len(podInfos))
 	}
 
 	// Add a pod and check GetPodInfos
 	pod := &pod_info.PodInfo{UID: "test-pod", Status: pod_status.Pending}
-	sgi.AssignTask(pod)
-	podInfos := sgi.GetPodInfos()
+	podSet.AssignTask(pod)
+	podInfos := podSet.GetPodInfos()
 	if len(podInfos) != 1 {
 		t.Errorf("Expected 1 pod in GetPodInfos, got %d", len(podInfos))
 	}
@@ -136,18 +108,18 @@ func TestGetPodInfos(t *testing.T) {
 	}
 }
 
-func TestAddTaskInfoToSubGroup(t *testing.T) {
-	sgi := NewSubGroupInfo("test", 1)
+func TestAddTaskInfoToPodSet(t *testing.T) {
+	podSet := NewPodSet("test", 1, nil)
 	podInfo := &pod_info.PodInfo{
 		UID:    "pod-1",
 		Status: pod_status.Pending,
 	}
 
-	sgi.AssignTask(podInfo)
-	if len(sgi.podInfos) != 1 {
-		t.Errorf("Expected 1 pod info object, got %d", len(sgi.podInfos))
+	podSet.AssignTask(podInfo)
+	if len(podSet.podInfos) != 1 {
+		t.Errorf("Expected 1 pod info object, got %d", len(podSet.podInfos))
 	}
-	if sgi.podInfos[podInfo.UID] != podInfo {
+	if podSet.podInfos[podInfo.UID] != podInfo {
 		t.Error("Pod info not properly stored in map")
 	}
 
@@ -155,12 +127,12 @@ func TestAddTaskInfoToSubGroup(t *testing.T) {
 		UID:    "pod-2",
 		Status: pod_status.Pending,
 	}
-	sgi.AssignTask(podInfo2)
-	if len(sgi.podInfos) != 2 {
-		t.Errorf("Expected 2 pod info objects, got %d", len(sgi.podInfos))
+	podSet.AssignTask(podInfo2)
+	if len(podSet.podInfos) != 2 {
+		t.Errorf("Expected 2 pod info objects, got %d", len(podSet.podInfos))
 	}
 
-	if sgi.podInfos[podInfo2.UID] != podInfo2 {
+	if podSet.podInfos[podInfo2.UID] != podInfo2 {
 		t.Error("Pod info 2 not properly stored in map")
 	}
 }
@@ -203,11 +175,11 @@ func TestIsReadyForScheduling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sgi := NewSubGroupInfo("test", tt.minAvailable)
+			podSet := NewPodSet("test", tt.minAvailable, nil)
 			for _, pod := range tt.pods {
-				sgi.AssignTask(pod)
+				podSet.AssignTask(pod)
 			}
-			if got := sgi.IsReadyForScheduling(); got != tt.expected {
+			if got := podSet.IsReadyForScheduling(); got != tt.expected {
 				t.Errorf("IsReadyForScheduling() = %v, want %v", got, tt.expected)
 			}
 		})
@@ -243,11 +215,11 @@ func TestIsGangSatisfied(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sgi := NewSubGroupInfo("test", tt.minAvailable)
+			podSet := NewPodSet("test", tt.minAvailable, nil)
 			for _, pod := range tt.pods {
-				sgi.AssignTask(pod)
+				podSet.AssignTask(pod)
 			}
-			if got := sgi.IsGangSatisfied(); got != tt.expected {
+			if got := podSet.IsGangSatisfied(); got != tt.expected {
 				t.Errorf("IsGangSatisfied() = %v, want %v", got, tt.expected)
 			}
 		})
@@ -255,7 +227,7 @@ func TestIsGangSatisfied(t *testing.T) {
 }
 
 func TestGetNumAliveTasks(t *testing.T) {
-	sgi := NewSubGroupInfo("test", 2)
+	podSet := NewPodSet("test", 2, nil)
 	pods := []*pod_info.PodInfo{
 		{UID: "1", Status: pod_status.Running},
 		{UID: "2", Status: pod_status.Pending},
@@ -264,17 +236,17 @@ func TestGetNumAliveTasks(t *testing.T) {
 	}
 
 	for _, pod := range pods {
-		sgi.AssignTask(pod)
+		podSet.AssignTask(pod)
 	}
 
 	expected := 2 // Running and Pending are alive statuses
-	if got := sgi.GetNumAliveTasks(); got != expected {
+	if got := podSet.GetNumAliveTasks(); got != expected {
 		t.Errorf("GetNumAliveTasks() = %v, want %v", got, expected)
 	}
 }
 
 func TestGetNumActiveUsedTasks(t *testing.T) {
-	sgi := NewSubGroupInfo("test", 2)
+	podSet := NewPodSet("test", 2, nil)
 	pods := []*pod_info.PodInfo{
 		{UID: "1", Status: pod_status.Running},
 		{UID: "2", Status: pod_status.Pipelined},
@@ -284,17 +256,17 @@ func TestGetNumActiveUsedTasks(t *testing.T) {
 	}
 
 	for _, pod := range pods {
-		sgi.AssignTask(pod)
+		podSet.AssignTask(pod)
 	}
 
 	expected := 3 // Running, Pipelined, and Releasing are considered active used statuses
-	if got := sgi.GetNumActiveUsedTasks(); got != expected {
+	if got := podSet.GetNumActiveUsedTasks(); got != expected {
 		t.Errorf("GetNumActiveUsedTasks() = %v, want %v", got, expected)
 	}
 }
 
 func TestGetNumGatedTasks(t *testing.T) {
-	sgi := NewSubGroupInfo("test", 2)
+	podSet := NewPodSet("test", 2, nil)
 	pods := []*pod_info.PodInfo{
 		{UID: "1", Status: pod_status.Gated},
 		{UID: "2", Status: pod_status.Running},
@@ -303,17 +275,17 @@ func TestGetNumGatedTasks(t *testing.T) {
 	}
 
 	for _, pod := range pods {
-		sgi.AssignTask(pod)
+		podSet.AssignTask(pod)
 	}
 
 	expected := 2 // Two Gated pods
-	if got := sgi.GetNumGatedTasks(); got != expected {
+	if got := podSet.GetNumGatedTasks(); got != expected {
 		t.Errorf("GetNumGatedTasks() = %v, want %v", got, expected)
 	}
 }
 
 func TestGetNumPendingTasks(t *testing.T) {
-	sgi := NewSubGroupInfo("test", 2)
+	podSet := NewPodSet("test", 2, nil)
 	pods := []*pod_info.PodInfo{
 		{UID: "1", Status: pod_status.Pending},
 		{UID: "2", Status: pod_status.Running},
@@ -323,11 +295,11 @@ func TestGetNumPendingTasks(t *testing.T) {
 	}
 
 	for _, pod := range pods {
-		sgi.AssignTask(pod)
+		podSet.AssignTask(pod)
 	}
 
 	expected := 3 // Three Pending pods
-	if got := sgi.GetNumPendingTasks(); got != expected {
+	if got := podSet.GetNumPendingTasks(); got != expected {
 		t.Errorf("GetNumPendingTasks() = %v, want %v", got, expected)
 	}
 }
@@ -367,12 +339,12 @@ func TestIsElastic(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		sgi := NewSubGroupInfo("test", 2)
+		podSet := NewPodSet("test", 2, nil)
 		for _, pod := range test.pods {
-			sgi.AssignTask(pod)
+			podSet.AssignTask(pod)
 		}
 
-		if got := sgi.IsElastic(); got != test.expected {
+		if got := podSet.IsElastic(); got != test.expected {
 			t.Errorf("Name: %v, IsElastic() = %v, want %v", test.name, got, test.expected)
 		}
 	}
@@ -419,11 +391,11 @@ func TestGetNumActiveAllocatedTasks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sgi := NewSubGroupInfo("test", 1)
+			podSet := NewPodSet("test", 1, nil)
 			for _, pod := range tt.pods {
-				sgi.AssignTask(pod)
+				podSet.AssignTask(pod)
 			}
-			got := sgi.GetNumActiveAllocatedTasks()
+			got := podSet.GetNumActiveAllocatedTasks()
 			if got != tt.expected {
 				t.Errorf("GetNumActiveAllocatedTasks() = %d, want %d", got, tt.expected)
 			}

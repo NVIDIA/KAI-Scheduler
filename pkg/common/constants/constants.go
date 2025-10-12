@@ -10,6 +10,7 @@ const (
 	UnlimitedResourceQuantity = float64(-1)
 
 	DefaultQueuePriority                  = 100
+	DefaultPodGroupPriority               = 50 // Default when no global default priority exists
 	DefaultNodePoolName                   = "default"
 	DefaultMetricsNamespace               = "kai"
 	DefaultQueueLabel                     = "kai.scheduler/queue"

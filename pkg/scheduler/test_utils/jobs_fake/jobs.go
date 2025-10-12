@@ -17,11 +17,14 @@ import (
 	"k8s.io/utils/pointer"
 
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants/labels"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/resources_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
@@ -34,6 +37,7 @@ type TestJobBasic struct {
 	RequiredMemoryPerTask               float64
 	RequiredMultiFractionDevicesPerTask *uint64
 	Priority                            int32
+	Preemptibility                      enginev2alpha2.Preemptibility
 	Name                                string
 	Namespace                           string
 	QueueName                           string
@@ -42,9 +46,9 @@ type TestJobBasic struct {
 	DeleteJobInTest                     bool
 	JobNotReadyForSsn                   bool
 	MinAvailable                        *int32
-	Topology                            *podgroup_info.TopologyConstraintInfo
+	Topology                            *topology_info.TopologyConstraintInfo
 	Tasks                               []*tasks_fake.TestTaskBasic
-	SubGroups                           map[string]*podgroup_info.SubGroupInfo
+	SubGroups                           map[string]*subgroup_info.PodSet
 	StaleDuration                       *time.Duration
 }
 
@@ -80,8 +84,10 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic) (
 			job.MinAvailable = pointer.Int32(int32(len(job.Tasks)))
 		}
 
+		job.Preemptibility = pg.CalculatePreemptibility(job.Preemptibility, job.Priority)
+
 		jobInfo := BuildJobInfo(
-			jobName, job.Namespace, jobUID, jobAllocatedResource, job.SubGroups, taskInfos, job.Priority, queueUID,
+			jobName, job.Namespace, jobUID, jobAllocatedResource, job.SubGroups, taskInfos, job.Priority, job.Preemptibility, queueUID,
 			jobCreationTime, *job.MinAvailable, job.StaleDuration, job.Topology,
 		)
 		jobsInfoMap[common_info.PodGroupID(job.Name)] = jobInfo
@@ -93,9 +99,9 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic) (
 func BuildJobInfo(
 	name, namespace string,
 	uid common_info.PodGroupID, allocatedResource *resource_info.Resource,
-	subGroups map[string]*podgroup_info.SubGroupInfo, taskInfos []*pod_info.PodInfo, priority int32,
+	subGroups map[string]*subgroup_info.PodSet, taskInfos []*pod_info.PodInfo, priority int32, preemptibility enginev2alpha2.Preemptibility,
 	queueUID common_info.QueueID, jobCreationTime time.Time, minAvailable int32, staleDuration *time.Duration,
-	topologyConstraint *podgroup_info.TopologyConstraintInfo) *podgroup_info.PodGroupInfo {
+	topologyConstraint *topology_info.TopologyConstraintInfo) *podgroup_info.PodGroupInfo {
 	allTasks := pod_info.PodsMap{}
 	taskStatusIndex := map[pod_status.PodStatus]pod_info.PodsMap{}
 
@@ -108,7 +114,7 @@ func BuildJobInfo(
 	}
 
 	if subGroups == nil {
-		subGroups = map[string]*podgroup_info.SubGroupInfo{}
+		subGroups = map[string]*subgroup_info.PodSet{}
 	}
 
 	for _, taskInfo := range taskInfos {
@@ -117,25 +123,30 @@ func BuildJobInfo(
 			subGroup.AssignTask(taskInfo)
 		} else {
 			if subGroups[podgroup_info.DefaultSubGroup] == nil {
-				subGroups[podgroup_info.DefaultSubGroup] = podgroup_info.NewSubGroupInfo(podgroup_info.DefaultSubGroup, minAvailable)
+				subGroups[podgroup_info.DefaultSubGroup] = subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, minAvailable, nil)
 			}
 			subGroups[podgroup_info.DefaultSubGroup].AssignTask(taskInfo)
 		}
 	}
 
+	subGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, topologyConstraint)
+	for _, subGroup := range subGroups {
+		subGroupSet.AddPodSet(subGroup)
+	}
+
 	result := &podgroup_info.PodGroupInfo{
-		UID:                uid,
-		Name:               name,
-		Namespace:          namespace,
-		Allocated:          allocatedResource,
-		PodStatusIndex:     taskStatusIndex,
-		Priority:           priority,
-		JobFitErrors:       make(enginev2alpha2.UnschedulableExplanations, 0),
-		NodesFitErrors:     map[common_info.PodID]*common_info.FitErrors{},
-		Queue:              queueUID,
-		CreationTimestamp:  metav1.Time{Time: jobCreationTime},
-		SubGroups:          subGroups,
-		TopologyConstraint: topologyConstraint,
+		UID:            uid,
+		Name:           name,
+		Namespace:      namespace,
+		Allocated:      allocatedResource,
+		PodStatusIndex: taskStatusIndex,
+		Priority:       priority,
+		Preemptibility: preemptibility, JobFitErrors: make(enginev2alpha2.UnschedulableExplanations, 0),
+		NodesFitErrors:    map[common_info.PodID]*common_info.FitErrors{},
+		Queue:             queueUID,
+		CreationTimestamp: metav1.Time{Time: jobCreationTime},
+		RootSubGroupSet:   subGroupSet,
+		PodSets:           subGroups,
 		PodGroup: &enginev2alpha2.PodGroup{
 			ObjectMeta: metav1.ObjectMeta{
 				UID:               types.UID(uid),

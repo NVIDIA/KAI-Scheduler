@@ -20,6 +20,7 @@ limitations under the License.
 package v2alpha2
 
 import (
+	"fmt"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -49,6 +50,10 @@ type PodGroupSpec struct {
 	// +optional
 	PriorityClassName string `json:"priorityClassName,omitempty" protobuf:"bytes,3,opt,name=priorityClassName"`
 
+	// Preemptibility determines if this PodGroup can be preempted by higher priority workloads.
+	// When unspecified, preemptibility is determined by the PriorityClass value - values below 100 are considered preemptible.
+	Preemptibility Preemptibility `json:"preemptibility,omitempty" protobuf:"bytes,4,opt,name=preemptibility"`
+
 	// The number of pods which will try to run at any instant.
 	Parallelism int32 `json:"parallelism,omitempty" protobuf:"bytes,4,opt,name=parallelism"`
 
@@ -71,6 +76,37 @@ type PodGroupSpec struct {
 	SubGroups []SubGroup `json:"subGroups,omitempty"`
 }
 
+// Preemptibility defines whether this PodGroup can be preempted
+//
+// Supported values are:
+// - `preemptible` - PodGroup can be preempted by higher-priority workloads
+// - `non-preemptible` - PodGroup runs to completion once scheduled
+//
+// Defaults to priority-based preemptibility determination (preemptible if priority < 100)
+//
+// +kubebuilder:validation:Enum=preemptible;non-preemptible
+// +optional
+type Preemptibility string
+
+const (
+	Preemptible    Preemptibility = "preemptible"
+	NonPreemptible Preemptibility = "non-preemptible"
+)
+
+func ParsePreemptibility(value string) (Preemptibility, error) {
+	switch value {
+	case string(Preemptible):
+		return Preemptible, nil
+	case string(NonPreemptible):
+		return NonPreemptible, nil
+	case "":
+		// Empty value is valid and represents the default priority-based preemptibility
+		return "", nil
+	default:
+		return "", fmt.Errorf("invalid preemptibility value: %s", value)
+	}
+}
+
 type SubGroup struct {
 	// Name uniquely identifies the SubGroup within the PodGroup.
 	// +kubebuilder:validation:MinLength=1
@@ -84,6 +120,9 @@ type SubGroup struct {
 	// Parent is an optional attribute that specifies the name of the parent SubGroup
 	// +kubebuilder:validation:Optional
 	Parent *string `json:"parent,omitempty"`
+
+	// TopologyConstraint defines the topology constraints for this SubGroup
+	TopologyConstraint *TopologyConstraint `json:"topologyConstraint,omitempty"`
 }
 
 // PodGroupStatus defines the observed state of PodGroup
