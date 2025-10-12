@@ -33,6 +33,10 @@ $(SERVICE_NAMES):
 	$(MAKE) build-go SERVICE_NAME=$@
 	$(MAKE) docker-build-generic SERVICE_NAME=$@
 
+.PHONY: push
+push: $(SERVICE_NAMES)
+	docker push $(DOCKER_REPO_BASE)/crd-upgrader:$(VERSION)
+
 .PHONY: validate
 validate: generate manifests clients gen-license generate-mocks lint
 	git diff --exit-code

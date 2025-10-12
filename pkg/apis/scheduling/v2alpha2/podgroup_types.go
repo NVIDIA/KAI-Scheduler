@@ -120,6 +120,9 @@ type SubGroup struct {
 	// Parent is an optional attribute that specifies the name of the parent SubGroup
 	// +kubebuilder:validation:Optional
 	Parent *string `json:"parent,omitempty"`
+
+	// TopologyConstraint defines the topology constraints for this SubGroup
+	TopologyConstraint *TopologyConstraint `json:"topologyConstraint,omitempty"`
 }
 
 // PodGroupStatus defines the observed state of PodGroup

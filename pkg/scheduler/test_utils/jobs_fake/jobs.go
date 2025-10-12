@@ -129,6 +129,11 @@ func BuildJobInfo(
 		}
 	}
 
+	subGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, topologyConstraint)
+	for _, subGroup := range subGroups {
+		subGroupSet.AddPodSet(subGroup)
+	}
+
 	result := &podgroup_info.PodGroupInfo{
 		UID:            uid,
 		Name:           name,
@@ -136,14 +141,12 @@ func BuildJobInfo(
 		Allocated:      allocatedResource,
 		PodStatusIndex: taskStatusIndex,
 		Priority:       priority,
-		Preemptibility: preemptibility,
-
-		JobFitErrors:       make(enginev2alpha2.UnschedulableExplanations, 0),
-		NodesFitErrors:     map[common_info.PodID]*common_info.FitErrors{},
-		Queue:              queueUID,
-		CreationTimestamp:  metav1.Time{Time: jobCreationTime},
-		PodSets:            subGroups,
-		TopologyConstraint: topologyConstraint,
+		Preemptibility: preemptibility, JobFitErrors: make(enginev2alpha2.UnschedulableExplanations, 0),
+		NodesFitErrors:    map[common_info.PodID]*common_info.FitErrors{},
+		Queue:             queueUID,
+		CreationTimestamp: metav1.Time{Time: jobCreationTime},
+		RootSubGroupSet:   subGroupSet,
+		PodSets:           subGroups,
 		PodGroup: &enginev2alpha2.PodGroup{
 			ObjectMeta: metav1.ObjectMeta{
 				UID:               types.UID(uid),

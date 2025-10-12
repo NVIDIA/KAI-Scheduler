@@ -38,7 +38,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
@@ -85,8 +84,8 @@ type PodGroupInfo struct {
 	PodGroup           *enginev2alpha2.PodGroup
 	PodGroupUID        types.UID
 
-	TopologyConstraint *topology_info.TopologyConstraintInfo
-	PodSets            map[string]*subgroup_info.PodSet
+	RootSubGroupSet *subgroup_info.SubGroupSet
+	PodSets         map[string]*subgroup_info.PodSet
 
 	StalenessInfo
 
@@ -100,6 +99,9 @@ type PodGroupInfo struct {
 }
 
 func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *PodGroupInfo {
+	defaultSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	defaultSubGroupSet.AddPodSet(subgroup_info.NewPodSet(DefaultSubGroup, 1, nil))
+
 	podGroupInfo := &PodGroupInfo{
 		UID:       uid,
 		Allocated: resource_info.EmptyResource(),
@@ -113,10 +115,8 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 			TimeStamp: nil,
 			Stale:     false,
 		},
-
-		PodSets: map[string]*subgroup_info.PodSet{
-			DefaultSubGroup: subgroup_info.NewPodSet(DefaultSubGroup, 1, nil),
-		},
+		RootSubGroupSet: defaultSubGroupSet,
+		PodSets:         defaultSubGroupSet.GetAllPodSets(),
 
 		LastStartTimestamp:   nil,
 		activeAllocatedCount: ptr.To(0),
@@ -155,14 +155,10 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 	pgi.CreationTimestamp = pg.GetCreationTimestamp()
 	pgi.PodGroup = pg
 	pgi.PodGroupUID = pg.UID
-	pgi.setSubGroups(pg)
-
-	if pg.Spec.TopologyConstraint.Topology != "" {
-		pgi.TopologyConstraint = &topology_info.TopologyConstraintInfo{
-			Topology:       pg.Spec.TopologyConstraint.Topology,
-			RequiredLevel:  pg.Spec.TopologyConstraint.RequiredTopologyLevel,
-			PreferredLevel: pg.Spec.TopologyConstraint.PreferredTopologyLevel,
-		}
+	err := pgi.setSubGroups(pg)
+	if err != nil {
+		log.InfraLogger.V(7).Warnf("Failed to set subgroups for podgroup <%s> err: %v",
+			pg.Namespace, pg.Name)
 	}
 
 	if pg.Annotations[commonconstants.StalePodgroupTimeStamp] != "" {
@@ -191,24 +187,27 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 		pgi.Name, pgi.PodGroupUID)
 }
 
-func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) {
-	if len(podGroup.Spec.SubGroups) > 0 {
-		pgi.PodSets = map[string]*subgroup_info.PodSet{}
-		for _, sg := range podGroup.Spec.SubGroups {
-			subGroupInfo := subgroup_info.FromSubGroup(&sg)
-			pgi.PodSets[subGroupInfo.GetName()] = subGroupInfo
+func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) error {
+	if len(podGroup.Spec.SubGroups) == 0 {
+		if defaultSubGroup, found := pgi.PodSets[DefaultSubGroup]; found {
+			defaultSubGroup.SetMinAvailable(max(podGroup.Spec.MinMember, 1))
 		}
-		return
+		return nil
 	}
-	if pgi.PodSets == nil {
-		pgi.PodSets = map[string]*subgroup_info.PodSet{}
+	rootSubGroupSet, err := subgroup_info.FromPodGroup(podGroup)
+	if err != nil {
+		return err
 	}
-	defaultSubGroup, found := pgi.PodSets[DefaultSubGroup]
-	if !found {
-		pgi.PodSets[DefaultSubGroup] = subgroup_info.NewPodSet(DefaultSubGroup, max(podGroup.Spec.MinMember, 1), nil)
+	pgi.RootSubGroupSet = rootSubGroupSet
+	podSets := rootSubGroupSet.GetAllPodSets()
+	if len(podSets) > 0 {
+		pgi.PodSets = podSets
 	} else {
-		defaultSubGroup.SetMinAvailable(max(podGroup.Spec.MinMember, 1))
+		for _, podSet := range pgi.PodSets {
+			rootSubGroupSet.AddPodSet(podSet)
+		}
 	}
+	return nil
 }
 
 func (pgi *PodGroupInfo) addTaskIndex(ti *pod_info.PodInfo) {
@@ -474,29 +473,14 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 		PodGroup:    pgi.PodGroup,
 		PodGroupUID: pgi.PodGroupUID,
 
-		PodSets: map[string]*subgroup_info.PodSet{},
-		TopologyConstraint: func() *topology_info.TopologyConstraintInfo {
-			if pgi.TopologyConstraint == nil {
-				return nil
-			}
-			return &topology_info.TopologyConstraintInfo{
-				Topology:       pgi.TopologyConstraint.Topology,
-				RequiredLevel:  pgi.TopologyConstraint.RequiredLevel,
-				PreferredLevel: pgi.TopologyConstraint.PreferredLevel,
-			}
-		}(),
-
 		PodStatusIndex:       map[pod_status.PodStatus]pod_info.PodsMap{},
 		activeAllocatedCount: ptr.To(0),
 	}
 
 	pgi.CreationTimestamp.DeepCopyInto(&info.CreationTimestamp)
 
-	for _, podSet := range pgi.PodSets {
-		info.PodSets[podSet.GetName()] = subgroup_info.NewPodSet(
-			podSet.GetName(), podSet.GetMinAvailable(), nil,
-		)
-	}
+	info.RootSubGroupSet = pgi.RootSubGroupSet.Clone()
+	info.PodSets = info.RootSubGroupSet.GetAllPodSets()
 
 	for _, task := range tasks {
 		info.AddTaskInfo(task.Clone())

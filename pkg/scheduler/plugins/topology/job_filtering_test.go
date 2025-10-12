@@ -11,12 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -32,18 +30,18 @@ import (
 
 func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 	tests := []struct {
-		name                  string
-		job                   *jobs_fake.TestJobBasic
-		jobTopologyConstraint *enginev2alpha2.TopologyConstraint
-		allocatedPodGroups    []*jobs_fake.TestJobBasic
-		nodes                 map[string]nodes_fake.TestNodeBasic
-		nodesToDomains        map[string]DomainID
-		setupTopologyTree     func() *Info
-		domainParent          map[DomainID]DomainID
-		domainLevel           map[DomainID]DomainLevel
-		expectedError         string
-		expectedJobFitError   string
-		expectedNodes         map[string]bool
+		name               string
+		job                *jobs_fake.TestJobBasic
+		allocatedPodGroups []*jobs_fake.TestJobBasic
+		nodes              map[string]nodes_fake.TestNodeBasic
+		nodesToDomains     map[string]DomainID
+		setupTopologyTree  func() *Info
+
+		domainParent        map[DomainID]DomainID
+		domainLevel         map[DomainID]DomainLevel
+		expectedError       string
+		expectedJobFitError string
+		expectedNodes       map[string]bool
 	}{
 		{
 			name: "successful topology allocation - right nodes",
@@ -54,11 +52,11 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					{State: pod_status.Pending},
 					{State: pod_status.Pending},
 				},
-			},
-			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
-				Topology:               "test-topology",
-				RequiredTopologyLevel:  "zone",
-				PreferredTopologyLevel: "rack",
+				Topology: &topology_info.TopologyConstraintInfo{
+					Topology:       "test-topology",
+					RequiredLevel:  "zone",
+					PreferredLevel: "rack",
+				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{
 				"node-1": {
@@ -142,9 +140,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
 				},
-			},
-			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
-				Topology: "test-topology",
+				Topology: &topology_info.TopologyConstraintInfo{
+					Topology: "test-topology",
+				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{
 				"node-1": {
@@ -176,9 +174,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
 				},
-			},
-			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
-				Topology: "nonexistent-topology",
+				Topology: &topology_info.TopologyConstraintInfo{
+					Topology: "nonexistent-topology",
+				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{
 				"node-1": {
@@ -209,9 +207,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
 				},
-			},
-			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
-				Topology: "test-topology",
+				Topology: &topology_info.TopologyConstraintInfo{
+					Topology: "test-topology",
+				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{
 				"node-1": {
@@ -242,9 +240,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
 				},
-			},
-			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
-				Topology: "test-topology",
+				Topology: &topology_info.TopologyConstraintInfo{
+					Topology: "test-topology",
+				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{
 				"node-1": {
@@ -293,11 +291,11 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
 				},
-			},
-			jobTopologyConstraint: &enginev2alpha2.TopologyConstraint{
-				Topology:               "test-topology",
-				RequiredTopologyLevel:  "nonexistent-level",
-				PreferredTopologyLevel: "rack",
+				Topology: &topology_info.TopologyConstraintInfo{
+					Topology:       "test-topology",
+					RequiredLevel:  "nonexistent-level",
+					PreferredLevel: "rack",
+				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{
 				"node-1": {
@@ -355,7 +353,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			domainLevel: map[DomainID]DomainLevel{
 				"zone1": "zone",
 			},
-			expectedError: "the topology test-topology doesn't have a level matching the required(nonexistent-level) specified for the job test-job",
+			expectedError: "topology test-topology doesn't have a required domain level named nonexistent-level",
 		},
 	}
 
@@ -388,19 +386,13 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			plugin := &topologyPlugin{
 				TopologyTrees: map[string]*Info{
 					"test-topology": topologyTree,
-				}}
-
-			// Update job with topology constraints based on test case
-			if tt.jobTopologyConstraint != nil {
-				job.TopologyConstraint = &topology_info.TopologyConstraintInfo{
-					Topology:       tt.jobTopologyConstraint.Topology,
-					RequiredLevel:  tt.jobTopologyConstraint.RequiredTopologyLevel,
-					PreferredLevel: tt.jobTopologyConstraint.PreferredTopologyLevel,
-				}
+				},
 			}
 
 			// Call the function under test
-			subsets, err := plugin.subSetNodesFn(job, podgroup_info.GetTasksToAllocate(job, nil, nil, true), maps.Values(nodesInfoMap))
+			subsets, err := plugin.subSetNodesFn(job, &job.RootSubGroupSet.SubGroupInfo,
+				job.RootSubGroupSet.GetAllPodSets(), podgroup_info.GetTasksToAllocate(job, nil, nil, true),
+				maps.Values(nodesInfoMap))
 
 			// Check error
 			if tt.expectedError != "" {
@@ -444,23 +436,21 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 
 func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 	tests := []struct {
-		name            string
-		job             *podgroup_info.PodGroupInfo
-		jobTopologyName string
-		topologyTree    *Info
-		expectedLevels  []DomainLevel
-		expectedError   string
+		name           string
+		subGroupSet    *subgroup_info.SubGroupSet
+		topologyTree   *Info
+		expectedLevels []DomainLevel
+		expectedError  string
 	}{
 		{
 			name: "both required and preferred placement specified",
-			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
+			subGroupSet: subgroup_info.NewSubGroupSet("test-subgroup",
+				&topology_info.TopologyConstraintInfo{
+					Topology:       "test-topology",
 					RequiredLevel:  "zone",
 					PreferredLevel: "rack",
 				},
-			},
-			jobTopologyName: "test-topology",
+			),
 			topologyTree: &Info{
 				Name: "test-topology",
 				TopologyResource: &kueuev1alpha1.Topology{
@@ -481,13 +471,12 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		},
 		{
 			name: "only required placement specified",
-			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
+			subGroupSet: subgroup_info.NewSubGroupSet("test-subgroup",
+				&topology_info.TopologyConstraintInfo{
+					Topology:      "test-topology",
 					RequiredLevel: "zone",
 				},
-			},
-			jobTopologyName: "test-topology",
+			),
 			topologyTree: &Info{
 				Name: "test-topology",
 				TopologyResource: &kueuev1alpha1.Topology{
@@ -507,14 +496,12 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		},
 		{
 			name: "only preferred placement specified",
-			job: &podgroup_info.PodGroupInfo{
-				Name:      "test-job",
-				Namespace: "test-namespace",
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
+			subGroupSet: subgroup_info.NewSubGroupSet("test-subgroup",
+				&topology_info.TopologyConstraintInfo{
+					Topology:       "test-topology",
 					PreferredLevel: "rack",
 				},
-			},
-			jobTopologyName: "test-topology",
+			),
 			topologyTree: &Info{
 				Name: "test-topology",
 				TopologyResource: &kueuev1alpha1.Topology{
@@ -537,12 +524,11 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		},
 		{
 			name: "no placement annotations specified",
-			job: &podgroup_info.PodGroupInfo{
-				Name:               "test-job",
-				Namespace:          "test-namespace",
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{},
-			},
-			jobTopologyName: "test-topology",
+			subGroupSet: subgroup_info.NewSubGroupSet("test-subgroup",
+				&topology_info.TopologyConstraintInfo{
+					Topology: "test-topology",
+				},
+			),
 			topologyTree: &Info{
 				Name: "test-topology",
 				TopologyResource: &kueuev1alpha1.Topology{
@@ -555,17 +541,16 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				},
 			},
 			expectedLevels: nil,
-			expectedError:  "no topology placement annotations found for job <test-namespace/test-job>, workload topology name: test-topology",
+			expectedError:  "no topology constraints were found for subgroup test-subgroup, with topology name test-topology",
 		},
 		{
 			name: "required placement not found in topology",
-			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
+			subGroupSet: subgroup_info.NewSubGroupSet("test-subgroup",
+				&topology_info.TopologyConstraintInfo{
+					Topology:      "test-topology",
 					RequiredLevel: "nonexistent",
 				},
-			},
-			jobTopologyName: "test-topology",
+			),
 			topologyTree: &Info{
 				Name: "test-topology",
 				TopologyResource: &kueuev1alpha1.Topology{
@@ -578,17 +563,16 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				},
 			},
 			expectedLevels: nil,
-			expectedError:  "the topology test-topology doesn't have a level matching the required(nonexistent) specified for the job test-job",
+			expectedError:  "topology test-topology doesn't have a required domain level named nonexistent",
 		},
 		{
 			name: "preferred placement not found in topology",
-			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
+			subGroupSet: subgroup_info.NewSubGroupSet("test-subgroup",
+				&topology_info.TopologyConstraintInfo{
+					Topology:       "test-topology",
 					PreferredLevel: "nonexistent",
 				},
-			},
-			jobTopologyName: "test-topology",
+			),
 			topologyTree: &Info{
 				Name: "test-topology",
 				TopologyResource: &kueuev1alpha1.Topology{
@@ -601,17 +585,16 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				},
 			},
 			expectedLevels: nil,
-			expectedError:  "the topology test-topology doesn't have a level matching the preferred(nonexistent) specified for the job test-job",
+			expectedError:  "topology test-topology doesn't have a preferred domain level named nonexistent",
 		},
 		{
 			name: "required placement at first level",
-			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
+			subGroupSet: subgroup_info.NewSubGroupSet("test-subgroup",
+				&topology_info.TopologyConstraintInfo{
+					Topology:      "test-topology",
 					RequiredLevel: "rack",
 				},
-			},
-			jobTopologyName: "test-topology",
+			),
 			topologyTree: &Info{
 				Name: "test-topology",
 				TopologyResource: &kueuev1alpha1.Topology{
@@ -631,13 +614,12 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		},
 		{
 			name: "preferred placement at first level",
-			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
+			subGroupSet: subgroup_info.NewSubGroupSet("test-subgroup",
+				&topology_info.TopologyConstraintInfo{
+					Topology:       "test-topology",
 					PreferredLevel: "rack",
 				},
-			},
-			jobTopologyName: "test-topology",
+			),
 			topologyTree: &Info{
 				Name: "test-topology",
 				TopologyResource: &kueuev1alpha1.Topology{
@@ -660,13 +642,12 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		},
 		{
 			name: "preferred placement at middle level",
-			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
+			subGroupSet: subgroup_info.NewSubGroupSet("test-subgroup",
+				&topology_info.TopologyConstraintInfo{
+					Topology:       "test-topology",
 					PreferredLevel: "zone",
 				},
-			},
-			jobTopologyName: "test-topology",
+			),
 			topologyTree: &Info{
 				Name: "test-topology",
 				TopologyResource: &kueuev1alpha1.Topology{
@@ -688,13 +669,12 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		},
 		{
 			name: "single level topology with preferred placement",
-			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
+			subGroupSet: subgroup_info.NewSubGroupSet("test-subgroup",
+				&topology_info.TopologyConstraintInfo{
+					Topology:       "test-topology",
 					PreferredLevel: "zone",
 				},
-			},
-			jobTopologyName: "test-topology",
+			),
 			topologyTree: &Info{
 				Name: "test-topology",
 				TopologyResource: &kueuev1alpha1.Topology{
@@ -713,14 +693,13 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		},
 		{
 			name: "complex topology with multiple levels",
-			job: &podgroup_info.PodGroupInfo{
-				Name: "test-job",
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
+			subGroupSet: subgroup_info.NewSubGroupSet("test-subgroup",
+				&topology_info.TopologyConstraintInfo{
+					Topology:       "test-topology",
 					RequiredLevel:  "region",
 					PreferredLevel: "zone",
 				},
-			},
-			jobTopologyName: "test-topology",
+			),
 			topologyTree: &Info{
 				Name: "test-topology",
 				TopologyResource: &kueuev1alpha1.Topology{
@@ -746,7 +725,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &topologyPlugin{}
 
-			result, err := plugin.calculateRelevantDomainLevels(tt.job, tt.topologyTree)
+			result, err := plugin.calculateRelevantDomainLevels(&tt.subGroupSet.SubGroupInfo, tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {
@@ -1104,7 +1083,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			},
 		},
 		{
-			name: "no leaf domains - no allocateable domains",
+			name: "no leaf domains - no allocatable domains",
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
 				RequiredCPUsPerTask: 2000, // Too much for any node
@@ -1339,12 +1318,13 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 
 func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 	tests := []struct {
-		name            string
-		job             *podgroup_info.PodGroupInfo
-		topologyTree    *Info
-		taskOrderFunc   common_info.LessFn
-		expectedDomains []*DomainInfo
-		expectedError   string
+		name               string
+		job                *podgroup_info.PodGroupInfo
+		topologyConstraint *topology_info.TopologyConstraintInfo
+		topologyTree       *Info
+		taskOrderFunc      common_info.LessFn
+		expectedDomains    []*DomainInfo
+		expectedError      string
 	}{
 		{
 			name: "return multi domain",
@@ -1357,10 +1337,10 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 							"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 						}),
 				},
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
-					RequiredLevel:  "zone",
-					PreferredLevel: "rack",
-				},
+			},
+			topologyConstraint: &topology_info.TopologyConstraintInfo{
+				RequiredLevel:  "zone",
+				PreferredLevel: "rack",
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
@@ -1423,9 +1403,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 							"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending},
 						}),
 				},
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
-					RequiredLevel: "zone",
-				},
+			},
+			topologyConstraint: &topology_info.TopologyConstraintInfo{
+				RequiredLevel: "zone",
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
@@ -1470,10 +1450,10 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 							"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending},
 						}),
 				},
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
-					RequiredLevel:  "zone",
-					PreferredLevel: "rack",
-				},
+			},
+			topologyConstraint: &topology_info.TopologyConstraintInfo{
+				RequiredLevel:  "zone",
+				PreferredLevel: "rack",
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
@@ -1499,7 +1479,7 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
 			},
 			expectedDomains: nil,
-			expectedError:   "the topology test-topology doesn't have a level matching the required(zone) specified for the job test-job",
+			expectedError:   "topology test-topology doesn't have a required domain level named zone",
 		},
 		{
 			name: "complex topology with multiple levels",
@@ -1513,10 +1493,10 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 							"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
 						}),
 				},
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
-					RequiredLevel:  "region",
-					PreferredLevel: "zone",
-				},
+			},
+			topologyConstraint: &topology_info.TopologyConstraintInfo{
+				RequiredLevel:  "region",
+				PreferredLevel: "zone",
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
@@ -1588,9 +1568,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 							"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
 						}),
 				},
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
-					RequiredLevel: "zone",
-				},
+			},
+			topologyConstraint: &topology_info.TopologyConstraintInfo{
+				RequiredLevel: "zone",
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
@@ -1644,9 +1624,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 							"pod3": {UID: "pod3", Name: "pod3", Status: pod_status.Pending},
 						}),
 				},
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
-					RequiredLevel: "zone",
-				},
+			},
+			topologyConstraint: &topology_info.TopologyConstraintInfo{
+				RequiredLevel: "zone",
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
@@ -1715,10 +1695,10 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 							"pod4": {UID: "pod4", Name: "pod4", Status: pod_status.Pending},
 						}),
 				},
-				TopologyConstraint: &topology_info.TopologyConstraintInfo{
-					RequiredLevel:  "region",
-					PreferredLevel: "rack",
-				},
+			},
+			topologyConstraint: &topology_info.TopologyConstraintInfo{
+				RequiredLevel:  "region",
+				PreferredLevel: "rack",
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
@@ -1858,7 +1838,13 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &topologyPlugin{}
 
-			result, err := plugin.getJobAllocatableDomains(tt.job, len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)), tt.topologyTree)
+			tt.job.RootSubGroupSet = subgroup_info.NewSubGroupSet("test", tt.topologyConstraint)
+			for _, podSet := range tt.job.PodSets {
+				tt.job.RootSubGroupSet.AddPodSet(podSet)
+			}
+			result, err := plugin.getJobAllocatableDomains(tt.job, &tt.job.RootSubGroupSet.SubGroupInfo,
+				tt.job.RootSubGroupSet.GetAllPodSets(), len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)),
+				tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {

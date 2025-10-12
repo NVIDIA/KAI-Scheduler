@@ -13,6 +13,6 @@ const (
 	NonPreemptiblePriorityThreshold = 100
 	EngineTestPodsApp               = "engine-e2e"
 
-	SchedulerDeploymentName = "scheduler"
+	SchedulerDeploymentName = "kai-scheduler-default"
 	SchedulerContainerName  = "scheduler"
 )
