@@ -68,8 +68,15 @@ func (mnr *MaxNodeResourcesPredicate) PreFilter(_ context.Context, _ *k8sframewo
 	for rName, rQuant := range podInfo.ResReq.ScalarResources() {
 		rrQuant, found := mnr.maxResources.ScalarResources()[rName]
 		if !found || rQuant > rrQuant {
+			units := ""
+			maxVal := float64(0)
+			// Humanize ephemeral /storage values: ionterbak rrQuant is milli-bytes, convert to GB
+			if rName == v1.ResourceEphemeralStorage || rName == v1.ResourceStorage {
+				units = "GB"
+				maxVal = float64(rrQuant) / resource_info.MemoryToGB
+			}
 			return nil, k8sframework.NewStatus(k8sframework.Unschedulable,
-				mnr.buildUnschedulableMessage(podInfo, string(rName), float64(rrQuant), ""))
+				mnr.buildUnschedulableMessage(podInfo, string(rName), float64(maxVal), units))
 		}
 	}
 
