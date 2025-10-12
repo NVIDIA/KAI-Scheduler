@@ -1,0 +1,33 @@
+name: Validate Commit Messages
+
+on:
+  push:
+    branches:
+      - omric/merge-commit-test
+
+jobs:
+  validate-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed to get full commit history
+
+      - name: Install commitlint
+        run: |
+          npm install -g @commitlint/{cli,config-conventional}
+
+      - name: Validate commit messages
+        run: |
+          # Get commits in this push
+          COMMITS=$(git log ${{ github.event.before }}..${{ github.sha }} --pretty=format:%s)
+
+          echo "Checking commits:"
+          echo "$COMMITS"
+
+          echo "$COMMITS" | while read line; do
+            if [ -n "$line" ]; then
+              echo "$line" | npx commitlint
+            fi
+          done
