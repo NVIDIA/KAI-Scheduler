@@ -63,13 +63,13 @@ func (sgs *SubGroupSet) Clone() *SubGroupSet {
 	return root
 }
 
-func (sgs *SubGroupSet) GetPodSets() map[string]*PodSet {
+func (sgs *SubGroupSet) GetAllPodSets() map[string]*PodSet {
 	result := make(map[string]*PodSet)
 	for _, podSet := range sgs.podSets {
 		result[podSet.GetName()] = podSet
 	}
 	for _, subGroup := range sgs.groups {
-		podSets := subGroup.GetPodSets()
+		podSets := subGroup.GetAllPodSets()
 		for name, podSet := range podSets {
 			result[name] = podSet
 		}

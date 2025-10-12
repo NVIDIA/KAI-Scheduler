@@ -18,6 +18,8 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 
+	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -31,7 +33,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/dra_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 var SchedulerVerbosity = flag.String("vv", "", "Scheduler's verbosity")

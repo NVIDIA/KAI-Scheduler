@@ -390,7 +390,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			}
 
 			// Call the function under test
-			subsets, err := plugin.subSetNodesFn(job, job.RootSubGroupSet, podgroup_info.GetTasksToAllocate(job, nil, nil, true), maps.Values(nodesInfoMap))
+			subsets, err := plugin.subSetNodesFn(job, &job.RootSubGroupSet.SubGroupInfo,
+				job.RootSubGroupSet.GetAllPodSets(), podgroup_info.GetTasksToAllocate(job, nil, nil, true),
+				maps.Values(nodesInfoMap))
 
 			// Check error
 			if tt.expectedError != "" {
@@ -723,7 +725,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &topologyPlugin{}
 
-			result, err := plugin.calculateRelevantDomainLevels(tt.subGroupSet, tt.topologyTree)
+			result, err := plugin.calculateRelevantDomainLevels(&tt.subGroupSet.SubGroupInfo, tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {
@@ -1081,7 +1083,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			},
 		},
 		{
-			name: "no leaf domains - no allocateable domains",
+			name: "no leaf domains - no allocatable domains",
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
 				RequiredCPUsPerTask: 2000, // Too much for any node
@@ -1840,7 +1842,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			for _, podSet := range tt.job.PodSets {
 				tt.job.RootSubGroupSet.AddPodSet(podSet)
 			}
-			result, err := plugin.getJobAllocatableDomains(tt.job, tt.job.RootSubGroupSet, len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)), tt.topologyTree)
+			result, err := plugin.getJobAllocatableDomains(tt.job, &tt.job.RootSubGroupSet.SubGroupInfo,
+				tt.job.RootSubGroupSet.GetAllPodSets(), len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)),
+				tt.topologyTree)
 
 			// Check error
 			if tt.expectedError != "" {
