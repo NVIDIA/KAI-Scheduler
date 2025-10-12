@@ -338,8 +338,11 @@ func sortDomainInfos(domainInfos []*DomainInfo) []*DomainInfo {
 		if domainInfos[i].Level != domainInfos[j].Level {
 			return false
 		}
-		if domainInfos[i].AllocatablePods != domainInfos[j].AllocatablePods {
-			return domainInfos[i].AllocatablePods > domainInfos[j].AllocatablePods
+
+		iDomainGPUs := domainInfos[i].GetNonAllocatedGPUsInDomain()
+		jDomainGPUs := domainInfos[j].GetNonAllocatedGPUsInDomain()
+		if iDomainGPUs != jDomainGPUs {
+			return iDomainGPUs < jDomainGPUs
 		}
 		return domainInfos[i].ID < domainInfos[j].ID
 	})

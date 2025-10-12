@@ -9,6 +9,7 @@ import (
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 )
 
 // DomainID uniquely identifies a topology domain
@@ -59,8 +60,16 @@ func NewDomainInfo(id DomainID, level DomainLevel) *DomainInfo {
 	}
 }
 
-func (t *DomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
-	t.Nodes[nodeInfo.Name] = nodeInfo
+func (di *DomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
+	di.Nodes[nodeInfo.Name] = nodeInfo
+}
+
+func (di *DomainInfo) GetNonAllocatedGPUsInDomain() float64 {
+	result := float64(0)
+	for _, node := range di.Nodes {
+		result += node.NonAllocatedResource(resource_info.GPUResourceName)
+	}
+	return result
 }
 
 func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, nodeLabels map[string]string) DomainID {
