@@ -24,7 +24,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants/labels"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/resources_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
@@ -46,7 +45,6 @@ type TestJobBasic struct {
 	DeleteJobInTest                     bool
 	JobNotReadyForSsn                   bool
 	MinAvailable                        *int32
-	Topology                            *topology_info.TopologyConstraintInfo
 	Tasks                               []*tasks_fake.TestTaskBasic
 	RootSubGroupSet                     *subgroup_info.SubGroupSet
 	StaleDuration                       *time.Duration
@@ -89,7 +87,6 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic) (
 		jobInfo := BuildJobInfo(
 			jobName, job.Namespace, jobUID, jobAllocatedResource, job.RootSubGroupSet, taskInfos,
 			job.Priority, job.Preemptibility, queueUID, jobCreationTime, *job.MinAvailable, job.StaleDuration,
-			job.Topology,
 		)
 		jobsInfoMap[common_info.PodGroupID(job.Name)] = jobInfo
 	}
@@ -102,7 +99,7 @@ func BuildJobInfo(
 	rootSubGroupSet *subgroup_info.SubGroupSet, taskInfos []*pod_info.PodInfo,
 	priority int32, preemptibility enginev2alpha2.Preemptibility, queueUID common_info.QueueID,
 	jobCreationTime time.Time, minAvailable int32, staleDuration *time.Duration,
-	topologyConstraint *topology_info.TopologyConstraintInfo) *podgroup_info.PodGroupInfo {
+) *podgroup_info.PodGroupInfo {
 	allTasks := pod_info.PodsMap{}
 	taskStatusIndex := map[pod_status.PodStatus]pod_info.PodsMap{}
 
@@ -115,7 +112,7 @@ func BuildJobInfo(
 	}
 
 	if rootSubGroupSet == nil {
-		rootSubGroupSet = subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, topologyConstraint)
+		rootSubGroupSet = subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
 	}
 	podSets := rootSubGroupSet.GetAllPodSets()
 	for _, taskInfo := range taskInfos {
