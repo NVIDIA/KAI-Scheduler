@@ -49,10 +49,12 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						RequiredGPUsPerTask: 1,
 						QueueName:           "queue0",
 						Priority:            constants.PriorityTrainNumber,
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
-							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub0", 1, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
@@ -105,10 +107,12 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						RequiredGPUsPerTask: 1,
 						QueueName:           "queue0",
 						Priority:            constants.PriorityTrainNumber,
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
-							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub0", 1, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
@@ -176,10 +180,12 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 2, nil),
-							"sub1": subgroup_info.NewPodSet("sub1", 2, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub0", 2, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub1", 2, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName:     "node0",
@@ -264,10 +270,12 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 2, nil),
-							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub0", 2, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName:     "node0",
@@ -368,10 +376,12 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 2, nil),
-							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub0", 2, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName:     "node0",
@@ -472,10 +482,12 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "pending_job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
-							"sub1": subgroup_info.NewPodSet("sub1", 2, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub0", 1, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub1", 2, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
@@ -543,10 +555,12 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "pending_job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
-							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub0", 1, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
@@ -575,10 +589,12 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "pending_job1",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
-							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub0", 1, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,

@@ -569,19 +569,20 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 						State: pod_status.Pending,
 					},
 				},
-				PodSets: map[string]*subgroup_info.PodSet{
-					"sub-group-1": func() *subgroup_info.PodSet {
-						subGroup := subgroup_info.NewPodSet("sub-group-1", 1, nil)
-						subGroup.AssignTask(&pod_info.PodInfo{UID: "test-task1", Status: pod_status.Pending})
-						subGroup.AssignTask(&pod_info.PodInfo{UID: "test-task2", Status: pod_status.Pending})
-						return subGroup
-					}(),
-					"sub-group-2": func() *subgroup_info.PodSet {
-						subGroup := subgroup_info.NewPodSet("sub-group-2", 2, nil)
-						subGroup.AssignTask(&pod_info.PodInfo{UID: "test-task3", Status: pod_status.Pending})
-						return subGroup
-					}(),
-				},
+				RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+					root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+
+					subGroup1 := subgroup_info.NewPodSet("sub-group-1", 1, nil)
+					subGroup1.AssignTask(&pod_info.PodInfo{UID: "test-task1", Status: pod_status.Pending})
+					subGroup1.AssignTask(&pod_info.PodInfo{UID: "test-task2", Status: pod_status.Pending})
+					root.AddPodSet(subGroup1)
+
+					subGroup2 := subgroup_info.NewPodSet("sub-group-2", 2, nil)
+					subGroup2.AssignTask(&pod_info.PodInfo{UID: "test-task3", Status: pod_status.Pending})
+					root.AddPodSet(subGroup2)
+
+					return root
+				}(),
 			},
 			expectedEventActions:      []string{"Normal NotReady Job is not ready for scheduling. Waiting for 2 pods for SubGroup sub-group-2, currently 1 exist, 0 are gated."},
 			expectedInFlightPodGroups: 0,
