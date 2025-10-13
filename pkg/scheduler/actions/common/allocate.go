@@ -34,15 +34,11 @@ func allocateSubGroupSet(ssn *framework.Session, stmt *framework.Statement, node
 	job *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, tasksToAllocate []*pod_info.PodInfo,
 	isPipelineOnly bool,
 ) bool {
-	nodeSets := []node_info.NodeSet{nodes}
-	if subGroupSet.GetTopologyConstraint() != nil {
-		var err error
-		nodeSets, err = ssn.SubsetNodesFn(job, &subGroupSet.SubGroupInfo, subGroupSet.GetAllPodSets(), tasksToAllocate, nodes)
-		if err != nil {
-			log.InfraLogger.Errorf(
-				"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
-			return false
-		}
+	nodeSets, err := ssn.SubsetNodesFn(job, &subGroupSet.SubGroupInfo, subGroupSet.GetAllPodSets(), tasksToAllocate, nodes)
+	if err != nil {
+		log.InfraLogger.Errorf(
+			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
+		return false
 	}
 
 	for _, nodeSet := range nodeSets {
@@ -83,18 +79,14 @@ func allocatePodSet(ssn *framework.Session, stmt *framework.Statement, nodes nod
 	job *podgroup_info.PodGroupInfo, podSet *subgroup_info.PodSet, tasksToAllocate []*pod_info.PodInfo,
 	isPipelineOnly bool,
 ) bool {
-	nodeSets := []node_info.NodeSet{nodes}
-	if podSet.GetTopologyConstraint() != nil {
-		var err error
-		podSets := map[string]*subgroup_info.PodSet{
-			podSet.GetName(): podSet,
-		}
-		nodeSets, err = ssn.SubsetNodesFn(job, &podSet.SubGroupInfo, podSets, tasksToAllocate, nodes)
-		if err != nil {
-			log.InfraLogger.Errorf(
-				"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
-			return false
-		}
+	podSets := map[string]*subgroup_info.PodSet{
+		podSet.GetName(): podSet,
+	}
+	nodeSets, err := ssn.SubsetNodesFn(job, &podSet.SubGroupInfo, podSets, tasksToAllocate, nodes)
+	if err != nil {
+		log.InfraLogger.Errorf(
+			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
+		return false
 	}
 
 	for _, nodeSet := range nodeSets {
