@@ -6,7 +6,6 @@ package allocate_test
 import (
 	"testing"
 
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	. "go.uber.org/mock/gomock"
@@ -65,7 +64,6 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 								SubGroupName: "sub1",
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -131,7 +129,6 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 								SubGroupName: "sub1",
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -215,7 +212,6 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 								RequiredGPUs: ptr.To(int64(1)),
 							},
 						},
-						MinAvailable: pointer.Int32(4),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -314,7 +310,6 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 								RequiredGPUs: ptr.To(int64(1)),
 							},
 						},
-						MinAvailable: pointer.Int32(3),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -420,7 +415,6 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 								RequiredGPUs: ptr.To(int64(1)),
 							},
 						},
-						MinAvailable: pointer.Int32(3),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -510,7 +504,6 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 								RequiredGPUs: ptr.To(int64(1)),
 							},
 						},
-						MinAvailable: pointer.Int32(3),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -583,7 +576,6 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 								RequiredGPUs: ptr.To(int64(1)),
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 					{
 						Name:      "pending_job1",
@@ -617,7 +609,6 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 								RequiredGPUs: ptr.To(int64(1)),
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{

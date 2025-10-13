@@ -13,6 +13,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/consolidation"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
@@ -199,7 +200,6 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 								RequiredGPUs: ptr.To(int64(2)),
 							},
 						},
-						MinAvailable: ptr.To(int32(2)),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -312,7 +312,6 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 								RequiredGPUs: ptr.To(int64(3)),
 							},
 						},
-						MinAvailable: ptr.To(int32(2)),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -378,7 +377,6 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 								RequiredGPUs: ptr.To(int64(3)),
 							},
 						},
-						MinAvailable: ptr.To(int32(2)),
 					},
 					{
 						Name:                "pending_job",
@@ -439,6 +437,11 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "running_job0",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Running,
@@ -446,7 +449,6 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 								RequiredGPUs: ptr.To(int64(2)),
 							},
 						},
-						MinAvailable: ptr.To(int32(1)),
 					},
 					{
 						Name:      "running_job1",
@@ -472,7 +474,6 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 								RequiredGPUs: ptr.To(int64(1)),
 							},
 						},
-						MinAvailable: ptr.To(int32(2)),
 					},
 					{
 						Name:                "pending_job",
@@ -568,7 +569,6 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 								RequiredGPUs: ptr.To(int64(1)),
 							},
 						},
-						MinAvailable: ptr.To(int32(1)),
 					},
 					{
 						Name:                "pending_job",

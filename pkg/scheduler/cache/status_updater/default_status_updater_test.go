@@ -517,10 +517,14 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 		{
 			name: "Running job",
 			job: jobs_fake.TestJobBasic{
-				Name:         "test-job",
-				Namespace:    "test-ns",
-				QueueName:    "test-queue",
-				MinAvailable: ptr.To(int32(1)),
+				Name:      "test-job",
+				Namespace: "test-ns",
+				QueueName: "test-queue",
+				RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+					root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+					root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
+					return root
+				}(),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{
 						Name:  "test-task",
@@ -534,10 +538,14 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 		{
 			name: "No ready job",
 			job: jobs_fake.TestJobBasic{
-				Name:         "test-job",
-				Namespace:    "test-ns",
-				QueueName:    "test-queue",
-				MinAvailable: ptr.To(int32(2)),
+				Name:      "test-job",
+				Namespace: "test-ns",
+				QueueName: "test-queue",
+				RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+					root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+					root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil))
+					return root
+				}(),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{
 						Name:  "test-task",
@@ -551,24 +559,9 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 		{
 			name: "No ready job - with subgroups",
 			job: jobs_fake.TestJobBasic{
-				Name:         "test-job",
-				Namespace:    "test-ns",
-				QueueName:    "test-queue",
-				MinAvailable: ptr.To(int32(3)),
-				Tasks: []*tasks_fake.TestTaskBasic{
-					{
-						Name:  "test-task-1",
-						State: pod_status.Pending,
-					},
-					{
-						Name:  "test-task-2",
-						State: pod_status.Pending,
-					},
-					{
-						Name:  "test-task-3",
-						State: pod_status.Pending,
-					},
-				},
+				Name:      "test-job",
+				Namespace: "test-ns",
+				QueueName: "test-queue",
 				RootSubGroupSet: func() *subgroup_info.SubGroupSet {
 					root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
 
@@ -583,6 +576,20 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 
 					return root
 				}(),
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{
+						Name:  "test-task-1",
+						State: pod_status.Pending,
+					},
+					{
+						Name:  "test-task-2",
+						State: pod_status.Pending,
+					},
+					{
+						Name:  "test-task-3",
+						State: pod_status.Pending,
+					},
+				},
 			},
 			expectedEventActions:      []string{"Normal NotReady Job is not ready for scheduling. Waiting for 2 pods for SubGroup sub-group-2, currently 1 exist, 0 are gated."},
 			expectedInFlightPodGroups: 0,
@@ -590,10 +597,14 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 		{
 			name: "Unscheduleable job",
 			job: jobs_fake.TestJobBasic{
-				Name:         "test-job",
-				Namespace:    "test-ns",
-				QueueName:    "test-queue",
-				MinAvailable: ptr.To(int32(1)),
+				Name:      "test-job",
+				Namespace: "test-ns",
+				QueueName: "test-queue",
+				RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+					root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+					root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
+					return root
+				}(),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{
 						Name:  "test-task",

@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
 
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
@@ -44,7 +43,6 @@ type TestJobBasic struct {
 	JobAgeInMinutes                     int
 	DeleteJobInTest                     bool
 	JobNotReadyForSsn                   bool
-	MinAvailable                        *int32
 	Tasks                               []*tasks_fake.TestTaskBasic
 	RootSubGroupSet                     *subgroup_info.SubGroupSet
 	StaleDuration                       *time.Duration
@@ -78,15 +76,11 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic) (
 			jobCreationTime = time.Now().Add(time.Minute * time.Duration(numberOfJobs-jobIndex) * (-1))
 		}
 
-		if job.MinAvailable == nil {
-			job.MinAvailable = pointer.Int32(int32(len(job.Tasks)))
-		}
-
 		job.Preemptibility = pg.CalculatePreemptibility(job.Preemptibility, job.Priority)
 
 		jobInfo := BuildJobInfo(
 			jobName, job.Namespace, jobUID, jobAllocatedResource, job.RootSubGroupSet, taskInfos,
-			job.Priority, job.Preemptibility, queueUID, jobCreationTime, *job.MinAvailable, job.StaleDuration,
+			job.Priority, job.Preemptibility, queueUID, jobCreationTime, job.StaleDuration,
 		)
 		jobsInfoMap[common_info.PodGroupID(job.Name)] = jobInfo
 	}
@@ -98,7 +92,7 @@ func BuildJobInfo(
 	name, namespace string, uid common_info.PodGroupID, allocatedResource *resource_info.Resource,
 	rootSubGroupSet *subgroup_info.SubGroupSet, taskInfos []*pod_info.PodInfo,
 	priority int32, preemptibility enginev2alpha2.Preemptibility, queueUID common_info.QueueID,
-	jobCreationTime time.Time, minAvailable int32, staleDuration *time.Duration,
+	jobCreationTime time.Time, staleDuration *time.Duration,
 ) *podgroup_info.PodGroupInfo {
 	allTasks := pod_info.PodsMap{}
 	taskStatusIndex := map[pod_status.PodStatus]pod_info.PodsMap{}
@@ -121,7 +115,9 @@ func BuildJobInfo(
 			subGroup.AssignTask(taskInfo)
 		} else {
 			if podSets[podgroup_info.DefaultSubGroup] == nil {
-				podSets[podgroup_info.DefaultSubGroup] = subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, minAvailable, nil)
+				podSets[podgroup_info.DefaultSubGroup] = subgroup_info.NewPodSet(
+					podgroup_info.DefaultSubGroup, int32(len(taskInfos)), nil,
+				)
 				rootSubGroupSet.AddPodSet(podSets[podgroup_info.DefaultSubGroup])
 			}
 			podSets[podgroup_info.DefaultSubGroup].AssignTask(taskInfo)
@@ -149,8 +145,7 @@ func BuildJobInfo(
 				CreationTimestamp: metav1.Time{Time: jobCreationTime},
 			},
 			Spec: enginev2alpha2.PodGroupSpec{
-				Queue:     string(queueUID),
-				MinMember: minAvailable,
+				Queue: string(queueUID),
 			},
 		},
 	}
