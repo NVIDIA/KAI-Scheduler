@@ -29,6 +29,7 @@ type Options struct {
 	FakeGPUNodes                         bool
 	GpuCdiEnabled                        bool
 	VolumeBindingTimeoutSeconds          int
+	RuntimeClassName                     string
 }
 
 func InitOptions() *Options {
@@ -91,6 +92,9 @@ func InitOptions() *Options {
 	fs.IntVar(&options.VolumeBindingTimeoutSeconds,
 		"volume-binding-timeout-seconds", 120,
 		"Volume binding timeout in seconds")
+	fs.StringVar(&options.RuntimeClassName,
+		"runtime-class-name", "",
+		"Runtime class for reservation pods")
 
 	utilfeature.DefaultMutableFeatureGate.AddFlag(fs)
 

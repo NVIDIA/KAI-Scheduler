@@ -19,6 +19,7 @@ const (
 	DefaultScaleAdjustName                = "kai-scale-adjust"
 	DefaultKAIConfigSingeltonInstanceName = "kai-config"
 	DefaultNodePoolLabelKey               = ""
+	DefaultRuntimeClassName               = "nvidia"
 
 	DefaultCPUWorkerNodeLabelKey = "node-role.kubernetes.io/cpu-worker"
 	DefaultGPUWorkerNodeLabelKey = "node-role.kubernetes.io/gpu-worker"

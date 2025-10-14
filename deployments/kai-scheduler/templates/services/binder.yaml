@@ -31,6 +31,7 @@ spec:
             - "--resource-reservation-namespace={{ .Values.global.resourceReservation.namespace }}"
             - "--resource-reservation-service-account={{ .Values.global.resourceReservation.serviceAccount }}"
             - "--resource-reservation-app-label={{ .Values.global.resourceReservation.appLabel }}"
+            - "--runtime-class-name={{ .Values.global.resourceReservation.runtimeClassName }}"
           {{- if .Values.binder.additionalArgs }}
             {{- toYaml .Values.binder.additionalArgs | nindent 12 }}
           {{- end }}

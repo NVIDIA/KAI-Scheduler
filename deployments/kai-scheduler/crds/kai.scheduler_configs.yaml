@@ -224,6 +224,11 @@ spec:
                         description: Namespace is the name of the namespace where
                           the resource reservation pods will run
                         type: string
+                      runtimeClassName:
+                        description: RuntimeClassName specifies the runtime class
+                          used by the reservation pods. Needs to allow access to the
+                          GPU
+                        type: string
                       serviceAccountName:
                         description: ServiceAccountName is the name of the service
                           account that will be used by the resource reservation pods
