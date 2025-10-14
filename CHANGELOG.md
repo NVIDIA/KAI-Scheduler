@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Added parent reference to SubGroup struct in PodGroup CRD to create a hierarchical SubGroup structure
 - Added the option to configure the names of the webhook configuration resources.
+- Option to configure reservation pods runtime class.
 
 ### Fixed
 - Fixed a bug where the scheduler would not re-try updating podgroup status after failure
