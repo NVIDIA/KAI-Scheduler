@@ -15,11 +15,12 @@ import (
 
 func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_info.NodeInfo) error {
 	job := t.getTaskJob(task)
-	if job.TopologyConstraint == nil || job.TopologyConstraint.PreferredLevel == "" {
+	topologyConstraint := job.RootSubGroupSet.GetTopologyConstraint()
+	if topologyConstraint == nil || topologyConstraint.PreferredLevel == "" {
 		return nil
 	}
 
-	domain, ok := t.nodeSetToDomain[job.TopologyConstraint.Topology][getNodeSetID(nodes)]
+	domain, ok := t.nodeSetToDomain[topologyConstraint.Topology][getNodeSetID(nodes)]
 	if !ok || domain == nil {
 		return fmt.Errorf("domain for node set %s not found", getNodeSetID(nodes))
 	}
@@ -31,7 +32,7 @@ func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_in
 
 	t.jobDomainNodeScores[job.UID] = domainNodeScores{
 		domainID:   domain.ID,
-		nodeScores: calculateNodeScores(domain, DomainLevel(job.TopologyConstraint.PreferredLevel)),
+		nodeScores: calculateNodeScores(domain, DomainLevel(topologyConstraint.PreferredLevel)),
 	}
 
 	return nil
@@ -39,7 +40,8 @@ func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_in
 
 func (t *topologyPlugin) nodeOrderFn(task *pod_info.PodInfo, node *node_info.NodeInfo) (float64, error) {
 	job := t.getTaskJob(task)
-	if job.TopologyConstraint == nil || job.TopologyConstraint.PreferredLevel == "" {
+	topologyConstraint := job.RootSubGroupSet.GetTopologyConstraint()
+	if topologyConstraint == nil || topologyConstraint.PreferredLevel == "" {
 		return 0, nil
 	}
 

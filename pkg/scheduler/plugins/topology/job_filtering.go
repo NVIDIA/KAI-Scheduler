@@ -42,8 +42,6 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{nodeSet}, nil
 	}
 
-	// defer t.treeAllocatableCleanup(topologyTree)
-	// Not cleaning the tree after since we need it later on for node scoring. The tree will be cleaned up in the next subset nodes call.
 	t.treeAllocatableCleanup(topologyTree)
 	maxAllocatablePods, err := t.calcTreeAllocatable(tasks, topologyTree, nodeSet)
 	if err != nil {
@@ -52,7 +50,7 @@ func (t *topologyPlugin) subSetNodesFn(
 
 	// Sorting so we can traverse the tree in-order later on for node scoring.
 	// If performance becomes an issue, we can optimize by sorting only the inspected domains during the node scoring phase rather than the entire tree.
-	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], DomainLevel(job.TopologyConstraint.PreferredLevel))
+	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], DomainLevel(subGroup.GetTopologyConstraint().PreferredLevel))
 
 	if maxAllocatablePods < len(tasks) {
 		job.SetJobFitError(
