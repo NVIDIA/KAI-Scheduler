@@ -54,6 +54,9 @@ spec:
       {{- end }}
     metricsPort: {{ .Values.binder.ports.metricsPort }}
     resourceReservation:
+      {{- if .Values.binder.runtimeClassName }}
+      runtimeClassName: {{ .Values.binder.runtimeClassName }}
+      {{- end }}
       image:
         name: {{ .Values.binder.resourceReservationImage.name }}
 
