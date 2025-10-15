@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -85,7 +86,7 @@ func (r *QueueReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *QueueReconciler) SetupWithManager(mgr ctrl.Manager, queueLabelKey string) error {
+func (r *QueueReconciler) SetupWithManager(mgr ctrl.Manager, queueLabelKey string, skipNameValidation bool) error {
 	err := mgr.GetFieldIndexer().IndexField(context.Background(), &v2.Queue{}, common.ParentQueueIndexName,
 		indexQueueByParent)
 	if err != nil {
@@ -106,6 +107,10 @@ func (r *QueueReconciler) SetupWithManager(mgr ctrl.Manager, queueLabelKey strin
 			handler.EnqueueRequestsFromMapFunc(enqueueQueue)).
 		Watches(&v2alpha2.PodGroup{},
 			handler.EnqueueRequestsFromMapFunc(enqueuePodGroup)).
+		WithOptions(
+			controller.Options{
+				SkipNameValidation: &skipNameValidation,
+			}).
 		Complete(r)
 }
 

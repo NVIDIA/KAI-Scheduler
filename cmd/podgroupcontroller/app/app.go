@@ -99,7 +99,7 @@ func Run(options *Options, config *rest.Config, ctx context.Context) error {
 	if err = (&controllers.PodGroupReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr, configs); err != nil {
+	}).SetupWithManager(mgr, configs, options.SkipControllerNameValidation); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pod")
 		return err
 	}
