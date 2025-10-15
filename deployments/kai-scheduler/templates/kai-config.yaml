@@ -117,6 +117,11 @@ spec:
       {{- end }}
     args:
       nodeScaleNamespace: {{ .Values.nodescaleadjuster.scalingPodNamespace }} 
+      scalingPodImage:
+        name: {{ .Values.nodescaleadjuster.scalingPodImage.name }}
+        repository: {{ .Values.global.registry }}
+        tag: {{ .Chart.Version }}
+        pullPolicy: {{ .Values.nodescaleadjuster.scalingPodImage.pullPolicy | default .Values.global.imagePullPolicy }}
 
   scheduler:
     service:
