@@ -227,7 +227,7 @@ func CheckServiceMonitorCRDAvailable(ctx context.Context, runtimeClient client.R
 		if errors.IsNotFound(err) {
 			return false, nil
 		}
-		return false, err
+		return false, fmt.Errorf("failed to check for ServiceMonitor CRD: %w", err)
 	}
 
 	return true, nil
@@ -249,7 +249,7 @@ func CheckPrometheusCRDAvailable(ctx context.Context, client client.Client) (boo
 		if errors.IsNotFound(err) {
 			return false, nil
 		}
-		return false, err
+		return false, fmt.Errorf("failed to check for Prometheus CRD: %w", err)
 	}
 
 	return true, nil

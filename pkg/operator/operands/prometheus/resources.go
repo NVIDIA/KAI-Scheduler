@@ -5,6 +5,7 @@ package prometheus
 
 import (
 	"context"
+	"fmt"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -76,7 +77,7 @@ func prometheusForKAIConfig(
 	prometheus, ok = prom.(*monitoringv1.Prometheus)
 	if !ok {
 		logger.Error(nil, "Failed to cast object to Prometheus type")
-		return nil, err
+		return nil, fmt.Errorf("failed to cast object to Prometheus type")
 	}
 
 	// Set the Prometheus spec from configuration

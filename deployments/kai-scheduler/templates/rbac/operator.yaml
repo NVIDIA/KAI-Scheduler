@@ -10,9 +10,6 @@ rules:
   - ""
   resources:
   - configmaps
-  - endpoints
-  - nodes
-  - nodes/proxy
   - persistentvolumeclaims
   - pods
   - secrets
