@@ -1,11 +1,13 @@
 # Copyright 2025 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
 
-{{ if not (lookup "kai.scheduler/v1" "SchedulingShard" "" "default") -}}
+{{- if .Release.IsInstall }}
 apiVersion: kai.scheduler/v1
 kind: SchedulingShard
 metadata:
   name: default
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   partitionLabelValue: ""
   {{- if .Values.scheduler.placementStrategy }}
@@ -13,4 +15,4 @@ spec:
     gpu: {{ .Values.scheduler.placementStrategy }}
     cpu: {{ .Values.scheduler.placementStrategy }}
   {{- end }}
-{{- end }}
+{{- end}}
