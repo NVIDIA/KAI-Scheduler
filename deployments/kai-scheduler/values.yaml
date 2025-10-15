@@ -83,6 +83,7 @@ nodescaleadjuster:
     pullPolicy: IfNotPresent
   scalingPodImage:
     name: scalingpod
+    pullPolicy: IfNotPresent
   scalingPodNamespace: kai-scale-adjust
 
 crdupgrader:
