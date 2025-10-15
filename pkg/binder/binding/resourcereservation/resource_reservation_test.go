@@ -46,7 +46,7 @@ func initializeTestService(
 	client runtimeClient.WithWatch,
 ) *service {
 	service := NewService(false, client, "", 40*time.Millisecond,
-		resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue, scalingPodsNamespace)
+		resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue, scalingPodsNamespace, constants.DefaultRuntimeClassName)
 
 	return service
 }
@@ -874,12 +874,14 @@ var _ = Describe("ResourceReservationService", func() {
 
 	Context("createResourceReservationPod", func() {
 		It("should create a pod with the correct RuntimeClassName and metadata", func() {
+			customRuntime := "custom-runtime"
 			rsc := &service{
 				namespace:           "kai-resource-reservation",
 				appLabelValue:       "kai-reservation",
 				serviceAccountName:  "kai-sa",
 				reservationPodImage: "nvidia/kai-reservation:latest",
 				kubeClient:          fake.NewClientBuilder().Build(),
+				runtimeClassName:    customRuntime,
 			}
 
 			resources := v1.ResourceRequirements{
@@ -906,7 +908,7 @@ var _ = Describe("ResourceReservationService", func() {
 			Expect(pod.Spec.NodeName).To(Equal(nodeName))
 			Expect(pod.Spec.RuntimeClassName).NotTo(BeNil())
 			if pod.Spec.RuntimeClassName != nil {
-				Expect(*pod.Spec.RuntimeClassName).To(Equal("nvidia"))
+				Expect(*pod.Spec.RuntimeClassName).To(Equal(customRuntime))
 			}
 			Expect(pod.Spec.ServiceAccountName).To(Equal("kai-sa"))
 
