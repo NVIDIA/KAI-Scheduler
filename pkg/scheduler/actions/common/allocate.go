@@ -10,6 +10,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/gpu_sharing"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
@@ -26,32 +27,85 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 		}
 		return false
 	}
+	return allocateSubGroupSet(ssn, stmt, nodes, job, job.RootSubGroupSet, tasksToAllocate, isPipelineOnly)
+}
 
-	podSets := job.RootSubGroupSet.GetAllPodSets()
-	nodeSets, err := ssn.SubsetNodesFn(job, &job.RootSubGroupSet.SubGroupInfo, podSets, tasksToAllocate, nodes)
+func allocateSubGroupSet(ssn *framework.Session, stmt *framework.Statement, nodes []*node_info.NodeInfo,
+	job *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, tasksToAllocate []*pod_info.PodInfo,
+	isPipelineOnly bool,
+) bool {
+	nodeSets, err := ssn.SubsetNodesFn(job, &subGroupSet.SubGroupInfo, subGroupSet.GetAllPodSets(), tasksToAllocate, nodes)
 	if err != nil {
 		log.InfraLogger.Errorf(
 			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
 		return false
 	}
+
 	for _, nodeSet := range nodeSets {
+		cp := stmt.Checkpoint()
+		if allocateSubGroupSetOnNodes(ssn, stmt, nodeSet, job, subGroupSet, tasksToAllocate, isPipelineOnly) {
+			return true
+		}
+		if err := stmt.Rollback(cp); err != nil {
+			log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.UID, err)
+		}
+	}
+
+	return false
+}
+
+func allocateSubGroupSetOnNodes(ssn *framework.Session, stmt *framework.Statement, nodes node_info.NodeSet,
+	job *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, tasksToAllocate []*pod_info.PodInfo,
+	isPipelineOnly bool,
+) bool {
+	for _, childSubGroupSet := range subGroupSet.GetChildGroups() {
+		podSets := childSubGroupSet.GetAllPodSets()
+		subGroupTasks := filterTasksForPodSets(podSets, tasksToAllocate)
+		if !allocateSubGroupSet(ssn, stmt, nodes, job, childSubGroupSet, subGroupTasks, isPipelineOnly) {
+			return false
+		}
+	}
+
+	for _, podSet := range subGroupSet.GetChildPodSets() {
+		podSetTasks := filterTasksForPodSet(podSet, tasksToAllocate)
+		if !allocatePodSet(ssn, stmt, nodes, job, podSet, podSetTasks, isPipelineOnly) {
+			return false
+		}
+	}
+	return true
+}
+
+func allocatePodSet(ssn *framework.Session, stmt *framework.Statement, nodes node_info.NodeSet,
+	job *podgroup_info.PodGroupInfo, podSet *subgroup_info.PodSet, tasksToAllocate []*pod_info.PodInfo,
+	isPipelineOnly bool,
+) bool {
+	podSets := map[string]*subgroup_info.PodSet{
+		podSet.GetName(): podSet,
+	}
+	nodeSets, err := ssn.SubsetNodesFn(job, &podSet.SubGroupInfo, podSets, tasksToAllocate, nodes)
+	if err != nil {
+		log.InfraLogger.Errorf(
+			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
+		return false
+	}
+
+	for _, nodeSet := range nodeSets {
+		cp := stmt.Checkpoint()
 		if allocateTasksOnNodeSet(ssn, stmt, nodeSet, job, tasksToAllocate, isPipelineOnly) {
 			return true
+		}
+		if err := stmt.Rollback(cp); err != nil {
+			log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.UID, err)
 		}
 	}
 	return false
 }
 
-func allocateTasksOnNodeSet(ssn *framework.Session, stmt *framework.Statement, nodeSet node_info.NodeSet,
+func allocateTasksOnNodeSet(ssn *framework.Session, stmt *framework.Statement, nodes node_info.NodeSet,
 	job *podgroup_info.PodGroupInfo, tasksToAllocate []*pod_info.PodInfo, isPipelineOnly bool) bool {
-	cp := stmt.Checkpoint()
 	for index, task := range tasksToAllocate {
-		success := allocateTask(ssn, stmt, nodeSet, task, isPipelineOnly)
+		success := allocateTask(ssn, stmt, nodes, task, isPipelineOnly)
 		if !success {
-			if err := stmt.Rollback(cp); err != nil {
-				log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.UID, err)
-			}
-
 			handleFailedTaskAllocation(job, task, index)
 			return false
 		}
@@ -180,4 +234,22 @@ func isGangScheduling(job *podgroup_info.PodGroupInfo) bool {
 		}
 	}
 	return false
+}
+
+func filterTasksForPodSet(podSet *subgroup_info.PodSet, tasks []*pod_info.PodInfo) []*pod_info.PodInfo {
+	return filterTasksForPodSets(map[string]*subgroup_info.PodSet{podSet.GetName(): podSet}, tasks)
+}
+
+func filterTasksForPodSets(podSets map[string]*subgroup_info.PodSet, tasks []*pod_info.PodInfo) []*pod_info.PodInfo {
+	var result []*pod_info.PodInfo
+	for _, task := range tasks {
+		subGroupName := task.SubGroupName
+		if len(subGroupName) == 0 {
+			subGroupName = podgroup_info.DefaultSubGroup
+		}
+		if _, found := podSets[subGroupName]; found {
+			result = append(result, task)
+		}
+	}
+	return result
 }

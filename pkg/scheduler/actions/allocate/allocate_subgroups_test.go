@@ -49,7 +49,7 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						RequiredGPUsPerTask: 1,
 						QueueName:           "queue0",
 						Priority:            constants.PriorityTrainNumber,
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
 							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
@@ -105,7 +105,7 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						RequiredGPUsPerTask: 1,
 						QueueName:           "queue0",
 						Priority:            constants.PriorityTrainNumber,
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
 							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
@@ -176,7 +176,7 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub0": subgroup_info.NewPodSet("sub0", 2, nil),
 							"sub1": subgroup_info.NewPodSet("sub1", 2, nil),
 						},
@@ -264,7 +264,7 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub0": subgroup_info.NewPodSet("sub0", 2, nil),
 							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
@@ -368,7 +368,7 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub0": subgroup_info.NewPodSet("sub0", 2, nil),
 							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
@@ -472,7 +472,7 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "pending_job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
 							"sub1": subgroup_info.NewPodSet("sub1", 2, nil),
 						},
@@ -543,7 +543,7 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "pending_job0",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
 							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
@@ -575,7 +575,7 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 						Name:      "pending_job1",
 						QueueName: "queue0",
 						Priority:  constants.PriorityTrainNumber,
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub0": subgroup_info.NewPodSet("sub0", 1, nil),
 							"sub1": subgroup_info.NewPodSet("sub1", 1, nil),
 						},
