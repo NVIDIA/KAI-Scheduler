@@ -70,7 +70,7 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "pending_job0",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
 							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
 						},
@@ -160,7 +160,7 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "pending_job0",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
 							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
 						},
@@ -291,7 +291,7 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "pending_job0",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
 							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
 						},
@@ -353,7 +353,7 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "running_job",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
 							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
 						},
@@ -445,7 +445,7 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "running_job1",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
 							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
 						},
@@ -540,7 +540,7 @@ func getSubGroupsConsolidationTestsMetadata() []integration_tests_utils.TestTopo
 						Name:      "running_job0",
 						Priority:  constants.PriorityTrainNumber,
 						QueueName: "queue0",
-						SubGroups: map[string]*subgroup_info.PodSet{
+						PodSets: map[string]*subgroup_info.PodSet{
 							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
 						},
 						Tasks: []*tasks_fake.TestTaskBasic{

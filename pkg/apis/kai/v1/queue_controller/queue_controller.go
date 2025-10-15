@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	imageName = "queuecontroller"
+	imageName                      = "queuecontroller"
+	defaultValidatingWebhookPrefix = "kai-queue-validation-"
 )
 
 type QueueController struct {
@@ -110,9 +111,16 @@ func (p *PortMapping) SetDefaultsWhereNeeded() {
 }
 
 type QueueControllerWebhooks struct {
+	// EnableValidation enables the validation webhook for the queue controller
+	// +kubebuilder:validation:Optional
 	EnableValidation *bool `json:"enableValidation,omitempty"`
+
+	// WebhookConfigurationNamePrefix is the prefix used for webhook configuration names
+	// +kubebuilder:validation:Optional
+	WebhookConfigurationNamePrefix *string `json:"webhookConfigurationNamePrefix,omitempty"`
 }
 
 func (q *QueueControllerWebhooks) SetDefaultsWhereNeeded() {
 	q.EnableValidation = common.SetDefault(q.EnableValidation, ptr.To(true))
+	q.WebhookConfigurationNamePrefix = common.SetDefault(q.WebhookConfigurationNamePrefix, ptr.To(defaultValidatingWebhookPrefix))
 }

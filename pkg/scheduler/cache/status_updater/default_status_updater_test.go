@@ -569,7 +569,7 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 						State: pod_status.Pending,
 					},
 				},
-				SubGroups: map[string]*subgroup_info.PodSet{
+				PodSets: map[string]*subgroup_info.PodSet{
 					"sub-group-1": func() *subgroup_info.PodSet {
 						subGroup := subgroup_info.NewPodSet("sub-group-1", 1, nil)
 						subGroup.AssignTask(&pod_info.PodInfo{UID: "test-task1", Status: pod_status.Pending})

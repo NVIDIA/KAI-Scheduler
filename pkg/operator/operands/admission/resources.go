@@ -25,12 +25,10 @@ import (
 )
 
 const (
-	mainResourceName                         = "admission"
-	mutatorWebhookKAIAdmissionResourceName   = "mutating-kai-admission"
-	validatorWebhookKAIAdmissionResourceName = "validating-kai-admission"
-	kaiAdmissionWebhookSecretName            = "kai-admission-webhook-tls-secret"
-	certKey                                  = "tls.crt"
-	keyKey                                   = "tls.key"
+	mainResourceName              = "admission"
+	kaiAdmissionWebhookSecretName = "kai-admission-webhook-tls-secret"
+	certKey                       = "tls.crt"
+	keyKey                        = "tls.key"
 )
 
 func deploymentForKAIConfig(
@@ -198,11 +196,12 @@ func mutatingWCForKAIConfig(
 	secret *v1.Secret, webhookName string,
 ) ([]client.Object, error) {
 	mutatingWebhookConfiguration := &admissionv1.MutatingWebhookConfiguration{}
-	err := runtimeClient.Get(ctx, types.NamespacedName{Name: mutatorWebhookKAIAdmissionResourceName}, mutatingWebhookConfiguration)
+	webhookConfigurationName := *kaiConfig.Spec.Admission.MutatingWebhookConfigurationName
+	err := runtimeClient.Get(ctx, types.NamespacedName{Name: webhookConfigurationName}, mutatingWebhookConfiguration)
 	if client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
-	mutatingWebhookConfiguration.Name = mutatorWebhookKAIAdmissionResourceName
+	mutatingWebhookConfiguration.Name = webhookConfigurationName
 
 	if mutatingWebhookConfiguration.Labels == nil {
 		mutatingWebhookConfiguration.Labels = map[string]string{}
@@ -244,12 +243,13 @@ func validatingWCForKAIConfig(
 	secret *v1.Secret, webhookName string,
 ) ([]client.Object, error) {
 	validatingWebhookConfiguration := &admissionv1.ValidatingWebhookConfiguration{}
-	err := runtimeClient.Get(ctx, types.NamespacedName{Name: validatorWebhookKAIAdmissionResourceName},
+	webhookConfigurationName := *kaiConfig.Spec.Admission.ValidatingWebhookConfigurationName
+	err := runtimeClient.Get(ctx, types.NamespacedName{Name: webhookConfigurationName},
 		validatingWebhookConfiguration)
 	if client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
-	validatingWebhookConfiguration.Name = validatorWebhookKAIAdmissionResourceName
+	validatingWebhookConfiguration.Name = webhookConfigurationName
 
 	if validatingWebhookConfiguration.Labels == nil {
 		validatingWebhookConfiguration.Labels = map[string]string{}

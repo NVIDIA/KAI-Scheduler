@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
+	"sort"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -64,6 +65,8 @@ func (t *topologyPlugin) subSetNodesFn(
 	if err != nil {
 		return nil, err
 	}
+
+	jobAllocatableDomains = sortDomainInfos(jobAllocatableDomains)
 
 	var domainNodeSets []node_info.NodeSet
 	for _, jobAllocatableDomain := range jobAllocatableDomains {
@@ -362,4 +365,20 @@ func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
 	for _, child := range root.Children {
 		sortTree(child, maxDepthLevel)
 	}
+}
+
+func sortDomainInfos(domainInfos []*DomainInfo) []*DomainInfo {
+	sort.SliceStable(domainInfos, func(i, j int) bool {
+		if domainInfos[i].Level != domainInfos[j].Level {
+			return false
+		}
+
+		iDomainGPUs := domainInfos[i].GetNonAllocatedGPUsInDomain()
+		jDomainGPUs := domainInfos[j].GetNonAllocatedGPUsInDomain()
+		if iDomainGPUs != jDomainGPUs {
+			return iDomainGPUs < jDomainGPUs
+		}
+		return domainInfos[i].ID < domainInfos[j].ID
+	})
+	return domainInfos
 }
