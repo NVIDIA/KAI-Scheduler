@@ -11,7 +11,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/preempt"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
@@ -48,11 +47,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName: "node0",
@@ -133,11 +127,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName: "node0",
@@ -217,11 +206,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName: "node0",
@@ -322,11 +306,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName: "node0",
@@ -461,11 +440,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 2,
 						Priority:            constants.PriorityBuildNumber,
 						QueueName:           "queue0",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -562,11 +536,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 2,
 						Priority:            constants.PriorityBuildNumber,
 						QueueName:           "queue0",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,

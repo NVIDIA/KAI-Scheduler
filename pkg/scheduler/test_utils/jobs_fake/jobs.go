@@ -163,6 +163,12 @@ func BuildJobInfo(
 	return result
 }
 
+func DefaultSubGroup(minAvailable int32) *subgroup_info.SubGroupSet {
+	subGroup := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	subGroup.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, minAvailable, nil))
+	return subGroup
+}
+
 func generateTasks(job *TestJobBasic, jobAllocatedResource *resource_info.Resource,
 	usedSharedGPUs map[string]map[string]bool, allocatedGPUs map[string]interface{},
 	tasksToNodeMap map[string]pod_info.PodsMap) []*pod_info.PodInfo {

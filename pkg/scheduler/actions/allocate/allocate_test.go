@@ -30,8 +30,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
@@ -1773,11 +1771,7 @@ func TestHandleElasticJobCommitFailure(t *testing.T) {
 					RequiredGPUsPerTask: 1,
 					Priority:            constants.PriorityTrainNumber,
 					QueueName:           "queue1",
-					RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-						root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-						root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-						return root
-					}(),
+					RootSubGroupSet:     jobs_fake.DefaultSubGroup(1),
 					Tasks: []*tasks_fake.TestTaskBasic{
 						{
 							State: pod_status.Pending,

@@ -16,8 +16,6 @@ import (
 	"k8s.io/kubernetes/pkg/features"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/dra_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
@@ -45,11 +43,6 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 					{
 						Name:      "job-1",
 						QueueName: "q-1",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:               "task-1",
@@ -70,11 +63,6 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 						Name:      "job-1",
 						Namespace: "test",
 						QueueName: "q-1",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:               "task-1",
@@ -126,11 +114,6 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 						Name:      "job-1",
 						Namespace: "test",
 						QueueName: "q-1",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:  "task-1",
@@ -171,11 +154,6 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 						Name:      "job-1",
 						Namespace: "test",
 						QueueName: "q-1",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:  "task-1",
@@ -223,11 +201,6 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 						Name:      "job-1",
 						Namespace: "test",
 						QueueName: "q-1",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:               "job-1-0",
@@ -248,11 +221,6 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 						Name:      "job-1",
 						Namespace: "test",
 						QueueName: "q-1",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:               "job-1-0",
@@ -306,11 +274,6 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 						Name:      "job-1",
 						Namespace: "test",
 						QueueName: "q-1",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:  "job-1-0",
@@ -360,11 +323,6 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 						Name:      "job-1",
 						Namespace: "test",
 						QueueName: "q-1",
-						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-							root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-							return root
-						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:               "job-1-0",

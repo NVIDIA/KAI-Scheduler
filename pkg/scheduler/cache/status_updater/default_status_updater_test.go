@@ -520,11 +520,6 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 				Name:      "test-job",
 				Namespace: "test-ns",
 				QueueName: "test-queue",
-				RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-					root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-					root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-					return root
-				}(),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{
 						Name:  "test-task",
@@ -538,14 +533,10 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 		{
 			name: "No ready job",
 			job: jobs_fake.TestJobBasic{
-				Name:      "test-job",
-				Namespace: "test-ns",
-				QueueName: "test-queue",
-				RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-					root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-					root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil))
-					return root
-				}(),
+				Name:            "test-job",
+				Namespace:       "test-ns",
+				QueueName:       "test-queue",
+				RootSubGroupSet: jobs_fake.DefaultSubGroup(2),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{
 						Name:  "test-task",
@@ -600,11 +591,6 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 				Name:      "test-job",
 				Namespace: "test-ns",
 				QueueName: "test-queue",
-				RootSubGroupSet: func() *subgroup_info.SubGroupSet {
-					root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-					root.AddPodSet(subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil))
-					return root
-				}(),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{
 						Name:  "test-task",
