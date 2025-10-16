@@ -78,7 +78,7 @@ func getCurrentPrometheusState(ctx context.Context, runtimeClient client.Client,
 	result := map[string]client.Object{}
 
 	// Check if Prometheus CRD is available before trying to list resources
-	hasPrometheusCRD, err := common.CheckPrometheusCRDAvailable(ctx, runtimeClient)
+	hasPrometheusCRD, err := common.CheckPrometheusCRDsAvailable(ctx, runtimeClient, "prometheus")
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func getCurrentServiceMonitorState(ctx context.Context, runtimeClient client.Cli
 	result := map[string]client.Object{}
 
 	// Check if ServiceMonitor CRD is available before trying to list resources
-	hasServiceMonitorCRD, err := common.CheckServiceMonitorCRDAvailable(ctx, runtimeClient)
+	hasServiceMonitorCRD, err := common.CheckPrometheusCRDsAvailable(ctx, runtimeClient, "serviceMonitor")
 	if err != nil {
 		return nil, err
 	}

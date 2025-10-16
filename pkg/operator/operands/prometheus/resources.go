@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -40,10 +39,10 @@ func prometheusForKAIConfig(
 
 	// Check if Prometheus Operator is installed by looking for the Prometheus CRD
 	// This is a simple check - in production you might want to check for the operator deployment
-	hasPrometheusOperator, err := CheckPrometheusOperatorInstalled(ctx, runtimeClient)
+	hasPrometheusOperator, err := common.CheckPrometheusCRDsAvailable(ctx, runtimeClient, "prometheus")
 	if err != nil {
 		logger.Error(err, "Failed to check for Prometheus Operator installation")
-		return nil, err
+		return []client.Object{}, err
 	}
 
 	// If Prometheus Operator is not installed, we can't create a Prometheus CR
@@ -70,8 +69,10 @@ func prometheusForKAIConfig(
 	// Check if Prometheus already exists
 	prom, err := common.ObjectForKAIConfig(ctx, runtimeClient, prometheus, mainResourceName, kaiConfig.Spec.Namespace)
 	if err != nil {
-		logger.Error(err, "Failed to check for existing Prometheus instance")
-		return nil, err
+		if !errors.IsNotFound(err) {
+			logger.Error(err, "Failed to check for existing Prometheus instance")
+			return nil, err
+		}
 	}
 	var ok bool
 	prometheus, ok = prom.(*monitoringv1.Prometheus)
@@ -121,62 +122,11 @@ func prometheusForKAIConfig(
 		prometheusSpec.ServiceMonitorNamespaceSelector = &metav1.LabelSelector{}
 	}
 
-	prometheus.Spec = prometheusSpec
-
-	var objects []client.Object
-
-	// Create ServiceAccount for Prometheus
-	serviceAccount, err := createPrometheusServiceAccount(ctx, runtimeClient, kaiConfig)
-	if err != nil {
-		logger.Error(err, "Failed to create Prometheus ServiceAccount")
-		return nil, err
-	}
-	objects = append(objects, serviceAccount)
-
 	// Set the service account name in the Prometheus spec
-	prometheus.Spec.ServiceAccountName = mainResourceName + "-prometheus"
+	prometheusSpec.ServiceAccountName = mainResourceName + "-prometheus"
 
-	objects = append(objects, prometheus)
-
-	// Create ServiceMonitors if enabled
-	if config.ServiceMonitor != nil && config.ServiceMonitor.Enabled != nil && *config.ServiceMonitor.Enabled {
-		serviceMonitors, err := serviceMonitorsForKAIConfig(ctx, runtimeClient, kaiConfig)
-		if err != nil {
-			logger.Error(err, "Failed to create ServiceMonitor instances")
-			return nil, err
-		}
-		objects = append(objects, serviceMonitors...)
-	}
-
-	return objects, nil
-}
-
-func CheckPrometheusOperatorInstalled(ctx context.Context, runtimeClient client.Reader) (bool, error) {
-	logger := log.FromContext(ctx)
-
-	// Check if the Prometheus CRD exists	// This is a simple way to check if the Prometheus Operator is installed
-	crd := &metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-	}
-
-	err := runtimeClient.Get(ctx, types.NamespacedName{
-		Name: "prometheuses.monitoring.coreos.com",
-	}, crd)
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("Prometheus CRD not found", "crd", "prometheuses.monitoring.coreos.com")
-			return false, nil
-		}
-		logger.Error(err, "Failed to check for Prometheus CRD", "crd", "prometheuses.monitoring.coreos.com")
-		return false, err
-	}
-
-	logger.Info("Prometheus CRD found", "crd", "prometheuses.monitoring.coreos.com")
-	return true, nil
+	prometheus.Spec = prometheusSpec
+	return []client.Object{prometheus}, nil
 }
 
 func serviceMonitorsForKAIConfig(
@@ -186,7 +136,7 @@ func serviceMonitorsForKAIConfig(
 	config := kaiConfig.Spec.Prometheus
 
 	// Check if ServiceMonitor CRD is available
-	hasServiceMonitorCRD, err := common.CheckServiceMonitorCRDAvailable(ctx, runtimeClient)
+	hasServiceMonitorCRD, err := common.CheckPrometheusCRDsAvailable(ctx, runtimeClient, "serviceMonitor")
 	if err != nil {
 		logger.Error(err, "Failed to check for ServiceMonitor CRD")
 		return nil, err
@@ -258,29 +208,29 @@ func serviceMonitorsForKAIConfig(
 }
 
 // createPrometheusServiceAccount creates a ServiceAccount for Prometheus
-func createPrometheusServiceAccount(
+func prometheusServiceAccountForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
-) (client.Object, error) {
+) ([]client.Object, error) {
 	serviceAccountName := mainResourceName + "-prometheus"
 
-	serviceAccount := &v1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ServiceAccount",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceAccountName,
-			Namespace: kaiConfig.Spec.Namespace,
-			Labels: map[string]string{
-				"app": mainResourceName,
-			},
+	// Check if ServiceAccount already exists
+	saObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.ServiceAccount{}, serviceAccountName, kaiConfig.Spec.Namespace)
+	if err != nil {
+		return []client.Object{}, err
+	}
+
+	serviceAccount := saObj.(*v1.ServiceAccount)
+	serviceAccount.TypeMeta = metav1.TypeMeta{
+		Kind:       "ServiceAccount",
+		APIVersion: "v1",
+	}
+	serviceAccount.ObjectMeta = metav1.ObjectMeta{
+		Name:      serviceAccountName,
+		Namespace: kaiConfig.Spec.Namespace,
+		Labels: map[string]string{
+			"app": serviceAccountName,
 		},
 	}
 
-	// Check if ServiceAccount already exists
-	saObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, serviceAccount, serviceAccountName, kaiConfig.Spec.Namespace)
-	if err != nil {
-		return nil, err
-	}
-	return saObj, nil
+	return []client.Object{serviceAccount}, nil
 }

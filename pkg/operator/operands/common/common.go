@@ -210,46 +210,35 @@ func AddK8sClientConfigToArgs(k8sClientConfig *kaiv1common.K8sClientConfig, args
 	}
 }
 
-func CheckServiceMonitorCRDAvailable(ctx context.Context, runtimeClient client.Reader) (bool, error) {
-	// Check if ServiceMonitor CRD exists
-	crd := &metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-	}
-
-	err := runtimeClient.Get(ctx, types.NamespacedName{
-		Name: "servicemonitors.monitoring.coreos.com",
-	}, crd)
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil
+func CheckPrometheusCRDsAvailable(ctx context.Context, client client.Reader, targetCRDs ...string) (bool, error) {
+	var names []string
+	for _, targetCRD := range targetCRDs {
+		switch targetCRD {
+		case "prometheus":
+			names = append(names, "prometheuses.monitoring.coreos.com")
+		case "serviceMonitor":
+			names = append(names, "servicemonitors.monitoring.coreos.com")
+		default:
+			names = append(names, targetCRD)
 		}
-		return false, fmt.Errorf("failed to check for ServiceMonitor CRD: %w", err)
 	}
 
-	return true, nil
-}
-
-func CheckPrometheusCRDAvailable(ctx context.Context, client client.Client) (bool, error) {
-	crd := &metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-	}
-
-	err := client.Get(ctx, types.NamespacedName{
-		Name: "prometheuses.monitoring.coreos.com",
-	}, crd)
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil
+	for _, name := range names {
+		crd := &metav1.PartialObjectMetadata{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "CustomResourceDefinition",
+				APIVersion: "apiextensions.k8s.io/v1",
+			},
 		}
-		return false, fmt.Errorf("failed to check for Prometheus CRD: %w", err)
+		err := client.Get(ctx, types.NamespacedName{
+			Name: name,
+		}, crd)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to check for Prometheus CRD: %w", err)
+		}
 	}
 
 	return true, nil
