@@ -15,8 +15,8 @@ import (
 
 func RunPodGroupController(cfg *rest.Config, ctx context.Context) error {
 	options := app.InitOptions(flag.NewFlagSet("", flag.ExitOnError))
-	options.MetricsAddr = ":8082"
-	options.ProbeAddr = ":8083"
+	options.MetricsAddr = "0"
+	options.ProbeAddr = "0"
 	options.EnablePodGroupWebhook = false
 	options.EnableLeaderElection = false
 	options.SkipControllerNameValidation = true
