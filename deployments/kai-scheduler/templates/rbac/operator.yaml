@@ -9,15 +9,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - nodes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  - rbac.authorization.k8s.io
-  resources:
   - configmaps
   - endpoints
   - persistentvolumeclaims
@@ -32,6 +23,14 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
   - watch
 - apiGroups:
   - admissionregistration.k8s.io
