@@ -149,6 +149,7 @@ func getCurrentServiceMonitorState(ctx context.Context, runtimeClient client.Cli
 		log.FromContext(ctx).Info("Field indexer not available, falling back to manual filtering")
 		err = runtimeClient.List(ctx, serviceMonitorList)
 		if err != nil {
+			log.FromContext(ctx).Error(err, "Failed to manually list ServiceMonitor resources")
 			return nil, err
 		}
 
