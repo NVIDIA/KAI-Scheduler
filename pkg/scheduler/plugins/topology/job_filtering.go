@@ -4,9 +4,12 @@
 package topology
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"sort"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -25,6 +28,8 @@ func (t *topologyPlugin) subSetNodesFn(
 	job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo, podSets map[string]*subgroup_info.PodSet,
 	tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet,
 ) ([]node_info.NodeSet, error) {
+	t.invalidateJobDomainNodeScores()
+
 	topologyTree, found := t.getJobTopology(subGroup)
 	if !found {
 		job.SetJobFitError(
@@ -38,11 +43,15 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{nodeSet}, nil
 	}
 
-	defer t.treeAllocatableCleanup(topologyTree)
+	t.treeAllocatableCleanup(topologyTree)
 	maxAllocatablePods, err := t.calcTreeAllocatable(tasks, topologyTree, nodeSet)
 	if err != nil {
 		return nil, err
 	}
+
+	// Sorting so we can traverse the tree in-order later on for node scoring.
+	// If performance becomes an issue, we can optimize by sorting only the inspected domains during the node scoring phase rather than the entire tree.
+	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], DomainLevel(subGroup.GetTopologyConstraint().PreferredLevel))
 
 	if maxAllocatablePods < len(tasks) {
 		job.SetJobFitError(
@@ -330,6 +339,31 @@ func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
 		for _, domain := range levelDomains {
 			domain.AllocatablePods = 0
 		}
+	}
+}
+
+func (t *topologyPlugin) invalidateJobDomainNodeScores() {
+	t.jobDomainNodeScores = make(map[common_info.PodGroupID]domainNodeScores)
+}
+
+func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
+	if root == nil || maxDepthLevel == "" {
+		return
+	}
+
+	slices.SortFunc(root.Children, func(i, j *DomainInfo) int {
+		if c := cmp.Compare(i.AllocatablePods, j.AllocatablePods); c != 0 {
+			return c
+		}
+		return cmp.Compare(i.ID, j.ID)
+	})
+
+	if root.Level == maxDepthLevel {
+		return
+	}
+
+	for _, child := range root.Children {
+		sortTree(child, maxDepthLevel)
 	}
 }
 

@@ -115,9 +115,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				}
 
 				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
-					"rack2.zone1": tree.DomainsByLevel["rack"]["rack2.zone1"],
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
+					tree.DomainsByLevel["rack"]["rack2.zone1"],
 				}
 
 				return tree
@@ -353,8 +353,8 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				}
 
 				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
 				}
 
 				return tree
@@ -859,9 +859,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				}
 
 				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
-					"rack2.zone1": tree.DomainsByLevel["rack"]["rack2.zone1"],
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
+					tree.DomainsByLevel["rack"]["rack2.zone1"],
 				}
 
 				return tree
@@ -957,9 +957,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				}
 
 				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
-					"rack2.zone1": tree.DomainsByLevel["rack"]["rack2.zone1"],
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
+					tree.DomainsByLevel["rack"]["rack2.zone1"],
 				}
 
 				return tree
@@ -1061,9 +1061,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				}
 
 				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
-					"rack2.zone1": tree.DomainsByLevel["rack"]["rack2.zone1"],
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
+					tree.DomainsByLevel["rack"]["rack2.zone1"],
 				}
 
 				return tree
@@ -1226,9 +1226,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				}
 
 				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
-					"rack2.zone1": tree.DomainsByLevel["rack"]["rack2.zone1"],
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
+					tree.DomainsByLevel["rack"]["rack2.zone1"],
 				}
 
 				return tree
@@ -1767,13 +1767,13 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 							ID:              "zone1.region1",
 							Level:           "zone",
 							AllocatablePods: 6,
-							Children: map[DomainID]*DomainInfo{
-								"rack1.zone1.region1": {
+							Children: []*DomainInfo{
+								{
 									ID:              "rack1.zone1.region1",
 									Level:           "rack",
 									AllocatablePods: 3,
 								},
-								"rack2.zone1.region1": {
+								{
 									ID:              "rack2.zone1.region1",
 									Level:           "rack",
 									AllocatablePods: 3,
@@ -1784,28 +1784,28 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 							ID:              "zone2.region1",
 							Level:           "zone",
 							AllocatablePods: 6,
-							Children: map[DomainID]*DomainInfo{
-								"rack1.zone2.region1": {
+							Children: []*DomainInfo{
+								{
 									ID:              "rack1.zone2.region1",
 									Level:           "rack",
 									AllocatablePods: 2,
 								},
-								"rack2.zone1.region1": {
+								{
 									ID:              "rack2.zone1.region1",
 									Level:           "rack",
 									AllocatablePods: 1,
 								},
-								"rack3.zone2.region1": {
+								{
 									ID:              "rack3.zone2.region1",
 									Level:           "rack",
 									AllocatablePods: 1,
 								},
-								"rack4.zone2.region1": {
+								{
 									ID:              "rack4.zone2.region1",
 									Level:           "rack",
 									AllocatablePods: 1,
 								},
-								"rack5.zone2.region1": {
+								{
 									ID:              "rack5.zone2.region1",
 									Level:           "rack",
 									AllocatablePods: 1,
