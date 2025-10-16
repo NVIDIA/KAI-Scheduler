@@ -11,6 +11,7 @@ package cache
 
 import (
 	reflect "reflect"
+	"testing"
 
 	api "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	eviction_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
@@ -18,12 +19,15 @@ import (
 	podgroup_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	data_lister "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info/data_lister"
 	plugins "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/plugins"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 	informers "k8s.io/client-go/informers"
 	kubernetes "k8s.io/client-go/kubernetes"
 	framework "k8s.io/kubernetes/pkg/scheduler/framework"
 )
+
+var TestingContext *testing.T
 
 // MockCache is a mock of Cache interface.
 type MockCache struct {
@@ -74,6 +78,9 @@ func (m *MockCache) Evict(ssnPod *v1.Pod, job *podgroup_info.PodGroupInfo, evict
 // Evict indicates an expected call of Evict.
 func (mr *MockCacheMockRecorder) Evict(ssnPod, job, evictionMetadata, message any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
+	if TestingContext != nil {
+		log.UnitestOutputSchedulerLogs(TestingContext)
+	}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Evict", reflect.TypeOf((*MockCache)(nil).Evict), ssnPod, job, evictionMetadata, message)
 }
 
