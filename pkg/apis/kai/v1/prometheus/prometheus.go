@@ -39,6 +39,16 @@ type Prometheus struct {
 	// StorageClassName defines the name of the storageClass that will be used to store the TSDB data. defaults to "standard".
 	// +kubebuilder:validation:Optional
 	StorageClassName *string `json:"storageClassName,omitempty"`
+
+	// ServiceMonitor defines ServiceMonitor configuration for KAI services
+	// +kubebuilder:validation:Optional
+	ServiceMonitor *ServiceMonitor `json:"serviceMonitor,omitempty"`
+
+	// ExternalPrometheusUrl defines the URL of an external Prometheus instance to use
+	// When set, KAI will not deploy its own Prometheus but will configure ServiceMonitors
+	// for the external instance and validate connectivity
+	// +kubebuilder:validation:Optional
+	ExternalPrometheusUrl *string `json:"externalPrometheusUrl,omitempty"`
 }
 
 func (p *Prometheus) SetDefaultsWhereNeeded() {
@@ -49,7 +59,10 @@ func (p *Prometheus) SetDefaultsWhereNeeded() {
 	p.RetentionPeriod = common.SetDefault(p.RetentionPeriod, ptr.To("2w"))
 	p.SampleInterval = common.SetDefault(p.SampleInterval, ptr.To("1m"))
 	p.StorageClassName = common.SetDefault(p.StorageClassName, ptr.To("standard"))
+	p.ExternalPrometheusUrl = common.SetDefault(p.ExternalPrometheusUrl, nil)
 
+	p.ServiceMonitor = common.SetDefault(p.ServiceMonitor, &ServiceMonitor{})
+	p.ServiceMonitor.SetDefaultsWhereNeeded()
 }
 
 // CalculateStorageSize estimates the required storage size based on TSDB parameters according to design
@@ -217,4 +230,33 @@ func (p *Prometheus) parseCustomDuration(durationStr string) (int, error) {
 	default:
 		return 0, fmt.Errorf("unsupported duration unit: %s", unit)
 	}
+}
+
+// ServiceMonitor defines ServiceMonitor configuration for KAI services
+type ServiceMonitor struct {
+	// Enabled defines whether ServiceMonitor resources should be created
+	// +kubebuilder:validation:Optional
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Interval defines the scrape interval for the ServiceMonitor (e.g., "30s", "1m")
+	// +kubebuilder:validation:Optional
+	Interval *string `json:"interval,omitempty"`
+
+	// ScrapeTimeout defines the scrape timeout for the ServiceMonitor (e.g., "10s", "30s")
+	// +kubebuilder:validation:Optional
+	ScrapeTimeout *string `json:"scrapeTimeout,omitempty"`
+
+	// BearerTokenFile defines the path to the bearer token file for authentication
+	// +kubebuilder:validation:Optional
+	BearerTokenFile *string `json:"bearerTokenFile,omitempty"`
+}
+
+func (s *ServiceMonitor) SetDefaultsWhereNeeded() {
+	if s == nil {
+		return
+	}
+	s.Enabled = common.SetDefault(s.Enabled, ptr.To(true))
+	s.Interval = common.SetDefault(s.Interval, ptr.To("30s"))
+	s.ScrapeTimeout = common.SetDefault(s.ScrapeTimeout, ptr.To("10s"))
+	s.BearerTokenFile = common.SetDefault(s.BearerTokenFile, ptr.To("/var/run/secrets/kubernetes.io/serviceaccount/token"))
 }

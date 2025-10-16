@@ -5,6 +5,11 @@ package prometheus
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,6 +38,22 @@ func prometheusForKAIConfig(
 	if config == nil || config.Enabled == nil || !*config.Enabled {
 		logger.Info("Prometheus is disabled in configuration")
 		return []client.Object{}, nil
+	}
+
+	// Check if external Prometheus URL is provided
+	if config.ExternalPrometheusUrl != nil && *config.ExternalPrometheusUrl != "" {
+		logger.Info("External Prometheus URL provided, validating connection", "url", *config.ExternalPrometheusUrl)
+
+		// Validate external Prometheus connection
+		if err := validateExternalPrometheusConnection(ctx, *config.ExternalPrometheusUrl); err != nil {
+			logger.Error(err, "Failed to connect to external Prometheus", "url", *config.ExternalPrometheusUrl)
+			return nil, err
+		}
+
+		logger.Info("Successfully validated external Prometheus connection")
+
+		// For external Prometheus, we only create ServiceMonitors, not the Prometheus CR
+		return createServiceMonitorsForExternalPrometheus(ctx, runtimeClient, kaiConfig)
 	}
 
 	logger.Info("Prometheus is enabled, checking for Prometheus Operator installation")
@@ -72,7 +93,12 @@ func prometheusForKAIConfig(
 		logger.Error(err, "Failed to check for existing Prometheus instance")
 		return nil, err
 	}
-	prometheus = prom.(*monitoringv1.Prometheus)
+	var ok bool
+	prometheus, ok = prom.(*monitoringv1.Prometheus)
+	if !ok {
+		logger.Error(nil, "Failed to cast object to Prometheus type")
+		return nil, err
+	}
 
 	// Set the Prometheus spec from configuration
 	prometheusSpec := monitoringv1.PrometheusSpec{
@@ -80,36 +106,69 @@ func prometheusForKAIConfig(
 		// Using minimal spec to avoid field name issues
 	}
 
-	// Configure TSDB storage if TSDB is configured
-	if config != nil {
-		storageSize, err := config.CalculateStorageSize(ctx, runtimeClient)
-		if err != nil {
-			logger.Error(err, "Failed to calculate storage size")
-			return nil, err
-		}
-		prometheusSpec.Storage = &monitoringv1.StorageSpec{
-			VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
-				Spec: v1.PersistentVolumeClaimSpec{
-					StorageClassName: config.StorageClassName,
-					AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
-					Resources: v1.VolumeResourceRequirements{
-						Requests: v1.ResourceList{
-							v1.ResourceStorage: resource.MustParse(storageSize),
-						},
+	// Configure TSDB storage
+	storageSize, err := config.CalculateStorageSize(ctx, runtimeClient)
+	if err != nil {
+		logger.Error(err, "Failed to calculate storage size")
+		return nil, err
+	}
+	prometheusSpec.Storage = &monitoringv1.StorageSpec{
+		VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
+			Spec: v1.PersistentVolumeClaimSpec{
+				StorageClassName: config.StorageClassName,
+				AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+				Resources: v1.VolumeResourceRequirements{
+					Requests: v1.ResourceList{
+						v1.ResourceStorage: resource.MustParse(storageSize),
 					},
 				},
 			},
-		}
+		},
+	}
 
-		// Set retention period if specified
-		if config.RetentionPeriod != nil {
-			prometheusSpec.Retention = monitoringv1.Duration(*config.RetentionPeriod)
+	// Set retention period if specified
+	if config.RetentionPeriod != nil {
+		prometheusSpec.Retention = monitoringv1.Duration(*config.RetentionPeriod)
+	}
+
+	// Configure ServiceMonitor selector to match KAI ServiceMonitors
+	if config.ServiceMonitor != nil && *config.ServiceMonitor.Enabled {
+		prometheusSpec.ServiceMonitorSelector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"accounting": mainResourceName,
+			},
 		}
+		prometheusSpec.ServiceMonitorNamespaceSelector = &metav1.LabelSelector{}
 	}
 
 	prometheus.Spec = prometheusSpec
 
-	return []client.Object{prometheus}, nil
+	var objects []client.Object
+
+	// Create ServiceAccount for Prometheus
+	serviceAccount, err := createPrometheusServiceAccount(ctx, runtimeClient, kaiConfig)
+	if err != nil {
+		logger.Error(err, "Failed to create Prometheus ServiceAccount")
+		return nil, err
+	}
+	objects = append(objects, serviceAccount)
+
+	// Set the service account name in the Prometheus spec
+	prometheus.Spec.ServiceAccountName = mainResourceName + "-prometheus"
+
+	objects = append(objects, prometheus)
+
+	// Create ServiceMonitors if enabled
+	if config.ServiceMonitor != nil && config.ServiceMonitor.Enabled != nil && *config.ServiceMonitor.Enabled {
+		serviceMonitors, err := serviceMonitorsForKAIConfig(ctx, runtimeClient, kaiConfig)
+		if err != nil {
+			logger.Error(err, "Failed to create ServiceMonitor instances")
+			return nil, err
+		}
+		objects = append(objects, serviceMonitors...)
+	}
+
+	return objects, nil
 }
 
 func CheckPrometheusOperatorInstalled(ctx context.Context, runtimeClient client.Reader) (bool, error) {
@@ -138,4 +197,192 @@ func CheckPrometheusOperatorInstalled(ctx context.Context, runtimeClient client.
 
 	logger.Info("Prometheus CRD found", "crd", "prometheuses.monitoring.coreos.com")
 	return true, nil
+}
+
+func serviceMonitorsForKAIConfig(
+	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
+) ([]client.Object, error) {
+	logger := log.FromContext(ctx)
+	config := kaiConfig.Spec.Prometheus
+
+	// Check if ServiceMonitor CRD is available
+	hasServiceMonitorCRD, err := common.CheckServiceMonitorCRDAvailable(ctx, runtimeClient)
+	if err != nil {
+		logger.Error(err, "Failed to check for ServiceMonitor CRD")
+		return nil, err
+	}
+
+	if !hasServiceMonitorCRD {
+		logger.Info("ServiceMonitor CRD not found - ServiceMonitor resources cannot be created")
+		return []client.Object{}, nil
+	}
+
+	var serviceMonitors []client.Object
+
+	// Create ServiceMonitor for each KAI service
+	for _, kaiService := range common.KaiServicesForServiceMonitor {
+		serviceMonitor := &monitoringv1.ServiceMonitor{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ServiceMonitor",
+				APIVersion: "monitoring.coreos.com/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      kaiService.Name,
+				Namespace: kaiConfig.Spec.Namespace,
+				Labels: map[string]string{
+					"app":        mainResourceName,
+					"accounting": mainResourceName,
+				},
+			},
+		}
+		serviceMonitorObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, serviceMonitor, kaiService.Name, kaiConfig.Spec.Namespace)
+		if err != nil {
+			logger.Error(err, "Failed to check for existing ServiceMonitor instance", "service", kaiService.Name)
+			return nil, err
+		}
+
+		// Set the ServiceMonitor spec from configuration
+		serviceMonitorSpec := monitoringv1.ServiceMonitorSpec{
+			JobLabel: kaiService.JobLabel,
+			NamespaceSelector: monitoringv1.NamespaceSelector{
+				MatchNames: []string{kaiConfig.Spec.Namespace},
+			},
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": kaiService.Name,
+				},
+			},
+			Endpoints: []monitoringv1.Endpoint{
+				{
+					Port: kaiService.Port,
+				},
+			},
+		}
+
+		// Apply ServiceMonitor configuration if available
+		if config.ServiceMonitor != nil {
+			if config.ServiceMonitor.Interval != nil {
+				serviceMonitorSpec.Endpoints[0].Interval = monitoringv1.Duration(*config.ServiceMonitor.Interval)
+			}
+			if config.ServiceMonitor.ScrapeTimeout != nil {
+				serviceMonitorSpec.Endpoints[0].ScrapeTimeout = monitoringv1.Duration(*config.ServiceMonitor.ScrapeTimeout)
+			}
+			if config.ServiceMonitor.BearerTokenFile != nil {
+				serviceMonitorSpec.Endpoints[0].BearerTokenFile = *config.ServiceMonitor.BearerTokenFile
+			}
+		}
+		serviceMonitorObj.(*monitoringv1.ServiceMonitor).Spec = serviceMonitorSpec
+		serviceMonitors = append(serviceMonitors, serviceMonitorObj)
+	}
+	return serviceMonitors, nil
+}
+
+// createPrometheusServiceAccount creates a ServiceAccount for Prometheus
+func createPrometheusServiceAccount(
+	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
+) (client.Object, error) {
+	serviceAccountName := mainResourceName + "-prometheus"
+
+	serviceAccount := &v1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceAccountName,
+			Namespace: kaiConfig.Spec.Namespace,
+			Labels: map[string]string{
+				"app": mainResourceName,
+			},
+		},
+	}
+
+	// Check if ServiceAccount already exists
+	saObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, serviceAccount, serviceAccountName, kaiConfig.Spec.Namespace)
+	if err != nil {
+		return nil, err
+	}
+	return saObj, nil
+}
+
+// validateExternalPrometheusConnection validates connectivity to an external Prometheus instance
+func validateExternalPrometheusConnection(ctx context.Context, prometheusURL string) error {
+	logger := log.FromContext(ctx)
+
+	// Ensure the URL has a scheme
+	if !strings.Contains(prometheusURL, "://") {
+		prometheusURL = "http://" + prometheusURL
+	}
+
+	// Parse the URL to ensure it's valid
+	_, err := url.Parse(prometheusURL)
+	if err != nil {
+		return fmt.Errorf("invalid Prometheus URL: %v", err)
+	}
+
+	// Create HTTP client with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// Try to connect to the Prometheus /api/v1/status/config endpoint
+	statusURL := prometheusURL + "/api/v1/status/config"
+	logger.Info("Validating external Prometheus connection", "url", statusURL)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", statusURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to connect to external Prometheus: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check if we got a successful response
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("external Prometheus returned status code %d", resp.StatusCode)
+	}
+
+	logger.Info("Successfully validated external Prometheus connection")
+	return nil
+}
+
+// createServiceMonitorsForExternalPrometheus creates ServiceMonitors for external Prometheus
+func createServiceMonitorsForExternalPrometheus(
+	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
+) ([]client.Object, error) {
+	logger := log.FromContext(ctx)
+	config := kaiConfig.Spec.Prometheus
+
+	// Check if ServiceMonitor CRD is available
+	hasServiceMonitorCRD, err := common.CheckServiceMonitorCRDAvailable(ctx, runtimeClient)
+	if err != nil {
+		logger.Error(err, "Failed to check for ServiceMonitor CRD")
+		return nil, err
+	}
+
+	if !hasServiceMonitorCRD {
+		logger.Info("ServiceMonitor CRD not found - ServiceMonitor resources cannot be created")
+		return []client.Object{}, nil
+	}
+
+	// Check if ServiceMonitors are enabled
+	if config.ServiceMonitor == nil || config.ServiceMonitor.Enabled == nil || !*config.ServiceMonitor.Enabled {
+		logger.Info("ServiceMonitors are disabled for external Prometheus")
+		return []client.Object{}, nil
+	}
+
+	logger.Info("Creating ServiceMonitors for external Prometheus")
+
+	// Create ServiceMonitors using the existing function
+	serviceMonitors, err := serviceMonitorsForKAIConfig(ctx, runtimeClient, kaiConfig)
+	if err != nil {
+		logger.Error(err, "Failed to create ServiceMonitor instances for external Prometheus")
+		return nil, err
+	}
+
+	logger.Info("Successfully created ServiceMonitors for external Prometheus", "count", len(serviceMonitors))
+	return serviceMonitors, nil
 }

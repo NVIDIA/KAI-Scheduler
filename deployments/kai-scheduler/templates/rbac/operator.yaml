@@ -10,7 +10,11 @@ rules:
   - ""
   resources:
   - configmaps
+  - endpoints
+  - nodes
+  - nodes/proxy
   - persistentvolumeclaims
+  - pods
   - secrets
   - serviceaccounts
   - services
@@ -21,14 +25,6 @@ rules:
   - list
   - patch
   - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - nodes
-  verbs:
-  - get
-  - list
   - watch
 - apiGroups:
   - admissionregistration.k8s.io
@@ -101,6 +97,7 @@ rules:
   - monitoring.coreos.com
   resources:
   - prometheuses
+  - servicemonitors
   verbs:
   - create
   - delete
@@ -116,6 +113,19 @@ rules:
   verbs:
   - get
   - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  - clusterroles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - scheduling.run.ai
