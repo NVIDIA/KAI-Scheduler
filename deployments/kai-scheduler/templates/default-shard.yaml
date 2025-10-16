@@ -6,6 +6,8 @@ apiVersion: kai.scheduler/v1
 kind: SchedulingShard
 metadata:
   name: default
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   partitionLabelValue: ""
   {{- if .Values.scheduler.placementStrategy }}

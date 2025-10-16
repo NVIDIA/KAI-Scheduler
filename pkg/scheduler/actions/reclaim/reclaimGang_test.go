@@ -309,7 +309,6 @@ func getTestsGangReclaimMetadata() []integration_tests_utils.TestTopologyMetadat
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						MinAvailable:        pointer.Int32(2),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName: "node0",
@@ -328,7 +327,6 @@ func getTestsGangReclaimMetadata() []integration_tests_utils.TestTopologyMetadat
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
-						MinAvailable:        pointer.Int32(1),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,

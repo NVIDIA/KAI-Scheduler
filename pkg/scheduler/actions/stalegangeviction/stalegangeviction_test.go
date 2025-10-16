@@ -37,9 +37,8 @@ func TestStaleGangEviction(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						QueueName:    "q-1",
-						MinAvailable: pointer.Int32(1),
+						Name:      "job-1",
+						QueueName: "q-1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:     "job-1-0",
@@ -78,9 +77,8 @@ func TestStaleGangEviction(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						QueueName:    "q-1",
-						MinAvailable: pointer.Int32(2),
+						Name:      "job-1",
+						QueueName: "q-1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:     "job-1-0",
@@ -134,9 +132,8 @@ func TestStaleGangEviction(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						QueueName:    "q-1",
-						MinAvailable: pointer.Int32(2),
+						Name:      "job-1",
+						QueueName: "q-1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:     "job-1-0",
@@ -190,9 +187,9 @@ func TestStaleGangEviction(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						QueueName:    "q-1",
-						MinAvailable: pointer.Int32(1),
+						Name:            "job-1",
+						QueueName:       "q-1",
+						RootSubGroupSet: jobs_fake.DefaultSubGroup(1),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:     "job-1-0",
@@ -246,13 +243,14 @@ func TestStaleGangEviction(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						QueueName:    "q-1",
-						MinAvailable: pointer.Int32(3),
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub-group-0": subgroup_info.NewPodSet("sub-group-0", 2, nil),
-							"sub-group-1": subgroup_info.NewPodSet("sub-group-1", 1, nil),
-						},
+						Name:      "job-1",
+						QueueName: "q-1",
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub-group-0", 2, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub-group-1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:         "job-1-0",
@@ -326,13 +324,14 @@ func TestStaleGangEviction(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						QueueName:    "q-1",
-						MinAvailable: pointer.Int32(3),
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub-group-0": subgroup_info.NewPodSet("sub-group-0", 2, nil),
-							"sub-group-1": subgroup_info.NewPodSet("sub-group-1", 1, nil),
-						},
+						Name:      "job-1",
+						QueueName: "q-1",
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub-group-0", 2, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub-group-1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:         "job-1-0",
