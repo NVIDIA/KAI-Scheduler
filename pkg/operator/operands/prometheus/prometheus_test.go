@@ -12,6 +12,7 @@ import (
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiprometheus "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	test_utils "github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common/test_utils"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -156,7 +157,7 @@ var _ = Describe("Prometheus", func() {
 				}
 				Expect(fakeKubeClient.Create(ctx, crd)).To(Succeed())
 
-				installed, err := CheckPrometheusOperatorInstalled(ctx, fakeKubeClient)
+				installed, err := common.CheckPrometheusCRDsAvailable(ctx, fakeKubeClient, "prometheus", "serviceMonitor")
 				Expect(err).To(BeNil())
 				Expect(installed).To(BeTrue())
 			})
@@ -164,7 +165,7 @@ var _ = Describe("Prometheus", func() {
 
 		Context("when Prometheus CRD does not exist", func() {
 			It("should return false", func(ctx context.Context) {
-				installed, err := CheckPrometheusOperatorInstalled(ctx, fakeKubeClient)
+				installed, err := common.CheckPrometheusCRDsAvailable(ctx, fakeKubeClient, "prometheus", "serviceMonitor")
 				Expect(err).To(BeNil())
 				Expect(installed).To(BeFalse())
 			})
