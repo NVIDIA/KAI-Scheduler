@@ -4,14 +4,11 @@
 package scheduler
 
 import (
-	"fmt"
-
 	"github.com/spf13/pflag"
 	"k8s.io/client-go/rest"
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/app"
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/app/options"
-	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
@@ -43,8 +40,8 @@ func RunScheduler(cfg *rest.Config, schedulerConf *conf.SchedulerConfiguration, 
 		return err
 	}
 
-	opt.PluginServerPort = utils.GetNextAvailablePort()
-	opt.ListenAddress = fmt.Sprintf(":%d", utils.GetNextAvailablePort())
+	opt.PluginServerPort = 8084
+	opt.ListenAddress = ":8085"
 
 	params := app.BuildSchedulerParams(opt)
 
