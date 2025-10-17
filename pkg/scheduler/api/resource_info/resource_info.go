@@ -130,7 +130,7 @@ func (r *Resource) DetailedString() string {
 	messageBuilder.WriteString(r.String())
 
 	for rName, rQuant := range r.scalarResources {
-            messageBuilder.WriteString(fmt.Sprintf(", %s: %v", rName, rQuant))
+        messageBuilder.WriteString(fmt.Sprintf(", %s: %v", rName, rQuant))
 	}
 	return messageBuilder.String()
 }

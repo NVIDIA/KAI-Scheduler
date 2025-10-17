@@ -71,7 +71,7 @@ func (mnr *MaxNodeResourcesPredicate) PreFilter(_ context.Context, _ ksf.CycleSt
 		if !found || rQuant > rrQuant {
 			units := ""
 			maxVal := float64(0)
-			// Humanize ephemeral /storage values: ionterbak rrQuant is milli-bytes, convert to GB
+			// Humanize ephemeral / storage values: rrQuant is milli-bytes, convert to GB
 			if rName == v1.ResourceEphemeralStorage || rName == v1.ResourceStorage {
 				units = "GB"
 				maxVal = float64(rrQuant) / resource_info.MemoryToGB
