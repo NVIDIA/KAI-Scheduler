@@ -17,8 +17,9 @@ func RunQueueController(cfg *rest.Config, ctx context.Context) error {
 	opts := app.InitOptions(flag.NewFlagSet("", flag.ContinueOnError))
 
 	opts.EnableLeaderElection = false
-	opts.MetricsAddress = ":8084"
+	opts.MetricsAddress = "0"
 	opts.EnableWebhook = false
+	opts.SkipControllerNameValidation = true
 
 	flag.Parse()
 

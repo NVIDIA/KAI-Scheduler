@@ -71,7 +71,7 @@ func (r *PodGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *PodGroupReconciler) SetupWithManager(mgr ctrl.Manager, configs Configs) error {
+func (r *PodGroupReconciler) SetupWithManager(mgr ctrl.Manager, configs Configs, skipNameValidation bool) error {
 	r.config = configs
 
 	err := mgr.GetFieldIndexer().IndexField(
@@ -89,6 +89,7 @@ func (r *PodGroupReconciler) SetupWithManager(mgr ctrl.Manager, configs Configs)
 				MaxConcurrentReconciles: r.config.MaxConcurrentReconciles,
 				RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[ctrl.Request](
 					rateLimiterBaseDelay, rateLimiterMaxDelay),
+				SkipNameValidation: &skipNameValidation,
 			}).
 		Complete(r)
 }
