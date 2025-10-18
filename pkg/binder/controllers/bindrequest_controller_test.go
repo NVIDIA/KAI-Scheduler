@@ -25,6 +25,7 @@ import (
 
 	kubeaischedulerscheme "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/scheme"
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding"
 	mock_binder "github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/mock"
@@ -88,7 +89,7 @@ var _ = Describe("BindRequest Controller", func() {
 		binderPlugins.RegisterPlugin(fakePlugin)
 
 		rrs := resourcereservation.NewService(false, fakeClient, "", 40*time.Second,
-			resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue, scalingPodsNamespace)
+			resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue, scalingPodsNamespace, constants.DefaultRuntimeClassName)
 		binder := binding.NewBinder(fakeClient, rrs, binderPlugins)
 		reconciler = NewBindRequestReconciler(fakeClient, testScheme, fakeEventRecorder, params,
 			binder, rrs)

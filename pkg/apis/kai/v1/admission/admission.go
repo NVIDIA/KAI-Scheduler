@@ -11,7 +11,9 @@ import (
 )
 
 const (
-	imageName = "admission"
+	imageName                    = "admission"
+	defaultValidatingWebhookName = "validating-kai-admission"
+	defaultMutatingWebhookName   = "mutating-kai-admission"
 )
 
 type Admission struct {
@@ -32,6 +34,14 @@ type Admission struct {
 	// QueueLabelSelector enables the queue label MatchExpression in webhooks
 	// +kubebuilder:validation:Optional
 	QueueLabelSelector *bool `json:"queueLabelSelector,omitempty"`
+
+	// ValidatingWebhookConfigurationName is the name of the ValidatingWebhookConfiguration for the admission service
+	// +kubebuilder:validation:Optional
+	ValidatingWebhookConfigurationName *string `json:"validatingWebhookConfigurationName,omitempty"`
+
+	// MutatingWebhookConfigurationName is the name of the MutatingWebhookConfiguration for the admission service
+	// +kubebuilder:validation:Optional
+	MutatingWebhookConfigurationName *string `json:"mutatingWebhookConfigurationName,omitempty"`
 }
 
 func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
@@ -47,6 +57,9 @@ func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
 	b.Replicas = common.SetDefault(b.Replicas, ptr.To(ptr.Deref(replicaCount, 1)))
 	b.GPUSharing = common.SetDefault(b.GPUSharing, ptr.To(false))
 	b.QueueLabelSelector = common.SetDefault(b.QueueLabelSelector, ptr.To(false))
+
+	b.ValidatingWebhookConfigurationName = common.SetDefault(b.ValidatingWebhookConfigurationName, ptr.To(defaultValidatingWebhookName))
+	b.MutatingWebhookConfigurationName = common.SetDefault(b.MutatingWebhookConfigurationName, ptr.To(defaultMutatingWebhookName))
 }
 
 // Webhook defines configuration for the admission webhook

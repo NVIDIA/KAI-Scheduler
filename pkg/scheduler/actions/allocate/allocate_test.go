@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	. "go.uber.org/mock/gomock"
-	"k8s.io/utils/pointer"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/allocate"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
@@ -1772,7 +1771,7 @@ func TestHandleElasticJobCommitFailure(t *testing.T) {
 					RequiredGPUsPerTask: 1,
 					Priority:            constants.PriorityTrainNumber,
 					QueueName:           "queue1",
-					MinAvailable:        pointer.Int32(1),
+					RootSubGroupSet:     jobs_fake.DefaultSubGroup(1),
 					Tasks: []*tasks_fake.TestTaskBasic{
 						{
 							State: pod_status.Pending,

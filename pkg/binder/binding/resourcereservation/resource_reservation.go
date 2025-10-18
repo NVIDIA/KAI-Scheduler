@@ -42,8 +42,6 @@ const (
 	unknownGpuIndicator            = "-1"
 )
 
-var runtimeClassName = "nvidia"
-
 type service struct {
 	fakeGPuNodes        bool
 	kubeClient          client.WithWatch
@@ -54,6 +52,7 @@ type service struct {
 	serviceAccountName  string
 	appLabelValue       string
 	scalingPodNamespace string
+	runtimeClassName    string
 }
 
 func NewService(
@@ -65,6 +64,7 @@ func NewService(
 	serviceAccountName string,
 	appLabelValue string,
 	scalingPodNamespace string,
+	runtimeClassName string,
 ) *service {
 	return &service{
 		fakeGPuNodes:        fakeGPuNodes,
@@ -76,6 +76,7 @@ func NewService(
 		serviceAccountName:  serviceAccountName,
 		appLabelValue:       appLabelValue,
 		scalingPodNamespace: scalingPodNamespace,
+		runtimeClassName:    runtimeClassName,
 	}
 }
 
@@ -450,8 +451,13 @@ func (rsc *service) createResourceReservationPod(
 			},
 		},
 		Spec: v1.PodSpec{
-			NodeName:           nodeName,
-			RuntimeClassName:   &runtimeClassName,
+			NodeName: nodeName,
+			RuntimeClassName: func() *string {
+				if len(rsc.runtimeClassName) == 0 {
+					return nil
+				}
+				return &rsc.runtimeClassName
+			}(),
 			ServiceAccountName: rsc.serviceAccountName,
 			Containers: []v1.Container{
 				{

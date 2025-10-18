@@ -25,11 +25,10 @@ import (
 const (
 	QueueCrdName = "queues.scheduling.run.ai"
 
-	deploymentName          = "queue-controller"
-	serviceName             = deploymentName
-	appName                 = deploymentName
-	validatingWebhookPrefix = "kai-queue-validation-"
-	queueWebhookName        = "queue-validation.kai.scheduler"
+	deploymentName   = "queue-controller"
+	serviceName      = deploymentName
+	appName          = deploymentName
+	queueWebhookName = "queue-validation.kai.scheduler"
 
 	secretName = "queue-webhook-tls-secret"
 	certKey    = "tls.crt"
@@ -184,7 +183,7 @@ func validatingWCForKAIConfig(
 	for _, version := range constants.QueueValidatedVersions() {
 		validatingWebhookConfiguration := &admissionv1.ValidatingWebhookConfiguration{}
 
-		webhookName := fmt.Sprintf("%s%s", validatingWebhookPrefix, version)
+		webhookName := fmt.Sprintf("%s%s", *kaiConfig.Spec.QueueController.Webhooks.WebhookConfigurationNamePrefix, version)
 		err = runtimeClient.Get(ctx, types.NamespacedName{Name: webhookName}, validatingWebhookConfiguration)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
