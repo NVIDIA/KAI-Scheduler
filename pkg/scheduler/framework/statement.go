@@ -23,7 +23,6 @@ import (
 	"fmt"
 
 	"golang.org/x/exp/slices"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
@@ -36,7 +35,7 @@ import (
 type Statement struct {
 	operations []Operation
 	ssn        *Session
-	sessionUID types.UID
+	sessionID  string
 }
 
 type Checkpoint int
@@ -66,7 +65,7 @@ func (s *Statement) Evict(reclaimeeTask *pod_info.PodInfo, message string,
 	job, jobFound := s.ssn.PodGroupInfos[reclaimeeTask.Job]
 	if !jobFound {
 		log.InfraLogger.Errorf("Failed to find Job <%s> in session <%s>",
-			reclaimeeTask.Job, s.sessionUID)
+			reclaimeeTask.Job, s.sessionID)
 		return fmt.Errorf("failed to find job <%s> in session", reclaimeeTask.Job)
 	}
 
@@ -81,12 +80,12 @@ func (s *Statement) Evict(reclaimeeTask *pod_info.PodInfo, message string,
 	previousIsVirtualStatus := reclaimeeTask.IsVirtualStatus
 	if err := job.UpdateTaskStatus(reclaimeeTask, pod_status.Releasing); err != nil {
 		log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
-			reclaimeeTask.Namespace, reclaimeeTask.Name, pod_status.Releasing, s.sessionUID, err)
+			reclaimeeTask.Namespace, reclaimeeTask.Name, pod_status.Releasing, s.sessionID, err)
 		return fmt.Errorf("failed to update task status for <%v/%v>", reclaimeeTask.Namespace, reclaimeeTask.Name)
 	}
 	if err := node.UpdateTask(reclaimeeTask); err != nil {
 		log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
-			reclaimeeTask.Namespace, reclaimeeTask.Name, pod_status.Releasing, s.sessionUID, err)
+			reclaimeeTask.Namespace, reclaimeeTask.Name, pod_status.Releasing, s.sessionID, err)
 		return fmt.Errorf("failed to update task <%v/%v>", reclaimeeTask.Namespace, reclaimeeTask.Name)
 	}
 
@@ -151,11 +150,11 @@ func (s *Statement) unevict(
 	if found {
 		if err := job.UpdateTaskStatus(reclaimee, previousStatus); err != nil {
 			log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
-				reclaimee.Namespace, reclaimee.Name, pod_status.Releasing, s.sessionUID, err)
+				reclaimee.Namespace, reclaimee.Name, pod_status.Releasing, s.sessionID, err)
 		}
 	} else {
 		log.InfraLogger.Errorf("Failed to find Job <%s> in Session <%s> index when binding.",
-			reclaimee.Job, s.sessionUID)
+			reclaimee.Job, s.sessionID)
 	}
 	reclaimee.GPUGroups = previousGpuGroups
 	reclaimee.IsVirtualStatus = previousIsVirtualStatus
@@ -166,12 +165,12 @@ func (s *Statement) unevict(
 		if _, found := node.PodInfos[key]; found {
 			if err := node.UpdateTask(reclaimee); err != nil {
 				log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
-					reclaimee.Namespace, reclaimee.Name, pod_status.Releasing, s.sessionUID, err)
+					reclaimee.Namespace, reclaimee.Name, pod_status.Releasing, s.sessionID, err)
 			}
 		} else if err := node.AddTask(reclaimee); err != nil {
 			// This can happen if job was 1st evicted, then pipelined -> it will cause the job to not be in the node
 			log.InfraLogger.Errorf("Failed to add task <%v/%v> status to %v in Session <%v>: %v",
-				reclaimee.Namespace, reclaimee.Name, pod_status.Releasing, s.sessionUID, err)
+				reclaimee.Namespace, reclaimee.Name, pod_status.Releasing, s.sessionID, err)
 		}
 	}
 
@@ -192,7 +191,7 @@ func (s *Statement) Pipeline(task *pod_info.PodInfo, hostname string, updateTask
 	node, foundNode := s.ssn.Nodes[hostname]
 	if !foundNode || !foundJob {
 		log.InfraLogger.Errorf("Failed to find Node <%s> or job: <%s> in Session <%s> index when binding.",
-			hostname, task.Job, s.sessionUID)
+			hostname, task.Job, s.sessionID)
 		return fmt.Errorf("failed to find node: <%v> or job: <%v>", hostname, task.Job)
 	}
 
@@ -212,7 +211,7 @@ func (s *Statement) Pipeline(task *pod_info.PodInfo, hostname string, updateTask
 		log.InfraLogger.V(6).Infof("Task: <%v/%v> already exists on node: <%v>, unevicting it", task.Namespace, task.Name, hostname)
 		if err := s.Unevict(task); err != nil {
 			log.InfraLogger.Errorf("Failed to unevict task <%v/%v> to node <%v> in Session <%v>: %v",
-				task.Namespace, task.Name, hostname, s.sessionUID, err)
+				task.Namespace, task.Name, hostname, s.sessionID, err)
 			return err
 		}
 		return nil
@@ -221,7 +220,7 @@ func (s *Statement) Pipeline(task *pod_info.PodInfo, hostname string, updateTask
 	previousStatus := task.Status
 	if err := job.UpdateTaskStatus(task, pod_status.Pipelined); err != nil {
 		log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
-			task.Namespace, task.Name, pod_status.Pipelined, s.sessionUID, err)
+			task.Namespace, task.Name, pod_status.Pipelined, s.sessionID, err)
 	}
 
 	previousNode := task.NodeName
@@ -235,17 +234,17 @@ func (s *Statement) Pipeline(task *pod_info.PodInfo, hostname string, updateTask
 		previousGpuGroup = taskOnNode.GPUGroups
 		if err := node.ConsolidateSharedPodInfoToDifferentGPU(task); err != nil {
 			log.InfraLogger.Errorf("Failed to unevict task <%v/%v> to node <%v> in Session <%v>: %v",
-				task.Namespace, task.Name, hostname, s.sessionUID, err)
+				task.Namespace, task.Name, hostname, s.sessionID, err)
 			return err
 		}
 	} else if foundOnNode {
 		if err := node.UpdateTask(task); err != nil {
 			log.InfraLogger.Errorf("Failed to update task <%v/%v> to node <%v> in Session <%v>: %v",
-				task.Namespace, task.Name, hostname, s.sessionUID, err)
+				task.Namespace, task.Name, hostname, s.sessionID, err)
 		}
 	} else if err := node.AddTask(task); err != nil {
 		log.InfraLogger.Errorf("Failed to pipeline task <%v/%v> to node <%v> in Session <%v>: %v",
-			task.Namespace, task.Name, hostname, s.sessionUID, err)
+			task.Namespace, task.Name, hostname, s.sessionID, err)
 		return err
 	}
 
@@ -288,12 +287,12 @@ func (s *Statement) Allocate(task *pod_info.PodInfo, hostname string) error {
 	if found {
 		if err := job.UpdateTaskStatus(task, pod_status.Allocated); err != nil {
 			log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
-				task.Namespace, task.Name, pod_status.Allocated, s.sessionUID, err)
+				task.Namespace, task.Name, pod_status.Allocated, s.sessionID, err)
 			return err
 		}
 	} else {
 		log.InfraLogger.Errorf("Failed to find Job <%s> in Session <%s> index when binding.",
-			task.Job, s.sessionUID)
+			task.Job, s.sessionID)
 		return fmt.Errorf("failed to find job %s", task.Job)
 	}
 
@@ -302,7 +301,7 @@ func (s *Statement) Allocate(task *pod_info.PodInfo, hostname string) error {
 	if node, found := s.ssn.Nodes[hostname]; found {
 		if err := node.AddTask(task); err != nil {
 			log.InfraLogger.Errorf("Failed to add task <%v/%v> to node <%v> in Session <%v>: %v",
-				task.Namespace, task.Name, hostname, s.sessionUID, err)
+				task.Namespace, task.Name, hostname, s.sessionID, err)
 			return err
 		}
 		log.InfraLogger.V(5).Infof(
@@ -310,7 +309,7 @@ func (s *Statement) Allocate(task *pod_info.PodInfo, hostname string) error {
 			task.Namespace, task.Name, node.Name, node.Idle, node.Used, node.Releasing)
 	} else {
 		log.InfraLogger.Errorf("Failed to find Node <%s> in Session <%s> index when binding.",
-			hostname, s.sessionUID)
+			hostname, s.sessionID)
 		return fmt.Errorf("failed to find node %s", hostname)
 	}
 
@@ -381,11 +380,11 @@ func (s *Statement) unallocate(task *pod_info.PodInfo, previousNodeName string, 
 	if found {
 		if err := job.UpdateTaskStatus(task, pod_status.Pending); err != nil {
 			log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
-				task.Namespace, task.Name, pod_status.Pending, s.sessionUID, err)
+				task.Namespace, task.Name, pod_status.Pending, s.sessionID, err)
 		}
 	} else {
 		log.InfraLogger.Errorf("Failed to find Job <%s> in Session <%s> index when unallocating.",
-			task.Job, s.sessionUID)
+			task.Job, s.sessionID)
 	}
 
 	if node, found := s.ssn.Nodes[task.NodeName]; found {
@@ -425,11 +424,11 @@ func (s *Statement) unpipeline(
 		statusToRevertTo := previousStatus
 		if err := job.UpdateTaskStatus(task, statusToRevertTo); err != nil {
 			log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
-				task.Namespace, task.Name, statusToRevertTo, s.sessionUID, err)
+				task.Namespace, task.Name, statusToRevertTo, s.sessionID, err)
 		}
 	} else {
 		log.InfraLogger.Errorf("Failed to find Job <%s> in Session <%s> index when binding.",
-			task.Job, s.sessionUID)
+			task.Job, s.sessionID)
 	}
 
 	hostname := task.NodeName
@@ -440,11 +439,11 @@ func (s *Statement) unpipeline(
 	if node, found := s.ssn.Nodes[hostname]; found {
 		if err := node.RemoveTask(task); err != nil {
 			log.InfraLogger.Errorf("Failed to unpipeline task <%v/%v> from node <%v> in Session <%v>: %v",
-				task.Namespace, task.Name, hostname, s.sessionUID, err)
+				task.Namespace, task.Name, hostname, s.sessionID, err)
 		}
 	} else {
 		log.InfraLogger.Errorf("Failed to find Node <%s> in Session <%s> index when binding.",
-			hostname, s.sessionUID)
+			hostname, s.sessionID)
 		return fmt.Errorf("node doesnt exist on cluster")
 	}
 

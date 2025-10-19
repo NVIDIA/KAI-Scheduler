@@ -10,7 +10,9 @@ rules:
   - ""
   resources:
   - configmaps
+  - endpoints
   - persistentvolumeclaims
+  - pods
   - secrets
   - serviceaccounts
   - services
@@ -101,6 +103,7 @@ rules:
   - monitoring.coreos.com
   resources:
   - prometheuses
+  - servicemonitors
   verbs:
   - create
   - delete

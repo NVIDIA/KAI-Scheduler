@@ -12,9 +12,13 @@ import (
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiprometheus "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	test_utils "github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common/test_utils"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	corev1 "k8s.io/api/core/v1"                                                // nolint:unused
+	rbacv1 "k8s.io/api/rbac/v1"                                                // nolint:unused
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1" // nolint:unused
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
@@ -31,6 +35,9 @@ func createFakeClientWithScheme() client.Client {
 	testScheme := runtime.NewScheme()
 	Expect(kaiv1.AddToScheme(testScheme)).To(Succeed())
 	Expect(monitoringv1.AddToScheme(testScheme)).To(Succeed())
+	Expect(corev1.AddToScheme(testScheme)).To(Succeed())
+	Expect(rbacv1.AddToScheme(testScheme)).To(Succeed())
+	Expect(apiextensionsv1.AddToScheme(testScheme)).To(Succeed())
 
 	return fake.NewClientBuilder().WithScheme(testScheme).Build()
 }
@@ -50,25 +57,25 @@ var _ = Describe("Prometheus", func() {
 		})
 
 		Context("when Prometheus is disabled", func() {
-			It("should return empty objects list", func(ctx context.Context) {
+			It("should return ServiceAccount only", func(ctx context.Context) {
 				kaiConfig.Spec.Prometheus.Enabled = ptr.To(false)
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(0))
+				Expect(len(objects)).To(Equal(1)) // ServiceAccount only
 			})
 
-			It("should return empty objects list when config is nil", func(ctx context.Context) {
+			It("should return ServiceAccount only when config is nil", func(ctx context.Context) {
 				kaiConfig.Spec.Prometheus = nil
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(0))
+				Expect(len(objects)).To(Equal(1)) // ServiceAccount only
 			})
 		})
 
 		Context("when Prometheus is enabled", func() {
 			BeforeEach(func(ctx context.Context) {
 				// Add Prometheus CRD to fake client to simulate Prometheus Operator being installed
-				crd := &metav1.PartialObjectMetadata{
+				prometheusCRD := &metav1.PartialObjectMetadata{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "CustomResourceDefinition",
 						APIVersion: "apiextensions.k8s.io/v1",
@@ -77,13 +84,25 @@ var _ = Describe("Prometheus", func() {
 						Name: "prometheuses.monitoring.coreos.com",
 					},
 				}
-				Expect(fakeKubeClient.Create(ctx, crd)).To(Succeed())
+				Expect(fakeKubeClient.Create(ctx, prometheusCRD)).To(Succeed())
+
+				// Add ServiceMonitor CRD to fake client to simulate Prometheus Operator being installed
+				serviceMonitorCRD := &metav1.PartialObjectMetadata{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "CustomResourceDefinition",
+						APIVersion: "apiextensions.k8s.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "servicemonitors.monitoring.coreos.com",
+					},
+				}
+				Expect(fakeKubeClient.Create(ctx, serviceMonitorCRD)).To(Succeed())
 			})
 
 			It("should return Prometheus object when Prometheus Operator is installed", func(ctx context.Context) {
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(1))
+				Expect(len(objects)).To(Equal(3)) // ServiceAccount, Prometheus, 1 ServiceMonitor
 
 				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 				Expect(prometheusObj).NotTo(BeNil())
@@ -110,7 +129,7 @@ var _ = Describe("Prometheus", func() {
 
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(1))
+				Expect(len(objects)).To(Equal(3)) // ServiceAccount, Prometheus, 1 ServiceMonitor
 
 				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 				Expect(prometheusObj).NotTo(BeNil())
@@ -120,10 +139,10 @@ var _ = Describe("Prometheus", func() {
 		})
 
 		Context("when Prometheus Operator is not installed", func() {
-			It("should return empty objects list", func(ctx context.Context) {
+			It("should return ServiceAccount only", func(ctx context.Context) {
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(0))
+				Expect(len(objects)).To(Equal(1)) // ServiceAccount only
 			})
 		})
 	})
@@ -139,7 +158,7 @@ var _ = Describe("Prometheus", func() {
 
 		Context("when Prometheus CRD exists", func() {
 			It("should return true", func(ctx context.Context) {
-				crd := &metav1.PartialObjectMetadata{
+				prometheusCRD := &metav1.PartialObjectMetadata{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "CustomResourceDefinition",
 						APIVersion: "apiextensions.k8s.io/v1",
@@ -148,9 +167,20 @@ var _ = Describe("Prometheus", func() {
 						Name: "prometheuses.monitoring.coreos.com",
 					},
 				}
-				Expect(fakeKubeClient.Create(ctx, crd)).To(Succeed())
+				Expect(fakeKubeClient.Create(ctx, prometheusCRD)).To(Succeed())
 
-				installed, err := CheckPrometheusOperatorInstalled(ctx, fakeKubeClient)
+				serviceMonitorCRD := &metav1.PartialObjectMetadata{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "CustomResourceDefinition",
+						APIVersion: "apiextensions.k8s.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "servicemonitors.monitoring.coreos.com",
+					},
+				}
+				Expect(fakeKubeClient.Create(ctx, serviceMonitorCRD)).To(Succeed())
+
+				installed, err := common.CheckPrometheusCRDsAvailable(ctx, fakeKubeClient, "prometheus", "serviceMonitor")
 				Expect(err).To(BeNil())
 				Expect(installed).To(BeTrue())
 			})
@@ -158,7 +188,7 @@ var _ = Describe("Prometheus", func() {
 
 		Context("when Prometheus CRD does not exist", func() {
 			It("should return false", func(ctx context.Context) {
-				installed, err := CheckPrometheusOperatorInstalled(ctx, fakeKubeClient)
+				installed, err := common.CheckPrometheusCRDsAvailable(ctx, fakeKubeClient, "prometheus", "serviceMonitor")
 				Expect(err).To(BeNil())
 				Expect(installed).To(BeFalse())
 			})
@@ -345,7 +375,7 @@ var _ = Describe("prometheusForKAIConfig", func() {
 	Context("when Prometheus is enabled", func() {
 		BeforeEach(func(ctx context.Context) {
 			// Add Prometheus CRD to fake client to simulate Prometheus Operator being installed
-			crd := &metav1.PartialObjectMetadata{
+			prometheusCRD := &metav1.PartialObjectMetadata{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "CustomResourceDefinition",
 					APIVersion: "apiextensions.k8s.io/v1",
@@ -354,13 +384,25 @@ var _ = Describe("prometheusForKAIConfig", func() {
 					Name: "prometheuses.monitoring.coreos.com",
 				},
 			}
-			Expect(fakeKubeClient.Create(ctx, crd)).To(Succeed())
+			Expect(fakeKubeClient.Create(ctx, prometheusCRD)).To(Succeed())
+
+			// Add ServiceMonitor CRD to fake client to simulate Prometheus Operator being installed
+			serviceMonitorCRD := &metav1.PartialObjectMetadata{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "CustomResourceDefinition",
+					APIVersion: "apiextensions.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "servicemonitors.monitoring.coreos.com",
+				},
+			}
+			Expect(fakeKubeClient.Create(ctx, serviceMonitorCRD)).To(Succeed())
 		})
 
 		It("should create new Prometheus object when none exists", func(ctx context.Context) {
 			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 			Expect(err).To(BeNil())
-			Expect(len(objects)).To(Equal(1))
+			Expect(len(objects)).To(Equal(1)) // Prometheus only
 
 			prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 			Expect(prometheusObj).NotTo(BeNil())
@@ -389,7 +431,7 @@ var _ = Describe("prometheusForKAIConfig", func() {
 
 			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 			Expect(err).To(BeNil())
-			Expect(len(objects)).To(Equal(1))
+			Expect(len(objects)).To(Equal(1)) // Prometheus only
 
 			prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 			Expect(prometheusObj).NotTo(BeNil())
