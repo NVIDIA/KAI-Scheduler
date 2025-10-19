@@ -68,8 +68,8 @@ func (ssn *Session) AddTaskOrderFn(tof common_info.CompareFn) {
 	ssn.TaskOrderFns = append(ssn.TaskOrderFns, tof)
 }
 
-func (ssn *Session) AddSubGroupsOrderFn(sgof common_info.CompareFn) {
-	ssn.SubGroupsOrderFns = append(ssn.SubGroupsOrderFns, sgof)
+func (ssn *Session) AddPodSetOrderFn(psof common_info.CompareFn) {
+	ssn.PodSetOrderFns = append(ssn.PodSetOrderFns, psof)
 }
 
 func (ssn *Session) AddQueueOrderFn(qof CompareQueueFn) {
@@ -253,10 +253,10 @@ func (ssn *Session) TaskOrderFn(l, r interface{}) bool {
 	}
 }
 
-func (ssn *Session) SubGroupOrderFn(l, r interface{}) bool {
+func (ssn *Session) PodSetOrderFn(l, r interface{}) bool {
 	lSubGroup := l.(*subgroup_info.PodSet)
 	rSubGroup := r.(*subgroup_info.PodSet)
-	for _, compareTasks := range ssn.SubGroupsOrderFns {
+	for _, compareTasks := range ssn.PodSetOrderFns {
 		if comparison := compareTasks(lSubGroup, rSubGroup); comparison != 0 {
 			return comparison < 0
 		}

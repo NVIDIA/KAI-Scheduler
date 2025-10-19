@@ -65,7 +65,7 @@ type Session struct {
 	NodePreOrderFns                       []api.NodePreOrderFn
 	NodeOrderFns                          []api.NodeOrderFn
 	JobOrderFns                           []common_info.CompareFn
-	SubGroupsOrderFns                     []common_info.CompareFn
+	PodSetOrderFns                        []common_info.CompareFn
 	TaskOrderFns                          []common_info.CompareFn
 	QueueOrderFns                         []CompareQueueFn
 	CanReclaimResourcesFns                []api.CanReclaimResourcesFn
@@ -338,7 +338,7 @@ func (ssn *Session) clear() {
 	ssn.plugins = nil
 	ssn.eventHandlers = nil
 	ssn.TaskOrderFns = nil
-	ssn.SubGroupsOrderFns = nil
+	ssn.PodSetOrderFns = nil
 	ssn.JobOrderFns = nil
 }
 

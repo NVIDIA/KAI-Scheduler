@@ -103,7 +103,7 @@ func (ra *reclaimAction) attemptToReclaimForSpecificJob(
 	ssn *framework.Session, reclaimer *podgroup_info.PodGroupInfo,
 ) (bool, *framework.Statement, []string) {
 	queue := ssn.Queues[reclaimer.Queue]
-	resReq := podgroup_info.GetTasksToAllocateInitResource(reclaimer, ssn.SubGroupOrderFn, ssn.TaskOrderFn, false)
+	resReq := podgroup_info.GetTasksToAllocateInitResource(reclaimer, ssn.PodSetOrderFn, ssn.TaskOrderFn, false)
 	log.InfraLogger.V(3).Infof("Attempting to reclaim for job: <%v/%v> of queue <%v>, resources: <%v>",
 		reclaimer.Namespace, reclaimer.Name, queue.Name, resReq)
 
