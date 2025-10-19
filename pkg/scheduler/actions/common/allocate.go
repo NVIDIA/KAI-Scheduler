@@ -5,6 +5,7 @@ package common
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -58,7 +59,7 @@ func allocateSubGroupSetOnNodes(ssn *framework.Session, stmt *framework.Statemen
 	job *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, tasksToAllocate []*pod_info.PodInfo,
 	isPipelineOnly bool,
 ) bool {
-	for _, childSubGroupSet := range subGroupSet.GetChildGroups() {
+	for _, childSubGroupSet := range orderedSubGroupSets(ssn, subGroupSet.GetChildGroups()) {
 		podSets := childSubGroupSet.GetAllPodSets()
 		subGroupTasks := filterTasksForPodSets(podSets, tasksToAllocate)
 		if !allocateSubGroupSet(ssn, stmt, nodes, job, childSubGroupSet, subGroupTasks, isPipelineOnly) {
@@ -66,7 +67,7 @@ func allocateSubGroupSetOnNodes(ssn *framework.Session, stmt *framework.Statemen
 		}
 	}
 
-	for _, podSet := range subGroupSet.GetChildPodSets() {
+	for _, podSet := range orderedPodSets(ssn, subGroupSet.GetChildPodSets()) {
 		podSetTasks := filterTasksForPodSet(podSet, tasksToAllocate)
 		if !allocatePodSet(ssn, stmt, nodes, job, podSet, podSetTasks, isPipelineOnly) {
 			return false
@@ -251,5 +252,21 @@ func filterTasksForPodSets(podSets map[string]*subgroup_info.PodSet, tasks []*po
 			result = append(result, task)
 		}
 	}
+	return result
+}
+
+func orderedSubGroupSets(ssn *framework.Session, subGroupSets []*subgroup_info.SubGroupSet) []*subgroup_info.SubGroupSet {
+	result := append([]*subgroup_info.SubGroupSet{}, subGroupSets...)
+	sort.Slice(result, func(i, j int) bool {
+		return ssn.SubGroupSetOrderFn(result[i], result[j])
+	})
+	return result
+}
+
+func orderedPodSets(ssn *framework.Session, podSets []*subgroup_info.PodSet) []*subgroup_info.PodSet {
+	result := append([]*subgroup_info.PodSet{}, podSets...)
+	sort.Slice(result, func(i, j int) bool {
+		return ssn.PodSetOrderFn(result[i], result[j])
+	})
 	return result
 }
