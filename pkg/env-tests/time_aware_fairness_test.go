@@ -1,6 +1,8 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build timeaware
+
 package env_tests
 
 import (
