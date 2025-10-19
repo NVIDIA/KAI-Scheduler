@@ -2328,11 +2328,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &topology_info.TopologyConstraintInfo{
-							Topology:       "cluster-topology",
-							RequiredLevel:  "k8s.io/rack",
-							PreferredLevel: "k8s.io/spine",
-						},
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:       "cluster-topology",
+								RequiredLevel:  "k8s.io/rack",
+								PreferredLevel: "k8s.io/spine",
+							},
+						),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,

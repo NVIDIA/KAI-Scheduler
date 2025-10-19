@@ -411,7 +411,6 @@ func TestSortTree(t *testing.T) {
 				}
 			},
 			maxDepthLevel: "zone",
-			// GuyTodo: Make sure this is the order we expect
 			expectedOrder: []DomainID{"zone1", "zone2"},
 			checkLevel:    "region",
 		},

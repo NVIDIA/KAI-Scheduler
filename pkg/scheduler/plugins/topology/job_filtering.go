@@ -9,7 +9,6 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -28,7 +27,8 @@ func (t *topologyPlugin) subSetNodesFn(
 	job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo, podSets map[string]*subgroup_info.PodSet,
 	tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet,
 ) ([]node_info.NodeSet, error) {
-	t.invalidateJobDomainNodeScores()
+	// GuyTodo: Create a new Extension Point for this - PreJobAllocationFn
+	t.invalidateSubGroupDomainNodeScores()
 
 	topologyTree, found := t.getJobTopology(subGroup)
 	if !found {
@@ -49,9 +49,12 @@ func (t *topologyPlugin) subSetNodesFn(
 		return nil, err
 	}
 
-	// Sorting so we can traverse the tree in-order later on for node scoring.
-	// If performance becomes an issue, we can optimize by sorting only the inspected domains during the node scoring phase rather than the entire tree.
-	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], DomainLevel(subGroup.GetTopologyConstraint().PreferredLevel))
+	// GuyTodo: Start from the required level
+	preferredLevel := DomainLevel(subGroup.GetTopologyConstraint().PreferredLevel)
+	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
+	if preferredLevel != "" {
+		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
+	}
 
 	if maxAllocatablePods < len(tasks) {
 		job.SetJobFitError(
@@ -342,8 +345,8 @@ func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
 	}
 }
 
-func (t *topologyPlugin) invalidateJobDomainNodeScores() {
-	t.jobDomainNodeScores = make(map[common_info.PodGroupID]domainNodeScores)
+func (t *topologyPlugin) invalidateSubGroupDomainNodeScores() {
+	t.subGroupDomainNodeScores = make(map[subgroupName]domainNodeScores)
 }
 
 func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
@@ -367,6 +370,7 @@ func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
 	}
 }
 
+// GuyTodo: Maybe remove and rely on sortTree only
 func sortDomainInfos(domainInfos []*DomainInfo) []*DomainInfo {
 	sort.SliceStable(domainInfos, func(i, j int) bool {
 		if domainInfos[i].Level != domainInfos[j].Level {

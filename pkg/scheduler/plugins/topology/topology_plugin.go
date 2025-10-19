@@ -6,7 +6,6 @@ package topology
 import (
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/samber/lo"
@@ -19,6 +18,7 @@ const (
 )
 
 type topologyName = string
+type subgroupName = string
 
 type topologyPlugin struct {
 	TopologyTrees map[topologyName]*Info
@@ -26,7 +26,10 @@ type topologyPlugin struct {
 	// Cache for storing node set to domain by topology name
 	nodeSetToDomain map[topologyName]map[nodeSetID]*DomainInfo
 
-	jobDomainNodeScores map[common_info.PodGroupID]domainNodeScores
+	subGroupDomainNodeScores map[subgroupName]domainNodeScores
+
+	// Defines order among nodes in a sub-group based on the sub-group's preferred level topology constraint.
+	subGroupNodeScores map[subgroupName]map[string]float64
 
 	session *framework.Session
 }
@@ -38,10 +41,11 @@ type domainNodeScores struct {
 
 func New(_ map[string]string) framework.Plugin {
 	return &topologyPlugin{
-		TopologyTrees:       map[topologyName]*Info{},
-		nodeSetToDomain:     map[topologyName]map[nodeSetID]*DomainInfo{},
-		jobDomainNodeScores: map[common_info.PodGroupID]domainNodeScores{},
-		session:             nil,
+		TopologyTrees:            map[topologyName]*Info{},
+		nodeSetToDomain:          map[topologyName]map[nodeSetID]*DomainInfo{},
+		subGroupDomainNodeScores: map[subgroupName]domainNodeScores{},
+		subGroupNodeScores:       map[subgroupName]map[string]float64{},
+		session:                  nil,
 	}
 }
 
@@ -57,9 +61,6 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddNodePreOrderFn(t.nodePreOrderFn)
 	ssn.AddNodeOrderFn(t.nodeOrderFn)
 }
-
-// Add a NodePreOrderFn to the session that calculates the topology tree for the job, and calculates min and max pod capacity for each domain level for that job.
-// Add a NodeOrderFn to the session that scores nodes for task placement based on the topology tree (parent d)
 
 func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, nodes map[string]*node_info.NodeInfo) {
 	for _, topology := range topologies {
