@@ -102,7 +102,7 @@ var _ = Describe("Prometheus", func() {
 			It("should return Prometheus object when Prometheus Operator is installed", func(ctx context.Context) {
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(9)) // ServiceAccount, Prometheus, 7 ServiceMonitors
+				Expect(len(objects)).To(Equal(3)) // ServiceAccount, Prometheus, 1 ServiceMonitor
 
 				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 				Expect(prometheusObj).NotTo(BeNil())
@@ -129,7 +129,7 @@ var _ = Describe("Prometheus", func() {
 
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(9)) // ServiceAccount, Prometheus, 7 ServiceMonitors
+				Expect(len(objects)).To(Equal(3)) // ServiceAccount, Prometheus, 1 ServiceMonitor
 
 				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 				Expect(prometheusObj).NotTo(BeNil())

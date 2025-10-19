@@ -50,24 +50,7 @@ func prometheusForKAIConfig(
 		logger.Info("Prometheus Operator not found - Prometheus CRD is not available")
 		return []client.Object{}, nil
 	}
-
-	// Create Prometheus CR
-	prometheus := &monitoringv1.Prometheus{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Prometheus",
-			APIVersion: "monitoring.coreos.com/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      mainResourceName,
-			Namespace: kaiConfig.Spec.Namespace,
-			Labels: map[string]string{
-				"app": mainResourceName,
-			},
-		},
-	}
-
-	// Check if Prometheus already exists
-	prom, err := common.ObjectForKAIConfig(ctx, runtimeClient, prometheus, mainResourceName, kaiConfig.Spec.Namespace)
+	prometheus, err := common.ObjectForKAIConfig(ctx, runtimeClient, &monitoringv1.Prometheus{}, mainResourceName, kaiConfig.Spec.Namespace)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			logger.Error(err, "Failed to check for existing Prometheus instance")
@@ -75,7 +58,7 @@ func prometheusForKAIConfig(
 		}
 	}
 	var ok bool
-	prometheus, ok = prom.(*monitoringv1.Prometheus)
+	prometheus, ok = prometheus.(*monitoringv1.Prometheus)
 	if !ok {
 		logger.Error(nil, "Failed to cast object to Prometheus type")
 		return nil, fmt.Errorf("failed to cast object to Prometheus type")
@@ -125,7 +108,7 @@ func prometheusForKAIConfig(
 	// Set the service account name in the Prometheus spec
 	prometheusSpec.ServiceAccountName = mainResourceName + "-prometheus"
 
-	prometheus.Spec = prometheusSpec
+	prometheus.(*monitoringv1.Prometheus).Spec = prometheusSpec
 	return []client.Object{prometheus}, nil
 }
 
@@ -151,21 +134,7 @@ func serviceMonitorsForKAIConfig(
 
 	// Create ServiceMonitor for each KAI service
 	for _, kaiService := range common.KaiServicesForServiceMonitor {
-		serviceMonitor := &monitoringv1.ServiceMonitor{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ServiceMonitor",
-				APIVersion: "monitoring.coreos.com/v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      kaiService.Name,
-				Namespace: kaiConfig.Spec.Namespace,
-				Labels: map[string]string{
-					"app":        mainResourceName,
-					"accounting": mainResourceName,
-				},
-			},
-		}
-		serviceMonitorObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, serviceMonitor, kaiService.Name, kaiConfig.Spec.Namespace)
+		serviceMonitorObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &monitoringv1.ServiceMonitor{}, kaiService.Name, kaiConfig.Spec.Namespace)
 		if err != nil {
 			logger.Error(err, "Failed to check for existing ServiceMonitor instance", "service", kaiService.Name)
 			return nil, err

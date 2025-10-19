@@ -26,18 +26,19 @@ import (
 var controllerTypes = []string{"Deployment", "DaemonSet"}
 
 // KAI services that should be monitored via ServiceMonitor
+// For now, we only monitor the queue controller
 var KaiServicesForServiceMonitor = []struct {
 	Name     string
 	Port     string
 	JobLabel string
 }{
-	{"binder", "http-metrics", "binder"},
-	{"scheduler", "http-metrics", "scheduler"},
+	// {"binder", "http-metrics", "binder"},
+	// {"scheduler", "http-metrics", "scheduler"},
 	{"queuecontroller", "metrics", "queuecontroller"},
-	{"podgrouper", "metrics", "podgrouper"},
-	{"podgroupcontroller", "metrics", "podgroupcontroller"},
-	{"admission", "metrics", "admission"},
-	{"nodescaleadjuster", "metrics", "nodescaleadjuster"},
+	// {"podgrouper", "metrics", "podgrouper"},
+	// {"podgroupcontroller", "metrics", "podgroupcontroller"},
+	// {"admission", "metrics", "admission"},
+	// {"nodescaleadjuster", "metrics", "nodescaleadjuster"},
 }
 
 func AllControllersAvailable(
