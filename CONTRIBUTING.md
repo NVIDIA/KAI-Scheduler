@@ -27,20 +27,132 @@ Open an issue with a clear description, steps to reproduce, and relevant environ
 Help us keep the docs clear and useful by fixing typos, updating outdated information, or adding examples.
 
 ### Contributing changes
-- Fork and Clone – Begin by forking the repository and cloning it to your local machine.
-- Create a Branch – Use a descriptive branch name, such as feature/add-cool-feature or bugfix/fix-issue123.
-- Make Changes – Keep your commits small, focused, and well-documented. For detailed build and test instructions, refer to [Building from Source](docs/developer/building-from-source.md).
-- Log Changes – For behavior-affecting changes (features, fixes, API changes), update the [changelog](CHANGELOG.md) file under the "Unreleased" section. Follow the format at [keepachangelog.com](https://keepachangelog.com/en/1.1.0/). Skip logging internal changes like refactoring or tests.
-- Submit a PR – Open a pull request and reference any relevant issues or discussions.
-- Coverage - Please look at the coverage change details and create unit tests, integration tests or end-to-end tests to cover new functionality or changes.
+- **Fork and Clone** – Begin by forking the repository and cloning it to your local machine.
+- **Create a Branch** – Use a descriptive branch name, such as `feature/add-cool-feature` or `bugfix/fix-issue123`.
+- **Make Changes** – Keep your commits small, focused, and well-documented. For detailed build and test instructions, refer to [Building from Source](docs/developer/building-from-source.md).
+- **Write Commit Messages** – Follow the [Conventional Commits](#commit-message-guidelines) specification. Use clear, descriptive commit messages that explain what changed and why.
+- **Log Changes** – For behavior-affecting changes (features, fixes, API changes), update the [changelog](CHANGELOG.md) file under the "Unreleased" section. Follow the format at [keepachangelog.com](https://keepachangelog.com/en/1.1.0/). Skip logging internal changes like refactoring or tests.
+- **Submit a PR** – Open a pull request using our [PR template](#pull-request-process) and reference any relevant issues or discussions.
+- **Test Coverage** – Please look at the coverage change details and create unit tests, integration tests or end-to-end tests to cover new functionality or changes.
+
+### Commit Message Guidelines
+
+We follow the [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) specification for all commit messages. This leads to more readable history and enables automated changelog generation.
+
+#### Commit Message Format
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+#### Types
+
+- **feat**: A new feature
+- **fix**: A bug fix
+- **docs**: Documentation only changes
+- **style**: Changes that don't affect code meaning (formatting, whitespace)
+- **refactor**: Code changes that neither fix a bug nor add a feature
+- **perf**: Performance improvements
+- **test**: Adding or updating tests
+- **build**: Changes to build system or dependencies
+- **ci**: Changes to CI/CD configuration
+- **chore**: Other changes that don't modify src or test files
+- **revert**: Reverts a previous commit
+
+#### Scopes (Optional)
+
+Common scopes for KAI Scheduler:
+- `scheduler`: Core scheduler logic
+- `binder`: Binder component
+- `podgrouper`: Pod grouper functionality
+- `admission`: Admission webhook
+- `operator`: Operator implementation
+- `queuecontroller`: Queue controller
+- `podgroupcontroller`: PodGroup controller
+- `resourcereservation`: Resource reservation
+- `fairshare`: Fair share functionality
+- `chart`: Helm chart changes
+- `crd`: CRD changes
+- `api`: API changes
+
+#### Examples
+
+```bash
+# Feature with scope
+feat(scheduler): add GPU topology-aware scheduling
+
+# Bug fix
+fix(binder): resolve race condition in pod binding process
+
+# Documentation
+docs: update installation guide with air-gapped setup
+
+# Breaking change (note the !)
+feat(api)!: change PodGroup status field structure
+
+BREAKING CHANGE: The status.phase field is renamed to status.state.
+Users must update their monitoring scripts accordingly.
+
+# Multiple paragraphs in body
+fix(scheduler): prevent memory leak in cache updates
+
+The scheduler cache was not properly releasing references to deleted
+pods, causing memory usage to grow over time.
+
+This fix ensures that pod references are properly cleaned up when pods
+are removed from the cache.
+
+Fixes #1234
+```
+
+#### Breaking Changes
+
+Breaking changes MUST be indicated in one of two ways:
+1. Add `!` after the type/scope: `feat(api)!: remove deprecated field`
+2. Include `BREAKING CHANGE:` in the commit footer
+
+#### Tips
+
+- Use the imperative mood: "add feature" not "added feature"
+- Keep the subject line under 72 characters
+- Capitalize the subject line
+- Don't end the subject line with a period
+- Separate subject from body with a blank line
+- Wrap the body at 72 characters
+- Use the body to explain what and why, not how
+- Reference issues and pull requests in the footer
 
 ### Pull Request Checklist
+
 Before introducing major changes, we strongly recommend opening a PR that outlines your proposed design.
+
 Each pull request should meet the following requirements:
-- All tests pass – Run the full test suite locally with: `make build validate test`
-- Test coverage – Add or update tests for any affected code.
-- Documentation – Update relevant documentation to reflect your changes.
-- Changes logged - If your changes warrant logging - like behavior changes (including bugfixes) or new features - add them to the [Changelog](CHANGELOG.md)
+- **All tests pass** – Run the full test suite locally with: `make build validate test`
+- **Test coverage** – Add or update tests for any affected code
+- **Documentation** – Update relevant documentation to reflect your changes
+- **Commit messages** – Follow the [Conventional Commits](#commit-message-guidelines) specification
+- **Changes logged** – If your changes warrant logging (behavior changes, bugfixes, or new features), add them to the [Changelog](CHANGELOG.md)
+- **PR description** – Fill out the pull request template completely
+
+### Pull Request Process
+
+1. **Use the PR Template** – When you create a pull request, GitHub will automatically populate it with our template. Please fill out all relevant sections.
+
+2. **Link Issues** – Reference related issues using keywords like "Fixes #123" or "Relates to #456" in the PR description.
+
+3. **Request Reviews** – Tag appropriate maintainers or request reviews from the team.
+
+4. **Address Feedback** – Respond to review comments and make requested changes. Push additional commits to your branch.
+
+5. **Keep it Updated** – Rebase or merge from the base branch if conflicts arise.
+
+6. **CI/CD Checks** – Ensure all automated checks pass before requesting final review.
+
+7. **Squash or Keep History** – We generally prefer meaningful commit history. Squashing is optional unless requested by maintainers.
 
 ## Getting Help
 Need support or have a question? We're here to help:

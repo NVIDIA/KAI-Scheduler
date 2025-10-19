@@ -1,0 +1,206 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+name: Create Release Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release candidate version (e.g., v0.10.0-rc.1)'
+        required: true
+        type: string
+      source_branch:
+        description: 'Source branch to create RC from'
+        required: true
+        default: 'main'
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  DOCKER_REGISTRY: "ghcr.io/nvidia/kai-scheduler"
+
+jobs:
+  validate:
+    name: Validate Inputs
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      is_valid: ${{ steps.validate.outputs.is_valid }}
+    steps:
+      - name: Validate version format
+        id: validate
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          
+          # Remove 'v' prefix if present
+          VERSION=${VERSION#v}
+          
+          # Validate format: X.Y.Z-rc.N
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format. Expected format: vX.Y.Z-rc.N (e.g., v0.10.0-rc.1)"
+            exit 1
+          fi
+          
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+          echo "is_valid=true" >> $GITHUB_OUTPUT
+          echo "✅ Version format is valid: v$VERSION"
+
+  build-and-publish:
+    name: Build and Publish RC
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.source_branch }}
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.4'
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker images
+        run: |
+          make build \
+            DOCKER_BUILD_PLATFORM=linux/amd64,linux/arm64 \
+            DOCKER_REPO_BASE=${{ env.DOCKER_REGISTRY }} \
+            VERSION=${{ needs.validate.outputs.version }} \
+            DOCKER_BUILDX_ADDITIONAL_ARGS=--push
+
+      - name: Build Helm chart
+        run: |
+          VERSION=${{ needs.validate.outputs.version }}
+          
+          # Update values.yaml to use correct registry
+          sed -i 's#registry/local/kai-scheduler#${{ env.DOCKER_REGISTRY }}#' deployments/kai-scheduler/values.yaml
+          
+          # Package the chart
+          helm package ./deployments/kai-scheduler \
+            -d ./charts \
+            --app-version ${VERSION} \
+            --version ${VERSION}
+          
+          echo "✅ Helm chart packaged: kai-scheduler-${VERSION}.tgz"
+
+      - name: Push Helm chart to OCI registry
+        run: |
+          VERSION=${{ needs.validate.outputs.version }}
+          helm push ./charts/kai-scheduler-${VERSION}.tgz oci://${{ env.DOCKER_REGISTRY }}
+          echo "✅ Helm chart pushed to OCI registry"
+
+      - name: Create Git tag
+        run: |
+          VERSION=${{ needs.validate.outputs.version }}
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create annotated tag
+          git tag -a ${VERSION} -m "Release Candidate ${VERSION}"
+          git push origin ${VERSION}
+          
+          echo "✅ Git tag created and pushed: ${VERSION}"
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION=${{ needs.validate.outputs.version }}
+          BASE_VERSION=${VERSION%-rc.*}
+          
+          # Try to find the previous RC or release tag
+          PREV_TAG=$(git describe --tags --abbrev=0 ${VERSION}^ 2>/dev/null || echo "")
+          
+          # Generate changelog
+          if [ -n "$PREV_TAG" ]; then
+            echo "## Changes since ${PREV_TAG}" > release_notes.md
+            echo "" >> release_notes.md
+            git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges >> release_notes.md
+          else
+            echo "## Changes in this Release Candidate" > release_notes.md
+            echo "" >> release_notes.md
+            echo "This is the first release candidate for ${BASE_VERSION}" >> release_notes.md
+          fi
+          
+          # Add unreleased changes from CHANGELOG
+          echo "" >> release_notes.md
+          echo "## Unreleased Changes" >> release_notes.md
+          echo "" >> release_notes.md
+          sed -n '/^## \[Unreleased\]/,/^## \[/p' CHANGELOG.md | head -n -1 | tail -n +2 >> release_notes.md || true
+          
+          # Add installation instructions
+          cat >> release_notes.md << 'EOF'
+          
+          ## Installation
+          
+          ### Docker Images
+          ```bash
+          docker pull ghcr.io/nvidia/kai-scheduler/scheduler:VERSION
+          docker pull ghcr.io/nvidia/kai-scheduler/binder:VERSION
+          # ... (other images)
+          ```
+          
+          ### Helm Chart
+          ```bash
+          helm install kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler --version VERSION
+          ```
+          
+          ## ⚠️ Release Candidate Notice
+          
+          This is a pre-release version intended for testing purposes. Do not use in production environments.
+          Please report any issues you encounter to help us improve the final release.
+          EOF
+          
+          sed -i "s/VERSION/${VERSION}/g" release_notes.md
+          
+          cat release_notes.md
+
+      - name: Create GitHub Pre-release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.validate.outputs.version }}
+          name: ${{ needs.validate.outputs.version }} Release Candidate
+          body_path: release_notes.md
+          files: charts/kai-scheduler-${{ needs.validate.outputs.version }}.tgz
+          prerelease: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post summary
+        run: |
+          VERSION=${{ needs.validate.outputs.version }}
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          # 🚀 Release Candidate Published
+          
+          ## Version: ${VERSION}
+          
+          ### ✅ Artifacts Published
+          - Docker images pushed to \`ghcr.io/nvidia/kai-scheduler\`
+          - Helm chart pushed to OCI registry
+          - Git tag created: \`${VERSION}\`
+          - GitHub pre-release created
+          
+          ### 📦 Installation
+          \`\`\`bash
+          helm install kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler --version ${VERSION}
+          \`\`\`
+          
+          ### 🔗 Links
+          - [View Release](https://github.com/${{ github.repository }}/releases/tag/${VERSION})
+          - [View Images](https://github.com/orgs/NVIDIA/packages?repo_name=KAI-Scheduler)
+          EOF

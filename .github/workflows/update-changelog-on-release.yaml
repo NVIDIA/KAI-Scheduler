@@ -1,0 +1,124 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+name: Update Changelog on Release
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-changelog:
+    name: Update Changelog
+    runs-on: ubuntu-latest
+    # Only run for non-RC releases
+    if: ${{ !contains(github.event.release.tag_name, '-rc.') }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.target_commitish }}
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update CHANGELOG.md
+        id: update_changelog
+        run: |
+          VERSION=${{ github.event.release.tag_name }}
+          DATE=$(date +%Y-%m-%d)
+          
+          # Create a temporary file
+          temp_file=$(mktemp)
+          
+          # Read the changelog
+          if [ ! -f CHANGELOG.md ]; then
+            echo "::error::CHANGELOG.md not found"
+            exit 1
+          fi
+          
+          # Check if there are unreleased changes
+          if ! grep -q "## \[Unreleased\]" CHANGELOG.md; then
+            echo "::warning::No [Unreleased] section found in CHANGELOG.md"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Extract unreleased content
+          sed -n '/## \[Unreleased\]/,/## \[/p' CHANGELOG.md | head -n -1 > unreleased_content.txt
+          
+          # Check if unreleased section has actual content (more than just the header)
+          if [ $(wc -l < unreleased_content.txt) -le 2 ]; then
+            echo "::warning::No unreleased changes to move to release section"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Create the new changelog content
+          # 1. Keep everything before [Unreleased]
+          sed -n '1,/## \[Unreleased\]/p' CHANGELOG.md > "$temp_file"
+          
+          # 2. Add empty unreleased section
+          echo "" >> "$temp_file"
+          
+          # 3. Add the new version section
+          echo "## [${VERSION}] - ${DATE}" >> "$temp_file"
+          echo "" >> "$temp_file"
+          
+          # 4. Add unreleased content (skip the first line which is the header)
+          tail -n +2 unreleased_content.txt >> "$temp_file"
+          echo "" >> "$temp_file"
+          
+          # 5. Add the rest of the changelog (skip unreleased section)
+          sed -n '/## \[Unreleased\]/,/## \[/!p' CHANGELOG.md | sed -n '/## \[/,$p' >> "$temp_file"
+          
+          # Replace the original file
+          mv "$temp_file" CHANGELOG.md
+          
+          # Clean up
+          rm -f unreleased_content.txt
+          
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "✅ CHANGELOG.md updated with version ${VERSION}"
+
+      - name: Create Pull Request
+        if: steps.update_changelog.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(release): update CHANGELOG for ${{ github.event.release.tag_name }}"
+          title: "chore(release): update CHANGELOG for ${{ github.event.release.tag_name }}"
+          body: |
+            ## Automated Changelog Update
+            
+            This PR automatically updates the CHANGELOG.md file following the release of `${{ github.event.release.tag_name }}`.
+            
+            ### Changes
+            - Moved entries from `[Unreleased]` to `[${{ github.event.release.tag_name }}]`
+            - Updated release date to $(date +%Y-%m-%d)
+            - Reset `[Unreleased]` section for future changes
+            
+            ### Related Release
+            - Release: [${{ github.event.release.tag_name }}](${{ github.event.release.html_url }})
+            
+            ---
+            🤖 This PR was automatically created by the release workflow.
+          branch: chore/update-changelog-${{ github.event.release.tag_name }}
+          delete-branch: true
+          labels: |
+            automated
+            changelog
+            release
+
+      - name: Enable Auto-merge
+        if: steps.update_changelog.outputs.has_changes == 'true'
+        run: |
+          echo "⚠️ Auto-merge not enabled. Please merge the changelog PR manually after review."
