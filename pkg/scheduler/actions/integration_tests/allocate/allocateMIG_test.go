@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -306,7 +305,6 @@ func getMIGTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State: pod_status.Pending,
 							},
 						},
-						MinAvailable: ptr.To(int32(2)),
 					},
 					{
 						Name:      "pending_job2",

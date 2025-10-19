@@ -9,7 +9,6 @@ import (
 	. "go.uber.org/mock/gomock"
 	"gopkg.in/h2non/gock.v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/allocate"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
@@ -323,7 +322,6 @@ func getMIGTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State: pod_status.Pending,
 							},
 						},
-						MinAvailable: ptr.To(int32(2)),
 					},
 					{
 						Name:      "pending_job-2",

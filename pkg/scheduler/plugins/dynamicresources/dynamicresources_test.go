@@ -14,7 +14,6 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	featuregate "k8s.io/component-base/featuregate/testing"
 	"k8s.io/kubernetes/pkg/features"
-	"k8s.io/utils/ptr"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
@@ -42,9 +41,8 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						QueueName:    "q-1",
-						MinAvailable: ptr.To(int32(1)),
+						Name:      "job-1",
+						QueueName: "q-1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:               "task-1",
@@ -62,10 +60,9 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						Namespace:    "test",
-						QueueName:    "q-1",
-						MinAvailable: ptr.To(int32(1)),
+						Name:      "job-1",
+						Namespace: "test",
+						QueueName: "q-1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:               "task-1",
@@ -114,10 +111,9 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						Namespace:    "test",
-						QueueName:    "q-1",
-						MinAvailable: ptr.To(int32(1)),
+						Name:      "job-1",
+						Namespace: "test",
+						QueueName: "q-1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:  "task-1",
@@ -155,10 +151,9 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						Namespace:    "test",
-						QueueName:    "q-1",
-						MinAvailable: ptr.To(int32(1)),
+						Name:      "job-1",
+						Namespace: "test",
+						QueueName: "q-1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:  "task-1",
@@ -203,10 +198,9 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						Namespace:    "test",
-						QueueName:    "q-1",
-						MinAvailable: ptr.To(int32(1)),
+						Name:      "job-1",
+						Namespace: "test",
+						QueueName: "q-1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:               "job-1-0",
@@ -224,10 +218,9 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						Namespace:    "test",
-						QueueName:    "q-1",
-						MinAvailable: ptr.To(int32(1)),
+						Name:      "job-1",
+						Namespace: "test",
+						QueueName: "q-1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:               "job-1-0",
@@ -278,10 +271,9 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						Namespace:    "test",
-						QueueName:    "q-1",
-						MinAvailable: ptr.To(int32(1)),
+						Name:      "job-1",
+						Namespace: "test",
+						QueueName: "q-1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:  "job-1-0",
@@ -328,10 +320,9 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
-						Name:         "job-1",
-						Namespace:    "test",
-						QueueName:    "q-1",
-						MinAvailable: ptr.To(int32(1)),
+						Name:      "job-1",
+						Namespace: "test",
+						QueueName: "q-1",
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								Name:               "job-1-0",

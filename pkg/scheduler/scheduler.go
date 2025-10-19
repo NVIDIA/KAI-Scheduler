@@ -21,10 +21,10 @@ package scheduler
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -106,7 +106,7 @@ func (s *Scheduler) Run(stopCh <-chan struct{}) {
 }
 
 func (s *Scheduler) runOnce() {
-	sessionId := uuid.NewUUID()
+	sessionId := generateSessionID(6)
 	log.InfraLogger.SetSessionID(string(sessionId))
 
 	log.InfraLogger.V(1).Infof("Start scheduling ...")
@@ -145,4 +145,16 @@ func newClients(config *rest.Config) (kubernetes.Interface, kubeaischedulerver.I
 func getUsageDBClient(dbConfig *usagedbapi.UsageDBConfig) (usagedbapi.Interface, error) {
 	resolver := usagedb.NewClientResolver(nil)
 	return resolver.GetClient(dbConfig)
+}
+
+func generateSessionID(l int) string {
+	str := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	bytes := []byte(str)
+	var result []byte
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for range l {
+		result = append(result, bytes[r.Intn(len(bytes))])
+	}
+
+	return string(result)
 }

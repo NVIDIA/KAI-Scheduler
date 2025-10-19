@@ -47,7 +47,7 @@ func allocateSubGroupSet(ssn *framework.Session, stmt *framework.Statement, node
 			return true
 		}
 		if err := stmt.Rollback(cp); err != nil {
-			log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.UID, err)
+			log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.ID, err)
 		}
 	}
 
@@ -95,7 +95,7 @@ func allocatePodSet(ssn *framework.Session, stmt *framework.Statement, nodes nod
 			return true
 		}
 		if err := stmt.Rollback(cp); err != nil {
-			log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.UID, err)
+			log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.ID, err)
 		}
 	}
 	return false
@@ -169,7 +169,7 @@ func bindTaskToNode(ssn *framework.Session, stmt *framework.Statement, task *pod
 		task.Namespace, task.Name, node.Name, task.ResReq)
 
 	if err := stmt.Allocate(task, node.Name); err != nil {
-		log.InfraLogger.Errorf("Failed to bind Task %v on %v in Session %v, err: %v", task.UID, node.Name, ssn.UID, err)
+		log.InfraLogger.Errorf("Failed to bind Task %v on %v in Session %v, err: %v", task.UID, node.Name, ssn.ID, err)
 		return false
 	}
 	return true
@@ -180,7 +180,7 @@ func pipelineTaskToNode(ssn *framework.Session, stmt *framework.Statement, task 
 		task.Namespace, task.Name, node.Name, task.ResReq)
 
 	if err := stmt.Pipeline(task, node.Name, updateTasksIfExistsOnNode); err != nil {
-		log.InfraLogger.V(6).Infof("Failed to pipeline Task %v on %v in Session %v", task.UID, node.Name, ssn.UID)
+		log.InfraLogger.V(6).Infof("Failed to pipeline Task %v on %v in Session %v", task.UID, node.Name, ssn.ID)
 		return false
 	}
 	return true
