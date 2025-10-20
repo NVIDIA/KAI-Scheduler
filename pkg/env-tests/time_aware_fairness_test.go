@@ -1,8 +1,6 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build timeaware
-
 package env_tests
 
 import (
@@ -18,11 +16,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 
+	kaiv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -40,6 +40,7 @@ import (
 )
 
 const interval = time.Millisecond * 10
+const defaultTimeout = time.Second * 10
 
 type TestQueue struct {
 	Name         string
@@ -122,11 +123,10 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan str
 
 func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.AllocationHistory, error, error) {
 	simulationName := randomstring.HumanFriendlyEnglishString(10)
-	var cleanupErrors []error
 
 	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to setup controllers: %w", err), errors.Join(cleanupErrors...)
+		return nil, fmt.Errorf("failed to setup controllers: %w", err), nil
 	}
 	defer close(stopCh)
 	defer cancel()
@@ -140,13 +140,12 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 		},
 	}
 	if err := ctrlClient.Create(ctx, testNamespace); err != nil {
-		return nil, fmt.Errorf("failed to create test namespace: %w", err), errors.Join(cleanupErrors...)
+		return nil, fmt.Errorf("failed to create test namespace: %w", err), nil
 	}
 
+	var cleanupErrors []error
 	defer func() {
-		if err := ctrlClient.Delete(context.Background(), testNamespace); err != nil {
-			cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete test namespace during cleanup: %w", err))
-		}
+		cleanupErrors = append(cleanupErrors, cleanupSimulation(ctx, ctrlClient, testNamespace, simulationName)...)
 	}()
 
 	var nodes []*corev1.Node
@@ -160,14 +159,6 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 		}
 		nodes = append(nodes, nodeObject)
 	}
-	defer func() {
-		if err := ctrlClient.DeleteAllOf(context.Background(), &corev1.Node{},
-			client.MatchingLabels{"simulation": simulationName},
-			client.GracePeriodSeconds(0),
-		); err != nil {
-			cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete test nodes during cleanup: %w", err))
-		}
-	}()
 
 	var queues []*schedulingv2.Queue
 	for _, queue := range simulation.Queues {
@@ -199,35 +190,11 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 		queues = append(queues, queueObject)
 	}
 
-	defer func() {
-		if err := ctrlClient.DeleteAllOf(context.Background(), &schedulingv2.Queue{},
-			client.MatchingLabels{"simulation": simulationName},
-			client.GracePeriodSeconds(0),
-		); err != nil {
-			cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete simulation queues during cleanup: %w", err))
-		}
-	}()
-
 	for queueName, job := range simulation.Jobs {
 		for range job.NumJobs {
 			queueJob(ctx, ctrlClient, testNamespace.Name, queueName, job.NumPods, job.GPUs)
 		}
 	}
-	defer func() {
-		if err := ctrlClient.DeleteAllOf(context.Background(), &corev1.Pod{},
-			client.InNamespace(testNamespace.Name),
-			client.GracePeriodSeconds(0),
-		); err != nil {
-			cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete simulation pods during cleanup: %w", err))
-		}
-
-		if err := ctrlClient.DeleteAllOf(context.Background(), &schedulingv2alpha2.PodGroup{},
-			client.InNamespace(testNamespace.Name),
-			client.GracePeriodSeconds(0),
-		); err != nil {
-			cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete simulation podgroups during cleanup: %w", err))
-		}
-	}()
 
 	if simulation.Cycles == nil {
 		simulation.Cycles = ptr.To(100)
@@ -240,6 +207,50 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 	allocationHistory := usageClient.GetAllocationHistory()
 
 	return allocationHistory, err, errors.Join(cleanupErrors...)
+}
+
+func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamespace *corev1.Namespace, simulationName string) []error {
+	var cleanupErrors []error
+
+	if err := ctrlClient.DeleteAllOf(context.Background(), &corev1.Node{},
+		client.MatchingLabels{"simulation": simulationName},
+		client.GracePeriodSeconds(0),
+	); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete test nodes during cleanup: %w", err))
+	}
+
+	if err := ctrlClient.DeleteAllOf(context.Background(), &schedulingv2.Queue{},
+		client.MatchingLabels{"simulation": simulationName},
+		client.GracePeriodSeconds(0),
+	); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete simulation queues during cleanup: %w", err))
+	}
+
+	if err := DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
+		&corev1.Pod{},
+		&schedulingv2alpha2.PodGroup{},
+	); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete simulation pods and podgroups during cleanup: %w", err))
+	}
+
+	if err := WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, interval,
+		&corev1.PodList{},
+		&schedulingv2alpha2.PodGroupList{},
+		&resourceapi.ResourceClaimList{},
+		&kaiv1alpha2.BindRequestList{},
+	); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to wait for simulation pods and podgroups to be deleted during cleanup: %w", err))
+	}
+
+	if err := ctrlClient.Delete(context.Background(), testNamespace); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete test namespace during cleanup: %w", err))
+	}
+
+	if err := WaitForNamespaceDeletion(ctx, ctrlClient, testNamespace.Name, defaultTimeout, interval); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to wait for test namespace to be deleted during cleanup: %w", err))
+	}
+
+	return cleanupErrors
 }
 
 var _ = Describe("Time Aware Fairness", Ordered, func() {
