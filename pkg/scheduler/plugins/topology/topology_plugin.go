@@ -8,7 +8,6 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	"github.com/samber/lo"
 )
 
 const (
@@ -23,13 +22,9 @@ type subgroupName = string
 type topologyPlugin struct {
 	TopologyTrees map[topologyName]*Info
 
-	// Cache for storing node set to domain by topology name
-	nodeSetToDomain map[topologyName]map[nodeSetID]*DomainInfo
-
 	// Defines order among nodes in a sub-group based on the sub-group's preferred level topology constraint.
 	subGroupNodeScores map[subgroupName]map[string]float64
-
-	session *framework.Session
+	session            *framework.Session
 }
 
 type domainNodeScores struct {
@@ -40,7 +35,6 @@ type domainNodeScores struct {
 func New(_ map[string]string) framework.Plugin {
 	return &topologyPlugin{
 		TopologyTrees:      map[topologyName]*Info{},
-		nodeSetToDomain:    map[topologyName]map[nodeSetID]*DomainInfo{},
 		subGroupNodeScores: map[subgroupName]map[string]float64{},
 		session:            nil,
 	}
@@ -75,17 +69,6 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 		}
 
 		t.TopologyTrees[topology.Name] = topologyTree
-
-		t.nodeSetToDomain[topology.Name] = map[nodeSetID]*DomainInfo{}
-		domains := []*DomainInfo{}
-		for _, levelDomains := range topologyTree.DomainsByLevel {
-			for _, domain := range levelDomains {
-				domains = append(domains, domain)
-			}
-		}
-		for _, domain := range domains {
-			t.nodeSetToDomain[topology.Name][getNodeSetID(lo.Values(domain.Nodes))] = domain
-		}
 	}
 }
 
