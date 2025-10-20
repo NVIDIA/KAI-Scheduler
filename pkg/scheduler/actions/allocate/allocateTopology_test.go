@@ -40,7 +40,6 @@ func TestHandleTopologyAllocation(t *testing.T) {
 }
 
 func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
-	// GuyContinue: Make all tests pass
 	return []integration_tests_utils.TestTopologyMetadata{
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
