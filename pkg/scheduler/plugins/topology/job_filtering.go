@@ -187,7 +187,7 @@ func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *n
 	}
 	// Add more to jobResourcesAllocationsRepresenters until the node cannot accommodate any more pods
 	if allocatablePodsCount == len(jobAllocationMetaData.allocationTestPods) {
-		for i := allocatablePodsCount; i < len(jobAllocationMetaData.tasksToAllocate); i++ {
+		for i := allocatablePodsCount; ; i++ {
 			latestTestPod := jobAllocationMetaData.allocationTestPods[len(jobAllocationMetaData.allocationTestPods)-1]
 
 			iAllocationsTestPod := &pod_info.PodInfo{
