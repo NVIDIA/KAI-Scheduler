@@ -93,9 +93,9 @@ func TestSubGroupOrderFn(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			left := makeSubGroupInfoWithAllocated(tt.lMinAvailable, tt.lAllocated, "l")
 			right := makeSubGroupInfoWithAllocated(tt.rMinAvailable, tt.rAllocated, "r")
-			got := SubGroupOrderFn(left, right)
+			got := PodSetOrderFn(left, right)
 			if got != tt.want {
-				t.Errorf("SubGroupOrderFn() = %v, want %v", got, tt.want)
+				t.Errorf("PodSetOrderFn() = %v, want %v", got, tt.want)
 			}
 		})
 	}

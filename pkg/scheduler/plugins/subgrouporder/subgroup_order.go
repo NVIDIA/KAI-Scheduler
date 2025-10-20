@@ -28,10 +28,10 @@ func (sgop *subGroupOrderPlugin) Name() string {
 }
 
 func (sgop *subGroupOrderPlugin) OnSessionOpen(ssn *framework.Session) {
-	ssn.AddSubGroupsOrderFn(SubGroupOrderFn)
+	ssn.AddPodSetOrderFn(PodSetOrderFn)
 }
 
-func SubGroupOrderFn(l, r interface{}) int {
+func PodSetOrderFn(l, r interface{}) int {
 	lv := l.(*subgroup_info.PodSet)
 	rv := r.(*subgroup_info.PodSet)
 
