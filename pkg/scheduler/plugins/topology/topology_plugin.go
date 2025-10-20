@@ -28,11 +28,6 @@ type topologyPlugin struct {
 	session            *framework.Session
 }
 
-type domainNodeScores struct {
-	domainID   DomainID
-	nodeScores map[string]float64
-}
-
 func New(_ map[string]string) framework.Plugin {
 	return &topologyPlugin{
 		TopologyTrees:      map[topologyName]*Info{},

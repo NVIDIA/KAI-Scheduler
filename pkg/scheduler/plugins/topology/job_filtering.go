@@ -26,9 +26,6 @@ func (t *topologyPlugin) subSetNodesFn(
 	job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo, podSets map[string]*subgroup_info.PodSet,
 	tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet,
 ) ([]node_info.NodeSet, error) {
-	// GuyTodo: Invalidate the sub-group node scores in PreJobAllocationFn
-	// t.invalidateSubGroupDomainNodeScores()
-
 	topologyTree, found := t.getJobTopology(subGroup)
 	if !found {
 		job.SetJobFitError(
