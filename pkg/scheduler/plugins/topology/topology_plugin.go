@@ -26,8 +26,6 @@ type topologyPlugin struct {
 	// Cache for storing node set to domain by topology name
 	nodeSetToDomain map[topologyName]map[nodeSetID]*DomainInfo
 
-	subGroupDomainNodeScores map[subgroupName]domainNodeScores
-
 	// Defines order among nodes in a sub-group based on the sub-group's preferred level topology constraint.
 	subGroupNodeScores map[subgroupName]map[string]float64
 
@@ -41,11 +39,10 @@ type domainNodeScores struct {
 
 func New(_ map[string]string) framework.Plugin {
 	return &topologyPlugin{
-		TopologyTrees:            map[topologyName]*Info{},
-		nodeSetToDomain:          map[topologyName]map[nodeSetID]*DomainInfo{},
-		subGroupDomainNodeScores: map[subgroupName]domainNodeScores{},
-		subGroupNodeScores:       map[subgroupName]map[string]float64{},
-		session:                  nil,
+		TopologyTrees:      map[topologyName]*Info{},
+		nodeSetToDomain:    map[topologyName]map[nodeSetID]*DomainInfo{},
+		subGroupNodeScores: map[subgroupName]map[string]float64{},
+		session:            nil,
 	}
 }
 

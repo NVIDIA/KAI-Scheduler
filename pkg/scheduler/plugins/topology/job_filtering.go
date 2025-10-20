@@ -26,8 +26,8 @@ func (t *topologyPlugin) subSetNodesFn(
 	job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo, podSets map[string]*subgroup_info.PodSet,
 	tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet,
 ) ([]node_info.NodeSet, error) {
-	// GuyTodo: Create a new Extension Point for this - PreJobAllocationFn
-	t.invalidateSubGroupDomainNodeScores()
+	// GuyTodo: Invalidate the sub-group node scores in PreJobAllocationFn
+	// t.invalidateSubGroupDomainNodeScores()
 
 	topologyTree, found := t.getJobTopology(subGroup)
 	if !found {
@@ -365,10 +365,6 @@ func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
 			domain.AllocatablePods = 0
 		}
 	}
-}
-
-func (t *topologyPlugin) invalidateSubGroupDomainNodeScores() {
-	t.subGroupDomainNodeScores = make(map[subgroupName]domainNodeScores)
 }
 
 func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
