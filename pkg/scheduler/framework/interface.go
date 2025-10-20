@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/xhit/go-str2duration/v2"
 )
 
 type ActionType string
@@ -127,7 +129,7 @@ func (pa PluginArguments) GetDuration(key string, defaultValue time.Duration) (t
 		return defaultValue, nil
 	}
 
-	parsed, err := time.ParseDuration(val)
+	parsed, err := str2duration.ParseDuration(val)
 	if err != nil {
 		return defaultValue, fmt.Errorf("failed to parse %q as duration: %w", val, err)
 	}
