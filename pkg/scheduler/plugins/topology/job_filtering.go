@@ -55,7 +55,12 @@ func (t *topologyPlugin) subSetNodesFn(
 
 	// Sorting the tree for both packing and closest preferred level domain scoring
 	preferredLevel := DomainLevel(subGroup.GetTopologyConstraint().PreferredLevel)
-	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
+	requiredLevel := DomainLevel(subGroup.GetTopologyConstraint().RequiredLevel)
+	maxDepthLevel := preferredLevel
+	if maxDepthLevel == "" {
+		maxDepthLevel = requiredLevel
+	}
+	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], maxDepthLevel)
 	if preferredLevel != "" {
 		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
 	}
@@ -385,6 +390,7 @@ func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
 	}
 }
 
+// Assumes the topology tree is already sorted
 func sortDomainInfos(topologyTree *Info, domainInfos []*DomainInfo) []*DomainInfo {
 	root := topologyTree.DomainsByLevel[rootLevel][rootDomainId]
 	reverseLevelOrderedDomains := reverseLevelOrder(root)
