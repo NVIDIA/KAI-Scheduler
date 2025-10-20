@@ -526,9 +526,7 @@ func Test_elasticPlugin_OnSessionOpen(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pp := &elasticPlugin{
-				pluginArguments: tt.fields.pluginArguments,
-			}
+			pp := &elasticPlugin{}
 			pp.OnSessionOpen(tt.args.ssn)
 		})
 	}
