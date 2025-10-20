@@ -28,7 +28,7 @@ type topologyPlugin struct {
 	session            *framework.Session
 }
 
-func New(_ map[string]string) framework.Plugin {
+func New(_ framework.PluginArguments) framework.Plugin {
 	return &topologyPlugin{
 		TopologyTrees:      map[topologyName]*Info{},
 		subGroupNodeScores: map[subgroupName]map[string]float64{},

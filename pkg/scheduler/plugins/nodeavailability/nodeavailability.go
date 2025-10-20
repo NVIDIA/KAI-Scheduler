@@ -11,14 +11,11 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/scores"
 )
 
-type nodeAvailabilityPlugin struct {
-	// Arguments given for the plugin
-	pluginArguments map[string]string
-}
+type nodeAvailabilityPlugin struct{}
 
 // New function returns nodeAvailabilityPlugin object
-func New(arguments map[string]string) framework.Plugin {
-	return &nodeAvailabilityPlugin{pluginArguments: arguments}
+func New(_ framework.PluginArguments) framework.Plugin {
+	return &nodeAvailabilityPlugin{}
 }
 
 func (pp *nodeAvailabilityPlugin) Name() string {

@@ -18,13 +18,10 @@ var (
 	masterRoleValues = []string{"master", "launcher"}
 )
 
-type kubeflowPlugin struct {
-	// Arguments given for the plugin
-	pluginArguments map[string]string
-}
+type kubeflowPlugin struct{}
 
-func New(arguments map[string]string) framework.Plugin {
-	return &kubeflowPlugin{pluginArguments: arguments}
+func New(_ framework.PluginArguments) framework.Plugin {
+	return &kubeflowPlugin{}
 }
 
 func (pp *kubeflowPlugin) Name() string {

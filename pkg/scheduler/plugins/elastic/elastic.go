@@ -8,13 +8,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
 
-type elasticPlugin struct {
-	// Arguments given for the plugin
-	pluginArguments map[string]string
-}
+type elasticPlugin struct{}
 
-func New(arguments map[string]string) framework.Plugin {
-	return &elasticPlugin{pluginArguments: arguments}
+func New(_ framework.PluginArguments) framework.Plugin {
+	return &elasticPlugin{}
 }
 
 func (pp *elasticPlugin) Name() string {
