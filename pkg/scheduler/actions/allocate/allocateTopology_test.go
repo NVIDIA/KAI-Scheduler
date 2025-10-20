@@ -2539,6 +2539,21 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						},
 					},
 				},
+				// zone1
+				// ├── spine1
+				// │   ├── rack1
+				// │   │   ├── node0 (1 GPU)
+				// │   │   └── node1 (1 GPU)
+				// │   └── rack2
+				// │       ├── node2 (1 GPU)
+				// │       └── node3 (1 GPU)
+				// └── spine2
+				// 	├── rack3
+				// 	│   ├── node4 (1 GPU)
+				// 	│   └── node5 (1 GPU)
+				// 	└── rack4
+				// 		├── node6 (1 GPU)
+				// 		└── node7 (1 GPU)
 				Nodes: buildEvenlyDistributedTopologyNodes(1, 2, 2, 2, 1),
 				Queues: []test_utils.TestQueueBasic{
 					{
@@ -2607,16 +2622,16 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 	}
 }
 
-func buildEvenlyDistributedTopologyNodes(numZones, numSpinesPerZone, numRacksPerSpine, numNodesPerSpine, gpusPerNode int) map[string]nodes_fake.TestNodeBasic {
+func buildEvenlyDistributedTopologyNodes(numZones, numSpinesPerZone, numRacksPerSpine, numNodesPerRack, gpusPerNode int) map[string]nodes_fake.TestNodeBasic {
 	nodes := make(map[string]nodes_fake.TestNodeBasic)
 	nodeID := 0
 	for z := 1; z <= numZones; z++ {
 		zoneLabel := fmt.Sprintf("zone%d", z)
-		for r := 1; r <= numSpinesPerZone; r++ {
-			spineLabel := fmt.Sprintf("spine%d", r+(z-1)*numSpinesPerZone)
-			for s := 1; s <= numRacksPerSpine; s++ {
-				rackLabel := fmt.Sprintf("rack%d", s+(r-1)*numRacksPerSpine+(z-1)*numSpinesPerZone*numRacksPerSpine)
-				for n := 1; n <= numNodesPerSpine; n++ {
+		for sp := 1; sp <= numSpinesPerZone; sp++ {
+			spineLabel := fmt.Sprintf("spine%d", sp+(z-1)*numSpinesPerZone)
+			for r := 1; r <= numRacksPerSpine; r++ {
+				rackLabel := fmt.Sprintf("rack%d", r+(sp-1)*numRacksPerSpine+(z-1)*numSpinesPerZone*numRacksPerSpine)
+				for n := 1; n <= numNodesPerRack; n++ {
 					nodeName := fmt.Sprintf("node%d", nodeID)
 					nodes[nodeName] = nodes_fake.TestNodeBasic{
 						GPUs: gpusPerNode,
@@ -2630,15 +2645,6 @@ func buildEvenlyDistributedTopologyNodes(numZones, numSpinesPerZone, numRacksPer
 				}
 			}
 		}
-	}
-
-	fmt.Printf("Built %d nodes\n", len(nodes))
-	fmt.Printf("Nodes: %v\n", nodes)
-	// Pretty print the nodes
-	for nodeName, node := range nodes {
-		fmt.Printf("Node: %s\n", nodeName)
-		fmt.Printf("  Labels: %v\n", node.Labels)
-		fmt.Printf("  GPUs: %d\n", node.GPUs)
 	}
 
 	return nodes
