@@ -73,22 +73,13 @@ func (t *topologyPlugin) getTaskSubGroupInfo(task *pod_info.PodInfo) (*subgroup_
 		return nil, fmt.Errorf("job %s not found for task %s/%s", task.Job, task.Namespace, task.Name)
 	}
 
-	sgName := t.getTaskSubGroupName(task)
+	sgName := getTaskSubGroupName(task)
 	sg, found := job.GetSubGroups()[sgName]
 	if !found {
 		return nil, fmt.Errorf("sub-group %s not found in job %s", sgName, job.Name)
 	}
 
 	return &sg.SubGroupInfo, nil
-}
-
-// GuyTodo: Move to common location (podgroup_info?)
-func (t *topologyPlugin) getTaskSubGroupName(task *pod_info.PodInfo) string {
-	sgName := podgroup_info.DefaultSubGroup
-	if task.SubGroupName != "" {
-		sgName = task.SubGroupName
-	}
-	return sgName
 }
 
 func (t *topologyPlugin) getRelevantNodeScores(sgi *subgroup_info.SubGroupInfo) map[string]float64 {
@@ -101,4 +92,12 @@ func (t *topologyPlugin) getRelevantNodeScores(sgi *subgroup_info.SubGroupInfo) 
 	}
 
 	return t.getRelevantNodeScores(&sgi.GetParent().SubGroupInfo)
+}
+
+func getTaskSubGroupName(task *pod_info.PodInfo) string {
+	sgName := podgroup_info.DefaultSubGroup
+	if task.SubGroupName != "" {
+		sgName = task.SubGroupName
+	}
+	return sgName
 }

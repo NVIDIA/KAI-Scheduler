@@ -399,6 +399,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				TopologyTrees: map[string]*Info{
 					"test-topology": topologyTree,
 				},
+				subGroupNodeScores: map[subgroupName]map[string]float64{},
 			}
 
 			// Call the function under test

@@ -7,7 +7,6 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
-	"sort"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -64,12 +63,35 @@ func (t *topologyPlugin) subSetNodesFn(
 		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
 	}
 
+	// GuyDebug: Print the topology tree for debugging
+	fmt.Printf("-------------- Topology Tree: %s\n", topologyTree.Name)
+	for _, domain := range topologyTree.DomainsByLevel[rootLevel][rootDomainId].Children {
+		fmt.Printf("%s, Level: %s, AllocatablePods: %d\n", domain.ID, domain.Level, domain.AllocatablePods)
+		for _, child := range domain.Children {
+			fmt.Printf("  %s, Level: %s, AllocatablePods: %d\n", child.ID, child.Level, child.AllocatablePods)
+			for _, grandChild := range child.Children {
+				fmt.Printf("    %s, Level: %s, AllocatablePods: %d\n", grandChild.ID, grandChild.Level, grandChild.AllocatablePods)
+				for _, greatGrandChild := range grandChild.Children {
+					fmt.Printf("      %s, Level: %s, AllocatablePods: %d\n", greatGrandChild.ID, greatGrandChild.Level, greatGrandChild.AllocatablePods)
+				}
+			}
+		}
+	}
+	fmt.Printf("-------------- End of Topology Tree\n")
+
 	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroup, podSets, len(tasks), topologyTree)
 	if err != nil {
 		return nil, err
 	}
 
-	jobAllocatableDomains = sortDomainInfos(jobAllocatableDomains)
+	jobAllocatableDomains = sortDomainInfos(topologyTree, jobAllocatableDomains)
+
+	// GuyDebug: Print the domains order for debugging
+	fmt.Printf("-------------- Job Allocatable Domains for workload in topology tree: %s\n", topologyTree.Name)
+	for _, domain := range jobAllocatableDomains {
+		fmt.Printf("Domain ID: %s, Level: %s, AllocatablePods: %d\n", domain.ID, domain.Level, domain.AllocatablePods)
+	}
+	fmt.Printf("-------------- End of Job Allocatable Domains\n")
 
 	var domainNodeSets []node_info.NodeSet
 	for _, jobAllocatableDomain := range jobAllocatableDomains {
@@ -370,19 +392,25 @@ func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
 	}
 }
 
-// GuyTodo: Maybe remove and rely on sortTree only
-func sortDomainInfos(domainInfos []*DomainInfo) []*DomainInfo {
-	sort.SliceStable(domainInfos, func(i, j int) bool {
-		if domainInfos[i].Level != domainInfos[j].Level {
-			return false
-		}
+func sortDomainInfos(topologyTree *Info, domainInfos []*DomainInfo) []*DomainInfo {
+	root := topologyTree.DomainsByLevel[rootLevel][rootDomainId]
+	reverseLevelOrderedDomains := reverseLevelOrder(root)
 
-		iDomainGPUs := domainInfos[i].GetNonAllocatedGPUsInDomain()
-		jDomainGPUs := domainInfos[j].GetNonAllocatedGPUsInDomain()
-		if iDomainGPUs != jDomainGPUs {
-			return iDomainGPUs < jDomainGPUs
+	// GuyDebug: Print the sorted domains for debugging
+	fmt.Printf("-------------- Sorted Domains by Capacity\n")
+	for _, domain := range reverseLevelOrderedDomains {
+		fmt.Printf("Domain ID: %s, Level: %s, AllocatablePods: %d\n", domain.ID, domain.Level, domain.AllocatablePods)
+	}
+	fmt.Printf("-------------- End of Sorted Domains\n")
+
+	sortedDomainInfos := make([]*DomainInfo, 0, len(domainInfos))
+	for _, domain := range reverseLevelOrderedDomains {
+		for _, domainInfo := range domainInfos {
+			if domain.ID == domainInfo.ID && domain.Level == domainInfo.Level {
+				sortedDomainInfos = append(sortedDomainInfos, domainInfo)
+			}
 		}
-		return domainInfos[i].ID < domainInfos[j].ID
-	})
-	return domainInfos
+	}
+
+	return sortedDomainInfos
 }
