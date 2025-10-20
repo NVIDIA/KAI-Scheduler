@@ -49,19 +49,19 @@ func (t *topologyPlugin) subSetNodesFn(
 		return nil, err
 	}
 
-	// GuyTodo: Start from the required level
-	preferredLevel := DomainLevel(subGroup.GetTopologyConstraint().PreferredLevel)
-	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
-	if preferredLevel != "" {
-		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
-	}
-
 	if maxAllocatablePods < len(tasks) {
 		job.SetJobFitError(
 			podgroup_info.PodSchedulingErrors,
 			fmt.Sprintf("No relevant domains found for workload in topology tree: %s", topologyTree.Name),
 			nil)
 		return []node_info.NodeSet{}, nil
+	}
+
+	// Sorting the tree for both packing and closest preferred level domain scoring
+	preferredLevel := DomainLevel(subGroup.GetTopologyConstraint().PreferredLevel)
+	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
+	if preferredLevel != "" {
+		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
 	}
 
 	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroup, podSets, len(tasks), topologyTree)

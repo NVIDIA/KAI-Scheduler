@@ -14,49 +14,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/scores"
 )
 
-func (t *topologyPlugin) nodePreOrderFn(task *pod_info.PodInfo, nodes []*node_info.NodeInfo) error {
-	// GuyTodo: Remove function
-	return nil
-
-	sgi, err := t.getTaskSubGroupInfo(task)
-	if err != nil {
-		return err
-	}
-
-	// GuyDebug: Print debug log
-	fmt.Printf("Calculating node scores for task %s/%s in sub-group %s on %d nodes\n",
-		task.Namespace, task.Name, sgi.GetName(), len(nodes))
-
-	// GuyTodo: Calculate whether the subgroup has a preferred topology level (consider hierarchy of levels)
-
-	// GuyTodo: Make sure the job Topology is the same as the task's Topology (validate with Hagay we don't allow different topologies in a job)
-	topologyConstraint := sgi.GetTopologyConstraint()
-	if topologyConstraint == nil || topologyConstraint.PreferredLevel == "" {
-		return nil
-	}
-
-	// GuyDebug: Print debug log
-	fmt.Printf("Calculating node scores for task %s/%s in sub-group %s with topology constraint %+v on %d nodes\n",
-		task.Namespace, task.Name, sgi.GetName(), topologyConstraint, len(nodes))
-
-	domain, ok := t.nodeSetToDomain[topologyConstraint.Topology][getNodeSetID(nodes)]
-	if !ok || domain == nil {
-		return fmt.Errorf("domain for node set %s not found", getNodeSetID(nodes))
-	}
-
-	// Avoid recalculating node scores for the same domain
-	if t.subGroupDomainNodeScores[sgi.GetName()].domainID == domain.ID {
-		return nil
-	}
-
-	t.subGroupDomainNodeScores[sgi.GetName()] = domainNodeScores{
-		domainID:   domain.ID,
-		nodeScores: calculateNodeScores(domain, DomainLevel(topologyConstraint.PreferredLevel)),
-	}
-
-	return nil
-}
-
 func (t *topologyPlugin) nodeOrderFn(task *pod_info.PodInfo, node *node_info.NodeInfo) (float64, error) {
 	taskSubGroupInfo, err := t.getTaskSubGroupInfo(task)
 	if err != nil {

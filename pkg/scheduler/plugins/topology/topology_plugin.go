@@ -58,7 +58,6 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	t.session = ssn
 
 	ssn.AddSubsetNodesFn(t.subSetNodesFn)
-	ssn.AddNodePreOrderFn(t.nodePreOrderFn)
 	ssn.AddNodeOrderFn(t.nodeOrderFn)
 }
 
