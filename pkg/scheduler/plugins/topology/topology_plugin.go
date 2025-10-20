@@ -7,6 +7,7 @@ import (
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
 
@@ -50,6 +51,12 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 
 	ssn.AddSubsetNodesFn(t.subSetNodesFn)
 	ssn.AddNodeOrderFn(t.nodeOrderFn)
+	ssn.AddPreJobAllocationFn(t.preJobAllocationFn)
+}
+
+func (t *topologyPlugin) preJobAllocationFn(job *podgroup_info.PodGroupInfo) {
+	// Invalidate the sub-group node scores
+	t.subGroupNodeScores = map[subgroupName]map[string]float64{}
 }
 
 func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, nodes map[string]*node_info.NodeInfo) {
