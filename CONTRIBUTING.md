@@ -76,9 +76,7 @@ Common scopes for KAI Scheduler:
 
 #### Breaking Changes
 
-Breaking changes MUST be indicated in one of two ways:
-1. Add `!` after the type/scope: `feat(api)!: remove deprecated field`
-2. Include `BREAKING CHANGE:` in the commit footer
+Breaking changes MUST be indicated by adding `!` after the type/scope: `feat(api)!: remove deprecated field`
 
 #### Examples
 
