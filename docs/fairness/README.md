@@ -17,7 +17,7 @@ These two steps are repeated across all hierarchy levels until every leaf queue 
 
 ## Fair Share
 Once the fair share for each queue is calculated, it serves two primary purposes:
-1. Queue Order - Queues with a fair share further below their allocation will be prioritized for scheduling.
+1. Queue Order - Queues with allocation further below their fair share will be prioritized for scheduling.
 2. Reclaim action – When reclamation is required, the scheduler compares the **Saturation Ratio** (`Allocated / FairShare`) of queues that share the same parent. A queue can only reclaim resources if, **after** the transfer, its utilisation ratio remains lower than that of every sibling queue. For more details see the reclaim strategies.
 
 ## Reclaim Strategies
