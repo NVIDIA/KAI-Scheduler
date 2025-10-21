@@ -66,11 +66,13 @@ Common scopes for KAI Scheduler:
 - `operator`: Operator implementation
 - `queuecontroller`: Queue controller
 - `podgroupcontroller`: PodGroup controller
+- `nodescaleadjuster`: Node scale adjuster
 - `resourcereservation`: Resource reservation
-- `fairshare`: Fair share functionality
 - `chart`: Helm chart changes
-- `crd`: CRD changes
 - `api`: API changes
+- `docs`: Documentation changes
+- `ci`: CI/CD changes
+- `release`: Release-related changes
 
 #### Breaking Changes
 

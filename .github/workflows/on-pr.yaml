@@ -202,7 +202,8 @@ jobs:
             nodescaleadjuster
             ci
             release
-          requireScope: false
+            docs
+          # requireScope: false
           ignoreLabels: |
             bot
             ignore-semantic-pull-request
