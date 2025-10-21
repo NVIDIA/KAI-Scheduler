@@ -346,6 +346,10 @@ func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
 	}
 }
 
+// sortTree recursively sorts the topology tree for bin-packing behavior.
+// Domains are sorted by AllocatablePods (ascending) to prioritize filling domains
+// with fewer available resources first, implementing a bin-packing strategy.
+// Within domains with equal AllocatablePods, sorts by ID for deterministic ordering.
 func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
 	if root == nil || maxDepthLevel == "" {
 		return
@@ -367,6 +371,7 @@ func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
 	}
 }
 
+// sortDomainInfos orders domains according to the sorted topology tree for consistent allocation.
 // Assumes the topology tree is already sorted
 func sortDomainInfos(topologyTree *Info, domainInfos []*DomainInfo) []*DomainInfo {
 	root := topologyTree.DomainsByLevel[rootLevel][rootDomainId]

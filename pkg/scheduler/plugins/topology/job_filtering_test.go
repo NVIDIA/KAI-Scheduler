@@ -420,7 +420,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			}
 
 			if tt.expectedJobFitError != "" {
-				if job.JobFitErrors == nil || len(job.JobFitErrors) == 0 {
+				if len(job.JobFitErrors) == 0 {
 					t.Errorf("expected job fit error '%s', but got nil", tt.expectedJobFitError)
 				}
 				if job.JobFitErrors[0].Message != tt.expectedJobFitError {

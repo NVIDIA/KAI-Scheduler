@@ -41,7 +41,7 @@ type DomainInfo struct {
 	// Level in the hierarchy (e.g., "datacenter", "zone", "rack", "node")
 	Level DomainLevel
 
-	// Child domains
+	// Child domains (slice maintains ordering for bin-packing and traversal algorithms)
 	Children []*DomainInfo
 
 	// Nodes that belong to this domain
