@@ -59,20 +59,20 @@ PR titles must follow the [Conventional Commits](https://www.conventionalcommits
 #### Scopes (Optional)
 
 Common scopes for KAI Scheduler:
-- `scheduler`: Core scheduler logic
-- `binder`: Binder component
-- `podgrouper`: Pod grouper functionality
-- `admission`: Admission webhook
-- `operator`: Operator implementation
-- `queuecontroller`: Queue controller
-- `podgroupcontroller`: PodGroup controller
-- `nodescaleadjuster`: Node scale adjuster
-- `resourcereservation`: Resource reservation
-- `chart`: Helm chart changes
-- `api`: API changes
-- `docs`: Documentation changes
-- `ci`: CI/CD changes
-- `release`: Release-related changes
+- `scheduler`
+- `binder`
+- `podgrouper`
+- `admission`
+- `operator`
+- `queuecontroller`
+- `podgroupcontroller`
+- `nodescaleadjuster`
+- `resourcereservation`
+- `chart`
+- `api`
+- `docs`
+- `ci`
+- `release`
 
 #### Breaking Changes
 
