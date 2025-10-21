@@ -27,13 +27,12 @@ Open an issue with a clear description, steps to reproduce, and relevant environ
 Help us keep the docs clear and useful by fixing typos, updating outdated information, or adding examples.
 
 ### Contributing changes
-- **Fork and Clone** – Begin by forking the repository and cloning it to your local machine.
-- **Create a Branch** – Use a descriptive branch name, such as `feature/add-cool-feature` or `bugfix/fix-issue123`.
-- **Make Changes** – Keep your commits small, focused, and well-documented. For detailed build and test instructions, refer to [Building from Source](docs/developer/building-from-source.md).
-- **Write Commit Messages** – Follow the [Conventional Commits](#commit-message-guidelines) specification. Use clear, descriptive commit messages that explain what changed and why.
-- **Log Changes** – For behavior-affecting changes (features, fixes, API changes), update the [changelog](CHANGELOG.md) file under the "Unreleased" section. Follow the format at [keepachangelog.com](https://keepachangelog.com/en/1.1.0/). Skip logging internal changes like refactoring or tests.
-- **Submit a PR** – Open a pull request using our [PR template](#pull-request-process) and reference any relevant issues or discussions.
-- **Test Coverage** – Please look at the coverage change details and create unit tests, integration tests or end-to-end tests to cover new functionality or changes.
+- Fork and Clone – Begin by forking the repository and cloning it to your local machine.
+- Create a Branch – Use a descriptive branch name, such as feature/add-cool-feature or bugfix/fix-issue123.
+- Make Changes – Keep your commits small, focused, and well-documented. For detailed build and test instructions, refer to [Building from Source](docs/developer/building-from-source.md).
+- Log Changes – For behavior-affecting changes (features, fixes, API changes), update the [changelog](CHANGELOG.md) file under the "Unreleased" section. Follow the format at [keepachangelog.com](https://keepachangelog.com/en/1.1.0/). Skip logging internal changes like refactoring or tests.
+- Submit a PR – Open a pull request and reference any relevant issues or discussions.
+- Coverage - Please look at the coverage change details and create unit tests, integration tests or end-to-end tests to cover new functionality or changes.
 
 ### PR Title Guidelines
 
@@ -97,30 +96,12 @@ feat(api)!: remove deprecated field from CRD
 ### Pull Request Checklist
 
 Before introducing major changes, we strongly recommend opening a PR that outlines your proposed design.
-
 Each pull request should meet the following requirements:
-- **All tests pass** – Run the full test suite locally with: `make build validate test`
-- **Test coverage** – Add or update tests for any affected code
-- **Documentation** – Update relevant documentation to reflect your changes
-- **Commit messages** – Follow the [Conventional Commits](#commit-message-guidelines) specification
-- **Changes logged** – If your changes warrant logging (behavior changes, bugfixes, or new features), add them to the [Changelog](CHANGELOG.md)
-- **PR description** – Fill out the pull request template completely
-
-### Pull Request Process
-
-1. **Use the PR Template** – When you create a pull request, GitHub will automatically populate it with our template. Please fill out all relevant sections.
-
-2. **Link Issues** – Reference related issues using keywords like "Fixes #123" or "Relates to #456" in the PR description.
-
-3. **Request Reviews** – Tag appropriate maintainers or request reviews from the team.
-
-4. **Address Feedback** – Respond to review comments and make requested changes. Push additional commits to your branch.
-
-5. **Keep it Updated** – Rebase or merge from the base branch if conflicts arise.
-
-6. **CI/CD Checks** – Ensure all automated checks pass before requesting final review.
-
-7. **Squash or Keep History** – We generally prefer meaningful commit history. Squashing is optional unless requested by maintainers.
+- All tests pass – Run the full test suite locally with: `make build validate test`
+- Test coverage – Add or update tests for any affected code.
+- Documentation – Update relevant documentation to reflect your changes.
+- Changes logged - If your changes warrant logging - like behavior changes (including bugfixes) or new features - add them to the [Changelog](CHANGELOG.md)
+- PR description – Fill out the pull request template completely
 
 ## Getting Help
 Need support or have a question? We're here to help:
