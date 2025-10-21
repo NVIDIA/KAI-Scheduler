@@ -13,7 +13,7 @@ import (
 
 const (
 	imageName           = "node-scale-adjuster"
-	scalingPodImageName = "scaling-pod"
+	scalingPodImageName = "scalingpod"
 )
 
 type NodeScaleAdjuster struct {
