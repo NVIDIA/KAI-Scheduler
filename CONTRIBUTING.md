@@ -35,18 +35,12 @@ Help us keep the docs clear and useful by fixing typos, updating outdated inform
 - **Submit a PR** – Open a pull request using our [PR template](#pull-request-process) and reference any relevant issues or discussions.
 - **Test Coverage** – Please look at the coverage change details and create unit tests, integration tests or end-to-end tests to cover new functionality or changes.
 
-### Commit Message Guidelines
+### PR Title Guidelines
 
-We follow the [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) specification for all commit messages. This leads to more readable history and enables automated changelog generation.
-
-#### Commit Message Format
+PR titles must follow the [Conventional Commits](https://www.conventionalcommits.org/) title specification. The format is:
 
 ```
 <type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
 ```
 
 #### Types
@@ -79,52 +73,26 @@ Common scopes for KAI Scheduler:
 - `crd`: CRD changes
 - `api`: API changes
 
-#### Examples
-
-```bash
-# Feature with scope
-feat(scheduler): add GPU topology-aware scheduling
-
-# Bug fix
-fix(binder): resolve race condition in pod binding process
-
-# Documentation
-docs: update installation guide with air-gapped setup
-
-# Breaking change (note the !)
-feat(api)!: change PodGroup status field structure
-
-BREAKING CHANGE: The status.phase field is renamed to status.state.
-Users must update their monitoring scripts accordingly.
-
-# Multiple paragraphs in body
-fix(scheduler): prevent memory leak in cache updates
-
-The scheduler cache was not properly releasing references to deleted
-pods, causing memory usage to grow over time.
-
-This fix ensures that pod references are properly cleaned up when pods
-are removed from the cache.
-
-Fixes #1234
-```
-
 #### Breaking Changes
 
 Breaking changes MUST be indicated in one of two ways:
 1. Add `!` after the type/scope: `feat(api)!: remove deprecated field`
 2. Include `BREAKING CHANGE:` in the commit footer
 
+#### Examples
+
+```
+feat(scheduler): add GPU topology-aware scheduling
+fix(binder): resolve race condition in pod binding
+docs: update installation guide
+refactor(api): simplify PodGroup status structure
+feat(api)!: remove deprecated field from CRD
+```
+
 #### Tips
 
 - Use the imperative mood: "add feature" not "added feature"
-- Keep the subject line under 72 characters
-- Capitalize the subject line
-- Don't end the subject line with a period
-- Separate subject from body with a blank line
-- Wrap the body at 72 characters
-- Use the body to explain what and why, not how
-- Reference issues and pull requests in the footer
+- Don't end with a period
 
 ### Pull Request Checklist
 
