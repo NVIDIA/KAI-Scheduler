@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add your changes under the `[Unreleased]` section
 - Use the categories: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`
 - When a release is published, the unreleased changes will be moved to a versioned section
-- Follow [Keep a Changelog](https://keepachangelog.com/) format guidelines
 
 ## [Unreleased]
 
