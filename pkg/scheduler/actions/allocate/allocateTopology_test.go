@@ -75,10 +75,12 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &topology_info.TopologyConstraintInfo{
-							Topology:      "cluster-topology",
-							RequiredLevel: "k8s.io/rack",
-						},
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:      "cluster-topology",
+								RequiredLevel: "k8s.io/rack",
+							},
+						),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -181,10 +183,12 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &topology_info.TopologyConstraintInfo{
-							Topology:      "cluster-topology",
-							RequiredLevel: "k8s.io/rack",
-						},
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:      "cluster-topology",
+								RequiredLevel: "k8s.io/rack",
+							},
+						),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -301,10 +305,12 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &topology_info.TopologyConstraintInfo{
-							Topology:      "cluster-topology",
-							RequiredLevel: "k8s.io/spine",
-						},
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:      "cluster-topology",
+								RequiredLevel: "k8s.io/spine",
+							},
+						),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -412,10 +418,12 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &topology_info.TopologyConstraintInfo{
-							Topology:      "cluster-topology",
-							RequiredLevel: "k8s.io/rack",
-						},
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:      "cluster-topology",
+								RequiredLevel: "k8s.io/rack",
+							},
+						),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -555,10 +563,12 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &topology_info.TopologyConstraintInfo{
-							Topology:      "cluster-topology",
-							RequiredLevel: "k8s.io/rack",
-						},
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:      "cluster-topology",
+								RequiredLevel: "k8s.io/rack",
+							},
+						),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -678,10 +688,12 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &topology_info.TopologyConstraintInfo{
-							Topology:      "cluster-topology",
-							RequiredLevel: "k8s.io/rack",
-						},
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:      "cluster-topology",
+								RequiredLevel: "k8s.io/rack",
+							},
+						),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -820,10 +832,12 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &topology_info.TopologyConstraintInfo{
-							Topology:       "cluster-topology",
-							PreferredLevel: "k8s.io/rack",
-						},
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:       "cluster-topology",
+								PreferredLevel: "k8s.io/rack",
+							},
+						),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -938,10 +952,12 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &topology_info.TopologyConstraintInfo{
-							Topology:       "cluster-topology",
-							PreferredLevel: "k8s.io/rack",
-						},
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:       "cluster-topology",
+								PreferredLevel: "k8s.io/rack",
+							},
+						),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -1069,11 +1085,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &topology_info.TopologyConstraintInfo{
-							Topology:       "cluster-topology",
-							RequiredLevel:  "k8s.io/rack",
-							PreferredLevel: "k8s.io/spine",
-						},
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:       "cluster-topology",
+								RequiredLevel:  "k8s.io/rack",
+								PreferredLevel: "k8s.io/spine",
+							},
+						),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -1219,36 +1237,35 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 2,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						Topology: &topology_info.TopologyConstraintInfo{
-							Topology:      "cluster-topology",
-							RequiredLevel: "k8s.io/zone",
-						},
-						PodSets: map[string]*subgroup_info.PodSet{
-							"encoder": subgroup_info.NewPodSet(
-								"encoder",
-								1,
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+								&topology_info.TopologyConstraintInfo{
+									Topology:      "cluster-topology",
+									RequiredLevel: "k8s.io/zone",
+								},
+							)
+							root.AddPodSet(subgroup_info.NewPodSet("sub-a", 1,
 								&topology_info.TopologyConstraintInfo{
 									Topology:      "cluster-topology",
 									RequiredLevel: "k8s.io/rack",
 								},
-							),
-							"decoder": subgroup_info.NewPodSet(
-								"decoder",
-								1,
+							))
+							root.AddPodSet(subgroup_info.NewPodSet("sub-b", 1,
 								&topology_info.TopologyConstraintInfo{
 									Topology:      "cluster-topology",
 									RequiredLevel: "k8s.io/rack",
 								},
-							),
-						},
+							))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
-								SubGroupName: "encoder",
+								SubGroupName: "sub-a",
 							},
 							{
 								State:        pod_status.Pending,
-								SubGroupName: "decoder",
+								SubGroupName: "sub-b",
 							},
 						},
 					},
@@ -1375,7 +1392,7 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								},
 							)
 							replica1.AddPodSet(subgroup_info.NewPodSet(
-								"encoder1",
+								"rep1-sub-a",
 								1,
 								&topology_info.TopologyConstraintInfo{
 									Topology:      "cluster-topology",
@@ -1383,7 +1400,7 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								},
 							))
 							replica1.AddPodSet(subgroup_info.NewPodSet(
-								"decoder1",
+								"rep1-sub-b",
 								1,
 								&topology_info.TopologyConstraintInfo{
 									Topology:      "cluster-topology",
@@ -1398,7 +1415,7 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								},
 							)
 							replica2.AddPodSet(subgroup_info.NewPodSet(
-								"encoder2",
+								"rep2-sub-a",
 								1,
 								&topology_info.TopologyConstraintInfo{
 									Topology:      "cluster-topology",
@@ -1406,7 +1423,7 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								},
 							))
 							replica2.AddPodSet(subgroup_info.NewPodSet(
-								"decoder2",
+								"rep2-sub-b",
 								1,
 								&topology_info.TopologyConstraintInfo{
 									Topology:      "cluster-topology",
@@ -1428,19 +1445,19 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
-								SubGroupName: "encoder1",
+								SubGroupName: "rep1-sub-a",
 							},
 							{
 								State:        pod_status.Pending,
-								SubGroupName: "decoder1",
+								SubGroupName: "rep1-sub-b",
 							},
 							{
 								State:        pod_status.Pending,
-								SubGroupName: "encoder2",
+								SubGroupName: "rep2-sub-a",
 							},
 							{
 								State:        pod_status.Pending,
-								SubGroupName: "decoder2",
+								SubGroupName: "rep2-sub-b",
 							},
 						},
 					},
@@ -1601,16 +1618,16 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub-a": subgroup_info.NewPodSet(
-								"sub-a",
-								1,
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub-a", 1,
 								&topology_info.TopologyConstraintInfo{
 									Topology:      "cluster-topology",
 									RequiredLevel: "k8s.io/rack",
 								},
-							),
-						},
+							))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
@@ -2103,12 +2120,12 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								},
 							)
 							replica1.AddPodSet(subgroup_info.NewPodSet(
-								"encoder1",
+								"rep1-sub-a",
 								1,
 								nil,
 							))
 							replica1.AddPodSet(subgroup_info.NewPodSet(
-								"decoder1",
+								"rep1-sub-b",
 								1,
 								nil,
 							))
@@ -2120,12 +2137,12 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								},
 							)
 							replica2.AddPodSet(subgroup_info.NewPodSet(
-								"encoder2",
+								"rep2-sub-a",
 								1,
 								nil,
 							))
 							replica2.AddPodSet(subgroup_info.NewPodSet(
-								"decoder2",
+								"rep2-sub-b",
 								1,
 								nil,
 							))
@@ -2144,19 +2161,19 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
-								SubGroupName: "encoder1",
+								SubGroupName: "rep1-sub-a",
 							},
 							{
 								State:        pod_status.Pending,
-								SubGroupName: "decoder1",
+								SubGroupName: "rep1-sub-b",
 							},
 							{
 								State:        pod_status.Pending,
-								SubGroupName: "encoder2",
+								SubGroupName: "rep2-sub-a",
 							},
 							{
 								State:        pod_status.Pending,
-								SubGroupName: "decoder2",
+								SubGroupName: "rep2-sub-b",
 							},
 						},
 					},

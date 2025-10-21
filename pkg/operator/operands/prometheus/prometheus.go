@@ -9,7 +9,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 )
@@ -19,6 +18,7 @@ type Prometheus struct {
 	lastDesiredState []client.Object
 	client           client.Client
 }
+type promethuesResourceForKAIConfig func(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) ([]client.Object, error)
 
 func (p *Prometheus) DesiredState(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
@@ -26,15 +26,22 @@ func (p *Prometheus) DesiredState(
 	p.namespace = kaiConfig.Spec.Namespace
 	p.client = runtimeClient.(client.Client)
 
-	objects, err := prometheusForKAIConfig(ctx, runtimeClient, kaiConfig)
-	if err != nil {
-		log.FromContext(ctx).Error(err, "Failed to create Prometheus instance")
-		return nil, err
+	var objects []client.Object
+	for _, resourceFunc := range []promethuesResourceForKAIConfig{
+		prometheusForKAIConfig,
+		prometheusServiceAccountForKAIConfig,
+		serviceMonitorsForKAIConfig,
+	} {
+		obj, err := resourceFunc(ctx, runtimeClient, kaiConfig)
+		if err != nil {
+			return nil, err
+		}
+		objects = append(objects, obj...)
 	}
 
 	p.lastDesiredState = objects
-
 	return objects, nil
+
 }
 
 func (b *Prometheus) IsDeployed(ctx context.Context, readerClient client.Reader) (bool, error) {

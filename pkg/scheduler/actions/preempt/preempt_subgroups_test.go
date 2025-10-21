@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	. "go.uber.org/mock/gomock"
-	"k8s.io/utils/pointer"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/preempt"
@@ -58,17 +57,18 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 					{
 						Name:                "pending_job",
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityBuildNumber,
 						QueueName:           "queue0",
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub-0", 1, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub-1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
@@ -79,7 +79,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								SubGroupName: "sub-1",
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -138,17 +137,18 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 					{
 						Name:                "pending_job",
 						RequiredGPUsPerTask: 2,
 						Priority:            constants.PriorityBuildNumber,
 						QueueName:           "queue0",
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub-0", 1, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub-1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
@@ -159,7 +159,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								SubGroupName: "sub-1",
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -217,17 +216,18 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 					{
 						Name:                "pending_job",
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityBuildNumber,
 						QueueName:           "queue0",
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub-0", 1, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub-1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
@@ -246,7 +246,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								SubGroupName: "sub-1",
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -317,17 +316,18 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 					{
 						Name:                "pending_job",
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityBuildNumber,
 						QueueName:           "queue0",
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub-0", 1, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub-1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:        pod_status.Pending,
@@ -346,7 +346,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								SubGroupName: "sub-1",
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -407,10 +406,12 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 1, nil),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 1, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub-0", 1, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub-1", 1, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName:     "node0",
@@ -433,7 +434,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								SubGroupName: "sub-1",
 							},
 						},
-						MinAvailable: pointer.Int32(2),
 					},
 					{
 						Name:                "pending_job",
@@ -445,7 +445,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								State: pod_status.Pending,
 							},
 						},
-						MinAvailable: pointer.Int32(1),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{
@@ -503,10 +502,12 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
-						PodSets: map[string]*subgroup_info.PodSet{
-							"sub-0": subgroup_info.NewPodSet("sub-0", 2, nil),
-							"sub-1": subgroup_info.NewPodSet("sub-1", 2, nil),
-						},
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("sub-0", 2, nil))
+							root.AddPodSet(subgroup_info.NewPodSet("sub-1", 2, nil))
+							return root
+						}(),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName:     "node0",
@@ -529,7 +530,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								SubGroupName: "sub-1",
 							},
 						},
-						MinAvailable: pointer.Int32(4),
 					},
 					{
 						Name:                "pending_job",
@@ -541,7 +541,6 @@ func getPreemptSubGroupsTestsMetadata() []integration_tests_utils.TestTopologyMe
 								State: pod_status.Pending,
 							},
 						},
-						MinAvailable: pointer.Int32(1),
 					},
 				},
 				Nodes: map[string]nodes_fake.TestNodeBasic{

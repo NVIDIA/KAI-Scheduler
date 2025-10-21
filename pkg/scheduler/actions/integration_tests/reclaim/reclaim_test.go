@@ -4053,6 +4053,7 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue0",
+						RootSubGroupSet:     jobs_fake.DefaultSubGroup(1),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								NodeName: "node0",
@@ -4065,14 +4066,13 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								Priority: pointer.Int(1),
 							},
 						},
-						MinAvailable: pointer.Int32(1),
 					},
 					{
 						Name:                "pending-job",
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
-						MinAvailable:        pointer.Int32(1),
+						RootSubGroupSet:     jobs_fake.DefaultSubGroup(1),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State:    pod_status.Pending,
@@ -4160,7 +4160,6 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: pointer.Int32(1),
 					},
 					{
 						Name:                "running-job1",
@@ -4173,14 +4172,12 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: pointer.Int32(1),
 					},
 					{
 						Name:                "pending-job",
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue2",
-						MinAvailable:        pointer.Int32(1),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -4257,7 +4254,6 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: pointer.Int32(1),
 					},
 					{
 						Name:                "running-job1",
@@ -4270,14 +4266,12 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: pointer.Int32(1),
 					},
 					{
 						Name:                "pending-job",
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue2",
-						MinAvailable:        pointer.Int32(1),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -4353,14 +4347,12 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: pointer.Int32(1),
 					},
 					{
 						Name:                "pending-job",
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
-						MinAvailable:        pointer.Int32(2),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -4434,7 +4426,6 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: pointer.Int32(1),
 					},
 					{
 						Name:                "running-job1",
@@ -4447,14 +4438,12 @@ func getReclaimTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: pointer.Int32(1),
 					},
 					{
 						Name:                "pending-job",
 						RequiredGPUsPerTask: 0.7,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
-						MinAvailable:        pointer.Int32(2),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,

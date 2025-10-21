@@ -54,6 +54,9 @@ spec:
       {{- end }}
     metricsPort: {{ .Values.binder.ports.metricsPort }}
     resourceReservation:
+      {{- if .Values.binder.runtimeClassName }}
+      runtimeClassName: {{ .Values.binder.runtimeClassName }}
+      {{- end }}
       image:
         name: {{ .Values.binder.resourceReservationImage.name }}
 
@@ -117,6 +120,11 @@ spec:
       {{- end }}
     args:
       nodeScaleNamespace: {{ .Values.nodescaleadjuster.scalingPodNamespace }} 
+      scalingPodImage:
+        name: {{ .Values.nodescaleadjuster.scalingPodImage.name }}
+        repository: {{ .Values.global.registry }}
+        tag: {{ .Chart.Version }}
+        pullPolicy: {{ .Values.nodescaleadjuster.scalingPodImage.pullPolicy | default .Values.global.imagePullPolicy }}
 
   scheduler:
     service:

@@ -5,6 +5,7 @@ package common
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -18,7 +19,7 @@ import (
 
 func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*node_info.NodeInfo,
 	job *podgroup_info.PodGroupInfo, isPipelineOnly bool) bool {
-	tasksToAllocate := podgroup_info.GetTasksToAllocate(job, ssn.SubGroupOrderFn, ssn.TaskOrderFn, !isPipelineOnly)
+	tasksToAllocate := podgroup_info.GetTasksToAllocate(job, ssn.PodSetOrderFn, ssn.TaskOrderFn, !isPipelineOnly)
 
 	result := ssn.IsJobOverQueueCapacityFn(job, tasksToAllocate)
 	if !result.IsSchedulable {
@@ -47,7 +48,7 @@ func allocateSubGroupSet(ssn *framework.Session, stmt *framework.Statement, node
 			return true
 		}
 		if err := stmt.Rollback(cp); err != nil {
-			log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.UID, err)
+			log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.ID, err)
 		}
 	}
 
@@ -58,7 +59,7 @@ func allocateSubGroupSetOnNodes(ssn *framework.Session, stmt *framework.Statemen
 	job *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, tasksToAllocate []*pod_info.PodInfo,
 	isPipelineOnly bool,
 ) bool {
-	for _, childSubGroupSet := range subGroupSet.GetChildGroups() {
+	for _, childSubGroupSet := range orderedSubGroupSets(ssn, subGroupSet.GetChildGroups()) {
 		podSets := childSubGroupSet.GetAllPodSets()
 		subGroupTasks := filterTasksForPodSets(podSets, tasksToAllocate)
 		if !allocateSubGroupSet(ssn, stmt, nodes, job, childSubGroupSet, subGroupTasks, isPipelineOnly) {
@@ -66,7 +67,7 @@ func allocateSubGroupSetOnNodes(ssn *framework.Session, stmt *framework.Statemen
 		}
 	}
 
-	for _, podSet := range subGroupSet.GetChildPodSets() {
+	for _, podSet := range orderedPodSets(ssn, subGroupSet.GetChildPodSets()) {
 		podSetTasks := filterTasksForPodSet(podSet, tasksToAllocate)
 		if !allocatePodSet(ssn, stmt, nodes, job, podSet, podSetTasks, isPipelineOnly) {
 			return false
@@ -95,7 +96,7 @@ func allocatePodSet(ssn *framework.Session, stmt *framework.Statement, nodes nod
 			return true
 		}
 		if err := stmt.Rollback(cp); err != nil {
-			log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.UID, err)
+			log.InfraLogger.Errorf("Failed to rollback statement in session %v, err: %v", ssn.ID, err)
 		}
 	}
 	return false
@@ -169,7 +170,7 @@ func bindTaskToNode(ssn *framework.Session, stmt *framework.Statement, task *pod
 		task.Namespace, task.Name, node.Name, task.ResReq)
 
 	if err := stmt.Allocate(task, node.Name); err != nil {
-		log.InfraLogger.Errorf("Failed to bind Task %v on %v in Session %v, err: %v", task.UID, node.Name, ssn.UID, err)
+		log.InfraLogger.Errorf("Failed to bind Task %v on %v in Session %v, err: %v", task.UID, node.Name, ssn.ID, err)
 		return false
 	}
 	return true
@@ -180,7 +181,7 @@ func pipelineTaskToNode(ssn *framework.Session, stmt *framework.Statement, task 
 		task.Namespace, task.Name, node.Name, task.ResReq)
 
 	if err := stmt.Pipeline(task, node.Name, updateTasksIfExistsOnNode); err != nil {
-		log.InfraLogger.V(6).Infof("Failed to pipeline Task %v on %v in Session %v", task.UID, node.Name, ssn.UID)
+		log.InfraLogger.V(6).Infof("Failed to pipeline Task %v on %v in Session %v", task.UID, node.Name, ssn.ID)
 		return false
 	}
 	return true
@@ -251,5 +252,21 @@ func filterTasksForPodSets(podSets map[string]*subgroup_info.PodSet, tasks []*po
 			result = append(result, task)
 		}
 	}
+	return result
+}
+
+func orderedSubGroupSets(ssn *framework.Session, subGroupSets []*subgroup_info.SubGroupSet) []*subgroup_info.SubGroupSet {
+	result := append([]*subgroup_info.SubGroupSet{}, subGroupSets...)
+	sort.Slice(result, func(i, j int) bool {
+		return ssn.SubGroupSetOrderFn(result[i], result[j])
+	})
+	return result
+}
+
+func orderedPodSets(ssn *framework.Session, podSets []*subgroup_info.PodSet) []*subgroup_info.PodSet {
+	result := append([]*subgroup_info.PodSet{}, podSets...)
+	sort.Slice(result, func(i, j int) bool {
+		return ssn.PodSetOrderFn(result[i], result[j])
+	})
 	return result
 }

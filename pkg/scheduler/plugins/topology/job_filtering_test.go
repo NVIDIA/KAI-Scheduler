@@ -48,14 +48,16 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
 				RequiredCPUsPerTask: 500,
+				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{
+						Topology:       "test-topology",
+						RequiredLevel:  "zone",
+						PreferredLevel: "rack",
+					},
+				),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
 					{State: pod_status.Pending},
-				},
-				Topology: &topology_info.TopologyConstraintInfo{
-					Topology:       "test-topology",
-					RequiredLevel:  "zone",
-					PreferredLevel: "rack",
 				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{
@@ -137,11 +139,13 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
 				RequiredCPUsPerTask: 500,
+				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{
+						Topology: "test-topology",
+					},
+				),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
-				},
-				Topology: &topology_info.TopologyConstraintInfo{
-					Topology: "test-topology",
 				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{
@@ -171,11 +175,13 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				Name:                "test-job",
 				Namespace:           "test-namespace",
 				RequiredCPUsPerTask: 500,
+				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{
+						Topology: "nonexistent-topology",
+					},
+				),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
-				},
-				Topology: &topology_info.TopologyConstraintInfo{
-					Topology: "nonexistent-topology",
 				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{
@@ -204,11 +210,13 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
 				RequiredCPUsPerTask: 500,
+				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{
+						Topology: "test-topology",
+					},
+				),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
-				},
-				Topology: &topology_info.TopologyConstraintInfo{
-					Topology: "test-topology",
 				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{
@@ -237,11 +245,13 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
 				RequiredCPUsPerTask: 2000, // Too much for any node
+				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{
+						Topology: "test-topology",
+					},
+				),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
-				},
-				Topology: &topology_info.TopologyConstraintInfo{
-					Topology: "test-topology",
 				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{
@@ -288,13 +298,15 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
 				RequiredCPUsPerTask: 500,
+				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{
+						Topology:       "test-topology",
+						RequiredLevel:  "nonexistent-level",
+						PreferredLevel: "rack",
+					},
+				),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
-				},
-				Topology: &topology_info.TopologyConstraintInfo{
-					Topology:       "test-topology",
-					RequiredLevel:  "nonexistent-level",
-					PreferredLevel: "rack",
 				},
 			},
 			nodes: map[string]nodes_fake.TestNodeBasic{

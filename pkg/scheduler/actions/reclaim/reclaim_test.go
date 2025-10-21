@@ -8,7 +8,6 @@ import (
 
 	. "go.uber.org/mock/gomock"
 	"gopkg.in/h2non/gock.v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/reclaim"
@@ -110,7 +109,6 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						},
 					}, {
 						Name:                "reclaimer",
-						MinAvailable:        ptr.To(int32(2)),
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "reclaimer_queue",
@@ -3211,7 +3209,6 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: ptr.To(int32(1)),
 					},
 					{
 						Name:                "running-job1",
@@ -3224,14 +3221,12 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: ptr.To(int32(1)),
 					},
 					{
 						Name:                "pending-job",
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue2",
-						MinAvailable:        ptr.To(int32(1)),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -3307,7 +3302,6 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: ptr.To(int32(1)),
 					},
 					{
 						Name:                "running-job1",
@@ -3320,14 +3314,12 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: ptr.To(int32(1)),
 					},
 					{
 						Name:                "pending-job",
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue2",
-						MinAvailable:        ptr.To(int32(1)),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -3403,14 +3395,12 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: ptr.To(int32(1)),
 					},
 					{
 						Name:                "pending-job",
 						RequiredGPUsPerTask: 1,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
-						MinAvailable:        ptr.To(int32(2)),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -3484,7 +3474,6 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: ptr.To(int32(1)),
 					},
 					{
 						Name:                "running-job1",
@@ -3497,14 +3486,12 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 								State:    pod_status.Running,
 							},
 						},
-						MinAvailable: ptr.To(int32(1)),
 					},
 					{
 						Name:                "pending-job",
 						RequiredGPUsPerTask: 0.7,
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
-						MinAvailable:        ptr.To(int32(2)),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
@@ -3620,9 +3607,9 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 					}, {
 						Name:                "q1_job0",
 						RequiredGPUsPerTask: 1,
-						MinAvailable:        ptr.To(int32(4)),
 						Priority:            constants.PriorityTrainNumber,
 						QueueName:           "queue1",
+						RootSubGroupSet:     jobs_fake.DefaultSubGroup(4),
 						Tasks: []*tasks_fake.TestTaskBasic{
 							{
 								State: pod_status.Pending,
