@@ -91,7 +91,7 @@ func (pp *proportionPlugin) Name() string {
 
 func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.calculateResourcesProportion(ssn)
-	pp.subGroupOrderFn = ssn.SubGroupOrderFn
+	pp.subGroupOrderFn = ssn.PodSetOrderFn
 	pp.taskOrderFunc = ssn.TaskOrderFn
 	pp.reclaimablePlugin = rec.New(pp.relcaimerSaturationMultiplier)
 	capacityPolicy := cp.New(pp.queues)
