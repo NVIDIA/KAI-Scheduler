@@ -83,27 +83,19 @@ jobs:
         run: |
           echo "$PR_TITLE" | npx commitlint
 
-      - name: Validate all commits in PR
-        run: |
-          npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
-
       - name: Comment on PR if validation fails
         if: failure()
         uses: actions/github-script@v7
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            const message = `## ❌ Commit Message Validation Failed
+            const message = `## ❌ PR Title Validation Failed
 
-            Your commit messages don't follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+            Your PR title doesn't follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
 
             ### Required Format
             \`\`\`
             <type>[optional scope]: <description>
-
-            [optional body]
-
-            [optional footer(s)]
             \`\`\`
 
             ### Valid Types
@@ -132,6 +124,12 @@ jobs:
 
             ### Breaking Changes
             Use \`!\` after type/scope: \`feat(api)!: remove deprecated field\`
+
+            ---
+
+            ### Important Notes
+            - **Individual commit messages are not validated.** Only the PR title needs to follow this format.
+            - **The PR title will be used as the commit message** when merging to the base branch, so ensure it accurately describes the changes.
 
             Please refer to our [Contributing Guide](https://github.com/NVIDIA/KAI-Scheduler/blob/main/CONTRIBUTING.md#commit-message-guidelines) for more details.`;
 
