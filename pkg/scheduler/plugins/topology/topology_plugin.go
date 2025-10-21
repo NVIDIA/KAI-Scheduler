@@ -49,7 +49,7 @@ func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddPreJobAllocationFn(t.preJobAllocationFn)
 }
 
-func (t *topologyPlugin) preJobAllocationFn(job *podgroup_info.PodGroupInfo) {
+func (t *topologyPlugin) preJobAllocationFn(_ *podgroup_info.PodGroupInfo) {
 	// Invalidate the sub-group node scores
 	t.subGroupNodeScores = map[subgroupName]map[string]float64{}
 }
