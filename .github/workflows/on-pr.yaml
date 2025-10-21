@@ -110,8 +110,6 @@ jobs:
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
           cp charts/kai-scheduler-$PACKAGE_VERSION.tgz images/
 
-
-
   e2e-tests:
     name: Run E2E Tests
     needs: [ build ]
@@ -181,3 +179,30 @@ jobs:
       - name: Run e2e tests
         run: |
           ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv --label-filter '!autoscale && !scale' ./test/e2e/suites
+
+  validate-pr-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          scopes: |
+            scheduler
+            binder
+            podgrouper
+            admission
+            operator
+            queuecontroller
+            podgroupcontroller
+            resourcereservation
+            chart
+            api
+            nodescaleadjuster
+            ci
+            release
+          requireScope: false
+          ignoreLabels: |
+            bot
+            ignore-semantic-pull-request
