@@ -13,7 +13,7 @@ Fixes #
 - [ ] Code follows project style guidelines
 - [ ] Self-reviewed
 - [ ] Added/updated tests
-- [ ] Updated [CHANGELOG.md](../CHANGELOG.md) (if needed)
+- [ ] Updated [CHANGELOG.md](/CHANGELOG.md) (if needed)
 - [ ] Updated documentation (if needed)
 
 ## Breaking Changes
