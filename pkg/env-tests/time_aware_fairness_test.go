@@ -41,7 +41,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins"
 )
 
-const interval = time.Millisecond * 10
+const simulationCycleInterval = time.Millisecond * 10
 const defaultTimeout = time.Second * 10
 
 type TestQueue struct {
@@ -70,7 +70,7 @@ type TimeAwareSimulation struct {
 	Cycles *int //default is 100
 }
 
-func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan struct{}, context.CancelFunc, *fake.FakeWithHistoryClient, error) {
+func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
 	ctx, cancel := context.WithCancel(backgroundCtx)
 
 	err := queuecontroller.RunQueueController(cfg, ctx)
@@ -115,7 +115,7 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan str
 	if err != nil {
 		return nil, cancel, nil, fmt.Errorf("failed to create fake usage client: %w", err)
 	}
-	usageClient := fakeClient.(*fake.FakeWithHistoryClient)
+	usageClient := fakeClient.(*fake.FakeUsageDBClient)
 
 	cfg.QPS = -1
 	cfg.Burst = -1
@@ -202,7 +202,7 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 		simulation.Cycles = ptr.To(100)
 	}
 	for range *simulation.Cycles {
-		time.Sleep(interval * 10)
+		time.Sleep(simulationCycleInterval * 10)
 		usageClient.AppendQueuedAllocation(getAllocations(ctx, ctrlClient), getClusterResources(ctx, ctrlClient, true))
 	}
 
@@ -235,7 +235,7 @@ func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamesp
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete simulation pods and podgroups during cleanup: %w", err))
 	}
 
-	if err := WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, interval,
+	if err := WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval,
 		&corev1.PodList{},
 		&schedulingv2alpha2.PodGroupList{},
 		&resourceapi.ResourceClaimList{},
@@ -248,7 +248,7 @@ func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamesp
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete test namespace during cleanup: %w", err))
 	}
 
-	if err := WaitForNamespaceDeletion(ctx, ctrlClient, testNamespace.Name, defaultTimeout, interval); err != nil {
+	if err := WaitForNamespaceDeletion(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval); err != nil {
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to wait for test namespace to be deleted during cleanup: %w", err))
 	}
 

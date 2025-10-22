@@ -15,7 +15,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-type FakeWithHistoryClient struct {
+type FakeUsageDBClient struct {
 	resourceUsage      *queue_info.ClusterUsage
 	resourceUsageMutex sync.RWMutex
 
@@ -25,12 +25,12 @@ type FakeWithHistoryClient struct {
 	clusterCapacityHistory ClusterCapacityHistory
 }
 
-var _ api.Interface = &FakeWithHistoryClient{}
-var ClientWithHistory *FakeWithHistoryClient
+var _ api.Interface = &FakeUsageDBClient{}
+var ClientWithHistory *FakeUsageDBClient
 
 func NewFakeWithHistoryClient(_ string, usageParams *api.UsageParams) (api.Interface, error) {
 	if ClientWithHistory == nil {
-		ClientWithHistory = &FakeWithHistoryClient{
+		ClientWithHistory = &FakeUsageDBClient{
 			resourceUsage: queue_info.NewClusterUsage(),
 			usageParams:   usageParams,
 		}
@@ -39,11 +39,11 @@ func NewFakeWithHistoryClient(_ string, usageParams *api.UsageParams) (api.Inter
 	return ClientWithHistory, nil
 }
 
-func (f *FakeWithHistoryClient) ResetClient() {
+func (f *FakeUsageDBClient) ResetClient() {
 	ClientWithHistory = nil
 }
 
-func (f *FakeWithHistoryClient) GetResourceUsage() (*queue_info.ClusterUsage, error) {
+func (f *FakeUsageDBClient) GetResourceUsage() (*queue_info.ClusterUsage, error) {
 	f.resourceUsageMutex.RLock()
 	defer f.resourceUsageMutex.RUnlock()
 
@@ -87,7 +87,7 @@ func (f *FakeWithHistoryClient) GetResourceUsage() (*queue_info.ClusterUsage, er
 	return usage, nil
 }
 
-func (f *FakeWithHistoryClient) AppendQueuedAllocation(queueAllocations map[common_info.QueueID]queue_info.QueueUsage, totalInCluster map[v1.ResourceName]float64) {
+func (f *FakeUsageDBClient) AppendQueuedAllocation(queueAllocations map[common_info.QueueID]queue_info.QueueUsage, totalInCluster map[v1.ResourceName]float64) {
 	f.resourceUsageMutex.Lock()
 	defer f.resourceUsageMutex.Unlock()
 
@@ -95,7 +95,7 @@ func (f *FakeWithHistoryClient) AppendQueuedAllocation(queueAllocations map[comm
 	f.clusterCapacityHistory = append(f.clusterCapacityHistory, totalInCluster)
 }
 
-func (f *FakeWithHistoryClient) GetAllocationHistory() AllocationHistory {
+func (f *FakeUsageDBClient) GetAllocationHistory() AllocationHistory {
 	return f.allocationHistory
 }
 
