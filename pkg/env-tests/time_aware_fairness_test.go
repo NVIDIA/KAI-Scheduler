@@ -259,7 +259,7 @@ var _ = Describe("Time Aware Fairness", Ordered, func() {
 	BeforeAll(func() {
 		runtests, err := strconv.ParseBool(os.Getenv("RUN_TIME_AWARE_TESTS"))
 		if err != nil {
-			Skip(fmt.Sprintf("Failed to parse RUN_TIME_AWARE_TESTS environment variable: %w", err))
+			Skip(fmt.Sprintf("Failed to parse RUN_TIME_AWARE_TESTS environment variable: %v", err))
 		}
 		if !runtests {
 			Skip("Skipping time aware fairness tests (RUN_TIME_AWARE_TESTS is not set to true)")
