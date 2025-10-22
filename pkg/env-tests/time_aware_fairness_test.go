@@ -64,13 +64,14 @@ type TestNodes struct {
 }
 
 type TimeAwareSimulation struct {
-	Queues []TestQueue
-	Jobs   map[string]TestJobs // key is the queue name
-	Nodes  []TestNodes
-	Cycles *int //default is 100
+	Queues     []TestQueue
+	Jobs       map[string]TestJobs // key is the queue name
+	Nodes      []TestNodes
+	Cycles     *int // default is 100
+	WindowSize *int // default is 5
 }
 
-func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
+func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSize *int) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
 	ctx, cancel := context.WithCancel(backgroundCtx)
 
 	err := queuecontroller.RunQueueController(cfg, ctx)
@@ -86,11 +87,15 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan str
 		return nil, cancel, nil, fmt.Errorf("failed to get default scheduler config: %w", err)
 	}
 
+	if windowSize == nil {
+		windowSize = ptr.To(5)
+	}
+
 	schedulerConf.UsageDBConfig = &api.UsageDBConfig{
 		ClientType:       "fake-with-history",
 		ConnectionString: "fake-connection",
 		UsageParams: &api.UsageParams{
-			WindowSize:    &[]time.Duration{time.Second * 6}[0],
+			WindowSize:    &[]time.Duration{time.Second * time.Duration(*windowSize)}[0],
 			FetchInterval: &[]time.Duration{time.Millisecond}[0],
 		},
 	}
@@ -292,7 +297,7 @@ var _ = Describe("Time Aware Fairness", Ordered, func() {
 
 		// Convert queueSums dataframe to map from queueID to sum
 		queueSumMap := make(map[string]float64)
-		for i := 0; i < queueSums.Nrow(); i++ {
+		for i := range queueSums.Nrow() {
 			queueID := queueSums.Elem(i, 1).String()
 			allocation := queueSums.Elem(i, 0).Float()
 			queueSumMap[queueID] = allocation
