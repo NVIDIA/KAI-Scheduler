@@ -44,8 +44,8 @@ func (t *topologyPlugin) Name() string {
 }
 
 func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
-	t.initializeTopologyTree(ssn.Topologies, ssn.Nodes)
 	t.session = ssn
+	t.initializeTopologyTree(ssn.Topologies, ssn.Nodes)
 
 	ssn.AddSubsetNodesFn(t.subSetNodesFn)
 	ssn.AddNodeOrderFn(t.nodeOrderFn)
@@ -90,6 +90,8 @@ func (t *topologyPlugin) buildNodeSetToDomainMapping(topologyName topologyName, 
 	for _, domain := range domains {
 		t.nodeSetToDomain[topologyName][getNodeSetID(lo.Values(domain.Nodes))] = domain
 	}
+
+	t.nodeSetToDomain[topologyName][getNodeSetID(lo.Values(t.session.Nodes))] = topologyTree.DomainsByLevel[rootLevel][rootDomainId]
 }
 
 func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
