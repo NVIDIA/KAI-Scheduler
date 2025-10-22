@@ -75,6 +75,7 @@ var _ = Describe("Cache", func() {
 						KAISchedulerClient: kubeaischedulerfake.NewSimpleClientset(),
 						KueueClient:        kueuefake.NewSimpleClientset(),
 						NodePoolParams:     &conf.SchedulingNodePoolParams{},
+						DiscoveryClient:    fakeClient.Discovery(),
 					}
 
 					cache := New(params)
@@ -296,6 +297,7 @@ func setupCacheWithObjects(snapshot bool, objects []runtime.Object, kaiScheduler
 		KueueClient:           kueueClient,
 		NodePoolParams:        &conf.SchedulingNodePoolParams{},
 		FullHierarchyFairness: true,
+		DiscoveryClient:       kubeClient.Discovery(),
 	})
 
 	stopCh := make(chan struct{})

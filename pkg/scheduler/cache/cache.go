@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -94,6 +95,7 @@ type SchedulerCacheParams struct {
 	AllowConsolidatingReclaim   bool
 	NumOfStatusRecordingWorkers int
 	UpdatePodEvictionCondition  bool
+	DiscoveryClient             discovery.DiscoveryInterface
 }
 
 type SchedulerCache struct {
@@ -157,7 +159,7 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 	sc.kubeAiSchedulerInformerFactory = kubeaischedulerinfo.NewSharedInformerFactory(sc.kubeAiSchedulerClient, 0)
 	sc.kueueInformerFactory = kueue.NewSharedInformerFactory(sc.kueueClient, 0)
 
-	if err := featuregates.SetDRAFeatureGate(sc.kubeClient.Discovery()); err != nil {
+	if err := featuregates.SetDRAFeatureGate(schedulerCacheParams.DiscoveryClient); err != nil {
 		log.InfraLogger.Warningf("Failed to set DRA feature gate: ", err)
 	}
 	sc.internalPlugins = k8splugins.InitializeInternalPlugins(sc.kubeClient, sc.informerFactory, sc.SnapshotSharedLister())

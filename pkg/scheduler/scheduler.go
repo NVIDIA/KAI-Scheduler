@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -59,6 +60,11 @@ func NewScheduler(
 ) (*Scheduler, error) {
 	kubeClient, kubeAiSchedulerClient, kueueClient := newClients(config)
 
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create discovery client: %v", err)
+	}
+
 	usageDBClient, err := getUsageDBClient(schedulerConf.UsageDBConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error getting usage db client: %v", err)
@@ -83,6 +89,7 @@ func NewScheduler(
 		FullHierarchyFairness:       schedulerParams.FullHierarchyFairness,
 		NumOfStatusRecordingWorkers: schedulerParams.NumOfStatusRecordingWorkers,
 		UpdatePodEvictionCondition:  schedulerParams.UpdatePodEvictionCondition,
+		DiscoveryClient:             discoveryClient,
 	}
 
 	scheduler := &Scheduler{
