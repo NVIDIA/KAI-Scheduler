@@ -100,6 +100,16 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 		},
 	}
 
+	for i := range schedulerConf.Tiers[0].Plugins {
+		if schedulerConf.Tiers[0].Plugins[i].Name != "proportion" {
+			continue
+		}
+		if schedulerConf.Tiers[0].Plugins[i].Arguments == nil {
+			schedulerConf.Tiers[0].Plugins[i].Arguments = map[string]string{}
+		}
+		schedulerConf.Tiers[0].Plugins[i].Arguments["kValue"] = "2000"
+	}
+
 	stopCh := make(chan struct{})
 	err = scheduler.RunScheduler(cfg, schedulerConf, stopCh)
 	if err != nil {
@@ -131,7 +141,7 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.AllocationHistory, error, error) {
 	simulationName := randomstring.HumanFriendlyEnglishString(10)
 
-	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg)
+	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg, simulation.WindowSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup controllers: %w", err), nil
 	}
@@ -313,6 +323,46 @@ var _ = Describe("Time Aware Fairness", Ordered, func() {
 		Expect(queueSumMap["test-queue1"]).To(
 			BeNumerically("~", queueSumMap["test-queue2"], queueSumMap["test-queue2"]*0.1),
 			"Queue1 and Queue2 should have approximately equal allocations")
+	})
+
+	It("Should allow burst use cases", func(ctx context.Context) {
+		allocationHistory, err, cleanupError := RunSimulation(ctx, TimeAwareSimulation{
+			Queues: []TestQueue{
+				{Name: "test-department", Parent: ""},
+				{Name: "test-queue1", Parent: "test-department"},
+				// {Name: "test-queue2", Parent: "test-department"},
+				{Name: "test-queue-burst", Parent: "test-department"},
+			},
+			Jobs: map[string]TestJobs{
+				"test-queue1": {NumPods: 1, NumJobs: 100, GPUs: 1},
+				// "test-queue2":      {NumPods: 1, NumJobs: 100, GPUs: 1},
+				"test-queue-burst": {NumPods: 1, NumJobs: 100, GPUs: 4},
+			},
+			Nodes: []TestNodes{
+				{GPUs: 6, Count: 1},
+			},
+			WindowSize: ptr.To(100),
+		})
+		Expect(err).NotTo(HaveOccurred(), "Failed to run simulation")
+		Expect(cleanupError).NotTo(HaveOccurred(), "Failed to cleanup simulation")
+
+		df := allocationHistory.ToDataFrame()
+
+		// Sum allocations for each queue
+		queueSums := df.GroupBy("QueueID").
+			Aggregation([]dataframe.AggregationType{dataframe.Aggregation_SUM}, []string{"Allocation"})
+
+		// Convert queueSums dataframe to map from queueID to sum
+		queueSumMap := make(map[string]float64)
+		for i := range queueSums.Nrow() {
+			queueID := queueSums.Elem(i, 1).String()
+			allocation := queueSums.Elem(i, 0).Float()
+			queueSumMap[queueID] = allocation
+		}
+
+		// Assert that test-queue-burst was able to access more resources than its weight
+		Expect(queueSumMap["test-queue-burst"]).To(BeNumerically(">", 0),
+			"Test-queue-burst should have accessed more resources than its weight")
 	})
 })
 
