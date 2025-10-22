@@ -88,7 +88,7 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan str
 		ClientType:       "fake-with-history",
 		ConnectionString: "fake-connection",
 		UsageParams: &api.UsageParams{
-			WindowSize:    &[]time.Duration{time.Second * 5}[0],
+			WindowSize:    &[]time.Duration{time.Second * 6}[0],
 			FetchInterval: &[]time.Duration{time.Millisecond}[0],
 		},
 	}
