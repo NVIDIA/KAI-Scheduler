@@ -48,7 +48,17 @@ func (r *StatusReconciler) ReconcileStatus(ctx context.Context, object objectWit
 	if err := r.reconcileCondition(ctx, object, r.getAvailableCondition(ctx, object.GetGeneration())); err != nil {
 		return err
 	}
-	return r.reconcileCondition(ctx, object, r.getDependenciesFulfilledCondition(object.GetGeneration()))
+	if err := r.reconcileCondition(ctx, object, r.getDependenciesFulfilledCondition(object.GetGeneration())); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *StatusReconciler) ReconcileStatusWithConfig(ctx context.Context, object objectWithConditions, kaiConfig *kaiv1.Config) error {
+	if err := r.ReconcileStatus(ctx, object); err != nil {
+		return err
+	}
+	return r.reconcileCondition(ctx, object, r.getPrometheusConnectivityCondition(ctx, object.GetGeneration(), kaiConfig))
 }
 
 func (r *StatusReconciler) reconcileCondition(ctx context.Context, object objectWithConditions, condition metav1.Condition) error {
@@ -164,4 +174,53 @@ func (r *StatusReconciler) getDependenciesFulfilledCondition(gen int64) metav1.C
 		ObservedGeneration: gen,
 		LastTransitionTime: metav1.Now(),
 	}
+}
+
+func (r *StatusReconciler) getPrometheusConnectivityCondition(ctx context.Context, gen int64, kaiConfig *kaiv1.Config) metav1.Condition {
+	// Check if external Prometheus is configured
+	if kaiConfig.Spec.Prometheus == nil || kaiConfig.Spec.Prometheus.ExternalPrometheusUrl == nil || *kaiConfig.Spec.Prometheus.ExternalPrometheusUrl == "" {
+		return metav1.Condition{
+			Type:               string(kaiv1.ConditionTypePrometheusConnectivity),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(kaiv1.PrometheusConnected),
+			Message:            "No external Prometheus configured",
+			ObservedGeneration: gen,
+			LastTransitionTime: metav1.Now(),
+		}
+	}
+
+	// Validate external Prometheus connectivity
+	err := kaiConfig.Spec.Prometheus.ValidateExternalPrometheusConnection(ctx, *kaiConfig.Spec.Prometheus.ExternalPrometheusUrl)
+	if err != nil {
+		return metav1.Condition{
+			Type:               string(kaiv1.ConditionTypePrometheusConnectivity),
+			Status:             metav1.ConditionFalse,
+			Reason:             string(kaiv1.PrometheusConnectionFailed),
+			Message:            err.Error(),
+			ObservedGeneration: gen,
+			LastTransitionTime: metav1.Now(),
+		}
+	}
+
+	return metav1.Condition{
+		Type:               string(kaiv1.ConditionTypePrometheusConnectivity),
+		Status:             metav1.ConditionTrue,
+		Reason:             string(kaiv1.PrometheusConnected),
+		Message:            "External Prometheus connectivity verified",
+		ObservedGeneration: gen,
+		LastTransitionTime: metav1.Now(),
+	}
+}
+
+// UpdatePrometheusConnectivityStatus updates only the Prometheus connectivity condition
+// This method is designed to be called from background goroutines
+func (r *StatusReconciler) UpdatePrometheusConnectivityStatus(ctx context.Context, kaiConfig *kaiv1.Config, condition metav1.Condition) error {
+	// Set the observed generation to match the current config generation
+	condition.ObservedGeneration = kaiConfig.Generation
+
+	// Create a wrapper for the config
+	wrapper := &KAIConfigWithStatusWrapper{Config: kaiConfig}
+
+	// Update only the Prometheus connectivity condition
+	return r.reconcileCondition(ctx, wrapper, condition)
 }
