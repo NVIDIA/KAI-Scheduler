@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/go-gota/gota/dataframe"
@@ -254,6 +256,16 @@ func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamesp
 }
 
 var _ = Describe("Time Aware Fairness", Ordered, func() {
+	BeforeAll(func() {
+		runtests, err := strconv.ParseBool(os.Getenv("RUN_TIME_AWARE_TESTS"))
+		if err != nil {
+			Skip(fmt.Sprintf("Failed to parse RUN_TIME_AWARE_TESTS environment variable: %w", err))
+		}
+		if !runtests {
+			Skip("Skipping time aware fairness tests (RUN_TIME_AWARE_TESTS is not set to true)")
+		}
+	})
+
 	It("Should run simulation", func(ctx context.Context) {
 		allocationHistory, err, cleanupError := RunSimulation(ctx, TimeAwareSimulation{
 			Queues: []TestQueue{
