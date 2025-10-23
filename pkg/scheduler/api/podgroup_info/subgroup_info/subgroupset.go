@@ -30,6 +30,7 @@ func (sgs *SubGroupSet) AddSubGroup(subGroup *SubGroupSet) {
 			"cannot have additional nested subgroup %s", sgs.GetName(), subGroup.GetName())
 		return
 	}
+	subGroup.SetParent(sgs)
 	sgs.groups = append(sgs.groups, subGroup)
 }
 
@@ -39,6 +40,7 @@ func (sgs *SubGroupSet) AddPodSet(podSet *PodSet) {
 			"it cannot references podset %s", sgs.GetName(), podSet.GetName())
 		return
 	}
+	podSet.SetParent(sgs)
 	sgs.podSets = append(sgs.podSets, podSet)
 }
 
@@ -75,4 +77,12 @@ func (sgs *SubGroupSet) GetAllPodSets() map[string]*PodSet {
 		}
 	}
 	return result
+}
+
+func (sgs *SubGroupSet) SetParent(parent *SubGroupSet) {
+	sgs.parent = parent
+}
+
+func (sgs *SubGroupSet) GetParent() *SubGroupSet {
+	return sgs.parent
 }

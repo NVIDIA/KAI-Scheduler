@@ -18,8 +18,9 @@ import (
 type GetClientFn func(connectionString string, usageParams *api.UsageParams) (api.Interface, error)
 
 var defaultClientMap = map[string]GetClientFn{
-	"fake":       fake.NewFakeClient,
-	"prometheus": prometheus.NewPrometheusClient,
+	"fake":              fake.NewFakeClient,
+	"fake-with-history": fake.NewFakeWithHistoryClient,
+	"prometheus":        prometheus.NewPrometheusClient,
 }
 
 type ClientResolver struct {

@@ -74,6 +74,7 @@ func main() {
 		FullHierarchyFairness:       snapshot.SchedulerParams.FullHierarchyFairness,
 		AllowConsolidatingReclaim:   snapshot.SchedulerParams.AllowConsolidatingReclaim,
 		NumOfStatusRecordingWorkers: snapshot.SchedulerParams.NumOfStatusRecordingWorkers,
+		DiscoveryClient:             kubeClient.Discovery(),
 	}
 
 	schedulerCache := cache.New(schedulerCacheParams)

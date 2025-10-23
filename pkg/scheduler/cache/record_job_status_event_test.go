@@ -325,6 +325,7 @@ func TestRecordJobStatusEvent(t *testing.T) {
 				DetailedFitErrors:           detailedFitErrors,
 				FullHierarchyFairness:       true,
 				NumOfStatusRecordingWorkers: 4,
+				DiscoveryClient:             kubeClient.Discovery(),
 			})
 
 			stopCh := make(chan struct{})

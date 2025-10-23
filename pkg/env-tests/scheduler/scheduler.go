@@ -40,6 +40,9 @@ func RunScheduler(cfg *rest.Config, schedulerConf *conf.SchedulerConfiguration, 
 		return err
 	}
 
+	opt.PluginServerPort = 8084
+	opt.ListenAddress = ":8085"
+
 	params := app.BuildSchedulerParams(opt)
 
 	actions.InitDefaultActions()

@@ -7,6 +7,7 @@ import (
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
 
@@ -16,13 +17,22 @@ const (
 	rootDomainId       = rootLevel
 )
 
+type topologyName = string
+type subgroupName = string
+
 type topologyPlugin struct {
-	TopologyTrees map[string]*Info
+	TopologyTrees map[topologyName]*Info
+
+	// Defines order among nodes in a sub-group based on the sub-group's preferred level topology constraint.
+	subGroupNodeScores map[subgroupName]map[string]float64
+	session            *framework.Session
 }
 
 func New(_ map[string]string) framework.Plugin {
 	return &topologyPlugin{
-		TopologyTrees: map[string]*Info{},
+		TopologyTrees:      map[topologyName]*Info{},
+		subGroupNodeScores: map[subgroupName]map[string]float64{},
+		session:            nil,
 	}
 }
 
@@ -32,8 +42,16 @@ func (t *topologyPlugin) Name() string {
 
 func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	t.initializeTopologyTree(ssn.Topologies, ssn.Nodes)
+	t.session = ssn
 
 	ssn.AddSubsetNodesFn(t.subSetNodesFn)
+	ssn.AddNodeOrderFn(t.nodeOrderFn)
+	ssn.AddPreJobAllocationFn(t.preJobAllocationFn)
+}
+
+func (t *topologyPlugin) preJobAllocationFn(_ *podgroup_info.PodGroupInfo) {
+	// Invalidate the sub-group node scores
+	t.subGroupNodeScores = map[subgroupName]map[string]float64{}
 }
 
 func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, nodes map[string]*node_info.NodeInfo) {
@@ -82,12 +100,12 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueue
 
 		// Connect the child domain to the current domain. The current node gives us the link
 		if nodeContainingChildDomain != nil {
-			domainInfo.Children[nodeContainingChildDomain.ID] = nodeContainingChildDomain
+			domainInfo.AddChild(nodeContainingChildDomain)
 		}
 		nodeContainingChildDomain = domainInfo
 	}
 
-	topologyTree.DomainsByLevel[rootLevel][rootDomainId].Children[nodeContainingChildDomain.ID] = nodeContainingChildDomain
+	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddChild(nodeContainingChildDomain)
 	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddNode(nodeInfo)
 }
 

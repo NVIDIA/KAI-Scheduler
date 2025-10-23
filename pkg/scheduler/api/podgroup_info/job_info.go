@@ -188,12 +188,6 @@ func (pgi *PodGroupInfo) SetPodGroup(pg *enginev2alpha2.PodGroup) {
 }
 
 func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) error {
-	if len(podGroup.Spec.SubGroups) == 0 {
-		if defaultSubGroup, found := pgi.PodSets[DefaultSubGroup]; found {
-			defaultSubGroup.SetMinAvailable(max(podGroup.Spec.MinMember, 1))
-		}
-		return nil
-	}
 	rootSubGroupSet, err := subgroup_info.FromPodGroup(podGroup)
 	if err != nil {
 		return err
@@ -203,8 +197,9 @@ func (pgi *PodGroupInfo) setSubGroups(podGroup *enginev2alpha2.PodGroup) error {
 	if len(podSets) > 0 {
 		pgi.PodSets = podSets
 	} else {
-		for _, podSet := range pgi.PodSets {
-			rootSubGroupSet.AddPodSet(podSet)
+		if defaultPodSet, found := pgi.PodSets[DefaultSubGroup]; found {
+			defaultPodSet.SetMinAvailable(max(podGroup.Spec.MinMember, 1))
+			rootSubGroupSet.AddPodSet(defaultPodSet)
 		}
 	}
 	return nil

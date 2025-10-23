@@ -4,8 +4,9 @@
 package topology
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -38,7 +39,7 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{nodeSet}, nil
 	}
 
-	defer t.treeAllocatableCleanup(topologyTree)
+	t.treeAllocatableCleanup(topologyTree)
 	maxAllocatablePods, err := t.calcTreeAllocatable(tasks, topologyTree, nodeSet)
 	if err != nil {
 		return nil, err
@@ -52,12 +53,24 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{}, nil
 	}
 
+	// Sorting the tree for both packing and closest preferred level domain scoring
+	preferredLevel := DomainLevel(subGroup.GetTopologyConstraint().PreferredLevel)
+	requiredLevel := DomainLevel(subGroup.GetTopologyConstraint().RequiredLevel)
+	maxDepthLevel := preferredLevel
+	if maxDepthLevel == "" {
+		maxDepthLevel = requiredLevel
+	}
+	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], maxDepthLevel)
+	if preferredLevel != "" {
+		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
+	}
+
 	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroup, podSets, len(tasks), topologyTree)
 	if err != nil {
 		return nil, err
 	}
 
-	jobAllocatableDomains = sortDomainInfos(jobAllocatableDomains)
+	jobAllocatableDomains = sortDomainInfos(topologyTree, jobAllocatableDomains)
 
 	var domainNodeSets []node_info.NodeSet
 	for _, jobAllocatableDomain := range jobAllocatableDomains {
@@ -156,7 +169,7 @@ func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *n
 	}
 	// Add more to jobResourcesAllocationsRepresenters until the node cannot accommodate any more pods
 	if allocatablePodsCount == len(jobAllocationMetaData.allocationTestPods) {
-		for i := allocatablePodsCount; i < len(jobAllocationMetaData.tasksToAllocate); i++ {
+		for i := allocatablePodsCount; ; i++ {
 			latestTestPod := jobAllocationMetaData.allocationTestPods[len(jobAllocationMetaData.allocationTestPods)-1]
 
 			iAllocationsTestPod := &pod_info.PodInfo{
@@ -333,18 +346,45 @@ func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
 	}
 }
 
-func sortDomainInfos(domainInfos []*DomainInfo) []*DomainInfo {
-	sort.SliceStable(domainInfos, func(i, j int) bool {
-		if domainInfos[i].Level != domainInfos[j].Level {
-			return false
-		}
+// sortTree recursively sorts the topology tree for bin-packing behavior.
+// Domains are sorted by AllocatablePods (ascending) to prioritize filling domains
+// with fewer available resources first, implementing a bin-packing strategy.
+// Within domains with equal AllocatablePods, sorts by ID for deterministic ordering.
+func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
+	if root == nil || maxDepthLevel == "" {
+		return
+	}
 
-		iDomainGPUs := domainInfos[i].GetNonAllocatedGPUsInDomain()
-		jDomainGPUs := domainInfos[j].GetNonAllocatedGPUsInDomain()
-		if iDomainGPUs != jDomainGPUs {
-			return iDomainGPUs < jDomainGPUs
+	slices.SortFunc(root.Children, func(i, j *DomainInfo) int {
+		if c := cmp.Compare(i.AllocatablePods, j.AllocatablePods); c != 0 {
+			return c
 		}
-		return domainInfos[i].ID < domainInfos[j].ID
+		return cmp.Compare(i.ID, j.ID)
 	})
-	return domainInfos
+
+	if root.Level == maxDepthLevel {
+		return
+	}
+
+	for _, child := range root.Children {
+		sortTree(child, maxDepthLevel)
+	}
+}
+
+// sortDomainInfos orders domains according to the sorted topology tree for consistent allocation.
+// Assumes the topology tree is already sorted
+func sortDomainInfos(topologyTree *Info, domainInfos []*DomainInfo) []*DomainInfo {
+	root := topologyTree.DomainsByLevel[rootLevel][rootDomainId]
+	reverseLevelOrderedDomains := reverseLevelOrder(root)
+
+	sortedDomainInfos := make([]*DomainInfo, 0, len(domainInfos))
+	for _, domain := range reverseLevelOrderedDomains {
+		for _, domainInfo := range domainInfos {
+			if domain.ID == domainInfo.ID && domain.Level == domainInfo.Level {
+				sortedDomainInfos = append(sortedDomainInfos, domainInfo)
+			}
+		}
+	}
+
+	return sortedDomainInfos
 }

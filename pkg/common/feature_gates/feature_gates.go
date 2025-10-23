@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	featureutil "k8s.io/apiserver/pkg/util/feature"
 	discovery "k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
 	"k8s.io/kubernetes/pkg/features"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -19,12 +18,7 @@ const (
 	minimalSupportedVersion = "v1beta1"
 )
 
-func SetDRAFeatureGate(config *rest.Config) error {
-	// Create a DiscoveryClient
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
-	if err != nil {
-		return err
-	}
+func SetDRAFeatureGate(discoveryClient discovery.DiscoveryInterface) error {
 	enabled := IsDynamicResourcesEnabled(discoveryClient)
 	return featureutil.DefaultMutableFeatureGate.SetFromMap(
 		map[string]bool{string(features.DynamicResourceAllocation): enabled})

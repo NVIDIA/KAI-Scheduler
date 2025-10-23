@@ -66,6 +66,7 @@ type Session struct {
 	NodeOrderFns                          []api.NodeOrderFn
 	JobOrderFns                           []common_info.CompareFn
 	PodSetOrderFns                        []common_info.CompareFn
+	SubGroupSetOrderFns                   []common_info.CompareFn
 	TaskOrderFns                          []common_info.CompareFn
 	QueueOrderFns                         []CompareQueueFn
 	CanReclaimResourcesFns                []api.CanReclaimResourcesFn
@@ -84,6 +85,7 @@ type Session struct {
 	PrePredicateFns                       []api.PrePredicateFn
 	PredicateFns                          []api.PredicateFn
 	BindRequestMutateFns                  []api.BindRequestMutateFn
+	PreJobAllocationFns                   []api.PreJobAllocationFn
 
 	Config          *conf.SchedulerConfiguration
 	plugins         map[string]Plugin
@@ -339,6 +341,7 @@ func (ssn *Session) clear() {
 	ssn.eventHandlers = nil
 	ssn.TaskOrderFns = nil
 	ssn.PodSetOrderFns = nil
+	ssn.SubGroupSetOrderFns = nil
 	ssn.JobOrderFns = nil
 }
 
