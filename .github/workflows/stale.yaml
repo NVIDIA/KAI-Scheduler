@@ -12,9 +12,6 @@ on:
         description: "Run in dry-run mode (no labels/comments applied)"
         required: false
         default: "true"
-  # Temporary: test trigger - REMOVE AFTER TESTING
-  push:
-    branches: [siormeir/create-stale-action-1]
 
 jobs:
   stale:
@@ -39,7 +36,7 @@ jobs:
           only-labels: "" # leave empty to include all
 
           # Debug-only mode (acts as a dry run)
-          debug-only: ${{ github.event.inputs.dry_run || 'true' }}
+          debug-only: ${{ github.event.inputs.dry_run }}
 
       - name: Log dry-run status
         run: |
