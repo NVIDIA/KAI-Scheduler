@@ -183,9 +183,7 @@ func Test_kubeflowPlugin_OnSessionOpen(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pp := &kubeflowPlugin{
-				pluginArguments: tt.fields.pluginArguments,
-			}
+			pp := &kubeflowPlugin{}
 			pp.OnSessionOpen(tt.args.ssn)
 		})
 	}

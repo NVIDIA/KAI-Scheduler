@@ -30,14 +30,11 @@ func (sp skipOrderFn) shouldSkip(podID common_info.PodID) bool {
 }
 
 type podAffinityPlugin struct {
-	// Arguments given for the plugin
-	pluginArguments map[string]string
-
 	skipOrderFn skipOrderFn
 }
 
-func New(arguments map[string]string) framework.Plugin {
-	return &podAffinityPlugin{pluginArguments: arguments}
+func New(_ framework.PluginArguments) framework.Plugin {
+	return &podAffinityPlugin{}
 }
 
 func (pp *podAffinityPlugin) Name() string {

@@ -86,17 +86,13 @@ func (sp SkipPredicates) ShouldSKip(podID common_info.PodID, predicateName k8s_i
 }
 
 type predicatesPlugin struct {
-	// Arguments given for the plugin
-	pluginArguments          map[string]string
 	storageSchedulingEnabled bool
 
 	skipPredicates SkipPredicates
 }
 
-func New(arguments map[string]string) framework.Plugin {
-	return &predicatesPlugin{
-		pluginArguments: arguments,
-	}
+func New(_ framework.PluginArguments) framework.Plugin {
+	return &predicatesPlugin{}
 }
 
 func (pp *predicatesPlugin) Name() string {

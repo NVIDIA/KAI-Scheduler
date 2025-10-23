@@ -32,7 +32,7 @@ func (jp *JobOrderPlugin) Name() string {
 	return "joborder"
 }
 
-func New(arguments map[string]string) framework.Plugin {
+func New(_ framework.PluginArguments) framework.Plugin {
 	return &JobOrderPlugin{}
 }
 
