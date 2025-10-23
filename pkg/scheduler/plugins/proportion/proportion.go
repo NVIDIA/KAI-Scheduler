@@ -78,8 +78,8 @@ func New(arguments framework.PluginArguments) framework.Plugin {
 		log.InfraLogger.Warningf("Failed to parse kValue: %v. Using default value of 1.0", err)
 	}
 	if kValue <= 0.0 {
-		log.InfraLogger.Warningf("kValue must be > 0.0, got %v. Using default value of 1.0", kValue)
-		kValue = 1.0
+		log.InfraLogger.Warningf("kValue must be > 0.0, got %v. Setting as 0", kValue)
+		kValue = 0.0
 	}
 
 	return &proportionPlugin{
