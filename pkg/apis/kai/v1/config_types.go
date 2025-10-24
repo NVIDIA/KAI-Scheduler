@@ -24,19 +24,22 @@ import (
 type ConditionType string
 
 const (
-	ConditionTypeReconciling       ConditionType = "Reconciling"
-	ConditionTypeDeployed          ConditionType = "Deployed"
-	ConditionTypeAvailable         ConditionType = "Available"
-	ConditionDependenciesFulfilled ConditionType = "DependenciesFulfilled"
+	ConditionTypeReconciling            ConditionType = "Reconciling"
+	ConditionTypeDeployed               ConditionType = "Deployed"
+	ConditionTypeAvailable              ConditionType = "Available"
+	ConditionDependenciesFulfilled      ConditionType = "DependenciesFulfilled"
+	ConditionTypePrometheusConnectivity ConditionType = "PrometheusConnectivity"
 )
 
 type ConditionReason string
 
 const (
-	Deployed              ConditionReason = "deployed"
-	Available             ConditionReason = "available"
-	Reconciled            ConditionReason = "reconciled"
-	DependenciesFulfilled ConditionReason = "dependencies_fulfilled"
+	Deployed                   ConditionReason = "deployed"
+	Available                  ConditionReason = "available"
+	Reconciled                 ConditionReason = "reconciled"
+	DependenciesFulfilled      ConditionReason = "dependencies_fulfilled"
+	PrometheusConnected        ConditionReason = "prometheus_connected"
+	PrometheusConnectionFailed ConditionReason = "prometheus_connection_failed"
 )
 
 // ConfigSpec defines the desired state of Config

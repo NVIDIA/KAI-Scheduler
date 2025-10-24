@@ -21,6 +21,7 @@ import (
 	"errors"
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -63,6 +64,10 @@ type ConfigReconciler struct {
 	Scheme     *runtime.Scheme
 	deployable *deployable.DeployableOperands
 	*status_reconciler.StatusReconciler
+
+	// Context for managing background goroutines
+	monitoringCtx    context.Context
+	monitoringCancel context.CancelFunc
 }
 
 func (r *ConfigReconciler) SetOperands(ops []operands.Operand) {
@@ -101,8 +106,8 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	defer func() {
-		reconcileStatusErr := r.ReconcileStatus(
-			ctx, &status_reconciler.KAIConfigWithStatusWrapper{Config: kaiConfig},
+		reconcileStatusErr := r.ReconcileStatusWithConfig(
+			ctx, &status_reconciler.KAIConfigWithStatusWrapper{Config: kaiConfig}, kaiConfig,
 		)
 		if reconcileStatusErr != nil {
 			if err != nil {
@@ -119,6 +124,9 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 	); err != nil {
 		return ctrl.Result{}, err
 	}
+
+	// Manage Prometheus monitoring goroutine
+	r.managePrometheusMonitoring(ctx, kaiConfig)
 
 	if err = r.deployable.Deploy(ctx, r.Client, kaiConfig, kaiConfig); err != nil {
 		return ctrl.Result{}, err
@@ -159,5 +167,35 @@ func enqueueWatched(_ context.Context, _ client.Object) []ctrl.Request {
 				Namespace: "",
 			},
 		},
+	}
+}
+
+// managePrometheusMonitoring manages the lifecycle of the Prometheus monitoring goroutine
+func (r *ConfigReconciler) managePrometheusMonitoring(ctx context.Context, kaiConfig *kaiv1.Config) {
+	// Check if external Prometheus is configured
+	hasExternalPrometheus := kaiConfig.Spec.Prometheus != nil &&
+		kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != nil &&
+		*kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != ""
+
+	if hasExternalPrometheus {
+		// Start monitoring if not already running
+		if r.monitoringCtx == nil || r.monitoringCtx.Err() != nil {
+			r.monitoringCtx, r.monitoringCancel = context.WithCancel(ctx)
+
+			// Create status updater function
+			statusUpdater := func(ctx context.Context, condition metav1.Condition) error {
+				return r.UpdatePrometheusConnectivityStatus(ctx, kaiConfig, condition)
+			}
+
+			// Start the monitoring goroutine
+			kaiConfig.Spec.Prometheus.StartPrometheusMonitoring(r.monitoringCtx, statusUpdater)
+		}
+	} else {
+		// Stop monitoring if external Prometheus is not configured
+		if r.monitoringCancel != nil {
+			r.monitoringCancel()
+			r.monitoringCtx = nil
+			r.monitoringCancel = nil
+		}
 	}
 }
