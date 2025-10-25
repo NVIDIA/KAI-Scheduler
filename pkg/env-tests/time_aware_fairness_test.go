@@ -64,13 +64,15 @@ type TestNodes struct {
 }
 
 type TimeAwareSimulation struct {
-	Queues []TestQueue
-	Jobs   map[string]TestJobs // key is the queue name
-	Nodes  []TestNodes
-	Cycles *int //default is 100
+	Queues     []TestQueue
+	Jobs       map[string]TestJobs // key is the queue name
+	Nodes      []TestNodes
+	Cycles     *int     // default is 100
+	WindowSize *int     // default is 5
+	KValue     *float64 // default is 1.0
 }
 
-func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
+func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSize *int, kValue *float64) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
 	ctx, cancel := context.WithCancel(backgroundCtx)
 
 	err := queuecontroller.RunQueueController(cfg, ctx)
@@ -86,13 +88,30 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan str
 		return nil, cancel, nil, fmt.Errorf("failed to get default scheduler config: %w", err)
 	}
 
+	if windowSize == nil {
+		windowSize = ptr.To(5)
+	}
+
 	schedulerConf.UsageDBConfig = &api.UsageDBConfig{
 		ClientType:       "fake-with-history",
 		ConnectionString: "fake-connection",
 		UsageParams: &api.UsageParams{
-			WindowSize:    &[]time.Duration{time.Second * 6}[0],
+			WindowSize:    &[]time.Duration{time.Second * time.Duration(*windowSize)}[0],
 			FetchInterval: &[]time.Duration{time.Millisecond}[0],
 		},
+	}
+
+	for i := range schedulerConf.Tiers[0].Plugins {
+		if schedulerConf.Tiers[0].Plugins[i].Name != "proportion" {
+			continue
+		}
+		if schedulerConf.Tiers[0].Plugins[i].Arguments == nil {
+			schedulerConf.Tiers[0].Plugins[i].Arguments = map[string]string{}
+		}
+		if kValue == nil {
+			kValue = ptr.To(1.0)
+		}
+		schedulerConf.Tiers[0].Plugins[i].Arguments["kValue"] = fmt.Sprintf("%f", *kValue)
 	}
 
 	stopCh := make(chan struct{})
@@ -123,10 +142,10 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan str
 	return stopCh, cancel, usageClient, nil
 }
 
-func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.AllocationHistory, error, error) {
+func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (allocationHistory fake.AllocationHistory, err error, cleanupErr error) {
 	simulationName := randomstring.HumanFriendlyEnglishString(10)
 
-	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg)
+	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg, simulation.WindowSize, simulation.KValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup controllers: %w", err), nil
 	}
@@ -135,7 +154,7 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 
 	testNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "simulation-test",
+			Name: fmt.Sprintf("simulation-test-%s", simulationName),
 			Labels: map[string]string{
 				"simulation": simulationName,
 			},
@@ -145,9 +164,11 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 		return nil, fmt.Errorf("failed to create test namespace: %w", err), nil
 	}
 
-	var cleanupErrors []error
 	defer func() {
-		cleanupErrors = append(cleanupErrors, cleanupSimulation(ctx, ctrlClient, testNamespace, simulationName)...)
+		cleanupErrors := cleanupSimulation(ctx, ctrlClient, testNamespace, simulationName)
+		if len(cleanupErrors) > 0 {
+			cleanupErr = errors.Join(cleanupErrors...)
+		}
 	}()
 
 	var nodes []*corev1.Node
@@ -157,7 +178,7 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 			"simulation": simulationName,
 		}
 		if err := ctrlClient.Create(ctx, nodeObject); err != nil {
-			return nil, fmt.Errorf("failed to create test node: %w", err), errors.Join(cleanupErrors...)
+			return nil, fmt.Errorf("failed to create test node: %w", err), nil
 		}
 		nodes = append(nodes, nodeObject)
 	}
@@ -187,7 +208,7 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 
 		err := ctrlClient.Create(ctx, queueObject)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create test queue: %w", err), errors.Join(cleanupErrors...)
+			return nil, fmt.Errorf("failed to create test queue: %w", err), nil
 		}
 		queues = append(queues, queueObject)
 	}
@@ -203,12 +224,11 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 	}
 	for range *simulation.Cycles {
 		time.Sleep(simulationCycleInterval * 10)
-		usageClient.AppendQueuedAllocation(getAllocations(ctx, ctrlClient), getClusterResources(ctx, ctrlClient, true))
+		usageClient.AppendQueueAllocation(getAllocations(ctx, ctrlClient), getClusterResources(ctx, ctrlClient, true))
 	}
 
-	allocationHistory := usageClient.GetAllocationHistory()
-
-	return allocationHistory, err, errors.Join(cleanupErrors...)
+	allocationHistory = usageClient.GetAllocationHistory()
+	return allocationHistory, err, nil
 }
 
 func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamespace *corev1.Namespace, simulationName string) []error {
@@ -292,7 +312,7 @@ var _ = Describe("Time Aware Fairness", Ordered, func() {
 
 		// Convert queueSums dataframe to map from queueID to sum
 		queueSumMap := make(map[string]float64)
-		for i := 0; i < queueSums.Nrow(); i++ {
+		for i := range queueSums.Nrow() {
 			queueID := queueSums.Elem(i, 1).String()
 			allocation := queueSums.Elem(i, 0).Float()
 			queueSumMap[queueID] = allocation
@@ -308,6 +328,47 @@ var _ = Describe("Time Aware Fairness", Ordered, func() {
 		Expect(queueSumMap["test-queue1"]).To(
 			BeNumerically("~", queueSumMap["test-queue2"], queueSumMap["test-queue2"]*0.1),
 			"Queue1 and Queue2 should have approximately equal allocations")
+	})
+
+	It("Should allow burst use cases", func(ctx context.Context) {
+		allocationHistory, err, cleanupError := RunSimulation(ctx, TimeAwareSimulation{
+			Queues: []TestQueue{
+				{Name: "test-department", Parent: ""},
+				{Name: "test-queue1", Parent: "test-department"},
+				{Name: "test-queue2", Parent: "test-department"},
+				{Name: "test-queue-burst", Parent: "test-department"},
+			},
+			Jobs: map[string]TestJobs{
+				"test-queue1":      {NumPods: 1, NumJobs: 100, GPUs: 1},
+				"test-queue2":      {NumPods: 1, NumJobs: 100, GPUs: 1},
+				"test-queue-burst": {NumPods: 1, NumJobs: 100, GPUs: 4},
+			},
+			Nodes: []TestNodes{
+				{GPUs: 6, Count: 1},
+			},
+			WindowSize: ptr.To(4),
+			KValue:     ptr.To(2.0),
+		})
+		Expect(err).NotTo(HaveOccurred(), "Failed to run simulation")
+		Expect(cleanupError).NotTo(HaveOccurred(), "Failed to cleanup simulation")
+
+		df := allocationHistory.ToDataFrame()
+
+		// Sum allocations for each queue
+		queueSums := df.GroupBy("QueueID").
+			Aggregation([]dataframe.AggregationType{dataframe.Aggregation_SUM}, []string{"Allocation"})
+
+		// Convert queueSums dataframe to map from queueID to sum
+		queueSumMap := make(map[string]float64)
+		for i := range queueSums.Nrow() {
+			queueID := queueSums.Elem(i, 1).String()
+			allocation := queueSums.Elem(i, 0).Float()
+			queueSumMap[queueID] = allocation
+		}
+
+		// Assert that test-queue-burst was able to access more resources than its weight
+		Expect(queueSumMap["test-queue-burst"]).To(BeNumerically(">", 0),
+			"Test-queue-burst should have accessed more resources than its weight")
 	})
 })
 
