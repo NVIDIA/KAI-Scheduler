@@ -67,11 +67,12 @@ type TimeAwareSimulation struct {
 	Queues     []TestQueue
 	Jobs       map[string]TestJobs // key is the queue name
 	Nodes      []TestNodes
-	Cycles     *int // default is 100
-	WindowSize *int // default is 5
+	Cycles     *int     // default is 100
+	WindowSize *int     // default is 5
+	KValue     *float64 // default is 1.0
 }
 
-func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSize *int) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
+func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSize *int, kValue *float64) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
 	ctx, cancel := context.WithCancel(backgroundCtx)
 
 	err := queuecontroller.RunQueueController(cfg, ctx)
@@ -107,7 +108,10 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 		if schedulerConf.Tiers[0].Plugins[i].Arguments == nil {
 			schedulerConf.Tiers[0].Plugins[i].Arguments = map[string]string{}
 		}
-		schedulerConf.Tiers[0].Plugins[i].Arguments["kValue"] = "2000"
+		if kValue == nil {
+			kValue = ptr.To(1.0)
+		}
+		schedulerConf.Tiers[0].Plugins[i].Arguments["kValue"] = fmt.Sprintf("%f", *kValue)
 	}
 
 	stopCh := make(chan struct{})
@@ -138,10 +142,10 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 	return stopCh, cancel, usageClient, nil
 }
 
-func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.AllocationHistory, error, error) {
+func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (allocationHistory fake.AllocationHistory, err error, cleanupErr error) {
 	simulationName := randomstring.HumanFriendlyEnglishString(10)
 
-	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg, simulation.WindowSize)
+	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg, simulation.WindowSize, simulation.KValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup controllers: %w", err), nil
 	}
@@ -150,7 +154,7 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 
 	testNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "simulation-test",
+			Name: fmt.Sprintf("simulation-test-%s", simulationName),
 			Labels: map[string]string{
 				"simulation": simulationName,
 			},
@@ -160,9 +164,11 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 		return nil, fmt.Errorf("failed to create test namespace: %w", err), nil
 	}
 
-	var cleanupErrors []error
 	defer func() {
-		cleanupErrors = append(cleanupErrors, cleanupSimulation(ctx, ctrlClient, testNamespace, simulationName)...)
+		cleanupErrors := cleanupSimulation(ctx, ctrlClient, testNamespace, simulationName)
+		if len(cleanupErrors) > 0 {
+			cleanupErr = errors.Join(cleanupErrors...)
+		}
 	}()
 
 	var nodes []*corev1.Node
@@ -172,7 +178,7 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 			"simulation": simulationName,
 		}
 		if err := ctrlClient.Create(ctx, nodeObject); err != nil {
-			return nil, fmt.Errorf("failed to create test node: %w", err), errors.Join(cleanupErrors...)
+			return nil, fmt.Errorf("failed to create test node: %w", err), nil
 		}
 		nodes = append(nodes, nodeObject)
 	}
@@ -202,7 +208,7 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 
 		err := ctrlClient.Create(ctx, queueObject)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create test queue: %w", err), errors.Join(cleanupErrors...)
+			return nil, fmt.Errorf("failed to create test queue: %w", err), nil
 		}
 		queues = append(queues, queueObject)
 	}
@@ -218,12 +224,11 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 	}
 	for range *simulation.Cycles {
 		time.Sleep(simulationCycleInterval * 10)
-		usageClient.AppendQueuedAllocation(getAllocations(ctx, ctrlClient), getClusterResources(ctx, ctrlClient, true))
+		usageClient.AppendQueueAllocation(getAllocations(ctx, ctrlClient), getClusterResources(ctx, ctrlClient, true))
 	}
 
-	allocationHistory := usageClient.GetAllocationHistory()
-
-	return allocationHistory, err, errors.Join(cleanupErrors...)
+	allocationHistory = usageClient.GetAllocationHistory()
+	return allocationHistory, err, nil
 }
 
 func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamespace *corev1.Namespace, simulationName string) []error {
@@ -330,18 +335,19 @@ var _ = Describe("Time Aware Fairness", Ordered, func() {
 			Queues: []TestQueue{
 				{Name: "test-department", Parent: ""},
 				{Name: "test-queue1", Parent: "test-department"},
-				// {Name: "test-queue2", Parent: "test-department"},
+				{Name: "test-queue2", Parent: "test-department"},
 				{Name: "test-queue-burst", Parent: "test-department"},
 			},
 			Jobs: map[string]TestJobs{
-				"test-queue1": {NumPods: 1, NumJobs: 100, GPUs: 1},
-				// "test-queue2":      {NumPods: 1, NumJobs: 100, GPUs: 1},
+				"test-queue1":      {NumPods: 1, NumJobs: 100, GPUs: 1},
+				"test-queue2":      {NumPods: 1, NumJobs: 100, GPUs: 1},
 				"test-queue-burst": {NumPods: 1, NumJobs: 100, GPUs: 4},
 			},
 			Nodes: []TestNodes{
 				{GPUs: 6, Count: 1},
 			},
-			WindowSize: ptr.To(100),
+			WindowSize: ptr.To(4),
+			KValue:     ptr.To(2.0),
 		})
 		Expect(err).NotTo(HaveOccurred(), "Failed to run simulation")
 		Expect(cleanupError).NotTo(HaveOccurred(), "Failed to cleanup simulation")

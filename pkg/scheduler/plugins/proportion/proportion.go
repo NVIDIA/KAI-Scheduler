@@ -82,19 +82,6 @@ func New(arguments framework.PluginArguments) framework.Plugin {
 		kValue = 0.0
 	}
 
-	kValue := 1.0
-	if val, exists := arguments["kValue"]; exists {
-		if k, err := strconv.ParseFloat(val, 64); err == nil {
-			if k <= 0.0 {
-				log.InfraLogger.Warningf("kValue must be > 0.0, got %v. Using default value of 1.0", k)
-			} else {
-				kValue = k
-			}
-		} else {
-			log.InfraLogger.V(1).Errorf("Failed to parse kValue: %s. Using default 1.", val)
-		}
-	}
-
 	return &proportionPlugin{
 		totalResource:                 rs.EmptyResourceQuantities(),
 		queues:                        map[common_info.QueueID]*rs.QueueAttributes{},
