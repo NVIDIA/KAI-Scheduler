@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	options := app.InitOptions()
+	options := app.InitOptions(nil)
 	config := ctrl.GetConfigOrDie()
 
 	opts := zap.Options{

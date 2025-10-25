@@ -40,8 +40,6 @@ var _ = Describe("Topology", Ordered, func() {
 		childQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), parentQueue.Name)
 		testCtx.InitQueues([]*v2.Queue{childQueue, parentQueue})
 
-		testTopologyData, gpuNodesNames = rd.CreateRackZoneTopology(ctx, testCtx.KubeClientset, testCtx.KubeConfig)
-
 		// Set spreading strategy to try and increase the probability of
 		//  out-of-topology allocation more common in case of a bug.
 		if err := feature_flags.SetPlacementStrategy(ctx, testCtx, feature_flags.SpreadStrategy); err != nil {
@@ -54,18 +52,25 @@ var _ = Describe("Topology", Ordered, func() {
 			Fail(fmt.Sprintf("Failed to patch scheduler config with spreading plugin: %v", err))
 		}
 
-		rd.CleanRackZoneTopology(ctx, testTopologyData, testCtx.KubeConfig)
-
 		testCtx.ClusterCleanup(ctx)
 	})
 
-	Context("Topology", func() {
+	Context("Topology - 4 nodes", func() {
+		const numNodesInTestTopology = 4
+
 		BeforeEach(func(ctx context.Context) {
-			rd.AssignNodesToTestTopology(ctx, testCtx.ControllerClient, gpuNodesNames, testTopologyData)
+			testTopologyData, gpuNodesNames = rd.CreateRackZoneTopology(ctx, testCtx.KubeClientset, testCtx.KubeConfig, numNodesInTestTopology, 2)
+			DeferCleanup(func(ctx context.Context) {
+				rd.CleanRackZoneTopology(ctx, testTopologyData, testCtx.KubeConfig)
+			})
+
+			rd.AssignNodesToTestTopology(ctx, testCtx.ControllerClient, gpuNodesNames, testTopologyData, numNodesInTestTopology, false)
+			DeferCleanup(func(ctx context.Context) {
+				rd.CleanNodesFromTopology(ctx, testCtx.ControllerClient, testTopologyData)
+			})
 		})
 
 		AfterEach(func(ctx context.Context) {
-			rd.CleanNodesFromTopology(ctx, testCtx.ControllerClient, testTopologyData)
 			testCtx.TestContextCleanup(ctx)
 		})
 
@@ -190,6 +195,60 @@ var _ = Describe("Topology", Ordered, func() {
 			Expect(len(scheduledRacks)).To(Equal(1), "Expected all pods scheduled to the same rack, got %v", scheduledRacks)
 		})
 	}, MustPassRepeatedly(3))
+
+	Context("Topology - 8 nodes", func() {
+		const numNodesInTestTopology = 8
+
+		BeforeEach(func(ctx context.Context) {
+			testTopologyData, gpuNodesNames = rd.CreateRackZoneTopology(ctx, testCtx.KubeClientset, testCtx.KubeConfig, numNodesInTestTopology, 4)
+			DeferCleanup(func(ctx context.Context) {
+				rd.CleanRackZoneTopology(ctx, testTopologyData, testCtx.KubeConfig)
+			})
+
+			rd.AssignNodesToTestTopology(ctx, testCtx.ControllerClient, gpuNodesNames, testTopologyData, numNodesInTestTopology, true)
+			DeferCleanup(func(ctx context.Context) {
+				rd.CleanNodesFromTopology(ctx, testCtx.ControllerClient, testTopologyData)
+			})
+		})
+
+		AfterEach(func(ctx context.Context) {
+			testCtx.TestContextCleanup(ctx)
+		})
+
+		It("required zone and preferred rack - all pods in a zone, packed into 2 racks", func(ctx context.Context) {
+			namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+			topologyConstraint := v2alpha2.TopologyConstraint{
+				RequiredTopologyLevel:  rd.TestZoneLabelKey,
+				PreferredTopologyLevel: rd.TestRackLabelKey,
+				Topology:               "e2e-topology-tree",
+			}
+
+			gpusPerNode := testTopologyData.TopologyNodes[gpuNodesNames[0]].
+				Status.Allocatable[v1.ResourceName(constants.GpuResource)]
+			podResource := v1.ResourceList{
+				v1.ResourceName(constants.GpuResource): gpusPerNode,
+			}
+
+			pods := createDistributedWorkload(ctx, testCtx, 4, podResource, topologyConstraint)
+			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, namespace, pods)
+
+			// Validate that all the pods have been scheduled to the same zone
+			podList, err := testCtx.KubeClientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Failed to list pods")
+
+			scheduledZones := map[string][]string{}
+			scheduledRacks := map[string][]string{}
+			for _, pod := range podList.Items {
+				podZone := testTopologyData.TopologyNodes[pod.Spec.NodeName].Labels[rd.TestZoneLabelKey]
+				scheduledZones[podZone] = append(scheduledZones[podZone], pod.Name)
+				podRack := testTopologyData.TopologyNodes[pod.Spec.NodeName].Labels[rd.TestRackLabelKey]
+				scheduledRacks[podRack] = append(scheduledRacks[podRack], pod.Name)
+			}
+
+			Expect(len(scheduledZones)).To(Equal(1), "Expected all pods scheduled to one zone, got %v", scheduledZones)
+			Expect(len(scheduledRacks)).To(Equal(2), "Expected all pods scheduled to 2 racks, got %v", scheduledRacks)
+		})
+	})
 
 	Context("Empty context to jump over ginkgo bug", func() {
 		It("should not create test suite while ensuring that the test suite is executed", func(ctx context.Context) {

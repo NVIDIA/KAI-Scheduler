@@ -201,7 +201,7 @@ func TestStatement_Checkpoint(t *testing.T) {
 		s := &Statement{
 			operations: []Operation{},
 			ssn:        ssn,
-			sessionUID: "1234",
+			sessionID:  "1234",
 		}
 
 		originalJobs, originalNodes := extractSessionAssertedData(ssn)

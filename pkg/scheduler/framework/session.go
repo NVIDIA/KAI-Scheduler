@@ -51,7 +51,7 @@ import (
 var server *PluginServer
 
 type Session struct {
-	UID   types.UID
+	ID    string
 	Cache cache.Cache
 
 	PodGroupInfos map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
@@ -65,7 +65,8 @@ type Session struct {
 	NodePreOrderFns                       []api.NodePreOrderFn
 	NodeOrderFns                          []api.NodeOrderFn
 	JobOrderFns                           []common_info.CompareFn
-	SubGroupsOrderFns                     []common_info.CompareFn
+	PodSetOrderFns                        []common_info.CompareFn
+	SubGroupSetOrderFns                   []common_info.CompareFn
 	TaskOrderFns                          []common_info.CompareFn
 	QueueOrderFns                         []CompareQueueFn
 	CanReclaimResourcesFns                []api.CanReclaimResourcesFn
@@ -84,6 +85,7 @@ type Session struct {
 	PrePredicateFns                       []api.PrePredicateFn
 	PredicateFns                          []api.PredicateFn
 	BindRequestMutateFns                  []api.BindRequestMutateFn
+	PreJobAllocationFns                   []api.PreJobAllocationFn
 
 	Config          *conf.SchedulerConfiguration
 	plugins         map[string]Plugin
@@ -95,7 +97,7 @@ type Session struct {
 }
 
 func (ssn *Session) Statement() *Statement {
-	return &Statement{ssn: ssn, sessionUID: ssn.UID}
+	return &Statement{ssn: ssn, sessionID: ssn.ID}
 }
 
 func (ssn *Session) GetSessionStateForResource(uid types.UID) k8s_internal.SessionState {
@@ -288,7 +290,7 @@ func (ssn *Session) isTaskAllocatableOnNode(task *pod_info.PodInfo, job *podgrou
 }
 
 func (ssn *Session) String() string {
-	msg := fmt.Sprintf("Session %v: \n", ssn.UID)
+	msg := fmt.Sprintf("Session %v: \n", ssn.ID)
 
 	for _, job := range ssn.PodGroupInfos {
 		msg = fmt.Sprintf("%s%v\n", msg, job)
@@ -311,7 +313,7 @@ func (ssn *Session) updatePodOnNode(pod *pod_info.PodInfo) error {
 	err := node.UpdateTask(pod)
 	if err != nil {
 		log.InfraLogger.Errorf("Failed to update task <%v/%v> in Session <%v>: %v",
-			pod.Namespace, pod.Name, ssn.UID, err)
+			pod.Namespace, pod.Name, ssn.ID, err)
 	}
 	return err
 }
@@ -320,14 +322,14 @@ func (ssn *Session) updatePodOnSession(pod *pod_info.PodInfo, status pod_status.
 	job, found := ssn.PodGroupInfos[pod.Job]
 	if !found {
 		log.InfraLogger.Errorf("Failed to found Job <%s> in Session <%s> index when binding.",
-			pod.Job, ssn.UID)
+			pod.Job, ssn.ID)
 		return fmt.Errorf("failed to find job %s", pod.Job)
 	}
 
 	err := job.UpdateTaskStatus(pod, status)
 	if err != nil {
 		log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
-			pod.Namespace, pod.Name, status, ssn.UID, err)
+			pod.Namespace, pod.Name, status, ssn.ID, err)
 	}
 	return err
 }
@@ -338,13 +340,14 @@ func (ssn *Session) clear() {
 	ssn.plugins = nil
 	ssn.eventHandlers = nil
 	ssn.TaskOrderFns = nil
-	ssn.SubGroupsOrderFns = nil
+	ssn.PodSetOrderFns = nil
+	ssn.SubGroupSetOrderFns = nil
 	ssn.JobOrderFns = nil
 }
 
-func openSession(cache cache.Cache, sessionId types.UID, schedulerParams conf.SchedulerParams, mux *http.ServeMux) (*Session, error) {
+func openSession(cache cache.Cache, sessionId string, schedulerParams conf.SchedulerParams, mux *http.ServeMux) (*Session, error) {
 	ssn := &Session{
-		UID:   sessionId,
+		ID:    sessionId,
 		Cache: cache,
 
 		PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{},
@@ -372,14 +375,14 @@ func openSession(cache cache.Cache, sessionId types.UID, schedulerParams conf.Sc
 	ssn.Topologies = snapshot.Topologies
 
 	log.InfraLogger.V(2).Infof("Session %v with <%d> Jobs, <%d> Queues and <%d> Nodes",
-		ssn.UID, len(ssn.PodGroupInfos), len(ssn.Queues), len(ssn.Nodes))
+		ssn.ID, len(ssn.PodGroupInfos), len(ssn.Queues), len(ssn.Nodes))
 
 	return ssn, nil
 }
 
 func closeSession(ssn *Session) {
 	log.InfraLogger.V(6).Infof("Close Session %v with <%d> Jobs and <%d> Queues",
-		ssn.UID, len(ssn.PodGroupInfos), len(ssn.Queues))
+		ssn.ID, len(ssn.PodGroupInfos), len(ssn.Queues))
 
 	// Push all jobs for status update into the channel
 	for _, job := range ssn.PodGroupInfos {
@@ -392,7 +395,7 @@ func closeSession(ssn *Session) {
 	stopCh := make(chan struct{})
 	ssn.Cache.WaitForWorkers(stopCh)
 
-	log.InfraLogger.V(6).Infof("Done updating job statuses for session: %v", ssn.UID)
+	log.InfraLogger.V(6).Infof("Done updating job statuses for session: %v", ssn.ID)
 }
 
 func (ssn *Session) GetMaxNumberConsolidationPreemptees() int {

@@ -12,12 +12,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/scores"
 )
 
-type resourceType struct {
-	pluginArguments map[string]string
-}
+type resourceType struct{}
 
-func New(arguments map[string]string) framework.Plugin {
-	return &resourceType{pluginArguments: arguments}
+func New(_ framework.PluginArguments) framework.Plugin {
+	return &resourceType{}
 }
 
 func (pp *resourceType) Name() string {

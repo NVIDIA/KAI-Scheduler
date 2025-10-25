@@ -29,6 +29,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/controller"
 
 	nvidiav1 "github.com/NVIDIA/gpu-operator/api/nvidia/v1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -42,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -94,6 +96,9 @@ var _ = BeforeSuite(func() {
 	err = nvidiav1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = monitoringv1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
 	// +kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
@@ -102,6 +107,10 @@ var _ = BeforeSuite(func() {
 
 	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
+		Metrics: server.Options{
+			BindAddress: "0",
+		},
+		HealthProbeBindAddress: "0",
 	})
 	Expect(err).ToNot(HaveOccurred())
 

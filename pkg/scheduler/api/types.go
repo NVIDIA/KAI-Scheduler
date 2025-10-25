@@ -73,6 +73,9 @@ type OnJobSolutionStartFn func()
 // BindRequestMutateFn allows plugins to add annotations before BindRequest creation.
 type BindRequestMutateFn func(pod *pod_info.PodInfo, nodeName string) map[string]string
 
+// PreJobAllocationFn is used for notifying on job allocation start
+type PreJobAllocationFn func(job *podgroup_info.PodGroupInfo)
+
 type SchedulableResult struct {
 	IsSchedulable bool
 	Reason        v2alpha2.UnschedulableReason

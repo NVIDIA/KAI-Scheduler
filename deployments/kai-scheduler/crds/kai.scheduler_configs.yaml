@@ -2020,6 +2020,27 @@ spec:
                     description: SampleInterval defines the interval of sampling (e.g.,
                       "1m", "30s", "5m")
                     type: string
+                  serviceMonitor:
+                    description: ServiceMonitor defines ServiceMonitor configuration
+                      for KAI services
+                    properties:
+                      bearerTokenFile:
+                        description: BearerTokenFile defines the path to the bearer
+                          token file for authentication
+                        type: string
+                      enabled:
+                        description: Enabled defines whether ServiceMonitor resources
+                          should be created
+                        type: boolean
+                      interval:
+                        description: Interval defines the scrape interval for the
+                          ServiceMonitor (e.g., "30s", "1m")
+                        type: string
+                      scrapeTimeout:
+                        description: ScrapeTimeout defines the scrape timeout for
+                          the ServiceMonitor (e.g., "10s", "30s")
+                        type: string
+                    type: object
                   storageClassName:
                     description: StorageClassName defines the name of the storageClass
                       that will be used to store the TSDB data. defaults to "standard".

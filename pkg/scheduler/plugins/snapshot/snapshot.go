@@ -202,6 +202,6 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 	}
 }
 
-func New(arguments map[string]string) framework.Plugin {
+func New(_ framework.PluginArguments) framework.Plugin {
 	return &snapshotPlugin{}
 }

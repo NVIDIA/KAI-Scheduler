@@ -8,12 +8,14 @@ import (
 )
 
 type SubGroupInfo struct {
+	parent             *SubGroupSet
 	name               string
 	topologyConstraint *topology_info.TopologyConstraintInfo
 }
 
 func newSubGroupInfo(name string, topologyConstraint *topology_info.TopologyConstraintInfo) *SubGroupInfo {
 	return &SubGroupInfo{
+		parent:             nil,
 		name:               name,
 		topologyConstraint: topologyConstraint,
 	}
@@ -25,4 +27,12 @@ func (sgi *SubGroupInfo) GetName() string {
 
 func (sgi *SubGroupInfo) GetTopologyConstraint() *topology_info.TopologyConstraintInfo {
 	return sgi.topologyConstraint
+}
+
+func (sgi *SubGroupInfo) SetParent(parent *SubGroupSet) {
+	sgi.parent = parent
+}
+
+func (sgi *SubGroupInfo) GetParent() *SubGroupSet {
+	return sgi.parent
 }

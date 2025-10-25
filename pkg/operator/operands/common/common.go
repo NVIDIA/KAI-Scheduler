@@ -15,6 +15,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
@@ -23,6 +24,16 @@ import (
 )
 
 var controllerTypes = []string{"Deployment", "DaemonSet"}
+
+// KAI services that should be monitored via ServiceMonitor
+// For now, we only monitor the queue controller. Add more services here if needed.
+var KaiServicesForServiceMonitor = []struct {
+	Name     string
+	Port     string
+	JobLabel string
+}{
+	{"queuecontroller", "metrics", "queuecontroller"},
+}
 
 func AllControllersAvailable(
 	ctx context.Context, readerClient client.Reader, objects []client.Object,
@@ -192,4 +203,38 @@ func AddK8sClientConfigToArgs(k8sClientConfig *kaiv1common.K8sClientConfig, args
 			args = append(args, "--burst", strconv.Itoa(*k8sClientConfig.Burst))
 		}
 	}
+}
+
+func CheckPrometheusCRDsAvailable(ctx context.Context, client client.Reader, targetCRDs ...string) (bool, error) {
+	var names []string
+	for _, targetCRD := range targetCRDs {
+		switch targetCRD {
+		case "prometheus":
+			names = append(names, "prometheuses.monitoring.coreos.com")
+		case "serviceMonitor":
+			names = append(names, "servicemonitors.monitoring.coreos.com")
+		default:
+			names = append(names, targetCRD)
+		}
+	}
+
+	for _, name := range names {
+		crd := &metav1.PartialObjectMetadata{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "CustomResourceDefinition",
+				APIVersion: "apiextensions.k8s.io/v1",
+			},
+		}
+		err := client.Get(ctx, types.NamespacedName{
+			Name: name,
+		}, crd)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to check for Prometheus CRD: %w", err)
+		}
+	}
+
+	return true, nil
 }
