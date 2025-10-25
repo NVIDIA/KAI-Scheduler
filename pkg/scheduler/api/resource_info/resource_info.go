@@ -62,7 +62,9 @@ func ResourceFromResourceList(rList v1.ResourceList) *Resource {
 		default:
 			if IsMigResource(rName) {
 				r.scalarResources[rName] += rQuant.Value()
-			} else if k8s_internal.IsScalarResourceName(rName) || rName == v1.ResourceEphemeralStorage || rName == v1.ResourceStorage {
+			} else if rName == v1.ResourceEphemeralStorage || rName == v1.ResourceStorage {
+				r.scalarResources[rName] += rQuant.Value()
+			} else if k8s_internal.IsScalarResourceName(rName) {
 				r.scalarResources[rName] += rQuant.MilliValue()
 			}
 		}

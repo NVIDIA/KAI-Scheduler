@@ -247,6 +247,54 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 					"The pod n1/name1 requires GPU: 0.5, CPU: 0 (cores), memory: 0 (GB). No node in the default node-pool has GPU resources"),
 			},
 		},
+		{
+			"not enough ephemeral storage",
+			args{
+				nodesMap: map[string]*node_info.NodeInfo{
+					"n1": {
+						Allocatable: resource_info.ResourceFromResourceList(v1.ResourceList{
+							v1.ResourceCPU:                resource.MustParse("100m"),
+							v1.ResourceMemory:             resource.MustParse("200Mi"),
+							resource_info.GPUResourceName: resource.MustParse("1"),
+							"kai.scheduler/r1":            resource.MustParse("2"),
+							v1.ResourceEphemeralStorage:   resource.MustParse("10Gi"),
+						}),
+					},
+					"n2": {
+						Allocatable: resource_info.ResourceFromResourceList(v1.ResourceList{
+							v1.ResourceCPU:                resource.MustParse("500m"),
+							v1.ResourceMemory:             resource.MustParse("200Mi"),
+							resource_info.GPUResourceName: resource.MustParse("1"),
+							"kai.scheduler/r1":            resource.MustParse("2"),
+							v1.ResourceEphemeralStorage:   resource.MustParse("20Gi"),
+						}),
+					},
+				},
+				pod: &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "name1",
+						Namespace: "n1",
+					},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							{
+								Name: "c1",
+								Resources: v1.ResourceRequirements{
+									Requests: map[v1.ResourceName]resource.Quantity{
+										v1.ResourceEphemeralStorage: resource.MustParse("25G"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected{
+				ksf.NewStatus(ksf.Unschedulable,
+					"The pod n1/name1 requires GPU: 0, CPU: 0 (cores), memory: 0 (GB), ephemeral-storage: 25 (GB). "+
+						"Max ephemeral-storage resources available in a single node in the default node-pool is topped at 21.474 GB"),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
