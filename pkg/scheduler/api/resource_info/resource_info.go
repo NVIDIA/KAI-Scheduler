@@ -66,7 +66,7 @@ func ResourceFromResourceList(rList v1.ResourceList) *Resource {
 				r.scalarResources[rName] += rQuant.Value()
 			} else if k8s_internal.IsScalarResourceName(rName) {
 				r.scalarResources[rName] += rQuant.MilliValue()
-			} 
+			}
 		}
 	}
 	return r
@@ -130,7 +130,7 @@ func (r *Resource) DetailedString() string {
 	messageBuilder.WriteString(r.String())
 
 	for rName, rQuant := range r.scalarResources {
-        messageBuilder.WriteString(fmt.Sprintf(", %s: %v", rName, rQuant))
+		messageBuilder.WriteString(fmt.Sprintf(", %s: %v", rName, rQuant))
 	}
 	return messageBuilder.String()
 }
