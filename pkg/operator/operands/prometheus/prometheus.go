@@ -5,12 +5,20 @@ package prometheus
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiprometheus "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
 )
 
 type Prometheus struct {
@@ -80,4 +88,116 @@ func (b *Prometheus) IsAvailable(ctx context.Context, readerClient client.Reader
 
 func (b *Prometheus) Name() string {
 	return "KAI-prometheus"
+}
+
+// StartPrometheusMonitoring starts a background goroutine to monitor external Prometheus connectivity
+// and update the status periodically. The goroutine will stop when ctx is cancelled or when
+// ExternalPrometheusUrl is set to nil or empty string.
+func StartPrometheusMonitoring(ctx context.Context, prometheusConfig *kaiprometheus.Prometheus, statusUpdater func(ctx context.Context, condition metav1.Condition) error) {
+	if prometheusConfig == nil || prometheusConfig.ExternalPrometheusUrl == nil || *prometheusConfig.ExternalPrometheusUrl == "" {
+		return
+	}
+
+	go func() {
+		ticker := time.NewTicker(30 * time.Second) // Check every 30 seconds
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				// Check if external Prometheus URL is still configured
+				if prometheusConfig.ExternalPrometheusUrl == nil || *prometheusConfig.ExternalPrometheusUrl == "" {
+					return
+				}
+
+				// Test connectivity
+				ok, err := pingExternalPrometheus(ctx, *prometheusConfig.ExternalPrometheusUrl)
+
+				var condition metav1.Condition
+				if err != nil || !ok {
+					condition = metav1.Condition{
+						Type:               "PrometheusConnectivity",
+						Status:             metav1.ConditionFalse,
+						Reason:             "prometheus_connection_failed",
+						Message:            fmt.Sprintf("Failed to ping external Prometheus: %v", err),
+						LastTransitionTime: metav1.Now(),
+					}
+				} else {
+					condition = metav1.Condition{
+						Type:               "PrometheusConnectivity",
+						Status:             metav1.ConditionTrue,
+						Reason:             "prometheus_connected",
+						Message:            "External Prometheus connectivity verified",
+						LastTransitionTime: metav1.Now(),
+					}
+				}
+
+				// Update status
+				if updateErr := statusUpdater(ctx, condition); updateErr != nil {
+					logger := log.FromContext(ctx)
+					logger.Error(updateErr, "Failed to update Prometheus connectivity status")
+				}
+
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+// pingExternalPrometheus validates connectivity to an external Prometheus instance
+func pingExternalPrometheus(ctx context.Context, prometheusURL string) (bool, error) {
+	logger := log.FromContext(ctx)
+
+	// Ensure the URL has a scheme
+	if !strings.Contains(prometheusURL, "://") {
+		prometheusURL = "http://" + prometheusURL
+	}
+
+	// Parse the URL to ensure it's valid
+	_, err := url.Parse(prometheusURL)
+	if err != nil {
+		return false, fmt.Errorf("invalid Prometheus URL: %w", err)
+	}
+
+	// Create HTTP client with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// Try to connect to the Prometheus /api/v1/status/config endpoint
+	statusURL := prometheusURL + "/api/v1/status/config"
+	logger.Info("Validating external Prometheus connection", "url", statusURL)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", statusURL, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("failed to connect to external Prometheus: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check if we got a successful response
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return false, fmt.Errorf("external Prometheus returned status code %d", resp.StatusCode)
+	}
+	return true, nil
+}
+
+// ValidateExternalPrometheusConnection validates connectivity to an external Prometheus instance
+func ValidateExternalPrometheusConnection(ctx context.Context, prometheusConfig *kaiprometheus.Prometheus) error {
+	// Check if external Prometheus URL is configured
+	if prometheusConfig == nil || prometheusConfig.ExternalPrometheusUrl == nil || *prometheusConfig.ExternalPrometheusUrl == "" {
+		return nil
+	}
+
+	// Validate the connection once
+	ok, err := pingExternalPrometheus(ctx, *prometheusConfig.ExternalPrometheusUrl)
+	if err != nil || !ok {
+		return fmt.Errorf("failed to ping external Prometheus: %w", err)
+	}
+	return nil
 }

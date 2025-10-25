@@ -11,6 +11,7 @@ import (
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/deployable"
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/prometheus"
 )
 
 type objectWithConditions interface {
@@ -190,7 +191,7 @@ func (r *StatusReconciler) getPrometheusConnectivityCondition(ctx context.Contex
 	}
 
 	// Validate external Prometheus connectivity
-	err := kaiConfig.Spec.Prometheus.ValidateExternalPrometheusConnection(ctx, *kaiConfig.Spec.Prometheus.ExternalPrometheusUrl)
+	err := prometheus.ValidateExternalPrometheusConnection(ctx, kaiConfig.Spec.Prometheus)
 	if err != nil {
 		return metav1.Condition{
 			Type:               string(kaiv1.ConditionTypePrometheusConnectivity),

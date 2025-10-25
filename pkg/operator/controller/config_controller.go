@@ -188,7 +188,7 @@ func (r *ConfigReconciler) managePrometheusMonitoring(ctx context.Context, kaiCo
 			}
 
 			// Start the monitoring goroutine
-			kaiConfig.Spec.Prometheus.StartPrometheusMonitoring(r.monitoringCtx, statusUpdater)
+			prometheus.StartPrometheusMonitoring(r.monitoringCtx, kaiConfig.Spec.Prometheus, statusUpdater)
 		}
 	} else {
 		// Stop monitoring if external Prometheus is not configured
