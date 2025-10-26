@@ -49,19 +49,27 @@ type DomainInfo struct {
 
 	// Number of pods that can be allocated in this domain for the job
 	AllocatablePods int
+
+	// Total available resources in this domain
+	IdleOrReleasingResources *resource_info.Resource
 }
 
 func NewDomainInfo(id DomainID, level DomainLevel) *DomainInfo {
 	return &DomainInfo{
-		ID:       id,
-		Level:    level,
-		Children: []*DomainInfo{},
-		Nodes:    map[string]*node_info.NodeInfo{},
+		ID:                       id,
+		Level:                    level,
+		Children:                 []*DomainInfo{},
+		Nodes:                    map[string]*node_info.NodeInfo{},
+		AllocatablePods:          0,
+		IdleOrReleasingResources: resource_info.EmptyResource(),
 	}
 }
 
 func (di *DomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
 	di.Nodes[nodeInfo.Name] = nodeInfo
+	di.IdleOrReleasingResources.Add(nodeInfo.Idle)
+	di.IdleOrReleasingResources.Add(nodeInfo.Releasing)
+	// Ignore fractions of GPUs for now
 }
 
 func (di *DomainInfo) GetNonAllocatedGPUsInDomain() float64 {

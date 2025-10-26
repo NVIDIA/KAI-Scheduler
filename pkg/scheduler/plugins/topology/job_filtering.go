@@ -6,6 +6,7 @@ package topology
 import (
 	"cmp"
 	"fmt"
+	"math"
 	"slices"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -60,7 +61,7 @@ func (t *topologyPlugin) subSetNodesFn(
 	if maxDepthLevel == "" {
 		maxDepthLevel = requiredLevel
 	}
-	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], maxDepthLevel)
+	sortTreeFromRoot(tasks, topologyTree, maxDepthLevel)
 	if preferredLevel != "" {
 		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
 	}
@@ -350,20 +351,31 @@ func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
 	}
 }
 
+func sortTreeFromRoot(tasks []*pod_info.PodInfo, topologyTree *Info, maxDepthLevel DomainLevel) {
+	tasksResources := resource_info.NewResource(0, 0, 0)
+	for _, task := range tasks {
+		tasksResources.AddResourceRequirements(task.ResReq)
+	}
+
+	sortTree(tasksResources, topologyTree.DomainsByLevel[rootLevel][rootDomainId], maxDepthLevel)
+}
+
 // sortTree recursively sorts the topology tree for bin-packing behavior.
 // Domains are sorted by AllocatablePods (ascending) to prioritize filling domains
 // with fewer available resources first, implementing a bin-packing strategy.
 // Within domains with equal AllocatablePods, sorts by ID for deterministic ordering.
-func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
+func sortTree(tasksResources *resource_info.Resource, root *DomainInfo, maxDepthLevel DomainLevel) {
 	if root == nil || maxDepthLevel == "" {
 		return
 	}
 
 	slices.SortFunc(root.Children, func(i, j *DomainInfo) int {
-		if c := cmp.Compare(i.AllocatablePods, j.AllocatablePods); c != 0 {
+		iRatio := getJobRatioToFreeResources(tasksResources, i)
+		jRatio := getJobRatioToFreeResources(tasksResources, j)
+		if c := cmp.Compare(jRatio, iRatio); c != 0 {
 			return c
 		}
-		return cmp.Compare(i.ID, j.ID)
+		return cmp.Compare(i.ID, j.ID) // For deterministic ordering
 	})
 
 	if root.Level == maxDepthLevel {
@@ -371,8 +383,35 @@ func sortTree(root *DomainInfo, maxDepthLevel DomainLevel) {
 	}
 
 	for _, child := range root.Children {
-		sortTree(child, maxDepthLevel)
+		sortTree(tasksResources, child, maxDepthLevel)
 	}
+}
+
+// Returns a max ratio for all tasks resources to the free resources in the domain.
+// The higher the ratio, the more "packed" the domain will be after the job is allocated.
+// If the ratio is higher then 1, the domain will not be able to allocate the job.
+func getJobRatioToFreeResources(tasksResources *resource_info.Resource, domain *DomainInfo) float64 {
+	dominantResourceRatio := 0.0
+
+	if tasksResources.LessEqual(resource_info.EmptyResource()) {
+		return dominantResourceRatio
+	}
+
+	if tasksResources.GPUs() > 0 {
+		dominantResourceRatio = math.Max(dominantResourceRatio,
+			tasksResources.GPUs()/domain.IdleOrReleasingResources.GPUs())
+	}
+
+	freeResources := domain.IdleOrReleasingResources
+	freeResourcesList := freeResources.ToResourceList()
+	for rName, rQuant := range freeResourcesList {
+		if rQuant.Value() > 0 {
+			tasksResourcesValue := tasksResources.Get(rName)
+			dominantResourceRatio = math.Max(dominantResourceRatio, tasksResourcesValue/float64(rQuant.Value()))
+		}
+	}
+
+	return dominantResourceRatio
 }
 
 // sortDomainInfos orders domains according to the sorted topology tree for consistent allocation.
