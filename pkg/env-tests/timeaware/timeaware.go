@@ -7,13 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
 	"time"
 
-	"github.com/go-gota/gota/dataframe"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"github.com/xyproto/randomstring"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -204,7 +199,15 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 	}
 	for range *simulation.Cycles {
 		time.Sleep(simulationCycleInterval * 10)
-		usageClient.AppendQueuedAllocation(getAllocations(ctx, ctrlClient), getClusterResources(ctx, ctrlClient, true))
+		allocations, err := getAllocations(ctx, ctrlClient)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get allocations: %w", err), errors.Join(cleanupErrors...)
+		}
+		clusterResources, err := getClusterResources(ctx, ctrlClient, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get cluster resources: %w", err), errors.Join(cleanupErrors...)
+		}
+		usageClient.AppendQueuedAllocation(allocations, clusterResources)
 	}
 
 	allocationHistory := usageClient.GetAllocationHistory()
@@ -256,86 +259,34 @@ func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamesp
 	return cleanupErrors
 }
 
-var _ = Describe("Time Aware Fairness", Ordered, func() {
-	BeforeAll(func() {
-		runtests, err := strconv.ParseBool(os.Getenv("RUN_TIME_AWARE_TESTS"))
-		if err != nil {
-			Skip(fmt.Sprintf("Failed to parse RUN_TIME_AWARE_TESTS environment variable: %v", err))
-		}
-		if !runtests {
-			Skip("Skipping time aware fairness tests (RUN_TIME_AWARE_TESTS is not set to true)")
-		}
-	})
-
-	It("Should run simulation", func(ctx context.Context) {
-		allocationHistory, err, cleanupError := RunSimulation(ctx, TimeAwareSimulation{
-			Queues: []TestQueue{
-				{Name: "test-department", Parent: ""},
-				{Name: "test-queue1", Parent: "test-department"},
-				{Name: "test-queue2", Parent: "test-department"},
-			},
-			Jobs: map[string]TestJobs{
-				"test-queue1": {NumPods: 1, NumJobs: 100, GPUs: 4},
-				"test-queue2": {NumPods: 1, NumJobs: 100, GPUs: 4},
-			},
-			Nodes: []TestNodes{
-				{GPUs: 4, Count: 1},
-			},
-		})
-		Expect(err).NotTo(HaveOccurred(), "Failed to run simulation")
-		Expect(cleanupError).NotTo(HaveOccurred(), "Failed to cleanup simulation")
-
-		df := allocationHistory.ToDataFrame()
-
-		// Sum allocations for each queue
-		queueSums := df.GroupBy("QueueID").
-			Aggregation([]dataframe.AggregationType{dataframe.Aggregation_SUM}, []string{"Allocation"})
-
-		// Convert queueSums dataframe to map from queueID to sum
-		queueSumMap := make(map[string]float64)
-		for i := 0; i < queueSums.Nrow(); i++ {
-			queueID := queueSums.Elem(i, 1).String()
-			allocation := queueSums.Elem(i, 0).Float()
-			queueSumMap[queueID] = allocation
-		}
-
-		// Assert that test-queue1 and test-queue2 allocations sum to approximately the department allocation
-		// Small difference could happen due to queue controller non-atomic updates
-		Expect(queueSumMap["test-queue1"]+queueSumMap["test-queue2"]).To(
-			BeNumerically("~", queueSumMap["test-department"], queueSumMap["test-department"]*0.1),
-			"Sum of queue1 and queue2 should equal department allocation")
-
-		// Assert that test-queue1 and test-queue2 have approximately equal allocations (within 10%)
-		Expect(queueSumMap["test-queue1"]).To(
-			BeNumerically("~", queueSumMap["test-queue2"], queueSumMap["test-queue2"]*0.1),
-			"Queue1 and Queue2 should have approximately equal allocations")
-	})
-})
-
 var totalInCluster map[corev1.ResourceName]float64
 
-func getClusterResources(ctx context.Context, ctrlClient client.Client, allowCache bool) map[corev1.ResourceName]float64 {
+func getClusterResources(ctx context.Context, ctrlClient client.Client, allowCache bool) (map[corev1.ResourceName]float64, error) {
 	if allowCache && totalInCluster != nil {
-		return totalInCluster
+		return totalInCluster, nil
 	}
 
 	totalInCluster = make(map[corev1.ResourceName]float64)
 
 	var nodes corev1.NodeList
-	Expect(ctrlClient.List(ctx, &nodes)).To(Succeed(), "Failed to list nodes")
+	if err := ctrlClient.List(ctx, &nodes); err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %w", err)
+	}
 
 	for _, node := range nodes.Items {
 		for resource, allocation := range node.Status.Allocatable {
 			totalInCluster[resource] += float64(allocation.Value())
 		}
 	}
-	return totalInCluster
+	return totalInCluster, nil
 }
 
-func getAllocations(ctx context.Context, ctrlClient client.Client) map[common_info.QueueID]queue_info.QueueUsage {
+func getAllocations(ctx context.Context, ctrlClient client.Client) (map[common_info.QueueID]queue_info.QueueUsage, error) {
 	allocations := make(map[common_info.QueueID]queue_info.QueueUsage)
 	var queues schedulingv2.QueueList
-	Expect(ctrlClient.List(ctx, &queues)).To(Succeed(), "Failed to list queues")
+	if err := ctrlClient.List(ctx, &queues); err != nil {
+		return nil, fmt.Errorf("failed to list queues: %w", err)
+	}
 
 	for _, queue := range queues.Items {
 		if allocations[common_info.QueueID(queue.Name)] == nil {
@@ -345,7 +296,7 @@ func getAllocations(ctx context.Context, ctrlClient client.Client) map[common_in
 			allocations[common_info.QueueID(queue.Name)][resource] = float64(allocation.Value())
 		}
 	}
-	return allocations
+	return allocations, nil
 }
 
 func queueJob(ctx context.Context, ctrlClient client.Client, namespace, queueName string, pods, gpus int) error {
