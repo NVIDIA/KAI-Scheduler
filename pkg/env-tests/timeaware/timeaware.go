@@ -190,7 +190,10 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 
 	for queueName, job := range simulation.Jobs {
 		for range job.NumJobs {
-			queueJob(ctx, ctrlClient, testNamespace.Name, queueName, job.NumPods, job.GPUs)
+			err := queueJob(ctx, ctrlClient, testNamespace.Name, queueName, job.NumPods, job.GPUs)
+			if err != nil {
+				return nil, fmt.Errorf("failed to queue job: %w", err), errors.Join(cleanupErrors...)
+			}
 		}
 	}
 

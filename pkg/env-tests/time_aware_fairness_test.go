@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/go-gota/gota/dataframe"
 	. "github.com/onsi/ginkgo/v2"
@@ -17,14 +16,9 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/timeaware"
 )
 
-const simulationCycleInterval = time.Millisecond * 10
-const defaultTimeout = time.Second * 10
-
 var _ = Describe("Time Aware Fairness", Ordered, func() {
 	BeforeAll(func() {
 		runtests, err := strconv.ParseBool(os.Getenv("RUN_TIME_AWARE_TESTS"))
-		runtests = true
-		err = nil
 		if err != nil {
 			Skip(fmt.Sprintf("Failed to parse RUN_TIME_AWARE_TESTS environment variable: %v", err))
 		}
