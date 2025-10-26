@@ -17,6 +17,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 )
 
+const (
+	requiredResourceNotInDomainRatio = 1000.0
+)
+
 type jobAllocationMetaData struct {
 	maxPodResources    *resource_info.ResourceRequirements
 	allocationTestPods []*pod_info.PodInfo
@@ -402,13 +406,20 @@ func getJobRatioToFreeResources(tasksResources *resource_info.Resource, domain *
 			tasksResources.GPUs()/domain.IdleOrReleasingResources.GPUs())
 	}
 
-	freeResources := domain.IdleOrReleasingResources
-	freeResourcesList := freeResources.ToResourceList()
-	for rName, rQuant := range freeResourcesList {
-		if rQuant.Value() > 0 {
-			tasksResourcesValue := tasksResources.Get(rName)
-			dominantResourceRatio = math.Max(dominantResourceRatio, tasksResourcesValue/float64(rQuant.Value()))
+	tasksResourcesList := tasksResources.ToResourceList()
+	freeDomainResourcesList := domain.IdleOrReleasingResources.ToResourceList()
+	for rName, taskResourceQuantity := range tasksResourcesList {
+		if taskResourceQuantity.Value() == 0 {
+			continue
 		}
+		var resourceRatio float64
+		freeDomainResourceQuantity := freeDomainResourcesList[rName]
+		if freeDomainResourceQuantity.Value() == 0 {
+			resourceRatio = requiredResourceNotInDomainRatio // required resource doesn't exist in the domain
+		} else {
+			resourceRatio = float64(taskResourceQuantity.Value()) / float64(freeDomainResourceQuantity.Value())
+		}
+		dominantResourceRatio = math.Max(dominantResourceRatio, resourceRatio)
 	}
 
 	return dominantResourceRatio
