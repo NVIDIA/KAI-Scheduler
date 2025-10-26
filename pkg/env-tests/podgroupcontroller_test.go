@@ -111,10 +111,10 @@ var _ = Describe("PodGroupController", Ordered, func() {
 			})
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 
-			Expect(GroupPods(ctx, ctrlClient, podGroupConfig{
-				queueName:    testQueue.Name,
-				podgroupName: "test-podgroup",
-				minMember:    1,
+			Expect(GroupPods(ctx, ctrlClient, PodGroupConfig{
+				QueueName:    testQueue.Name,
+				PodgroupName: "test-podgroup",
+				MinMember:    1,
 			}, []*corev1.Pod{testPod})).To(Succeed(), "Failed to group pod")
 
 			var podgroup schedulingv2alpha2.PodGroup

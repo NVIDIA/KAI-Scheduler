@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package env_tests
+package timeaware
 
 import (
 	"context"
@@ -28,6 +28,7 @@ import (
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	env_tests "github.com/NVIDIA/KAI-scheduler/pkg/env-tests"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/binder"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/podgroupcontroller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/queuecontroller"
@@ -123,7 +124,7 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan str
 	return stopCh, cancel, usageClient, nil
 }
 
-func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.AllocationHistory, error, error) {
+func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Config, simulation TimeAwareSimulation) (fake.AllocationHistory, error, error) {
 	simulationName := randomstring.HumanFriendlyEnglishString(10)
 
 	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg)
@@ -152,7 +153,7 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 
 	var nodes []*corev1.Node
 	for _, node := range simulation.Nodes {
-		nodeObject := CreateNodeObject(ctx, ctrlClient, DefaultNodeConfig(fmt.Sprintf("test-node-%d", node.GPUs)))
+		nodeObject := env_tests.CreateNodeObject(ctx, ctrlClient, env_tests.DefaultNodeConfig(fmt.Sprintf("test-node-%d", node.GPUs)))
 		nodeObject.ObjectMeta.Labels = map[string]string{
 			"simulation": simulationName,
 		}
@@ -164,7 +165,7 @@ func RunSimulation(ctx context.Context, simulation TimeAwareSimulation) (fake.Al
 
 	var queues []*schedulingv2.Queue
 	for _, queue := range simulation.Queues {
-		queueObject := CreateQueueObject(queue.Name, queue.Parent)
+		queueObject := env_tests.CreateQueueObject(queue.Name, queue.Parent)
 
 		queueObject.ObjectMeta.Labels = map[string]string{
 			"simulation": simulationName,
@@ -228,14 +229,14 @@ func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamesp
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete simulation queues during cleanup: %w", err))
 	}
 
-	if err := DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
+	if err := env_tests.DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
 		&corev1.Pod{},
 		&schedulingv2alpha2.PodGroup{},
 	); err != nil {
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete simulation pods and podgroups during cleanup: %w", err))
 	}
 
-	if err := WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval,
+	if err := env_tests.WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval,
 		&corev1.PodList{},
 		&schedulingv2alpha2.PodGroupList{},
 		&resourceapi.ResourceClaimList{},
@@ -248,7 +249,7 @@ func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamesp
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete test namespace during cleanup: %w", err))
 	}
 
-	if err := WaitForNamespaceDeletion(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval); err != nil {
+	if err := env_tests.WaitForNamespaceDeletion(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval); err != nil {
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to wait for test namespace to be deleted during cleanup: %w", err))
 	}
 
@@ -353,7 +354,7 @@ func queueJob(ctx context.Context, ctrlClient client.Client, namespace, queueNam
 	var testPods []*corev1.Pod
 	for range pods {
 		name := randomstring.HumanFriendlyEnglishString(10)
-		testPod := CreatePodObject(namespace, name, corev1.ResourceRequirements{
+		testPod := env_tests.CreatePodObject(namespace, name, corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
 				constants.GpuResource: resource.MustParse(fmt.Sprintf("%d", gpus)),
 			},
@@ -366,7 +367,7 @@ func queueJob(ctx context.Context, ctrlClient client.Client, namespace, queueNam
 		testPods = append(testPods, testPod)
 	}
 
-	err := GroupPods(ctx, ctrlClient, PodGroupConfig{
+	err := env_tests.GroupPods(ctx, ctrlClient, env_tests.PodGroupConfig{
 		QueueName:    queueName,
 		PodgroupName: pgName,
 		MinMember:    1,

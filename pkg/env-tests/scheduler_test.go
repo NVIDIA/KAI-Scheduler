@@ -111,11 +111,11 @@ var _ = Describe("Scheduler", Ordered, func() {
 			})
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 
-			podGroupConfig := podGroupConfig{
-				queueName:          testQueue.Name,
-				podgroupName:       "test-podgroup",
-				minMember:          1,
-				topologyConstraint: nil,
+			podGroupConfig := PodGroupConfig{
+				QueueName:          testQueue.Name,
+				PodgroupName:       "test-podgroup",
+				MinMember:          1,
+				TopologyConstraint: nil,
 			}
 			err := GroupPods(ctx, ctrlClient, podGroupConfig, []*corev1.Pod{testPod})
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
@@ -146,11 +146,11 @@ var _ = Describe("Scheduler", Ordered, func() {
 			}
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 
-			podGroupConfig := podGroupConfig{
-				queueName:          testQueue.Name,
-				podgroupName:       "test-podgroup",
-				minMember:          1,
-				topologyConstraint: nil,
+			podGroupConfig := PodGroupConfig{
+				QueueName:          testQueue.Name,
+				PodgroupName:       "test-podgroup",
+				MinMember:          1,
+				TopologyConstraint: nil,
 			}
 			err := GroupPods(ctx, ctrlClient, podGroupConfig, []*corev1.Pod{testPod})
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
@@ -213,11 +213,11 @@ var _ = Describe("Scheduler", Ordered, func() {
 			}
 			Expect(ctrlClient.Create(ctx, testPod2)).To(Succeed(), "Failed to create test pod")
 
-			podGroupConfig := podGroupConfig{
-				queueName:          testQueue.Name,
-				podgroupName:       "test-podgroup",
-				minMember:          1,
-				topologyConstraint: nil,
+			podGroupConfig := PodGroupConfig{
+				QueueName:          testQueue.Name,
+				PodgroupName:       "test-podgroup",
+				MinMember:          1,
+				TopologyConstraint: nil,
 			}
 			err := GroupPods(ctx, ctrlClient, podGroupConfig, []*corev1.Pod{testPod1, testPod2})
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
@@ -310,10 +310,10 @@ var _ = Describe("Scheduler", Ordered, func() {
 				_ = ctrlClient.Delete(ctx, &webhook)
 			}()
 
-			err := GroupPods(ctx, ctrlClient, podGroupConfig{
-				queueName:    testQueue.Name,
-				podgroupName: "test-podgroup",
-				minMember:    1,
+			err := GroupPods(ctx, ctrlClient, PodGroupConfig{
+				QueueName:    testQueue.Name,
+				PodgroupName: "test-podgroup",
+				MinMember:    1,
 			}, []*corev1.Pod{testPod})
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
 
@@ -421,11 +421,11 @@ var _ = Describe("Scheduler", Ordered, func() {
 			dynamicresource.UseClaim(testPod, resourceClaim)
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 
-			podGroupConfig := podGroupConfig{
-				queueName:          testQueue.Name,
-				podgroupName:       "test-podgroup",
-				minMember:          1,
-				topologyConstraint: nil,
+			podGroupConfig := PodGroupConfig{
+				QueueName:          testQueue.Name,
+				PodgroupName:       "test-podgroup",
+				MinMember:          1,
+				TopologyConstraint: nil,
 			}
 			err = GroupPods(ctx, ctrlClient, podGroupConfig, []*corev1.Pod{testPod})
 			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
@@ -460,11 +460,11 @@ var _ = Describe("Scheduler", Ordered, func() {
 				Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 				createdPods = append(createdPods, testPod)
 
-				podGroupConfig := podGroupConfig{
-					queueName:          testQueue.Name,
-					podgroupName:       fmt.Sprintf("test-podgroup-%d", i),
-					minMember:          1,
-					topologyConstraint: nil,
+				podGroupConfig := PodGroupConfig{
+					QueueName:          testQueue.Name,
+					PodgroupName:       fmt.Sprintf("test-podgroup-%d", i),
+					MinMember:          1,
+					TopologyConstraint: nil,
 				}
 				err = GroupPods(ctx, ctrlClient, podGroupConfig, []*corev1.Pod{testPod})
 				Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
@@ -570,7 +570,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 				hostnameLabelKey: "test-node",
 			}
 			Expect(ctrlClient.Create(ctx, binPackingPullPod)).To(Succeed(), "Failed to create bin-packing-pull-pod")
-			err := GroupPods(ctx, ctrlClient, podGroupConfig{queueName: testQueue.Name, podgroupName: "bin-packing-pull-podgroup", minMember: 1}, []*corev1.Pod{binPackingPullPod})
+			err := GroupPods(ctx, ctrlClient, PodGroupConfig{QueueName: testQueue.Name, PodgroupName: "bin-packing-pull-podgroup", MinMember: 1}, []*corev1.Pod{binPackingPullPod})
 			Expect(err).NotTo(HaveOccurred(), "Failed tocreate a pod group for bin-packing-pull-pod")
 
 			singlePodResourceRequirements := corev1.ResourceRequirements{
@@ -590,11 +590,11 @@ var _ = Describe("Scheduler", Ordered, func() {
 				workloadPods = append(workloadPods, testPod)
 			}
 
-			podGroupConfig := podGroupConfig{
-				queueName:    testQueue.Name,
-				podgroupName: "test-podgroup",
-				minMember:    1,
-				topologyConstraint: &schedulingv2alpha2.TopologyConstraint{
+			podGroupConfig := PodGroupConfig{
+				QueueName:    testQueue.Name,
+				PodgroupName: "test-podgroup",
+				MinMember:    1,
+				TopologyConstraint: &schedulingv2alpha2.TopologyConstraint{
 					Topology:              topologyName,
 					RequiredTopologyLevel: rackLabelKey,
 				},
