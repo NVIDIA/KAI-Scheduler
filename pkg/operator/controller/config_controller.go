@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,8 +107,8 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	defer func() {
-		reconcileStatusErr := r.ReconcileStatusWithConfig(
-			ctx, &status_reconciler.KAIConfigWithStatusWrapper{Config: kaiConfig}, kaiConfig,
+		reconcileStatusErr := r.ReconcileStatus(
+			ctx, &status_reconciler.KAIConfigWithStatusWrapper{Config: kaiConfig},
 		)
 		if reconcileStatusErr != nil {
 			if err != nil {
@@ -182,9 +183,44 @@ func (r *ConfigReconciler) managePrometheusMonitoring(ctx context.Context, kaiCo
 		if r.monitoringCtx == nil || r.monitoringCtx.Err() != nil {
 			r.monitoringCtx, r.monitoringCancel = context.WithCancel(ctx)
 
-			// Create status updater function
+			// Create status updater function that uses the controller's client
 			statusUpdater := func(ctx context.Context, condition metav1.Condition) error {
-				return r.UpdatePrometheusConnectivityStatus(ctx, kaiConfig, condition)
+				// Get fresh kaiConfig from cluster
+				currentConfig := &kaiv1.Config{}
+				if err := r.Client.Get(ctx, client.ObjectKey{
+					Name:      kaiConfig.Name,
+					Namespace: kaiConfig.Namespace,
+				}, currentConfig); err != nil {
+					return fmt.Errorf("failed to get current config: %w", err)
+				}
+
+				// Set the observed generation to match the current config generation
+				condition.ObservedGeneration = currentConfig.Generation
+
+				// Get the current config to update
+				configToUpdate := currentConfig.DeepCopy()
+
+				// Find and update the Prometheus connectivity condition
+				found := false
+				for index, existingCondition := range configToUpdate.Status.Conditions {
+					if existingCondition.Type == condition.Type {
+						if existingCondition.ObservedGeneration == condition.ObservedGeneration &&
+							existingCondition.Status == condition.Status &&
+							existingCondition.Message == condition.Message {
+							return nil // No change needed
+						}
+						found = true
+						configToUpdate.Status.Conditions[index] = condition
+						break
+					}
+				}
+
+				if !found {
+					configToUpdate.Status.Conditions = append(configToUpdate.Status.Conditions, condition)
+				}
+
+				// Update the status using the controller's client
+				return r.Client.Status().Patch(ctx, configToUpdate, client.MergeFrom(currentConfig))
 			}
 
 			// Start the monitoring goroutine

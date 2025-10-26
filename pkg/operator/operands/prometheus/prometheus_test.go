@@ -469,14 +469,16 @@ var _ = Describe("prometheusForKAIConfig", func() {
 		It("should return ServiceMonitors only when external Prometheus URL is valid", func(ctx context.Context) {
 			kaiConfig.Spec.Prometheus.ExternalPrometheusUrl = ptr.To("http://prometheus.example.com:9090")
 
-			// Mock the HTTP client to simulate successful connection
-			// Note: In a real test, you'd want to use a test HTTP server
-			// For now, we'll test the logic without actual HTTP calls
 			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 
-			// The function will fail due to actual HTTP call, but we can test the structure
-			Expect(err).NotTo(BeNil()) // Expected to fail due to no real HTTP server
-			Expect(objects).To(BeNil())
+			// The function skips Prometheus CR creation and only creates ServiceMonitors
+			Expect(err).To(BeNil())
+			Expect(objects).NotTo(BeNil())
+			Expect(len(objects)).To(Equal(1)) // 1 ServiceMonitor
+
+			serviceMonitor := test_utils.FindTypeInObjects[*monitoringv1.ServiceMonitor](objects)
+			Expect(serviceMonitor).NotTo(BeNil())
+			Expect((*serviceMonitor).Name).To(Equal("queuecontroller"))
 		})
 
 		It("should return empty objects list when ServiceMonitors are disabled", func(ctx context.Context) {
@@ -485,9 +487,10 @@ var _ = Describe("prometheusForKAIConfig", func() {
 
 			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 
-			// The function will fail due to actual HTTP call, but we can test the structure
-			Expect(err).NotTo(BeNil()) // Expected to fail due to no real HTTP server
-			Expect(objects).To(BeNil())
+			// When ServiceMonitors are disabled, function returns empty list
+			Expect(err).To(BeNil())
+			Expect(objects).NotTo(BeNil())
+			Expect(len(objects)).To(Equal(0))
 		})
 
 		It("should return empty objects list when ServiceMonitor CRD is not available", func(ctx context.Context) {
@@ -507,9 +510,10 @@ var _ = Describe("prometheusForKAIConfig", func() {
 
 			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 
-			// The function will fail due to actual HTTP call, but we can test the structure
-			Expect(err).NotTo(BeNil()) // Expected to fail due to no real HTTP server
-			Expect(objects).To(BeNil())
+			// When CRD is not available, function returns empty list
+			Expect(err).To(BeNil())
+			Expect(objects).NotTo(BeNil())
+			Expect(len(objects)).To(Equal(0))
 		})
 	})
 })

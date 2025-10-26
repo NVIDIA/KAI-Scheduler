@@ -41,17 +41,10 @@ func prometheusForKAIConfig(
 
 	// Check if external Prometheus URL is provided
 	if config.ExternalPrometheusUrl != nil && *config.ExternalPrometheusUrl != "" {
-		logger.Info("External Prometheus URL provided, validating connection", "url", *config.ExternalPrometheusUrl)
-
-		// Validate external Prometheus connection
-		if err := validateExternalPrometheusConnection(ctx, *config.ExternalPrometheusUrl); err != nil {
-			logger.Error(err, "Failed to connect to external Prometheus", "url", *config.ExternalPrometheusUrl)
-			return nil, err
-		}
-
-		logger.Info("Successfully validated external Prometheus connection")
+		logger.Info("External Prometheus URL provided, skipping Prometheus CR creation", "url", *config.ExternalPrometheusUrl)
 
 		// For external Prometheus, we only create ServiceMonitors, not the Prometheus CR
+		// Note: Connectivity validation happens in the background monitoring goroutine, not here
 		return createServiceMonitorsForExternalPrometheus(ctx, runtimeClient, kaiConfig)
 	}
 
