@@ -21,6 +21,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
@@ -90,21 +91,24 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"rack": {
 							"rack1.zone1": {
-								ID:    "rack1.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "rack1.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 							"rack2.zone1": {
-								ID:    "rack2.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "rack2.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
@@ -277,9 +281,10 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
@@ -333,16 +338,18 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"rack": {
 							"rack1.zone1": {
-								ID:    "rack1.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "rack1.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
@@ -797,21 +804,24 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 				"rack": {
 					"rack1.zone1": {
-						ID:    "rack1.zone1",
-						Level: "rack",
-						Nodes: map[string]*node_info.NodeInfo{},
+						ID:                       "rack1.zone1",
+						Level:                    "rack",
+						Nodes:                    map[string]*node_info.NodeInfo{},
+						IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 					},
 					"rack2.zone1": {
-						ID:    "rack2.zone1",
-						Level: "rack",
-						Nodes: map[string]*node_info.NodeInfo{},
+						ID:                       "rack2.zone1",
+						Level:                    "rack",
+						Nodes:                    map[string]*node_info.NodeInfo{},
+						IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 					},
 				},
 				"zone": {
 					"zone1": {
-						ID:    "zone1",
-						Level: "zone",
-						Nodes: map[string]*node_info.NodeInfo{},
+						ID:                       "zone1",
+						Level:                    "zone",
+						Nodes:                    map[string]*node_info.NodeInfo{},
+						IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 					},
 				},
 			},
@@ -1039,9 +1049,10 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
