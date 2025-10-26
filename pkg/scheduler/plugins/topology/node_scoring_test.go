@@ -291,16 +291,52 @@ func TestSortTree(t *testing.T) {
 			expectedOrder: nil,
 		},
 		{
-			name:           "sort single level - racks by allocatable pods",
+			name:           "sort single level - gpus",
 			tasksResources: resource_info.NewResource(0, 0, 1),
 			setupTree: func() *DomainInfo {
 				return &DomainInfo{
 					ID:    "zone1",
 					Level: "zone",
 					Children: []*DomainInfo{
-						{ID: "rack3", Level: "rack", AllocatablePods: 5, IdleOrReleasingResources: resource_info.NewResource(0, 0, 5)},
-						{ID: "rack1", Level: "rack", AllocatablePods: 2, IdleOrReleasingResources: resource_info.NewResource(0, 0, 2)},
-						{ID: "rack2", Level: "rack", AllocatablePods: 8, IdleOrReleasingResources: resource_info.NewResource(0, 0, 8)},
+						{ID: "rack3", Level: "rack", IdleOrReleasingResources: resource_info.NewResource(0, 0, 5)},
+						{ID: "rack1", Level: "rack", IdleOrReleasingResources: resource_info.NewResource(0, 0, 2)},
+						{ID: "rack2", Level: "rack", IdleOrReleasingResources: resource_info.NewResource(0, 0, 8)},
+					},
+				}
+			},
+			maxDepthLevel: "rack",
+			expectedOrder: []DomainID{"rack1", "rack3", "rack2"},
+			checkLevel:    "zone",
+		},
+		{
+			name:           "sort single level - cpu",
+			tasksResources: resource_info.NewResource(1000, 0, 0),
+			setupTree: func() *DomainInfo {
+				return &DomainInfo{
+					ID:    "zone1",
+					Level: "zone",
+					Children: []*DomainInfo{
+						{ID: "rack3", Level: "rack", IdleOrReleasingResources: resource_info.NewResource(5000, 0, 0)},
+						{ID: "rack1", Level: "rack", IdleOrReleasingResources: resource_info.NewResource(2000, 0, 0)},
+						{ID: "rack2", Level: "rack", IdleOrReleasingResources: resource_info.NewResource(8000, 0, 0)},
+					},
+				}
+			},
+			maxDepthLevel: "rack",
+			expectedOrder: []DomainID{"rack1", "rack3", "rack2"},
+			checkLevel:    "zone",
+		},
+		{
+			name:           "sort single level - several dominant resources",
+			tasksResources: resource_info.NewResource(1000, 0, 1),
+			setupTree: func() *DomainInfo {
+				return &DomainInfo{
+					ID:    "zone1",
+					Level: "zone",
+					Children: []*DomainInfo{
+						{ID: "rack3", Level: "rack", AllocatablePods: 5, IdleOrReleasingResources: resource_info.NewResource(100000, 0, 5)},
+						{ID: "rack1", Level: "rack", AllocatablePods: 2, IdleOrReleasingResources: resource_info.NewResource(2000, 0, 4)},
+						{ID: "rack2", Level: "rack", AllocatablePods: 8, IdleOrReleasingResources: resource_info.NewResource(100000, 0, 8)},
 					},
 				}
 			},
