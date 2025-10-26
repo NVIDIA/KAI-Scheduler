@@ -28,11 +28,11 @@ import (
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
-	env_tests "github.com/NVIDIA/KAI-scheduler/pkg/env-tests"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/binder"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/podgroupcontroller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/queuecontroller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/scheduler"
+	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
@@ -153,7 +153,7 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 
 	var nodes []*corev1.Node
 	for _, node := range simulation.Nodes {
-		nodeObject := env_tests.CreateNodeObject(ctx, ctrlClient, env_tests.DefaultNodeConfig(fmt.Sprintf("test-node-%d", node.GPUs)))
+		nodeObject := utils.CreateNodeObject(ctx, ctrlClient, utils.DefaultNodeConfig(fmt.Sprintf("test-node-%d", node.GPUs)))
 		nodeObject.ObjectMeta.Labels = map[string]string{
 			"simulation": simulationName,
 		}
@@ -165,7 +165,7 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 
 	var queues []*schedulingv2.Queue
 	for _, queue := range simulation.Queues {
-		queueObject := env_tests.CreateQueueObject(queue.Name, queue.Parent)
+		queueObject := utils.CreateQueueObject(queue.Name, queue.Parent)
 
 		queueObject.ObjectMeta.Labels = map[string]string{
 			"simulation": simulationName,
@@ -229,14 +229,14 @@ func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamesp
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete simulation queues during cleanup: %w", err))
 	}
 
-	if err := env_tests.DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
+	if err := utils.DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
 		&corev1.Pod{},
 		&schedulingv2alpha2.PodGroup{},
 	); err != nil {
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete simulation pods and podgroups during cleanup: %w", err))
 	}
 
-	if err := env_tests.WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval,
+	if err := utils.WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval,
 		&corev1.PodList{},
 		&schedulingv2alpha2.PodGroupList{},
 		&resourceapi.ResourceClaimList{},
@@ -249,7 +249,7 @@ func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamesp
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete test namespace during cleanup: %w", err))
 	}
 
-	if err := env_tests.WaitForNamespaceDeletion(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval); err != nil {
+	if err := utils.WaitForNamespaceDeletion(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval); err != nil {
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to wait for test namespace to be deleted during cleanup: %w", err))
 	}
 
@@ -354,7 +354,7 @@ func queueJob(ctx context.Context, ctrlClient client.Client, namespace, queueNam
 	var testPods []*corev1.Pod
 	for range pods {
 		name := randomstring.HumanFriendlyEnglishString(10)
-		testPod := env_tests.CreatePodObject(namespace, name, corev1.ResourceRequirements{
+		testPod := utils.CreatePodObject(namespace, name, corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
 				constants.GpuResource: resource.MustParse(fmt.Sprintf("%d", gpus)),
 			},
@@ -367,7 +367,7 @@ func queueJob(ctx context.Context, ctrlClient client.Client, namespace, queueNam
 		testPods = append(testPods, testPod)
 	}
 
-	err := env_tests.GroupPods(ctx, ctrlClient, env_tests.PodGroupConfig{
+	err := utils.GroupPods(ctx, ctrlClient, utils.PodGroupConfig{
 		QueueName:    queueName,
 		PodgroupName: pgName,
 		MinMember:    1,

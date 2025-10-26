@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package env_tests
+package utils
 
 import (
 	"context"
@@ -153,7 +153,7 @@ func GroupPods(ctx context.Context, c client.Client, podGroupConfig PodGroupConf
 		},
 	}
 	if podGroupConfig.TopologyConstraint != nil {
-		podgroup.Spec.TopologyConstraint = *podGroupConfig.xtopologyConstraint
+		podgroup.Spec.TopologyConstraint = *podGroupConfig.TopologyConstraint
 	}
 	err := c.Create(ctx, podgroup, &client.CreateOptions{})
 	if err != nil {
