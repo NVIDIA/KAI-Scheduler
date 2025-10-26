@@ -35,9 +35,6 @@ jobs:
           # Optional: exclude some labels if needed
           only-labels: "" # leave empty to include all
 
-          # Debug-only mode (acts as a dry run)
-          debug-only: ${{ github.event.inputs.dry_run }}
-
       - name: Log dry-run status
         run: |
           echo "Dry-run mode: ${{ github.event.inputs.dry_run }}"
