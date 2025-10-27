@@ -304,6 +304,16 @@ func WaitForNoObjectsInNamespace(ctx context.Context, c client.Client, namespace
 	})
 }
 
+func WaitForNamespaceDeletion(ctx context.Context, c client.Client, namespace string, timeout, interval time.Duration) error {
+	return wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+		err := c.Get(ctx, client.ObjectKey{Name: namespace}, &corev1.Namespace{})
+		if errors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
+	})
+}
+
 func WaitForObjectDeletion(ctx context.Context, c client.Client, obj client.Object, timeout, interval time.Duration) error {
 	return wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj)

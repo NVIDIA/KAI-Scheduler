@@ -11,13 +11,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
 
-type taskOrderPlugin struct {
-	// Arguments given for the plugin
-	pluginArguments map[string]string
-}
+type taskOrderPlugin struct{}
 
-func New(arguments map[string]string) framework.Plugin {
-	return &taskOrderPlugin{pluginArguments: arguments}
+func New(_ framework.PluginArguments) framework.Plugin {
+	return &taskOrderPlugin{}
 }
 
 func (pp *taskOrderPlugin) Name() string {

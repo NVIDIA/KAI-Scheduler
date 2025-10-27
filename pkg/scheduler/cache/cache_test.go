@@ -27,12 +27,19 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	resourcev1 "k8s.io/api/resource/v1"
+	resourcev1alhpa3 "k8s.io/api/resource/v1alpha3"
+	resourcev1beta1 "k8s.io/api/resource/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	version "k8s.io/apimachinery/pkg/version"
+	featureutil "k8s.io/apiserver/pkg/util/feature"
+	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	faketesting "k8s.io/client-go/testing"
+	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/utils/ptr"
 
 	kubeaischedulerfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
@@ -49,6 +56,45 @@ func TestCache(t *testing.T) {
 }
 
 var _ = Describe("Cache", func() {
+	Describe("New", func() {
+		Context("DRA Feature Gate", func() {
+			DescribeTable("should enable DRA feature gate based on Kubernetes version and resource API availability",
+				func(serverMajor, serverMinor string, resourceGroupVersions []string, expectDRAFeatureEnabled bool) {
+					fakeClient := fake.NewClientset()
+					fakeClient.Discovery().(*fakediscovery.FakeDiscovery).FakedServerVersion = &version.Info{
+						Major: serverMajor,
+						Minor: serverMinor,
+					}
+
+					for _, groupVersion := range resourceGroupVersions {
+						fakeClient.Resources = append(fakeClient.Resources, &metav1.APIResourceList{GroupVersion: groupVersion})
+					}
+
+					params := &SchedulerCacheParams{
+						KubeClient:         fakeClient,
+						KAISchedulerClient: kubeaischedulerfake.NewSimpleClientset(),
+						KueueClient:        kueuefake.NewSimpleClientset(),
+						NodePoolParams:     &conf.SchedulingNodePoolParams{},
+						DiscoveryClient:    fakeClient.Discovery(),
+					}
+
+					cache := New(params)
+
+					Expect(cache).NotTo(BeNil())
+
+					// Check if the DynamicResourceAllocation feature gate has the expected state
+					draEnabled := featureutil.DefaultFeatureGate.Enabled(features.DynamicResourceAllocation)
+					Expect(draEnabled).To(Equal(expectDRAFeatureEnabled))
+				},
+				Entry("compatible version (1.32) with resource API should enable DRA", "1", "32", []string{resourcev1beta1.SchemeGroupVersion.String()}, true),
+				Entry("compatible version (1.32) without resource API should not enable DRA", "1", "32", []string{}, false),
+				Entry("incompatible version (1.25) with resource API should not enable DRA", "1", "25", []string{resourcev1beta1.SchemeGroupVersion.String()}, false),
+				Entry("incompatible version (1.25) without resource API should not enable DRA", "1", "25", []string{}, false),
+				Entry("edge case version (1.31) with resource API should not enable DRA", "1", "31", []string{resourcev1alhpa3.SchemeGroupVersion.String()}, false),
+				Entry("higher compatible version (1.35) with resource API should enable DRA", "1", "34", []string{resourcev1.SchemeGroupVersion.String()}, true),
+			)
+		})
+	})
 	Describe("Bind", func() {
 		Context("failure to bind", func() {
 			It("should return error", func() {
@@ -251,6 +297,7 @@ func setupCacheWithObjects(snapshot bool, objects []runtime.Object, kaiScheduler
 		KueueClient:           kueueClient,
 		NodePoolParams:        &conf.SchedulingNodePoolParams{},
 		FullHierarchyFairness: true,
+		DiscoveryClient:       kubeClient.Discovery(),
 	})
 
 	stopCh := make(chan struct{})

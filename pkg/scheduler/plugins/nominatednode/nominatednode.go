@@ -12,12 +12,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/scores"
 )
 
-type nominatedNodeNamePlugin struct {
-	pluginArguments map[string]string
-}
+type nominatedNodeNamePlugin struct{}
 
-func New(arguments map[string]string) framework.Plugin {
-	return &nominatedNodeNamePlugin{pluginArguments: arguments}
+func New(_ framework.PluginArguments) framework.Plugin {
+	return &nominatedNodeNamePlugin{}
 }
 
 func (nnp *nominatedNodeNamePlugin) Name() string {
