@@ -30,16 +30,21 @@ import (
 )
 
 const (
-	EksTopologyName = "eks-topology"
-	EksRegionLabel  = "topology.kubernetes.io/region"
-	EksZoneLabel    = "topology.kubernetes.io/zone"
+	TopologyName   = "topology"
+	EksRegionLabel = "topology.kubernetes.io/region"
+	EksZoneLabel   = "topology.kubernetes.io/zone"
 )
 
 type subGroupPods struct {
 	parent             string
-	numPods            int
-	pods               []*v1.Pod
 	topologyConstraint *v2alpha2.TopologyConstraint
+
+	//Leaf
+	numPods     int
+	podResource v1.ResourceRequirements
+
+	//Do not fill
+	pods []*v1.Pod
 }
 
 var _ = Describe("Topology EKS", Ordered, func() {
@@ -57,7 +62,7 @@ var _ = Describe("Topology EKS", Ordered, func() {
 
 		testTopologyData.TopologyCrd = &kueuev1alpha1.Topology{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: EksTopologyName,
+				Name: TopologyName,
 			},
 			Spec: kueuev1alpha1.TopologySpec{
 				Levels: []kueuev1alpha1.TopologyLevel{
@@ -73,7 +78,7 @@ var _ = Describe("Topology EKS", Ordered, func() {
 	})
 
 	AfterAll(func(ctx context.Context) {
-		err := kueueClient.KueueV1alpha1().Topologies().Delete(ctx, EksTopologyName, metav1.DeleteOptions{})
+		err := kueueClient.KueueV1alpha1().Topologies().Delete(ctx, TopologyName, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete topology tree")
 		testCtx.ClusterCleanup(ctx)
 	})
@@ -82,26 +87,39 @@ var _ = Describe("Topology EKS", Ordered, func() {
 		testCtx.TestContextCleanup(ctx)
 	})
 
-	It("Require - 2 subgroups", func(ctx context.Context) {
+	It("Require - 3 subgroups, 2 leafs 1 parent", func(ctx context.Context) {
 		subGroups := map[string]*subGroupPods{
 			"sg-p": {
 				topologyConstraint: &v2alpha2.TopologyConstraint{
-					Topology:              EksTopologyName,
+					Topology:              TopologyName,
 					RequiredTopologyLevel: EksRegionLabel,
 				},
 			},
 			"sg-1": {
-				numPods: 7,
+				parent: "sg-p",
 				topologyConstraint: &v2alpha2.TopologyConstraint{
-					Topology:              EksTopologyName,
+					Topology:              TopologyName,
 					RequiredTopologyLevel: EksZoneLabel,
+				},
+
+				numPods: 7,
+				podResource: v1.ResourceRequirements{
+					Limits: v1.ResourceList{
+						constants.GpuResource: resource.MustParse("8"),
+					},
 				},
 			},
 			"sg-2": {
-				numPods: 7,
+				parent: "sg-p",
 				topologyConstraint: &v2alpha2.TopologyConstraint{
-					Topology:              EksTopologyName,
+					Topology:              TopologyName,
 					RequiredTopologyLevel: EksZoneLabel,
+				},
+				numPods: 7,
+				podResource: v1.ResourceRequirements{
+					Limits: v1.ResourceList{
+						constants.GpuResource: resource.MustParse("8"),
+					},
 				},
 			},
 		}
@@ -114,6 +132,105 @@ var _ = Describe("Topology EKS", Ordered, func() {
 		}
 	})
 
+	/*
+		Context("Require", func() {
+			It("Single subgroup - schedule to single domain", func(ctx context.Context) {
+				subGroups := map[string]*subGroupPods{
+					"sg": {
+						topologyConstraint: &v2alpha2.TopologyConstraint{
+							Topology:              TopologyName,
+							RequiredTopologyLevel: EksZoneLabel,
+						},
+						numPods: 7,
+						podResource: v1.ResourceRequirements{
+							Limits: v1.ResourceList{
+								constants.GpuResource: resource.MustParse("8"),
+							},
+						},
+					},
+				}
+
+				podGroup, subGroupPods := createPodgroupWithSubgroupsWithPods(ctx, testCtx, testCtx.Queues[0], subGroups)
+
+				for _, sgPods := range subGroupPods {
+					wait.ForPodsScheduled(ctx, testCtx.ControllerClient, podGroup.Namespace, sgPods.pods)
+					assertPodsOnSameTopology(ctx, testCtx, sgPods.pods, testTopologyData.TopologyCrd, sgPods.topologyConstraint)
+				}
+			})
+
+			It("Single subgroup - does not fit to single domain - do not schedule to multiple domains", func(ctx context.Context) {
+				subGroups := map[string]*subGroupPods{
+					"sg": {
+						topologyConstraint: &v2alpha2.TopologyConstraint{
+							Topology:              TopologyName,
+							RequiredTopologyLevel: EksZoneLabel,
+						},
+						numPods: 14,
+						podResource: v1.ResourceRequirements{
+							Limits: v1.ResourceList{
+								constants.GpuResource: resource.MustParse("8"),
+							},
+						},
+					},
+				}
+
+				podGroup, subGroupPods := createPodgroupWithSubgroupsWithPods(ctx, testCtx, testCtx.Queues[0], subGroups)
+
+				for _, sgPods := range subGroupPods {
+					wait.ForAtLeastNPodsUnschedulable(ctx, testCtx.ControllerClient, podGroup.Namespace, sgPods.pods, 14)
+				}
+			})
+		})
+
+		Context("Prefer", func() {
+			It("Single subgroup - schedule to single domain", func(ctx context.Context) {
+				subGroups := map[string]*subGroupPods{
+					"sg": {
+						topologyConstraint: &v2alpha2.TopologyConstraint{
+							Topology:               TopologyName,
+							PreferredTopologyLevel: EksZoneLabel,
+						},
+						numPods: 7,
+						podResource: v1.ResourceRequirements{
+							Limits: v1.ResourceList{
+								constants.GpuResource: resource.MustParse("8"),
+							},
+						},
+					},
+				}
+
+				podGroup, subGroupPods := createPodgroupWithSubgroupsWithPods(ctx, testCtx, testCtx.Queues[0], subGroups)
+
+				for _, sgPods := range subGroupPods {
+					wait.ForPodsScheduled(ctx, testCtx.ControllerClient, podGroup.Namespace, sgPods.pods)
+					assertPodsOnSameTopology(ctx, testCtx, sgPods.pods, testTopologyData.TopologyCrd, sgPods.topologyConstraint)
+				}
+			})
+
+			It("Single subgroup - does not fit to single domain - schedule to multiple domains", func(ctx context.Context) {
+				subGroups := map[string]*subGroupPods{
+					"sg": {
+						topologyConstraint: &v2alpha2.TopologyConstraint{
+							Topology:               TopologyName,
+							PreferredTopologyLevel: EksZoneLabel,
+						},
+						numPods: 14,
+						podResource: v1.ResourceRequirements{
+							Limits: v1.ResourceList{
+								constants.GpuResource: resource.MustParse("8"),
+							},
+						},
+					},
+				}
+
+				podGroup, subGroupPods := createPodgroupWithSubgroupsWithPods(ctx, testCtx, testCtx.Queues[0], subGroups)
+
+				for _, sgPods := range subGroupPods {
+					wait.ForPodsScheduled(ctx, testCtx.ControllerClient, podGroup.Namespace, sgPods.pods)
+				}
+			})
+		})
+	*/
 }, Ordered)
 
 func assertPodsOnSameTopology(ctx context.Context, testCtx *testcontext.TestContext, pods []*v1.Pod, topologyCrd *kueuev1alpha1.Topology, constraint *v2alpha2.TopologyConstraint) {
@@ -134,8 +251,12 @@ func assertPodsOnSameTopology(ctx context.Context, testCtx *testcontext.TestCont
 		}
 	}
 
-	if constraint == nil || constraint.RequiredTopologyLevel == "" {
+	if constraint == nil || (constraint.RequiredTopologyLevel == "" && constraint.PreferredTopologyLevel == "") {
 		return
+	}
+	assertionLevel := constraint.RequiredTopologyLevel
+	if constraint.PreferredTopologyLevel != "" {
+		assertionLevel = constraint.PreferredTopologyLevel
 	}
 
 	for _, topologyLevel := range topologyCrd.Spec.Levels {
@@ -146,7 +267,7 @@ func assertPodsOnSameTopology(ctx context.Context, testCtx *testcontext.TestCont
 		for _, domain := range domains {
 			Expect(domain).To(Equal(domains[0]))
 		}
-		if topologyLevel.NodeLabel == constraint.RequiredTopologyLevel {
+		if topologyLevel.NodeLabel == assertionLevel {
 			break
 		}
 	}
@@ -158,11 +279,7 @@ func createPodgroupWithSubgroupsWithPods(ctx context.Context, testCtx *testconte
 
 	for name, subGroup := range subGroups {
 		for j := 0; j < subGroup.numPods; j++ {
-			pod := createPodOfSubGroup(ctx, testCtx.KubeClientset, testQueue, pgName, name, v1.ResourceRequirements{
-				Limits: v1.ResourceList{
-					constants.GpuResource: resource.MustParse("8"),
-				},
-			})
+			pod := createPodOfSubGroup(ctx, testCtx.KubeClientset, testQueue, pgName, name, subGroup.podResource)
 			subGroupToAddPod := subGroup
 			for subGroupToAddPod != nil {
 				subGroupToAddPod.pods = append(subGroupToAddPod.pods, pod)
