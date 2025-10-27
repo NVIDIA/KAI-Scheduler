@@ -148,3 +148,8 @@ The scheduler evaluates both zones:
 Within Zone A, the scheduler prioritizes racks with more available resources to maximize pod concentration. Rack A1 has 2 GPUs available (the most), so the scheduler fills Rack A1 completely (2 pods) before moving to Rack A2 (1 pod).
 
 **Result**: The 3 pods are placed on **2 racks** instead of spreading across 3 racks, maximizing pod proximity at the preferred rack level.
+
+## Multi-level Topology Aware Scheduling
+KAI Scheduler supports multi-level topologies, where each level can be defined with a different constraint.
+More information about it can be found in the [Multi-Level Topology Aware Scheduling](multilevel.md) section.
+
