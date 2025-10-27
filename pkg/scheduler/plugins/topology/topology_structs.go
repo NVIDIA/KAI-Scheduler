@@ -71,9 +71,6 @@ func NewDomainInfo(id DomainID, level DomainLevel) *DomainInfo {
 
 func (di *DomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
 	di.Nodes[nodeInfo.Name] = nodeInfo
-	di.IdleOrReleasingResources.Add(nodeInfo.Idle)
-	di.IdleOrReleasingResources.Add(nodeInfo.Releasing)
-	// Ignore fractions of GPUs for now
 }
 
 func (di *DomainInfo) GetNonAllocatedGPUsInDomain() float64 {

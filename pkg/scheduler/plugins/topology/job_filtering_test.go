@@ -24,7 +24,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
@@ -1296,15 +1295,10 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				}
 			}
 
-			session := &framework.Session{
-				Nodes:         nodesInfoMap,
-				PodGroupInfos: jobsInfoMap,
-				Topologies:    []*kueuev1alpha1.Topology{topologyTree.TopologyResource},
-			}
 			plugin := &topologyPlugin{}
 
 			// Call the function under test
-			err := plugin.calcTreeAllocatable(podgroup_info.GetTasksToAllocate(job, nil, nil, true), topologyTree, maps.Values(session.Nodes))
+			err := plugin.calcTreeAllocatable(podgroup_info.GetTasksToAllocate(job, nil, nil, true), topologyTree.DomainsByLevel[rootLevel][rootDomainId])
 			if err != nil {
 				t.Errorf("failed to calc tree allocatable. job: %s, error: %v", job.PodGroup.Name, err)
 			}
