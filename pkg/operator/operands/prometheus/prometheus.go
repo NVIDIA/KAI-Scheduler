@@ -90,16 +90,16 @@ func (b *Prometheus) Name() string {
 	return "KAI-prometheus"
 }
 
-// StartPrometheusMonitoring starts a background goroutine to monitor external Prometheus connectivity
+// StartMonitoring starts a background goroutine to monitor external Prometheus connectivity
 // and update the status periodically. The goroutine will stop when ctx is cancelled or when
 // ExternalPrometheusUrl is set to nil or empty string.
-func StartPrometheusMonitoring(ctx context.Context, prometheusConfig *kaiprometheus.Prometheus, statusUpdater func(ctx context.Context, condition metav1.Condition) error) {
+func StartMonitoring(ctx context.Context, prometheusConfig *kaiprometheus.Prometheus, statusUpdater func(ctx context.Context, condition metav1.Condition) error) {
 	if prometheusConfig == nil || prometheusConfig.ExternalPrometheusUrl == nil || *prometheusConfig.ExternalPrometheusUrl == "" {
 		return
 	}
 
 	go func() {
-		ticker := time.NewTicker(30 * time.Second) // Check every 30 seconds
+		ticker := time.NewTicker(time.Duration(*prometheusConfig.ExternalPrometheusPingConfig.PingsInterval) * time.Second) // Check every 30 seconds
 		defer ticker.Stop()
 
 		for {
@@ -111,10 +111,10 @@ func StartPrometheusMonitoring(ctx context.Context, prometheusConfig *kaiprometh
 				}
 
 				// Test connectivity
-				ok, err := pingExternalPrometheus(ctx, *prometheusConfig.ExternalPrometheusUrl)
+				err := pingExternalPrometheus(ctx, *prometheusConfig.ExternalPrometheusUrl, *prometheusConfig.ExternalPrometheusPingConfig.PingsTimeout, *prometheusConfig.ExternalPrometheusPingConfig.PingsMaxRetries)
 
 				var condition metav1.Condition
-				if err != nil || !ok {
+				if err != nil {
 					condition = metav1.Condition{
 						Type:               "PrometheusConnectivity",
 						Status:             metav1.ConditionFalse,
@@ -146,7 +146,7 @@ func StartPrometheusMonitoring(ctx context.Context, prometheusConfig *kaiprometh
 }
 
 // pingExternalPrometheus validates connectivity to an external Prometheus instance
-func pingExternalPrometheus(ctx context.Context, prometheusURL string) (bool, error) {
+func pingExternalPrometheus(ctx context.Context, prometheusURL string, timeout int, maxRetries int) error {
 	logger := log.FromContext(ctx)
 
 	// Ensure the URL has a scheme
@@ -157,34 +157,53 @@ func pingExternalPrometheus(ctx context.Context, prometheusURL string) (bool, er
 	// Parse the URL to ensure it's valid
 	_, err := url.Parse(prometheusURL)
 	if err != nil {
-		return false, fmt.Errorf("invalid Prometheus URL: %w", err)
+		return fmt.Errorf("invalid Prometheus URL: %w, prometheusURL: %s", err, prometheusURL)
 	}
 
 	// Create HTTP client with timeout
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: time.Duration(timeout) * time.Second,
 	}
 
 	// Try to connect to the Prometheus /api/v1/status/config endpoint
 	statusURL := prometheusURL + "/api/v1/status/config"
 	logger.Info("Validating external Prometheus connection", "url", statusURL)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", statusURL, nil)
-	if err != nil {
-		return false, fmt.Errorf("failed to create request: %w", err)
+	var lastErr error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, "GET", statusURL, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create request: %w, statusURL: %s", err, statusURL)
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("failed to connect to external Prometheus: %w, statusURL: %s", err, statusURL)
+			if attempt < maxRetries {
+				backoff := time.Duration(attempt) * time.Second
+				logger.Info("Retrying Prometheus connection", "attempt", attempt, "maxRetries", maxRetries, "nextRetryInSeconds", backoff.Seconds())
+				time.Sleep(backoff)
+			}
+			continue
+		}
+
+		// Check if we got a successful response
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("external Prometheus returned status code %d, statusURL: %s", resp.StatusCode, statusURL)
+			if attempt < maxRetries {
+				backoff := time.Duration(attempt) * time.Second
+				logger.Info("Retrying Prometheus connection", "attempt", attempt, "maxRetries", maxRetries, "statusCode", resp.StatusCode, "nextRetryInSeconds", backoff.Seconds())
+				time.Sleep(backoff)
+			}
+			continue
+		}
+
+		resp.Body.Close()
+		return nil
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return false, fmt.Errorf("failed to connect to external Prometheus: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Check if we got a successful response
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return false, fmt.Errorf("external Prometheus returned status code %d", resp.StatusCode)
-	}
-	return true, nil
+	return fmt.Errorf("failed to connect to external Prometheus after %d attempts: %w", maxRetries, lastErr)
 }
 
 // ValidateExternalPrometheusConnection validates connectivity to an external Prometheus instance
@@ -195,8 +214,8 @@ func ValidateExternalPrometheusConnection(ctx context.Context, prometheusConfig 
 	}
 
 	// Validate the connection once
-	ok, err := pingExternalPrometheus(ctx, *prometheusConfig.ExternalPrometheusUrl)
-	if err != nil || !ok {
+	err := pingExternalPrometheus(ctx, *prometheusConfig.ExternalPrometheusUrl, *prometheusConfig.ExternalPrometheusPingConfig.PingsTimeout, *prometheusConfig.ExternalPrometheusPingConfig.PingsMaxRetries)
+	if err != nil {
 		return fmt.Errorf("failed to ping external Prometheus: %w", err)
 	}
 	return nil

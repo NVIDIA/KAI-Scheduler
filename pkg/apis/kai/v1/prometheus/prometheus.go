@@ -49,6 +49,24 @@ type Prometheus struct {
 	// for the external instance and validate connectivity
 	// +kubebuilder:validation:Optional
 	ExternalPrometheusUrl *string `json:"externalPrometheusUrl,omitempty"`
+
+	// ExternalPrometheusPingConfig defines the configuration for external Prometheus connectivity validation, with defaults.
+	// +kubebuilder:validation:Optional
+	ExternalPrometheusPingConfig *ExternalPrometheusPingConfig `json:"externalPrometheusPingConfig,omitempty"`
+}
+
+type ExternalPrometheusPingConfig struct {
+	// PingsInterval defines the interval for external Prometheus connectivity validation (in seconds)
+	// +kubebuilder:validation:Optional
+	PingsInterval *int `json:"pingsInterval,omitempty"`
+
+	// PingsTimeout defines the timeout for external Prometheus connectivity validation (in seconds)
+	// +kubebuilder:validation:Optional
+	PingsTimeout *int `json:"pingsTimeout,omitempty"`
+
+	// PingsMaxRetries defines the maximum number of retries for external Prometheus connectivity validation
+	// +kubebuilder:validation:Optional
+	PingsMaxRetries *int `json:"pingsMaxRetries,omitempty"`
 }
 
 func (p *Prometheus) SetDefaultsWhereNeeded() {
@@ -60,7 +78,11 @@ func (p *Prometheus) SetDefaultsWhereNeeded() {
 	p.SampleInterval = common.SetDefault(p.SampleInterval, ptr.To("1m"))
 	p.StorageClassName = common.SetDefault(p.StorageClassName, ptr.To("standard"))
 	p.ExternalPrometheusUrl = common.SetDefault(p.ExternalPrometheusUrl, nil)
-
+	p.ExternalPrometheusPingConfig = common.SetDefault(p.ExternalPrometheusPingConfig, &ExternalPrometheusPingConfig{
+		PingsInterval:   ptr.To(30),
+		PingsTimeout:    ptr.To(10),
+		PingsMaxRetries: ptr.To(5),
+	})
 	p.ServiceMonitor = common.SetDefault(p.ServiceMonitor, &ServiceMonitor{})
 	p.ServiceMonitor.SetDefaultsWhereNeeded()
 }

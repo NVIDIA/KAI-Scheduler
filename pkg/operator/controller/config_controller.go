@@ -178,60 +178,66 @@ func (r *ConfigReconciler) managePrometheusMonitoring(ctx context.Context, kaiCo
 		kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != nil &&
 		*kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != ""
 
-	if hasExternalPrometheus {
-		// Start monitoring if not already running
-		if r.monitoringCtx == nil || r.monitoringCtx.Err() != nil {
-			r.monitoringCtx, r.monitoringCancel = context.WithCancel(ctx)
-
-			// Create status updater function that uses the controller's client
-			statusUpdater := func(ctx context.Context, condition metav1.Condition) error {
-				// Get fresh kaiConfig from cluster
-				currentConfig := &kaiv1.Config{}
-				if err := r.Client.Get(ctx, client.ObjectKey{
-					Name:      kaiConfig.Name,
-					Namespace: kaiConfig.Namespace,
-				}, currentConfig); err != nil {
-					return fmt.Errorf("failed to get current config: %w", err)
-				}
-
-				// Set the observed generation to match the current config generation
-				condition.ObservedGeneration = currentConfig.Generation
-
-				// Get the current config to update
-				configToUpdate := currentConfig.DeepCopy()
-
-				// Find and update the Prometheus connectivity condition
-				found := false
-				for index, existingCondition := range configToUpdate.Status.Conditions {
-					if existingCondition.Type == condition.Type {
-						if existingCondition.ObservedGeneration == condition.ObservedGeneration &&
-							existingCondition.Status == condition.Status &&
-							existingCondition.Message == condition.Message {
-							return nil // No change needed
-						}
-						found = true
-						configToUpdate.Status.Conditions[index] = condition
-						break
-					}
-				}
-
-				if !found {
-					configToUpdate.Status.Conditions = append(configToUpdate.Status.Conditions, condition)
-				}
-
-				// Update the status using the controller's client
-				return r.Client.Status().Patch(ctx, configToUpdate, client.MergeFrom(currentConfig))
-			}
-
-			// Start the monitoring goroutine
-			prometheus.StartPrometheusMonitoring(r.monitoringCtx, kaiConfig.Spec.Prometheus, statusUpdater)
-		}
-	} else {
-		// Stop monitoring if external Prometheus is not configured
+	if !hasExternalPrometheus {
+		// Stop monitoring if not already running
 		if r.monitoringCancel != nil {
 			r.monitoringCancel()
 			r.monitoringCtx = nil
 			r.monitoringCancel = nil
 		}
+		return
+	}
+	// do nothing if already running
+	if r.monitoringCtx != nil && r.monitoringCtx.Err() == nil {
+		return
+	}
+	// Start monitoring if not already running
+	r.monitoringCtx, r.monitoringCancel = context.WithCancel(ctx)
+
+	// Create status updater function that uses the controller's client
+	statusUpdater := createStatusUpdaterFunction(r, kaiConfig)
+
+	// Start the monitoring goroutine
+	prometheus.StartMonitoring(r.monitoringCtx, kaiConfig.Spec.Prometheus, statusUpdater)
+}
+
+func createStatusUpdaterFunction(r *ConfigReconciler, kaiConfig *kaiv1.Config) func(ctx context.Context, condition metav1.Condition) error {
+	return func(ctx context.Context, condition metav1.Condition) error {
+		// Get fresh kaiConfig from cluster
+		currentConfig := &kaiv1.Config{}
+		if err := r.Client.Get(ctx, client.ObjectKey{
+			Name:      kaiConfig.Name,
+			Namespace: kaiConfig.Namespace,
+		}, currentConfig); err != nil {
+			return fmt.Errorf("failed to get current config: %w", err)
+		}
+
+		// Set the observed generation to match the current config generation
+		condition.ObservedGeneration = currentConfig.Generation
+
+		// Get the current config to update
+		configToUpdate := currentConfig.DeepCopy()
+
+		// Find and update the Prometheus connectivity condition
+		found := false
+		for index, existingCondition := range configToUpdate.Status.Conditions {
+			if existingCondition.Type == condition.Type {
+				if existingCondition.ObservedGeneration == condition.ObservedGeneration &&
+					existingCondition.Status == condition.Status &&
+					existingCondition.Message == condition.Message {
+					return nil // No change needed
+				}
+				found = true
+				configToUpdate.Status.Conditions[index] = condition
+				break
+			}
+		}
+
+		if !found {
+			configToUpdate.Status.Conditions = append(configToUpdate.Status.Conditions, condition)
+		}
+
+		// Update the status using the controller's client
+		return r.Client.Status().Patch(ctx, configToUpdate, client.MergeFrom(currentConfig))
 	}
 }

@@ -2012,6 +2012,23 @@ spec:
                     description: Enabled defines whether a Prometheus instance should
                       be deployed
                     type: boolean
+                  externalPrometheusPingConfig:
+                    description: ExternalPrometheusPingConfig defines the configuration
+                      for external Prometheus connectivity validation, with defaults.
+                    properties:
+                      pingsInterval:
+                        description: PingsInterval defines the interval for external
+                          Prometheus connectivity validation (in seconds)
+                        type: integer
+                      pingsMaxRetries:
+                        description: PingsMaxRetries defines the maximum number of
+                          retries for external Prometheus connectivity validation
+                        type: integer
+                      pingsTimeout:
+                        description: PingsTimeout defines the timeout for external
+                          Prometheus connectivity validation (in seconds)
+                        type: integer
+                    type: object
                   externalPrometheusUrl:
                     description: |-
                       ExternalPrometheusUrl defines the URL of an external Prometheus instance to use

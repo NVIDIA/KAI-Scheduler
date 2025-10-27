@@ -48,10 +48,7 @@ func (r *StatusReconciler) ReconcileStatus(ctx context.Context, object objectWit
 	if err := r.reconcileCondition(ctx, object, r.getAvailableCondition(ctx, object.GetGeneration())); err != nil {
 		return err
 	}
-	if err := r.reconcileCondition(ctx, object, r.getDependenciesFulfilledCondition(object.GetGeneration())); err != nil {
-		return err
-	}
-	return nil
+	return r.reconcileCondition(ctx, object, r.getDependenciesFulfilledCondition(object.GetGeneration()))
 }
 
 func (r *StatusReconciler) reconcileCondition(ctx context.Context, object objectWithConditions, condition metav1.Condition) error {
