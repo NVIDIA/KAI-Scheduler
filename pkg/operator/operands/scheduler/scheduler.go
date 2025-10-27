@@ -92,6 +92,10 @@ func (s *SchedulerForShard) IsDeployed(ctx context.Context, readerClient client.
 	return common.AllObjectsExists(ctx, readerClient, s.lastDesiredState)
 }
 
+func (s *SchedulerForShard) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+	return nil
+}
+
 func (s *SchedulerForShard) Name() string {
 	return "SchedulerForShard"
 }
@@ -128,4 +132,8 @@ func (s *SchedulerForConfig) IsDeployed(ctx context.Context, readerClient client
 
 func (s *SchedulerForConfig) Name() string {
 	return "SchedulerForConfig"
+}
+
+func (s *SchedulerForConfig) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+	return nil
 }

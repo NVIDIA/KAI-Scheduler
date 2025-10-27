@@ -25,6 +25,8 @@ type Prometheus struct {
 	namespace        string
 	lastDesiredState []client.Object
 	client           client.Client
+	monitoringCtx    context.Context
+	monitoringCancel context.CancelFunc
 }
 type promethuesResourceForKAIConfig func(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) ([]client.Object, error)
 
@@ -88,6 +90,81 @@ func (b *Prometheus) IsAvailable(ctx context.Context, readerClient client.Reader
 
 func (b *Prometheus) Name() string {
 	return "KAI-prometheus"
+}
+
+func (p *Prometheus) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+	// Check if external Prometheus is configured
+	hasExternalPrometheus := kaiConfig.Spec.Prometheus != nil &&
+		kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != nil &&
+		*kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != ""
+
+	if !hasExternalPrometheus {
+		// Stop monitoring if not already running
+		if p.monitoringCancel != nil {
+			p.monitoringCancel()
+			p.monitoringCtx = nil
+			p.monitoringCancel = nil
+		}
+		return nil
+	}
+
+	// do nothing if already running
+	if p.monitoringCtx != nil && p.monitoringCtx.Err() == nil {
+		return nil
+	}
+
+	// Start monitoring if not already running
+	p.monitoringCtx, p.monitoringCancel = context.WithCancel(ctx)
+
+	// Create status updater function
+	statusUpdater := p.createStatusUpdaterFunction(kaiConfig)
+
+	// Start the monitoring goroutine
+	StartMonitoring(p.monitoringCtx, kaiConfig.Spec.Prometheus, statusUpdater)
+
+	return nil
+}
+
+// createStatusUpdaterFunction creates a function that updates the KAI Config status
+func (p *Prometheus) createStatusUpdaterFunction(kaiConfig *kaiv1.Config) func(ctx context.Context, condition metav1.Condition) error {
+	return func(ctx context.Context, condition metav1.Condition) error {
+		// Get fresh kaiConfig from cluster
+		currentConfig := &kaiv1.Config{}
+		if err := p.client.Get(ctx, client.ObjectKey{
+			Name:      kaiConfig.Name,
+			Namespace: kaiConfig.Namespace,
+		}, currentConfig); err != nil {
+			return fmt.Errorf("failed to get current config: %w", err)
+		}
+
+		// Set the observed generation to match the current config generation
+		condition.ObservedGeneration = currentConfig.Generation
+
+		// Get the current config to update
+		configToUpdate := currentConfig.DeepCopy()
+
+		// Find and update the Prometheus connectivity condition
+		found := false
+		for index, existingCondition := range configToUpdate.Status.Conditions {
+			if existingCondition.Type == condition.Type {
+				if existingCondition.ObservedGeneration == condition.ObservedGeneration &&
+					existingCondition.Status == condition.Status &&
+					existingCondition.Message == condition.Message {
+					return nil // No change needed
+				}
+				found = true
+				configToUpdate.Status.Conditions[index] = condition
+				break
+			}
+		}
+
+		if !found {
+			configToUpdate.Status.Conditions = append(configToUpdate.Status.Conditions, condition)
+		}
+
+		// Update the status using the Prometheus struct's client
+		return p.client.Status().Patch(ctx, configToUpdate, client.MergeFrom(currentConfig))
+	}
 }
 
 // StartMonitoring starts a background goroutine to monitor external Prometheus connectivity

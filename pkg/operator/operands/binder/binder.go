@@ -58,3 +58,7 @@ func (b *Binder) IsAvailable(ctx context.Context, readerClient client.Reader) (b
 func (b *Binder) Name() string {
 	return "Binder"
 }
+
+func (b *Binder) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+	return nil
+}

@@ -57,3 +57,7 @@ func (nsa *NodeScaleAdjuster) IsAvailable(ctx context.Context, readerClient clie
 func (nsa *NodeScaleAdjuster) Name() string {
 	return "NodeScaleAdjuster"
 }
+
+func (nsa *NodeScaleAdjuster) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+	return nil
+}

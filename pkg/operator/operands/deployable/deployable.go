@@ -292,3 +292,12 @@ func createObjectForKAIConfig(
 
 	return nil
 }
+
+func (d *DeployableOperands) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+	for _, operand := range d.operands {
+		if err := operand.Monitor(ctx, runtimeReader, kaiConfig); err != nil {
+			return fmt.Errorf("failed monitoring %s: %v", operand.Name(), err)
+		}
+	}
+	return nil
+}
