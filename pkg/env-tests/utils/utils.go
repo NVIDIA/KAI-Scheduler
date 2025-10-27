@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package env_tests
+package utils
 
 import (
 	"context"
@@ -22,11 +22,11 @@ import (
 	commonconsts "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
-type podGroupConfig struct {
-	queueName          string
-	podgroupName       string
-	minMember          int32
-	topologyConstraint *schedulingv2alpha2.TopologyConstraint
+type PodGroupConfig struct {
+	QueueName          string
+	PodgroupName       string
+	MinMember          int32
+	TopologyConstraint *schedulingv2alpha2.TopologyConstraint
 }
 
 // NodeConfig holds the configuration for a test node
@@ -133,27 +133,27 @@ func CreatePodObject(namespace, name string, resources corev1.ResourceRequiremen
 	return pod
 }
 
-func GroupPods(ctx context.Context, c client.Client, podGroupConfig podGroupConfig, pods []*corev1.Pod) error {
+func GroupPods(ctx context.Context, c client.Client, podGroupConfig PodGroupConfig, pods []*corev1.Pod) error {
 	if len(pods) == 0 {
 		return fmt.Errorf("no pods to group")
 	}
 
 	podgroup := &schedulingv2alpha2.PodGroup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      podGroupConfig.podgroupName,
+			Name:      podGroupConfig.PodgroupName,
 			Namespace: pods[0].Namespace,
 			Labels: map[string]string{
-				commonconsts.DefaultQueueLabel: podGroupConfig.queueName,
+				commonconsts.DefaultQueueLabel: podGroupConfig.QueueName,
 			},
 		},
 		Spec: schedulingv2alpha2.PodGroupSpec{
-			Queue:             podGroupConfig.queueName,
-			MinMember:         podGroupConfig.minMember,
+			Queue:             podGroupConfig.QueueName,
+			MinMember:         podGroupConfig.MinMember,
 			MarkUnschedulable: ptr.To(true),
 		},
 	}
-	if podGroupConfig.topologyConstraint != nil {
-		podgroup.Spec.TopologyConstraint = *podGroupConfig.topologyConstraint
+	if podGroupConfig.TopologyConstraint != nil {
+		podgroup.Spec.TopologyConstraint = *podGroupConfig.TopologyConstraint
 	}
 	err := c.Create(ctx, podgroup, &client.CreateOptions{})
 	if err != nil {
@@ -165,7 +165,7 @@ func GroupPods(ctx context.Context, c client.Client, podGroupConfig podGroupConf
 		if pod.Annotations == nil {
 			pod.Annotations = make(map[string]string)
 		}
-		pod.Annotations[commonconsts.PodGroupAnnotationForPod] = podGroupConfig.podgroupName
+		pod.Annotations[commonconsts.PodGroupAnnotationForPod] = podGroupConfig.PodgroupName
 		err = c.Patch(ctx, pod, client.MergeFrom(originalPod))
 		if err != nil {
 			return fmt.Errorf("failed to patch pod with podgroup annotation: %w", err)
