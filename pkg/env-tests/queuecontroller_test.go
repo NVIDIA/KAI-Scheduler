@@ -23,6 +23,7 @@ import (
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/queuecontroller"
+	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/utils"
 )
 
 var _ = Describe("QueueController", Ordered, func() {
@@ -49,13 +50,13 @@ var _ = Describe("QueueController", Ordered, func() {
 		}
 		Expect(ctrlClient.Create(ctx, testNamespace)).To(Succeed())
 
-		testDepartment = CreateQueueObject("test-department", "")
+		testDepartment = utils.CreateQueueObject("test-department", "")
 		Expect(ctrlClient.Create(ctx, testDepartment)).To(Succeed(), "Failed to create test department")
 
-		testQueue = CreateQueueObject("test-queue", testDepartment.Name)
+		testQueue = utils.CreateQueueObject("test-queue", testDepartment.Name)
 		Expect(ctrlClient.Create(ctx, testQueue)).To(Succeed(), "Failed to create test queue")
 
-		testNode = CreateNodeObject(ctx, ctrlClient, DefaultNodeConfig("test-node"))
+		testNode = utils.CreateNodeObject(ctx, ctrlClient, utils.DefaultNodeConfig("test-node"))
 		Expect(ctrlClient.Create(ctx, testNode)).To(Succeed(), "Failed to create test node")
 
 		backgroundCtx, cancel = context.WithCancel(context.Background())
@@ -68,13 +69,13 @@ var _ = Describe("QueueController", Ordered, func() {
 		Expect(ctrlClient.Delete(ctx, testQueue)).To(Succeed(), "Failed to delete test queue")
 		Expect(ctrlClient.Delete(ctx, testNode)).To(Succeed(), "Failed to delete test node")
 
-		err := WaitForObjectDeletion(ctx, ctrlClient, testDepartment, defaultTimeout, interval)
+		err := utils.WaitForObjectDeletion(ctx, ctrlClient, testDepartment, defaultTimeout, interval)
 		Expect(err).NotTo(HaveOccurred(), "Failed to wait for test department to be deleted")
 
-		err = WaitForObjectDeletion(ctx, ctrlClient, testQueue, defaultTimeout, interval)
+		err = utils.WaitForObjectDeletion(ctx, ctrlClient, testQueue, defaultTimeout, interval)
 		Expect(err).NotTo(HaveOccurred(), "Failed to wait for test queue to be deleted")
 
-		err = WaitForObjectDeletion(ctx, ctrlClient, testNode, defaultTimeout, interval)
+		err = utils.WaitForObjectDeletion(ctx, ctrlClient, testNode, defaultTimeout, interval)
 		Expect(err).NotTo(HaveOccurred(), "Failed to wait for test node to be deleted")
 
 		cancel()
@@ -82,7 +83,7 @@ var _ = Describe("QueueController", Ordered, func() {
 
 	Context("simple queue test", func() {
 		AfterEach(func(ctx context.Context) {
-			err := DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
+			err := utils.DeleteAllInNamespace(ctx, ctrlClient, testNamespace.Name,
 				&corev1.Pod{},
 				&schedulingv2alpha2.PodGroup{},
 				&resourcev1beta1.ResourceClaim{},
@@ -90,7 +91,7 @@ var _ = Describe("QueueController", Ordered, func() {
 			)
 			Expect(err).NotTo(HaveOccurred(), "Failed to delete test resources")
 
-			err = WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, interval,
+			err = utils.WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, interval,
 				&corev1.PodList{},
 				&schedulingv2alpha2.PodGroupList{},
 				&resourcev1beta1.ResourceClaimList{},
@@ -100,17 +101,17 @@ var _ = Describe("QueueController", Ordered, func() {
 		})
 
 		It("Should update queue status", func(ctx context.Context) {
-			testPod := CreatePodObject(testNamespace.Name, "test-pod", corev1.ResourceRequirements{
+			testPod := utils.CreatePodObject(testNamespace.Name, "test-pod", corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
 					constants.GpuResource: resource.MustParse("1"),
 				},
 			})
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
 
-			Expect(GroupPods(ctx, ctrlClient, podGroupConfig{
-				queueName:    testQueue.Name,
-				podgroupName: "test-podgroup",
-				minMember:    1,
+			Expect(utils.GroupPods(ctx, ctrlClient, utils.PodGroupConfig{
+				QueueName:    testQueue.Name,
+				PodgroupName: "test-podgroup",
+				MinMember:    1,
 			}, []*corev1.Pod{testPod})).To(Succeed(), "Failed to group pod")
 
 			var podgroup schedulingv2alpha2.PodGroup
