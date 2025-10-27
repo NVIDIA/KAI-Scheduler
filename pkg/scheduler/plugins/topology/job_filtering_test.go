@@ -8,6 +8,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
@@ -394,12 +395,26 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				}
 			}
 
+			// Setup nodeSetToDomain mapping
+			nodeSetToDomain := map[topologyName]map[nodeSetID]*DomainInfo{}
+			nodeSetToDomain[topologyTree.Name] = map[nodeSetID]*DomainInfo{}
+			domains := []*DomainInfo{}
+			for _, levelDomains := range topologyTree.DomainsByLevel {
+				for _, domain := range levelDomains {
+					domains = append(domains, domain)
+				}
+			}
+			for _, domain := range domains {
+				nodeSetToDomain[topologyTree.Name][getNodeSetID(lo.Values(domain.Nodes))] = domain
+			}
+
 			// Setup plugin
 			plugin := &topologyPlugin{
 				TopologyTrees: map[string]*Info{
 					"test-topology": topologyTree,
 				},
 				subGroupNodeScores: map[subgroupName]map[string]float64{},
+				nodeSetToDomain:    nodeSetToDomain,
 			}
 
 			// Call the function under test

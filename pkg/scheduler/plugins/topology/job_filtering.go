@@ -53,6 +53,11 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{}, nil
 	}
 
+	domain, ok := t.nodeSetToDomain[topologyTree.Name][getNodeSetID(nodeSet)]
+	if !ok {
+		return nil, fmt.Errorf("domain not found for node set in topology %s", topologyTree.Name)
+	}
+
 	// Sorting the tree for both packing and closest preferred level domain scoring
 	preferredLevel := DomainLevel(subGroup.GetTopologyConstraint().PreferredLevel)
 	requiredLevel := DomainLevel(subGroup.GetTopologyConstraint().RequiredLevel)
@@ -60,9 +65,9 @@ func (t *topologyPlugin) subSetNodesFn(
 	if maxDepthLevel == "" {
 		maxDepthLevel = requiredLevel
 	}
-	sortTree(topologyTree.DomainsByLevel[rootLevel][rootDomainId], maxDepthLevel)
+	sortTree(domain, maxDepthLevel)
 	if preferredLevel != "" {
-		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(topologyTree.DomainsByLevel[rootLevel][rootDomainId], preferredLevel)
+		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(domain, preferredLevel)
 	}
 
 	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroup, podSets, len(tasks), topologyTree)
