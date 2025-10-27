@@ -87,7 +87,7 @@ func (f *FakeUsageDBClient) GetResourceUsage() (*queue_info.ClusterUsage, error)
 	return usage, nil
 }
 
-func (f *FakeUsageDBClient) AppendQueuedAllocation(queueAllocations map[common_info.QueueID]queue_info.QueueUsage, totalInCluster map[v1.ResourceName]float64) {
+func (f *FakeUsageDBClient) AppendQueueAllocation(queueAllocations map[common_info.QueueID]queue_info.QueueUsage, totalInCluster map[v1.ResourceName]float64) {
 	f.resourceUsageMutex.Lock()
 	defer f.resourceUsageMutex.Unlock()
 

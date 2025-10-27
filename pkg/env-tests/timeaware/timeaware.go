@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
-	resourceapi "k8s.io/api/resource/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -60,13 +59,15 @@ type TestNodes struct {
 }
 
 type TimeAwareSimulation struct {
-	Queues []TestQueue
-	Jobs   map[string]TestJobs // key is the queue name
-	Nodes  []TestNodes
-	Cycles *int //default is 100
+	Queues     []TestQueue
+	Jobs       map[string]TestJobs // key is the queue name
+	Nodes      []TestNodes
+	Cycles     *int     // default is 100
+	WindowSize *int     // default is 5
+	KValue     *float64 // default is 1.0
 }
 
-func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
+func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSize *int, kValue *float64) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
 	ctx, cancel := context.WithCancel(backgroundCtx)
 
 	err := queuecontroller.RunQueueController(cfg, ctx)
@@ -82,13 +83,30 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan str
 		return nil, cancel, nil, fmt.Errorf("failed to get default scheduler config: %w", err)
 	}
 
+	if windowSize == nil {
+		windowSize = ptr.To(5)
+	}
+
 	schedulerConf.UsageDBConfig = &api.UsageDBConfig{
 		ClientType:       "fake-with-history",
 		ConnectionString: "fake-connection",
 		UsageParams: &api.UsageParams{
-			WindowSize:    &[]time.Duration{time.Second * 6}[0],
+			WindowSize:    &[]time.Duration{time.Second * time.Duration(*windowSize)}[0],
 			FetchInterval: &[]time.Duration{time.Millisecond}[0],
 		},
+	}
+
+	for i := range schedulerConf.Tiers[0].Plugins {
+		if schedulerConf.Tiers[0].Plugins[i].Name != "proportion" {
+			continue
+		}
+		if schedulerConf.Tiers[0].Plugins[i].Arguments == nil {
+			schedulerConf.Tiers[0].Plugins[i].Arguments = map[string]string{}
+		}
+		if kValue == nil {
+			kValue = ptr.To(1.0)
+		}
+		schedulerConf.Tiers[0].Plugins[i].Arguments["kValue"] = fmt.Sprintf("%f", *kValue)
 	}
 
 	stopCh := make(chan struct{})
@@ -119,10 +137,10 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config) (chan str
 	return stopCh, cancel, usageClient, nil
 }
 
-func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Config, simulation TimeAwareSimulation) (fake.AllocationHistory, error, error) {
+func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Config, simulation TimeAwareSimulation) (allocationHistory fake.AllocationHistory, err error, cleanupErr error) {
 	simulationName := randomstring.HumanFriendlyEnglishString(10)
 
-	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg)
+	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg, simulation.WindowSize, simulation.KValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup controllers: %w", err), nil
 	}
@@ -131,7 +149,7 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 
 	testNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "simulation-test",
+			Name: fmt.Sprintf("simulation-test-%s", simulationName),
 			Labels: map[string]string{
 				"simulation": simulationName,
 			},
@@ -141,9 +159,11 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 		return nil, fmt.Errorf("failed to create test namespace: %w", err), nil
 	}
 
-	var cleanupErrors []error
 	defer func() {
-		cleanupErrors = append(cleanupErrors, cleanupSimulation(ctx, ctrlClient, testNamespace, simulationName)...)
+		cleanupErrors := cleanupSimulation(ctx, ctrlClient, testNamespace, simulationName)
+		if len(cleanupErrors) > 0 {
+			cleanupErr = errors.Join(cleanupErrors...)
+		}
 	}()
 
 	var nodes []*corev1.Node
@@ -153,7 +173,7 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 			"simulation": simulationName,
 		}
 		if err := ctrlClient.Create(ctx, nodeObject); err != nil {
-			return nil, fmt.Errorf("failed to create test node: %w", err), errors.Join(cleanupErrors...)
+			return nil, fmt.Errorf("failed to create test node: %w", err), nil
 		}
 		nodes = append(nodes, nodeObject)
 	}
@@ -183,7 +203,7 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 
 		err := ctrlClient.Create(ctx, queueObject)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create test queue: %w", err), errors.Join(cleanupErrors...)
+			return nil, fmt.Errorf("failed to create test queue: %w", err), nil
 		}
 		queues = append(queues, queueObject)
 	}
@@ -192,7 +212,7 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 		for range job.NumJobs {
 			err := queueJob(ctx, ctrlClient, testNamespace.Name, queueName, job.NumPods, job.GPUs)
 			if err != nil {
-				return nil, fmt.Errorf("failed to queue job: %w", err), errors.Join(cleanupErrors...)
+				return nil, fmt.Errorf("failed to queue job: %w", err), nil
 			}
 		}
 	}
@@ -201,21 +221,21 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 		simulation.Cycles = ptr.To(100)
 	}
 	for range *simulation.Cycles {
-		time.Sleep(simulationCycleInterval * 10)
+		time.Sleep(simulationCycleInterval)
 		allocations, err := getAllocations(ctx, ctrlClient)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get allocations: %w", err), errors.Join(cleanupErrors...)
+			return nil, fmt.Errorf("failed to get allocations: %w", err), nil
 		}
 		clusterResources, err := getClusterResources(ctx, ctrlClient, true)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get cluster resources: %w", err), errors.Join(cleanupErrors...)
+			return nil, fmt.Errorf("failed to get cluster resources: %w", err), nil
 		}
-		usageClient.AppendQueuedAllocation(allocations, clusterResources)
+		usageClient.AppendQueueAllocation(allocations, clusterResources)
 	}
 
-	allocationHistory := usageClient.GetAllocationHistory()
+	allocationHistory = usageClient.GetAllocationHistory()
 
-	return allocationHistory, err, errors.Join(cleanupErrors...)
+	return allocationHistory, err, nil
 }
 
 func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamespace *corev1.Namespace, simulationName string) []error {
@@ -245,7 +265,6 @@ func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamesp
 	if err := utils.WaitForNoObjectsInNamespace(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval,
 		&corev1.PodList{},
 		&schedulingv2alpha2.PodGroupList{},
-		&resourceapi.ResourceClaimList{},
 		&kaiv1alpha2.BindRequestList{},
 	); err != nil {
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to wait for simulation pods and podgroups to be deleted during cleanup: %w", err))
@@ -253,10 +272,6 @@ func cleanupSimulation(ctx context.Context, ctrlClient client.Client, testNamesp
 
 	if err := ctrlClient.Delete(context.Background(), testNamespace); err != nil {
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete test namespace during cleanup: %w", err))
-	}
-
-	if err := utils.WaitForNamespaceDeletion(ctx, ctrlClient, testNamespace.Name, defaultTimeout, simulationCycleInterval); err != nil {
-		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to wait for test namespace to be deleted during cleanup: %w", err))
 	}
 
 	return cleanupErrors
