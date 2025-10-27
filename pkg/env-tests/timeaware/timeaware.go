@@ -47,6 +47,18 @@ type TestQueue struct {
 	Weight       *float64 // default is 1
 }
 
+func (q *TestQueue) SetDefaults() {
+	if q.Priority == nil {
+		q.Priority = ptr.To(100)
+	}
+	if q.DeservedGPUs == nil {
+		q.DeservedGPUs = ptr.To(0.0)
+	}
+	if q.Weight == nil {
+		q.Weight = ptr.To(1.0)
+	}
+}
+
 type TestJobs struct {
 	GPUs    int
 	NumPods int
@@ -67,6 +79,21 @@ type TimeAwareSimulation struct {
 	KValue     *float64 // default is 1.0
 }
 
+func (s *TimeAwareSimulation) SetDefaults() {
+	for i := range s.Queues {
+		s.Queues[i].SetDefaults()
+	}
+	if s.Cycles == nil {
+		s.Cycles = ptr.To(100)
+	}
+	if s.WindowSize == nil {
+		s.WindowSize = ptr.To(5)
+	}
+	if s.KValue == nil {
+		s.KValue = ptr.To(1.0)
+	}
+}
+
 func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSize *int, kValue *float64) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
 	ctx, cancel := context.WithCancel(backgroundCtx)
 
@@ -81,10 +108,6 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 	schedulerConf, err := conf_util.GetDefaultSchedulerConf()
 	if err != nil {
 		return nil, cancel, nil, fmt.Errorf("failed to get default scheduler config: %w", err)
-	}
-
-	if windowSize == nil {
-		windowSize = ptr.To(5)
 	}
 
 	schedulerConf.UsageDBConfig = &api.UsageDBConfig{
@@ -102,9 +125,6 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 		}
 		if schedulerConf.Tiers[0].Plugins[i].Arguments == nil {
 			schedulerConf.Tiers[0].Plugins[i].Arguments = map[string]string{}
-		}
-		if kValue == nil {
-			kValue = ptr.To(1.0)
 		}
 		schedulerConf.Tiers[0].Plugins[i].Arguments["kValue"] = fmt.Sprintf("%f", *kValue)
 	}
@@ -139,6 +159,7 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 
 func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Config, simulation TimeAwareSimulation) (allocationHistory fake.AllocationHistory, err error, cleanupErr error) {
 	simulationName := randomstring.HumanFriendlyEnglishString(10)
+	simulation.SetDefaults()
 
 	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg, simulation.WindowSize, simulation.KValue)
 	if err != nil {
@@ -185,20 +206,13 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 		queueObject.ObjectMeta.Labels = map[string]string{
 			"simulation": simulationName,
 		}
-
-		queueObject.Spec.Priority = ptr.To(100)
-		if queue.Priority != nil {
-			queueObject.Spec.Priority = queue.Priority
-		}
-
-		queueObject.Spec.Resources.GPU.Quota = 0
-		if queue.DeservedGPUs != nil {
-			queueObject.Spec.Resources.GPU.Quota = *queue.DeservedGPUs
-		}
-
-		queueObject.Spec.Resources.GPU.OverQuotaWeight = 1
-		if queue.Weight != nil {
-			queueObject.Spec.Resources.GPU.OverQuotaWeight = *queue.Weight
+		queueObject.Spec.Priority = queue.Priority
+		queueObject.Spec.Resources = &schedulingv2.QueueResources{
+			GPU: schedulingv2.QueueResource{
+				Quota:           *queue.DeservedGPUs,
+				OverQuotaWeight: *queue.Weight,
+				Limit:           -1,
+			},
 		}
 
 		err := ctrlClient.Create(ctx, queueObject)
@@ -217,9 +231,6 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 		}
 	}
 
-	if simulation.Cycles == nil {
-		simulation.Cycles = ptr.To(100)
-	}
 	for range *simulation.Cycles {
 		time.Sleep(simulationCycleInterval)
 		allocations, err := getAllocations(ctx, ctrlClient)
