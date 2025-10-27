@@ -15,10 +15,12 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	v1 "k8s.io/api/core/v1"
 )
 
 const (
 	requiredResourceNotInDomainRatio = 1000.0
+	maxAllocatableTasksRatio         = 1.0
 )
 
 type jobAllocationMetaData struct {
@@ -45,22 +47,28 @@ func (t *topologyPlugin) subSetNodesFn(
 	}
 
 	t.treeAllocatableCleanup(topologyTree)
-	maxAllocatablePods, err := t.calcTreeAllocatable(tasks, topologyTree, nodeSet)
-	if err != nil {
-		return nil, err
+	if usePodCountAccounting(tasks) {
+		if err := t.calcTreeAllocatable(tasks, topologyTree, nodeSet); err != nil {
+			return nil, err
+		}
 	}
 
-	if maxAllocatablePods < len(tasks) {
+	tasksResources := resource_info.NewResource(0, 0, 0)
+	for _, task := range tasks {
+		tasksResources.AddResourceRequirements(task.ResReq)
+	}
+	tasksCount := len(tasks)
+	domain, ok := t.nodeSetToDomain[topologyTree.Name][getNodeSetID(nodeSet)]
+	if !ok {
+		return nil, fmt.Errorf("domain not found for node set in topology %s", topologyTree.Name)
+	}
+
+	if !isJobAllocatableOnDomain(tasksResources, tasksCount, domain) {
 		job.SetJobFitError(
 			podgroup_info.PodSchedulingErrors,
 			fmt.Sprintf("No relevant domains found for workload in topology tree: %s", topologyTree.Name),
 			nil)
 		return []node_info.NodeSet{}, nil
-	}
-
-	domain, ok := t.nodeSetToDomain[topologyTree.Name][getNodeSetID(nodeSet)]
-	if !ok {
-		return nil, fmt.Errorf("domain not found for node set in topology %s", topologyTree.Name)
 	}
 
 	// Sorting the tree for both packing and closest preferred level domain scoring
@@ -75,7 +83,7 @@ func (t *topologyPlugin) subSetNodesFn(
 		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(domain, preferredLevel)
 	}
 
-	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroup, podSets, len(tasks), topologyTree)
+	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroup, podSets, tasksResources, tasksCount, topologyTree)
 	if err != nil {
 		return nil, err
 	}
@@ -109,17 +117,18 @@ func (t *topologyPlugin) getJobTopology(subGroup *subgroup_info.SubGroupInfo) (*
 	return topologyTree, true
 }
 
-func (t *topologyPlugin) calcTreeAllocatable(tasks []*pod_info.PodInfo, topologyTree *Info, nodeSet node_info.NodeSet) (int, error) {
+func (t *topologyPlugin) calcTreeAllocatable(tasks []*pod_info.PodInfo, topologyTree *Info, nodeSet node_info.NodeSet) error {
 	jobAllocationData, err := initJobAllocationMetadataStruct(tasks)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	nodes := map[string]bool{}
 	for _, node := range nodeSet {
 		nodes[node.Name] = true
 	}
-	return t.calcSubTreeAllocatable(jobAllocationData, topologyTree.DomainsByLevel[rootLevel][rootDomainId], nodes)
+	_, err = t.calcSubTreeAllocatable(jobAllocationData, topologyTree.DomainsByLevel[rootLevel][rootDomainId], nodes)
+	return err
 }
 
 func initJobAllocationMetadataStruct(tasksToAllocate []*pod_info.PodInfo) (*jobAllocationMetaData, error) {
@@ -147,6 +156,7 @@ func (t *topologyPlugin) calcSubTreeAllocatable(
 	if domain == nil {
 		return 0, nil
 	}
+	domain.AllocatablePods = 0 // reset the allocatable pods count for the domain
 
 	if len(domain.Children) == 0 {
 		for _, node := range domain.Nodes {
@@ -220,7 +230,7 @@ func calcNextAllocationTestPodResources(previousTestResources, maxPodResources *
 
 func (t *topologyPlugin) getJobAllocatableDomains(
 	job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo, podSets map[string]*subgroup_info.PodSet,
-	taskToAllocateCount int, topologyTree *Info,
+	tasksResources *resource_info.Resource, tasksCount int, topologyTree *Info,
 ) ([]*DomainInfo, error) {
 	relevantLevels, err := t.calculateRelevantDomainLevels(subGroup, topologyTree)
 	if err != nil {
@@ -239,7 +249,7 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 	var domains []*DomainInfo
 	for _, level := range relevantLevels {
 		for _, domain := range relevantDomainsByLevel[level] {
-			if domain.AllocatablePods < taskToAllocateCount { // Filter domains that cannot allocate the job
+			if !isJobAllocatableOnDomain(tasksResources, tasksCount, domain) { // Filter domains that cannot allocate the job
 				continue
 			}
 
@@ -305,6 +315,14 @@ func hasTopologyRequiredConstraint(subGroup *subgroup_info.SubGroupInfo) bool {
 	return subGroup.GetTopologyConstraint().RequiredLevel != ""
 }
 
+func isJobAllocatableOnDomain(tasksResources *resource_info.Resource, tasksCount int, domain *DomainInfo) bool {
+	if domain.AllocatablePods != allocatablePodsNotSet {
+		return domain.AllocatablePods >= tasksCount
+	}
+
+	return getJobRatioToFreeResources(tasksResources, domain) <= maxAllocatableTasksRatio
+}
+
 func (*topologyPlugin) calculateRelevantDomainLevels(
 	subGroup *subgroup_info.SubGroupInfo, topologyTree *Info,
 ) ([]DomainLevel, error) {
@@ -355,7 +373,7 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
 	for _, levelDomains := range topologyTree.DomainsByLevel {
 		for _, domain := range levelDomains {
-			domain.AllocatablePods = 0
+			domain.AllocatablePods = allocatablePodsNotSet
 		}
 	}
 }
@@ -446,4 +464,26 @@ func sortDomainInfos(topologyTree *Info, domainInfos []*DomainInfo) []*DomainInf
 	}
 
 	return sortedDomainInfos
+}
+
+func usePodCountAccounting(tasks []*pod_info.PodInfo) bool {
+	extendedResources := map[v1.ResourceName]int{}
+	podsUsingGpu := 0
+	for _, task := range tasks {
+		for resourceName := range task.ResReq.BaseResource.ScalarResources() {
+			extendedResources[resourceName] += 1
+		}
+		if task.ResReq.GPUs() > 0 {
+			podsUsingGpu += 1
+		}
+	}
+	if podsUsingGpu != len(tasks) && podsUsingGpu != 0 {
+		return false
+	}
+	for _, count := range extendedResources {
+		if count != len(tasks) {
+			return false
+		}
+	}
+	return true
 }
