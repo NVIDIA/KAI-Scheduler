@@ -194,12 +194,12 @@ jobs:
             podgrouper
             admission
             operator
-            queuecontroller
-            podgroupcontroller
-            resourcereservation
+            queue-controller
+            pod-group-controller
+            resource-reservation
             chart
             api
-            nodescaleadjuster
+            node-scale-adjuster
             ci
             release
             docs
