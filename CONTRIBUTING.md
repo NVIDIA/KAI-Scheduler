@@ -59,20 +59,20 @@ PR titles must follow the [Conventional Commits](https://www.conventionalcommits
 #### Scopes (Optional)
 
 Common scopes for KAI Scheduler:
-- `scheduler`
-- `binder`
-- `podgrouper`
-- `admission`
-- `operator`
-- `queuecontroller`
-- `podgroupcontroller`
-- `nodescaleadjuster`
-- `resourcereservation`
-- `chart`
-- `api`
-- `docs`
-- `ci`
-- `release`
+- 'scheduler'
+- 'binder'
+- 'podgrouper'
+- 'admission'
+- 'operator'
+- 'queue-controller'
+- 'pod-group-controller'
+- 'resource-reservation'
+- 'chart'
+- 'api'
+- 'node-scale-adjuster'
+- 'ci'
+- 'release'
+- 'docs'
 
 #### Breaking Changes
 
