@@ -133,6 +133,7 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 		ScheduleCSIStorage:          false,
 		FullHierarchyFairness:       true,
 		NumOfStatusRecordingWorkers: 1,
+		DiscoveryClient:             fakeKubeClient.Discovery(),
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -159,16 +160,22 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 			testNodes[0].Name: {
 				Node:        testNodes[0],
 				Allocatable: resource_info.ResourceFromResourceList(testNodes[0].Status.Allocatable),
+				Idle:        resource_info.NewResource(500, 0, 0),
+				Releasing:   resource_info.NewResource(0, 0, 0),
 				Used:        resource_info.NewResource(500, 0, 1),
 			},
 			testNodes[1].Name: {
 				Node:        testNodes[1],
 				Allocatable: resource_info.ResourceFromResourceList(testNodes[1].Status.Allocatable),
+				Idle:        resource_info.NewResource(500, 0, 0),
+				Releasing:   resource_info.NewResource(0, 0, 0),
 				Used:        resource_info.NewResource(500, 0, 0),
 			},
 			testNodes[2].Name: {
 				Node:        testNodes[2],
 				Allocatable: resource_info.ResourceFromResourceList(testNodes[2].Status.Allocatable),
+				Idle:        resource_info.NewResource(0, 0, 0),
+				Releasing:   resource_info.NewResource(0, 0, 0),
 				Used:        resource_info.NewResource(1000, 0, 3),
 			},
 		},

@@ -5,6 +5,7 @@ package podgroupcontroller
 
 import (
 	"context"
+	"flag"
 	"fmt"
 
 	"k8s.io/client-go/rest"
@@ -13,11 +14,12 @@ import (
 )
 
 func RunPodGroupController(cfg *rest.Config, ctx context.Context) error {
-	options := app.InitOptions()
-	options.MetricsAddr = ":8082"
-	options.ProbeAddr = ":8083"
+	options := app.InitOptions(flag.NewFlagSet("", flag.ExitOnError))
+	options.MetricsAddr = "0"
+	options.ProbeAddr = "0"
 	options.EnablePodGroupWebhook = false
 	options.EnableLeaderElection = false
+	options.SkipControllerNameValidation = true
 
 	go func() {
 		if err := app.Run(options, cfg, ctx); err != nil {

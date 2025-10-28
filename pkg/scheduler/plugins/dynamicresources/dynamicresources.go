@@ -6,7 +6,6 @@ package dynamicresources
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -37,16 +36,11 @@ type draPlugin struct {
 
 // +kubebuilder:rbac:groups="resource.k8s.io",resources=deviceclasses;resourceslices;resourceclaims,verbs=get;list;watch
 
-func New(pluginArgs map[string]string) framework.Plugin {
-	maxCelCacheEntries := defaultMaxCelCacheEntries
-	if entries, found := pluginArgs[maxCelCacheEntriesKey]; found {
-		value, err := strconv.Atoi(entries)
-		if err != nil {
-			log.InfraLogger.V(2).Warnf("Failed to parse %s as int: %v, err: %v.\n Using default value of: %d",
-				maxCelCacheEntriesKey, entries, err, defaultMaxCelCacheEntries)
-		} else {
-			maxCelCacheEntries = value
-		}
+func New(pluginArgs framework.PluginArguments) framework.Plugin {
+	maxCelCacheEntries, err := pluginArgs.GetInt(maxCelCacheEntriesKey, defaultMaxCelCacheEntries)
+	if err != nil {
+		log.InfraLogger.Warningf("Failed to parse %s as int: %v, err: %v.\n Using default value of: %d",
+			maxCelCacheEntriesKey, err, defaultMaxCelCacheEntries)
 	}
 
 	features := k8s_utils.GetK8sFeatures()

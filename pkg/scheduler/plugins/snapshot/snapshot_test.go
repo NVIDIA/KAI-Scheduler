@@ -158,6 +158,7 @@ func TestSnapshotPlugin(t *testing.T) {
 		ScheduleCSIStorage:          false,
 		FullHierarchyFairness:       true,
 		NumOfStatusRecordingWorkers: 1,
+		DiscoveryClient:             fakeKubeClient.Discovery(),
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())

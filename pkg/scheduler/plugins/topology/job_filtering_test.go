@@ -8,6 +8,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
@@ -21,6 +22,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
@@ -90,21 +92,24 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"rack": {
 							"rack1.zone1": {
-								ID:    "rack1.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "rack1.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 							"rack2.zone1": {
-								ID:    "rack2.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "rack2.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
@@ -115,9 +120,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				}
 
 				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
-					"rack2.zone1": tree.DomainsByLevel["rack"]["rack2.zone1"],
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
+					tree.DomainsByLevel["rack"]["rack2.zone1"],
 				}
 
 				return tree
@@ -277,9 +282,10 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
@@ -333,16 +339,18 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"rack": {
 							"rack1.zone1": {
-								ID:    "rack1.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "rack1.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
@@ -353,8 +361,8 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				}
 
 				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
 				}
 
 				return tree
@@ -394,11 +402,26 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				}
 			}
 
+			// Setup nodeSetToDomain mapping
+			nodeSetToDomain := map[topologyName]map[nodeSetID]*DomainInfo{}
+			nodeSetToDomain[topologyTree.Name] = map[nodeSetID]*DomainInfo{}
+			domains := []*DomainInfo{}
+			for _, levelDomains := range topologyTree.DomainsByLevel {
+				for _, domain := range levelDomains {
+					domains = append(domains, domain)
+				}
+			}
+			for _, domain := range domains {
+				nodeSetToDomain[topologyTree.Name][getNodeSetID(lo.Values(domain.Nodes))] = domain
+			}
+
 			// Setup plugin
 			plugin := &topologyPlugin{
 				TopologyTrees: map[string]*Info{
 					"test-topology": topologyTree,
 				},
+				subGroupNodeScores: map[subgroupName]map[string]float64{},
+				nodeSetToDomain:    nodeSetToDomain,
 			}
 
 			// Call the function under test
@@ -419,7 +442,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			}
 
 			if tt.expectedJobFitError != "" {
-				if job.JobFitErrors == nil || len(job.JobFitErrors) == 0 {
+				if len(job.JobFitErrors) == 0 {
 					t.Errorf("expected job fit error '%s', but got nil", tt.expectedJobFitError)
 				}
 				if job.JobFitErrors[0].Message != tt.expectedJobFitError {
@@ -782,6 +805,56 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 }
 
 func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
+	twoRacksOneZoneTree := func() *Info {
+		tree := &Info{
+			Name: "test-topology",
+			TopologyResource: &kueuev1alpha1.Topology{
+				Spec: kueuev1alpha1.TopologySpec{
+					Levels: []kueuev1alpha1.TopologyLevel{
+						{NodeLabel: "zone"},
+						{NodeLabel: "rack"},
+					},
+				},
+			},
+			DomainsByLevel: map[DomainLevel]LevelDomainInfos{
+				"rack": {
+					"rack1.zone1": {
+						ID:                       "rack1.zone1",
+						Level:                    "rack",
+						Nodes:                    map[string]*node_info.NodeInfo{},
+						IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+					},
+					"rack2.zone1": {
+						ID:                       "rack2.zone1",
+						Level:                    "rack",
+						Nodes:                    map[string]*node_info.NodeInfo{},
+						IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+					},
+				},
+				"zone": {
+					"zone1": {
+						ID:                       "zone1",
+						Level:                    "zone",
+						Nodes:                    map[string]*node_info.NodeInfo{},
+						IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+					},
+				},
+			},
+		}
+
+		tree.DomainsByLevel[rootLevel] = map[DomainID]*DomainInfo{
+			rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
+		}
+
+		// Set parent relationships
+		tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+			tree.DomainsByLevel["rack"]["rack1.zone1"],
+			tree.DomainsByLevel["rack"]["rack2.zone1"],
+		}
+
+		return tree
+	}
+
 	tests := []struct {
 		name                       string
 		job                        *jobs_fake.TestJobBasic
@@ -820,52 +893,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				"node-1": "rack1.zone1",
 				"node-2": "rack2.zone1",
 			},
-			setupTopologyTree: func() *Info {
-				tree := &Info{
-					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
-								{NodeLabel: "zone"},
-								{NodeLabel: "rack"},
-							},
-						},
-					},
-					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
-						"rack": {
-							"rack1.zone1": {
-								ID:    "rack1.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-							"rack2.zone1": {
-								ID:    "rack2.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-						},
-						"zone": {
-							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-						},
-					},
-				}
-
-				tree.DomainsByLevel[rootLevel] = map[DomainID]*DomainInfo{
-					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
-				}
-
-				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
-					"rack2.zone1": tree.DomainsByLevel["rack"]["rack2.zone1"],
-				}
-
-				return tree
-			},
+			setupTopologyTree: twoRacksOneZoneTree,
 			domainParent: map[DomainID]DomainID{
 				"rack1.zone1": "zone1",
 				"rack2.zone1": "zone1",
@@ -918,52 +946,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				"node-1": "rack1.zone1",
 				"node-2": "rack2.zone1",
 			},
-			setupTopologyTree: func() *Info {
-				tree := &Info{
-					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
-								{NodeLabel: "zone"},
-								{NodeLabel: "rack"},
-							},
-						},
-					},
-					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
-						"rack": {
-							"rack1.zone1": {
-								ID:    "rack1.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-							"rack2.zone1": {
-								ID:    "rack2.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-						},
-						"zone": {
-							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-						},
-					},
-				}
-
-				tree.DomainsByLevel[rootLevel] = map[DomainID]*DomainInfo{
-					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
-				}
-
-				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
-					"rack2.zone1": tree.DomainsByLevel["rack"]["rack2.zone1"],
-				}
-
-				return tree
-			},
+			setupTopologyTree: twoRacksOneZoneTree,
 			domainParent: map[DomainID]DomainID{
 				"rack1.zone1": "zone1",
 				"rack2.zone1": "zone1",
@@ -1022,52 +1005,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				"node-2": "rack1.zone1",
 				"node-3": "rack2.zone1",
 			},
-			setupTopologyTree: func() *Info {
-				tree := &Info{
-					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
-								{NodeLabel: "zone"},
-								{NodeLabel: "rack"},
-							},
-						},
-					},
-					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
-						"rack": {
-							"rack1.zone1": {
-								ID:    "rack1.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-							"rack2.zone1": {
-								ID:    "rack2.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-						},
-						"zone": {
-							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-						},
-					},
-				}
-
-				tree.DomainsByLevel[rootLevel] = map[DomainID]*DomainInfo{
-					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
-				}
-
-				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
-					"rack2.zone1": tree.DomainsByLevel["rack"]["rack2.zone1"],
-				}
-
-				return tree
-			},
+			setupTopologyTree: twoRacksOneZoneTree,
 			domainParent: map[DomainID]DomainID{
 				"rack1.zone1": "zone1",
 				"rack2.zone1": "zone1",
@@ -1126,9 +1064,10 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
@@ -1187,52 +1126,7 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				"node-1": "rack1.zone1",
 				"node-2": "rack2.zone1",
 			},
-			setupTopologyTree: func() *Info {
-				tree := &Info{
-					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
-								{NodeLabel: "zone"},
-								{NodeLabel: "rack"},
-							},
-						},
-					},
-					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
-						"rack": {
-							"rack1.zone1": {
-								ID:    "rack1.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-							"rack2.zone1": {
-								ID:    "rack2.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-						},
-						"zone": {
-							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
-							},
-						},
-					},
-				}
-
-				tree.DomainsByLevel[rootLevel] = map[DomainID]*DomainInfo{
-					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
-				}
-
-				// Set parent relationships
-				tree.DomainsByLevel["zone"]["zone1"].Children = map[DomainID]*DomainInfo{
-					"rack1.zone1": tree.DomainsByLevel["rack"]["rack1.zone1"],
-					"rack2.zone1": tree.DomainsByLevel["rack"]["rack2.zone1"],
-				}
-
-				return tree
-			},
+			setupTopologyTree: twoRacksOneZoneTree,
 			domainParent: map[DomainID]DomainID{
 				"rack1.zone1": "zone1",
 				"rack2.zone1": "zone1",
@@ -1256,6 +1150,62 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 					ID:              "zone1",
 					Level:           "zone",
 					AllocatablePods: 4,
+				},
+			},
+		},
+		{
+			name: "Job requests 0 resources - set maximal amount of pods on each node",
+			job: &jobs_fake.TestJobBasic{
+				Name:                "test-job",
+				RequiredCPUsPerTask: 0,
+				IsBestEffortJob:     true, // ensures tasks are generated with no requested resources
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{State: pod_status.Pending},
+					{State: pod_status.Pending},
+					{State: pod_status.Pending},
+					{State: pod_status.Pending},
+				},
+			},
+			nodes: map[string]nodes_fake.TestNodeBasic{
+				"node-1": {
+					CPUMillis:  1000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+				},
+				"node-2": {
+					CPUMillis:  1000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+				},
+			},
+			nodesToDomains: map[string]DomainID{
+				"node-1": "rack1.zone1",
+				"node-2": "rack2.zone1",
+			},
+			setupTopologyTree: twoRacksOneZoneTree,
+			domainParent: map[DomainID]DomainID{
+				"rack1.zone1": "zone1",
+				"rack2.zone1": "zone1",
+			},
+			domainLevel: map[DomainID]DomainLevel{
+				"zone1": "zone",
+			},
+			expectedMaxAllocatablePods: 8,
+			expectedDomains: map[DomainID]*DomainInfo{
+				"rack1.zone1": {
+					ID:              "rack1.zone1",
+					Level:           "rack",
+					AllocatablePods: 4,
+				},
+				"rack2.zone1": {
+					ID:              "rack2.zone1",
+					Level:           "rack",
+					AllocatablePods: 4,
+				},
+				"zone1": {
+					ID:              "zone1",
+					Level:           "zone",
+					AllocatablePods: 8,
 				},
 			},
 		},
@@ -1767,13 +1717,13 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 							ID:              "zone1.region1",
 							Level:           "zone",
 							AllocatablePods: 6,
-							Children: map[DomainID]*DomainInfo{
-								"rack1.zone1.region1": {
+							Children: []*DomainInfo{
+								{
 									ID:              "rack1.zone1.region1",
 									Level:           "rack",
 									AllocatablePods: 3,
 								},
-								"rack2.zone1.region1": {
+								{
 									ID:              "rack2.zone1.region1",
 									Level:           "rack",
 									AllocatablePods: 3,
@@ -1784,28 +1734,28 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 							ID:              "zone2.region1",
 							Level:           "zone",
 							AllocatablePods: 6,
-							Children: map[DomainID]*DomainInfo{
-								"rack1.zone2.region1": {
+							Children: []*DomainInfo{
+								{
 									ID:              "rack1.zone2.region1",
 									Level:           "rack",
 									AllocatablePods: 2,
 								},
-								"rack2.zone1.region1": {
+								{
 									ID:              "rack2.zone1.region1",
 									Level:           "rack",
 									AllocatablePods: 1,
 								},
-								"rack3.zone2.region1": {
+								{
 									ID:              "rack3.zone2.region1",
 									Level:           "rack",
 									AllocatablePods: 1,
 								},
-								"rack4.zone2.region1": {
+								{
 									ID:              "rack4.zone2.region1",
 									Level:           "rack",
 									AllocatablePods: 1,
 								},
-								"rack5.zone2.region1": {
+								{
 									ID:              "rack5.zone2.region1",
 									Level:           "rack",
 									AllocatablePods: 1,

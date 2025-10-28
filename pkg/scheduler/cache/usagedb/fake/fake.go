@@ -17,11 +17,16 @@ type FakeClient struct {
 }
 
 var _ api.Interface = &FakeClient{}
+var Client *FakeClient
 
 func NewFakeClient(_ string, _ *api.UsageParams) (api.Interface, error) {
-	return &FakeClient{
-		resourceUsage: queue_info.NewClusterUsage(),
-	}, nil
+	if Client == nil {
+		Client = &FakeClient{
+			resourceUsage: queue_info.NewClusterUsage(),
+		}
+	}
+
+	return Client, nil
 }
 
 func (f *FakeClient) GetResourceUsage() (*queue_info.ClusterUsage, error) {

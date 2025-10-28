@@ -73,3 +73,7 @@ func (p *PodGroupController) IsAvailable(ctx context.Context, readerClient clien
 func (p *PodGroupController) Name() string {
 	return "PodGroupController"
 }
+
+func (p *PodGroupController) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+	return nil
+}

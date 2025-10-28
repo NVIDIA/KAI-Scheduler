@@ -74,3 +74,7 @@ func (q *QueueController) IsAvailable(ctx context.Context, readerClient client.R
 func (q *QueueController) Name() string {
 	return "QueueController"
 }
+
+func (q *QueueController) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+	return nil
+}

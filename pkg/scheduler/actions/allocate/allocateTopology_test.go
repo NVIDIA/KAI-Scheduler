@@ -4,6 +4,7 @@
 package allocate_test
 
 import (
+	"fmt"
 	"testing"
 
 	. "go.uber.org/mock/gomock"
@@ -1011,13 +1012,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-0": {
-						NodeName:             "node0",
+						NodeName:             "node1",
 						GPUsRequired:         1,
 						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-1": {
-						NodeName:             "node1",
+						NodeName:             "node0",
 						GPUsRequired:         1,
 						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
@@ -1179,13 +1180,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-0": {
-						NodeName:             "node2",
+						NodeName:             "node3",
 						GPUsRequired:         1,
 						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
 					},
 					"pending_job0-1": {
-						NodeName:             "node3",
+						NodeName:             "node2",
 						GPUsRequired:         1,
 						Status:               pod_status.Binding,
 						DontValidateGPUGroup: true,
@@ -2299,5 +2300,762 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 			},
 			RoundsUntilMatch: 1,
 		},
+		{
+			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Name: "Combined preferred and required topology constraints - preferred level respected when possible",
+				// Tests that when both required (rack) and preferred (spine) topology levels are specified,
+				// the scheduler respects both: all tasks stay within the required rack level, and tasks are
+				// concentrated on minimum number of spines (2 spines used for 3 tasks, not spread across 3-4 spines).
+				Topologies: []*kueuev1alpha1.Topology{
+					{
+						ObjectMeta: v1.ObjectMeta{
+							Name: "cluster-topology",
+						},
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{
+									NodeLabel: "k8s.io/rack",
+								},
+								{
+									NodeLabel: "k8s.io/spine",
+								},
+							},
+						},
+					},
+				},
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:                "pending_job0",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:       "cluster-topology",
+								RequiredLevel:  "k8s.io/rack",
+								PreferredLevel: "k8s.io/spine",
+							},
+						),
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State: pod_status.Pending,
+							},
+							{
+								State: pod_status.Pending,
+							},
+							{
+								State: pod_status.Pending,
+							},
+						},
+					},
+				},
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node0": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/rack":  "rack1",
+							"k8s.io/spine": "spine1",
+						},
+					},
+					"node1": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/rack":  "rack1",
+							"k8s.io/spine": "spine1",
+						},
+					},
+					"node2": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/rack":  "rack1",
+							"k8s.io/spine": "spine2",
+						},
+					},
+					"node3": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/rack":  "rack1",
+							"k8s.io/spine": "spine2",
+						},
+					},
+					"node4": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/rack":  "rack1",
+							"k8s.io/spine": "spine3",
+						},
+					},
+					"node5": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/rack":  "rack1",
+							"k8s.io/spine": "spine3",
+						},
+					},
+					"node6": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/rack":  "rack1",
+							"k8s.io/spine": "spine4",
+						},
+					},
+					"node7": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/rack":  "rack1",
+							"k8s.io/spine": "spine4",
+						},
+					},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:               "queue0",
+						ParentQueue:        "department-a",
+						DeservedGPUs:       8,
+						GPUOverQuotaWeight: 1,
+						MaxAllowedGPUs:     8,
+					},
+				},
+				Departments: []test_utils.TestDepartmentBasic{
+					{
+						Name:         "department-a",
+						DeservedGPUs: 8,
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"pending_job0-0": {
+						NodeName:             "node6",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-1": {
+						NodeName:             "node7",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-2": {
+						NodeName:             "node4",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheBinds: 3,
+					},
+				},
+			},
+			RoundsUntilMatch: 1,
+		},
+		{
+			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Name: "Hierarchical Preferred Topology - PodGroup prefers Spine, SubGroups has no preference - should allocate on closest Spine nodes",
+				Topologies: []*kueuev1alpha1.Topology{
+					{
+						ObjectMeta: v1.ObjectMeta{
+							Name: "cluster-topology",
+						},
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{
+									NodeLabel: "k8s.io/zone",
+								},
+								{
+									NodeLabel: "k8s.io/spine",
+								},
+								{
+									NodeLabel: "k8s.io/rack",
+								},
+							},
+						},
+					},
+				},
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:                "pending_job0",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							subgroupA := subgroup_info.NewSubGroupSet("subgroup-a", &topology_info.TopologyConstraintInfo{})
+							subgroupA.AddPodSet(subgroup_info.NewPodSet("pod-a-1", 1, nil))
+							subgroupA.AddPodSet(subgroup_info.NewPodSet("pod-a-2", 1, nil))
+							subgroupA.AddPodSet(subgroup_info.NewPodSet("pod-a-3", 1, nil))
+
+							subgroupB := subgroup_info.NewSubGroupSet("subgroup-b", &topology_info.TopologyConstraintInfo{})
+							subgroupB.AddPodSet(subgroup_info.NewPodSet("pod-b-1", 1, nil))
+							subgroupB.AddPodSet(subgroup_info.NewPodSet("pod-b-2", 1, nil))
+							subgroupB.AddPodSet(subgroup_info.NewPodSet("pod-b-3", 1, nil))
+
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+								&topology_info.TopologyConstraintInfo{
+									Topology:       "cluster-topology",
+									PreferredLevel: "k8s.io/spine",
+								},
+							)
+							root.AddSubGroup(subgroupA)
+							root.AddSubGroup(subgroupB)
+
+							return root
+						}(),
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-a-1",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-a-2",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-a-3",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-b-1",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-b-2",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-b-3",
+							},
+						},
+					},
+				},
+				// zone1
+				// ├── spine1
+				// │   ├── rack1
+				// │   │   ├── node0 (1 GPU)
+				// │   │   └── node1 (1 GPU)
+				// │   └── rack2
+				// │       ├── node2 (1 GPU)
+				// │       └── node3 (1 GPU)
+				// └── spine2
+				// 	├── rack3
+				// 	│   ├── node4 (1 GPU)
+				// 	│   └── node5 (1 GPU)
+				// 	└── rack4
+				// 		├── node6 (1 GPU)
+				// 		└── node7 (1 GPU)
+				Nodes: buildEvenlyDistributedTopologyNodes(1, 2, 2, 2, 1),
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:               "queue0",
+						ParentQueue:        "department-a",
+						DeservedGPUs:       16,
+						GPUOverQuotaWeight: 1,
+						MaxAllowedGPUs:     16,
+					},
+				},
+				Departments: []test_utils.TestDepartmentBasic{
+					{
+						Name:         "department-a",
+						DeservedGPUs: 16,
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"pending_job0-0": {
+						NodeName:             "node4",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-1": {
+						NodeName:             "node5",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-2": {
+						NodeName:             "node6",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-3": {
+						NodeName:             "node7",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-4": {
+						NodeName:             "node0",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-5": {
+						NodeName:             "node1",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheBinds: 6,
+					},
+				},
+			},
+			RoundsUntilMatch: 1,
+		},
+		{
+			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Name: "Hierarchical Conflicting Preferred Topology - PodGroup prefers Spine, SubGroups prefer Rack - should allocate on closest Rack nodes",
+				Topologies: []*kueuev1alpha1.Topology{
+					{
+						ObjectMeta: v1.ObjectMeta{
+							Name: "cluster-topology",
+						},
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{
+									NodeLabel: "k8s.io/zone",
+								},
+								{
+									NodeLabel: "k8s.io/spine",
+								},
+								{
+									NodeLabel: "k8s.io/rack",
+								},
+							},
+						},
+					},
+				},
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:                "pending_job0",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							subgroupA := subgroup_info.NewSubGroupSet("subgroup-a",
+								&topology_info.TopologyConstraintInfo{
+									Topology:       "cluster-topology",
+									PreferredLevel: "k8s.io/rack",
+								},
+							)
+							subgroupA.AddPodSet(subgroup_info.NewPodSet("pod-a-1", 1, nil))
+							subgroupA.AddPodSet(subgroup_info.NewPodSet("pod-a-2", 1, nil))
+							subgroupA.AddPodSet(subgroup_info.NewPodSet("pod-a-3", 1, nil))
+
+							subgroupB := subgroup_info.NewSubGroupSet("subgroup-b",
+								&topology_info.TopologyConstraintInfo{
+									Topology:       "cluster-topology",
+									PreferredLevel: "k8s.io/rack",
+								},
+							)
+							subgroupB.AddPodSet(subgroup_info.NewPodSet("pod-b-1", 1, nil))
+							subgroupB.AddPodSet(subgroup_info.NewPodSet("pod-b-2", 1, nil))
+							subgroupB.AddPodSet(subgroup_info.NewPodSet("pod-b-3", 1, nil))
+
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+								&topology_info.TopologyConstraintInfo{
+									Topology:       "cluster-topology",
+									PreferredLevel: "k8s.io/spine",
+								},
+							)
+							root.AddSubGroup(subgroupA)
+							root.AddSubGroup(subgroupB)
+
+							return root
+						}(),
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-a-1",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-a-2",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-a-3",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-b-1",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-b-2",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "pod-b-3",
+							},
+						},
+					},
+				},
+				// zone1
+				// ├── spine1
+				// │   ├── rack1
+				// │   │   ├── node0 (1 GPU)
+				// │   │   └── node1 (1 GPU)
+				// │   └── rack2
+				// │       ├── node2 (1 GPU)
+				// │       └── node3 (1 GPU)
+				// └── spine2
+				// 	├── rack3
+				// 	│   ├── node4 (1 GPU)
+				// 	│   └── node5 (1 GPU)
+				// 	└── rack4
+				// 		├── node6 (1 GPU)
+				// 		└── node7 (1 GPU)
+				Nodes: buildEvenlyDistributedTopologyNodes(1, 2, 2, 2, 1),
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:               "queue0",
+						ParentQueue:        "department-a",
+						DeservedGPUs:       16,
+						GPUOverQuotaWeight: 1,
+						MaxAllowedGPUs:     16,
+					},
+				},
+				Departments: []test_utils.TestDepartmentBasic{
+					{
+						Name:         "department-a",
+						DeservedGPUs: 16,
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"pending_job0-0": {
+						NodeName:             "node2",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-1": {
+						NodeName:             "node3",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-2": {
+						NodeName:             "node0",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-3": {
+						NodeName:             "node6",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-4": {
+						NodeName:             "node7",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-5": {
+						NodeName:             "node4",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheBinds: 6,
+					},
+				},
+			},
+			RoundsUntilMatch: 1,
+		},
+		{
+			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Name: "Bin Packing - allocate on domain with least free resources (most occupied)",
+				Topologies: []*kueuev1alpha1.Topology{
+					{
+						ObjectMeta: v1.ObjectMeta{
+							Name: "cluster-topology",
+						},
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{
+									NodeLabel: "k8s.io/zone",
+								},
+								{
+									NodeLabel: "k8s.io/spine",
+								},
+								{
+									NodeLabel: "k8s.io/rack",
+								},
+							},
+						},
+					},
+				},
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:                "running_job0",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:    pod_status.Running,
+								NodeName: "node0", // spine1, rack1
+							},
+							{
+								State:    pod_status.Running,
+								NodeName: "node1", // spine1, rack1
+							},
+							{
+								State:    pod_status.Running,
+								NodeName: "node2", // spine1, rack2
+							},
+						},
+					},
+					{
+						Name:                "pending_job0",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:       "cluster-topology",
+								PreferredLevel: "k8s.io/spine",
+							},
+						),
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State: pod_status.Pending,
+							},
+						},
+					},
+				},
+				// zone1
+				// ├── spine1 (3/4 GPUs occupied - 1 free)
+				// │   ├── rack1
+				// │   │   ├── node0 (1 GPU) - OCCUPIED
+				// │   │   └── node1 (1 GPU) - OCCUPIED
+				// │   └── rack2
+				// │       ├── node2 (1 GPU) - OCCUPIED
+				// │       └── node3 (1 GPU) - FREE - **Allocation should happen here
+				// └── spine2 (0/4 GPUs occupied - 4 free)
+				// 	├── rack3
+				// 	│   ├── node4 (1 GPU) - FREE
+				// 	│   └── node5 (1 GPU) - FREE
+				// 	└── rack4
+				// 		├── node6 (1 GPU) - FREE
+				// 		└── node7 (1 GPU) - FREE
+				Nodes: buildEvenlyDistributedTopologyNodes(1, 2, 2, 2, 1),
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:               "queue0",
+						ParentQueue:        "department-a",
+						DeservedGPUs:       16,
+						GPUOverQuotaWeight: 1,
+						MaxAllowedGPUs:     16,
+					},
+				},
+				Departments: []test_utils.TestDepartmentBasic{
+					{
+						Name:         "department-a",
+						DeservedGPUs: 16,
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"running_job0-0": {
+						NodeName:             "node0",
+						GPUsRequired:         1,
+						Status:               pod_status.Running,
+						DontValidateGPUGroup: true,
+					},
+					"running_job0-1": {
+						NodeName:             "node1",
+						GPUsRequired:         1,
+						Status:               pod_status.Running,
+						DontValidateGPUGroup: true,
+					},
+					"running_job0-2": {
+						NodeName:             "node2",
+						GPUsRequired:         1,
+						Status:               pod_status.Running,
+						DontValidateGPUGroup: true,
+					},
+					// Bin packing: should allocate on spine1 (most occupied, least free resources)
+					// rather than spine2 (completely free)
+					"pending_job0-0": {
+						NodeName:             "node3", // spine1, rack2 - the only free node on spine1
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheBinds: 1,
+					},
+				},
+			},
+			RoundsUntilMatch: 1,
+		},
+		{
+			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Name: "Bin Packing - Pack Top-Most domain first",
+				Topologies: []*kueuev1alpha1.Topology{
+					{
+						ObjectMeta: v1.ObjectMeta{
+							Name: "cluster-topology",
+						},
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{
+									NodeLabel: "k8s.io/zone",
+								},
+								{
+									NodeLabel: "k8s.io/spine",
+								},
+								{
+									NodeLabel: "k8s.io/rack",
+								},
+							},
+						},
+					},
+				},
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:                "pending_job0",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+							&topology_info.TopologyConstraintInfo{
+								Topology:       "cluster-topology",
+								PreferredLevel: "k8s.io/rack",
+							},
+						),
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State: pod_status.Pending,
+							},
+						},
+					},
+				},
+				// zone1 (5 GPUs total)
+				// ├── spine1 (3 GPUs total)
+				// │   ├── rack1 (1 GPU)
+				// │   │   └── node0 (1 GPU)
+				// │   ├── rack2 (1 GPU)
+				// │   │   └── node1 (1 GPU)
+				// │   └── rack3 (1 GPU)
+				// │       └── node2 (1 GPU)
+				// └── spine2 (2 GPUs total)
+				//     └── rack4 (2 GPUs)
+				//         ├── node3 (1 GPU) - **Should allocate here
+				//         └── node4 (1 GPU)
+				//
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node0": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/zone":  "zone1",
+							"k8s.io/spine": "spine1",
+							"k8s.io/rack":  "rack1",
+						},
+					},
+					"node1": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/zone":  "zone1",
+							"k8s.io/spine": "spine1",
+							"k8s.io/rack":  "rack2",
+						},
+					},
+					"node2": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/zone":  "zone1",
+							"k8s.io/spine": "spine1",
+							"k8s.io/rack":  "rack3",
+						},
+					},
+					"node3": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/zone":  "zone1",
+							"k8s.io/spine": "spine2",
+							"k8s.io/rack":  "rack4",
+						},
+					},
+					"node4": {
+						GPUs: 1,
+						Labels: map[string]string{
+							"k8s.io/zone":  "zone1",
+							"k8s.io/spine": "spine2",
+							"k8s.io/rack":  "rack4",
+						},
+					},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:               "queue0",
+						ParentQueue:        "department-a",
+						DeservedGPUs:       5,
+						GPUOverQuotaWeight: 1,
+						MaxAllowedGPUs:     5,
+					},
+				},
+				Departments: []test_utils.TestDepartmentBasic{
+					{
+						Name:         "department-a",
+						DeservedGPUs: 5,
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"pending_job0-0": {
+						NodeName:             "node3",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheBinds: 1,
+					},
+				},
+			},
+			RoundsUntilMatch: 1,
+		},
 	}
+}
+
+func buildEvenlyDistributedTopologyNodes(numZones, numSpinesPerZone, numRacksPerSpine, numNodesPerRack, gpusPerNode int) map[string]nodes_fake.TestNodeBasic {
+	nodes := make(map[string]nodes_fake.TestNodeBasic)
+	nodeID := 0
+	for z := 1; z <= numZones; z++ {
+		zoneLabel := fmt.Sprintf("zone%d", z)
+		for sp := 1; sp <= numSpinesPerZone; sp++ {
+			spineLabel := fmt.Sprintf("spine%d", sp+(z-1)*numSpinesPerZone)
+			for r := 1; r <= numRacksPerSpine; r++ {
+				rackLabel := fmt.Sprintf("rack%d", r+(sp-1)*numRacksPerSpine+(z-1)*numSpinesPerZone*numRacksPerSpine)
+				for n := 1; n <= numNodesPerRack; n++ {
+					nodeName := fmt.Sprintf("node%d", nodeID)
+					nodes[nodeName] = nodes_fake.TestNodeBasic{
+						GPUs: gpusPerNode,
+						Labels: map[string]string{
+							"k8s.io/zone":  zoneLabel,
+							"k8s.io/spine": spineLabel,
+							"k8s.io/rack":  rackLabel,
+						},
+					}
+					nodeID++
+				}
+			}
+		}
+	}
+
+	return nodes
 }

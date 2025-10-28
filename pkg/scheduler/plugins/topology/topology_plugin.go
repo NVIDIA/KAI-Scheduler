@@ -7,7 +7,9 @@ import (
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
+	"github.com/samber/lo"
 )
 
 const (
@@ -16,13 +18,24 @@ const (
 	rootDomainId       = rootLevel
 )
 
+type topologyName = string
+type subgroupName = string
+
 type topologyPlugin struct {
-	TopologyTrees map[string]*Info
+	TopologyTrees map[topologyName]*Info
+
+	// Defines order among nodes in a sub-group based on the sub-group's preferred level topology constraint.
+	subGroupNodeScores map[subgroupName]map[string]float64
+	nodeSetToDomain    map[topologyName]map[nodeSetID]*DomainInfo
+	session            *framework.Session
 }
 
-func New(_ map[string]string) framework.Plugin {
+func New(_ framework.PluginArguments) framework.Plugin {
 	return &topologyPlugin{
-		TopologyTrees: map[string]*Info{},
+		TopologyTrees:      map[topologyName]*Info{},
+		subGroupNodeScores: map[subgroupName]map[string]float64{},
+		nodeSetToDomain:    map[topologyName]map[nodeSetID]*DomainInfo{},
+		session:            nil,
 	}
 }
 
@@ -31,9 +44,17 @@ func (t *topologyPlugin) Name() string {
 }
 
 func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
+	t.session = ssn
 	t.initializeTopologyTree(ssn.Topologies, ssn.Nodes)
 
 	ssn.AddSubsetNodesFn(t.subSetNodesFn)
+	ssn.AddNodeOrderFn(t.nodeOrderFn)
+	ssn.AddPreJobAllocationFn(t.preJobAllocationFn)
+}
+
+func (t *topologyPlugin) preJobAllocationFn(_ *podgroup_info.PodGroupInfo) {
+	// Invalidate the sub-group node scores
+	t.subGroupNodeScores = map[subgroupName]map[string]float64{}
 }
 
 func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, nodes map[string]*node_info.NodeInfo) {
@@ -53,7 +74,24 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 		}
 
 		t.TopologyTrees[topology.Name] = topologyTree
+
+		t.buildNodeSetToDomainMapping(topology.Name, topologyTree)
 	}
+}
+
+func (t *topologyPlugin) buildNodeSetToDomainMapping(topologyName topologyName, topologyTree *Info) {
+	t.nodeSetToDomain[topologyName] = map[nodeSetID]*DomainInfo{}
+	domains := []*DomainInfo{}
+	for _, levelDomains := range topologyTree.DomainsByLevel {
+		for _, domain := range levelDomains {
+			domains = append(domains, domain)
+		}
+	}
+	for _, domain := range domains {
+		t.nodeSetToDomain[topologyName][getNodeSetID(lo.Values(domain.Nodes))] = domain
+	}
+
+	t.nodeSetToDomain[topologyName][getNodeSetID(lo.Values(t.session.Nodes))] = topologyTree.DomainsByLevel[rootLevel][rootDomainId]
 }
 
 func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
@@ -82,12 +120,12 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueue
 
 		// Connect the child domain to the current domain. The current node gives us the link
 		if nodeContainingChildDomain != nil {
-			domainInfo.Children[nodeContainingChildDomain.ID] = nodeContainingChildDomain
+			domainInfo.AddChild(nodeContainingChildDomain)
 		}
 		nodeContainingChildDomain = domainInfo
 	}
 
-	topologyTree.DomainsByLevel[rootLevel][rootDomainId].Children[nodeContainingChildDomain.ID] = nodeContainingChildDomain
+	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddChild(nodeContainingChildDomain)
 	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddNode(nodeInfo)
 }
 

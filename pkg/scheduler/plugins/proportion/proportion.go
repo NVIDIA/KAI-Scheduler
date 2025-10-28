@@ -21,7 +21,6 @@ package proportion
 
 import (
 	"math"
-	"strconv"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
@@ -55,26 +54,32 @@ type proportionPlugin struct {
 	queues              map[common_info.QueueID]*rs.QueueAttributes
 	jobSimulationQueues map[common_info.QueueID]*rs.QueueAttributes
 	// Arguments given for the plugin
-	pluginArguments               map[string]string
+	pluginArguments               framework.PluginArguments
 	subGroupOrderFn               common_info.LessFn
 	taskOrderFunc                 common_info.LessFn
 	reclaimablePlugin             *rec.Reclaimable
 	allowConsolidatingReclaim     bool
 	relcaimerSaturationMultiplier float64
+	kValue                        float64
 }
 
-func New(arguments map[string]string) framework.Plugin {
-	multiplier := 1.0
-	if val, exists := arguments["relcaimerSaturationMultiplier"]; exists {
-		if m, err := strconv.ParseFloat(val, 64); err == nil {
-			if m < 1.0 {
-				log.InfraLogger.Warningf("relcaimerSaturationMultiplier must be >= 1.0, got %v. Using default value of 1.0", m)
-			} else {
-				multiplier = m
-			}
-		} else {
-			log.InfraLogger.V(1).Errorf("Failed to parse relcaimerSaturationMultiplier: %s. Using default 1.", val)
-		}
+func New(arguments framework.PluginArguments) framework.Plugin {
+	multiplier, err := arguments.GetFloat64("relcaimerSaturationMultiplier", 1.0)
+	if err != nil {
+		log.InfraLogger.Warningf("Failed to parse relcaimerSaturationMultiplier: %v. Using default value of 1.0", err)
+	}
+	if multiplier < 1.0 {
+		log.InfraLogger.Warningf("relcaimerSaturationMultiplier must be >= 1.0, got %v. Using default value of 1.0", multiplier)
+		multiplier = 1.0
+	}
+
+	kValue, err := arguments.GetFloat64("kValue", 1.0)
+	if err != nil {
+		log.InfraLogger.Warningf("Failed to parse kValue: %v. Using default value of 1.0", err)
+	}
+	if kValue <= 0.0 {
+		log.InfraLogger.Warningf("kValue must be > 0.0, got %v. Setting as 0", kValue)
+		kValue = 0.0
 	}
 
 	return &proportionPlugin{
@@ -82,6 +87,7 @@ func New(arguments map[string]string) framework.Plugin {
 		queues:                        map[common_info.QueueID]*rs.QueueAttributes{},
 		pluginArguments:               arguments,
 		relcaimerSaturationMultiplier: multiplier,
+		kValue:                        kValue,
 	}
 }
 
@@ -391,7 +397,7 @@ func (pp *proportionPlugin) setFairShare() {
 	topQueues := pp.getTopQueues()
 	metrics.ResetQueueUsage()
 	metrics.ResetQueueFairShare()
-	pp.setFairShareForQueues(pp.totalResource, 1, topQueues)
+	pp.setFairShareForQueues(pp.totalResource, pp.kValue, topQueues)
 }
 
 func (pp *proportionPlugin) setFairShareForQueues(totalResources rs.ResourceQuantities, kValue float64,

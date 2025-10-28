@@ -28,6 +28,8 @@ const (
 )
 
 var (
+	initiated = false
+
 	queueInfo            *prometheus.GaugeVec
 	queueDeservedGPUs    *prometheus.GaugeVec
 	queueQuotaCPU        *prometheus.GaugeVec
@@ -54,6 +56,11 @@ var (
 // queueLabelToMetricLabelMap        = map[string]string{"priority": "queue_priority"}
 // queueLabelToDefaultMetricValueMap = map[string]string{"priority": "normal"}
 func InitMetrics(namespace string, queueLabelToMetricLabelMap, queueLabelToDefaultMetricValueMap map[string]string) {
+	if initiated {
+		return
+	}
+	initiated = true
+
 	// Sort the keys to ensure consistent order
 	sortedQueueLabelKeys := make([]string, 0, len(queueLabelToMetricLabelMap))
 	for key := range queueLabelToMetricLabelMap {

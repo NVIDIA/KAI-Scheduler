@@ -14,5 +14,6 @@ type Operand interface {
 	DesiredState(context.Context, client.Reader, *enginev1alpha1.Config) ([]client.Object, error)
 	IsDeployed(context.Context, client.Reader) (bool, error)
 	IsAvailable(context.Context, client.Reader) (bool, error)
+	Monitor(context.Context, client.Reader, *enginev1alpha1.Config) error
 	Name() string
 }

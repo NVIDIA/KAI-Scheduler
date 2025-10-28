@@ -157,9 +157,7 @@ func Test_rayPlugin_OnSessionOpen(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pp := &rayPlugin{
-				pluginArguments: tt.fields.pluginArguments,
-			}
+			pp := &rayPlugin{}
 			pp.OnSessionOpen(tt.args.ssn)
 		})
 	}

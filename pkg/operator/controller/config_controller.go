@@ -123,6 +123,12 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 	if err = r.deployable.Deploy(ctx, r.Client, kaiConfig, kaiConfig); err != nil {
 		return ctrl.Result{}, err
 	}
+
+	// Monitor all operands
+	if err = r.deployable.Monitor(ctx, r.Client, kaiConfig); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 

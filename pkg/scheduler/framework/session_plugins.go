@@ -112,6 +112,10 @@ func (ssn *Session) AddBindRequestMutateFn(fn api.BindRequestMutateFn) {
 	ssn.BindRequestMutateFns = append(ssn.BindRequestMutateFns, fn)
 }
 
+func (ssn *Session) AddPreJobAllocationFn(fn api.PreJobAllocationFn) {
+	ssn.PreJobAllocationFns = append(ssn.PreJobAllocationFns, fn)
+}
+
 func (ssn *Session) CanReclaimResources(reclaimer *podgroup_info.PodGroupInfo) bool {
 	for _, canReclaimFn := range ssn.CanReclaimResourcesFns {
 		return canReclaimFn(reclaimer)
@@ -443,4 +447,10 @@ func (ssn *Session) MutateBindRequestAnnotations(pod *pod_info.PodInfo, nodeName
 		maps.Copy(annotations, fn(pod, nodeName))
 	}
 	return annotations
+}
+
+func (ssn *Session) PreJobAllocation(job *podgroup_info.PodGroupInfo) {
+	for _, preJobAllocationFn := range ssn.PreJobAllocationFns {
+		preJobAllocationFn(job)
+	}
 }
