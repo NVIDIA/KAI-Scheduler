@@ -176,7 +176,7 @@ func StartMonitoring(ctx context.Context, prometheusConfig *kaiprometheus.Promet
 	}
 
 	go func() {
-		ticker := time.NewTicker(time.Duration(*prometheusConfig.ExternalPrometheusPingConfig.PingsInterval) * time.Second) // Check every 30 seconds
+		ticker := time.NewTicker(time.Duration(*prometheusConfig.ExternalPrometheusHealthProbe.Interval) * time.Second) // Check every 30 seconds
 		defer ticker.Stop()
 
 		for {
@@ -188,12 +188,12 @@ func StartMonitoring(ctx context.Context, prometheusConfig *kaiprometheus.Promet
 				}
 
 				// Test connectivity
-				err := pingExternalPrometheus(ctx, *prometheusConfig.ExternalPrometheusUrl, *prometheusConfig.ExternalPrometheusPingConfig.PingsTimeout, *prometheusConfig.ExternalPrometheusPingConfig.PingsMaxRetries)
+				err := pingExternalPrometheus(ctx, *prometheusConfig.ExternalPrometheusUrl, *prometheusConfig.ExternalPrometheusHealthProbe.Timeout, *prometheusConfig.ExternalPrometheusHealthProbe.MaxRetries)
 
 				var condition metav1.Condition
 				if err != nil {
 					condition = metav1.Condition{
-						Type:               "PrometheusConnectivity",
+						Type:               string(kaiv1.ConditionTypeAvailable),
 						Status:             metav1.ConditionFalse,
 						Reason:             "prometheus_connection_failed",
 						Message:            fmt.Sprintf("Failed to ping external Prometheus: %v", err),
@@ -201,7 +201,7 @@ func StartMonitoring(ctx context.Context, prometheusConfig *kaiprometheus.Promet
 					}
 				} else {
 					condition = metav1.Condition{
-						Type:               "PrometheusConnectivity",
+						Type:               string(kaiv1.ConditionTypeAvailable),
 						Status:             metav1.ConditionTrue,
 						Reason:             "prometheus_connected",
 						Message:            "External Prometheus connectivity verified",
@@ -291,7 +291,7 @@ func ValidateExternalPrometheusConnection(ctx context.Context, prometheusConfig 
 	}
 
 	// Validate the connection once
-	err := pingExternalPrometheus(ctx, *prometheusConfig.ExternalPrometheusUrl, *prometheusConfig.ExternalPrometheusPingConfig.PingsTimeout, *prometheusConfig.ExternalPrometheusPingConfig.PingsMaxRetries)
+	err := pingExternalPrometheus(ctx, *prometheusConfig.ExternalPrometheusUrl, *prometheusConfig.ExternalPrometheusHealthProbe.Timeout, *prometheusConfig.ExternalPrometheusHealthProbe.MaxRetries)
 	if err != nil {
 		return fmt.Errorf("failed to ping external Prometheus: %w", err)
 	}

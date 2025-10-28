@@ -24,11 +24,10 @@ import (
 type ConditionType string
 
 const (
-	ConditionTypeReconciling            ConditionType = "Reconciling"
-	ConditionTypeDeployed               ConditionType = "Deployed"
-	ConditionTypeAvailable              ConditionType = "Available"
-	ConditionDependenciesFulfilled      ConditionType = "DependenciesFulfilled"
-	ConditionTypePrometheusConnectivity ConditionType = "PrometheusConnectivity"
+	ConditionTypeReconciling       ConditionType = "Reconciling"
+	ConditionTypeDeployed          ConditionType = "Deployed"
+	ConditionTypeAvailable         ConditionType = "Available"
+	ConditionDependenciesFulfilled ConditionType = "DependenciesFulfilled"
 )
 
 type ConditionReason string
