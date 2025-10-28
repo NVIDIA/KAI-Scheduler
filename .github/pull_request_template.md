@@ -1,3 +1,10 @@
+<!--  Thanks for sending a pull request!  Here are some tips for you:
+
+1. If this is your first time, please read our [Contributor Guide](/CONTRIBUTING.md)
+2. If this PR is unfinished, please mark it as a draft
+
+-->
+
 ## Description
 
 <!-- What does this PR do and why? -->
