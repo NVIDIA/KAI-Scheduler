@@ -26,13 +26,16 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/podgroupcontroller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/queuecontroller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/scheduler"
+	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/schedulerplugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/fake"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins"
 )
 
@@ -106,6 +109,7 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config,
 
 	actions.InitDefaultActions()
 	plugins.InitDefaultPlugins()
+	framework.RegisterPluginBuilder("fairnessTracker", schedulerplugins.New)
 
 	schedulerConf, err := conf_util.GetDefaultSchedulerConf()
 	if err != nil {
@@ -132,6 +136,14 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config,
 		}
 		schedulerConf.Tiers[0].Plugins[i].Arguments["kValue"] = fmt.Sprintf("%f", *kValue)
 	}
+
+	schedulerConf.Tiers = append(schedulerConf.Tiers, conf.Tier{
+		Plugins: []conf.PluginOption{
+			{
+				Name: "fairnessTracker",
+			},
+		},
+	})
 
 	stopCh := make(chan struct{})
 	err = scheduler.RunScheduler(cfg, schedulerConf, stopCh)
@@ -161,7 +173,16 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config,
 	return stopCh, cancel, usageClient, nil
 }
 
-func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Config, simulation TimeAwareSimulation) (allocationHistory fake.AllocationHistory, err error, cleanupErr error) {
+func RunSimulation(
+	ctx context.Context,
+	ctrlClient client.Client,
+	cfg *rest.Config,
+	simulation TimeAwareSimulation,
+) (
+	allocationHistory SimulationHistory,
+	err error,
+	cleanupErr error,
+) {
 	simulationName := randomstring.HumanFriendlyEnglishString(10)
 	simulation.SetDefaults()
 
@@ -197,7 +218,9 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 
 	var nodes []*corev1.Node
 	for _, node := range simulation.Nodes {
-		nodeObject := utils.CreateNodeObject(ctx, ctrlClient, utils.DefaultNodeConfig(fmt.Sprintf("test-node-%d", node.GPUs)))
+		nodeConfig := utils.DefaultNodeConfig(fmt.Sprintf("test-node-%d", node.GPUs))
+		nodeConfig.GPUs = node.GPUs
+		nodeObject := utils.CreateNodeObject(ctx, ctrlClient, nodeConfig)
 		nodeObject.ObjectMeta.Labels = map[string]string{
 			"simulation": simulationName,
 		}
@@ -239,7 +262,10 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 		}
 	}
 
-	for range *simulation.Cycles {
+	fairnessTrackerPlugin := schedulerplugins.GetFairnessTrackerPlugin()
+
+	allocationHistory = make(SimulationHistory, *simulation.Cycles)
+	for i := range *simulation.Cycles {
 		time.Sleep(simulationCycleInterval)
 		allocations, err := getAllocations(ctx, ctrlClient)
 		if err != nil {
@@ -250,9 +276,17 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 			return nil, fmt.Errorf("failed to get cluster resources: %w", err), nil
 		}
 		usageClient.AppendQueueAllocation(allocations, clusterResources)
-	}
 
-	allocationHistory = usageClient.GetAllocationHistory()
+		fairshares := fairnessTrackerPlugin.GetSnapshots()
+		a := map[common_info.QueueID]SimulationDataPoint{}
+		for queueID, fairshare := range fairshares {
+			a[queueID] = SimulationDataPoint{
+				Allocation: allocations[queueID][constants.GpuResource],
+				FairShare:  fairshare.GPUs(),
+			}
+		}
+		allocationHistory[i] = a
+	}
 
 	return allocationHistory, err, nil
 }

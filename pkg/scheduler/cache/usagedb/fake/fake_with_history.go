@@ -11,8 +11,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
-	"github.com/go-gota/gota/dataframe"
-	"github.com/go-gota/gota/series"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -107,39 +105,8 @@ func (f *FakeUsageDBClient) AppendQueueAllocation(queueAllocations map[common_in
 	f.clusterCapacityHistory = append(f.clusterCapacityHistory, totalInCluster)
 }
 
-func (f *FakeUsageDBClient) GetAllocationHistory() AllocationHistory {
-	return f.allocationHistory
-}
-
 type AllocationHistory []map[common_info.QueueID]queue_info.QueueUsage
 type ClusterCapacityHistory []map[v1.ResourceName]float64
-
-func (a AllocationHistory) ToDataFrame() dataframe.DataFrame {
-	var times []int
-	var queueIDs []string
-	var resources []string
-	var allocations []float64
-
-	for timeIndex, queueAllocations := range a {
-		for queueID, queueUsage := range queueAllocations {
-			for resourceName, allocation := range queueUsage {
-				times = append(times, timeIndex)
-				queueIDs = append(queueIDs, string(queueID))
-				resources = append(resources, string(resourceName))
-				allocations = append(allocations, allocation)
-			}
-		}
-	}
-
-	df := dataframe.New(
-		series.New(times, series.Int, "Time"),
-		series.New(queueIDs, series.String, "QueueID"),
-		series.New(resources, series.String, "Resource"),
-		series.New(allocations, series.Float, "Allocation"),
-	)
-
-	return df
-}
 
 func getDecaySlice(length int, period *time.Duration) []float64 {
 	if period == nil || period.Seconds() == 0 {

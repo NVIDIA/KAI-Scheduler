@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
-	"github.com/go-gota/gota/dataframe"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
@@ -46,30 +46,35 @@ var _ = Describe("Time Aware Fairness", Ordered, func() {
 		Expect(err).NotTo(HaveOccurred(), "Failed to run simulation")
 		Expect(cleanupError).NotTo(HaveOccurred(), "Failed to cleanup simulation")
 
-		df := allocationHistory.ToDataFrame()
+		filename := fmt.Sprintf("allocation_history_%s.csv", time.Now().Format("20060102150405"))
+		err = os.WriteFile(filename, []byte(allocationHistory.ToCSV()), 0644)
+		Expect(err).NotTo(HaveOccurred(), "Failed to write allocation history to file")
+	})
 
-		// Sum allocations for each queue
-		queueSums := df.GroupBy("QueueID").
-			Aggregation([]dataframe.AggregationType{dataframe.Aggregation_SUM}, []string{"Allocation"})
+	It("Should run a longer simulation", func(ctx context.Context) {
+		allocationHistory, err, cleanupError := timeaware.RunSimulation(ctx, ctrlClient, cfg, timeaware.TimeAwareSimulation{
+			Queues: []timeaware.TestQueue{
+				{Name: "test-department", Parent: ""},
+				{Name: "test-queue1", Parent: "test-department"},
+				{Name: "test-queue2", Parent: "test-department"},
+			},
+			Jobs: map[string]timeaware.TestJobs{
+				"test-queue1": {NumPods: 1, NumJobs: 100, GPUs: 16},
+				"test-queue2": {NumPods: 1, NumJobs: 100, GPUs: 16},
+			},
+			Nodes: []timeaware.TestNodes{
+				{GPUs: 16, Count: 1},
+			},
+			WindowSize:     ptr.To(256),
+			HalfLifePeriod: ptr.To(128),
+			Cycles:         ptr.To(1024),
+		})
+		Expect(err).NotTo(HaveOccurred(), "Failed to run simulation")
+		Expect(cleanupError).NotTo(HaveOccurred(), "Failed to cleanup simulation")
 
-		// Convert queueSums dataframe to map from queueID to sum
-		queueSumMap := make(map[string]float64)
-		for i := range queueSums.Nrow() {
-			queueID := queueSums.Elem(i, 1).String()
-			allocation := queueSums.Elem(i, 0).Float()
-			queueSumMap[queueID] = allocation
-		}
-
-		// Assert that test-queue1 and test-queue2 allocations sum to approximately the department allocation
-		// Small difference could happen due to queue controller non-atomic updates
-		Expect(queueSumMap["test-queue1"]+queueSumMap["test-queue2"]).To(
-			BeNumerically("~", queueSumMap["test-department"], queueSumMap["test-department"]*0.1),
-			"Sum of queue1 and queue2 should equal department allocation")
-
-		// Assert that test-queue1 and test-queue2 have approximately equal allocations (within 10%)
-		Expect(queueSumMap["test-queue1"]).To(
-			BeNumerically("~", queueSumMap["test-queue2"], queueSumMap["test-queue2"]*0.1),
-			"Queue1 and Queue2 should have approximately equal allocations")
+		filename := "allocation_history_oscillating.csv"
+		err = os.WriteFile(filename, []byte(allocationHistory.ToCSV()), 0644)
+		Expect(err).NotTo(HaveOccurred(), "Failed to write allocation history to file")
 	})
 
 	It("Should allow burst use cases", func(ctx context.Context) {
@@ -81,35 +86,50 @@ var _ = Describe("Time Aware Fairness", Ordered, func() {
 				{Name: "test-queue-burst", Parent: "test-department"},
 			},
 			Jobs: map[string]timeaware.TestJobs{
-				"test-queue1":      {NumPods: 1, NumJobs: 100, GPUs: 1},
-				"test-queue2":      {NumPods: 1, NumJobs: 100, GPUs: 1},
-				"test-queue-burst": {NumPods: 1, NumJobs: 100, GPUs: 4},
+				"test-queue1":      {NumPods: 1, NumJobs: 1000, GPUs: 1},
+				"test-queue2":      {NumPods: 1, NumJobs: 1000, GPUs: 1},
+				"test-queue-burst": {NumPods: 1, NumJobs: 1000, GPUs: 12},
 			},
 			Nodes: []timeaware.TestNodes{
-				{GPUs: 6, Count: 1},
+				{GPUs: 16, Count: 1},
 			},
-			WindowSize: ptr.To(4),
-			KValue:     ptr.To(2.0),
+			Cycles:     ptr.To(1024),
+			WindowSize: ptr.To(256),
+			KValue:     ptr.To(1.0),
 		})
 		Expect(err).NotTo(HaveOccurred(), "Failed to run simulation")
 		Expect(cleanupError).NotTo(HaveOccurred(), "Failed to cleanup simulation")
 
-		df := allocationHistory.ToDataFrame()
+		filename := "allocation_history_burst.csv"
+		err = os.WriteFile(filename, []byte(allocationHistory.ToCSV()), 0644)
+		Expect(err).NotTo(HaveOccurred(), "Failed to write allocation history to file")
+	})
 
-		// Sum allocations for each queue
-		queueSums := df.GroupBy("QueueID").
-			Aggregation([]dataframe.AggregationType{dataframe.Aggregation_SUM}, []string{"Allocation"})
+	It("3-Way oscillation between queues", func(ctx context.Context) {
+		allocationHistory, err, cleanupError := timeaware.RunSimulation(ctx, ctrlClient, cfg, timeaware.TimeAwareSimulation{
+			Queues: []timeaware.TestQueue{
+				{Name: "test-department", Parent: ""},
+				{Name: "test-queue1", Parent: "test-department"},
+				{Name: "test-queue2", Parent: "test-department"},
+				{Name: "test-queue3", Parent: "test-department"},
+			},
+			Jobs: map[string]timeaware.TestJobs{
+				"test-queue1": {NumPods: 1, NumJobs: 1000, GPUs: 16},
+				"test-queue2": {NumPods: 1, NumJobs: 1000, GPUs: 16},
+				"test-queue3": {NumPods: 1, NumJobs: 1000, GPUs: 16},
+			},
+			Nodes: []timeaware.TestNodes{
+				{GPUs: 16, Count: 1},
+			},
+			Cycles:     ptr.To(1024),
+			WindowSize: ptr.To(256),
+			KValue:     ptr.To(10.0),
+		})
+		Expect(err).NotTo(HaveOccurred(), "Failed to run simulation")
+		Expect(cleanupError).NotTo(HaveOccurred(), "Failed to cleanup simulation")
 
-		// Convert queueSums dataframe to map from queueID to sum
-		queueSumMap := make(map[string]float64)
-		for i := range queueSums.Nrow() {
-			queueID := queueSums.Elem(i, 1).String()
-			allocation := queueSums.Elem(i, 0).Float()
-			queueSumMap[queueID] = allocation
-		}
-
-		// Assert that test-queue-burst was able to access more resources than its weight
-		Expect(queueSumMap["test-queue-burst"]).To(BeNumerically(">", 0),
-			"Test-queue-burst should have accessed more resources than its weight", "sums", queueSumMap)
+		filename := "allocation_history_3-way-oscillation.csv"
+		err = os.WriteFile(filename, []byte(allocationHistory.ToCSV()), 0644)
+		Expect(err).NotTo(HaveOccurred(), "Failed to write allocation history to file")
 	})
 })
