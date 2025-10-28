@@ -8,6 +8,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
@@ -21,6 +22,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
@@ -90,21 +92,24 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"rack": {
 							"rack1.zone1": {
-								ID:    "rack1.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "rack1.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 							"rack2.zone1": {
-								ID:    "rack2.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "rack2.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
@@ -277,9 +282,10 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
@@ -333,16 +339,18 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"rack": {
 							"rack1.zone1": {
-								ID:    "rack1.zone1",
-								Level: "rack",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "rack1.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
@@ -394,12 +402,26 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				}
 			}
 
+			// Setup nodeSetToDomain mapping
+			nodeSetToDomain := map[topologyName]map[nodeSetID]*DomainInfo{}
+			nodeSetToDomain[topologyTree.Name] = map[nodeSetID]*DomainInfo{}
+			domains := []*DomainInfo{}
+			for _, levelDomains := range topologyTree.DomainsByLevel {
+				for _, domain := range levelDomains {
+					domains = append(domains, domain)
+				}
+			}
+			for _, domain := range domains {
+				nodeSetToDomain[topologyTree.Name][getNodeSetID(lo.Values(domain.Nodes))] = domain
+			}
+
 			// Setup plugin
 			plugin := &topologyPlugin{
 				TopologyTrees: map[string]*Info{
 					"test-topology": topologyTree,
 				},
 				subGroupNodeScores: map[subgroupName]map[string]float64{},
+				nodeSetToDomain:    nodeSetToDomain,
 			}
 
 			// Call the function under test
@@ -797,21 +819,24 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 				"rack": {
 					"rack1.zone1": {
-						ID:    "rack1.zone1",
-						Level: "rack",
-						Nodes: map[string]*node_info.NodeInfo{},
+						ID:                       "rack1.zone1",
+						Level:                    "rack",
+						Nodes:                    map[string]*node_info.NodeInfo{},
+						IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 					},
 					"rack2.zone1": {
-						ID:    "rack2.zone1",
-						Level: "rack",
-						Nodes: map[string]*node_info.NodeInfo{},
+						ID:                       "rack2.zone1",
+						Level:                    "rack",
+						Nodes:                    map[string]*node_info.NodeInfo{},
+						IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 					},
 				},
 				"zone": {
 					"zone1": {
-						ID:    "zone1",
-						Level: "zone",
-						Nodes: map[string]*node_info.NodeInfo{},
+						ID:                       "zone1",
+						Level:                    "zone",
+						Nodes:                    map[string]*node_info.NodeInfo{},
+						IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 					},
 				},
 			},
@@ -1039,9 +1064,10 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
 						"zone": {
 							"zone1": {
-								ID:    "zone1",
-								Level: "zone",
-								Nodes: map[string]*node_info.NodeInfo{},
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
 							},
 						},
 					},
