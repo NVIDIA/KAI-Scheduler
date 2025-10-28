@@ -71,12 +71,13 @@ type TestNodes struct {
 }
 
 type TimeAwareSimulation struct {
-	Queues     []TestQueue
-	Jobs       map[string]TestJobs // key is the queue name
-	Nodes      []TestNodes
-	Cycles     *int     // default is 100
-	WindowSize *int     // default is 5
-	KValue     *float64 // default is 1.0
+	Queues         []TestQueue
+	Jobs           map[string]TestJobs // key is the queue name
+	Nodes          []TestNodes
+	Cycles         *int     // default is 100
+	WindowSize     *int     // default is 5
+	HalfLifePeriod *int     // default is 0 (disabled)
+	KValue         *float64 // default is 1.0
 }
 
 func (s *TimeAwareSimulation) SetDefaults() {
@@ -94,7 +95,8 @@ func (s *TimeAwareSimulation) SetDefaults() {
 	}
 }
 
-func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSize *int, kValue *float64) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
+func setupControllers(backgroundCtx context.Context, cfg *rest.Config,
+	windowSize, halfLifePeriod *int, kValue *float64) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
 	ctx, cancel := context.WithCancel(backgroundCtx)
 
 	err := queuecontroller.RunQueueController(cfg, ctx)
@@ -114,10 +116,12 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 		ClientType:       "fake-with-history",
 		ConnectionString: "fake-connection",
 		UsageParams: &api.UsageParams{
-			WindowSize:    &[]time.Duration{time.Second * time.Duration(*windowSize)}[0],
-			FetchInterval: &[]time.Duration{time.Millisecond}[0],
+			WindowSize:     &[]time.Duration{time.Second * time.Duration(*windowSize)}[0],
+			FetchInterval:  &[]time.Duration{time.Millisecond}[0],
+			HalfLifePeriod: &[]time.Duration{time.Second * time.Duration(*halfLifePeriod)}[0],
 		},
 	}
+	schedulerConf.UsageDBConfig.UsageParams.SetDefaults()
 
 	for i := range schedulerConf.Tiers[0].Plugins {
 		if schedulerConf.Tiers[0].Plugins[i].Name != "proportion" {
@@ -161,7 +165,11 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 	simulationName := randomstring.HumanFriendlyEnglishString(10)
 	simulation.SetDefaults()
 
-	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg, simulation.WindowSize, simulation.KValue)
+	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg,
+		simulation.WindowSize,
+		simulation.HalfLifePeriod,
+		simulation.KValue,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup controllers: %w", err), nil
 	}
