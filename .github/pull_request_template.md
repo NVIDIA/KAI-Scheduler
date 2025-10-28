@@ -11,7 +11,7 @@ Fixes #
 > **Note:** Ensure your PR title follows the [Conventional Commits format](/CONTRIBUTING.md#pr-title-guidelines) (e.g., `feat(scheduler): add new feature`)
 
 - [ ] Self-reviewed
-- [ ] Added/updated tests
+- [ ] Added/updated tests (if needed)
 - [ ] Updated [CHANGELOG.md](/CHANGELOG.md) (if needed)
 - [ ] Updated documentation (if needed)
 
