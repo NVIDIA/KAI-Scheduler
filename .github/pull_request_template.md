@@ -9,6 +9,18 @@
 
 <!-- What does this PR do and why? -->
 
+## Release Note
+
+- [ ] No release note needed
+
+<!-- If this PR should appear in the changelog, describe the change from a user perspective.
+     The changelog category (Added/Fixed/Changed/Removed) will be automatically determined from your PR type:
+     - feat: → Added
+     - fix: → Fixed
+     - refactor:, perf: → Changed
+     - Breaking changes (with ! in title) → [BREAKING] prefix
+     Leave empty or check the box above if no release note is needed. -->
+
 ## Related Issues
 
 Fixes #

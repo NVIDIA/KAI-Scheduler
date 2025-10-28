@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - Fixed a bug where the scheduler would not re-try updating podgroup status after failure
 
+### Changed
+
+### Removed
+
 ## [v0.9.1] - 20250-09-15
 
 ### Added

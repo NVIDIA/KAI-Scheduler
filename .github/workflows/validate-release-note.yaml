@@ -1,0 +1,64 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+name: Validate Release Note
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+jobs:
+  validate:
+    name: Validate Release Note
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check release note
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prBody = context.payload.pull_request.body || '';
+            
+            // Extract the Release Note section
+            const releaseNoteRegex = /##\s+Release\s+Note\s*\n([\s\S]*?)(?=\n##|\n---|\n\n##|$)/i;
+            const match = prBody.match(releaseNoteRegex);
+            
+            if (!match) {
+              core.setFailed('❌ Could not find "Release Note" section in PR description. Please use the PR template.');
+              return;
+            }
+            
+            const releaseNoteSection = match[1];
+            
+            // Check if "No release note needed" checkbox is checked
+            const checkboxChecked = /- \[x\]\s+No release note needed/i.test(releaseNoteSection);
+            
+            // Extract release note content (everything after the checkbox and comment)
+            // Remove the checkbox line and HTML comments
+            let content = releaseNoteSection
+              .replace(/- \[[x ]\]\s+No release note needed/gi, '')
+              .replace(/<!--[\s\S]*?-->/g, '')
+              .trim();
+            
+            // Check if there's actual content
+            const hasContent = content.length > 0;
+            
+            if (!checkboxChecked && !hasContent) {
+              core.setFailed(
+                '❌ Release note validation failed!\n\n' +
+                'Please either:\n' +
+                '1. Add a release note describing your changes, OR\n' +
+                '2. Check the "No release note needed" checkbox if this PR doesn\'t require a changelog entry\n\n' +
+                'The release note should describe the change from a user perspective.'
+              );
+              return;
+            }
+            
+            if (checkboxChecked) {
+              console.log('✅ "No release note needed" checkbox is checked');
+            } else {
+              console.log('✅ Release note provided:');
+              console.log(content);
+            }
+            
+            core.notice('Release note validation passed');
+

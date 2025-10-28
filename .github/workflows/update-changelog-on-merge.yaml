@@ -1,0 +1,140 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+name: Update Changelog on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  update-changelog:
+    name: Update Changelog
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract and add release note
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { execSync } = require('child_process');
+            
+            const prBody = context.payload.pull_request.body || '';
+            const prTitle = context.payload.pull_request.title;
+            const prNumber = context.payload.pull_request.number;
+            
+            // Extract the Release Note section
+            const releaseNoteRegex = /##\s+Release\s+Note\s*\n([\s\S]*?)(?=\n##|\n---|\n\n##|$)/i;
+            const match = prBody.match(releaseNoteRegex);
+            
+            if (!match) {
+              console.log('No Release Note section found, skipping changelog update');
+              return;
+            }
+            
+            const releaseNoteSection = match[1];
+            
+            // Check if "No release note needed" checkbox is checked
+            const checkboxChecked = /- \[x\]\s+No release note needed/i.test(releaseNoteSection);
+            
+            if (checkboxChecked) {
+              console.log('✅ "No release note needed" checkbox is checked, skipping changelog update');
+              return;
+            }
+            
+            // Extract release note content
+            let content = releaseNoteSection
+              .replace(/- \[[x ]\]\s+No release note needed/gi, '')
+              .replace(/<!--[\s\S]*?-->/g, '')
+              .trim();
+            
+            if (!content) {
+              console.log('No release note content found, skipping changelog update');
+              return;
+            }
+            
+            // Determine category from PR title using conventional commits format
+            // Match: type(scope): description or type: description or type(scope)!: description
+            const titleRegex = /^(\w+)(?:\([^)]+\))?(!?):\s+(.+)$/;
+            const titleMatch = prTitle.match(titleRegex);
+            
+            if (!titleMatch) {
+              console.log('PR title does not follow conventional commits format, skipping changelog update');
+              return;
+            }
+            
+            const prType = titleMatch[1].toLowerCase();
+            const isBreaking = titleMatch[2] === '!';
+            
+            // Map PR type to changelog category
+            let category;
+            switch (prType) {
+              case 'feat':
+                category = 'Added';
+                break;
+              case 'fix':
+                category = 'Fixed';
+                break;
+              case 'refactor':
+              case 'perf':
+                category = 'Changed';
+                break;
+              case 'docs':
+              case 'chore':
+              case 'ci':
+              case 'test':
+              case 'build':
+              case 'style':
+                console.log(`PR type '${prType}' does not require changelog entry, skipping`);
+                return;
+              default:
+                console.log(`Unknown PR type '${prType}', skipping changelog update`);
+                return;
+            }
+            
+            // Format the entry
+            let entry = content;
+            
+            // Add breaking change prefix if needed
+            if (isBreaking) {
+              entry = `[BREAKING] ${entry}`;
+            }
+            
+            // Add PR number
+            entry = `${entry} (#${prNumber})`;
+            
+            console.log(`Adding entry to ${category} section:`);
+            console.log(entry);
+            
+            // Use the changelog script to add the entry
+            try {
+              execSync(
+                `./.github/scripts/update-changelog.sh add "${category}" "${entry}"`,
+                { encoding: 'utf-8', stdio: 'inherit' }
+              );
+              
+              // Configure git
+              execSync('git config user.name "github-actions[bot]"');
+              execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+              
+              // Commit and push
+              execSync('git add CHANGELOG.md');
+              execSync(`git commit -m "chore: update changelog for PR #${prNumber}"`);
+              execSync('git push origin main');
+              
+              console.log('✅ Changelog updated successfully');
+            } catch (error) {
+              core.setFailed(`Failed to update changelog: ${error.message}`);
+            }
+
