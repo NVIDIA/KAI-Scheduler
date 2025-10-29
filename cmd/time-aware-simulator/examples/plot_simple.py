@@ -1,3 +1,6 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
 import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
