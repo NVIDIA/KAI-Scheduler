@@ -10,9 +10,9 @@ cd /path/to/KAI-Scheduler
 go build -o bin/time-aware-simulator ./cmd/time-aware-simulator
 
 # Run with example configuration
-./bin/time-aware-simulator -input cmd/time-aware-simulator/example_config.yaml -v=1
+./bin/time-aware-simulator -input cmd/time-aware-simulator/examples/example_config.yaml -v=1
 
-# Output will be written to allocation_history_<timestamp>.csv
+# Output will be written to simulation_results.csv
 # You can then analyze the results with Python, Excel, or other tools
 ```
 
@@ -52,47 +52,40 @@ For local development on macOS/Windows, use the direct `go build` command which 
 Run a simulation using a YAML configuration file:
 
 ```bash
-./bin/time-aware-simulator -input example_config.yaml
+./bin/time-aware-simulator -input examples/example_config.yaml
 ```
 
 This will:
-1. Read the configuration from `example_config.yaml`
+1. Read the configuration from `examples/example_config.yaml`
 2. Set up a test Kubernetes environment
 3. Run the simulation
-4. Write results to `allocation_history_<timestamp>.csv`
+4. Write results to `simulation_results.csv`
 
-See `example_config.yaml` in this directory for a well-commented example configuration.
+See `examples/example_config.yaml` for a well-commented example configuration.
 
 ### Command-Line Options
 
-- `-input <file>`: Path to the YAML configuration file (default: `example_config.yaml`)
+- `-input <file>`: Path to the YAML configuration file (default: `examples/example_config.yaml`)
   - Use `-input -` to read from stdin
 - `-output <file>`: Path to the output CSV file (default: `simulation_results.csv`)
   - Use `-output -` to write to stdout
-- `-v <level>`: Log verbosity level (default: 0)
-  - `-v=0`: Info level (basic progress messages)
-  - `-v=1`: Detailed info (includes configuration details)
-  - `-v=2`: Debug level (maximum verbosity)
-- `-logtostderr`: Log to stderr instead of files (enabled by default)
-- `-alsologtostderr`: Log to both files and stderr
-
-The tool uses `klog` for logging, so all standard klog flags are available. See `--help` for the full list.
+- `-enable-controller-logs <true/false>`: Print the internal controllers' logs to stdout (default: false)
 
 ### Examples
 
 **Read from file, write to default output:**
 ```bash
-./bin/time-aware-simulator -input simulation_config_oscillating.yaml
+./bin/time-aware-simulator -input examples/simulation_config_oscillating.yaml
 ```
 
 **Read from stdin, write to stdout:**
 ```bash
-cat simulation_config.yaml | ./bin/time-aware-simulator -input - -output -
+cat examples/example_config.yaml | ./bin/time-aware-simulator -input - -output -
 ```
 
 **Verbose output with custom output file:**
 ```bash
-./bin/time-aware-simulator -input config.yaml -output results.csv -v=1
+./bin/time-aware-simulator -input config.yaml -output results.csv
 ```
 
 **Pipe output directly to analysis tool:**
@@ -108,10 +101,10 @@ The input configuration is a YAML file with the following structure:
 # Number of simulation cycles to run (default: 100)
 Cycles: 1024
 
-# Window size for usage tracking in seconds (default: 5)
+# Window size for usage tracking in cycles (default: 5)
 WindowSize: 256
 
-# Half-life period for exponential decay in seconds (default: 0, disabled)
+# Half-life period for exponential decay in cycles (default: 0, disabled)
 HalfLifePeriod: 128
 
 # K-value for fairness calculation (default: 1.0)
@@ -160,7 +153,7 @@ Jobs:
 #### Global Parameters
 
 - **Cycles**: Number of simulation cycles (each cycle is ~10ms). More cycles = longer simulation
-- **WindowSize**: Time window (in seconds) for tracking usage history. Affects how quickly the fairness algorithm responds to changes
+- **WindowSize**: Time window (in cycles) for tracking usage history. Affects how quickly the fairness algorithm responds to changes
 - **HalfLifePeriod**: Half-life for exponential decay (in seconds). If set to 0, decay is disabled
 - **KValue**: Fairness sensitivity parameter. Higher values make the algorithm more aggressive in correcting imbalances
 
@@ -199,7 +192,7 @@ Time,QueueID,Allocation,FairShare
 
 ## Analysis
 
-The CSV output can be analyzed using various tools:
+The CSV output can be analyzed using various tools. For example, python can be used to plot the results:
 
 ### Python/Pandas
 
@@ -207,7 +200,7 @@ The CSV output can be analyzed using various tools:
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df = pd.read_csv('allocation_history.csv')
+df = pd.read_csv('simulation_results.csv')
 
 # Plot allocations over time
 for queue in df['QueueID'].unique():
@@ -219,10 +212,6 @@ plt.ylabel('GPU Allocation')
 plt.legend()
 plt.show()
 ```
-
-### Jupyter Notebook
-
-See `pkg/env-tests/plot_allocation_history.ipynb` for an example analysis notebook.
 
 ## Example Scenarios
 
@@ -254,100 +243,6 @@ Jobs:
     NumPods: 1
     NumJobs: 100
 ```
-
-### Burst Workload
-
-Tests how the system handles a bursty workload alongside steady workloads:
-
-```yaml
-Cycles: 1024
-WindowSize: 256
-KValue: 1.0
-Nodes:
-  - GPUs: 16
-    Count: 1
-Queues:
-  - Name: dept
-    Parent: ""
-  - Name: steady1
-    Parent: dept
-  - Name: steady2
-    Parent: dept
-  - Name: burst
-    Parent: dept
-Jobs:
-  steady1:
-    GPUs: 1
-    NumPods: 1
-    NumJobs: 1000
-  steady2:
-    GPUs: 1
-    NumPods: 1
-    NumJobs: 1000
-  burst:
-    GPUs: 12
-    NumPods: 1
-    NumJobs: 1000
-```
-
-### Three-Way Oscillation
-
-Tests more complex fairness with three competing queues:
-
-```yaml
-Cycles: 1024
-WindowSize: 256
-KValue: 10.0
-Nodes:
-  - GPUs: 16
-    Count: 1
-Queues:
-  - Name: dept
-    Parent: ""
-  - Name: queue1
-    Parent: dept
-  - Name: queue2
-    Parent: dept
-  - Name: queue3
-    Parent: dept
-Jobs:
-  queue1:
-    GPUs: 16
-    NumPods: 1
-    NumJobs: 1000
-  queue2:
-    GPUs: 16
-    NumPods: 1
-    NumJobs: 1000
-  queue3:
-    GPUs: 16
-    NumPods: 1
-    NumJobs: 1000
-```
-
-## Troubleshooting
-
-### "Could not find project root"
-
-Make sure you're running the simulator from within the KAI Scheduler project directory, or that the binary can access the `deployments/` directory with CRD definitions.
-
-### "Failed to start test environment"
-
-Ensure that:
-1. The `setup-envtest` tool is available and has downloaded the necessary binaries
-2. You have the required Kubernetes API binaries in your `PATH` or the tool will download them
-
-### "Failed to create test namespace/queue/node"
-
-The test environment may not have started correctly. Try running with `-verbose` to see more detailed error messages.
-
-## Development
-
-To modify the simulator:
-
-1. Edit `main.go` for CLI handling and environment setup
-2. Edit `pkg/env-tests/timeaware/timeaware.go` for simulation logic
-3. Rebuild with `go build -o bin/time-aware-simulator ./cmd/time-aware-simulator`
 
 ## License
 

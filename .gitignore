@@ -10,3 +10,5 @@ coverage.out
 
 cmd/fairshare-simulator/fairshare-simulator
 cmd/snapshot-tool/snapshot-tool
+cmd/time-aware-simulator/time-aware-simulator
+cmd/time-aware-simulator/simulation_results.csv
