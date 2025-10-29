@@ -5,6 +5,7 @@ package env_tests
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -45,11 +46,33 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	By("bootstrapping test environment")
-	testEnv = &envtest.Environment{
-		CRDDirectoryPaths: []string{
+	var err error
+	cfg, ctrlClient, testEnv, err = SetupEnvTest(nil)
+	Expect(err).To(Succeed())
+})
+
+var _ = AfterSuite(func(ctx context.Context) {
+	By("tearing down the test environment")
+	err := testEnv.Stop()
+	Expect(err).NotTo(HaveOccurred())
+})
+
+func SetupEnvTest(crdDirectoryPaths []string) (*rest.Config, client.Client, *envtest.Environment, error) {
+	var (
+		cfg        *rest.Config
+		ctrlClient client.Client
+		testEnv    *envtest.Environment
+	)
+
+	if crdDirectoryPaths == nil {
+		crdDirectoryPaths = []string{
 			filepath.Join("..", "..", "deployments", "kai-scheduler", "crds"),
 			filepath.Join("..", "..", "deployments", "external-crds"),
-		},
+		}
+	}
+
+	testEnv = &envtest.Environment{
+		CRDDirectoryPaths:     crdDirectoryPaths,
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -61,9 +84,10 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	var err error
 	// cfg is defined in this file globally
 	cfg, err = testEnv.Start()
+	if err != nil {
+		return nil, nil, testEnv, fmt.Errorf("failed to start test env: %w", err)
+	}
 	cfg.ContentType = "application/json"
-	Expect(err).NotTo(HaveOccurred())
-	Expect(cfg).NotTo(BeNil())
 
 	// Effectively disable rate limiting
 	cfg.RateLimiter = flowcontrol.NewFakeAlwaysRateLimiter()
@@ -77,12 +101,9 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	// +kubebuilder:scaffold:scheme
 
 	ctrlClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(ctrlClient).NotTo(BeNil())
-})
+	if err != nil {
+		return nil, nil, testEnv, fmt.Errorf("Failed to get controller client: %v", err)
+	}
 
-var _ = AfterSuite(func(ctx context.Context) {
-	By("tearing down the test environment")
-	err := testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
-})
+	return cfg, ctrlClient, testEnv, nil
+}
