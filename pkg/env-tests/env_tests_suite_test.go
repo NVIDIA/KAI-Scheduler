@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	resourceapi "k8s.io/api/resource/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -80,10 +79,6 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	ctrlClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(ctrlClient).NotTo(BeNil())
-
-	// This is needed since we don't have the conversion webhook installed in the test environment.
-	// To be removed once v2 is the stored version by default.
-	storeQueueV2CRD(ctx, ctrlClient)
 })
 
 var _ = AfterSuite(func(ctx context.Context) {
@@ -91,22 +86,3 @@ var _ = AfterSuite(func(ctx context.Context) {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
-
-func storeQueueV2CRD(ctx context.Context, ctrlClient client.Client) {
-	var crd apiextensionsv1.CustomResourceDefinition
-	err := ctrlClient.Get(ctx, client.ObjectKey{Name: "queues.scheduling.run.ai"}, &crd)
-	Expect(err).NotTo(HaveOccurred(), "Failed to get CRD")
-
-	foundV2 := false
-	for i, version := range crd.Spec.Versions {
-		crd.Spec.Versions[i].Storage = false
-		if version.Name == "v2" {
-			crd.Spec.Versions[i].Storage = true
-			foundV2 = true
-		}
-	}
-	Expect(foundV2).To(BeTrue(), "Failed to find v2 version in CRD")
-
-	err = ctrlClient.Update(ctx, &crd)
-	Expect(err).NotTo(HaveOccurred(), "Failed to update CRD")
-}
