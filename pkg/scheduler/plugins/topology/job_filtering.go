@@ -493,6 +493,10 @@ func sortDomainInfos(topologyTree *Info, domainInfos []*DomainInfo) []*DomainInf
 	return sortedDomainInfos
 }
 
+// useRepresentorPodsAccounting checks if the tasks are using representor pods accounting.
+// If all the tasks are homogeneous, i.e. all the tasks have the same type of resource requirements, then use representor pods accounting (AllocatablePods).
+// If the tasks are heterogeneous, i.e. some of the tasks require resources that other tasks do not require,
+// then use the job resources sum to see if a domain can allocate the job.
 func useRepresentorPodsAccounting(tasks []*pod_info.PodInfo) bool {
 	extendedResources := map[v1.ResourceName]int{}
 	podsUsingGpu := 0
