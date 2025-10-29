@@ -54,11 +54,26 @@ func SetupEnvTest(crdDirectoryPaths []string) (*rest.Config, client.Client, *env
 	cfg.RateLimiter = flowcontrol.NewFakeAlwaysRateLimiter()
 
 	// Add any scheme registration here if needed for your custom CRDs
-	kaiv2.AddToScheme(scheme.Scheme)
-	kaiv1alpha2.AddToScheme(scheme.Scheme)
-	kaiv2v2alpha2.AddToScheme(scheme.Scheme)
-	resourceapi.AddToScheme(scheme.Scheme)
-	kueuev1alpha1.AddToScheme(scheme.Scheme)
+	err = kaiv2.AddToScheme(scheme.Scheme)
+	if err != nil {
+		return nil, nil, testEnv, fmt.Errorf("failed to add kaiv2 scheme: %w", err)
+	}
+	err = kaiv1alpha2.AddToScheme(scheme.Scheme)
+	if err != nil {
+		return nil, nil, testEnv, fmt.Errorf("failed to add kaiv1alpha2 scheme: %w", err)
+	}
+	err = kaiv2v2alpha2.AddToScheme(scheme.Scheme)
+	if err != nil {
+		return nil, nil, testEnv, fmt.Errorf("failed to add kaiv2v2alpha2 scheme: %w", err)
+	}
+	err = resourceapi.AddToScheme(scheme.Scheme)
+	if err != nil {
+		return nil, nil, testEnv, fmt.Errorf("failed to add resourceapi scheme: %w", err)
+	}
+	err = kueuev1alpha1.AddToScheme(scheme.Scheme)
+	if err != nil {
+		return nil, nil, testEnv, fmt.Errorf("failed to add kueuev1alpha1 scheme: %w", err)
+	}
 	// +kubebuilder:scaffold:scheme
 
 	ctrlClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
