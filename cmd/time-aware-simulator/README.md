@@ -10,7 +10,7 @@ cd /path/to/KAI-Scheduler
 go build -o bin/time-aware-simulator ./cmd/time-aware-simulator
 
 # Run with example configuration
-./bin/time-aware-simulator -input cmd/time-aware-simulator/examples/example_config.yaml -v=1
+./bin/time-aware-simulator -input cmd/time-aware-simulator/examples/example_config.yaml
 
 # Output will be written to simulation_results.csv
 # You can then analyze the results with Python, Excel, or other tools
@@ -192,9 +192,11 @@ Time,QueueID,Allocation,FairShare
 
 ## Analysis
 
-The CSV output can be analyzed using various tools. For example, python can be used to plot the results:
+The CSV output can be analyzed using various tools. For example, python can be used to plot the results.
 
-### Python/Pandas
+See [`examples/plot_simple.py`](examples/plot_simple.py) for a complete example that plots both allocation and fair share over time.
+
+### Python/Pandas Example
 
 ```python
 import pandas as pd
