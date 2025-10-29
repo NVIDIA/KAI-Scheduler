@@ -43,11 +43,11 @@ const simulationCycleInterval = time.Millisecond * 10
 const defaultTimeout = time.Second * 10
 
 type TestQueue struct {
-	Name         string
-	Parent       string   // if empty, the queue is a department
-	Priority     *int     // default is 100
-	DeservedGPUs *float64 // default is 0
-	Weight       *float64 // default is 1
+	Name         string   `yaml:"name"`
+	Parent       string   `yaml:"parent"`       // if empty, the queue is a department
+	Priority     *int     `yaml:"priority"`     // default is 100
+	DeservedGPUs *float64 `yaml:"deservedGPUs"` // default is 0
+	Weight       *float64 `yaml:"weight"`       // default is 1
 }
 
 func (q *TestQueue) SetDefaults() {
@@ -63,24 +63,24 @@ func (q *TestQueue) SetDefaults() {
 }
 
 type TestJobs struct {
-	GPUs    int
-	NumPods int
-	NumJobs int
+	GPUs    int `yaml:"GPUs"`
+	NumPods int `yaml:"numPods"`
+	NumJobs int `yaml:"numJobs"`
 }
 
 type TestNodes struct {
-	GPUs  int
-	Count int
+	GPUs  int `yaml:"GPUs"`
+	Count int `yaml:"count"`
 }
 
 type TimeAwareSimulation struct {
-	Queues         []TestQueue
-	Jobs           map[string]TestJobs // key is the queue name
-	Nodes          []TestNodes
-	Cycles         *int     // default is 100
-	WindowSize     *int     // default is 5
-	HalfLifePeriod *int     // default is 0 (disabled)
-	KValue         *float64 // default is 1.0
+	Queues         []TestQueue         `yaml:"queues"`
+	Jobs           map[string]TestJobs `yaml:"jobs"` // key is the queue name
+	Nodes          []TestNodes         `yaml:"nodes"`
+	Cycles         *int                `yaml:"cycles"`         // default is 100
+	WindowSize     *int                `yaml:"windowSize"`     // default is 5
+	HalfLifePeriod *int                `yaml:"halfLifePeriod"` // default is 0 (disabled)
+	KValue         *float64            `yaml:"kValue"`         // default is 1.0
 }
 
 func (s *TimeAwareSimulation) SetDefaults() {
