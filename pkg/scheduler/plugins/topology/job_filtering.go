@@ -40,7 +40,7 @@ func (t *topologyPlugin) subSetNodesFn(
 			nil)
 		return []node_info.NodeSet{}, nil
 	}
-	if topologyTree == nil {
+	if topologyTree == nil || len(tasks) == 0 {
 		return []node_info.NodeSet{nodeSet}, nil
 	}
 
