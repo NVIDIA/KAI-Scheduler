@@ -44,6 +44,7 @@ type SchedulerForShard struct {
 
 type SchedulerForConfig struct {
 	lastDesiredState []client.Object
+	BaseResourceName string
 }
 
 func NewSchedulerForShard(schedulingShard *kaiv1.SchedulingShard) *SchedulerForShard {
@@ -104,6 +105,9 @@ func (s *SchedulerForConfig) DesiredState(
 	ctx context.Context, readerClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 	logger := log.FromContext(ctx)
+	if s.BaseResourceName == "" {
+		s.BaseResourceName = defaultResourceName
+	}
 
 	if !*kaiConfig.Spec.Scheduler.Service.Enabled {
 		logger.Info("Scheduler operand is disabled")
@@ -113,7 +117,7 @@ func (s *SchedulerForConfig) DesiredState(
 		return nil, nil
 	}
 
-	serviceAccount, err := serviceAccountForKAIConfig(ctx, readerClient, kaiConfig)
+	serviceAccount, err := s.serviceAccountForKAIConfig(ctx, readerClient, kaiConfig)
 	if err != nil {
 		return nil, err
 	}

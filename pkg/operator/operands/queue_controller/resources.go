@@ -25,22 +25,22 @@ import (
 const (
 	QueueCrdName = "queues.scheduling.run.ai"
 
-	deploymentName   = "queue-controller"
-	serviceName      = deploymentName
-	appName          = deploymentName
-	queueWebhookName = "queue-validation.kai.scheduler"
+	defaultResourceName = "queue-controller"
+	serviceName         = defaultResourceName
+	appName             = defaultResourceName
+	queueWebhookName    = "queue-validation.kai.scheduler"
 
 	secretName = "queue-webhook-tls-secret"
 	certKey    = "tls.crt"
 	keyKey     = "tls.key"
 )
 
-func deploymentForKAIConfig(
+func (q *QueueController) deploymentForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 
 	config := kaiConfig.Spec.QueueController
-	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, config.Service, deploymentName)
+	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, config.Service, q.BaseResourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -70,10 +70,10 @@ func deploymentForKAIConfig(
 	return []client.Object{deployment}, nil
 }
 
-func serviceAccountForKAIConfig(
+func (q *QueueController) serviceAccountForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
-	sa, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.ServiceAccount{}, deploymentName,
+	sa, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.ServiceAccount{}, q.BaseResourceName,
 		kaiConfig.Spec.Namespace)
 	if err != nil {
 		return nil, err
@@ -85,10 +85,10 @@ func serviceAccountForKAIConfig(
 	return []client.Object{sa}, err
 }
 
-func serviceForKAIConfig(
+func (q *QueueController) serviceForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
-	obj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Service{}, serviceName,
+	obj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Service{}, q.BaseResourceName,
 		kaiConfig.Spec.Namespace)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func serviceForKAIConfig(
 		},
 	}
 	service.Spec.Selector = map[string]string{
-		"app": appName,
+		"app": q.BaseResourceName,
 	}
 
 	return []client.Object{service}, nil
@@ -137,7 +137,7 @@ func crdForKAIConfig(
 	return []client.Object{}, nil
 }
 
-func secretForKAIConfig(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
+func (q *QueueController) secretForKAIConfig(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 	obj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Secret{}, secretName, kaiConfig.Spec.Namespace)
 	if err != nil {
@@ -151,7 +151,7 @@ func secretForKAIConfig(ctx context.Context, runtimeClient client.Reader, kaiCon
 	}
 
 	if _, found := secret.Data[certKey]; !found {
-		serviceUrl := fmt.Sprintf("%s.%s.svc", serviceName, kaiConfig.Spec.Namespace)
+		serviceUrl := fmt.Sprintf("%s.%s.svc", q.BaseResourceName, kaiConfig.Spec.Namespace)
 		cert, key, err := generate.GenerateSelfSignedCert(serviceUrl, []string{serviceUrl})
 		if err != nil {
 			return nil, err
@@ -164,7 +164,7 @@ func secretForKAIConfig(ctx context.Context, runtimeClient client.Reader, kaiCon
 	return []client.Object{secret}, nil
 }
 
-func validatingWCForKAIConfig(
+func (q *QueueController) validatingWCForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 	secret *v1.Secret,
 ) ([]client.Object, error) {
@@ -193,14 +193,14 @@ func validatingWCForKAIConfig(
 		if validatingWebhookConfiguration.Labels == nil {
 			validatingWebhookConfiguration.Labels = map[string]string{}
 		}
-		validatingWebhookConfiguration.Labels["app"] = appName
+		validatingWebhookConfiguration.Labels["app"] = q.BaseResourceName
 		validatingWebhookConfiguration.Webhooks = []admissionv1.ValidatingWebhook{
 			{
 				Name:                    queueWebhookName,
 				AdmissionReviewVersions: []string{"v1"},
 				SideEffects:             sideEffectsNone(),
 				FailurePolicy:           failurePolicyTypeFail(),
-				ClientConfig: webhookClientConfig(kaiConfig.Spec.Namespace, serviceName,
+				ClientConfig: q.webhookClientConfig(kaiConfig.Spec.Namespace,
 					fmt.Sprintf("/validate-scheduling-run-ai-%s-queue", version), crt, int(*kaiConfig.Spec.QueueController.ControllerService.Webhook.Port)),
 				Rules: []admissionv1.RuleWithOperations{
 					{
@@ -242,11 +242,11 @@ func scopeTypeCluster() *admissionv1.ScopeType {
 	return &s
 }
 
-func webhookClientConfig(namespace, name, path string, cabundle []byte, port int) admissionv1.WebhookClientConfig {
+func (q *QueueController) webhookClientConfig(namespace, path string, cabundle []byte, port int) admissionv1.WebhookClientConfig {
 	return admissionv1.WebhookClientConfig{
 		Service: &admissionv1.ServiceReference{
 			Namespace: namespace,
-			Name:      name,
+			Name:      q.BaseResourceName,
 			Path:      ptr.To(path),
 			Port:      ptr.To(int32(port)),
 		},

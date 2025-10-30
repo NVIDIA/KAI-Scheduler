@@ -71,7 +71,7 @@ func deploymentForShard(
 			"configMapVersion": schedulerConfig.ResourceVersion,
 		},
 	}
-	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccountName
+	deployment.Spec.Template.Spec.ServiceAccountName = defaultResourceName
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
 		{
 			MountPath: configMountPath,
