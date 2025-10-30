@@ -124,24 +124,21 @@ spec:
     topology: "cluster-topology"
     requiredTopologyLevel: "topology/zone"
   subgroups:
-    - name: subgroup-ab
-      topologyConstraint:
-        topology: "cluster-topology"
-        requiredTopologyLevel: "topology/spine"
-    - name: subgroup-a
+    - name: api-server
       minMember: 1
-      parent: subgroup-ab
+    - name: workers
       topologyConstraint:
         topology: "cluster-topology"
-        requiredTopologyLevel: "topology/rack"
-    - name: subgroup-b
-      minMember: 2
-      parent: subgroup-ab
-      topologyConstraint:
-        topology: "cluster-topology"
-        requiredTopologyLevel: "topology/rack"
-    - name: subgroup-c
+        requiredTopologyLevel: "topology/block"
+    - name: prefill
       minMember: 3
+      parent: workers
+      topologyConstraint:
+        topology: "cluster-topology"
+        requiredTopologyLevel: "topology/rack"
+    - name: decode
+      minMember: 5
+      parent: workers
       topologyConstraint:
         topology: "cluster-topology"
         requiredTopologyLevel: "topology/rack"
