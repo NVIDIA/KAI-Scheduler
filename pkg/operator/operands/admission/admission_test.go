@@ -86,8 +86,8 @@ var _ = Describe("Admission", func() {
 				Expect(validatingWebhook.Webhooks).To(HaveLen(1))
 				Expect(validatingWebhook.Webhooks[0].ClientConfig.CABundle).To(Equal(secret.Data[certKey]))
 
-				Expect(mutatingWebhook.Webhooks[0].ClientConfig.Service.Name).To(Equal(mainResourceName))
-				Expect(validatingWebhook.Webhooks[0].ClientConfig.Service.Name).To(Equal(mainResourceName))
+				Expect(mutatingWebhook.Webhooks[0].ClientConfig.Service.Name).To(Equal(defaultResourceName))
+				Expect(validatingWebhook.Webhooks[0].ClientConfig.Service.Name).To(Equal(defaultResourceName))
 			})
 
 			It("should preserve existing deployment labels", func() {
@@ -106,7 +106,7 @@ var _ = Describe("Admission", func() {
 
 			It("should configure service with correct selector", func() {
 				service := getService(objects)
-				Expect(service.Spec.Selector).To(HaveKeyWithValue("app", mainResourceName))
+				Expect(service.Spec.Selector).To(HaveKeyWithValue("app", defaultResourceName))
 			})
 		})
 	})

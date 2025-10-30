@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	configMountPath = "/etc/config/config.yaml"
-	binpackStrategy = "binpack"
-	spreadStrategy  = "spread"
-	gpuResource     = "gpu"
-	cpuResource     = "cpu"
+	configMountPath     = "/etc/config/config.yaml"
+	binpackStrategy     = "binpack"
+	spreadStrategy      = "spread"
+	gpuResource         = "gpu"
+	cpuResource         = "cpu"
+	defaultResourceName = "scheduler"
 )
 
 type config struct {
@@ -40,14 +41,17 @@ type SchedulerForShard struct {
 	schedulingShard *kaiv1.SchedulingShard
 
 	lastDesiredState []client.Object
+
+	BaseResourceName string
 }
 
 type SchedulerForConfig struct {
 	lastDesiredState []client.Object
+	BaseResourceName string
 }
 
 func NewSchedulerForShard(schedulingShard *kaiv1.SchedulingShard) *SchedulerForShard {
-	return &SchedulerForShard{schedulingShard: schedulingShard}
+	return &SchedulerForShard{schedulingShard: schedulingShard, BaseResourceName: defaultResourceName}
 }
 
 type resourceForShard func(
@@ -68,9 +72,9 @@ func (s *SchedulerForShard) DesiredState(
 
 	objects := []client.Object{}
 	for _, resourceFunc := range []resourceForShard{
-		deploymentForShard,
-		configMapForShard,
-		serviceForShard,
+		s.deploymentForShard,
+		s.configMapForShard,
+		s.serviceForShard,
 	} {
 		object, err := resourceFunc(ctx, readerClient, kaiConfig, s.schedulingShard)
 		if err != nil {
@@ -104,6 +108,9 @@ func (s *SchedulerForConfig) DesiredState(
 	ctx context.Context, readerClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 	logger := log.FromContext(ctx)
+	if s.BaseResourceName == "" {
+		s.BaseResourceName = defaultResourceName
+	}
 
 	if !*kaiConfig.Spec.Scheduler.Service.Enabled {
 		logger.Info("Scheduler operand is disabled")
@@ -113,7 +120,7 @@ func (s *SchedulerForConfig) DesiredState(
 		return nil, nil
 	}
 
-	serviceAccount, err := serviceAccountForKAIConfig(ctx, readerClient, kaiConfig)
+	serviceAccount, err := s.serviceAccountForKAIConfig(ctx, readerClient, kaiConfig)
 	if err != nil {
 		return nil, err
 	}

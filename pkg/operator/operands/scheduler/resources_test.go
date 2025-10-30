@@ -123,7 +123,8 @@ func TestDeploymentForShard(t *testing.T) {
 			client := fake.NewClientBuilder().Build()
 			tt.config.Spec.SetDefaultsWhereNeeded()
 
-			deployment, err := deploymentForShard(ctx, client, tt.config, tt.shard)
+			s := NewSchedulerForShard(tt.shard)
+			deployment, err := s.deploymentForShard(ctx, client, tt.config, tt.shard)
 			require.NoError(t, err)
 			assert.NotNil(t, deployment)
 
@@ -439,7 +440,8 @@ tiers:
 			tt.config.Spec.SetDefaultsWhereNeeded()
 			tt.shard.Spec.SetDefaultsWhereNeeded()
 
-			cm, err := configMapForShard(ctx, client, tt.config, tt.shard)
+			s := NewSchedulerForShard(tt.shard)
+			cm, err := s.configMapForShard(ctx, client, tt.config, tt.shard)
 			if !tt.expectedErr {
 				require.NoError(t, err)
 				assert.NotNil(t, cm)
@@ -541,7 +543,8 @@ func TestServiceForShard(t *testing.T) {
 			tt.config.Spec.SetDefaultsWhereNeeded()
 			tt.shard.Spec.SetDefaultsWhereNeeded()
 
-			service, err := serviceForShard(ctx, client, tt.config, tt.shard)
+			s := NewSchedulerForShard(tt.shard)
+			service, err := s.serviceForShard(ctx, client, tt.config, tt.shard)
 			require.NoError(t, err)
 			assert.NotNil(t, service)
 
@@ -593,7 +596,8 @@ func TestServiceAccountForScheduler(t *testing.T) {
 			client := fake.NewClientBuilder().Build()
 			tt.config.Spec.SetDefaultsWhereNeeded()
 
-			sa, err := serviceAccountForKAIConfig(ctx, client, tt.config)
+			s := &SchedulerForConfig{BaseResourceName: defaultResourceName}
+			sa, err := s.serviceAccountForKAIConfig(ctx, client, tt.config)
 			require.NoError(t, err)
 			assert.NotNil(t, sa)
 

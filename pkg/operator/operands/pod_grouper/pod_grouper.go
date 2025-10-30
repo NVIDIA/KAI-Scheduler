@@ -15,6 +15,7 @@ import (
 type PodGrouper struct {
 	namespace        string
 	lastDesiredState []client.Object
+	BaseResourceName string
 }
 
 type resourceForKAIConfig func(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) (client.Object, error)
@@ -23,6 +24,9 @@ func (p *PodGrouper) DesiredState(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 	p.namespace = kaiConfig.Spec.Namespace
+	if p.BaseResourceName == "" {
+		p.BaseResourceName = defaultResourceName
+	}
 
 	if *kaiConfig.Spec.PodGrouper.Service.Enabled == false {
 		p.lastDesiredState = []client.Object{}
@@ -31,8 +35,8 @@ func (p *PodGrouper) DesiredState(
 
 	var objects []client.Object
 	for _, resourceFunc := range []resourceForKAIConfig{
-		deploymentForKAIConfig,
-		serviceAccountForKAIConfig,
+		p.deploymentForKAIConfig,
+		p.serviceAccountForKAIConfig,
 	} {
 		obj, err := resourceFunc(ctx, runtimeClient, kaiConfig)
 		if err != nil {

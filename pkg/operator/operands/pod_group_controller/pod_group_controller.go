@@ -17,6 +17,7 @@ import (
 type PodGroupController struct {
 	namespace        string
 	lastDesiredState []client.Object
+	BaseResourceName string
 }
 
 type resourceForKAIConfig func(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) ([]client.Object, error)
@@ -25,13 +26,16 @@ func (p *PodGroupController) DesiredState(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 	p.namespace = kaiConfig.Spec.Namespace
+	if p.BaseResourceName == "" {
+		p.BaseResourceName = defaultResourceName
+	}
 
 	if *kaiConfig.Spec.PodGroupController.Service.Enabled == false {
 		p.lastDesiredState = []client.Object{}
 		return nil, nil
 	}
 
-	secret, err := secretForKAIConfig(ctx, runtimeClient, kaiConfig)
+	secret, err := p.secretForKAIConfig(ctx, runtimeClient, kaiConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -44,11 +48,11 @@ func (p *PodGroupController) DesiredState(
 		func(_ context.Context, _ client.Reader, _ *kaiv1.Config) ([]client.Object, error) {
 			return []client.Object{secret[0]}, nil
 		},
-		deploymentForKAIConfig,
-		serviceAccountForKAIConfig,
-		serviceForKAIConfig,
+		p.deploymentForKAIConfig,
+		p.serviceAccountForKAIConfig,
+		p.serviceForKAIConfig,
 		func(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) ([]client.Object, error) {
-			return validatingWCForKAIConfig(ctx, runtimeClient, kaiConfig, secret[0].(*v1.Secret))
+			return p.validatingWCForKAIConfig(ctx, runtimeClient, kaiConfig, secret[0].(*v1.Secret))
 		},
 	} {
 		obj, err := resourceFunc(ctx, runtimeClient, kaiConfig)

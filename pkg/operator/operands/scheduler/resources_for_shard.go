@@ -29,7 +29,7 @@ const (
 	invalidJobDepthMapError = "the scheduler's actions are %s. %s isn't one of them, making the queueDepthPerAction invalid"
 )
 
-func deploymentForShard(
+func (s *SchedulerForShard) deploymentForShard(
 	ctx context.Context, readerClient client.Reader,
 	kaiConfig *kaiv1.Config, shard *kaiv1.SchedulingShard,
 ) (client.Object, error) {
@@ -71,7 +71,7 @@ func deploymentForShard(
 			"configMapVersion": schedulerConfig.ResourceVersion,
 		},
 	}
-	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccountName
+	deployment.Spec.Template.Spec.ServiceAccountName = s.BaseResourceName
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
 		{
 			MountPath: configMountPath,
@@ -110,7 +110,7 @@ func deploymentForShard(
 	return deployment, nil
 }
 
-func configMapForShard(
+func (s *SchedulerForShard) configMapForShard(
 	ctx context.Context, readerClient client.Reader,
 	kaiConfig *kaiv1.Config, shard *kaiv1.SchedulingShard,
 ) (client.Object, error) {
@@ -204,7 +204,7 @@ func validateJobDepthMap(shard *kaiv1.SchedulingShard, innerConfig config, actio
 	return nil
 }
 
-func serviceForShard(
+func (s *SchedulerForShard) serviceForShard(
 	ctx context.Context, readerClient client.Reader,
 	kaiConfig *kaiv1.Config, shard *kaiv1.SchedulingShard,
 ) (client.Object, error) {

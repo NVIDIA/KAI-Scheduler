@@ -25,15 +25,15 @@ import (
 )
 
 const (
-	mainResourceName = "binder"
+	defaultResourceName = "binder"
 )
 
-func deploymentForKAIConfig(
+func (b *Binder) deploymentForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 
 	config := kaiConfig.Spec.Binder
-	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, config.Service, mainResourceName)
+	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, config.Service, b.BaseResourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -56,10 +56,10 @@ func deploymentForKAIConfig(
 	return []client.Object{deployment}, nil
 }
 
-func serviceAccountForKAIConfig(
+func (b *Binder) serviceAccountForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
-	sa, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.ServiceAccount{}, mainResourceName,
+	sa, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.ServiceAccount{}, b.BaseResourceName,
 		kaiConfig.Spec.Namespace)
 	if err != nil {
 		return nil, err
@@ -71,10 +71,10 @@ func serviceAccountForKAIConfig(
 	return []client.Object{sa}, err
 }
 
-func serviceForKAIConfig(
+func (b *Binder) serviceForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
-	serviceObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Service{}, mainResourceName,
+	serviceObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Service{}, b.BaseResourceName,
 		kaiConfig.Spec.Namespace)
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func serviceForKAIConfig(
 		},
 	}
 	service.Spec.Selector = map[string]string{
-		"app": mainResourceName,
+		"app": b.BaseResourceName,
 	}
 
 	service.Spec.SessionAffinity = v1.ServiceAffinityNone

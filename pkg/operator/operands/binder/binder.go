@@ -14,6 +14,7 @@ import (
 type Binder struct {
 	namespace        string
 	lastDesiredState []client.Object
+	BaseResourceName string
 }
 
 type resourceForKAIConfig func(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) ([]client.Object, error)
@@ -23,6 +24,9 @@ func (b *Binder) DesiredState(
 	kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 	b.namespace = kaiConfig.Spec.Namespace
+	if b.BaseResourceName == "" {
+		b.BaseResourceName = defaultResourceName
+	}
 
 	if kaiConfig.Spec.Binder == nil || kaiConfig.Spec.Binder.Service.Enabled == nil || !*kaiConfig.Spec.Binder.Service.Enabled {
 		b.lastDesiredState = []client.Object{}
@@ -31,9 +35,9 @@ func (b *Binder) DesiredState(
 
 	objects := []client.Object{}
 	for _, resourceFunc := range []resourceForKAIConfig{
-		deploymentForKAIConfig,
-		serviceAccountForKAIConfig,
-		serviceForKAIConfig,
+		b.deploymentForKAIConfig,
+		b.serviceAccountForKAIConfig,
+		b.serviceForKAIConfig,
 		resourceReservationServiceAccount,
 	} {
 		newResources, err := resourceFunc(ctx, runtimeClient, kaiConfig)

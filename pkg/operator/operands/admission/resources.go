@@ -25,18 +25,18 @@ import (
 )
 
 const (
-	mainResourceName              = "admission"
+	defaultResourceName           = "admission"
 	kaiAdmissionWebhookSecretName = "kai-admission-webhook-tls-secret"
 	certKey                       = "tls.crt"
 	keyKey                        = "tls.key"
 )
 
-func deploymentForKAIConfig(
+func (a *Admission) deploymentForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 
 	config := kaiConfig.Spec.Admission
-	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, config.Service, mainResourceName)
+	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, config.Service, a.BaseResourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -85,10 +85,10 @@ func deploymentForKAIConfig(
 	return []client.Object{deployment}, nil
 }
 
-func serviceAccountForKAIConfig(
+func (a *Admission) serviceAccountForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
-	sa, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.ServiceAccount{}, mainResourceName,
+	sa, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.ServiceAccount{}, a.BaseResourceName,
 		kaiConfig.Spec.Namespace)
 	if err != nil {
 		return nil, err
@@ -100,10 +100,10 @@ func serviceAccountForKAIConfig(
 	return []client.Object{sa}, err
 }
 
-func serviceForKAIConfig(
+func (a *Admission) serviceForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
-	serviceObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Service{}, mainResourceName,
+	serviceObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Service{}, a.BaseResourceName,
 		kaiConfig.Spec.Namespace)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func serviceForKAIConfig(
 		},
 	}
 	service.Spec.Selector = map[string]string{
-		"app": mainResourceName,
+		"app": a.BaseResourceName,
 	}
 
 	service.Spec.SessionAffinity = v1.ServiceAffinityNone
@@ -180,18 +180,18 @@ func buildWebhookSelectors(kaiConfig *kaiv1.Config) (namespaceSelector *metav1.L
 	return namespaceSelector, objectSelector
 }
 
-func buildWebhookClientConfig(kaiConfig *kaiv1.Config, secret *v1.Secret, webhookPath string) admissionv1.WebhookClientConfig {
+func (a *Admission) buildWebhookClientConfig(kaiConfig *kaiv1.Config, secret *v1.Secret, webhookPath string) admissionv1.WebhookClientConfig {
 	return admissionv1.WebhookClientConfig{
 		Service: &admissionv1.ServiceReference{
 			Namespace: kaiConfig.Spec.Namespace,
-			Name:      mainResourceName,
+			Name:      a.BaseResourceName,
 			Path:      ptr.To(webhookPath),
 		},
 		CABundle: secret.Data[certKey],
 	}
 }
 
-func mutatingWCForKAIConfig(
+func (a *Admission) mutatingWCForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 	secret *v1.Secret, webhookName string,
 ) ([]client.Object, error) {
@@ -206,10 +206,10 @@ func mutatingWCForKAIConfig(
 	if mutatingWebhookConfiguration.Labels == nil {
 		mutatingWebhookConfiguration.Labels = map[string]string{}
 	}
-	mutatingWebhookConfiguration.Labels["app"] = mainResourceName
+	mutatingWebhookConfiguration.Labels["app"] = a.BaseResourceName
 
 	namespaceSelector, objectSelector := buildWebhookSelectors(kaiConfig)
-	clientConfig := buildWebhookClientConfig(kaiConfig, secret, "/mutate--v1-pod")
+	clientConfig := a.buildWebhookClientConfig(kaiConfig, secret, "/mutate--v1-pod")
 
 	mutatingWebhookConfiguration.Webhooks = []admissionv1.MutatingWebhook{
 		{
@@ -238,7 +238,7 @@ func mutatingWCForKAIConfig(
 	return []client.Object{mutatingWebhookConfiguration}, nil
 }
 
-func validatingWCForKAIConfig(
+func (a *Admission) validatingWCForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 	secret *v1.Secret, webhookName string,
 ) ([]client.Object, error) {
@@ -254,10 +254,10 @@ func validatingWCForKAIConfig(
 	if validatingWebhookConfiguration.Labels == nil {
 		validatingWebhookConfiguration.Labels = map[string]string{}
 	}
-	validatingWebhookConfiguration.Labels["app"] = mainResourceName
+	validatingWebhookConfiguration.Labels["app"] = a.BaseResourceName
 
 	namespaceSelector, objectSelector := buildWebhookSelectors(kaiConfig)
-	clientConfig := buildWebhookClientConfig(kaiConfig, secret, "/validate--v1-pod")
+	clientConfig := a.buildWebhookClientConfig(kaiConfig, secret, "/validate--v1-pod")
 
 	validatingWebhookConfiguration.Webhooks = []admissionv1.ValidatingWebhook{
 		{
@@ -285,7 +285,7 @@ func validatingWCForKAIConfig(
 	return []client.Object{validatingWebhookConfiguration}, nil
 }
 
-func upsertKAIAdmissionCertSecret(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) (
+func (a *Admission) upsertKAIAdmissionCertSecret(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) (
 	error, *v1.Secret, string) {
 	secretObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Secret{},
 		kaiAdmissionWebhookSecretName, kaiConfig.Spec.Namespace)
@@ -298,7 +298,7 @@ func upsertKAIAdmissionCertSecret(ctx context.Context, runtimeClient client.Read
 		Kind:       "Secret",
 		APIVersion: "v1",
 	}
-	webhookName := calculateServiceUrl(mainResourceName, kaiConfig.Spec.Namespace)
+	webhookName := calculateServiceUrl(a.BaseResourceName, kaiConfig.Spec.Namespace)
 	if err = updateSelfSigned(secret, webhookName); err != nil {
 		return err, nil, ""
 	}

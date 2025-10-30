@@ -15,40 +15,44 @@ import (
 type Admission struct {
 	namespace        string
 	lastDesiredState []client.Object
+	BaseResourceName string
 }
 
 type resourceForKAIConfig func(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) ([]client.Object, error)
 
-func (b *Admission) DesiredState(
+func (a *Admission) DesiredState(
 	ctx context.Context, runtimeClient client.Reader,
 	kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
-	b.namespace = kaiConfig.Spec.Namespace
+	a.namespace = kaiConfig.Spec.Namespace
+	if a.BaseResourceName == "" {
+		a.BaseResourceName = defaultResourceName
+	}
 
 	if kaiConfig.Spec.Admission == nil || kaiConfig.Spec.Admission.Service.Enabled == nil ||
 		!*kaiConfig.Spec.Admission.Service.Enabled {
-		b.lastDesiredState = []client.Object{}
+		a.lastDesiredState = []client.Object{}
 		return nil, nil
 	}
 
-	err, secret, webhookName := upsertKAIAdmissionCertSecret(ctx, runtimeClient, kaiConfig)
+	err, secret, webhookName := a.upsertKAIAdmissionCertSecret(ctx, runtimeClient, kaiConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	objects := []client.Object{secret}
 	for _, resourceFunc := range []resourceForKAIConfig{
-		deploymentForKAIConfig,
-		serviceAccountForKAIConfig,
-		serviceForKAIConfig,
+		a.deploymentForKAIConfig,
+		a.serviceAccountForKAIConfig,
+		a.serviceForKAIConfig,
 		func(_ context.Context, _ client.Reader, _ *kaiv1.Config) ([]client.Object, error) {
 			return []client.Object{secret}, nil
 		},
 		func(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) ([]client.Object, error) {
-			return mutatingWCForKAIConfig(ctx, runtimeClient, kaiConfig, secret, webhookName)
+			return a.mutatingWCForKAIConfig(ctx, runtimeClient, kaiConfig, secret, webhookName)
 		},
 		func(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) ([]client.Object, error) {
-			return validatingWCForKAIConfig(ctx, runtimeClient, kaiConfig, secret, webhookName)
+			return a.validatingWCForKAIConfig(ctx, runtimeClient, kaiConfig, secret, webhookName)
 		},
 	} {
 		newResources, err := resourceFunc(ctx, runtimeClient, kaiConfig)
@@ -58,22 +62,22 @@ func (b *Admission) DesiredState(
 		objects = append(objects, newResources...)
 	}
 
-	b.lastDesiredState = objects
+	a.lastDesiredState = objects
 	return objects, nil
 }
 
-func (b *Admission) IsDeployed(ctx context.Context, readerClient client.Reader) (bool, error) {
-	return common.AllObjectsExists(ctx, readerClient, b.lastDesiredState)
+func (a *Admission) IsDeployed(ctx context.Context, readerClient client.Reader) (bool, error) {
+	return common.AllObjectsExists(ctx, readerClient, a.lastDesiredState)
 }
 
-func (b *Admission) IsAvailable(ctx context.Context, readerClient client.Reader) (bool, error) {
-	return common.AllControllersAvailable(ctx, readerClient, b.lastDesiredState)
+func (a *Admission) IsAvailable(ctx context.Context, readerClient client.Reader) (bool, error) {
+	return common.AllControllersAvailable(ctx, readerClient, a.lastDesiredState)
 }
 
-func (b *Admission) Name() string {
+func (a *Admission) Name() string {
 	return "KAIAdmission"
 }
 
-func (b *Admission) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+func (a *Admission) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
 	return nil
 }

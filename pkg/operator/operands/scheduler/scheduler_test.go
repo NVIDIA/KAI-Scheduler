@@ -72,7 +72,8 @@ var _ = Describe("Scheduler", func() {
 		}
 		Expect(fakeClient.Create(ctx, existingDeployment)).To(Succeed())
 
-		deploymentObj, err := deploymentForShard(ctx, fakeClient, kaiConfig, shard)
+		s := NewSchedulerForShard(shard)
+		deploymentObj, err := s.deploymentForShard(ctx, fakeClient, kaiConfig, shard)
 		deployment := deploymentObj.(*appsv1.Deployment)
 
 		Expect(err).To(BeNil())
@@ -85,7 +86,8 @@ var _ = Describe("Scheduler", func() {
 		kaiConfig.Spec.Scheduler.Service.Image.Name = ptr.To("best-name")
 		kaiConfig.Spec.Scheduler.Service.Image.Tag = ptr.To("great-tag")
 
-		deploymentObj, err := deploymentForShard(ctx, fakeClient, kaiConfig, shard)
+		s := NewSchedulerForShard(shard)
+		deploymentObj, err := s.deploymentForShard(ctx, fakeClient, kaiConfig, shard)
 		deployment := deploymentObj.(*appsv1.Deployment)
 
 		Expect(err).To(BeNil())
@@ -130,7 +132,8 @@ var _ = Describe("Scheduler", func() {
 
 	Context("ConfigMap", func() {
 		It("Should create configmap", func(ctx context.Context) {
-			cmObj, err := configMapForShard(ctx, fakeClient, kaiConfig, shard)
+			s := NewSchedulerForShard(shard)
+			cmObj, err := s.configMapForShard(ctx, fakeClient, kaiConfig, shard)
 			cm := cmObj.(*v1.ConfigMap)
 
 			Expect(err).To(BeNil())
@@ -168,7 +171,8 @@ tiers:
 				CPU: ptr.To("spread"),
 				GPU: ptr.To("spread"),
 			}
-			cmObj, err := configMapForShard(ctx, fakeClient, kaiConfig, spreadShard)
+			s := NewSchedulerForShard(shard)
+			cmObj, err := s.configMapForShard(ctx, fakeClient, kaiConfig, spreadShard)
 			cm := cmObj.(*v1.ConfigMap)
 
 			Expect(err).To(BeNil())

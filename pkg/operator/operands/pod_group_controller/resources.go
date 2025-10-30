@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	deploymentName = "podgroup-controller"
-	appName        = deploymentName
-	serviceName    = deploymentName
+	defaultResourceName = "podgroup-controller"
+	appName             = defaultResourceName
+	serviceName         = defaultResourceName
 
 	podGroupWebhookName = "podgroup-validation.kai.scheduler"
 
@@ -35,13 +35,13 @@ const (
 	keyKey     = "tls.key"
 )
 
-func deploymentForKAIConfig(
+func (p *PodGroupController) deploymentForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 
 	config := kaiConfig.Spec.PodGroupController
 
-	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, config.Service, deploymentName)
+	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, config.Service, p.BaseResourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -71,10 +71,10 @@ func deploymentForKAIConfig(
 	return []client.Object{deployment}, nil
 }
 
-func serviceAccountForKAIConfig(
+func (p *PodGroupController) serviceAccountForKAIConfig(
 	ctx context.Context, k8sReader client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
-	sa, err := common.ObjectForKAIConfig(ctx, k8sReader, &v1.ServiceAccount{}, deploymentName,
+	sa, err := common.ObjectForKAIConfig(ctx, k8sReader, &v1.ServiceAccount{}, p.BaseResourceName,
 		kaiConfig.Spec.Namespace)
 	if err != nil {
 		return nil, err
@@ -86,10 +86,10 @@ func serviceAccountForKAIConfig(
 	return []client.Object{sa}, err
 }
 
-func serviceForKAIConfig(
+func (p *PodGroupController) serviceForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
-	obj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Service{}, serviceName,
+	obj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Service{}, p.BaseResourceName,
 		kaiConfig.Spec.Namespace)
 	if err != nil {
 		return nil, err
@@ -110,13 +110,13 @@ func serviceForKAIConfig(
 		},
 	}
 	service.Spec.Selector = map[string]string{
-		"app": appName,
+		"app": p.BaseResourceName,
 	}
 
 	return []client.Object{service}, nil
 }
 
-func secretForKAIConfig(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
+func (p *PodGroupController) secretForKAIConfig(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 	obj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Secret{}, secretName, kaiConfig.Spec.Namespace)
 	if err != nil {
@@ -130,7 +130,7 @@ func secretForKAIConfig(ctx context.Context, runtimeClient client.Reader, kaiCon
 	}
 
 	if _, found := secret.Data[certKey]; !found {
-		serviceUrl := fmt.Sprintf("%s.%s.svc", serviceName, kaiConfig.Spec.Namespace)
+		serviceUrl := fmt.Sprintf("%s.%s.svc", p.BaseResourceName, kaiConfig.Spec.Namespace)
 		cert, key, err := generate.GenerateSelfSignedCert(serviceUrl, []string{serviceUrl})
 		if err != nil {
 			return nil, err
@@ -143,7 +143,7 @@ func secretForKAIConfig(ctx context.Context, runtimeClient client.Reader, kaiCon
 	return []client.Object{secret}, nil
 }
 
-func validatingWCForKAIConfig(
+func (p *PodGroupController) validatingWCForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 	secret *v1.Secret,
 ) ([]client.Object, error) {
@@ -172,14 +172,14 @@ func validatingWCForKAIConfig(
 		if validatingWebhookConfiguration.Labels == nil {
 			validatingWebhookConfiguration.Labels = map[string]string{}
 		}
-		validatingWebhookConfiguration.Labels["app"] = appName
+		validatingWebhookConfiguration.Labels["app"] = p.BaseResourceName
 		validatingWebhookConfiguration.Webhooks = []admissionv1.ValidatingWebhook{
 			{
 				Name:                    podGroupWebhookName,
 				AdmissionReviewVersions: []string{"v1"},
 				SideEffects:             ptr.To(admissionv1.SideEffectClassNone),
 				FailurePolicy:           ptr.To(admissionv1.Fail),
-				ClientConfig: webhookClientConfig(kaiConfig.Spec.Namespace, serviceName,
+				ClientConfig: p.webhookClientConfig(kaiConfig.Spec.Namespace,
 					fmt.Sprintf("/validate-scheduling-run-ai-%s-podgroup", version), crt,
 					*kaiConfig.Spec.PodGroupController.ControllerService.Webhook.Port),
 				Rules: []admissionv1.RuleWithOperations{
@@ -207,11 +207,11 @@ func validatingWCForKAIConfig(
 	return validatingWebhookConfigurations, nil
 }
 
-func webhookClientConfig(namespace, name, path string, cabundle []byte, port int) admissionv1.WebhookClientConfig {
+func (p *PodGroupController) webhookClientConfig(namespace, path string, cabundle []byte, port int) admissionv1.WebhookClientConfig {
 	return admissionv1.WebhookClientConfig{
 		Service: &admissionv1.ServiceReference{
 			Namespace: namespace,
-			Name:      name,
+			Name:      p.BaseResourceName,
 			Path:      ptr.To(path),
 			Port:      ptr.To(int32(port)),
 		},
