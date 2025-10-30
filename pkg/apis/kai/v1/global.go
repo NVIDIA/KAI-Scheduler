@@ -62,9 +62,6 @@ type GlobalConfig struct {
 	// +kubebuilder:validation:Optional
 	PodLabelSelector map[string]string `json:"podLabelSelector,omitempty"`
 
-	// +kubebuilder:validation:Optional
-	PrometheusEnabled *bool `json:"prometheusEnabled,omitempty"`
-
 	// Connection defines the connection configuration for TSDB
 	// +kubebuilder:validation:Optional
 	ExternalTSDBConnection *Connection `json:"connection,omitempty"`
