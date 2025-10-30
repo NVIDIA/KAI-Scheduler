@@ -2,6 +2,12 @@
 
 A standalone tool for running time-aware fairness simulations for the KAI Scheduler. This tool simulates queue allocations over time and generates allocation history data that can be analyzed to understand fairness behavior.
 
+## Further Reading
+
+For more information about time-aware fairness and the underlying concepts:
+- [Time-Aware Fairness Design Document](../../docs/developer/designs/time-aware-fairness/time-aware-fairness.md) - Detailed design and mathematical formulation
+- [Fairness Documentation](../../docs/fairness/README.md) - Overview of KAI's fair-share scheduling concepts
+
 ## Quick Start
 
 ```bash
@@ -152,10 +158,10 @@ Jobs:
 
 #### Global Parameters
 
-- **Cycles**: Number of simulation cycles (each cycle is ~10ms). More cycles = longer simulation
-- **WindowSize**: Time window (in cycles) for tracking usage history. Affects how quickly the fairness algorithm responds to changes
-- **HalfLifePeriod**: Half-life for exponential decay (in seconds). If set to 0, decay is disabled
-- **KValue**: Fairness sensitivity parameter. Higher values make the algorithm more aggressive in correcting imbalances
+- `Cycles`: Number of simulation cycles (each cycle is ~10ms). More cycles = longer simulation
+- `WindowSize`: Time window (in cycles) for tracking usage history. Affects how quickly the fairness algorithm responds to changes
+- `HalfLifePeriod`: Half-life for exponential decay (in seconds). If set to 0, decay is disabled
+- `KValue`: Fairness sensitivity parameter. Higher values make the algorithm more aggressive in correcting imbalances
 
 #### Queue Parameters
 
