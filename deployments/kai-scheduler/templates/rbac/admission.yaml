@@ -7,6 +7,14 @@ metadata:
   name: kai-admission
 rules:
 - apiGroups:
+  - config.openshift.io
+  resources:
+  - clusterversions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - coordination.k8s.io
   resources:
   - leases
@@ -38,3 +46,11 @@ rules:
   - create
   - patch
   - update
+- apiGroups:
+  - node.k8s.io
+  resources:
+  - runtimeclasses
+  verbs:
+  - get
+  - list
+  - watch

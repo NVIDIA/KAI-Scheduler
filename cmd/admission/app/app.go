@@ -13,6 +13,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	ocpconf "github.com/openshift/api/config/v1"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
@@ -41,8 +42,8 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(schedulingv1alpha2.AddToScheme(scheme))
+	utilruntime.Must(ocpconf.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -140,6 +141,8 @@ func (app *App) RegisterPlugins(admissionPlugins *admissionplugins.KaiAdmissionP
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch;update
+// +kubebuilder:rbac:groups=node.k8s.io,resources=runtimeclasses,verbs=get;list;watch
+// +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 
 func (app *App) Run() error {
 	var err error
@@ -174,5 +177,6 @@ func (app *App) Run() error {
 		setupLog.Error(err, "problem running manager")
 		return err
 	}
+
 	return nil
 }

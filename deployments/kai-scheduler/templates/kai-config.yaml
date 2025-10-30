@@ -105,6 +105,7 @@ spec:
       targetPort: {{ .Values.admission.ports.webhookPort | default 9443 }}
       probePort: {{ .Values.admission.ports.probePort | default 8081 }}
       metricsPort: {{ .Values.admission.ports.metricsPort | default 8080 }}
+    gpuPodRuntimeClassName: {{ .Values.admission.gpuPodRuntimeClassName | default "nvidia" }}
 
   nodeScaleAdjuster:
     service:

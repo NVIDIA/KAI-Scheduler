@@ -8,6 +8,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 const (
@@ -42,6 +43,11 @@ type Admission struct {
 	// MutatingWebhookConfigurationName is the name of the MutatingWebhookConfiguration for the admission service
 	// +kubebuilder:validation:Optional
 	MutatingWebhookConfigurationName *string `json:"mutatingWebhookConfigurationName,omitempty"`
+
+	// GPUPodRuntimeClassName specifies the runtime class to be set for GPU pods, ignored in Openshift deployments.
+	// set to empty string to disable
+	// +kubebuilder:validation:Optional
+	GPUPodRuntimeClassName *string `json:"gpuPodRuntimeClassName,omitempty"`
 }
 
 func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
@@ -60,6 +66,8 @@ func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
 
 	b.ValidatingWebhookConfigurationName = common.SetDefault(b.ValidatingWebhookConfigurationName, ptr.To(defaultValidatingWebhookName))
 	b.MutatingWebhookConfigurationName = common.SetDefault(b.MutatingWebhookConfigurationName, ptr.To(defaultMutatingWebhookName))
+
+	b.GPUPodRuntimeClassName = common.SetDefault(b.GPUPodRuntimeClassName, ptr.To(constants.DefaultRuntimeClassName))
 }
 
 // Webhook defines configuration for the admission webhook
