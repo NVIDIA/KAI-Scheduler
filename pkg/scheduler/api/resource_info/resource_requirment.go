@@ -154,7 +154,7 @@ func (r *ResourceRequirements) DetailedString() string {
 
 	for rName, rQuant := range r.scalarResources {
 		if rName == v1.ResourceEphemeralStorage || rName == v1.ResourceStorage {
-			rQuant = rQuant / (1000 * 1000 * 1000) // convert from milli-bytes to GB
+			rQuant = rQuant / int64(MemoryToGB) // convert from milli-bytes to GB
 		}
 		messageBuilder.WriteString(fmt.Sprintf(", %s: %v (GB)", rName, rQuant))
 	}
