@@ -43,6 +43,30 @@ type Prometheus struct {
 	// ServiceMonitor defines ServiceMonitor configuration for KAI services
 	// +kubebuilder:validation:Optional
 	ServiceMonitor *ServiceMonitor `json:"serviceMonitor,omitempty"`
+
+	// ExternalPrometheusUrl defines the URL of an external Prometheus instance to use
+	// When set, KAI will not deploy its own Prometheus but will configure ServiceMonitors
+	// for the external instance and validate connectivity
+	// +kubebuilder:validation:Optional
+	ExternalPrometheusUrl *string `json:"externalPrometheusUrl,omitempty"`
+
+	// ExternalPrometheusPingConfig defines the configuration for external Prometheus connectivity validation, with defaults.
+	// +kubebuilder:validation:Optional
+	ExternalPrometheusHealthProbe *ExternalPrometheusHealthProbe `json:"externalPrometheusHealthProbe,omitempty"`
+}
+
+type ExternalPrometheusHealthProbe struct {
+	// Interval defines the interval for external Prometheus connectivity validation (in seconds)
+	// +kubebuilder:validation:Optional
+	Interval *int `json:"interval,omitempty"`
+
+	// PingsTimeout defines the timeout for external Prometheus connectivity validation (in seconds)
+	// +kubebuilder:validation:Optional
+	Timeout *int `json:"timeout,omitempty"`
+
+	// PingsMaxRetries defines the maximum number of retries for external Prometheus connectivity validation
+	// +kubebuilder:validation:Optional
+	MaxRetries *int `json:"maxRetries,omitempty"`
 }
 
 func (p *Prometheus) SetDefaultsWhereNeeded() {
@@ -53,7 +77,9 @@ func (p *Prometheus) SetDefaultsWhereNeeded() {
 	p.RetentionPeriod = common.SetDefault(p.RetentionPeriod, ptr.To("2w"))
 	p.SampleInterval = common.SetDefault(p.SampleInterval, ptr.To("1m"))
 	p.StorageClassName = common.SetDefault(p.StorageClassName, ptr.To("standard"))
-
+	p.ExternalPrometheusUrl = common.SetDefault(p.ExternalPrometheusUrl, nil)
+	p.ExternalPrometheusHealthProbe = common.SetDefault(p.ExternalPrometheusHealthProbe, &ExternalPrometheusHealthProbe{})
+	p.ExternalPrometheusHealthProbe.SetDefaultsWhereNeeded()
 	p.ServiceMonitor = common.SetDefault(p.ServiceMonitor, &ServiceMonitor{})
 	p.ServiceMonitor.SetDefaultsWhereNeeded()
 }
@@ -252,4 +278,13 @@ func (s *ServiceMonitor) SetDefaultsWhereNeeded() {
 	s.Interval = common.SetDefault(s.Interval, ptr.To("30s"))
 	s.ScrapeTimeout = common.SetDefault(s.ScrapeTimeout, ptr.To("10s"))
 	s.BearerTokenFile = common.SetDefault(s.BearerTokenFile, ptr.To("/var/run/secrets/kubernetes.io/serviceaccount/token"))
+}
+
+func (p *ExternalPrometheusHealthProbe) SetDefaultsWhereNeeded() {
+	if p == nil {
+		return
+	}
+	p.Interval = common.SetDefault(p.Interval, ptr.To(30))
+	p.Timeout = common.SetDefault(p.Timeout, ptr.To(10))
+	p.MaxRetries = common.SetDefault(p.MaxRetries, ptr.To(5))
 }

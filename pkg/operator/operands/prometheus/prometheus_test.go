@@ -5,6 +5,8 @@ package prometheus
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -448,6 +450,72 @@ var _ = Describe("prometheusForKAIConfig", func() {
 			Expect(len(objects)).To(Equal(0))
 		})
 	})
+
+	Context("when external Prometheus URL is provided", func() {
+		BeforeEach(func(ctx context.Context) {
+			// Add ServiceMonitor CRD to fake client to simulate Prometheus Operator being installed
+			serviceMonitorCRD := &metav1.PartialObjectMetadata{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "CustomResourceDefinition",
+					APIVersion: "apiextensions.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "servicemonitors.monitoring.coreos.com",
+				},
+			}
+			Expect(fakeKubeClient.Create(ctx, serviceMonitorCRD)).To(Succeed())
+		})
+
+		It("should return ServiceMonitors only when external Prometheus URL is valid", func(ctx context.Context) {
+			kaiConfig.Spec.Prometheus.ExternalPrometheusUrl = ptr.To("http://prometheus.example.com:9090")
+
+			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+
+			// The function skips Prometheus CR creation and only creates ServiceMonitors
+			Expect(err).To(BeNil())
+			Expect(objects).NotTo(BeNil())
+			Expect(len(objects)).To(Equal(1)) // 1 ServiceMonitor
+
+			serviceMonitor := test_utils.FindTypeInObjects[*monitoringv1.ServiceMonitor](objects)
+			Expect(serviceMonitor).NotTo(BeNil())
+			Expect((*serviceMonitor).Name).To(Equal("queuecontroller"))
+		})
+
+		It("should return empty objects list when ServiceMonitors are disabled", func(ctx context.Context) {
+			kaiConfig.Spec.Prometheus.ExternalPrometheusUrl = ptr.To("http://prometheus.example.com:9090")
+			kaiConfig.Spec.Prometheus.ServiceMonitor.Enabled = ptr.To(false)
+
+			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+
+			// When ServiceMonitors are disabled, function returns empty list
+			Expect(err).To(BeNil())
+			Expect(objects).NotTo(BeNil())
+			Expect(len(objects)).To(Equal(0))
+		})
+
+		It("should return empty objects list when ServiceMonitor CRD is not available", func(ctx context.Context) {
+			kaiConfig.Spec.Prometheus.ExternalPrometheusUrl = ptr.To("http://prometheus.example.com:9090")
+
+			// Remove ServiceMonitor CRD
+			serviceMonitorCRD := &metav1.PartialObjectMetadata{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "CustomResourceDefinition",
+					APIVersion: "apiextensions.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "servicemonitors.monitoring.coreos.com",
+				},
+			}
+			Expect(fakeKubeClient.Delete(ctx, serviceMonitorCRD)).To(Succeed())
+
+			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+
+			// When CRD is not available, function returns empty list
+			Expect(err).To(BeNil())
+			Expect(objects).NotTo(BeNil())
+			Expect(len(objects)).To(Equal(0))
+		})
+	})
 })
 
 func kaiConfigForPrometheus() *kaiv1.Config {
@@ -461,3 +529,75 @@ func kaiConfigForPrometheus() *kaiv1.Config {
 
 	return kaiConfig
 }
+
+var _ = Describe("External Prometheus Validation", func() {
+	Context("validateExternalPrometheusConnection", func() {
+		var (
+			ctx    context.Context
+			server *httptest.Server
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+		})
+
+		AfterEach(func() {
+			if server != nil {
+				server.Close()
+			}
+		})
+
+		It("should successfully validate connection to a working Prometheus instance", func() {
+			// Create a test server that responds to /api/v1/status/config
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/api/v1/status/config" {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"status":"success"}`))
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+
+			err := validateExternalPrometheusConnection(ctx, server.URL)
+			Expect(err).To(BeNil())
+		})
+
+		It("should fail validation for invalid URL", func() {
+			err := validateExternalPrometheusConnection(ctx, "://invalid-url")
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("invalid Prometheus URL"))
+		})
+
+		It("should fail validation when Prometheus returns error status", func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			}))
+
+			err := validateExternalPrometheusConnection(ctx, server.URL)
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("status code 500"))
+		})
+
+		It("should fail validation when connection cannot be established", func() {
+			err := validateExternalPrometheusConnection(ctx, "http://nonexistent.example.com:9090")
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("failed to connect"))
+		})
+
+		It("should add http scheme when missing", func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/api/v1/status/config" {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"status":"success"}`))
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+
+			// Remove the scheme from the URL
+			urlWithoutScheme := server.URL[7:] // Remove "http://"
+			err := validateExternalPrometheusConnection(ctx, urlWithoutScheme)
+			Expect(err).To(BeNil())
+		})
+	})
+})

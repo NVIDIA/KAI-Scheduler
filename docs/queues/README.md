@@ -21,7 +21,7 @@ Scheduling queues are the core resource management primitive in KAI Scheduler, p
 
 ### Queue Specification
 ```yaml
-apiVersion: scheduling.run.ai/v2alpha2
+apiVersion: scheduling.run.ai/v2
 kind: Queue
 metadata:
   name: example-queue
@@ -71,7 +71,7 @@ resources:
 
 ### Basic Queue
 ```yaml
-apiVersion: scheduling.run.ai/v2alpha2
+apiVersion: scheduling.run.ai/v2
 kind: Queue
 metadata:
   name: research-team
@@ -88,7 +88,7 @@ spec:
 
 ### Hierarchical Queue 
 ```yaml
-apiVersion: scheduling.run.ai/v2alpha2
+apiVersion: scheduling.run.ai/v2
 kind: Queue
 metadata:
   name: ml-team
@@ -107,7 +107,7 @@ spec:
 
 ### Unlimited Queue - default value is -1
 ```yaml
-apiVersion: scheduling.run.ai/v2alpha2
+apiVersion: scheduling.run.ai/v2
 kind: Queue
 metadata:
   name: burst-queue

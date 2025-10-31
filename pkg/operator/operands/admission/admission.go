@@ -73,3 +73,7 @@ func (b *Admission) IsAvailable(ctx context.Context, readerClient client.Reader)
 func (b *Admission) Name() string {
 	return "KAIAdmission"
 }
+
+func (b *Admission) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+	return nil
+}

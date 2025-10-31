@@ -24,7 +24,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
@@ -39,11 +38,11 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 		nodesToDomains     map[string]DomainID
 		setupTopologyTree  func() *Info
 
-		domainParent        map[DomainID]DomainID
-		domainLevel         map[DomainID]DomainLevel
-		expectedError       string
-		expectedJobFitError string
-		expectedNodes       map[string]bool
+		domainParent             map[DomainID]DomainID
+		domainLevel              map[DomainID]DomainLevel
+		expectedError            string
+		expectedJobFitError      string
+		expectedNodesFirstSubset map[string]bool
 	}{
 		{
 			name: "successful topology allocation - right nodes",
@@ -135,7 +134,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				"zone1": "zone",
 			},
 			expectedError: "",
-			expectedNodes: map[string]bool{
+			expectedNodesFirstSubset: map[string]bool{
 				"node-1": true,
 			},
 		},
@@ -145,9 +144,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				Name:                "test-job",
 				RequiredCPUsPerTask: 500,
 				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
-					&topology_info.TopologyConstraintInfo{
-						Topology: "test-topology",
-					},
+					nil,
 				),
 				Tasks: []*tasks_fake.TestTaskBasic{
 					{State: pod_status.Pending},
@@ -211,41 +208,6 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			expectedJobFitError: "Matching topology nonexistent-topology does not exist",
 		},
 		{
-			name: "cache already populated - early return",
-			job: &jobs_fake.TestJobBasic{
-				Name:                "test-job",
-				RequiredCPUsPerTask: 500,
-				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
-					&topology_info.TopologyConstraintInfo{
-						Topology: "test-topology",
-					},
-				),
-				Tasks: []*tasks_fake.TestTaskBasic{
-					{State: pod_status.Pending},
-				},
-			},
-			nodes: map[string]nodes_fake.TestNodeBasic{
-				"node-1": {
-					CPUMillis:  1000,
-					GPUs:       6,
-					MaxTaskNum: ptr.To(100),
-				},
-			},
-			setupTopologyTree: func() *Info {
-				return &Info{
-					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
-								{NodeLabel: "zone"},
-							},
-						},
-					},
-				}
-			},
-			expectedError: "",
-		},
-		{
 			name: "insufficient allocatable pods - no domains found",
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",
@@ -298,6 +260,104 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				return tree
 			},
 			expectedError: "",
+		},
+		{
+			name: "successful allocation with mixed GPU tasks - usePodCountAccounting returns false",
+			job: &jobs_fake.TestJobBasic{
+				Name:                "test-job",
+				RequiredCPUsPerTask: 2000,
+				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{
+						Topology:       "test-topology",
+						RequiredLevel:  "zone",
+						PreferredLevel: "rack",
+					},
+				),
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{State: pod_status.Pending, RequiredGPUs: ptr.To(int64(1))}, // Task with GPU
+					{State: pod_status.Pending, RequiredGPUs: ptr.To(int64(0))}, // Task without GPU
+				},
+			},
+			nodes: map[string]nodes_fake.TestNodeBasic{
+				"node-1": {
+					CPUMillis:  2000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+				},
+				"node-2": {
+					CPUMillis:  2000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+				},
+			},
+			nodesToDomains: map[string]DomainID{
+				"node-1": "rack1.zone1",
+				"node-2": "rack2.zone1",
+			},
+			setupTopologyTree: func() *Info {
+				tree := &Info{
+					Name: "test-topology",
+					TopologyResource: &kueuev1alpha1.Topology{
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{NodeLabel: "zone"},
+								{NodeLabel: "rack"},
+							},
+						},
+					},
+					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
+						"rack": {
+							"rack1.zone1": {
+								ID:                       "rack1.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+								AllocatablePods:          allocatablePodsNotSet,
+							},
+							"rack2.zone1": {
+								ID:                       "rack2.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+								AllocatablePods:          allocatablePodsNotSet,
+							},
+						},
+						"zone": {
+							"zone1": {
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+								AllocatablePods:          allocatablePodsNotSet,
+							},
+						},
+					},
+				}
+
+				tree.DomainsByLevel[rootLevel] = map[DomainID]*DomainInfo{
+					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
+				}
+
+				// Set parent relationships
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
+					tree.DomainsByLevel["rack"]["rack2.zone1"],
+				}
+
+				return tree
+			},
+			domainParent: map[DomainID]DomainID{
+				"rack1.zone1": "zone1",
+				"rack2.zone1": "zone1",
+			},
+			domainLevel: map[DomainID]DomainLevel{
+				"zone1": "zone",
+			},
+			expectedError: "",
+			expectedNodesFirstSubset: map[string]bool{
+				"node-1": true,
+				"node-2": true,
+			},
 		},
 		{
 			name: "getJobAllocatableDomains constrain definition error",
@@ -456,13 +516,16 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			}
 
 			// Verify nodes
-			if tt.expectedNodes != nil {
-				if subsets == nil {
-					t.Errorf("expected subsets to be filled with %v, but got nil", tt.expectedNodes)
+			if tt.expectedNodesFirstSubset != nil {
+				if len(subsets) == 0 {
+					t.Errorf("expected subsets to be filled with %v, but got nil", tt.expectedNodesFirstSubset)
+				}
+				if len(subsets[0]) != len(tt.expectedNodesFirstSubset) {
+					t.Errorf("expected subsets to be filled with %v, but got %v", tt.expectedNodesFirstSubset, subsets[0])
 				}
 				for _, node := range subsets[0] {
-					_, ok := tt.expectedNodes[node.Name]
-					assert.True(t, ok, "expected node %s to be in subset %v", node.Name, tt.expectedNodes)
+					_, ok := tt.expectedNodesFirstSubset[node.Name]
+					assert.True(t, ok, "expected node %s to be in subset %v", node.Name, tt.expectedNodesFirstSubset)
 				}
 			}
 		})
@@ -1232,18 +1295,14 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 				}
 			}
 
-			session := &framework.Session{
-				Nodes:         nodesInfoMap,
-				PodGroupInfos: jobsInfoMap,
-				Topologies:    []*kueuev1alpha1.Topology{topologyTree.TopologyResource},
-			}
 			plugin := &topologyPlugin{}
 
 			// Call the function under test
-			maxAllocatablePods, err := plugin.calcTreeAllocatable(podgroup_info.GetTasksToAllocate(job, nil, nil, true), topologyTree, maps.Values(session.Nodes))
+			err := plugin.calcTreeAllocatable(podgroup_info.GetTasksToAllocate(job, nil, nil, true), topologyTree.DomainsByLevel[rootLevel][rootDomainId])
 			if err != nil {
 				t.Errorf("failed to calc tree allocatable. job: %s, error: %v", job.PodGroup.Name, err)
 			}
+			maxAllocatablePods := topologyTree.DomainsByLevel[rootLevel][rootDomainId].AllocatablePods
 
 			// Assert
 			if maxAllocatablePods != tt.expectedMaxAllocatablePods {
@@ -1804,8 +1863,16 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			for _, podSet := range tt.job.PodSets {
 				tt.job.RootSubGroupSet.AddPodSet(podSet)
 			}
+
+			tasks := podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)
+			tasksResources := resource_info.NewResource(0, 0, 0)
+			for _, task := range tasks {
+				tasksResources.AddResourceRequirements(task.ResReq)
+			}
+			tasksCount := len(tasks)
+
 			result, err := plugin.getJobAllocatableDomains(tt.job, &tt.job.RootSubGroupSet.SubGroupInfo,
-				tt.job.RootSubGroupSet.GetAllPodSets(), len(podgroup_info.GetTasksToAllocate(tt.job, nil, nil, true)),
+				tt.job.RootSubGroupSet.GetAllPodSets(), tasksResources, tasksCount,
 				tt.topologyTree)
 
 			// Check error

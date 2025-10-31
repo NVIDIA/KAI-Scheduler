@@ -2012,6 +2012,29 @@ spec:
                     description: Enabled defines whether a Prometheus instance should
                       be deployed
                     type: boolean
+                  externalPrometheusHealthProbe:
+                    description: ExternalPrometheusPingConfig defines the configuration
+                      for external Prometheus connectivity validation, with defaults.
+                    properties:
+                      interval:
+                        description: Interval defines the interval for external Prometheus
+                          connectivity validation (in seconds)
+                        type: integer
+                      maxRetries:
+                        description: PingsMaxRetries defines the maximum number of
+                          retries for external Prometheus connectivity validation
+                        type: integer
+                      timeout:
+                        description: PingsTimeout defines the timeout for external
+                          Prometheus connectivity validation (in seconds)
+                        type: integer
+                    type: object
+                  externalPrometheusUrl:
+                    description: |-
+                      ExternalPrometheusUrl defines the URL of an external Prometheus instance to use
+                      When set, KAI will not deploy its own Prometheus but will configure ServiceMonitors
+                      for the external instance and validate connectivity
+                    type: string
                   retentionPeriod:
                     description: RetentionPeriod defines how long to retain data (e.g.,
                       "2w", "1d", "30d")

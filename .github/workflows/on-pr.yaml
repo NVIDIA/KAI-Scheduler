@@ -110,8 +110,6 @@ jobs:
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
           cp charts/kai-scheduler-$PACKAGE_VERSION.tgz images/
 
-
-
   e2e-tests:
     name: Run E2E Tests
     needs: [ build ]

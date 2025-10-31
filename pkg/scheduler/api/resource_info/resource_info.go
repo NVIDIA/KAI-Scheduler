@@ -136,6 +136,9 @@ func (r *Resource) DetailedString() string {
 }
 
 func (r *Resource) AddResourceRequirements(req *ResourceRequirements) {
+	if req == nil {
+		return
+	}
 	r.BaseResource.Add(&req.BaseResource)
 	r.gpus += req.GPUs()
 	for migProfile, migCount := range req.MigResources() {

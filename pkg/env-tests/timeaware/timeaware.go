@@ -26,13 +26,16 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/podgroupcontroller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/queuecontroller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/scheduler"
+	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/schedulerplugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/fake"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins"
 )
 
@@ -40,11 +43,11 @@ const simulationCycleInterval = time.Millisecond * 10
 const defaultTimeout = time.Second * 10
 
 type TestQueue struct {
-	Name         string
-	Parent       string   // if empty, the queue is a department
-	Priority     *int     // default is 100
-	DeservedGPUs *float64 // default is 0
-	Weight       *float64 // default is 1
+	Name         string   `yaml:"name"`
+	Parent       string   `yaml:"parent"`       // if empty, the queue is a department
+	Priority     *int     `yaml:"priority"`     // default is 100
+	DeservedGPUs *float64 `yaml:"deservedGPUs"` // default is 0
+	Weight       *float64 `yaml:"weight"`       // default is 1
 }
 
 func (q *TestQueue) SetDefaults() {
@@ -60,23 +63,24 @@ func (q *TestQueue) SetDefaults() {
 }
 
 type TestJobs struct {
-	GPUs    int
-	NumPods int
-	NumJobs int
+	GPUs    int `yaml:"GPUs"`
+	NumPods int `yaml:"numPods"`
+	NumJobs int `yaml:"numJobs"`
 }
 
 type TestNodes struct {
-	GPUs  int
-	Count int
+	GPUs  int `yaml:"GPUs"`
+	Count int `yaml:"count"`
 }
 
 type TimeAwareSimulation struct {
-	Queues     []TestQueue
-	Jobs       map[string]TestJobs // key is the queue name
-	Nodes      []TestNodes
-	Cycles     *int     // default is 100
-	WindowSize *int     // default is 5
-	KValue     *float64 // default is 1.0
+	Queues         []TestQueue         `yaml:"queues"`
+	Jobs           map[string]TestJobs `yaml:"jobs"` // key is the queue name
+	Nodes          []TestNodes         `yaml:"nodes"`
+	Cycles         *int                `yaml:"cycles"`         // default is 100
+	WindowSize     *int                `yaml:"windowSize"`     // default is 5
+	HalfLifePeriod *int                `yaml:"halfLifePeriod"` // default is 0 (disabled)
+	KValue         *float64            `yaml:"kValue"`         // default is 1.0
 }
 
 func (s *TimeAwareSimulation) SetDefaults() {
@@ -94,7 +98,8 @@ func (s *TimeAwareSimulation) SetDefaults() {
 	}
 }
 
-func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSize *int, kValue *float64) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
+func setupControllers(backgroundCtx context.Context, cfg *rest.Config,
+	windowSize, halfLifePeriod *int, kValue *float64) (chan struct{}, context.CancelFunc, *fake.FakeUsageDBClient, error) {
 	ctx, cancel := context.WithCancel(backgroundCtx)
 
 	err := queuecontroller.RunQueueController(cfg, ctx)
@@ -104,6 +109,7 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 
 	actions.InitDefaultActions()
 	plugins.InitDefaultPlugins()
+	framework.RegisterPluginBuilder("fairnessTracker", schedulerplugins.New)
 
 	schedulerConf, err := conf_util.GetDefaultSchedulerConf()
 	if err != nil {
@@ -114,10 +120,12 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 		ClientType:       "fake-with-history",
 		ConnectionString: "fake-connection",
 		UsageParams: &api.UsageParams{
-			WindowSize:    &[]time.Duration{time.Second * time.Duration(*windowSize)}[0],
-			FetchInterval: &[]time.Duration{time.Millisecond}[0],
+			WindowSize:     &[]time.Duration{time.Second * time.Duration(*windowSize)}[0],
+			FetchInterval:  &[]time.Duration{time.Millisecond}[0],
+			HalfLifePeriod: &[]time.Duration{time.Second * time.Duration(*halfLifePeriod)}[0],
 		},
 	}
+	schedulerConf.UsageDBConfig.UsageParams.SetDefaults()
 
 	for i := range schedulerConf.Tiers[0].Plugins {
 		if schedulerConf.Tiers[0].Plugins[i].Name != "proportion" {
@@ -128,6 +136,14 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 		}
 		schedulerConf.Tiers[0].Plugins[i].Arguments["kValue"] = fmt.Sprintf("%f", *kValue)
 	}
+
+	schedulerConf.Tiers = append(schedulerConf.Tiers, conf.Tier{
+		Plugins: []conf.PluginOption{
+			{
+				Name: "fairnessTracker",
+			},
+		},
+	})
 
 	stopCh := make(chan struct{})
 	err = scheduler.RunScheduler(cfg, schedulerConf, stopCh)
@@ -157,11 +173,24 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config, windowSiz
 	return stopCh, cancel, usageClient, nil
 }
 
-func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Config, simulation TimeAwareSimulation) (allocationHistory fake.AllocationHistory, err error, cleanupErr error) {
+func RunSimulation(
+	ctx context.Context,
+	ctrlClient client.Client,
+	cfg *rest.Config,
+	simulation TimeAwareSimulation,
+) (
+	allocationHistory SimulationHistory,
+	err error,
+	cleanupErr error,
+) {
 	simulationName := randomstring.HumanFriendlyEnglishString(10)
 	simulation.SetDefaults()
 
-	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg, simulation.WindowSize, simulation.KValue)
+	stopCh, cancel, usageClient, err := setupControllers(ctx, cfg,
+		simulation.WindowSize,
+		simulation.HalfLifePeriod,
+		simulation.KValue,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup controllers: %w", err), nil
 	}
@@ -189,7 +218,9 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 
 	var nodes []*corev1.Node
 	for _, node := range simulation.Nodes {
-		nodeObject := utils.CreateNodeObject(ctx, ctrlClient, utils.DefaultNodeConfig(fmt.Sprintf("test-node-%d", node.GPUs)))
+		nodeConfig := utils.DefaultNodeConfig(fmt.Sprintf("test-node-%d", node.GPUs))
+		nodeConfig.GPUs = node.GPUs
+		nodeObject := utils.CreateNodeObject(ctx, ctrlClient, nodeConfig)
 		nodeObject.ObjectMeta.Labels = map[string]string{
 			"simulation": simulationName,
 		}
@@ -231,7 +262,10 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 		}
 	}
 
-	for range *simulation.Cycles {
+	fairnessTrackerPlugin := schedulerplugins.GetFairnessTrackerPlugin()
+
+	allocationHistory = make(SimulationHistory, *simulation.Cycles)
+	for i := range *simulation.Cycles {
 		time.Sleep(simulationCycleInterval)
 		allocations, err := getAllocations(ctx, ctrlClient)
 		if err != nil {
@@ -242,9 +276,17 @@ func RunSimulation(ctx context.Context, ctrlClient client.Client, cfg *rest.Conf
 			return nil, fmt.Errorf("failed to get cluster resources: %w", err), nil
 		}
 		usageClient.AppendQueueAllocation(allocations, clusterResources)
-	}
 
-	allocationHistory = usageClient.GetAllocationHistory()
+		fairshares := fairnessTrackerPlugin.GetSnapshots()
+		a := map[common_info.QueueID]SimulationDataPoint{}
+		for queueID, fairshare := range fairshares {
+			a[queueID] = SimulationDataPoint{
+				Allocation: allocations[queueID][constants.GpuResource],
+				FairShare:  fairshare.GPUs(),
+			}
+		}
+		allocationHistory[i] = a
+	}
 
 	return allocationHistory, err, nil
 }

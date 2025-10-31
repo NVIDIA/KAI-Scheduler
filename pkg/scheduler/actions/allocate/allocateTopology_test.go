@@ -2452,6 +2452,126 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		},
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Name: "Elastic subgroups with required topology constraints",
+				Topologies: []*kueuev1alpha1.Topology{
+					{
+						ObjectMeta: v1.ObjectMeta{
+							Name: "cluster-topology",
+						},
+						Spec: kueuev1alpha1.TopologySpec{
+							Levels: []kueuev1alpha1.TopologyLevel{
+								{
+									NodeLabel: "k8s.io/rack",
+								},
+							},
+						},
+					},
+				},
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:                "pending_job0",
+						RequiredGPUsPerTask: 1,
+						Priority:            constants.PriorityTrainNumber,
+						QueueName:           "queue0",
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+							root.AddPodSet(subgroup_info.NewPodSet("subgroup-a", 1,
+								&topology_info.TopologyConstraintInfo{
+									Topology:       "cluster-topology",
+									PreferredLevel: "k8s.io/rack",
+								}))
+							root.AddPodSet(subgroup_info.NewPodSet("subgroup-b", 1,
+								&topology_info.TopologyConstraintInfo{
+									Topology:       "cluster-topology",
+									PreferredLevel: "k8s.io/rack",
+								}))
+							return root
+						}(),
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "subgroup-a",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "subgroup-a",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "subgroup-b",
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "subgroup-b",
+							},
+						},
+					},
+				},
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node0": {
+						GPUs: 2,
+						Labels: map[string]string{
+							"k8s.io/rack": "rack1",
+						},
+					},
+					"node1": {
+						GPUs: 2,
+						Labels: map[string]string{
+							"k8s.io/rack": "rack2",
+						},
+					},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:               "queue0",
+						ParentQueue:        "department-a",
+						DeservedGPUs:       4,
+						GPUOverQuotaWeight: 1,
+						MaxAllowedGPUs:     4,
+					},
+				},
+				Departments: []test_utils.TestDepartmentBasic{
+					{
+						Name:         "department-a",
+						DeservedGPUs: 4,
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"pending_job0-0": {
+						NodeName:             "node0",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-1": {
+						NodeName:             "node1",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-2": {
+						NodeName:             "node0",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+					"pending_job0-3": {
+						NodeName:             "node1",
+						GPUsRequired:         1,
+						Status:               pod_status.Binding,
+						DontValidateGPUGroup: true,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheBinds: 4,
+					},
+				},
+			},
+			RoundsUntilMatch: 1,
+		},
+		{
+			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Hierarchical Preferred Topology - PodGroup prefers Spine, SubGroups has no preference - should allocate on closest Spine nodes",
 				Topologies: []*kueuev1alpha1.Topology{
 					{

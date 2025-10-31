@@ -56,3 +56,7 @@ func (p *PodGrouper) IsAvailable(ctx context.Context, readerClient client.Reader
 func (p *PodGrouper) Name() string {
 	return "PodGrouper"
 }
+
+func (p *PodGrouper) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+	return nil
+}

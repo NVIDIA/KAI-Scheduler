@@ -34,13 +34,74 @@ Help us keep the docs clear and useful by fixing typos, updating outdated inform
 - Submit a PR – Open a pull request and reference any relevant issues or discussions.
 - Coverage - Please look at the coverage change details and create unit tests, integration tests or end-to-end tests to cover new functionality or changes.
 
+### PR Title Guidelines
+
+PR titles must follow the [Conventional Commits](https://www.conventionalcommits.org/) title specification. The format is:
+
+```
+<type>[optional scope]: <description>
+```
+
+#### Types
+
+- **feat**: A new feature
+- **fix**: A bug fix
+- **docs**: Documentation only changes
+- **style**: Changes that don't affect code meaning (formatting, whitespace)
+- **refactor**: Code changes that neither fix a bug nor add a feature
+- **perf**: Performance improvements
+- **test**: Adding or updating tests
+- **build**: Changes to build system or dependencies
+- **ci**: Changes to CI/CD configuration
+- **chore**: Other changes that don't modify src or test files
+- **revert**: Reverts a previous commit
+
+#### Scopes (Optional)
+
+Common scopes for KAI Scheduler:
+- 'scheduler'
+- 'binder'
+- 'podgrouper'
+- 'admission'
+- 'operator'
+- 'queue-controller'
+- 'pod-group-controller'
+- 'resource-reservation'
+- 'chart'
+- 'api'
+- 'node-scale-adjuster'
+- 'ci'
+- 'release'
+- 'docs'
+
+#### Breaking Changes
+
+Breaking changes MUST be indicated by adding `!` after the type/scope: `feat(api)!: remove deprecated field`
+
+#### Examples
+
+```
+feat(scheduler): add GPU topology-aware scheduling
+fix(binder): resolve race condition in pod binding
+docs: update installation guide
+refactor(api): simplify PodGroup status structure
+feat(api)!: remove deprecated field from CRD
+```
+
+#### Tips
+
+- Use the imperative mood: "add feature" not "added feature"
+- Don't end with a period
+
 ### Pull Request Checklist
+
 Before introducing major changes, we strongly recommend opening a PR that outlines your proposed design.
 Each pull request should meet the following requirements:
 - All tests pass – Run the full test suite locally with: `make build validate test`
 - Test coverage – Add or update tests for any affected code.
 - Documentation – Update relevant documentation to reflect your changes.
 - Changes logged - If your changes warrant logging - like behavior changes (including bugfixes) or new features - add them to the [Changelog](CHANGELOG.md)
+- PR description – Fill out the pull request template completely
 
 ## Getting Help
 Need support or have a question? We're here to help:

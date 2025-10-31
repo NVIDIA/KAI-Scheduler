@@ -351,6 +351,10 @@ func (f *fakeOperand) IsAvailable(_ context.Context, _ client.Reader) (bool, err
 	return f.isAvailable, nil
 }
 
+func (f *fakeOperand) Monitor(_ context.Context, _ client.Reader, _ *kaiv1.Config) error {
+	return nil
+}
+
 func (f *fakeOperand) Name() string {
 	if f.name == "" {
 		return "fakeOperand"

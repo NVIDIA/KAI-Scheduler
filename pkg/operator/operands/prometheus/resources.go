@@ -6,6 +6,10 @@ package prometheus
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,6 +37,15 @@ func prometheusForKAIConfig(
 	if config == nil || config.Enabled == nil || !*config.Enabled {
 		logger.Info("Prometheus is disabled in configuration")
 		return []client.Object{}, nil
+	}
+
+	// Check if external Prometheus URL is provided
+	if config.ExternalPrometheusUrl != nil && *config.ExternalPrometheusUrl != "" {
+		logger.Info("External Prometheus URL provided, skipping Prometheus CR creation", "url", *config.ExternalPrometheusUrl)
+
+		// For external Prometheus, we only create ServiceMonitors, not the Prometheus CR
+		// Note: Connectivity validation happens in the background monitoring goroutine, not here
+		return createServiceMonitorsForExternalPrometheus(ctx, runtimeClient, kaiConfig)
 	}
 
 	logger.Info("Prometheus is enabled, checking for Prometheus Operator installation")
@@ -202,4 +215,86 @@ func prometheusServiceAccountForKAIConfig(
 	}
 
 	return []client.Object{serviceAccount}, nil
+}
+
+// validateExternalPrometheusConnection validates connectivity to an external Prometheus instance
+func validateExternalPrometheusConnection(ctx context.Context, prometheusURL string) error {
+	logger := log.FromContext(ctx)
+
+	// Ensure the URL has a scheme
+	if !strings.Contains(prometheusURL, "://") {
+		prometheusURL = "http://" + prometheusURL
+	}
+
+	// Parse the URL to ensure it's valid
+	_, err := url.Parse(prometheusURL)
+	if err != nil {
+		return fmt.Errorf("invalid Prometheus URL: %v", err)
+	}
+
+	// Create HTTP client with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// Try to connect to the Prometheus /api/v1/status/config endpoint
+	statusURL := prometheusURL + "/api/v1/status/config"
+	logger.Info("Validating external Prometheus connection", "url", statusURL)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", statusURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to connect to external Prometheus: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check if we got a successful response
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("external Prometheus returned status code %d", resp.StatusCode)
+	}
+
+	logger.Info("Successfully validated external Prometheus connection")
+	return nil
+}
+
+// createServiceMonitorsForExternalPrometheus creates ServiceMonitors for external Prometheus
+func createServiceMonitorsForExternalPrometheus(
+	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
+) ([]client.Object, error) {
+	logger := log.FromContext(ctx)
+	config := kaiConfig.Spec.Prometheus
+
+	// Check if ServiceMonitor CRD is available
+	hasServiceMonitorCRD, err := common.CheckPrometheusCRDsAvailable(ctx, runtimeClient, "serviceMonitor")
+	if err != nil {
+		logger.Error(err, "Failed to check for ServiceMonitor CRD")
+		return nil, err
+	}
+
+	if !hasServiceMonitorCRD {
+		logger.Info("ServiceMonitor CRD not found - ServiceMonitor resources cannot be created")
+		return []client.Object{}, nil
+	}
+
+	// Check if ServiceMonitors are enabled
+	if config.ServiceMonitor == nil || config.ServiceMonitor.Enabled == nil || !*config.ServiceMonitor.Enabled {
+		logger.Info("ServiceMonitors are disabled for external Prometheus")
+		return []client.Object{}, nil
+	}
+
+	logger.Info("Creating ServiceMonitors for external Prometheus")
+
+	// Create ServiceMonitors using the existing function
+	serviceMonitors, err := serviceMonitorsForKAIConfig(ctx, runtimeClient, kaiConfig)
+	if err != nil {
+		logger.Error(err, "Failed to create ServiceMonitor instances for external Prometheus")
+		return nil, err
+	}
+
+	logger.Info("Successfully created ServiceMonitors for external Prometheus", "count", len(serviceMonitors))
+	return serviceMonitors, nil
 }

@@ -6,12 +6,11 @@ package fake
 import (
 	"math"
 	"sync"
+	"time"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
-	"github.com/go-gota/gota/dataframe"
-	"github.com/go-gota/gota/series"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -51,26 +50,31 @@ func (f *FakeUsageDBClient) GetResourceUsage() (*queue_info.ClusterUsage, error)
 
 	var windowStart, windowEnd int
 	size := f.usageParams.WindowSize.Seconds()
-	if len(f.allocationHistory) <= int(size) {
+	l := len(f.allocationHistory)
+	if l == 0 {
+		return usage, nil
+	}
+	if l <= int(size) {
 		windowStart = 0
-		windowEnd = len(f.allocationHistory)
+		windowEnd = l
 	} else {
-		windowStart = len(f.allocationHistory) - int(size)
-		windowEnd = len(f.allocationHistory)
+		windowStart = l - int(size)
+		windowEnd = l
 	}
 
-	totalDecayFactor := 0.0
-	var decayFactors []float64
-	for i := range windowEnd - windowStart {
-		decayFactors = append(decayFactors, math.Pow(0.5, float64(size-float64(i))))
-		totalDecayFactor += decayFactors[i]
-	}
-	for i, decayFactor := range decayFactors {
-		decayFactors[i] = decayFactor / totalDecayFactor
+	decaySlice := getDecaySlice(int(size), f.usageParams.HalfLifePeriod)
+
+	capacities := make(map[v1.ResourceName]float64)
+	for i := range f.clusterCapacityHistory[windowStart:windowEnd] {
+		for resource, capacity := range f.clusterCapacityHistory[windowStart:windowEnd][i] {
+			if _, exists := capacities[resource]; !exists {
+				capacities[resource] = 0
+			}
+			capacities[resource] += capacity * decaySlice[i]
+		}
 	}
 
 	for i, queueAllocations := range f.allocationHistory[windowStart:windowEnd] {
-		timeDecayFactor := math.Pow(0.5, float64(size-float64(i)))
 		for queueID, allocation := range queueAllocations {
 			if _, exists := usage.Queues[queueID]; !exists {
 				usage.Queues[queueID] = queue_info.QueueUsage{}
@@ -79,8 +83,14 @@ func (f *FakeUsageDBClient) GetResourceUsage() (*queue_info.ClusterUsage, error)
 				if _, exists := usage.Queues[queueID][resource]; !exists {
 					usage.Queues[queueID][resource] = 0
 				}
-				usage.Queues[queueID][resource] += ((allocation * timeDecayFactor) / f.clusterCapacityHistory[windowStart:windowEnd][i][resource])
+				usage.Queues[queueID][resource] += allocation * decaySlice[i]
 			}
+		}
+	}
+
+	for queueID, queueUsage := range usage.Queues {
+		for resource, usageValue := range queueUsage {
+			usage.Queues[queueID][resource] = usageValue / capacities[resource]
 		}
 	}
 
@@ -95,36 +105,23 @@ func (f *FakeUsageDBClient) AppendQueueAllocation(queueAllocations map[common_in
 	f.clusterCapacityHistory = append(f.clusterCapacityHistory, totalInCluster)
 }
 
-func (f *FakeUsageDBClient) GetAllocationHistory() AllocationHistory {
-	return f.allocationHistory
-}
-
 type AllocationHistory []map[common_info.QueueID]queue_info.QueueUsage
 type ClusterCapacityHistory []map[v1.ResourceName]float64
 
-func (a AllocationHistory) ToDataFrame() dataframe.DataFrame {
-	var times []int
-	var queueIDs []string
-	var resources []string
-	var allocations []float64
-
-	for timeIndex, queueAllocations := range a {
-		for queueID, queueUsage := range queueAllocations {
-			for resourceName, allocation := range queueUsage {
-				times = append(times, timeIndex)
-				queueIDs = append(queueIDs, string(queueID))
-				resources = append(resources, string(resourceName))
-				allocations = append(allocations, allocation)
-			}
+func getDecaySlice(length int, period *time.Duration) []float64 {
+	if period == nil || period.Seconds() == 0 {
+		decaySlice := make([]float64, length)
+		for i := range decaySlice {
+			decaySlice[i] = 1
 		}
+		return decaySlice
 	}
 
-	df := dataframe.New(
-		series.New(times, series.Int, "Time"),
-		series.New(queueIDs, series.String, "QueueID"),
-		series.New(resources, series.String, "Resource"),
-		series.New(allocations, series.Float, "Allocation"),
-	)
-
-	return df
+	seconds := period.Seconds()
+	decaySlice := make([]float64, length)
+	for i := range decaySlice {
+		val := math.Pow(0.5, float64(length-i)/seconds)
+		decaySlice[i] = val
+	}
+	return decaySlice
 }

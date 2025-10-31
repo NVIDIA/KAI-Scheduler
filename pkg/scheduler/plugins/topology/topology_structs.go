@@ -12,6 +12,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 )
 
+const (
+	allocatablePodsNotSet = -1
+)
+
 // DomainID uniquely identifies a topology domain
 type DomainID string
 
@@ -60,16 +64,13 @@ func NewDomainInfo(id DomainID, level DomainLevel) *DomainInfo {
 		Level:                    level,
 		Children:                 []*DomainInfo{},
 		Nodes:                    map[string]*node_info.NodeInfo{},
-		AllocatablePods:          0,
+		AllocatablePods:          allocatablePodsNotSet,
 		IdleOrReleasingResources: resource_info.EmptyResource(),
 	}
 }
 
 func (di *DomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
 	di.Nodes[nodeInfo.Name] = nodeInfo
-	di.IdleOrReleasingResources.Add(nodeInfo.Idle)
-	di.IdleOrReleasingResources.Add(nodeInfo.Releasing)
-	// Ignore fractions of GPUs for now
 }
 
 func (di *DomainInfo) GetNonAllocatedGPUsInDomain() float64 {
