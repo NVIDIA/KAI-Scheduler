@@ -4,8 +4,10 @@
 package topology
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"math"
+	"slices"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -13,6 +15,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+)
+
+const (
+	requiredResourceNotInDomainRatio = 1000.0
 )
 
 type jobAllocationMetaData struct {
@@ -38,7 +44,7 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{nodeSet}, nil
 	}
 
-	defer t.treeAllocatableCleanup(topologyTree)
+	t.treeAllocatableCleanup(topologyTree)
 	maxAllocatablePods, err := t.calcTreeAllocatable(tasks, topologyTree, nodeSet)
 	if err != nil {
 		return nil, err
@@ -52,12 +58,29 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{}, nil
 	}
 
+	domain, ok := t.nodeSetToDomain[topologyTree.Name][getNodeSetID(nodeSet)]
+	if !ok {
+		return nil, fmt.Errorf("domain not found for node set in topology %s", topologyTree.Name)
+	}
+
+	// Sorting the tree for both packing and closest preferred level domain scoring
+	preferredLevel := DomainLevel(subGroup.GetTopologyConstraint().PreferredLevel)
+	requiredLevel := DomainLevel(subGroup.GetTopologyConstraint().RequiredLevel)
+	maxDepthLevel := preferredLevel
+	if maxDepthLevel == "" {
+		maxDepthLevel = requiredLevel
+	}
+	sortTreeFromRoot(tasks, domain, maxDepthLevel)
+	if preferredLevel != "" {
+		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(domain, preferredLevel)
+	}
+
 	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroup, podSets, len(tasks), topologyTree)
 	if err != nil {
 		return nil, err
 	}
 
-	jobAllocatableDomains = sortDomainInfos(jobAllocatableDomains)
+	jobAllocatableDomains = sortDomainInfos(topologyTree, jobAllocatableDomains)
 
 	var domainNodeSets []node_info.NodeSet
 	for _, jobAllocatableDomain := range jobAllocatableDomains {
@@ -146,6 +169,10 @@ func (t *topologyPlugin) calcSubTreeAllocatable(
 }
 
 func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *node_info.NodeInfo) int {
+	if jobAllocationMetaData.maxPodResources.LessEqual(resource_info.EmptyResourceRequirements()) {
+		return len(jobAllocationMetaData.tasksToAllocate)
+	}
+
 	allocatablePodsCount := 0
 	for _, resourceRepresentorPod := range jobAllocationMetaData.allocationTestPods {
 		if node.IsTaskAllocatableOnReleasingOrIdle(resourceRepresentorPod) {
@@ -156,7 +183,7 @@ func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *n
 	}
 	// Add more to jobResourcesAllocationsRepresenters until the node cannot accommodate any more pods
 	if allocatablePodsCount == len(jobAllocationMetaData.allocationTestPods) {
-		for i := allocatablePodsCount; i < len(jobAllocationMetaData.tasksToAllocate); i++ {
+		for i := allocatablePodsCount; ; i++ {
 			latestTestPod := jobAllocationMetaData.allocationTestPods[len(jobAllocationMetaData.allocationTestPods)-1]
 
 			iAllocationsTestPod := &pod_info.PodInfo{
@@ -333,18 +360,90 @@ func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
 	}
 }
 
-func sortDomainInfos(domainInfos []*DomainInfo) []*DomainInfo {
-	sort.SliceStable(domainInfos, func(i, j int) bool {
-		if domainInfos[i].Level != domainInfos[j].Level {
-			return false
-		}
+func sortTreeFromRoot(tasks []*pod_info.PodInfo, root *DomainInfo, maxDepthLevel DomainLevel) {
+	tasksResources := resource_info.NewResource(0, 0, 0)
+	for _, task := range tasks {
+		tasksResources.AddResourceRequirements(task.ResReq)
+	}
 
-		iDomainGPUs := domainInfos[i].GetNonAllocatedGPUsInDomain()
-		jDomainGPUs := domainInfos[j].GetNonAllocatedGPUsInDomain()
-		if iDomainGPUs != jDomainGPUs {
-			return iDomainGPUs < jDomainGPUs
+	sortTree(tasksResources, root, maxDepthLevel)
+}
+
+// sortTree recursively sorts the topology tree for bin-packing behavior.
+// Domains are sorted by AllocatablePods (ascending) to prioritize filling domains
+// with fewer available resources first, implementing a bin-packing strategy.
+// Within domains with equal AllocatablePods, sorts by ID for deterministic ordering.
+func sortTree(tasksResources *resource_info.Resource, root *DomainInfo, maxDepthLevel DomainLevel) {
+	if root == nil || maxDepthLevel == "" {
+		return
+	}
+
+	slices.SortFunc(root.Children, func(i, j *DomainInfo) int {
+		iRatio := getJobRatioToFreeResources(tasksResources, i)
+		jRatio := getJobRatioToFreeResources(tasksResources, j)
+		if c := cmp.Compare(jRatio, iRatio); c != 0 {
+			return c
 		}
-		return domainInfos[i].ID < domainInfos[j].ID
+		return cmp.Compare(i.ID, j.ID) // For deterministic ordering
 	})
-	return domainInfos
+
+	if root.Level == maxDepthLevel {
+		return
+	}
+
+	for _, child := range root.Children {
+		sortTree(tasksResources, child, maxDepthLevel)
+	}
+}
+
+// Returns a max ratio for all tasks resources to the free resources in the domain.
+// The higher the ratio, the more "packed" the domain will be after the job is allocated.
+// If the ratio is higher then 1, the domain will not be able to allocate the job.
+func getJobRatioToFreeResources(tasksResources *resource_info.Resource, domain *DomainInfo) float64 {
+	dominantResourceRatio := 0.0
+
+	if tasksResources.LessEqual(resource_info.EmptyResource()) {
+		return dominantResourceRatio
+	}
+
+	if tasksResources.GPUs() > 0 {
+		dominantResourceRatio = math.Max(dominantResourceRatio,
+			tasksResources.GPUs()/domain.IdleOrReleasingResources.GPUs())
+	}
+
+	tasksResourcesList := tasksResources.ToResourceList()
+	freeDomainResourcesList := domain.IdleOrReleasingResources.ToResourceList()
+	for rName, taskResourceQuantity := range tasksResourcesList {
+		if taskResourceQuantity.Value() == 0 {
+			continue
+		}
+		var resourceRatio float64
+		freeDomainResourceQuantity := freeDomainResourcesList[rName]
+		if freeDomainResourceQuantity.Value() == 0 {
+			resourceRatio = requiredResourceNotInDomainRatio // required resource doesn't exist in the domain
+		} else {
+			resourceRatio = float64(taskResourceQuantity.Value()) / float64(freeDomainResourceQuantity.Value())
+		}
+		dominantResourceRatio = math.Max(dominantResourceRatio, resourceRatio)
+	}
+
+	return dominantResourceRatio
+}
+
+// sortDomainInfos orders domains according to the sorted topology tree for consistent allocation.
+// Assumes the topology tree is already sorted
+func sortDomainInfos(topologyTree *Info, domainInfos []*DomainInfo) []*DomainInfo {
+	root := topologyTree.DomainsByLevel[rootLevel][rootDomainId]
+	reverseLevelOrderedDomains := reverseLevelOrder(root)
+
+	sortedDomainInfos := make([]*DomainInfo, 0, len(domainInfos))
+	for _, domain := range reverseLevelOrderedDomains {
+		for _, domainInfo := range domainInfos {
+			if domain.ID == domainInfo.ID && domain.Level == domainInfo.Level {
+				sortedDomainInfos = append(sortedDomainInfos, domainInfo)
+			}
+		}
+	}
+
+	return sortedDomainInfos
 }

@@ -95,7 +95,7 @@ func allocateSharedGPUTask(ssn *framework.Session, stmt *framework.Statement, no
 
 	if err := stmt.Allocate(task, node.Name); err != nil {
 		log.InfraLogger.Errorf("Failed to bind Task <%v> on <%v> in Session <%v>, err: <%v>",
-			task.UID, node.Name, ssn.UID, err)
+			task.UID, node.Name, ssn.ID, err)
 		return false
 	}
 

@@ -14,7 +14,7 @@ const pluginName = "gpupack"
 
 type gpuPackPlugin struct{}
 
-func New(_ map[string]string) framework.Plugin {
+func New(_ framework.PluginArguments) framework.Plugin {
 	return &gpuPackPlugin{}
 }
 

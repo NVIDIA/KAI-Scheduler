@@ -14,13 +14,10 @@ const (
 	equalPrioritization = 0
 )
 
-type subGroupOrderPlugin struct {
-	// Arguments given for the plugin
-	pluginArguments map[string]string
-}
+type subGroupOrderPlugin struct{}
 
-func New(arguments map[string]string) framework.Plugin {
-	return &subGroupOrderPlugin{pluginArguments: arguments}
+func New(_ framework.PluginArguments) framework.Plugin {
+	return &subGroupOrderPlugin{}
 }
 
 func (sgop *subGroupOrderPlugin) Name() string {
@@ -28,10 +25,10 @@ func (sgop *subGroupOrderPlugin) Name() string {
 }
 
 func (sgop *subGroupOrderPlugin) OnSessionOpen(ssn *framework.Session) {
-	ssn.AddSubGroupsOrderFn(SubGroupOrderFn)
+	ssn.AddPodSetOrderFn(PodSetOrderFn)
 }
 
-func SubGroupOrderFn(l, r interface{}) int {
+func PodSetOrderFn(l, r interface{}) int {
 	lv := l.(*subgroup_info.PodSet)
 	rv := r.(*subgroup_info.PodSet)
 

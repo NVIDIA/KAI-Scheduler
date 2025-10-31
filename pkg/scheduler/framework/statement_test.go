@@ -115,7 +115,7 @@ func TestStatement_Evict_Unevict(t *testing.T) {
 			s := &Statement{
 				operations: []Operation{},
 				ssn:        ssn,
-				sessionUID: "1234",
+				sessionID:  "1234",
 			}
 
 			originalTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName].Clone()
@@ -264,7 +264,7 @@ func TestStatement_Evict(t *testing.T) {
 					PodGroupInfos: jobsInfoMap,
 					Nodes:         nodesInfoMap,
 				},
-				sessionUID: "1234",
+				sessionID: "1234",
 			}
 
 			dataBeforeEvict := originalState{
@@ -410,7 +410,7 @@ func TestStatement_Evict_Undo_Undo(t *testing.T) {
 					PodGroupInfos: jobsInfoMap,
 					Nodes:         nodesInfoMap,
 				},
-				sessionUID: "1234",
+				sessionID: "1234",
 			}
 
 			dataBeforeEvict := originalState{
@@ -634,7 +634,7 @@ func TestStatement_Pipeline_Unpipeline(t *testing.T) {
 			s := &Statement{
 				operations: []Operation{},
 				ssn:        ssn,
-				sessionUID: "1234",
+				sessionID:  "1234",
 			}
 
 			pipelinedTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
@@ -768,7 +768,7 @@ func TestStatement_Pipeline(t *testing.T) {
 					PodGroupInfos: jobsInfoMap,
 					Nodes:         nodesInfoMap,
 				},
-				sessionUID: "1234",
+				sessionID: "1234",
 			}
 
 			dataBeforeEvict := originalState{
@@ -894,7 +894,7 @@ func TestStatement_Pipeline_Undo_Undo(t *testing.T) {
 					PodGroupInfos: jobsInfoMap,
 					Nodes:         nodesInfoMap,
 				},
-				sessionUID: "1234",
+				sessionID: "1234",
 			}
 
 			dataBeforeEvict := originalState{
@@ -1004,7 +1004,7 @@ func TestStatement_Allocate_Unallocate(t *testing.T) {
 			s := &Statement{
 				operations: []Operation{},
 				ssn:        ssn,
-				sessionUID: "1234",
+				sessionID:  "1234",
 			}
 
 			allocateTask := jobsInfoMap[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
@@ -1114,7 +1114,7 @@ func TestStatement_Allocate(t *testing.T) {
 					PodGroupInfos: jobsInfoMap,
 					Nodes:         nodesInfoMap,
 				},
-				sessionUID: "1234",
+				sessionID: "1234",
 			}
 
 			dataBeforeEvict := originalState{
@@ -1217,7 +1217,7 @@ func TestStatement_Allocate_Undo_Undo(t *testing.T) {
 					PodGroupInfos: jobsInfoMap,
 					Nodes:         nodesInfoMap,
 				},
-				sessionUID: "1234",
+				sessionID: "1234",
 			}
 
 			dataBeforeEvict := originalState{

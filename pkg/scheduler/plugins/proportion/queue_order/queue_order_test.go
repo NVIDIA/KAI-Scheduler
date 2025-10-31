@@ -197,7 +197,7 @@ func TestGetQueueOrderResult(t *testing.T) {
 			}
 
 			subGroupOrderFn := func(l, r interface{}) bool {
-				if comparison := subgrouporder.SubGroupOrderFn(l, r); comparison != 0 {
+				if comparison := subgrouporder.PodSetOrderFn(l, r); comparison != 0 {
 					return comparison < 0
 				}
 				return false

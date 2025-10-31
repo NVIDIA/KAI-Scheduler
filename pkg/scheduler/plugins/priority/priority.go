@@ -24,13 +24,10 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
 
-type priorityPlugin struct {
-	// Arguments given for the plugin
-	pluginArguments map[string]string
-}
+type priorityPlugin struct{}
 
-func New(arguments map[string]string) framework.Plugin {
-	return &priorityPlugin{pluginArguments: arguments}
+func New(_ framework.PluginArguments) framework.Plugin {
+	return &priorityPlugin{}
 }
 
 func (pp *priorityPlugin) Name() string {

@@ -41,27 +41,35 @@ type DomainInfo struct {
 	// Level in the hierarchy (e.g., "datacenter", "zone", "rack", "node")
 	Level DomainLevel
 
-	// Child domains
-	Children map[DomainID]*DomainInfo
+	// Child domains (slice maintains ordering for bin-packing and traversal algorithms)
+	Children []*DomainInfo
 
 	// Nodes that belong to this domain
 	Nodes map[string]*node_info.NodeInfo
 
 	// Number of pods that can be allocated in this domain for the job
 	AllocatablePods int
+
+	// Total available resources in this domain
+	IdleOrReleasingResources *resource_info.Resource
 }
 
 func NewDomainInfo(id DomainID, level DomainLevel) *DomainInfo {
 	return &DomainInfo{
-		ID:       id,
-		Level:    level,
-		Children: map[DomainID]*DomainInfo{},
-		Nodes:    map[string]*node_info.NodeInfo{},
+		ID:                       id,
+		Level:                    level,
+		Children:                 []*DomainInfo{},
+		Nodes:                    map[string]*node_info.NodeInfo{},
+		AllocatablePods:          0,
+		IdleOrReleasingResources: resource_info.EmptyResource(),
 	}
 }
 
 func (di *DomainInfo) AddNode(nodeInfo *node_info.NodeInfo) {
 	di.Nodes[nodeInfo.Name] = nodeInfo
+	di.IdleOrReleasingResources.Add(nodeInfo.Idle)
+	di.IdleOrReleasingResources.Add(nodeInfo.Releasing)
+	// Ignore fractions of GPUs for now
 }
 
 func (di *DomainInfo) GetNonAllocatedGPUsInDomain() float64 {
@@ -70,6 +78,16 @@ func (di *DomainInfo) GetNonAllocatedGPUsInDomain() float64 {
 		result += node.NonAllocatedResource(resource_info.GPUResourceName)
 	}
 	return result
+}
+
+func (t *DomainInfo) AddChild(child *DomainInfo) {
+	// Check if child already exists to avoid duplicates
+	for _, existingChild := range t.Children {
+		if existingChild.ID == child.ID {
+			return
+		}
+	}
+	t.Children = append(t.Children, child)
 }
 
 func calcDomainId(leafLevelIndex int, levels []kueuev1alpha1.TopologyLevel, nodeLabels map[string]string) DomainID {

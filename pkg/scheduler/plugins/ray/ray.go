@@ -18,13 +18,10 @@ var (
 	masterRoleValues = []string{"head"}
 )
 
-type rayPlugin struct {
-	// Arguments given for the plugin
-	pluginArguments map[string]string
-}
+type rayPlugin struct{}
 
-func New(arguments map[string]string) framework.Plugin {
-	return &rayPlugin{pluginArguments: arguments}
+func New(_ framework.PluginArguments) framework.Plugin {
+	return &rayPlugin{}
 }
 
 func (pp *rayPlugin) Name() string {

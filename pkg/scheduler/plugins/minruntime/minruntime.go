@@ -4,7 +4,6 @@
 package minruntime
 
 import (
-	"github.com/xhit/go-str2duration/v2"
 	"slices"
 	"time"
 
@@ -37,26 +36,20 @@ type minruntimePlugin struct {
 	resolver *resolver
 }
 
-func parseMinRuntime(arguments map[string]string, minRuntimeConfig string) metav1.Duration {
-	minRuntime := arguments[minRuntimeConfig]
-	if len(minRuntime) == 0 {
+func parseMinRuntime(arguments framework.PluginArguments, minRuntimeConfig string) metav1.Duration {
+	minRuntime, err := arguments.GetDuration(minRuntimeConfig, 0*time.Second)
+	if err != nil {
+		log.InfraLogger.Errorf("Failed to parse %v as duration: %v, using default value 0s", minRuntimeConfig, err)
 		return metav1.Duration{Duration: 0 * time.Second}
 	}
-	duration, err := str2duration.ParseDuration(minRuntime)
-	if err != nil {
-		log.InfraLogger.Errorf("Failed to parse %v (%v): %v, using default value 0s", minRuntimeConfig, minRuntime, err)
-		duration = 0 * time.Second
-	}
-
-	if duration < 0 {
+	if minRuntime < 0 {
 		log.InfraLogger.Errorf("Parsed %v (%v) is negative, using default value 0s", minRuntimeConfig, minRuntime)
-		duration = 0 * time.Second
+		return metav1.Duration{Duration: 0 * time.Second}
 	}
-
-	return metav1.Duration{Duration: duration}
+	return metav1.Duration{Duration: minRuntime}
 }
 
-func New(arguments map[string]string) framework.Plugin {
+func New(arguments framework.PluginArguments) framework.Plugin {
 	plugin := &minruntimePlugin{}
 
 	plugin.defaultReclaimMinRuntime = parseMinRuntime(arguments, defaultReclaimMinRuntimeConfig)

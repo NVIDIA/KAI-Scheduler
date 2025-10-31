@@ -23,8 +23,6 @@ import (
 	"net/http"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
@@ -32,7 +30,7 @@ import (
 )
 
 func OpenSession(cache cache.Cache, config *conf.SchedulerConfiguration,
-	schedulerParams *conf.SchedulerParams, sessionId types.UID, mux *http.ServeMux) (*Session, error) {
+	schedulerParams *conf.SchedulerParams, sessionId string, mux *http.ServeMux) (*Session, error) {
 	openSessionStart := time.Now()
 	defer metrics.UpdateOpenSessionDuration(openSessionStart)
 

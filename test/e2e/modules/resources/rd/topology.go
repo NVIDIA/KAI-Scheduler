@@ -29,8 +29,6 @@ const (
 	TestZoneLabelKey = "e2e-topology-label/zone"
 	TestRackLabelKey = "e2e-topology-label/rack"
 	NodeNameLabelKey = "kubernetes.io/hostname"
-
-	numNodesInTestTopology = 4
 )
 
 type TestTopologyData struct {
@@ -41,12 +39,16 @@ type TestTopologyData struct {
 }
 
 func CreateRackZoneTopology(
-	ctx context.Context, kubeClientset *kubernetes.Clientset, kubeConfig *rest.Config) (TestTopologyData, []string) {
+	ctx context.Context, kubeClientset *kubernetes.Clientset, kubeConfig *rest.Config, numNodesInTestTopology int, rackCount int) (TestTopologyData, []string) {
 	testTopologyData := TestTopologyData{
 		TopologyCrd:   nil,
 		TopologyNodes: make(map[string]*corev1.Node),
 		Zones:         map[string][]*corev1.Node{"zone1": {}},
-		Racks:         map[string][]*corev1.Node{"rack1": {}, "rack2": {}},
+		Racks:         map[string][]*corev1.Node{},
+	}
+
+	for i := 1; i <= rackCount; i++ {
+		testTopologyData.Racks[fmt.Sprintf("rack%d", i)] = []*corev1.Node{}
 	}
 
 	requiredNodesResources := []capacity.ResourceList{}
@@ -103,10 +105,12 @@ func AssignNodesToTestTopology(ctx context.Context,
 	kubeClient client.Client,
 	nodesNamesList []string,
 	testTopologyData TestTopologyData,
+	numNodesInTestTopology int,
+	spreadAcrossDomains bool,
 ) {
 	selectedTopologyNodesNames := shuffleNodes(nodesNamesList)
 	selectedTopologyNodesNames = slices.Clone(selectedTopologyNodesNames[:numNodesInTestTopology])
-	for _, nodeName := range selectedTopologyNodesNames {
+	for i, nodeName := range selectedTopologyNodesNames {
 		node := &corev1.Node{}
 		err := kubeClient.Get(ctx, client.ObjectKey{Name: nodeName}, node)
 		Expect(err).NotTo(HaveOccurred(), "Failed to get node fresh copy for label cleaning")
@@ -114,13 +118,18 @@ func AssignNodesToTestTopology(ctx context.Context,
 		originalNode := node.DeepCopy()
 		testTopologyData.TopologyNodes[node.Name] = node
 
-		chosenZone := len(selectedTopologyNodesNames) % len(testTopologyData.Zones)
-		zoneName := fmt.Sprintf("zone%d", chosenZone)
+		numerator := len(selectedTopologyNodesNames)
+		if spreadAcrossDomains {
+			numerator = i
+		}
+
+		chosenZone := numerator % len(testTopologyData.Zones)
+		zoneName := fmt.Sprintf("zone%d", chosenZone+1)
 		testTopologyData.Zones[zoneName] = append(testTopologyData.Zones[zoneName], node)
 		node.Labels[TestZoneLabelKey] = zoneName
 
-		chosenRack := len(selectedTopologyNodesNames) % len(testTopologyData.Racks)
-		rackName := fmt.Sprintf("rack%d", chosenRack)
+		chosenRack := numerator % len(testTopologyData.Racks)
+		rackName := fmt.Sprintf("rack%d", chosenRack+1)
 		testTopologyData.Racks[rackName] = append(testTopologyData.Racks[rackName], node)
 		node.Labels[TestRackLabelKey] = rackName
 
