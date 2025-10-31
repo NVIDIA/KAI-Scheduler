@@ -49,7 +49,7 @@ var _ = Describe("PodGrouper", func() {
 				Expect(deploymentT).NotTo(BeNil())
 				deployment := *deploymentT
 				Expect(deployment).NotTo(BeNil())
-				Expect(deployment.Name).To(Equal(deploymentName))
+				Expect(deployment.Name).To(Equal(defaultResourceName))
 			})
 
 			It("the deployment should keep labels from existing deployment", func(ctx context.Context) {

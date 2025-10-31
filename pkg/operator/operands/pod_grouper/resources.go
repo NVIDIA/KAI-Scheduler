@@ -17,15 +17,15 @@ import (
 )
 
 const (
-	deploymentName = "pod-grouper"
+	defaultResourceName = "pod-grouper"
 )
 
-func deploymentForKAIConfig(
+func (p *PodGrouper) deploymentForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) (client.Object, error) {
 
 	config := kaiConfig.Spec.PodGrouper
-	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, config.Service, deploymentName)
+	deployment, err := common.DeploymentForKAIConfig(ctx, runtimeClient, kaiConfig, config.Service, p.BaseResourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -36,10 +36,10 @@ func deploymentForKAIConfig(
 	return deployment, nil
 }
 
-func serviceAccountForKAIConfig(
+func (p *PodGrouper) serviceAccountForKAIConfig(
 	ctx context.Context, k8sReader client.Reader, kaiConfig *kaiv1.Config,
 ) (client.Object, error) {
-	sa, err := common.ObjectForKAIConfig(ctx, k8sReader, &v1.ServiceAccount{}, deploymentName,
+	sa, err := common.ObjectForKAIConfig(ctx, k8sReader, &v1.ServiceAccount{}, p.BaseResourceName,
 		kaiConfig.Spec.Namespace)
 	if err != nil {
 		return nil, err

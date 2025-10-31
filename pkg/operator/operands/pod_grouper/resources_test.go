@@ -308,20 +308,18 @@ func TestDeploymentForKAIConfig(t *testing.T) {
 	client := fake.NewClientBuilder().Build()
 
 	config.Spec.SetDefaultsWhereNeeded()
-	deployment, err := deploymentForKAIConfig(ctx, client, config)
+	pg := &PodGrouper{BaseResourceName: defaultResourceName}
+	deploymentObj, err := pg.deploymentForKAIConfig(ctx, client, config)
 	require.NoError(t, err)
-	require.NotNil(t, deployment)
+	require.NotNil(t, deploymentObj)
 
+	deployment := deploymentObj.(*appsv1.Deployment)
 	assert.Equal(t, "pod-grouper", deployment.GetName())
 	assert.Equal(t, constants.DefaultKAINamespace, deployment.GetNamespace())
 
-	// Type assert to access Spec
-	deploymentObj, ok := deployment.(*appsv1.Deployment)
-	require.True(t, ok, "deployment should be of type *appsv1.Deployment")
+	assert.Equal(t, int32(1), *deployment.Spec.Replicas)
 
-	assert.Equal(t, int32(1), *deploymentObj.Spec.Replicas)
-
-	container := deploymentObj.Spec.Template.Spec.Containers[0]
+	container := deployment.Spec.Template.Spec.Containers[0]
 	assert.Equal(t, "pod-grouper", container.Name)
 	assert.Equal(t, "registry.local/kai-scheduler/pod-grouper:latest", container.Image)
 
@@ -344,7 +342,8 @@ func TestServiceAccountForKAIConfig(t *testing.T) {
 	client := fake.NewClientBuilder().Build()
 
 	config.Spec.SetDefaultsWhereNeeded()
-	sa, err := serviceAccountForKAIConfig(ctx, client, config)
+	pg := &PodGrouper{BaseResourceName: defaultResourceName}
+	sa, err := pg.serviceAccountForKAIConfig(ctx, client, config)
 	require.NoError(t, err)
 	require.NotNil(t, sa)
 

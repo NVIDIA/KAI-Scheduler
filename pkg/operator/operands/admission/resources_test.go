@@ -119,19 +119,17 @@ func TestDeploymentForKAIConfig(t *testing.T) {
 			client := fake.NewClientBuilder().Build()
 
 			tt.config.Spec.SetDefaultsWhereNeeded()
-			objects, err := deploymentForKAIConfig(ctx, client, tt.config)
+			a := &Admission{BaseResourceName: defaultResourceName}
+			objects, err := a.deploymentForKAIConfig(ctx, client, tt.config)
 			require.NoError(t, err)
 			require.Len(t, objects, 1)
 
-			deployment := objects[0]
-			assert.Equal(t, "admission", deployment.GetName())
-			assert.Equal(t, constants.DefaultKAINamespace, deployment.GetNamespace())
+			deploymentObj := objects[0]
+			assert.Equal(t, "admission", deploymentObj.GetName())
+			assert.Equal(t, constants.DefaultKAINamespace, deploymentObj.GetNamespace())
 
-			// Type assert to access Spec
-			deploymentObj, ok := deployment.(*appsv1.Deployment)
-			require.True(t, ok, "deployment should be of type *appsv1.Deployment")
-
-			container := deploymentObj.Spec.Template.Spec.Containers[0]
+			deployment := deploymentObj.(*appsv1.Deployment)
+			container := deployment.Spec.Template.Spec.Containers[0]
 			args := container.Args
 
 			// Check expected args
@@ -240,7 +238,8 @@ func TestMutatingWCForKAIConfig(t *testing.T) {
 			err, secret, webhookName := upsertKAIAdmissionCertSecret(ctx, client, tt.config)
 			require.NoError(t, err)
 
-			objects, err := mutatingWCForKAIConfig(ctx, client, tt.config, secret, webhookName)
+			a := &Admission{BaseResourceName: defaultResourceName}
+			objects, err := a.mutatingWCForKAIConfig(ctx, client, tt.config, secret, webhookName)
 			require.NoError(t, err)
 			require.Len(t, objects, 1) // webhook only (secret is created separately now)
 
@@ -371,7 +370,8 @@ func TestValidatingWCForKAIConfig(t *testing.T) {
 			err, secret, webhookName := upsertKAIAdmissionCertSecret(ctx, client, tt.config)
 			require.NoError(t, err)
 
-			objects, err := validatingWCForKAIConfig(ctx, client, tt.config, secret, webhookName)
+			a := &Admission{BaseResourceName: defaultResourceName}
+			objects, err := a.validatingWCForKAIConfig(ctx, client, tt.config, secret, webhookName)
 			require.NoError(t, err)
 			require.Len(t, objects, 1) // webhook only (secret is created separately now)
 
@@ -412,7 +412,8 @@ func TestServiceAccountForKAIConfig(t *testing.T) {
 		},
 	}
 
-	objects, err := serviceAccountForKAIConfig(ctx, client, config)
+	a := &Admission{BaseResourceName: defaultResourceName}
+	objects, err := a.serviceAccountForKAIConfig(ctx, client, config)
 	require.NoError(t, err)
 	require.Len(t, objects, 1)
 
@@ -439,7 +440,8 @@ func TestServiceForKAIConfig(t *testing.T) {
 		},
 	}
 
-	objects, err := serviceForKAIConfig(ctx, client, config)
+	a := &Admission{BaseResourceName: defaultResourceName}
+	objects, err := a.serviceForKAIConfig(ctx, client, config)
 	require.NoError(t, err)
 	require.Len(t, objects, 1)
 

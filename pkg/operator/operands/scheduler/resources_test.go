@@ -593,7 +593,8 @@ func TestServiceAccountForScheduler(t *testing.T) {
 			client := fake.NewClientBuilder().Build()
 			tt.config.Spec.SetDefaultsWhereNeeded()
 
-			sa, err := serviceAccountForKAIConfig(ctx, client, tt.config)
+			s := &SchedulerForConfig{BaseResourceName: defaultResourceName}
+			sa, err := s.serviceAccountForKAIConfig(ctx, client, tt.config)
 			require.NoError(t, err)
 			assert.NotNil(t, sa)
 

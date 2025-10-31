@@ -17,6 +17,7 @@ import (
 type QueueController struct {
 	namespace        string
 	lastDesiredState []client.Object
+	BaseResourceName string
 }
 
 type resourceForKAIConfig func(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) ([]client.Object, error)
@@ -25,13 +26,16 @@ func (q *QueueController) DesiredState(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
 	q.namespace = kaiConfig.Spec.Namespace
+	if q.BaseResourceName == "" {
+		q.BaseResourceName = defaultResourceName
+	}
 
 	if *kaiConfig.Spec.QueueController.Service.Enabled == false {
 		q.lastDesiredState = []client.Object{}
 		return nil, nil
 	}
 
-	queueSecret, err := secretForKAIConfig(ctx, runtimeClient, kaiConfig)
+	queueSecret, err := q.secretForKAIConfig(ctx, runtimeClient, kaiConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -44,12 +48,12 @@ func (q *QueueController) DesiredState(
 		func(_ context.Context, _ client.Reader, _ *kaiv1.Config) ([]client.Object, error) {
 			return []client.Object{queueSecret[0]}, nil
 		},
-		deploymentForKAIConfig,
-		serviceAccountForKAIConfig,
-		serviceForKAIConfig,
+		q.deploymentForKAIConfig,
+		q.serviceAccountForKAIConfig,
+		q.serviceForKAIConfig,
 		crdForKAIConfig,
 		func(ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config) ([]client.Object, error) {
-			return validatingWCForKAIConfig(ctx, runtimeClient, kaiConfig, queueSecret[0].(*v1.Secret))
+			return q.validatingWCForKAIConfig(ctx, runtimeClient, kaiConfig, queueSecret[0].(*v1.Secret))
 		},
 	} {
 		obj, err := resourceFunc(ctx, runtimeClient, kaiConfig)
