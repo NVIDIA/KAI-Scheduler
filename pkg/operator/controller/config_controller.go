@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	nvidiav1 "github.com/NVIDIA/gpu-operator/api/nvidia/v1"
 
@@ -149,6 +150,7 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&kaiv1.Config{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Watches(&nvidiav1.ClusterPolicy{}, handler.EnqueueRequestsFromMapFunc(enqueueWatched))
 
 	for _, collectable := range known_types.KAIConfigRegisteredCollectible {

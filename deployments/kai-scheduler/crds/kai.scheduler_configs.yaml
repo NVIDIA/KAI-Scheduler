@@ -1342,8 +1342,6 @@ spec:
                     description: PodLabelSelector filters pods for webhooks and pod
                       grouper
                     type: object
-                  prometheusEnabled:
-                    type: boolean
                   queueLabelKey:
                     description: QueueLabelKey specifies the pod label key whose value
                       will be the queue name of the pod.
