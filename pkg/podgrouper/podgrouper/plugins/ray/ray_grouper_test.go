@@ -200,7 +200,7 @@ func TestGetPodGroupMetadata_RayCluster_NonAutoScaling(t *testing.T) {
 	assert.Equal(t, 2, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "ray_train_priority_class", podGroupMetadata.PriorityClassName)
-	assert.Equal(t, int32(9), podGroupMetadata.MinAvailable)
+	assert.Equal(t, int32(6), podGroupMetadata.MinAvailable)
 }
 
 func TestGetPodGroupMetadata_RayCluster_SuspendedWorkers(t *testing.T) {
@@ -221,7 +221,7 @@ func TestGetPodGroupMetadata_RayCluster_SuspendedWorkers(t *testing.T) {
 	assert.Equal(t, 1, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
-	assert.Equal(t, int32(6), podGroupMetadata.MinAvailable)
+	assert.Equal(t, int32(5), podGroupMetadata.MinAvailable)
 }
 
 func TestGetPodGroupMetadata_RayCluster_NumOfHosts(t *testing.T) {
@@ -242,7 +242,7 @@ func TestGetPodGroupMetadata_RayCluster_NumOfHosts(t *testing.T) {
 	assert.Equal(t, 1, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
-	assert.Equal(t, int32(16), podGroupMetadata.MinAvailable)
+	assert.Equal(t, int32(8), podGroupMetadata.MinAvailable)
 }
 
 func TestGetPodGroupMetadata_RayJob(t *testing.T) {

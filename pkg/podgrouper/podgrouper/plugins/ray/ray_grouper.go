@@ -122,13 +122,7 @@ func (rg *RayGrouper) extractRayClusterObject(
 // https://github.com/ray-project/kuberay/blob/dbcc686eabefecc3b939cd5c6e7a051f2473ad34/ray-operator/controllers/ray/batchscheduler/volcano/volcano_scheduler.go#L106
 // https://github.com/ray-project/kuberay/blob/dbcc686eabefecc3b939cd5c6e7a051f2473ad34/ray-operator/controllers/ray/batchscheduler/volcano/volcano_scheduler.go#L51
 func calcJobNumOfPods(topOwner *unstructured.Unstructured) (int32, error) {
-	minAvailableReplicas := int32(0)
-	minAvailableReplicas += int32(calcMinHeadReplicas(topOwner))
-
-	autoscalingEnabled, err := isWorkloadAutoscalingEnabled(topOwner)
-	if err != nil {
-		return 0, err
-	}
+	minReplicas := int32(calcMinHeadReplicas(topOwner))
 
 	workerGroupSpecs, workerSpecFound, err := unstructured.NestedSlice(topOwner.Object,
 		"spec", "workerGroupSpecs")
@@ -136,7 +130,7 @@ func calcJobNumOfPods(topOwner *unstructured.Unstructured) (int32, error) {
 		return 0, err
 	}
 	if !workerSpecFound || len(workerGroupSpecs) == 0 {
-		return minAvailableReplicas, nil
+		return minReplicas, nil
 	}
 
 	for groupIndex, groupSpec := range workerGroupSpecs {
@@ -153,26 +147,16 @@ func calcJobNumOfPods(topOwner *unstructured.Unstructured) (int32, error) {
 			return 0, err
 		}
 
-		if autoscalingEnabled {
-			// if autoscaling is enabled, use the minReplicas field to calculate the min number for workload scheduling
-			minAvailableReplicas += int32(groupMinReplicas * numOfHosts)
+		if groupMinReplicas > 0 {
+			// if minReplicas is set, use it to calculate the min number for workload scheduling
+			minReplicas += int32(groupMinReplicas * numOfHosts)
 		} else {
-			// if autoscaling is disabled, set all the workers to schedule together
-			minAvailableReplicas += int32(groupDesiredReplicas * numOfHosts)
+			// if minReplicas is not set, use the desiredReplicas field to calculate the min number for workload scheduling
+			minReplicas += int32(groupDesiredReplicas * numOfHosts)
 		}
 	}
 
-	return minAvailableReplicas, nil
-}
-
-func isWorkloadAutoscalingEnabled(topOwner *unstructured.Unstructured) (bool, error) {
-	enableInTreeAutoscaling, foundEnableInTreeAutoscaling, err := unstructured.NestedBool(topOwner.Object,
-		"spec", "enableInTreeAutoscaling")
-	if err != nil {
-		return false, err
-	}
-	autoScalingEnabled := foundEnableInTreeAutoscaling && enableInTreeAutoscaling
-	return autoScalingEnabled, nil
+	return minReplicas, nil
 }
 
 func getGroupNumOfHosts(groupSpec interface{}) (int64, error) {
@@ -224,16 +208,19 @@ func getReplicaCountersForWorkerGroup(groupSpec interface{}, groupIndex int) (
 }
 
 func calcMinHeadReplicas(topOwner *unstructured.Unstructured) int64 {
-	launcherMinReplicas, minReplicasFound, err := unstructured.NestedInt64(topOwner.Object,
-		"spec", "headGroupSpec", "minReplicas")
+	minHeadReplicas := int64(1) // default value 1
+
 	launcherReplicas, replicasFound, replicasErr := unstructured.NestedInt64(topOwner.Object,
 		"spec", "headGroupSpec", "replicas")
-	if err != nil || !minReplicasFound || launcherMinReplicas == 0 {
-		if replicasErr == nil && replicasFound && launcherReplicas > 0 {
-			launcherMinReplicas = launcherReplicas
-		} else {
-			launcherMinReplicas = 1 // Set default value 1
-		}
+	if replicasErr == nil && replicasFound && launcherReplicas > 0 {
+		minHeadReplicas = launcherReplicas
 	}
-	return launcherMinReplicas
+
+	launcherMinReplicas, minReplicasFound, err := unstructured.NestedInt64(topOwner.Object,
+		"spec", "headGroupSpec", "minReplicas")
+	if err == nil && minReplicasFound && launcherMinReplicas > 0 {
+		minHeadReplicas = launcherMinReplicas
+	}
+
+	return minHeadReplicas
 }
