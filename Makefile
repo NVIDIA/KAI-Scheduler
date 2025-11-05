@@ -22,8 +22,13 @@ SERVICE_NAMES := podgrouper scheduler binder resourcereservation snapshot-tool s
 lint: fmt-go vet-go lint-go
 .PHONY: lint
 
+.PHONY: test-chart
+test-chart:
+	@echo "Running tests for Helm chart: kai-scheduler"
+	docker run -t --rm -v ./deployments/kai-scheduler:/apps helmunittest/helm-unittest:3.17.2-0.8.1 . -f 'tests/**/*_test.yaml'
+
 .PHONY: test
-test: envtest-docker-go
+test: test-chart envtest-docker-go
 
 .PHONY: build
 build: $(SERVICE_NAMES)
