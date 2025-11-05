@@ -12,9 +12,6 @@ metadata:
 spec:
   namespace: {{ .Release.Namespace }}
   global:
-    schedulerName: "kai-scheduler"
-    queueLabelKey: "kai.scheduler/queue"
-    nodePoolLabelKey: "kai.scheduler/nodepool"
     {{- if .Values.global.namespaceLabelSelector }}
     namespaceLabelSelector:
       {{- toYaml .Values.global.namespaceLabelSelector | nindent 6 }}

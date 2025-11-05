@@ -85,22 +85,34 @@ kubectl label nodes node-5 kai.scheduler/node-pool=high-memory-nodes
 Create queues that target specific shards:
 
 ```yaml
-apiVersion: kai.scheduler/v1
+apiVersion: scheduling.run.ai/v2
+kind: Queue
+metadata:
+  name: gpu-queue-parent
+  labels:
+    kai.scheduler/node-pool: gpu-nodes  # Targets GPU shard
+spec:
+  priority: 100
+  resources:
+    gpu:
+      quota: -1
+---
+apiVersion: scheduling.run.ai/v2
 kind: Queue
 metadata:
   name: gpu-queue
   labels:
     kai.scheduler/node-pool: gpu-nodes  # Targets GPU shard
 spec:
+  parentQueue: gpu-queue-parent
   priority: 100
-  resourceQuota:
-    gpu: 10
-    cpu: 100
-    memory: 500Gi
+  resources:
+    gpu:
+      quota: 10
 ```
 
 ```yaml
-apiVersion: kai.scheduler/v1
+apiVersion: scheduling.run.ai/v2
 kind: Queue
 metadata:
   name: cpu-queue
@@ -108,51 +120,71 @@ metadata:
     kai.scheduler/node-pool: cpu-nodes  # Targets CPU shard
 spec:
   priority: 50
+  parentQueue: cpu-queue-parent
   resourceQuota:
-    cpu: 200
-    memory: 1Ti
+    cpu:
+       quota: 200
+    memory:
+        quota: -1
 ```
 
-## Pod Group Configuration
-
-### Shard-Specific Pod Groups
-
-Pod groups will automatically inherit shard targeting from their queue:
-
-```yaml
-apiVersion: kai.scheduler/v1
-kind: PodGroup
-metadata:
-  name: gpu-training-job
-  labels:
-    kai.scheduler/queue: gpu-queue  # Inherits shard from queue
-spec:
-  minMember: 1
-  priority: 100
-  resourceQuota:
-    gpu: 2
-    cpu: 8
-    memory: 32Gi
-```
+## Job Submission
 
 ### Direct Shard Targeting
 
-Pod groups can also directly target shards:
+Jobs should be directly submitted to a specific shard:
 
 ```yaml
-apiVersion: kai.scheduler/v1
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-pod
+  namespace: test
+  labels:
+    kai.scheduler/queue: foo-queue-test
+    kai.scheduler/node-pool: foo
+spec:
+  schedulerName: kai-scheduler
+  containers:
+    - name: main
+      image: ubuntu
+      command: ["bash", "-c"]
+      args: ["nvidia-smi; trap 'exit 0' TERM; sleep infinity & wait"]
+      resources:
+        limits:
+          nvidia.com/gpu: "1"
+```
+
+The created pod group will have the same labels as the top owner of the pod, which will then include the node-pool label
+
+```yaml
+apiVersion: scheduling.run.ai/v2alpha2
 kind: PodGroup
 metadata:
-  name: memory-intensive-job
+  annotations:
+    kai.scheduler/top-owner-metadata: |
+      name: gpu-pod
+      uid:
+      group: ""
+      version: v1
+      kind: Pod
   labels:
-    kai.scheduler/node-pool: high-memory-nodes
+    kai.scheduler/queue: foo-queue-test
+  name: pg-gpu-pod-d81e6f2c-8da7-4e61-8758-d8a2c38d2bfb
+  namespace: test
+  ownerReferences:
+  - apiVersion: v1
+    kind: Pod
+    name: gpu-pod
+    uid:
+  uid:
 spec:
   minMember: 1
-  priority: 75
-  resourceQuota:
-    cpu: 16
-    memory: 128Gi
+  priorityClassName: train
+  queue: foo-queue-test
 ```
+
+The PodGroup's label can later be updated manually to direct the job to a different shard.
 
 ## Monitoring and Observability
 
