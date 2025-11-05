@@ -56,6 +56,7 @@ spec:
       topologyConstraint:
         topology: "cluster-topology"
         requiredTopologyLevel: "topology/rack"
+
     - name: subgroup-b
       minMember: 3
       topologyConstraint:
