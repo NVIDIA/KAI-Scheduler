@@ -18,6 +18,7 @@ import (
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -226,7 +227,7 @@ func (p *PrometheusClient) queryTumblingTimeWindow(ctx context.Context, decayedA
 }
 
 func (p *PrometheusClient) getLatestUsageResetTime() time.Time {
-	maxWindowStartingPoint := time.Now().Add(-*p.usageParams.WindowSize)
+	maxWindowStartingPoint := time.Now().Add(-p.usageParams.WindowSize.Duration)
 	lastUsageReset := maxWindowStartingPoint
 	nextInWindowReset := maxWindowStartingPoint
 
@@ -237,12 +238,12 @@ func (p *PrometheusClient) getLatestUsageResetTime() time.Time {
 	return lastUsageReset
 }
 
-func getExponentialDecayQuery(halfLifePeriod *time.Duration) string {
+func getExponentialDecayQuery(halfLifePeriod *metav1.Duration) string {
 	if halfLifePeriod == nil {
 		return ""
 	}
 
-	halfLifeSeconds := halfLifePeriod.Seconds()
+	halfLifeSeconds := halfLifePeriod.Duration.Seconds()
 	now := time.Now().Unix()
 
 	return fmt.Sprintf("0.5^((%d - time()) / %f)", now, halfLifeSeconds)

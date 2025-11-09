@@ -3,31 +3,31 @@
 
 package api
 
-import "time"
+import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 func (p *UsageParams) SetDefaults() {
 	if p.HalfLifePeriod == nil {
 		// noop: disabled by default
 	}
 	if p.WindowSize == nil {
-		windowSize := time.Hour * 24 * 7
-		p.WindowSize = &windowSize
+		p.WindowSize = &metav1.Duration{Duration: time.Hour * 24 * 7}
 	}
 	if p.WindowType == nil {
 		windowType := SlidingWindow
 		p.WindowType = &windowType
 	}
 	if p.FetchInterval == nil {
-		fetchInterval := 1 * time.Minute
-		p.FetchInterval = &fetchInterval
+		p.FetchInterval = &metav1.Duration{Duration: 1 * time.Minute}
 	}
 	if p.StalenessPeriod == nil {
-		stalenessPeriod := 5 * time.Minute
-		p.StalenessPeriod = &stalenessPeriod
+		p.StalenessPeriod = &metav1.Duration{Duration: 5 * time.Minute}
 	}
 	if p.WaitTimeout == nil {
-		waitTimeout := 1 * time.Minute
-		p.WaitTimeout = &waitTimeout
+		p.WaitTimeout = &metav1.Duration{Duration: 1 * time.Minute}
 	}
 }
 

@@ -4,9 +4,8 @@
 package api
 
 import (
-	"time"
-
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Interface interface {
@@ -40,40 +39,50 @@ func (c *UsageDBConfig) DeepCopy() *UsageDBConfig {
 // UsageParams defines common params for all usage db clients. Some clients may not support all the params.
 type UsageParams struct {
 	// Half life period of the usage. If not set, or set to 0, the usage will not be decayed.
-	HalfLifePeriod *time.Duration `yaml:"halfLifePeriod" json:"halfLifePeriod"`
+	HalfLifePeriod *metav1.Duration `yaml:"halfLifePeriod,omitempty" json:"halfLifePeriod,omitempty"`
 	// Window size of the usage. Default is 1 week.
-	WindowSize *time.Duration `yaml:"windowSize" json:"windowSize"`
+	WindowSize *metav1.Duration `yaml:"windowSize,omitempty" json:"windowSize,omitempty"`
 	// Window type for time-series aggregation. If not set, defaults to sliding.
-	WindowType *WindowType `yaml:"windowType" json:"windowType"`
+	WindowType *WindowType `yaml:"windowType,omitempty" json:"windowType,omitempty"`
 	// A cron string used to determine when to reset resource usage for all queues.
-	TumblingWindowCronString string `yaml:"tumblingWindowCronString" json:"tumblingWindowCronString"`
+	TumblingWindowCronString string `yaml:"tumblingWindowCronString,omitempty" json:"tumblingWindowCronString,omitempty"`
 	// Fetch interval of the usage. Default is 1 minute.
-	FetchInterval *time.Duration `yaml:"fetchInterval" json:"fetchInterval"`
+	FetchInterval *metav1.Duration `yaml:"fetchInterval,omitempty" json:"fetchInterval,omitempty"`
 	// Staleness period of the usage. Default is 5 minutes.
-	StalenessPeriod *time.Duration `yaml:"stalenessPeriod" json:"stalenessPeriod"`
+	StalenessPeriod *metav1.Duration `yaml:"stalenessPeriod,omitempty" json:"stalenessPeriod,omitempty"`
 	// Wait timeout of the usage. Default is 1 minute.
-	WaitTimeout *time.Duration `yaml:"waitTimeout" json:"waitTimeout"`
+	WaitTimeout *metav1.Duration `yaml:"waitTimeout,omitempty" json:"waitTimeout,omitempty"`
 
 	// ExtraParams are extra parameters for the usage db client, which are client specific.
-	ExtraParams map[string]string `yaml:"extraParams" json:"extraParams"`
+	ExtraParams map[string]string `yaml:"extraParams,omitempty" json:"extraParams,omitempty"`
 }
 
 func (p *UsageParams) DeepCopy() *UsageParams {
 	out := new(UsageParams)
 	if p.HalfLifePeriod != nil {
-		out.HalfLifePeriod = p.HalfLifePeriod
+		duration := *p.HalfLifePeriod
+		out.HalfLifePeriod = &duration
 	}
 	if p.WindowSize != nil {
-		out.WindowSize = p.WindowSize
+		duration := *p.WindowSize
+		out.WindowSize = &duration
 	}
+	if p.WindowType != nil {
+		windowType := *p.WindowType
+		out.WindowType = &windowType
+	}
+	out.TumblingWindowCronString = p.TumblingWindowCronString
 	if p.FetchInterval != nil {
-		out.FetchInterval = p.FetchInterval
+		duration := *p.FetchInterval
+		out.FetchInterval = &duration
 	}
 	if p.StalenessPeriod != nil {
-		out.StalenessPeriod = p.StalenessPeriod
+		duration := *p.StalenessPeriod
+		out.StalenessPeriod = &duration
 	}
 	if p.WaitTimeout != nil {
-		out.WaitTimeout = p.WaitTimeout
+		duration := *p.WaitTimeout
+		out.WaitTimeout = &duration
 	}
 	if p.ExtraParams != nil {
 		out.ExtraParams = make(map[string]string, len(p.ExtraParams))

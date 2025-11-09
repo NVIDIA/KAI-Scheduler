@@ -120,9 +120,9 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config,
 		ClientType:       "fake-with-history",
 		ConnectionString: "fake-connection",
 		UsageParams: &api.UsageParams{
-			WindowSize:     &[]time.Duration{time.Second * time.Duration(*windowSize)}[0],
-			FetchInterval:  &[]time.Duration{time.Millisecond}[0],
-			HalfLifePeriod: &[]time.Duration{time.Second * time.Duration(*halfLifePeriod)}[0],
+			WindowSize:     &metav1.Duration{Duration: time.Second * time.Duration(*windowSize)},
+			FetchInterval:  &metav1.Duration{Duration: time.Millisecond},
+			HalfLifePeriod: &metav1.Duration{Duration: time.Second * time.Duration(*halfLifePeriod)},
 		},
 	}
 	schedulerConf.UsageDBConfig.UsageParams.SetDefaults()
