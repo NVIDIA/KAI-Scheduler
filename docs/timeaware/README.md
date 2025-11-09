@@ -39,11 +39,129 @@ The following plot demonstrates the GPU allocation over time in a 16 GPU cluster
 
 ## Configuration
 
+> Note: this is not finalized and is expected to change in an upcoming KAI release
+
+### Enabling prometheus
+
+To enable prometheus via kai-operator, apply the following patch:
+```sh
+kubectl patch config kai-scheduler --type merge -p '{"spec":{"prometheus":{"enabled":true}}}'
+```
+
+You can also customize the following configurations:
+
+```
+  externalPrometheusHealthProbe	<Object>
+    ExternalPrometheusPingConfig defines the configuration for external
+    Prometheus connectivity validation, with defaults.
+
+  externalPrometheusUrl	<string>
+    ExternalPrometheusUrl defines the URL of an external Prometheus instance to
+    use
+    When set, KAI will not deploy its own Prometheus but will configure
+    ServiceMonitors
+    for the external instance and validate connectivity
+
+  retentionPeriod	<string>
+    RetentionPeriod defines how long to retain data (e.g., "2w", "1d", "30d")
+
+  sampleInterval	<string>
+    SampleInterval defines the interval of sampling (e.g., "1m", "30s", "5m")
+
+  serviceMonitor	<Object>
+    ServiceMonitor defines ServiceMonitor configuration for KAI services
+
+  storageClassName	<string>
+    StorageClassName defines the name of the storageClass that will be used to
+    store the TSDB data. defaults to "standard".
+
+  storageSize	<string>
+    StorageSize defines the size of the storage (e.g., "20Gi", "30Gi")
+```
+
+Alternatively, you can use your own prometheus. Make sure that it's configured to collect metrics from the queue controller via a service monitor. For example:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: queuecontroller
+  name: queuecontroller
+  namespace: kai-scheduler
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    interval: 30s
+    port: metrics
+    scrapeTimeout: 10s
+  jobLabel: queuecontroller
+  namespaceSelector:
+    matchNames:
+    - kai-scheduler
+  selector:
+    matchLabels:
+      app: queuecontroller
+```
+
 ### Usage Database
 
-The scheduler can be configured 
+To configure the scheduler to connect to prometheus, the usageDBConfig section of the scheduling shard needs to be edited:
+```sh
+kubectl edit schedulingshard default
+```
+*Replace `default` with the shard name if relevant*
+
+Add the following section under `spec`:
+```yaml
+  usageDBConfig:
+    clientType: prometheus
+    connectionString: http://prometheus-operated.kai-scheduler.svc.cluster.local:9090
+    usageParams:
+      halfLifePeriod: 10m
+      windowSize: 10m
+      windowType: sliding
+```
+*This configuration assumes using the kai operated prometheus. Change connectionString if relevant.*
+
+Configure windowSize and halfLifePeriod to desired values.
 
 ### External prometheus
+
+You can configure kai-scheduler to connect to any external DB that's compatible with the prometheus API - simply edit the connectionString accordingly. Note that it has to be accessible from the scheduler pod, and have access to queue controller and kube-state metrics.
+
+### kValue
+
+KValue is a parameter used by the proportion plugin to determine the significance of historical usage in fairness calculations - higher values mean more aggressive effects on fairness. To set it, add it to the scheduling shard spec:
+```sh
+kubectl edit schedulingshard default
+```
+
+```yaml
+spec:
+  kValue: 0.5
+```
+
+### Advanced: overriding metrics
+
+> *This configuration should not be changed under normal conditions*
+
+In some cases, the admin might want to configure the scheduler to query different metrics for usage and capacity of certain resources. This can be done with the following config:
+
+```sh
+kubectl edit schedulingshard default
+```
+
+```yaml
+  usageDBConfig:
+    extraParams:
+      gpuAllocationMetric: kai_queue_allocated_gpus
+      cpuAllocationMetric: kai_queue_allocated_cpu_cores
+      memoryAllocationMetric: kai_queue_allocated_memory_bytes
+      gpuCapacityMetric: sum(kube_node_status_capacity{resource=\"nvidia_com_gpu\"})
+      cpuCapacityMetric: sum(kube_node_status_capacity{resource=\"cpu\"})
+      memoryCapacityMetric: sum(kube_node_status_capacity{resource=\"memory\"})
+```
 
 ## Troubleshooting
 

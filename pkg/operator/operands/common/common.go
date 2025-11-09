@@ -32,7 +32,7 @@ var KaiServicesForServiceMonitor = []struct {
 	Port     string
 	JobLabel string
 }{
-	{"queuecontroller", "metrics", "queuecontroller"},
+	{"queue-controller", "metrics", "queue-controller"},
 }
 
 func AllControllersAvailable(

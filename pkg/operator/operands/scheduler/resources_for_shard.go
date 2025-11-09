@@ -135,11 +135,18 @@ func (s *SchedulerForShard) configMapForShard(
 
 	innerConfig.Actions = strings.Join(actions, ", ")
 
+	var proportionArgs map[string]string
+	if shard.Spec.KValue != nil {
+		proportionArgs = map[string]string{
+			"kValue": strconv.FormatFloat(*shard.Spec.KValue, 'f', -1, 64),
+		}
+	}
+
 	innerConfig.Tiers = []tier{
 		{
 			Plugins: []plugin{
 				{Name: "predicates"},
-				{Name: "proportion"},
+				{Name: "proportion", Arguments: proportionArgs},
 				{Name: "priority"},
 				{Name: "nodeavailability"},
 				{Name: "resourcetype"},
@@ -182,6 +189,10 @@ func (s *SchedulerForShard) configMapForShard(
 		}
 		// Set the validated map to the scheduler config
 		innerConfig.QueueDepthPerAction = shard.Spec.QueueDepthPerAction
+	}
+
+	if shard.Spec.UsageDBConfig != nil {
+		innerConfig.UsageDBConfig = shard.Spec.UsageDBConfig
 	}
 
 	data, marshalErr := yaml.Marshal(&innerConfig)
