@@ -18,7 +18,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/scheduler"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -431,8 +430,7 @@ func (in *SchedulingShardSpec) DeepCopyInto(out *SchedulingShardSpec) {
 	}
 	if in.UsageDBConfig != nil {
 		in, out := &in.UsageDBConfig, &out.UsageDBConfig
-		*out = new(api.UsageDBConfig)
-		(*in).DeepCopyInto(*out)
+		*out = (*in).DeepCopy()
 	}
 }
 

@@ -29,12 +29,12 @@ func (c *UsageDBConfig) GetUsageParams() *UsageParams {
 	return &up
 }
 
-func (c *UsageDBConfig) DeepCopyInto(out *UsageDBConfig) {
-	*out = *c
+func (c *UsageDBConfig) DeepCopy() *UsageDBConfig {
+	out := new(UsageDBConfig)
 	if c.UsageParams != nil {
-		out.UsageParams = new(UsageParams)
-		c.UsageParams.DeepCopyInto(out.UsageParams)
+		out.UsageParams = c.UsageParams.DeepCopy()
 	}
+	return out
 }
 
 // UsageParams defines common params for all usage db clients. Some clients may not support all the params.
@@ -58,31 +58,22 @@ type UsageParams struct {
 	ExtraParams map[string]string `yaml:"extraParams" json:"extraParams"`
 }
 
-func (p *UsageParams) DeepCopyInto(out *UsageParams) {
-	*out = *p
+func (p *UsageParams) DeepCopy() *UsageParams {
+	out := new(UsageParams)
 	if p.HalfLifePeriod != nil {
-		out.HalfLifePeriod = new(time.Duration)
-		*out.HalfLifePeriod = *p.HalfLifePeriod
+		out.HalfLifePeriod = p.HalfLifePeriod
 	}
 	if p.WindowSize != nil {
-		out.WindowSize = new(time.Duration)
-		*out.WindowSize = *p.WindowSize
-	}
-	if p.WindowType != nil {
-		out.WindowType = new(WindowType)
-		*out.WindowType = *p.WindowType
+		out.WindowSize = p.WindowSize
 	}
 	if p.FetchInterval != nil {
-		out.FetchInterval = new(time.Duration)
-		*out.FetchInterval = *p.FetchInterval
+		out.FetchInterval = p.FetchInterval
 	}
 	if p.StalenessPeriod != nil {
-		out.StalenessPeriod = new(time.Duration)
-		*out.StalenessPeriod = *p.StalenessPeriod
+		out.StalenessPeriod = p.StalenessPeriod
 	}
 	if p.WaitTimeout != nil {
-		out.WaitTimeout = new(time.Duration)
-		*out.WaitTimeout = *p.WaitTimeout
+		out.WaitTimeout = p.WaitTimeout
 	}
 	if p.ExtraParams != nil {
 		out.ExtraParams = make(map[string]string, len(p.ExtraParams))
@@ -90,4 +81,5 @@ func (p *UsageParams) DeepCopyInto(out *UsageParams) {
 			out.ExtraParams[k] = v
 		}
 	}
+	return out
 }
