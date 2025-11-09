@@ -424,6 +424,11 @@ func (in *SchedulingShardSpec) DeepCopyInto(out *SchedulingShardSpec) {
 		*out = new(MinRuntime)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.KValue != nil {
+		in, out := &in.KValue, &out.KValue
+		*out = new(float64)
+		**out = **in
+	}
 	if in.UsageDBConfig != nil {
 		in, out := &in.UsageDBConfig, &out.UsageDBConfig
 		*out = new(api.UsageDBConfig)

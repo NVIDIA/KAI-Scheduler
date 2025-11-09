@@ -29,6 +29,14 @@ func (c *UsageDBConfig) GetUsageParams() *UsageParams {
 	return &up
 }
 
+func (c *UsageDBConfig) DeepCopyInto(out *UsageDBConfig) {
+	*out = *c
+	if c.UsageParams != nil {
+		out.UsageParams = new(UsageParams)
+		c.UsageParams.DeepCopyInto(out.UsageParams)
+	}
+}
+
 // UsageParams defines common params for all usage db clients. Some clients may not support all the params.
 type UsageParams struct {
 	// Half life period of the usage. If not set, or set to 0, the usage will not be decayed.
@@ -48,4 +56,38 @@ type UsageParams struct {
 
 	// ExtraParams are extra parameters for the usage db client, which are client specific.
 	ExtraParams map[string]string `yaml:"extraParams" json:"extraParams"`
+}
+
+func (p *UsageParams) DeepCopyInto(out *UsageParams) {
+	*out = *p
+	if p.HalfLifePeriod != nil {
+		out.HalfLifePeriod = new(time.Duration)
+		*out.HalfLifePeriod = *p.HalfLifePeriod
+	}
+	if p.WindowSize != nil {
+		out.WindowSize = new(time.Duration)
+		*out.WindowSize = *p.WindowSize
+	}
+	if p.WindowType != nil {
+		out.WindowType = new(WindowType)
+		*out.WindowType = *p.WindowType
+	}
+	if p.FetchInterval != nil {
+		out.FetchInterval = new(time.Duration)
+		*out.FetchInterval = *p.FetchInterval
+	}
+	if p.StalenessPeriod != nil {
+		out.StalenessPeriod = new(time.Duration)
+		*out.StalenessPeriod = *p.StalenessPeriod
+	}
+	if p.WaitTimeout != nil {
+		out.WaitTimeout = new(time.Duration)
+		*out.WaitTimeout = *p.WaitTimeout
+	}
+	if p.ExtraParams != nil {
+		out.ExtraParams = make(map[string]string, len(p.ExtraParams))
+		for k, v := range p.ExtraParams {
+			out.ExtraParams[k] = v
+		}
+	}
 }

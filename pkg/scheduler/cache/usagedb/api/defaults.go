@@ -5,29 +5,29 @@ package api
 
 import "time"
 
-func (up *UsageParams) SetDefaults() {
-	if up.HalfLifePeriod == nil {
+func (p *UsageParams) SetDefaults() {
+	if p.HalfLifePeriod == nil {
 		// noop: disabled by default
 	}
-	if up.WindowSize == nil {
+	if p.WindowSize == nil {
 		windowSize := time.Hour * 24 * 7
-		up.WindowSize = &windowSize
+		p.WindowSize = &windowSize
 	}
-	if up.WindowType == nil {
+	if p.WindowType == nil {
 		windowType := SlidingWindow
-		up.WindowType = &windowType
+		p.WindowType = &windowType
 	}
-	if up.FetchInterval == nil {
+	if p.FetchInterval == nil {
 		fetchInterval := 1 * time.Minute
-		up.FetchInterval = &fetchInterval
+		p.FetchInterval = &fetchInterval
 	}
-	if up.StalenessPeriod == nil {
+	if p.StalenessPeriod == nil {
 		stalenessPeriod := 5 * time.Minute
-		up.StalenessPeriod = &stalenessPeriod
+		p.StalenessPeriod = &stalenessPeriod
 	}
-	if up.WaitTimeout == nil {
+	if p.WaitTimeout == nil {
 		waitTimeout := 1 * time.Minute
-		up.WaitTimeout = &waitTimeout
+		p.WaitTimeout = &waitTimeout
 	}
 }
 
@@ -54,12 +54,12 @@ func (wt WindowType) IsValid() bool {
 	}
 }
 
-func (up *UsageParams) GetExtraDurationParamOrDefault(key string, defaultValue time.Duration) time.Duration {
-	if up.ExtraParams == nil {
+func (p *UsageParams) GetExtraDurationParamOrDefault(key string, defaultValue time.Duration) time.Duration {
+	if p.ExtraParams == nil {
 		return defaultValue
 	}
 
-	value, exists := up.ExtraParams[key]
+	value, exists := p.ExtraParams[key]
 	if !exists {
 		return defaultValue
 	}
@@ -72,12 +72,12 @@ func (up *UsageParams) GetExtraDurationParamOrDefault(key string, defaultValue t
 	return duration
 }
 
-func (up *UsageParams) GetExtraStringParamOrDefault(key string, defaultValue string) string {
-	if up.ExtraParams == nil {
+func (p *UsageParams) GetExtraStringParamOrDefault(key string, defaultValue string) string {
+	if p.ExtraParams == nil {
 		return defaultValue
 	}
 
-	value, exists := up.ExtraParams[key]
+	value, exists := p.ExtraParams[key]
 	if !exists {
 		return defaultValue
 	}
