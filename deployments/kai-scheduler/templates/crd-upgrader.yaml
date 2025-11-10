@@ -30,7 +30,7 @@ spec:
       {{- end }}
       containers:
       - name: upgrader
-        image: "{{ .Values.global.registry }}/{{ .Values.crdupgrader.image.name }}:{{ .Chart.Version }}"
+        image: "{{ .Values.global.registry }}/{{ .Values.crdupgrader.image.name }}:{{ .Values.crdupgrader.image.tag | default .Values.global.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.crdupgrader.image.pullPolicy }}
         {{- if (lookup "apiextensions.k8s.io/v1" "CustomResourceDefinition" "" "clusterversions.config.openshift.io") }}
         securityContext:

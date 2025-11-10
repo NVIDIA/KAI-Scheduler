@@ -21,7 +21,7 @@ spec:
       serviceAccountName: kai-operator
       containers:
       - name: operator
-        image: {{ .Values.global.registry }}/{{ .Values.operator.image.name }}:{{ .Chart.Version }}
+        image: {{ .Values.global.registry }}/{{ .Values.operator.image.name }}:{{ .Values.operator.image.tag | default .Values.global.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
         resources:
           {{- toYaml .Values.operator.resources | nindent 12 }}
@@ -44,7 +44,7 @@ spec:
         - name: MS_REPOSITORY
           value: {{ .Values.global.registry }}
         - name: MS_TAG
-          value: {{ .Chart.Version }}
+          value: {{ .Values.operator.image.tag | default .Values.global.tag | default .Chart.AppVersion }}
         ports:
         - containerPort: 8080
           name: metrics
