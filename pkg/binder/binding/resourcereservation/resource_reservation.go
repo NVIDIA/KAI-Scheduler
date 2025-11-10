@@ -386,6 +386,13 @@ func (rsc *service) createGPUReservationPod(ctx context.Context, nodeName, gpuGr
 	resources := v1.ResourceRequirements{
 		Limits: v1.ResourceList{
 			constants.GpuResource: *resource.NewQuantity(numberOfGPUsToReserve, resource.DecimalSI),
+			v1.ResourceCPU:        resource.MustParse("50m"),
+			v1.ResourceMemory:     resource.MustParse("100Mi"),
+		},
+		Requests: v1.ResourceList{
+			constants.GpuResource: *resource.NewQuantity(numberOfGPUsToReserve, resource.DecimalSI),
+			v1.ResourceCPU:        resource.MustParse("1m"),
+			v1.ResourceMemory:     resource.MustParse("10Mi"),
 		},
 	}
 
