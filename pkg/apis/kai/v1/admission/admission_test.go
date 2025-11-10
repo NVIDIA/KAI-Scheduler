@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -25,6 +26,7 @@ var _ = Describe("Admission", func() {
 		Expect(*Admission.Service.Enabled).To(Equal(true))
 		Expect(*Admission.Service.Image.Name).To(Equal("admission"))
 		Expect(*Admission.Replicas).To(Equal(int32(1)))
+		Expect(*Admission.GPUPodRuntimeClassName).To(Equal(constants.DefaultRuntimeClassName))
 	})
 	It("Set Defaults with replica count", func(ctx context.Context) {
 		Admission := &Admission{}

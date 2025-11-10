@@ -41,7 +41,6 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(schedulingv1alpha2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
@@ -174,5 +173,6 @@ func (app *App) Run() error {
 		setupLog.Error(err, "problem running manager")
 		return err
 	}
+
 	return nil
 }

@@ -44,6 +44,11 @@ spec:
               admission:
                 description: Admission holds KAI admission webhooks
                 properties:
+                  gpuPodRuntimeClassName:
+                    description: |-
+                      GPUPodRuntimeClassName specifies the runtime class to be set for GPU pods
+                      set to empty string to disable
+                    type: string
                   gpuSharing:
                     description: GPUSharing enables GPU sharing functionality for
                       the admission service

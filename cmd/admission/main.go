@@ -12,6 +12,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/admission/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/gpusharing"
+	"github.com/NVIDIA/KAI-scheduler/pkg/admission/webhook/v1alpha2/runtimeenforcement"
 )
 
 var (
@@ -42,8 +43,13 @@ func registerPlugins(app *app.App) error {
 	admissionPlugins := plugins.New()
 
 	admissionGpuSharingPlugin := gpusharing.New(app.Client, app.Options.GPUSharingEnabled)
-
 	admissionPlugins.RegisterPlugin(admissionGpuSharingPlugin)
+
+	if app.Options.GPUPodRuntimeClassName != "" {
+		admissionRuntimeEnforcementPlugin := runtimeenforcement.New(app.Options.GPUPodRuntimeClassName)
+		admissionPlugins.RegisterPlugin(admissionRuntimeEnforcementPlugin)
+	}
+
 	app.RegisterPlugins(admissionPlugins)
 	return nil
 }

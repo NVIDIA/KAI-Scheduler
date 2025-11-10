@@ -527,3 +527,7 @@ func (rsc *service) isScalingUp(ctx context.Context) bool {
 	}
 	return false
 }
+
+func IsGPUReservationPod(pod *v1.Pod) bool {
+	return strings.HasPrefix(pod.Name, gpuReservationPodPrefix)
+}

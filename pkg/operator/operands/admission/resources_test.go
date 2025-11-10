@@ -111,6 +111,92 @@ func TestDeploymentForKAIConfig(t *testing.T) {
 				"--leader-elect",
 			},
 		},
+		{
+			name: "configuration with default gpu pod runtime class",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: constants.DefaultKAINamespace,
+					Global: &kaiv1.GlobalConfig{
+						SchedulerName: ptr.To(constants.DefaultSchedulerName),
+					},
+					Admission: &admission.Admission{
+						Replicas:   ptr.To(int32(2)),
+						GPUSharing: ptr.To(false),
+						Webhook: &admission.Webhook{
+							TargetPort:  ptr.To(9443),
+							ProbePort:   ptr.To(8081),
+							MetricsPort: ptr.To(8080),
+						},
+					},
+				},
+			},
+			expectedArgs: []string{
+				"--scheduler-name", constants.DefaultSchedulerName,
+				"--webhook-addr", "9443",
+				"--health-probe-bind-address", ":8081",
+				"--metrics-bind-address", ":8080",
+				"--leader-elect",
+				"--gpu-pod-runtime-class-name", constants.DefaultRuntimeClassName,
+			},
+		},
+		{
+			name: "configuration with custom gpu pod runtime class",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: constants.DefaultKAINamespace,
+					Global: &kaiv1.GlobalConfig{
+						SchedulerName: ptr.To(constants.DefaultSchedulerName),
+					},
+					Admission: &admission.Admission{
+						Replicas:   ptr.To(int32(2)),
+						GPUSharing: ptr.To(false),
+						Webhook: &admission.Webhook{
+							TargetPort:  ptr.To(9443),
+							ProbePort:   ptr.To(8081),
+							MetricsPort: ptr.To(8080),
+						},
+						GPUPodRuntimeClassName: ptr.To("custom-runtime-class"),
+					},
+				},
+			},
+			expectedArgs: []string{
+				"--scheduler-name", constants.DefaultSchedulerName,
+				"--webhook-addr", "9443",
+				"--health-probe-bind-address", ":8081",
+				"--metrics-bind-address", ":8080",
+				"--leader-elect",
+				"--gpu-pod-runtime-class-name", "custom-runtime-class",
+			},
+		},
+		{
+			name: "configuration with no gpu pod runtime class",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: constants.DefaultKAINamespace,
+					Global: &kaiv1.GlobalConfig{
+						SchedulerName: ptr.To(constants.DefaultSchedulerName),
+					},
+					Admission: &admission.Admission{
+						Replicas:   ptr.To(int32(2)),
+						GPUSharing: ptr.To(false),
+						Webhook: &admission.Webhook{
+							TargetPort:  ptr.To(9443),
+							ProbePort:   ptr.To(8081),
+							MetricsPort: ptr.To(8080),
+						},
+						GPUPodRuntimeClassName: ptr.To(""),
+					},
+				},
+			},
+			expectedArgs: []string{
+				"--scheduler-name", constants.DefaultSchedulerName,
+				"--webhook-addr", "9443",
+				"--health-probe-bind-address", ":8081",
+				"--metrics-bind-address", ":8080",
+				"--leader-elect",
+				"--gpu-pod-runtime-class-name", "",
+			},
+		},
 	}
 
 	for _, tt := range tests {

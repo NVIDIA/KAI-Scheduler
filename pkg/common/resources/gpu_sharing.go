@@ -24,6 +24,22 @@ func RequestsGPUFraction(pod *v1.Pod) bool {
 	return foundFraction || foundGPUMemory
 }
 
+func RequestsWholeGPU(pod *v1.Pod) bool {
+	for _, container := range pod.Spec.Containers {
+		if _, ok := container.Resources.Requests[constants.GpuResource]; ok {
+			return true
+		}
+		if _, ok := container.Resources.Limits[constants.GpuResource]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func RequestsGPU(pod *v1.Pod) bool {
+	return RequestsGPUFraction(pod) || RequestsWholeGPU(pod)
+}
+
 func GetGPUFraction(pod *v1.Pod) (float64, error) {
 	gpuFractionStr, found := pod.Annotations[constants.GpuFraction]
 	if !found {

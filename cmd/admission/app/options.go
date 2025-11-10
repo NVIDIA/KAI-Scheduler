@@ -4,6 +4,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/spf13/pflag"
 
@@ -22,6 +24,7 @@ type Options struct {
 	WebhookPort                 int
 	FakeGPUNodes                bool
 	GPUSharingEnabled           bool
+	GPUPodRuntimeClassName      string
 }
 
 func InitOptions() *Options {
@@ -63,6 +66,9 @@ func InitOptions() *Options {
 	fs.BoolVar(&options.GPUSharingEnabled,
 		"gpu-sharing-enabled", false,
 		"Specifies if the GPU sharing is enabled")
+	fs.StringVar(&options.GPUPodRuntimeClassName,
+		"gpu-pod-runtime-class-name", constants.DefaultRuntimeClassName,
+		fmt.Sprintf("Runtime class to be set for GPU pods (defaults to %s) Set to empty string to disable", constants.DefaultRuntimeClassName))
 
 	utilfeature.DefaultMutableFeatureGate.AddFlag(fs)
 

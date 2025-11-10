@@ -8,6 +8,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 const (
@@ -32,6 +33,11 @@ type Admission struct {
 	// QueueLabelSelector enables the queue label MatchExpression in webhooks
 	// +kubebuilder:validation:Optional
 	QueueLabelSelector *bool `json:"queueLabelSelector,omitempty"`
+
+	// GPUPodRuntimeClassName specifies the runtime class to be set for GPU pods
+	// set to empty string to disable
+	// +kubebuilder:validation:Optional
+	GPUPodRuntimeClassName *string `json:"gpuPodRuntimeClassName,omitempty"`
 }
 
 func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
@@ -47,6 +53,8 @@ func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
 	b.Replicas = common.SetDefault(b.Replicas, ptr.To(ptr.Deref(replicaCount, 1)))
 	b.GPUSharing = common.SetDefault(b.GPUSharing, ptr.To(false))
 	b.QueueLabelSelector = common.SetDefault(b.QueueLabelSelector, ptr.To(false))
+
+	b.GPUPodRuntimeClassName = common.SetDefault(b.GPUPodRuntimeClassName, ptr.To(constants.DefaultRuntimeClassName))
 }
 
 // Webhook defines configuration for the admission webhook

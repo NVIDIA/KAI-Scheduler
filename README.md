@@ -49,6 +49,13 @@ helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -
 #### Build from Source
 Follow the instructions [here](docs/developer/building-from-source.md)
 
+## Flavor Specific Instructions
+### Openshift
+When `gpu-operator` <v25.10.0 is installed, the following flag should be added to the installation command:
+```
+--set admission.gpuPodRuntimeClassName=null
+```
+
 ## Quick Start
 To start scheduling workloads with KAI Scheduler, please continue to [Quick Start example](docs/quickstart/README.md)
 

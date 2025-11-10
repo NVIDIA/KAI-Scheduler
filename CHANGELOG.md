@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Support DRA in kubernetes 1.34
+- Added enforcement of the `nvidia` runtime class for GPU pods, with the option to enforce a custom runtime class, or disable enforcement entirely.
 
 ### Fixed
 - Fixed a bug where the scheduler would not re-try updating podgroup status after failure

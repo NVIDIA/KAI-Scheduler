@@ -344,6 +344,10 @@ func buildArgsList(kaiConfig *kaiv1.Config, config *kaiv1admission.Admission) []
 		args = append(args, "--leader-elect")
 	}
 
+	if config.GPUPodRuntimeClassName != nil {
+		args = append(args, "--gpu-pod-runtime-class-name", *config.GPUPodRuntimeClassName)
+	}
+
 	common.AddK8sClientConfigToArgs(config.Service.K8sClientConfig, args)
 
 	return args
