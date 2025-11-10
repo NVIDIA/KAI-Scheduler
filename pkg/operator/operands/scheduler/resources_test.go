@@ -8,8 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-
-	"gopkg.in/yaml.v3"
+	"time"
 
 	"github.com/spf13/pflag"
 
@@ -17,6 +16,8 @@ import (
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiv1qc "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
 	kaiv1scheduler "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/scheduler"
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 )
 
 func TestDeploymentForShard(t *testing.T) {
@@ -187,7 +189,7 @@ func TestValidateJobDepthMap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			innerConfig := config{
+			innerConfig := conf.SchedulerConfiguration{
 				Actions: strings.Join(tt.actions, ", "),
 			}
 
@@ -431,6 +433,59 @@ tiers:
 			},
 			expectedErr: true,
 		},
+		{
+			name: "usage DB configuration",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{},
+			},
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: &usagedbapi.UsageDBConfig{
+						ClientType:       "prometheus",
+						ConnectionString: "http://prometheus-operated.kai-scheduler.svc.cluster.local:9090",
+						UsageParams: &usagedbapi.UsageParams{
+							HalfLifePeriod: &metav1.Duration{Duration: 10 * time.Minute},
+							WindowSize:     &metav1.Duration{Duration: 10 * time.Minute},
+							WindowType:     ptr.To(usagedbapi.SlidingWindow),
+						},
+					},
+				},
+			},
+			expected: map[string]string{
+				"config.yaml": `actions: allocate,consolidation,reclaim,preempt,stalegangeviction
+tiers:
+- plugins:
+  - name: predicates
+  - name: proportion
+  - name: priority
+  - name: nodeavailability
+  - name: resourcetype
+  - name: podaffinity
+  - name: elastic
+  - name: kubeflow
+  - name: ray
+  - name: subgrouporder
+  - name: taskorder
+  - name: nominatednode
+  - name: dynamicresources
+  - name: minruntime
+  - name: topology
+  - name: snapshot
+  - name: gpupack
+  - name: nodeplacement
+    arguments:
+      cpu: binpack
+      gpu: binpack
+  - name: gpusharingorder
+usageDBConfig:
+  clientType: prometheus
+  connectionString: http://prometheus-operated.kai-scheduler.svc.cluster.local:9090
+  usageParams:
+    halfLifePeriod: 10m
+    windowSize: 10m
+    windowType: sliding`,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -454,7 +509,7 @@ tiers:
 				require.True(t, found, "ConfigMap missing config.yaml")
 
 				// Unmarshal expected YAML from test case
-				var expectedConfig config
+				var expectedConfig conf.SchedulerConfiguration
 				if _, ok := tt.expected["config.yaml"]; !ok {
 					t.Fatal("Test case must provide expected YAML for config.yaml")
 				}
@@ -462,7 +517,7 @@ tiers:
 				require.NoError(t, err, "Failed to unmarshal expected config")
 
 				// Unmarshal actual YAML from ConfigMap
-				var actualConfig config
+				var actualConfig conf.SchedulerConfiguration
 				err = yaml.Unmarshal([]byte(actualYAML), &actualConfig)
 				require.NoError(t, err, "Failed to unmarshal actual config")
 
@@ -605,4 +660,62 @@ func TestServiceAccountForScheduler(t *testing.T) {
 			assert.Equal(t, tt.config.Spec.Namespace, sa.GetNamespace())
 		})
 	}
+}
+
+func TestMarshalingShardVsConfig(t *testing.T) {
+	shardSpecString := `
+spec:
+  partitionLabelValue: ""
+  placementStrategy:
+    cpu: binpack
+    gpu: binpack
+  usageDBConfig:
+    clientType: prometheus
+    connectionString: http://prometheus-operated.kai-scheduler.svc.cluster.local:9090
+    usageParams:
+      halfLifePeriod: 10m
+      windowSize: 10m
+      windowType: sliding
+`
+
+	shardSpec := &kaiv1.SchedulingShardSpec{}
+	err := yaml.Unmarshal([]byte(shardSpecString), shardSpec)
+	assert.NoError(t, err)
+
+	configString := `actions: allocate,consolidation,reclaim,preempt,stalegangeviction
+tiers:
+- plugins:
+  - name: predicates
+  - name: proportion
+  - name: priority
+  - name: nodeavailability
+  - name: resourcetype
+  - name: podaffinity
+  - name: elastic
+  - name: kubeflow
+  - name: ray
+  - name: subgrouporder
+  - name: taskorder
+  - name: nominatednode
+  - name: dynamicresources
+  - name: minruntime
+  - name: topology
+  - name: snapshot
+  - name: gpupack
+  - name: nodeplacement
+    arguments:
+      cpu: binpack
+      gpu: binpack
+  - name: gpusharingorder
+usageDBConfig:
+  clientType: prometheus
+  connectionString: http://prometheus-operated.kai-scheduler.svc.cluster.local:9090
+  usageParams:
+    halfLifePeriod: 10m
+    windowSize: 10m
+    windowType: sliding
+`
+	config := &conf.SchedulerConfiguration{}
+	err = yaml.Unmarshal([]byte(configString), config)
+	assert.NoError(t, err)
 }

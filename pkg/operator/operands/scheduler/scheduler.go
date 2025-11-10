@@ -11,7 +11,6 @@ import (
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
-	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 )
 
 const (
@@ -22,22 +21,6 @@ const (
 	cpuResource         = "cpu"
 	defaultResourceName = "scheduler"
 )
-
-type config struct {
-	Actions             string                    `yaml:"actions"`
-	Tiers               []tier                    `yaml:"tiers,omitempty"`
-	QueueDepthPerAction map[string]int            `yaml:"queueDepthPerAction,omitempty"`
-	UsageDBConfig       *usagedbapi.UsageDBConfig `yaml:"usageDBConfig,omitempty"`
-}
-
-type tier struct {
-	Plugins []plugin `yaml:"plugins"`
-}
-
-type plugin struct {
-	Name      string            `yaml:"name"`
-	Arguments map[string]string `yaml:"arguments,omitempty"`
-}
 
 type SchedulerForShard struct {
 	schedulingShard *kaiv1.SchedulingShard
