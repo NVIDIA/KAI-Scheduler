@@ -478,7 +478,7 @@ var _ = Describe("prometheusForKAIConfig", func() {
 
 			serviceMonitor := test_utils.FindTypeInObjects[*monitoringv1.ServiceMonitor](objects)
 			Expect(serviceMonitor).NotTo(BeNil())
-			Expect((*serviceMonitor).Name).To(Equal("queuecontroller"))
+			Expect((*serviceMonitor).Name).To(Equal("queue-controller"))
 		})
 
 		It("should return empty objects list when ServiceMonitors are disabled", func(ctx context.Context) {
