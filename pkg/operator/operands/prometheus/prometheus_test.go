@@ -59,18 +59,11 @@ var _ = Describe("Prometheus", func() {
 		})
 
 		Context("when Prometheus is disabled", func() {
-			It("should return ServiceAccount only", func(ctx context.Context) {
+			It("should return no objects", func(ctx context.Context) {
 				kaiConfig.Spec.Prometheus.Enabled = ptr.To(false)
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(1)) // ServiceAccount only
-			})
-
-			It("should return ServiceAccount only when config is nil", func(ctx context.Context) {
-				kaiConfig.Spec.Prometheus = nil
-				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
-				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(1)) // ServiceAccount only
+				Expect(len(objects)).To(Equal(0))
 			})
 		})
 
@@ -354,20 +347,6 @@ var _ = Describe("prometheusForKAIConfig", func() {
 	Context("when Prometheus is disabled", func() {
 		It("should return empty objects list", func(ctx context.Context) {
 			kaiConfig.Spec.Prometheus.Enabled = ptr.To(false)
-			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
-			Expect(err).To(BeNil())
-			Expect(len(objects)).To(Equal(0))
-		})
-
-		It("should return empty objects list when config is nil", func(ctx context.Context) {
-			kaiConfig.Spec.Prometheus = nil
-			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
-			Expect(err).To(BeNil())
-			Expect(len(objects)).To(Equal(0))
-		})
-
-		It("should return empty objects list when enabled is nil", func(ctx context.Context) {
-			kaiConfig.Spec.Prometheus.Enabled = nil
 			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 			Expect(err).To(BeNil())
 			Expect(len(objects)).To(Equal(0))
