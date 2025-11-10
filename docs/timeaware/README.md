@@ -155,7 +155,35 @@ kubectl edit schedulingshard default
 
 ### Dependencies
 
-If trying 
+Before enabling prometheus in kai config, make sure that the prometheus is installed. If it's not, you will see the following condition in the kai config:
+
+``` sh 
+kubectl describe config kai-config
+```
+```
+Status:
+  Conditions:
+    ...
+    Last Transition Time:  2025-11-10T11:25:48Z
+    Message:               KAI-prometheus: no matches for kind "Prometheus" in version "monitoring.coreos.com/v1"
+KAI-prometheus: not available
+    Observed Generation:   2
+    Reason:                available
+    Status:                False
+    Type:                  Available
+```
+
+Simply follow the [prometheus installation instructions](https://prometheus-operator.dev/docs/getting-started/installation/).
+
+In order to collect cluster capacity metrics, [kube-state-metrics](https://artifacthub.io/packages/helm/prometheus-community/kube-state-metrics/) needs to be installed as well. By default, the kai operator creates a ServiceMonitor for it, assuming it's installed in `monitoring` or `default` namespace.
+
+### Missing metrics
+
+If the scheduler is unable to collect the usage metrics from prometheus, you will see a message in the logs, similar to this:
+
+```
+2025-11-10T12:33:07.318Z	ERROR	usagedb/usagedb.go:142	failed to fetch usage data: error querying nvidia.com/gpu and capacity: error querying cluster capacity metric ((sum(kube_node_status_capacity{resource="nvidia_com_gpu"})) * (0.5^((1762777987 - time()) / 600.000000))): bad_data: invalid parameter "query": 1:124: parse error: unexpected character in duration expression: '&'
+```
 
 Prometheus connectivity
 Metrics availability
