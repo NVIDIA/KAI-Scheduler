@@ -198,7 +198,7 @@ func serviceMonitorsForKAIConfig(
 		Spec: monitoringv1.ServiceMonitorSpec{
 			JobLabel: "kube-state-metrics",
 			NamespaceSelector: monitoringv1.NamespaceSelector{
-				MatchNames: []string{"monitoring"},
+				MatchNames: []string{"monitoring", "default"},
 			},
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
