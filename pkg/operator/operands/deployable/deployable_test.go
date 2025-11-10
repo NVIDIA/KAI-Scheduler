@@ -355,6 +355,10 @@ func (f *fakeOperand) Monitor(_ context.Context, _ client.Reader, _ *kaiv1.Confi
 	return nil
 }
 
+func (f *fakeOperand) HasMissingDependencies(context.Context, client.Reader, *kaiv1.Config) (string, error) {
+	return "", nil
+}
+
 func (f *fakeOperand) Name() string {
 	if f.name == "" {
 		return "fakeOperand"

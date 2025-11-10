@@ -100,6 +100,10 @@ func (s *SchedulerForShard) Monitor(ctx context.Context, runtimeReader client.Re
 	return nil
 }
 
+func (s *SchedulerForShard) HasMissingDependencies(context.Context, client.Reader, *kaiv1.Config) (string, error) {
+	return "", nil
+}
+
 func (s *SchedulerForShard) Name() string {
 	return "SchedulerForShard"
 }
@@ -143,4 +147,8 @@ func (s *SchedulerForConfig) Name() string {
 
 func (s *SchedulerForConfig) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
 	return nil
+}
+
+func (s *SchedulerForConfig) HasMissingDependencies(context.Context, client.Reader, *kaiv1.Config) (string, error) {
+	return "", nil
 }

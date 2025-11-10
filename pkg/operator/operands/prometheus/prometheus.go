@@ -100,6 +100,26 @@ func (b *Prometheus) Name() string {
 	return "KAI-prometheus"
 }
 
+func (p *Prometheus) HasMissingDependencies(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) (string, error) {
+	if kaiConfig.Spec.Prometheus == nil || kaiConfig.Spec.Prometheus.Enabled == nil || !*kaiConfig.Spec.Prometheus.Enabled {
+		return "", nil
+	}
+	if kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != nil && *kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != "" {
+		return "", nil
+	}
+
+	hasPrometheusOperator, err := common.CheckPrometheusCRDsAvailable(ctx, runtimeReader, "prometheus")
+	if err != nil {
+		return "", err
+	}
+
+	if !hasPrometheusOperator {
+		return "prometheus operator", nil
+	}
+
+	return "", nil
+}
+
 func (p *Prometheus) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
 	hasExternalPrometheus := kaiConfig.Spec.Prometheus != nil &&
 		kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != nil &&
