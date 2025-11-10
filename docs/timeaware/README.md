@@ -21,6 +21,18 @@ The metrics are collected continuously: the pod-group-controller publishes resou
 
 If configured, the scheduler applies an [exponential time decay](https://en.wikipedia.org/wiki/Exponential_decay) formula which is configured by a half-life period. This can be more intuitively understood with an example: for a half life of one hour, a usage (for example, 1 gpu-second) that occurred an hour ago will be considered half as significant as a gpu-second that was consumed just now.
 
+Mathematically, the following formula is applied to historical usage:
+
+$$U = 0.5^{\frac{\Delta{t}}{t_{1/2}}}$$
+
+Where:
+
+- $U$ is the usage
+- $t_{1/2}$ is the half life constant set by the user
+- $\Delta{t}$ is the time elapsed since that usage
+
+#### Normalization to cluster capacity
+
 The aggregated usage for each queue is then normalized to the **cluster capacity** at the relevant time period: the scheduler looks at the available resources in the cluster for that time period, and normalizes all resource usage to it. For example, in a cluster with 10 GPUs, and considering a time period of 10 hours, a queue which consumed 24 GPU hours (wether it's 8 GPUs for 3 hours, or 12 GPUs for 2 hours), will get a normalized usage score of 0.24 (used 24 GPU hours out of a potential 100). This normalization ensures that a small amount of resource usage in a vacant cluster will not result in a heavy penalty.
 
 ### Effect on fair share
@@ -37,76 +49,52 @@ The following plot demonstrates the GPU allocation over time in a 16 GPU cluster
 
 *Time units are intentionally omitted*
 
-## Configuration
+## Setup and Configurations
 
-> Note: this is not finalized and is expected to change in an upcoming KAI release
+> Note: this section is not finalized and is expected to change in an upcoming KAI release
 
 ### Enabling prometheus
 
+> Using a kai-operated prometheus assumes that the [prometheus operator](https://prometheus-operator.dev/docs/getting-started/installation/) is installed in the cluster
+
 To enable prometheus via kai-operator, apply the following patch:
 ```sh
-kubectl patch config kai-scheduler --type merge -p '{"spec":{"prometheus":{"enabled":true}}}'
+kubectl patch config kai-config --type merge -p '{"spec":{"prometheus":{"enabled":true}}}'
 ```
 
 You can also customize the following configurations:
 
 ```
-  externalPrometheusHealthProbe	<Object>
-    ExternalPrometheusPingConfig defines the configuration for external
-    Prometheus connectivity validation, with defaults.
-
-  externalPrometheusUrl	<string>
-    ExternalPrometheusUrl defines the URL of an external Prometheus instance to
-    use
-    When set, KAI will not deploy its own Prometheus but will configure
-    ServiceMonitors
-    for the external instance and validate connectivity
-
-  retentionPeriod	<string>
-    RetentionPeriod defines how long to retain data (e.g., "2w", "1d", "30d")
-
-  sampleInterval	<string>
-    SampleInterval defines the interval of sampling (e.g., "1m", "30s", "5m")
-
-  serviceMonitor	<Object>
-    ServiceMonitor defines ServiceMonitor configuration for KAI services
-
-  storageClassName	<string>
-    StorageClassName defines the name of the storageClass that will be used to
-    store the TSDB data. defaults to "standard".
-
-  storageSize	<string>
-    StorageSize defines the size of the storage (e.g., "20Gi", "30Gi")
+  externalPrometheusHealthProbe	# defines the configuration for external Prometheus connectivity validation, with defaults.
+  externalPrometheusUrl	# defines the URL of an external Prometheus instance to use. When set, KAI will not deploy its own Prometheus but will configure ServiceMonitors for the external instance and validate connectivity
+  retentionPeriod # defines how long to retain data (e.g., "2w", "1d", "30d")
+  sampleInterval # defines the interval of sampling (e.g., "1m", "30s", "5m")
+  serviceMonitor # defines ServiceMonitor configuration for KAI services
+  storageClassName # defines the name of the storageClass that will be used to store the TSDB data. defaults to "standard".
+  storageSize # defines the size of the storage (e.g., "20Gi", "30Gi")
 ```
 
-Alternatively, you can use your own prometheus. Make sure that it's configured to collect metrics from the queue controller via a service monitor. For example:
-
-```yaml
+If you choose to use your own prometheus, make sure that it's configured to watch the relevant service monitors with `accounting: kai` labels. For example:
+``` yaml
 apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
+kind: Prometheus
 metadata:
-  labels:
-    app: queuecontroller
-  name: queuecontroller
-  namespace: kai-scheduler
+  name: external-prometheus
+  namespace: other-namespace
 spec:
-  endpoints:
-  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
-    interval: 30s
-    port: metrics
-    scrapeTimeout: 10s
-  jobLabel: queuecontroller
-  namespaceSelector:
-    matchNames:
-    - kai-scheduler
-  selector:
+  ... # Other prometheus configurations..
+  serviceMonitorSelector:
     matchLabels:
-      app: queuecontroller
+      accounting: kai
+  ...
 ```
 
-### Usage Database
+### Scheduler configurations
 
-To configure the scheduler to connect to prometheus, the usageDBConfig section of the scheduling shard needs to be edited:
+In order to use time-aware fairness, you need to configure the scheduler to connect to prometheus. If using more than one scheduling shards in the cluster, each shard can be configured independently.
+
+To edit the default scheduling shard:
+
 ```sh
 kubectl edit schedulingshard default
 ```
@@ -118,9 +106,9 @@ Add the following section under `spec`:
     clientType: prometheus
     connectionString: http://prometheus-operated.kai-scheduler.svc.cluster.local:9090
     usageParams:
-      halfLifePeriod: 10m
-      windowSize: 10m
-      windowType: sliding
+      halfLifePeriod: 10m # Change to the desired value
+      windowSize: 10m # Change to the desired value
+      windowType: sliding # Change to the desired value (sliding/tumbling)
 ```
 *This configuration assumes using the kai operated prometheus. Change connectionString if relevant.*
 
@@ -164,6 +152,10 @@ kubectl edit schedulingshard default
 ```
 
 ## Troubleshooting
+
+### Dependencies
+
+If trying 
 
 Prometheus connectivity
 Metrics availability
