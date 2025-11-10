@@ -113,48 +113,32 @@ spec:
                         type: object
                       fetchInterval:
                         description: Fetch interval of the usage. Default is 1 minute.
-                        format: int64
-                        type: integer
+                        type: string
                       halfLifePeriod:
                         description: Half life period of the usage. If not set, or
                           set to 0, the usage will not be decayed.
-                        format: int64
-                        type: integer
+                        type: string
                       stalenessPeriod:
                         description: Staleness period of the usage. Default is 5 minutes.
-                        format: int64
-                        type: integer
+                        type: string
                       tumblingWindowCronString:
                         description: A cron string used to determine when to reset
                           resource usage for all queues.
                         type: string
                       waitTimeout:
                         description: Wait timeout of the usage. Default is 1 minute.
-                        format: int64
-                        type: integer
+                        type: string
                       windowSize:
                         description: Window size of the usage. Default is 1 week.
-                        format: int64
-                        type: integer
+                        type: string
                       windowType:
                         description: Window type for time-series aggregation. If not
                           set, defaults to sliding.
                         type: string
-                    required:
-                    - extraParams
-                    - fetchInterval
-                    - halfLifePeriod
-                    - stalenessPeriod
-                    - tumblingWindowCronString
-                    - waitTimeout
-                    - windowSize
-                    - windowType
                     type: object
                 required:
                 - clientType
                 - connectionString
-                - connectionStringEnvVar
-                - usageParams
                 type: object
             type: object
           status:

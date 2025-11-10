@@ -14,8 +14,8 @@ type Interface interface {
 type UsageDBConfig struct {
 	ClientType             string       `yaml:"clientType" json:"clientType"`
 	ConnectionString       string       `yaml:"connectionString" json:"connectionString"`
-	ConnectionStringEnvVar string       `yaml:"connectionStringEnvVar" json:"connectionStringEnvVar"`
-	UsageParams            *UsageParams `yaml:"usageParams" json:"usageParams"`
+	ConnectionStringEnvVar string       `yaml:"connectionStringEnvVar,omitempty" json:"connectionStringEnvVar,omitempty"`
+	UsageParams            *UsageParams `yaml:"usageParams,omitempty" json:"usageParams,omitempty"`
 }
 
 // GetUsageParams returns the usage params if set, and default params if not set.
@@ -30,6 +30,9 @@ func (c *UsageDBConfig) GetUsageParams() *UsageParams {
 
 func (c *UsageDBConfig) DeepCopy() *UsageDBConfig {
 	out := new(UsageDBConfig)
+	out.ClientType = c.ClientType
+	out.ConnectionString = c.ConnectionString
+	out.ConnectionStringEnvVar = c.ConnectionStringEnvVar
 	if c.UsageParams != nil {
 		out.UsageParams = c.UsageParams.DeepCopy()
 	}
