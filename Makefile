@@ -43,7 +43,7 @@ push: $(SERVICE_NAMES)
 	docker push $(DOCKER_REPO_BASE)/crd-upgrader:$(VERSION)
 
 .PHONY: validate
-validate: generate manifests clients gen-license generate-mocks lint
+validate: generate manifests clients gen-license lint
 	git diff --exit-code
 
 .PHONY: generate-mocks

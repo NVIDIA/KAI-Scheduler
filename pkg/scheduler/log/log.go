@@ -4,8 +4,10 @@
 package log
 
 import (
+	"bytes"
 	"fmt"
 	"hash/fnv"
+	"testing"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/buffer"
@@ -39,6 +41,8 @@ type schedulerLogger struct {
 	sessionLogger *zap.SugaredLogger
 	actionLogger  *zap.SugaredLogger
 }
+
+var unitestLogsBuffer *bytes.Buffer
 
 var emptyLogger = zap.NewNop().Sugar()
 
@@ -182,4 +186,42 @@ func InitLoggers(logLevel int) error {
 	StatusUpdaterLogger = newSchedulerLogger(logLevel, logger)
 	StatusUpdaterLogger.SetSessionID("status-updater")
 	return nil
+}
+
+func InitLoggersIntoBuffer(logLevel int) (*bytes.Buffer, error) {
+	// Create a bytes.Buffer to capture log output
+	unitestLogsBuffer = &bytes.Buffer{}
+
+	// Create a custom WriteSyncer that writes to the buffer
+	writerSyncer := zapcore.AddSync(unitestLogsBuffer)
+
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	core := zapcore.NewCore(
+		&sessionIDEncoder{
+			Encoder: zapcore.NewConsoleEncoder(encoderConfig),
+		},
+		writerSyncer,
+		zapcore.InfoLevel, // Set the desired log level
+	)
+
+	logger := zap.New(core).WithOptions(zap.AddCaller()).Sugar()
+	InfraLogger = newSchedulerLogger(logLevel, logger)
+	InfraLogger.SetSessionID("infra")
+	StatusUpdaterLogger = newSchedulerLogger(logLevel, logger)
+	StatusUpdaterLogger.SetSessionID("status-updater")
+	return unitestLogsBuffer, nil
+}
+
+func UnitestOutputSchedulerLogs(t *testing.T) {
+	fmt.Println("Test scheduler log:")
+	fmt.Println(unitestLogsBuffer.String())
+	fmt.Println("--------------------------------")
+	/*fmt.Fprintf(os.Stderr, "Test scheduler log: \n")
+	fmt.Fprintf(os.Stderr, "%s", unitestLogsBuffer.String())
+	fmt.Fprintf(os.Stderr, "--------------------------------\n")
+	t.Errorf("Test scheduler log: \n")
+	t.Log(unitestLogsBuffer.String())
+	t.Log("\n\n")*/
 }

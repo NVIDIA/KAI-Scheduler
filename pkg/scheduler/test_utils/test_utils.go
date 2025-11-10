@@ -36,6 +36,7 @@ import (
 )
 
 var SchedulerVerbosity = flag.String("vv", "", "Scheduler's verbosity")
+var testingContext *testing.T
 
 type TestTopologyBasic struct {
 	Name string
@@ -116,7 +117,8 @@ type TestExpectedNodesResources struct {
 	IdleGPUs      float64
 }
 
-func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTopologyBasic, ssn *framework.Session) {
+func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTopologyBasic, ssn *framework.Session) bool {
+	hasErrors := false
 
 	tasksToGPUGroup := make(map[string]map[string]string)
 
@@ -124,11 +126,13 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 		var sumOfJobRequestedGPU, sumOfJobRequestedMillisCpu, sumOfJobRequestedMemory, sumOfAcceptedGpus float64
 		job, found := ssn.PodGroupInfos[common_info.PodGroupID(jobName)]
 		if !found {
+			hasErrors = true
 			t.Errorf("Test number: %d, name: %s, has failed. Couldn't find job: %s for expected tasks.", testNumber, testMetadata.Name, jobName)
 		}
 		for _, taskInfo := range ssn.PodGroupInfos[common_info.PodGroupID(jobName)].GetAllPodsMap() {
 
 			if taskInfo.Status != jobExpectedResult.Status {
+				hasErrors = true
 				t.Errorf("Test number: %d, name: %s, has failed. Task name: %s, actual uses status: %s, was expecting status: %s", testNumber, testMetadata.Name, taskInfo.Name, taskInfo.Status, jobExpectedResult.Status)
 				if jobExpectedResult.Status == pod_status.Running {
 					t.Errorf("%v", job.JobFitErrors)
@@ -137,6 +141,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 			}
 
 			if len(jobExpectedResult.NodeName) > 0 && taskInfo.NodeName != jobExpectedResult.NodeName {
+				hasErrors = true
 				t.Errorf("Test number: %d, name: %s, has failed. Task name: %s, actual uses node: %s, was expecting node: %s", testNumber, testMetadata.Name, taskInfo.Name, taskInfo.NodeName, jobExpectedResult.NodeName)
 			}
 
@@ -159,6 +164,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 					if gpuGroup, found := nodeGPUs[expectedGpuGroup]; !found {
 						nodeGPUs[expectedGpuGroup] = taskInfo.GPUGroups[gpuGroupIndex]
 					} else if gpuGroup != taskInfo.GPUGroups[gpuGroupIndex] {
+						hasErrors = true
 						t.Errorf(
 							"Test number: %d, name: %v, has failed. Task name: %v, "+
 								"running on GPU: %s, was expecting GPU index: %s",
@@ -171,10 +177,12 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 
 		if pod_status.AllocatedStatus(jobExpectedResult.Status) {
 			if job.LastStartTimestamp == nil {
+				hasErrors = true
 				t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual last start timestamp is not set expecting pod_status.%v", testNumber, testMetadata.Name, jobName, jobExpectedResult.Status.String())
 			} else if jobExpectedResult.LastStartTimestampOlderThan != nil {
 				now := time.Now()
 				if now.Sub(*job.LastStartTimestamp) < *jobExpectedResult.LastStartTimestampOlderThan {
+					hasErrors = true
 					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual last start timestamp is not older than %v", testNumber, testMetadata.Name, jobName,
 						*jobExpectedResult.LastStartTimestampOlderThan)
 				}
@@ -182,15 +190,19 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 		}
 
 		if sumOfAcceptedGpus != jobExpectedResult.GPUsAccepted && jobExpectedResult.GPUsAccepted != 0 {
+			hasErrors = true
 			t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual accept GPUs: %v, was expecting GPUs: %v", testNumber, testMetadata.Name, jobName, sumOfAcceptedGpus, jobExpectedResult.GPUsAccepted)
 		}
 		if sumOfJobRequestedGPU != jobExpectedResult.GPUsRequired {
+			hasErrors = true
 			t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses  GPUs: %v, was expecting GPUs: %v", testNumber, testMetadata.Name, jobName, sumOfJobRequestedGPU, jobExpectedResult.GPUsRequired)
 		}
 		if jobExpectedResult.MilliCpuRequired != 0 && sumOfJobRequestedMillisCpu != jobExpectedResult.MilliCpuRequired {
+			hasErrors = true
 			t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses MilliCpu: %v, was expecting MilliCpu: %v", testNumber, testMetadata.Name, jobName, sumOfJobRequestedMillisCpu, jobExpectedResult.MilliCpuRequired)
 		}
 		if jobExpectedResult.MemoryRequired != 0 && sumOfJobRequestedMemory != jobExpectedResult.MemoryRequired {
+			hasErrors = true
 			t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses Memory: %v, was expecting Memory: %v", testNumber, testMetadata.Name, jobName, sumOfJobRequestedMemory, jobExpectedResult.MemoryRequired)
 		}
 	}
@@ -204,12 +216,14 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 				}
 
 				if task.Status != taskExpectedResult.Status {
+					hasErrors = true
 					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses status: %v, "+
 						"was expecting status: %v", testNumber, testMetadata.Name, taskId, task.Status,
 						taskExpectedResult.Status.String())
 				}
 
 				if len(taskExpectedResult.NodeName) > 0 && task.NodeName != taskExpectedResult.NodeName {
+					hasErrors = true
 					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses node: %v, "+
 						"was expecting node: %v", testNumber, testMetadata.Name, taskId, task.NodeName,
 						taskExpectedResult.NodeName)
@@ -217,6 +231,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 
 				acceptedGPUs := task.AcceptedResource.GPUs()
 				if taskExpectedResult.GPUsAccepted != 0 && acceptedGPUs != taskExpectedResult.GPUsAccepted {
+					hasErrors = true
 					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual accept GPUs: %v, "+
 						"was expecting GPUs: %v", testNumber, testMetadata.Name, taskId, acceptedGPUs,
 						taskExpectedResult.GPUsAccepted)
@@ -224,6 +239,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 
 				requestedGPUs := task.ResReq.GPUs()
 				if requestedGPUs != taskExpectedResult.GPUsRequired {
+					hasErrors = true
 					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses  GPUs: %v, "+
 						"was expecting GPUs: %v", testNumber, testMetadata.Name, taskId, requestedGPUs,
 						taskExpectedResult.GPUsRequired)
@@ -231,6 +247,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 
 				requestedMilliCPUs := task.ResReq.Cpu()
 				if taskExpectedResult.MilliCpuRequired != 0 && requestedMilliCPUs != taskExpectedResult.MilliCpuRequired {
+					hasErrors = true
 					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses MilliCpu: %v, "+
 						"was expecting MilliCpu: %v", testNumber, testMetadata.Name, taskId, requestedMilliCPUs,
 						taskExpectedResult.MilliCpuRequired)
@@ -238,6 +255,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 
 				requestedMemory := task.ResReq.Memory()
 				if taskExpectedResult.MemoryRequired != 0 && requestedMemory != taskExpectedResult.MemoryRequired {
+					hasErrors = true
 					t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses Memory: %v, "+
 						"was expecting Memory: %v", testNumber, testMetadata.Name, taskId, requestedMemory,
 						taskExpectedResult.MemoryRequired)
@@ -245,10 +263,12 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 
 				if pod_status.AllocatedStatus(taskExpectedResult.Status) {
 					if job.LastStartTimestamp == nil {
+						hasErrors = true
 						t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual last start timestamp is not set expecting pod_status.%v", testNumber, testMetadata.Name, taskId, taskExpectedResult.Status.String())
 					} else if taskExpectedResult.LastStartTimestampOlderThan != nil {
 						now := time.Now()
 						if now.Sub(*job.LastStartTimestamp) < *taskExpectedResult.LastStartTimestampOlderThan {
+							hasErrors = true
 							t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual last start timestamp is not older than %v", testNumber, testMetadata.Name, taskId,
 								*taskExpectedResult.LastStartTimestampOlderThan)
 						}
@@ -269,6 +289,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 						if gpuGroup, found := nodeGPUs[expectedGpuGroup]; !found {
 							nodeGPUs[expectedGpuGroup] = task.GPUGroups[gpuGroupIndex]
 						} else if gpuGroup != task.GPUGroups[gpuGroupIndex] {
+							hasErrors = true
 							t.Errorf(
 								"Test number: %d, name: %v, has failed. Task name: %v, "+
 									"running on GPU: %s, was expecting GPU index: %s",
@@ -285,17 +306,22 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 	for nodeName, nodeExpectedResources := range testMetadata.ExpectedNodesResources {
 		ssnNode, found := ssn.Nodes[nodeName]
 		if !found {
+			hasErrors = true
 			t.Errorf("Test number: %d, name: %v, has failed. Couldn't find node: %v for expected nodes resources.", testNumber, testMetadata.Name, nodeName)
 		}
 
 		if nodeExpectedResources.ReleasingGPUs != ssnNode.Releasing.GPUs() {
+			hasErrors = true
 			t.Errorf("Test number: %d, name: %v, has failed. Node name: %v, actual Releasing GPUs: %v, was expecting Releasing GPUs: %v", testNumber, testMetadata.Name, nodeName, ssnNode.Releasing.GPUs(), nodeExpectedResources.ReleasingGPUs)
 		}
 
 		if nodeExpectedResources.IdleGPUs != ssnNode.Idle.GPUs() {
+			hasErrors = true
 			t.Errorf("Test number: %d, name: %v, has failed. Node name: %v, actual Idle GPUs: %v, was expecting Idle GPUs: %v", testNumber, testMetadata.Name, nodeName, ssnNode.Idle.GPUs(), nodeExpectedResources.IdleGPUs)
 		}
 	}
+
+	return hasErrors
 }
 
 func GetTestCacheMock(
@@ -303,6 +329,9 @@ func GetTestCacheMock(
 	clusterPodAffinityInfo *cache.K8sClusterPodAffinityInfo,
 ) *cache.MockCache {
 	cacheMock := cache.NewMockCache(controller)
+	if testingContext != nil {
+		cache.TestingContext = testingContext
+	}
 	cacheRequirements := &CacheMocking{}
 	if testMocks != nil {
 		cacheRequirements = testMocks.CacheRequirements
@@ -354,7 +383,7 @@ func CreateFloat64Pointer(x float64) *float64 {
 	return &x
 }
 
-func InitTestingInfrastructure() {
+func InitTestingInfrastructure(t ...*testing.T) {
 	actions.InitDefaultActions()
 	plugins.InitDefaultPlugins()
 
@@ -365,5 +394,9 @@ func InitTestingInfrastructure() {
 				fmt.Printf("Failed to initialize loggers: %v", err)
 			}
 		}
+	}
+
+	if len(t) > 0 {
+		testingContext = t[0]
 	}
 }
