@@ -139,7 +139,7 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 func (p *PrometheusClient) queryResourceCapacity(ctx context.Context, capacityMetric string, queryByWindow usageWindowQueryFunction) (float64, error) {
 	decayedCapacityMetric := capacityMetric
 	if p.usageParams.HalfLifePeriod != nil {
-		decayedCapacityMetric = fmt.Sprintf("((%s) * (%s))", capacityMetric, getExponentialDecayQuery(p.usageParams.HalfLifePeriod))
+		decayedCapacityMetric = fmt.Sprintf("((%s) * (%s))", capacityMetric, getExponentialDecayQuery(&p.usageParams.HalfLifePeriod.Duration))
 	}
 
 	capacityResult, warnings, err := queryByWindow(ctx, decayedCapacityMetric)
@@ -170,7 +170,7 @@ func (p *PrometheusClient) queryResourceUsage(
 
 	decayedAllocationMetric := allocationMetric
 	if p.usageParams.HalfLifePeriod != nil {
-		decayedAllocationMetric = fmt.Sprintf("((%s) * (%s))", allocationMetric, getExponentialDecayQuery(p.usageParams.HalfLifePeriod))
+		decayedAllocationMetric = fmt.Sprintf("((%s) * (%s))", allocationMetric, getExponentialDecayQuery(&p.usageParams.HalfLifePeriod.Duration))
 	}
 
 	usageResult, warnings, err := queryByWindow(ctx, decayedAllocationMetric)
@@ -226,7 +226,7 @@ func (p *PrometheusClient) queryTumblingTimeWindow(ctx context.Context, decayedA
 }
 
 func (p *PrometheusClient) getLatestUsageResetTime() time.Time {
-	maxWindowStartingPoint := time.Now().Add(-*p.usageParams.WindowSize)
+	maxWindowStartingPoint := time.Now().Add(-*&p.usageParams.WindowSize.Duration)
 	lastUsageReset := maxWindowStartingPoint
 	nextInWindowReset := maxWindowStartingPoint
 

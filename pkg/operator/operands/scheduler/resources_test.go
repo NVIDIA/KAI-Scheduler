@@ -17,6 +17,7 @@ import (
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiv1qc "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
 	kaiv1scheduler "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/scheduler"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
