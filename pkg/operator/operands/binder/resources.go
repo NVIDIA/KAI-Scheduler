@@ -140,7 +140,23 @@ func resourceReservationServiceAccount(
 
 	sa.Name = *kaiConfig.Spec.Binder.ResourceReservation.ServiceAccountName
 	sa.Namespace = *kaiConfig.Spec.Binder.ResourceReservation.Namespace
-	sa.ImagePullSecrets = kaiConfigUtils.GetGlobalImagePullSecrets(kaiConfig.Spec.Global)
+
+	imagePullSecrets := make(map[string]bool)
+	for _, secret := range sa.ImagePullSecrets {
+		imagePullSecrets[secret.Name] = true
+	}
+
+	for _, secret := range kaiConfigUtils.GetGlobalImagePullSecrets(kaiConfig.Spec.Global) {
+		if !imagePullSecrets[secret.Name] {
+			imagePullSecrets[secret.Name] = true
+		}
+	}
+
+	sa.ImagePullSecrets = make([]v1.LocalObjectReference, 0, len(imagePullSecrets))
+	for secretName := range imagePullSecrets {
+		sa.ImagePullSecrets = append(sa.ImagePullSecrets, v1.LocalObjectReference{Name: secretName})
+	}
+
 	return []client.Object{sa}, nil
 }
 
