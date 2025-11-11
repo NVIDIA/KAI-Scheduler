@@ -46,7 +46,8 @@ func initializeTestService(
 	client runtimeClient.WithWatch,
 ) *service {
 	service := NewService(false, client, "", 40*time.Millisecond,
-		resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue, scalingPodsNamespace, constants.DefaultRuntimeClassName)
+		resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue, scalingPodsNamespace, constants.DefaultRuntimeClassName,
+		"", "", "", "") // Empty resource configs to use defaults
 
 	return service
 }
@@ -939,6 +940,113 @@ var _ = Describe("ResourceReservationService", func() {
 			}
 			Expect(container.Env).To(ContainElement(Equal(podNameEnv)))
 			Expect(container.Env).To(ContainElement(Equal(podNamespaceEnv)))
+		})
+	})
+
+	Context("createGPUReservationPod with resource configuration", func() {
+		It("should create pod with configured CPU and memory resources", func() {
+			rsc := &service{
+				namespace:           "kai-resource-reservation",
+				appLabelValue:       "kai-reservation",
+				serviceAccountName:  "kai-sa",
+				reservationPodImage: "test-image:latest",
+				kubeClient:          fake.NewClientBuilder().Build(),
+				runtimeClassName:    "nvidia",
+				podCPURequest:       "2m",
+				podMemoryRequest:    "20Mi",
+				podCPULimit:         "100m",
+				podMemoryLimit:      "200Mi",
+				scalingPodNamespace: scalingPodsNamespace,
+			}
+
+			pod, err := rsc.createGPUReservationPod(context.TODO(), "test-node", "test-gpu-group")
+			Expect(err).To(BeNil())
+			Expect(pod).NotTo(BeNil())
+
+			container := pod.Spec.Containers[0]
+
+			// Verify CPU requests and limits
+			Expect(container.Resources.Requests[v1.ResourceCPU]).To(Equal(resource.MustParse("2m")))
+			Expect(container.Resources.Requests[v1.ResourceMemory]).To(Equal(resource.MustParse("20Mi")))
+			Expect(container.Resources.Limits[v1.ResourceCPU]).To(Equal(resource.MustParse("100m")))
+			Expect(container.Resources.Limits[v1.ResourceMemory]).To(Equal(resource.MustParse("200Mi")))
+
+			// Verify GPU resource is still set
+			gpuRequest := container.Resources.Requests[constants.GpuResource]
+			gpuLimit := container.Resources.Limits[constants.GpuResource]
+			Expect(gpuRequest.Value()).To(Equal(int64(1)))
+			Expect(gpuLimit.Value()).To(Equal(int64(1)))
+		})
+
+		It("should create pod without CPU/Memory resources when not configured", func() {
+			rsc := &service{
+				namespace:           "kai-resource-reservation",
+				appLabelValue:       "kai-reservation",
+				serviceAccountName:  "kai-sa",
+				reservationPodImage: "test-image:latest",
+				kubeClient:          fake.NewClientBuilder().Build(),
+				runtimeClassName:    "nvidia",
+				podCPURequest:       "",
+				podMemoryRequest:    "",
+				podCPULimit:         "",
+				podMemoryLimit:      "",
+				scalingPodNamespace: scalingPodsNamespace,
+			}
+
+			pod, err := rsc.createGPUReservationPod(context.TODO(), "test-node", "test-gpu-group")
+			Expect(err).To(BeNil())
+			Expect(pod).NotTo(BeNil())
+
+			container := pod.Spec.Containers[0]
+
+			// Verify CPU and Memory are NOT set
+			_, cpuRequestExists := container.Resources.Requests[v1.ResourceCPU]
+			_, memRequestExists := container.Resources.Requests[v1.ResourceMemory]
+			_, cpuLimitExists := container.Resources.Limits[v1.ResourceCPU]
+			_, memLimitExists := container.Resources.Limits[v1.ResourceMemory]
+
+			Expect(cpuRequestExists).To(BeFalse())
+			Expect(memRequestExists).To(BeFalse())
+			Expect(cpuLimitExists).To(BeFalse())
+			Expect(memLimitExists).To(BeFalse())
+
+			// Verify GPU resource is still set
+			gpuRequest := container.Resources.Requests[constants.GpuResource]
+			gpuLimit := container.Resources.Limits[constants.GpuResource]
+			Expect(gpuRequest.Value()).To(Equal(int64(1)))
+			Expect(gpuLimit.Value()).To(Equal(int64(1)))
+		})
+
+		It("should create pod with only CPU resources when only CPU is configured", func() {
+			rsc := &service{
+				namespace:           "kai-resource-reservation",
+				appLabelValue:       "kai-reservation",
+				serviceAccountName:  "kai-sa",
+				reservationPodImage: "test-image:latest",
+				kubeClient:          fake.NewClientBuilder().Build(),
+				runtimeClassName:    "nvidia",
+				podCPURequest:       "5m",
+				podMemoryRequest:    "",
+				podCPULimit:         "50m",
+				podMemoryLimit:      "",
+				scalingPodNamespace: scalingPodsNamespace,
+			}
+
+			pod, err := rsc.createGPUReservationPod(context.TODO(), "test-node", "test-gpu-group")
+			Expect(err).To(BeNil())
+			Expect(pod).NotTo(BeNil())
+
+			container := pod.Spec.Containers[0]
+
+			// Verify CPU is set
+			Expect(container.Resources.Requests[v1.ResourceCPU]).To(Equal(resource.MustParse("5m")))
+			Expect(container.Resources.Limits[v1.ResourceCPU]).To(Equal(resource.MustParse("50m")))
+
+			// Verify Memory is NOT set
+			_, memRequestExists := container.Resources.Requests[v1.ResourceMemory]
+			_, memLimitExists := container.Resources.Limits[v1.ResourceMemory]
+			Expect(memRequestExists).To(BeFalse())
+			Expect(memLimitExists).To(BeFalse())
 		})
 	})
 })
