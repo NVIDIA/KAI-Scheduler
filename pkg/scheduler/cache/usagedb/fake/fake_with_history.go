@@ -6,12 +6,12 @@ package fake
 import (
 	"math"
 	"sync"
-	"time"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type FakeUsageDBClient struct {
@@ -49,7 +49,7 @@ func (f *FakeUsageDBClient) GetResourceUsage() (*queue_info.ClusterUsage, error)
 	usage := queue_info.NewClusterUsage()
 
 	var windowStart, windowEnd int
-	size := f.usageParams.WindowSize.Seconds()
+	size := f.usageParams.WindowSize.Duration.Seconds()
 	l := len(f.allocationHistory)
 	if l == 0 {
 		return usage, nil
@@ -108,8 +108,8 @@ func (f *FakeUsageDBClient) AppendQueueAllocation(queueAllocations map[common_in
 type AllocationHistory []map[common_info.QueueID]queue_info.QueueUsage
 type ClusterCapacityHistory []map[v1.ResourceName]float64
 
-func getDecaySlice(length int, period *time.Duration) []float64 {
-	if period == nil || period.Seconds() == 0 {
+func getDecaySlice(length int, period *metav1.Duration) []float64 {
+	if period == nil || period.Duration.Seconds() == 0 {
 		decaySlice := make([]float64, length)
 		for i := range decaySlice {
 			decaySlice[i] = 1
@@ -117,7 +117,7 @@ func getDecaySlice(length int, period *time.Duration) []float64 {
 		return decaySlice
 	}
 
-	seconds := period.Seconds()
+	seconds := period.Duration.Seconds()
 	decaySlice := make([]float64, length)
 	for i := range decaySlice {
 		val := math.Pow(0.5, float64(length-i)/seconds)
