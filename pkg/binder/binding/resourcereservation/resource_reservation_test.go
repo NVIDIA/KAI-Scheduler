@@ -47,7 +47,7 @@ func initializeTestService(
 ) *service {
 	service := NewService(false, client, "", 40*time.Millisecond,
 		resourceReservationNameSpace, resourceReservationServiceAccount, resourceReservationAppLabelValue, scalingPodsNamespace, constants.DefaultRuntimeClassName,
-		"", "", "", "") // Empty resource configs to use defaults
+		nil) // nil podResources to use defaults
 
 	return service
 }
@@ -952,10 +952,16 @@ var _ = Describe("ResourceReservationService", func() {
 				reservationPodImage: "test-image:latest",
 				kubeClient:          fake.NewClientBuilder().Build(),
 				runtimeClassName:    "nvidia",
-				podCPURequest:       "2m",
-				podMemoryRequest:    "20Mi",
-				podCPULimit:         "100m",
-				podMemoryLimit:      "200Mi",
+				podResources: &v1.ResourceRequirements{
+					Requests: v1.ResourceList{
+						v1.ResourceCPU:    resource.MustParse("2m"),
+						v1.ResourceMemory: resource.MustParse("20Mi"),
+					},
+					Limits: v1.ResourceList{
+						v1.ResourceCPU:    resource.MustParse("100m"),
+						v1.ResourceMemory: resource.MustParse("200Mi"),
+					},
+				},
 				scalingPodNamespace: scalingPodsNamespace,
 			}
 
@@ -986,10 +992,7 @@ var _ = Describe("ResourceReservationService", func() {
 				reservationPodImage: "test-image:latest",
 				kubeClient:          fake.NewClientBuilder().Build(),
 				runtimeClassName:    "nvidia",
-				podCPURequest:       "",
-				podMemoryRequest:    "",
-				podCPULimit:         "",
-				podMemoryLimit:      "",
+				podResources:        nil,
 				scalingPodNamespace: scalingPodsNamespace,
 			}
 
@@ -1025,10 +1028,14 @@ var _ = Describe("ResourceReservationService", func() {
 				reservationPodImage: "test-image:latest",
 				kubeClient:          fake.NewClientBuilder().Build(),
 				runtimeClassName:    "nvidia",
-				podCPURequest:       "5m",
-				podMemoryRequest:    "",
-				podCPULimit:         "50m",
-				podMemoryLimit:      "",
+				podResources: &v1.ResourceRequirements{
+					Requests: v1.ResourceList{
+						v1.ResourceCPU: resource.MustParse("5m"),
+					},
+					Limits: v1.ResourceList{
+						v1.ResourceCPU: resource.MustParse("50m"),
+					},
+				},
 				scalingPodNamespace: scalingPodsNamespace,
 			}
 
@@ -1047,6 +1054,46 @@ var _ = Describe("ResourceReservationService", func() {
 			_, memLimitExists := container.Resources.Limits[v1.ResourceMemory]
 			Expect(memRequestExists).To(BeFalse())
 			Expect(memLimitExists).To(BeFalse())
+		})
+
+		It("should not allow GPU resources to be overridden by podResources", func() {
+			// This test ensures that even if podResources contains GPU configuration,
+			// it won't override the GPU resource value set by the service
+			rsc := &service{
+				namespace:           "kai-resource-reservation",
+				appLabelValue:       "kai-reservation",
+				serviceAccountName:  "kai-sa",
+				reservationPodImage: "test-image:latest",
+				kubeClient:          fake.NewClientBuilder().Build(),
+				runtimeClassName:    "nvidia",
+				podResources: &v1.ResourceRequirements{
+					Requests: v1.ResourceList{
+						v1.ResourceCPU:        resource.MustParse("10m"),
+						constants.GpuResource: resource.MustParse("999"), // This should be ignored
+					},
+					Limits: v1.ResourceList{
+						v1.ResourceCPU:        resource.MustParse("100m"),
+						constants.GpuResource: resource.MustParse("999"), // This should be ignored
+					},
+				},
+				scalingPodNamespace: scalingPodsNamespace,
+			}
+
+			pod, err := rsc.createGPUReservationPod(context.TODO(), "test-node", "test-gpu-group")
+			Expect(err).To(BeNil())
+			Expect(pod).NotTo(BeNil())
+
+			container := pod.Spec.Containers[0]
+
+			// Verify CPU resources from podResources are set
+			Expect(container.Resources.Requests[v1.ResourceCPU]).To(Equal(resource.MustParse("10m")))
+			Expect(container.Resources.Limits[v1.ResourceCPU]).To(Equal(resource.MustParse("100m")))
+
+			// Verify GPU resources are NOT overridden - should always be 1
+			gpuRequest := container.Resources.Requests[constants.GpuResource]
+			gpuLimit := container.Resources.Limits[constants.GpuResource]
+			Expect(gpuRequest.Value()).To(Equal(int64(1)), "GPU request should be 1, not overridden by podResources")
+			Expect(gpuLimit.Value()).To(Equal(int64(1)), "GPU limit should be 1, not overridden by podResources")
 		})
 	})
 })

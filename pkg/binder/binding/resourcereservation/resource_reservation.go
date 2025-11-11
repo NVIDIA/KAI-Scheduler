@@ -53,10 +53,7 @@ type service struct {
 	appLabelValue       string
 	scalingPodNamespace string
 	runtimeClassName    string
-	podCPURequest       string
-	podMemoryRequest    string
-	podCPULimit         string
-	podMemoryLimit      string
+	podResources        *v1.ResourceRequirements
 }
 
 func NewService(
@@ -69,10 +66,7 @@ func NewService(
 	appLabelValue string,
 	scalingPodNamespace string,
 	runtimeClassName string,
-	podCPURequest string,
-	podMemoryRequest string,
-	podCPULimit string,
-	podMemoryLimit string,
+	podResources *v1.ResourceRequirements,
 ) *service {
 	return &service{
 		fakeGPuNodes:        fakeGPuNodes,
@@ -85,10 +79,7 @@ func NewService(
 		appLabelValue:       appLabelValue,
 		scalingPodNamespace: scalingPodNamespace,
 		runtimeClassName:    runtimeClassName,
-		podCPURequest:       podCPURequest,
-		podMemoryRequest:    podMemoryRequest,
-		podCPULimit:         podCPULimit,
-		podMemoryLimit:      podMemoryLimit,
+		podResources:        podResources,
 	}
 }
 
@@ -395,8 +386,7 @@ func (rsc *service) createGPUReservationPod(ctx context.Context, nodeName, gpuGr
 
 	podName := fmt.Sprintf("%s-%s-%s", gpuReservationPodPrefix, nodeName, rand.String(reservationPodRandomCharacters))
 
-	// Build resource requirements with configured values
-	// Only set CPU/Memory if explicitly configured (better backward compatibility)
+	// Build resource requirements starting with GPU resources
 	resources := v1.ResourceRequirements{
 		Limits: v1.ResourceList{
 			constants.GpuResource: *resource.NewQuantity(numberOfGPUsToReserve, resource.DecimalSI),
@@ -406,20 +396,24 @@ func (rsc *service) createGPUReservationPod(ctx context.Context, nodeName, gpuGr
 		},
 	}
 
-	// Only set CPU/Memory limits if configured
-	if rsc.podCPULimit != "" {
-		resources.Limits[v1.ResourceCPU] = resource.MustParse(rsc.podCPULimit)
-	}
-	if rsc.podMemoryLimit != "" {
-		resources.Limits[v1.ResourceMemory] = resource.MustParse(rsc.podMemoryLimit)
-	}
-
-	// Only set CPU/Memory requests if configured
-	if rsc.podCPURequest != "" {
-		resources.Requests[v1.ResourceCPU] = resource.MustParse(rsc.podCPURequest)
-	}
-	if rsc.podMemoryRequest != "" {
-		resources.Requests[v1.ResourceMemory] = resource.MustParse(rsc.podMemoryRequest)
+	// Merge in configured CPU/Memory resources if provided, but skip GPU resources to prevent override
+	if rsc.podResources != nil {
+		if rsc.podResources.Limits != nil {
+			for resourceName, quantity := range rsc.podResources.Limits {
+				// Skip GPU resources - they are already set correctly
+				if resourceName != constants.GpuResource {
+					resources.Limits[resourceName] = quantity
+				}
+			}
+		}
+		if rsc.podResources.Requests != nil {
+			for resourceName, quantity := range rsc.podResources.Requests {
+				// Skip GPU resources - they are already set correctly
+				if resourceName != constants.GpuResource {
+					resources.Requests[resourceName] = quantity
+				}
+			}
+		}
 	}
 
 	pod, err := rsc.createResourceReservationPod(nodeName, gpuGroup, podName, resources)
