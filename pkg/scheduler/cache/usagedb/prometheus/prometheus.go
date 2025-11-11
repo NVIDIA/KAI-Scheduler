@@ -190,7 +190,8 @@ func (p *PrometheusClient) queryResourceUsage(
 
 	usageVector := usageResult.(model.Vector)
 	if len(usageVector) == 0 {
-		return nil, fmt.Errorf("no data returned for cluster usage metric %s", decayedAllocationMetric)
+		log.InfraLogger.V(3).Warnf("No data returned for cluster usage metric %s", decayedAllocationMetric)
+		return queueUsage, nil
 	}
 
 	for _, usageSample := range usageVector {
@@ -206,11 +207,14 @@ func (p *PrometheusClient) queryResourceUsage(
 func (p *PrometheusClient) querySlidingTimeWindow(ctx context.Context, decayedAllocationMetric string) (model.Value, promv1.Warnings, error) {
 	usageQuery := fmt.Sprintf("sum_over_time((%s)[%s:%s])",
 		decayedAllocationMetric,
-		p.usageParams.WindowSize.String(),
+		p.usageParams.WindowSize.Duration.String(),
 		p.queryResolution.String(),
 	)
 
 	usageResult, warnings, err := p.client.Query(ctx, usageQuery, time.Now())
+	if err != nil {
+		err = fmt.Errorf("%w, full query: %s", err, usageQuery)
+	}
 	return usageResult, warnings, err
 }
 
@@ -223,6 +227,11 @@ func (p *PrometheusClient) queryTumblingTimeWindow(ctx context.Context, decayedA
 		End:   time.Now(),
 		Step:  p.queryResolution,
 	})
+
+	if err != nil {
+		err = fmt.Errorf("%w, full query: %s", err, usageQuery)
+	}
+
 	return usageResult, warnings, err
 }
 
