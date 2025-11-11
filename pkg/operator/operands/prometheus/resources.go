@@ -153,6 +153,8 @@ func serviceMonitorsForKAIConfig(
 			return nil, err
 		}
 
+		serviceMonitorObj.GetLabels()["accounting"] = mainResourceName
+
 		// Set the ServiceMonitor spec from configuration
 		serviceMonitorSpec := monitoringv1.ServiceMonitorSpec{
 			JobLabel: kaiService.JobLabel,
