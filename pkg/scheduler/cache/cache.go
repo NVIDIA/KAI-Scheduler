@@ -169,9 +169,9 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 
 	if schedulerCacheParams.UsageDBClient != nil {
 		sc.usageLister = usagedb.NewUsageLister(schedulerCacheParams.UsageDBClient,
-			schedulerCacheParams.UsageDBParams.FetchInterval,
-			schedulerCacheParams.UsageDBParams.StalenessPeriod,
-			schedulerCacheParams.UsageDBParams.WaitTimeout)
+			&schedulerCacheParams.UsageDBParams.FetchInterval.Duration,
+			&schedulerCacheParams.UsageDBParams.StalenessPeriod.Duration,
+			&schedulerCacheParams.UsageDBParams.WaitTimeout.Duration)
 	}
 
 	clusterInfo, err := cluster_info.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.kueueInformerFactory, sc.usageLister, sc.schedulingNodePoolParams,

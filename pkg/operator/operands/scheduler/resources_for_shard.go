@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/spf13/pflag"
 	"golang.org/x/exp/slices"
 
 	"gopkg.in/yaml.v3"
@@ -22,7 +23,7 @@ import (
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiConfigUtils "github.com/NVIDIA/KAI-scheduler/pkg/operator/config"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
-	"github.com/spf13/pflag"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 )
 
 const (
@@ -125,7 +126,7 @@ func (s *SchedulerForShard) configMapForShard(
 		APIVersion: "v1",
 	}
 	placementArguments := calculatePlacementArguments(shard.Spec.PlacementStrategy)
-	innerConfig := config{}
+	innerConfig := conf.SchedulerConfiguration{}
 
 	actions := []string{"allocate"}
 	if placementArguments[gpuResource] != spreadStrategy && placementArguments[cpuResource] != spreadStrategy {
@@ -135,9 +136,9 @@ func (s *SchedulerForShard) configMapForShard(
 
 	innerConfig.Actions = strings.Join(actions, ", ")
 
-	innerConfig.Tiers = []tier{
+	innerConfig.Tiers = []conf.Tier{
 		{
-			Plugins: []plugin{
+			Plugins: []conf.PluginOption{
 				{Name: "predicates"},
 				{Name: "proportion"},
 				{Name: "priority"},
@@ -160,8 +161,8 @@ func (s *SchedulerForShard) configMapForShard(
 
 	innerConfig.Tiers[0].Plugins = append(
 		innerConfig.Tiers[0].Plugins,
-		plugin{Name: fmt.Sprintf("gpu%s", strings.Replace(placementArguments[gpuResource], "bin", "", 1))},
-		plugin{
+		conf.PluginOption{Name: fmt.Sprintf("gpu%s", strings.Replace(placementArguments[gpuResource], "bin", "", 1))},
+		conf.PluginOption{
 			Name:      "nodeplacement",
 			Arguments: placementArguments,
 		},
@@ -170,7 +171,7 @@ func (s *SchedulerForShard) configMapForShard(
 	if placementArguments[gpuResource] == binpackStrategy {
 		innerConfig.Tiers[0].Plugins = append(
 			innerConfig.Tiers[0].Plugins,
-			plugin{Name: "gpusharingorder"},
+			conf.PluginOption{Name: "gpusharingorder"},
 		)
 	}
 
@@ -195,7 +196,7 @@ func (s *SchedulerForShard) configMapForShard(
 	return schedulerConfig, nil
 }
 
-func validateJobDepthMap(shard *kaiv1.SchedulingShard, innerConfig config, actions []string) error {
+func validateJobDepthMap(shard *kaiv1.SchedulingShard, innerConfig conf.SchedulerConfiguration, actions []string) error {
 	for actionToConfigure := range shard.Spec.QueueDepthPerAction {
 		if !slices.Contains(actions, actionToConfigure) {
 			return fmt.Errorf(invalidJobDepthMapError, innerConfig.Actions, actionToConfigure)
@@ -294,12 +295,12 @@ func calculatePlacementArguments(placementStrategy *kaiv1.PlacementStrategy) map
 	}
 }
 
-func addMinRuntimePluginIfNeeded(plugins *[]plugin, minRuntime *kaiv1.MinRuntime) {
+func addMinRuntimePluginIfNeeded(plugins *[]conf.PluginOption, minRuntime *kaiv1.MinRuntime) {
 	if minRuntime == nil || (minRuntime.PreemptMinRuntime == nil && minRuntime.ReclaimMinRuntime == nil) {
 		return
 	}
 
-	minRuntimePlugin := plugin{Name: "minruntime", Arguments: map[string]string{}}
+	minRuntimePlugin := conf.PluginOption{Name: "minruntime", Arguments: map[string]string{}}
 
 	if minRuntime.PreemptMinRuntime != nil {
 		minRuntimePlugin.Arguments["defaultPreemptMinRuntime"] = *minRuntime.PreemptMinRuntime

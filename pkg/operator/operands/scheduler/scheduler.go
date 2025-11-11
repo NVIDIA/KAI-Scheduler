@@ -22,21 +22,6 @@ const (
 	defaultResourceName = "scheduler"
 )
 
-type config struct {
-	Actions             string         `yaml:"actions"`
-	Tiers               []tier         `yaml:"tiers,omitempty"`
-	QueueDepthPerAction map[string]int `yaml:"queueDepthPerAction,omitempty"`
-}
-
-type tier struct {
-	Plugins []plugin `yaml:"plugins"`
-}
-
-type plugin struct {
-	Name      string            `yaml:"name"`
-	Arguments map[string]string `yaml:"arguments,omitempty"`
-}
-
 type SchedulerForShard struct {
 	schedulingShard *kaiv1.SchedulingShard
 

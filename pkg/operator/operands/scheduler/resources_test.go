@@ -17,6 +17,7 @@ import (
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiv1qc "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
 	kaiv1scheduler "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/scheduler"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -187,7 +188,7 @@ func TestValidateJobDepthMap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			innerConfig := config{
+			innerConfig := conf.SchedulerConfiguration{
 				Actions: strings.Join(tt.actions, ", "),
 			}
 
@@ -454,7 +455,7 @@ tiers:
 				require.True(t, found, "ConfigMap missing config.yaml")
 
 				// Unmarshal expected YAML from test case
-				var expectedConfig config
+				var expectedConfig conf.SchedulerConfiguration
 				if _, ok := tt.expected["config.yaml"]; !ok {
 					t.Fatal("Test case must provide expected YAML for config.yaml")
 				}
@@ -462,7 +463,7 @@ tiers:
 				require.NoError(t, err, "Failed to unmarshal expected config")
 
 				// Unmarshal actual YAML from ConfigMap
-				var actualConfig config
+				var actualConfig conf.SchedulerConfiguration
 				err = yaml.Unmarshal([]byte(actualYAML), &actualConfig)
 				require.NoError(t, err, "Failed to unmarshal actual config")
 
