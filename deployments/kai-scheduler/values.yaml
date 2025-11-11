@@ -3,7 +3,7 @@
 
 global:
   registry: registry/local/kai-scheduler
-  tag: latest
+  tag: ""
   imagePullPolicy: IfNotPresent
   securityContext: {}
   imagePullSecrets: []
