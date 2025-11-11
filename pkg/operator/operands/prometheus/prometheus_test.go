@@ -97,7 +97,7 @@ var _ = Describe("Prometheus", func() {
 			It("should return Prometheus object when Prometheus Operator is installed", func(ctx context.Context) {
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(3)) // ServiceAccount, Prometheus, 1 ServiceMonitor
+				Expect(len(objects)).To(Equal(4)) // ServiceAccount, Prometheus, 2 ServiceMonitors
 
 				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 				Expect(prometheusObj).NotTo(BeNil())
@@ -124,7 +124,7 @@ var _ = Describe("Prometheus", func() {
 
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(3)) // ServiceAccount, Prometheus, 1 ServiceMonitor
+				Expect(len(objects)).To(Equal(4)) // ServiceAccount, Prometheus, 2 ServiceMonitor
 
 				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 				Expect(prometheusObj).NotTo(BeNil())
@@ -453,11 +453,11 @@ var _ = Describe("prometheusForKAIConfig", func() {
 			// The function skips Prometheus CR creation and only creates ServiceMonitors
 			Expect(err).To(BeNil())
 			Expect(objects).NotTo(BeNil())
-			Expect(len(objects)).To(Equal(1)) // 1 ServiceMonitor
+			Expect(len(objects)).To(Equal(2)) // 2 ServiceMonitors
 
 			serviceMonitor := test_utils.FindTypeInObjects[*monitoringv1.ServiceMonitor](objects)
 			Expect(serviceMonitor).NotTo(BeNil())
-			Expect((*serviceMonitor).Name).To(Equal("queuecontroller"))
+			Expect((*serviceMonitor).Name).To(Equal("queue-controller"))
 		})
 
 		It("should return empty objects list when ServiceMonitors are disabled", func(ctx context.Context) {

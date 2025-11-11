@@ -136,6 +136,8 @@ func serviceMonitorsForKAIConfig(
 			return nil, err
 		}
 
+		serviceMonitorObj.GetLabels()["accounting"] = mainResourceName
+
 		// Set the ServiceMonitor spec from configuration
 		serviceMonitorSpec := monitoringv1.ServiceMonitorSpec{
 			JobLabel: kaiService.JobLabel,
@@ -169,6 +171,36 @@ func serviceMonitorsForKAIConfig(
 		serviceMonitorObj.(*monitoringv1.ServiceMonitor).Spec = serviceMonitorSpec
 		serviceMonitors = append(serviceMonitors, serviceMonitorObj)
 	}
+
+	kubeStateMetric := &monitoringv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kube-state-metrics",
+			Namespace: kaiConfig.Spec.Namespace,
+			Labels: map[string]string{
+				"accounting": mainResourceName,
+			},
+		},
+		Spec: monitoringv1.ServiceMonitorSpec{
+			JobLabel: "kube-state-metrics",
+			NamespaceSelector: monitoringv1.NamespaceSelector{
+				MatchNames: []string{"monitoring", "default"},
+			},
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app.kubernetes.io/name": "kube-state-metrics",
+				},
+			},
+			Endpoints: []monitoringv1.Endpoint{
+				{
+					Port:            "http",
+					BearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token",
+					Interval:        "30s",
+				},
+			},
+		},
+	}
+
+	serviceMonitors = append(serviceMonitors, kubeStateMetric)
 	return serviceMonitors, nil
 }
 
