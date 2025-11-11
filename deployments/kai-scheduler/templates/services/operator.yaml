@@ -23,8 +23,10 @@ spec:
       - name: operator
         image: {{ .Values.global.registry }}/{{ .Values.operator.image.name }}:{{ .Values.operator.image.tag | default .Values.global.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
+        {{- with .Values.operator.resources }}
         resources:
-          {{- toYaml .Values.operator.resources | nindent 12 }}
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
         args:
           - --metrics-bind-address={{ .Values.operator.metricsBindAddress | default ":8080" }}
           - --health-probe-bind-address={{ .Values.operator.probeBindAddress | default ":8081" }}
