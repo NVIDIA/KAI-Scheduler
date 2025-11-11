@@ -130,7 +130,7 @@ func TestResolveConfigurationFromFile(t *testing.T) {
 				t.Errorf("ResolveConfigurationFromFile() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(*got, *tt.want) {
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ResolveConfigurationFromFile() got: \n%+v, want: \n%+v", *got, *tt.want)
 				t.Errorf("Actions equal: %v", got.Actions == tt.want.Actions)
 				t.Errorf("Tiers equal: %v", reflect.DeepEqual(got.Tiers, tt.want.Tiers))
