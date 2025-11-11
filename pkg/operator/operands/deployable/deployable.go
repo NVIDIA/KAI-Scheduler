@@ -66,15 +66,15 @@ func (d *DeployableOperands) Deploy(
 		Controller: ptr.To(true),
 	}
 
-	if createObjectsInCluster(ctx, runtimeClient, reconcilerAsOwnerReference, objectsToCreate) != nil {
+	if err := createObjectsInCluster(ctx, runtimeClient, reconcilerAsOwnerReference, objectsToCreate); err != nil {
 		return err
 	}
 
-	if deleteObjectsInCluster(ctx, runtimeClient, objectsToDelete) != nil {
+	if err := deleteObjectsInCluster(ctx, runtimeClient, objectsToDelete); err != nil {
 		return err
 	}
 
-	if updateObjectsInCluster(ctx, runtimeClient, reconcilerAsOwnerReference, objectsToUpdate) != nil {
+	if err := updateObjectsInCluster(ctx, runtimeClient, reconcilerAsOwnerReference, objectsToUpdate); err != nil {
 		return err
 	}
 	return nil
