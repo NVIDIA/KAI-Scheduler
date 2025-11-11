@@ -28,7 +28,6 @@ const (
 	ConditionTypeDeployed          ConditionType = "Deployed"
 	ConditionTypeAvailable         ConditionType = "Available"
 	ConditionDependenciesFulfilled ConditionType = "DependenciesFulfilled"
-	ConditionDependenciesMissing   ConditionType = "DependenciesMissing"
 )
 
 type ConditionReason string
