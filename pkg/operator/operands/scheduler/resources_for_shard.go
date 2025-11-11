@@ -12,12 +12,12 @@ import (
 	"github.com/spf13/pflag"
 	"golang.org/x/exp/slices"
 
-	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/app/options"
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
@@ -136,11 +136,18 @@ func (s *SchedulerForShard) configMapForShard(
 
 	innerConfig.Actions = strings.Join(actions, ", ")
 
+	var proportionArgs map[string]string
+	if shard.Spec.KValue != nil {
+		proportionArgs = map[string]string{
+			"kValue": strconv.FormatFloat(*shard.Spec.KValue, 'f', -1, 64),
+		}
+	}
+
 	innerConfig.Tiers = []conf.Tier{
 		{
 			Plugins: []conf.PluginOption{
 				{Name: "predicates"},
-				{Name: "proportion"},
+				{Name: "proportion", Arguments: proportionArgs},
 				{Name: "priority"},
 				{Name: "nodeavailability"},
 				{Name: "resourcetype"},
@@ -183,6 +190,10 @@ func (s *SchedulerForShard) configMapForShard(
 		}
 		// Set the validated map to the scheduler config
 		innerConfig.QueueDepthPerAction = shard.Spec.QueueDepthPerAction
+	}
+
+	if shard.Spec.UsageDBConfig != nil {
+		innerConfig.UsageDBConfig = shard.Spec.UsageDBConfig
 	}
 
 	data, marshalErr := yaml.Marshal(&innerConfig)
@@ -300,14 +311,16 @@ func addMinRuntimePluginIfNeeded(plugins *[]conf.PluginOption, minRuntime *kaiv1
 		return
 	}
 
-	minRuntimePlugin := conf.PluginOption{Name: "minruntime", Arguments: map[string]string{}}
+	minRuntimeArgs := make(map[string]string)
 
 	if minRuntime.PreemptMinRuntime != nil {
-		minRuntimePlugin.Arguments["defaultPreemptMinRuntime"] = *minRuntime.PreemptMinRuntime
+		minRuntimeArgs["defaultPreemptMinRuntime"] = *minRuntime.PreemptMinRuntime
 	}
 	if minRuntime.ReclaimMinRuntime != nil {
-		minRuntimePlugin.Arguments["defaultReclaimMinRuntime"] = *minRuntime.ReclaimMinRuntime
+		minRuntimeArgs["defaultReclaimMinRuntime"] = *minRuntime.ReclaimMinRuntime
 	}
+
+	minRuntimePlugin := conf.PluginOption{Name: "minruntime", Arguments: minRuntimeArgs}
 
 	*plugins = append(*plugins, minRuntimePlugin)
 }
