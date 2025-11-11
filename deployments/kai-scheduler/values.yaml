@@ -3,7 +3,7 @@
 
 global:
   registry: registry/local/kai-scheduler
-  tag: latest
+  tag: ""
   imagePullPolicy: IfNotPresent
   securityContext: {}
   imagePullSecrets: []
@@ -25,6 +25,7 @@ operator:
   image:
     name: operator
     pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   replicaCount: 1
   metricsBindAddress: ":8080"
   probeBindAddress: ":8081"
@@ -35,6 +36,7 @@ podgrouper:
   image:
     name: podgrouper
     pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   queueLabelKey: "kai.scheduler/queue"
   affinity: {}
 
@@ -42,14 +44,17 @@ podgroupcontroller:
   image:
     name: podgroupcontroller
     pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   affinity: {}
 binder:
   name: binder
   image:
     name: binder
     pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   resourceReservationImage:
     name: resourcereservation
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   ports:
     metricsPort: 8080
   affinity: {}
@@ -57,6 +62,7 @@ scheduler:
   image:
     name: scheduler
     pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   placementStrategy: binpack
   ports:
     metricsPort: 8080
@@ -65,14 +71,16 @@ queuecontroller:
   image:
     name: queuecontroller
     pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   certSecretName: queuecontroller-webhook-tls-secret
-  affinity: {}  
+  affinity: {}
 
 admission:
   name: kai-admission
   image:
     name: admission
     pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   certSecretName: admission-webhook-tls-secret
   ports:
     webhookPort: 9443
@@ -86,9 +94,11 @@ nodescaleadjuster:
   image:
     name: nodescaleadjuster
     pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   scalingPodImage:
     name: scalingpod
     pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   scalingPodNamespace: kai-scale-adjust
   affinity: {}
 
@@ -96,6 +106,7 @@ crdupgrader:
   image:
     name: crd-upgrader
     pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
 
 defaultQueue:
   createDefaultQueue: true
