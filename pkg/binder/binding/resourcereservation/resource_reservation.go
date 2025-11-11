@@ -53,6 +53,10 @@ type service struct {
 	appLabelValue       string
 	scalingPodNamespace string
 	runtimeClassName    string
+	podCPURequest       string
+	podMemoryRequest    string
+	podCPULimit         string
+	podMemoryLimit      string
 }
 
 func NewService(
@@ -65,6 +69,10 @@ func NewService(
 	appLabelValue string,
 	scalingPodNamespace string,
 	runtimeClassName string,
+	podCPURequest string,
+	podMemoryRequest string,
+	podCPULimit string,
+	podMemoryLimit string,
 ) *service {
 	return &service{
 		fakeGPuNodes:        fakeGPuNodes,
@@ -77,6 +85,10 @@ func NewService(
 		appLabelValue:       appLabelValue,
 		scalingPodNamespace: scalingPodNamespace,
 		runtimeClassName:    runtimeClassName,
+		podCPURequest:       podCPURequest,
+		podMemoryRequest:    podMemoryRequest,
+		podCPULimit:         podCPULimit,
+		podMemoryLimit:      podMemoryLimit,
 	}
 }
 
@@ -383,17 +395,31 @@ func (rsc *service) createGPUReservationPod(ctx context.Context, nodeName, gpuGr
 
 	podName := fmt.Sprintf("%s-%s-%s", gpuReservationPodPrefix, nodeName, rand.String(reservationPodRandomCharacters))
 
+	// Build resource requirements with configured values
+	// Only set CPU/Memory if explicitly configured (better backward compatibility)
 	resources := v1.ResourceRequirements{
 		Limits: v1.ResourceList{
 			constants.GpuResource: *resource.NewQuantity(numberOfGPUsToReserve, resource.DecimalSI),
-			v1.ResourceCPU:        resource.MustParse("50m"),
-			v1.ResourceMemory:     resource.MustParse("100Mi"),
 		},
 		Requests: v1.ResourceList{
 			constants.GpuResource: *resource.NewQuantity(numberOfGPUsToReserve, resource.DecimalSI),
-			v1.ResourceCPU:        resource.MustParse("1m"),
-			v1.ResourceMemory:     resource.MustParse("10Mi"),
 		},
+	}
+
+	// Only set CPU/Memory limits if configured
+	if rsc.podCPULimit != "" {
+		resources.Limits[v1.ResourceCPU] = resource.MustParse(rsc.podCPULimit)
+	}
+	if rsc.podMemoryLimit != "" {
+		resources.Limits[v1.ResourceMemory] = resource.MustParse(rsc.podMemoryLimit)
+	}
+
+	// Only set CPU/Memory requests if configured
+	if rsc.podCPURequest != "" {
+		resources.Requests[v1.ResourceCPU] = resource.MustParse(rsc.podCPURequest)
+	}
+	if rsc.podMemoryRequest != "" {
+		resources.Requests[v1.ResourceMemory] = resource.MustParse(rsc.podMemoryRequest)
 	}
 
 	pod, err := rsc.createResourceReservationPod(nodeName, gpuGroup, podName, resources)

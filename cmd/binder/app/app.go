@@ -107,7 +107,9 @@ func New(options *Options, config *rest.Config) (*App, error) {
 	rrs := resourcereservation.NewService(options.FakeGPUNodes, clientWithWatch, options.ResourceReservationPodImage,
 		time.Duration(options.ResourceReservationAllocationTimeout)*time.Second,
 		options.ResourceReservationNamespace, options.ResourceReservationServiceAccount,
-		options.ResourceReservationAppLabel, options.ScalingPodNamespace, options.RuntimeClassName)
+		options.ResourceReservationAppLabel, options.ScalingPodNamespace, options.RuntimeClassName,
+		options.ResourceReservationPodCPURequest, options.ResourceReservationPodMemoryRequest,
+		options.ResourceReservationPodCPULimit, options.ResourceReservationPodMemoryLimit)
 
 	reconcilerParams := &controllers.ReconcilerParams{
 		MaxConcurrentReconciles:     options.MaxConcurrentReconciles,

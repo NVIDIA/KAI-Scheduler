@@ -233,5 +233,21 @@ func buildArgsList(kaiConfig *kaiv1.Config, config *kaiv1binder.Binder, fakeGPU 
 		args = append(args, []string{fmt.Sprintf("--runtime-class-name=%s", *config.ResourceReservation.RuntimeClassName)}...)
 	}
 
+	// Add GPU reservation pod resource configurations
+	if config.ResourceReservation.PodResources != nil {
+		if cpuRequest, found := config.ResourceReservation.PodResources.Requests[v1.ResourceCPU]; found {
+			args = append(args, []string{"--resource-reservation-pod-cpu-request", cpuRequest.String()}...)
+		}
+		if memoryRequest, found := config.ResourceReservation.PodResources.Requests[v1.ResourceMemory]; found {
+			args = append(args, []string{"--resource-reservation-pod-memory-request", memoryRequest.String()}...)
+		}
+		if cpuLimit, found := config.ResourceReservation.PodResources.Limits[v1.ResourceCPU]; found {
+			args = append(args, []string{"--resource-reservation-pod-cpu-limit", cpuLimit.String()}...)
+		}
+		if memoryLimit, found := config.ResourceReservation.PodResources.Limits[v1.ResourceMemory]; found {
+			args = append(args, []string{"--resource-reservation-pod-memory-limit", memoryLimit.String()}...)
+		}
+	}
+
 	return args
 }

@@ -17,6 +17,10 @@ type Options struct {
 	ResourceReservationPodImage          string
 	ResourceReservationAppLabel          string
 	ResourceReservationAllocationTimeout int
+	ResourceReservationPodCPURequest     string
+	ResourceReservationPodMemoryRequest  string
+	ResourceReservationPodCPULimit       string
+	ResourceReservationPodMemoryLimit    string
 	ScalingPodNamespace                  string
 	QPS                                  float64
 	Burst                                int
@@ -57,6 +61,18 @@ func InitOptions(fs *pflag.FlagSet) *Options {
 	fs.IntVar(&options.ResourceReservationAllocationTimeout,
 		"resource-reservation-allocation-timeout", 40,
 		"Resource reservation allocation timeout in seconds")
+	fs.StringVar(&options.ResourceReservationPodCPURequest,
+		"resource-reservation-pod-cpu-request", "",
+		"CPU request for GPU reservation pods (optional, empty means not set)")
+	fs.StringVar(&options.ResourceReservationPodMemoryRequest,
+		"resource-reservation-pod-memory-request", "",
+		"Memory request for GPU reservation pods (optional, empty means not set)")
+	fs.StringVar(&options.ResourceReservationPodCPULimit,
+		"resource-reservation-pod-cpu-limit", "",
+		"CPU limit for GPU reservation pods (optional, empty means not set)")
+	fs.StringVar(&options.ResourceReservationPodMemoryLimit,
+		"resource-reservation-pod-memory-limit", "",
+		"Memory limit for GPU reservation pods (optional, empty means not set)")
 	fs.StringVar(&options.ScalingPodNamespace,
 		"scale-adjust-namespace", constants.DefaultScaleAdjustName,
 		"Scaling pods namespace")
