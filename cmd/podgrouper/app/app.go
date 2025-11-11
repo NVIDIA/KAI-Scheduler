@@ -24,7 +24,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	kubeAiSchedulerV2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	controllers "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper"
 	pluginshub "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/hub"
@@ -51,7 +51,7 @@ func init() {
 
 type App struct {
 	Mgr               manager.Manager
-	DefaultPluginsHub pluginshub.PluginsHub
+	DefaultPluginsHub *pluginshub.DefaultPluginsHub
 
 	configs    controllers.Configs
 	pluginsHub pluginshub.PluginsHub
