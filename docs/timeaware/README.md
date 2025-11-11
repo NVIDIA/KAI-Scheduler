@@ -23,13 +23,14 @@ If configured, the scheduler applies an [exponential time decay](https://en.wiki
 
 Mathematically, the following formula is applied to historical usage:
 
-$$U = 0.5^{\frac{\Delta{t}}{t_{1/2}}}$$
+$$U = 0.5^{\frac{\Delta{t}}{t_{1/2}}}*A$$
 
 Where:
 
 - $U$ is the usage
 - $t_{1/2}$ is the half life constant set by the user
 - $\Delta{t}$ is the time elapsed since that usage
+- $A$ is the allocated resource
 
 #### Normalization to cluster capacity
 
