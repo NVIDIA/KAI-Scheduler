@@ -30,5 +30,5 @@ To build and deploy KAI Scheduler from source, follow these steps:
 
 5. Install on your cluster:
    ```sh
-   helm upgrade -i kai-scheduler -n kai-scheduler --create-namespace ./charts/kai-scheduler-0.0.0.tgz
+   helm upgrade -i kai-scheduler -n kai-scheduler --create-namespace ./charts/kai-scheduler-0.0.0.tgz --set-string global.tag=0.0.0
    ```
