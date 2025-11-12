@@ -138,7 +138,6 @@ spec:
                     type: object
                 required:
                 - clientType
-                - connectionString
                 type: object
             type: object
           status:

@@ -265,11 +265,6 @@ func (in *GlobalConfig) DeepCopyInto(out *GlobalConfig) {
 			(*out)[key] = val
 		}
 	}
-	if in.PrometheusEnabled != nil {
-		in, out := &in.PrometheusEnabled, &out.PrometheusEnabled
-		*out = new(bool)
-		**out = **in
-	}
 	if in.ExternalTSDBConnection != nil {
 		in, out := &in.ExternalTSDBConnection, &out.ExternalTSDBConnection
 		*out = new(Connection)
