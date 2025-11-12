@@ -43,7 +43,7 @@ KAI Scheduler can be installed:
 Locate the latest release version in [releases](https://github.com/NVIDIA/KAI-Scheduler/releases) page.
 Run the following command after replacing `<VERSION>` with the desired release version:
 ```sh
-helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --version <VERSION> --set-string global.tag=<VERSION>
+helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --set-string global.tag=<VERSION>
 ```
 #### Build from Source
 Follow the instructions [here](docs/developer/building-from-source.md)
