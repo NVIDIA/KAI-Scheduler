@@ -37,6 +37,10 @@ rules:
   resources:
   - mutatingwebhookconfigurations
   - validatingwebhookconfigurations
+  resourceNames:
+  - mutating-kai-admission
+  - validating-kai-admission
+  - kai-queue-validation-v2
   verbs:
   - create
   - delete
@@ -49,6 +53,13 @@ rules:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions
+  resourceNames:
+  - configs.kai.scheduler
+  - schedulingshards.kai.scheduler
+  - bindrequests.scheduling.run.ai
+  - podgroups.scheduling.run.ai
+  - queues.scheduling.run.ai
+  - topologies.kueue.x-k8s.io
   verbs:
   - create
   - delete
