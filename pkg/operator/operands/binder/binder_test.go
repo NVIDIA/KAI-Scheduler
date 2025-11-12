@@ -19,6 +19,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common/test_utils"
 
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -92,6 +94,60 @@ var _ = Describe("Binder", func() {
 				deployment = *deploymentT
 				Expect(deployment.Labels).To(HaveKeyWithValue("foo", "bar"))
 				Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("kai", "scheduler"))
+			})
+
+			It("sets CDI flag if set in cluser policy", func(ctx context.Context) {
+				clusterPolicy := &nvidiav1.ClusterPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test",
+					},
+					Spec: nvidiav1.ClusterPolicySpec{
+						CDI: nvidiav1.CDIConfigSpec{
+							Enabled: ptr.To(true),
+							Default: ptr.To(true),
+						},
+					},
+				}
+
+				Expect(fakeKubeClient.Create(ctx, clusterPolicy)).To(Succeed())
+				objects, err := b.DesiredState(ctx, fakeKubeClient, kaiConfig)
+				Expect(err).To(BeNil())
+
+				deploymentT := test_utils.FindTypeInObjects[*appsv1.Deployment](objects)
+				Expect(deploymentT).NotTo(BeNil())
+				Expect((*deploymentT).Spec.Template.Spec.Containers[0].Args).To(ContainElement("--cdi-enabled=true"))
+			})
+		})
+
+		Context("Reservation Service Account", func() {
+			It("will not remove current image pull secrets", func(ctx context.Context) {
+				kaiConfig.Spec.Global.ImagePullSecrets = []string{"test-secret"}
+
+				reservationSA := &v1.ServiceAccount{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: *kaiConfig.Spec.Binder.ResourceReservation.Namespace,
+						Name:      *kaiConfig.Spec.Binder.ResourceReservation.ServiceAccountName,
+					},
+					ImagePullSecrets: []v1.LocalObjectReference{
+						{Name: "existing"},
+					},
+				}
+				Expect(fakeKubeClient.Create(ctx, reservationSA)).To(Succeed())
+				objects, err := b.DesiredState(ctx, fakeKubeClient, kaiConfig)
+				Expect(err).To(BeNil())
+
+				var newReservationSA *v1.ServiceAccount
+				for _, obj := range objects {
+					sa, ok := obj.(*v1.ServiceAccount)
+					if ok && sa.Name == reservationSA.Name {
+						newReservationSA = sa
+					}
+				}
+
+				Expect(newReservationSA).NotTo(BeNil())
+				Expect(newReservationSA.ImagePullSecrets).To(HaveLen(2))
+				Expect(newReservationSA.ImagePullSecrets).To(ContainElement(v1.LocalObjectReference{Name: "existing"}))
+				Expect(newReservationSA.ImagePullSecrets).To(ContainElement(v1.LocalObjectReference{Name: "test-secret"}))
 			})
 		})
 	})
