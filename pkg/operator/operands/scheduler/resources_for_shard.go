@@ -23,6 +23,7 @@ import (
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiConfigUtils "github.com/NVIDIA/KAI-scheduler/pkg/operator/config"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 )
 
@@ -192,9 +193,11 @@ func (s *SchedulerForShard) configMapForShard(
 		innerConfig.QueueDepthPerAction = shard.Spec.QueueDepthPerAction
 	}
 
-	if shard.Spec.UsageDBConfig != nil {
-		innerConfig.UsageDBConfig = shard.Spec.UsageDBConfig
+	usageDBConfig, err := getUsageDBConfig(shard, kaiConfig)
+	if err != nil {
+		return nil, err
 	}
+	innerConfig.UsageDBConfig = usageDBConfig
 
 	data, marshalErr := yaml.Marshal(&innerConfig)
 	if marshalErr != nil {
@@ -214,6 +217,41 @@ func validateJobDepthMap(shard *kaiv1.SchedulingShard, innerConfig conf.Schedule
 		}
 	}
 	return nil
+}
+
+func getUsageDBConfig(shard *kaiv1.SchedulingShard, kaiConfig *kaiv1.Config) (*usagedbapi.UsageDBConfig, error) {
+	// Check for nil inputs
+	if shard == nil {
+		return nil, fmt.Errorf("shard cannot be nil")
+	}
+	if kaiConfig == nil {
+		return nil, fmt.Errorf("kaiConfig cannot be nil")
+	}
+
+	if shard.Spec.UsageDBConfig == nil {
+		return nil, nil
+	}
+
+	usageDBConfig := shard.Spec.UsageDBConfig.DeepCopy()
+
+	if usageDBConfig.ClientType != "prometheus" {
+		return usageDBConfig, nil
+	}
+
+	if usageDBConfig.ConnectionString == "" && usageDBConfig.ConnectionStringEnvVar == "" {
+		// Use prometheus from config
+		if kaiConfig.Spec.Prometheus != nil &&
+			kaiConfig.Spec.Prometheus.Enabled != nil &&
+			*kaiConfig.Spec.Prometheus.Enabled {
+			usageDBConfig.ConnectionString = fmt.Sprintf("http://prometheus-operated.%s.svc.cluster.local:9090", kaiConfig.Spec.Namespace)
+		} else if kaiConfig.Spec.Global != nil && kaiConfig.Spec.Global.ExternalTSDBConnection != nil && kaiConfig.Spec.Global.ExternalTSDBConnection.URL != nil {
+			usageDBConfig.ConnectionString = *kaiConfig.Spec.Global.ExternalTSDBConnection.URL
+		} else {
+			return nil, fmt.Errorf("prometheus connection string not configured: either enable internal prometheus or configure external TSDB connection URL")
+		}
+	}
+
+	return usageDBConfig, nil
 }
 
 func (s *SchedulerForShard) serviceForShard(

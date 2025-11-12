@@ -14,6 +14,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/app/options"
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiprometheus "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
 	kaiv1qc "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/queue_controller"
 	kaiv1scheduler "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/scheduler"
 	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
@@ -718,4 +719,286 @@ usageDBConfig:
 	config := &conf.SchedulerConfiguration{}
 	err = yaml.Unmarshal([]byte(configString), config)
 	assert.NoError(t, err)
+}
+
+func TestGetUsageDBConfig(t *testing.T) {
+	tests := []struct {
+		name        string
+		shard       *kaiv1.SchedulingShard
+		kaiConfig   *kaiv1.Config
+		expectError bool
+		errorMsg    string
+		validate    func(t *testing.T, result *usagedbapi.UsageDBConfig)
+	}{
+		{
+			name:        "nil shard",
+			shard:       nil,
+			kaiConfig:   &kaiv1.Config{},
+			expectError: true,
+			errorMsg:    "shard cannot be nil",
+		},
+		{
+			name:        "nil kaiConfig",
+			shard:       &kaiv1.SchedulingShard{},
+			kaiConfig:   nil,
+			expectError: true,
+			errorMsg:    "kaiConfig cannot be nil",
+		},
+		{
+			name: "nil UsageDBConfig",
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: nil,
+				},
+			},
+			kaiConfig:   &kaiv1.Config{},
+			expectError: false,
+			validate: func(t *testing.T, result *usagedbapi.UsageDBConfig) {
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "non-prometheus client type",
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: &usagedbapi.UsageDBConfig{
+						ClientType:       "custom",
+						ConnectionString: "http://custom-db:9090",
+					},
+				},
+			},
+			kaiConfig:   &kaiv1.Config{},
+			expectError: false,
+			validate: func(t *testing.T, result *usagedbapi.UsageDBConfig) {
+				assert.NotNil(t, result)
+				assert.Equal(t, "custom", result.ClientType)
+				assert.Equal(t, "http://custom-db:9090", result.ConnectionString)
+			},
+		},
+		{
+			name: "prometheus with explicit connection string",
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: &usagedbapi.UsageDBConfig{
+						ClientType:       "prometheus",
+						ConnectionString: "http://external-prometheus:9090",
+					},
+				},
+			},
+			kaiConfig:   &kaiv1.Config{},
+			expectError: false,
+			validate: func(t *testing.T, result *usagedbapi.UsageDBConfig) {
+				assert.NotNil(t, result)
+				assert.Equal(t, "prometheus", result.ClientType)
+				assert.Equal(t, "http://external-prometheus:9090", result.ConnectionString)
+			},
+		},
+		{
+			name: "prometheus with internal prometheus enabled",
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: &usagedbapi.UsageDBConfig{
+						ClientType: "prometheus",
+					},
+				},
+			},
+			kaiConfig: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: "kai-system",
+					Prometheus: &kaiprometheus.Prometheus{
+						Enabled: ptr.To(true),
+					},
+				},
+			},
+			expectError: false,
+			validate: func(t *testing.T, result *usagedbapi.UsageDBConfig) {
+				assert.NotNil(t, result)
+				assert.Equal(t, "prometheus", result.ClientType)
+				assert.Equal(t, "http://prometheus-operated.kai-system.svc.cluster.local:9090", result.ConnectionString)
+			},
+		},
+		{
+			name: "prometheus with external TSDB connection",
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: &usagedbapi.UsageDBConfig{
+						ClientType: "prometheus",
+					},
+				},
+			},
+			kaiConfig: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: "kai-system",
+					Global: &kaiv1.GlobalConfig{
+						ExternalTSDBConnection: &kaiv1.Connection{
+							URL: ptr.To("http://external-tsdb:9090"),
+						},
+					},
+				},
+			},
+			expectError: false,
+			validate: func(t *testing.T, result *usagedbapi.UsageDBConfig) {
+				assert.NotNil(t, result)
+				assert.Equal(t, "prometheus", result.ClientType)
+				assert.Equal(t, "http://external-tsdb:9090", result.ConnectionString)
+			},
+		},
+		{
+			name: "prometheus with nil prometheus config",
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: &usagedbapi.UsageDBConfig{
+						ClientType: "prometheus",
+					},
+				},
+			},
+			kaiConfig: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace:  "kai-system",
+					Prometheus: nil,
+					Global: &kaiv1.GlobalConfig{
+						ExternalTSDBConnection: &kaiv1.Connection{
+							URL: ptr.To("http://external-tsdb:9090"),
+						},
+					},
+				},
+			},
+			expectError: false,
+			validate: func(t *testing.T, result *usagedbapi.UsageDBConfig) {
+				assert.NotNil(t, result)
+				assert.Equal(t, "prometheus", result.ClientType)
+				assert.Equal(t, "http://external-tsdb:9090", result.ConnectionString)
+			},
+		},
+		{
+			name: "prometheus with prometheus.enabled = false",
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: &usagedbapi.UsageDBConfig{
+						ClientType: "prometheus",
+					},
+				},
+			},
+			kaiConfig: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: "kai-system",
+					Prometheus: &kaiprometheus.Prometheus{
+						Enabled: ptr.To(false),
+					},
+					Global: &kaiv1.GlobalConfig{
+						ExternalTSDBConnection: &kaiv1.Connection{
+							URL: ptr.To("http://external-tsdb:9090"),
+						},
+					},
+				},
+			},
+			expectError: false,
+			validate: func(t *testing.T, result *usagedbapi.UsageDBConfig) {
+				assert.NotNil(t, result)
+				assert.Equal(t, "prometheus", result.ClientType)
+				assert.Equal(t, "http://external-tsdb:9090", result.ConnectionString)
+			},
+		},
+		{
+			name: "prometheus with nil external TSDB connection",
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: &usagedbapi.UsageDBConfig{
+						ClientType: "prometheus",
+					},
+				},
+			},
+			kaiConfig: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: "kai-system",
+					Global: &kaiv1.GlobalConfig{
+						ExternalTSDBConnection: nil,
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "prometheus connection string not configured",
+		},
+		{
+			name: "prometheus with nil external TSDB URL",
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: &usagedbapi.UsageDBConfig{
+						ClientType: "prometheus",
+					},
+				},
+			},
+			kaiConfig: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: "kai-system",
+					Global: &kaiv1.GlobalConfig{
+						ExternalTSDBConnection: &kaiv1.Connection{
+							URL: nil,
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "prometheus connection string not configured",
+		},
+		{
+			name: "prometheus with nil global config",
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: &usagedbapi.UsageDBConfig{
+						ClientType: "prometheus",
+					},
+				},
+			},
+			kaiConfig: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: "kai-system",
+					Global:    nil,
+				},
+			},
+			expectError: true,
+			errorMsg:    "prometheus connection string not configured",
+		},
+		{
+			name: "deep copy preserves usage params",
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					UsageDBConfig: &usagedbapi.UsageDBConfig{
+						ClientType:       "prometheus",
+						ConnectionString: "http://prometheus:9090",
+						UsageParams: &usagedbapi.UsageParams{
+							HalfLifePeriod: &metav1.Duration{Duration: 10 * time.Minute},
+							WindowSize:     &metav1.Duration{Duration: 20 * time.Minute},
+						},
+					},
+				},
+			},
+			kaiConfig:   &kaiv1.Config{},
+			expectError: false,
+			validate: func(t *testing.T, result *usagedbapi.UsageDBConfig) {
+				assert.NotNil(t, result)
+				assert.NotNil(t, result.UsageParams)
+				assert.Equal(t, 10*time.Minute, result.UsageParams.HalfLifePeriod.Duration)
+				assert.Equal(t, 20*time.Minute, result.UsageParams.WindowSize.Duration)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := getUsageDBConfig(tt.shard, tt.kaiConfig)
+
+			if tt.expectError {
+				require.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				require.NoError(t, err)
+				if tt.validate != nil {
+					tt.validate(t, result)
+				}
+			}
+		})
+	}
 }
