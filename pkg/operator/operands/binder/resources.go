@@ -5,6 +5,7 @@ package binder
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -140,7 +141,23 @@ func resourceReservationServiceAccount(
 
 	sa.Name = *kaiConfig.Spec.Binder.ResourceReservation.ServiceAccountName
 	sa.Namespace = *kaiConfig.Spec.Binder.ResourceReservation.Namespace
-	sa.ImagePullSecrets = kaiConfigUtils.GetGlobalImagePullSecrets(kaiConfig.Spec.Global)
+
+	imagePullSecrets := make(map[string]bool)
+	for _, secret := range sa.ImagePullSecrets {
+		imagePullSecrets[secret.Name] = true
+	}
+
+	for _, secret := range kaiConfigUtils.GetGlobalImagePullSecrets(kaiConfig.Spec.Global) {
+		if !imagePullSecrets[secret.Name] {
+			imagePullSecrets[secret.Name] = true
+		}
+	}
+
+	sa.ImagePullSecrets = make([]v1.LocalObjectReference, 0, len(imagePullSecrets))
+	for secretName := range imagePullSecrets {
+		sa.ImagePullSecrets = append(sa.ImagePullSecrets, v1.LocalObjectReference{Name: secretName})
+	}
+
 	return []client.Object{sa}, nil
 }
 
@@ -231,6 +248,18 @@ func buildArgsList(kaiConfig *kaiv1.Config, config *kaiv1binder.Binder, fakeGPU 
 
 	if config.ResourceReservation.RuntimeClassName != nil && len(*config.ResourceReservation.RuntimeClassName) > 0 {
 		args = append(args, []string{fmt.Sprintf("--runtime-class-name=%s", *config.ResourceReservation.RuntimeClassName)}...)
+	}
+
+	// Serialize and add GPU reservation pod resource configurations
+	if config.ResourceReservation.PodResources != nil {
+		resourceRequirements := v1.ResourceRequirements{
+			Requests: config.ResourceReservation.PodResources.Requests,
+			Limits:   config.ResourceReservation.PodResources.Limits,
+		}
+		resourcesJSON, err := json.Marshal(resourceRequirements)
+		if err == nil {
+			args = append(args, []string{"--resource-reservation-pod-resources", string(resourcesJSON)}...)
+		}
 	}
 
 	return args

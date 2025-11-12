@@ -63,6 +63,10 @@ spec:
       {{- end }}
       image:
         name: {{ .Values.binder.resourceReservationImage.name }}
+      {{- if .Values.binder.resourceReservationPodResources }}
+      podResources:
+        {{- toYaml .Values.binder.resourceReservationPodResources | nindent 8 }}
+      {{- end }}
 
   podGroupController:
     service:

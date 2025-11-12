@@ -55,6 +55,17 @@ binder:
   resourceReservationImage:
     name: resourcereservation
     # tag: ""  # Optional: Override global.tag or Chart.AppVersion
+  # resourceReservationPodResources specifies CPU and memory resource requests and limits
+  # for GPU reservation pods created by the binder.
+  # If not specified, Kubernetes default behavior will be used (no explicit limits/requests for CPU/Memory).
+  # Example:
+  # resourceReservationPodResources:
+  #   requests:
+  #     cpu: 1m
+  #     memory: 10Mi
+  #   limits:
+  #     cpu: 50m
+  #     memory: 100Mi
   ports:
     metricsPort: 8080
   affinity: {}
