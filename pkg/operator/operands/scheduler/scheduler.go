@@ -22,21 +22,6 @@ const (
 	defaultResourceName = "scheduler"
 )
 
-type config struct {
-	Actions             string         `yaml:"actions"`
-	Tiers               []tier         `yaml:"tiers,omitempty"`
-	QueueDepthPerAction map[string]int `yaml:"queueDepthPerAction,omitempty"`
-}
-
-type tier struct {
-	Plugins []plugin `yaml:"plugins"`
-}
-
-type plugin struct {
-	Name      string            `yaml:"name"`
-	Arguments map[string]string `yaml:"arguments,omitempty"`
-}
-
 type SchedulerForShard struct {
 	schedulingShard *kaiv1.SchedulingShard
 
@@ -100,6 +85,10 @@ func (s *SchedulerForShard) Monitor(ctx context.Context, runtimeReader client.Re
 	return nil
 }
 
+func (s *SchedulerForShard) HasMissingDependencies(context.Context, client.Reader, *kaiv1.Config) (string, error) {
+	return "", nil
+}
+
 func (s *SchedulerForShard) Name() string {
 	return "SchedulerForShard"
 }
@@ -143,4 +132,8 @@ func (s *SchedulerForConfig) Name() string {
 
 func (s *SchedulerForConfig) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
 	return nil
+}
+
+func (s *SchedulerForConfig) HasMissingDependencies(context.Context, client.Reader, *kaiv1.Config) (string, error) {
+	return "", nil
 }

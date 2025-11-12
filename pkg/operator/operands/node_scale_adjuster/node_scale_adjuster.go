@@ -61,3 +61,7 @@ func (nsa *NodeScaleAdjuster) Name() string {
 func (nsa *NodeScaleAdjuster) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
 	return nil
 }
+
+func (nsa *NodeScaleAdjuster) HasMissingDependencies(context.Context, client.Reader, *kaiv1.Config) (string, error) {
+	return "", nil
+}

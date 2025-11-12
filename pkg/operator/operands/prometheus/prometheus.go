@@ -36,6 +36,10 @@ func (p *Prometheus) DesiredState(
 	p.namespace = kaiConfig.Spec.Namespace
 	p.client = runtimeClient.(client.Client)
 
+	if kaiConfig.Spec.Prometheus == nil || kaiConfig.Spec.Prometheus.Enabled == nil || !*kaiConfig.Spec.Prometheus.Enabled {
+		return []client.Object{}, nil
+	}
+
 	var objects []client.Object
 	for _, resourceFunc := range []promethuesResourceForKAIConfig{
 		prometheusForKAIConfig,
@@ -55,7 +59,6 @@ func (p *Prometheus) DesiredState(
 }
 
 func (b *Prometheus) IsDeployed(ctx context.Context, readerClient client.Reader) (bool, error) {
-	// If there are no objects to check, consider it deployed
 	if len(b.lastDesiredState) == 0 {
 		return true, nil
 	}
@@ -63,21 +66,26 @@ func (b *Prometheus) IsDeployed(ctx context.Context, readerClient client.Reader)
 }
 
 func (b *Prometheus) IsAvailable(ctx context.Context, readerClient client.Reader) (bool, error) {
-	// If there are no objects to check, consider it available
 	if len(b.lastDesiredState) == 0 {
 		return true, nil
 	}
 
-	prometheus := &monitoringv1.Prometheus{}
-	err := readerClient.Get(ctx, client.ObjectKey{
-		Name:      mainResourceName,
-		Namespace: b.namespace,
-	}, prometheus)
+	var prometheus *monitoringv1.Prometheus = nil
+	for _, obj := range b.lastDesiredState {
+		var ok bool
+		if prometheus, ok = obj.(*monitoringv1.Prometheus); ok {
+			break
+		}
+	}
+	if prometheus == nil {
+		return true, nil
+	}
+
+	err := readerClient.Get(ctx, client.ObjectKeyFromObject(prometheus), prometheus)
 	if err != nil {
 		return false, err
 	}
 
-	// Check if there are any conditions and if the first one is Available
 	if len(prometheus.Status.Conditions) > 0 {
 		for _, condition := range prometheus.Status.Conditions {
 			if condition.Type == monitoringv1.ConditionType("Available") {
@@ -92,14 +100,32 @@ func (b *Prometheus) Name() string {
 	return "KAI-prometheus"
 }
 
+func (p *Prometheus) HasMissingDependencies(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) (string, error) {
+	if kaiConfig.Spec.Prometheus == nil || kaiConfig.Spec.Prometheus.Enabled == nil || !*kaiConfig.Spec.Prometheus.Enabled {
+		return "", nil
+	}
+	if kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != nil && *kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != "" {
+		return "", nil
+	}
+
+	hasPrometheusOperator, err := common.CheckPrometheusCRDsAvailable(ctx, runtimeReader, "prometheus")
+	if err != nil {
+		return "", err
+	}
+
+	if !hasPrometheusOperator {
+		return "prometheus operator", nil
+	}
+
+	return "", nil
+}
+
 func (p *Prometheus) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
-	// Check if external Prometheus is configured
 	hasExternalPrometheus := kaiConfig.Spec.Prometheus != nil &&
 		kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != nil &&
 		*kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != ""
 
 	if !hasExternalPrometheus {
-		// Stop monitoring if not already running
 		if p.monitoringCancel != nil {
 			p.monitoringCancel()
 			p.monitoringCtx = nil
@@ -108,18 +134,12 @@ func (p *Prometheus) Monitor(ctx context.Context, runtimeReader client.Reader, k
 		return nil
 	}
 
-	// do nothing if already running
 	if p.monitoringCtx != nil && p.monitoringCtx.Err() == nil {
 		return nil
 	}
 
-	// Start monitoring if not already running
 	p.monitoringCtx, p.monitoringCancel = context.WithCancel(ctx)
-
-	// Create status updater function
 	statusUpdater := p.createStatusUpdaterFunction(kaiConfig)
-
-	// Start the monitoring goroutine
 	StartMonitoring(p.monitoringCtx, kaiConfig.Spec.Prometheus, statusUpdater)
 
 	return nil
@@ -128,7 +148,6 @@ func (p *Prometheus) Monitor(ctx context.Context, runtimeReader client.Reader, k
 // createStatusUpdaterFunction creates a function that updates the KAI Config status
 func (p *Prometheus) createStatusUpdaterFunction(kaiConfig *kaiv1.Config) func(ctx context.Context, condition metav1.Condition) error {
 	return func(ctx context.Context, condition metav1.Condition) error {
-		// Get fresh kaiConfig from cluster
 		currentConfig := &kaiv1.Config{}
 		if err := p.client.Get(ctx, client.ObjectKey{
 			Name:      kaiConfig.Name,
@@ -137,10 +156,8 @@ func (p *Prometheus) createStatusUpdaterFunction(kaiConfig *kaiv1.Config) func(c
 			return fmt.Errorf("failed to get current config: %w", err)
 		}
 
-		// Set the observed generation to match the current config generation
 		condition.ObservedGeneration = currentConfig.Generation
 
-		// Get the current config to update
 		configToUpdate := currentConfig.DeepCopy()
 
 		// Find and update the Prometheus connectivity condition
@@ -226,25 +243,20 @@ func StartMonitoring(ctx context.Context, prometheusConfig *kaiprometheus.Promet
 func pingExternalPrometheus(ctx context.Context, prometheusURL string, timeout int, maxRetries int) error {
 	logger := log.FromContext(ctx)
 
-	// Ensure the URL has a scheme
 	if !strings.Contains(prometheusURL, "://") {
 		prometheusURL = "http://" + prometheusURL
 	}
 
-	// Parse the URL to ensure it's valid
 	_, err := url.Parse(prometheusURL)
 	if err != nil {
 		return fmt.Errorf("invalid Prometheus URL: %w, prometheusURL: %s", err, prometheusURL)
 	}
 
-	// Create HTTP client with timeout
 	client := &http.Client{
 		Timeout: time.Duration(timeout) * time.Second,
 	}
 
-	// Try to connect to the Prometheus /api/v1/status/config endpoint
 	statusURL := prometheusURL + "/api/v1/status/config"
-	logger.Info("Validating external Prometheus connection", "url", statusURL)
 
 	var lastErr error
 	for attempt := 1; attempt <= maxRetries; attempt++ {
@@ -281,19 +293,4 @@ func pingExternalPrometheus(ctx context.Context, prometheusURL string, timeout i
 	}
 
 	return fmt.Errorf("failed to connect to external Prometheus after %d attempts: %w", maxRetries, lastErr)
-}
-
-// ValidateExternalPrometheusConnection validates connectivity to an external Prometheus instance
-func ValidateExternalPrometheusConnection(ctx context.Context, prometheusConfig *kaiprometheus.Prometheus) error {
-	// Check if external Prometheus URL is configured
-	if prometheusConfig == nil || prometheusConfig.ExternalPrometheusUrl == nil || *prometheusConfig.ExternalPrometheusUrl == "" {
-		return nil
-	}
-
-	// Validate the connection once
-	err := pingExternalPrometheus(ctx, *prometheusConfig.ExternalPrometheusUrl, *prometheusConfig.ExternalPrometheusHealthProbe.Timeout, *prometheusConfig.ExternalPrometheusHealthProbe.MaxRetries)
-	if err != nil {
-		return fmt.Errorf("failed to ping external Prometheus: %w", err)
-	}
-	return nil
 }

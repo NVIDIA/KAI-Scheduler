@@ -188,6 +188,14 @@ func (f *fakeDeployable) IsAvailable(ctx context.Context, runtimeClient client.R
 	return f.isAvailable, nil
 }
 
+func (f *fakeDeployable) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
+	return nil
+}
+
+func (f *fakeDeployable) HasMissingDependencies(ctx context.Context, readerClient client.Reader, obj client.Object) (string, error) {
+	return "", nil
+}
+
 func (f *fakeDeployable) Name() string {
 	return "fakeDeployable"
 }

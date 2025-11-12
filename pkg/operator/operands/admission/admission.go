@@ -81,3 +81,7 @@ func (a *Admission) Name() string {
 func (a *Admission) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
 	return nil
 }
+
+func (a *Admission) HasMissingDependencies(context.Context, client.Reader, *kaiv1.Config) (string, error) {
+	return "", nil
+}

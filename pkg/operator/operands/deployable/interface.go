@@ -14,4 +14,6 @@ type Deployable interface {
 	Deploy(ctx context.Context, runtimeClient client.Client, kaiConfig *kaiConfig.Config, reconciler client.Object) error
 	IsDeployed(ctx context.Context, readerClient client.Reader) (bool, error)
 	IsAvailable(ctx context.Context, readerClient client.Reader) (bool, error)
+	Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiConfig.Config) error
+	HasMissingDependencies(ctx context.Context, readerClient client.Reader, obj client.Object) (string, error)
 }

@@ -37,6 +37,7 @@ const (
 	Available                  ConditionReason = "available"
 	Reconciled                 ConditionReason = "reconciled"
 	DependenciesFulfilled      ConditionReason = "dependencies_fulfilled"
+	DependenciesMissing        ConditionReason = "dependencies_missing"
 	PrometheusConnected        ConditionReason = "prometheus_connected"
 	PrometheusConnectionFailed ConditionReason = "prometheus_connection_failed"
 )

@@ -48,7 +48,7 @@ func (r *StatusReconciler) ReconcileStatus(ctx context.Context, object objectWit
 	if err := r.reconcileCondition(ctx, object, r.getAvailableCondition(ctx, object.GetGeneration())); err != nil {
 		return err
 	}
-	return r.reconcileCondition(ctx, object, r.getDependenciesFulfilledCondition(object.GetGeneration()))
+	return r.reconcileCondition(ctx, object, r.getDependenciesFulfilledCondition(ctx, object))
 }
 
 func (r *StatusReconciler) reconcileCondition(ctx context.Context, object objectWithConditions, condition metav1.Condition) error {
@@ -155,13 +155,36 @@ func (r *StatusReconciler) getAvailableCondition(ctx context.Context, gen int64)
 	}
 }
 
-func (r *StatusReconciler) getDependenciesFulfilledCondition(gen int64) metav1.Condition {
+func (r *StatusReconciler) getDependenciesFulfilledCondition(ctx context.Context, object objectWithConditions) metav1.Condition {
+	missingDependencies, err := r.deployable.HasMissingDependencies(ctx, r.Client, object.GetInternalObject())
+	if err != nil {
+		return metav1.Condition{
+			Type:               string(kaiv1.ConditionDependenciesFulfilled),
+			Status:             metav1.ConditionFalse,
+			Reason:             string(kaiv1.DependenciesMissing),
+			Message:            err.Error(),
+			ObservedGeneration: object.GetGeneration(),
+			LastTransitionTime: metav1.Now(),
+		}
+	}
+
+	if len(missingDependencies) > 0 {
+		return metav1.Condition{
+			Type:               string(kaiv1.ConditionDependenciesFulfilled),
+			Status:             metav1.ConditionFalse,
+			Reason:             string(kaiv1.DependenciesMissing),
+			Message:            missingDependencies,
+			ObservedGeneration: object.GetGeneration(),
+			LastTransitionTime: metav1.Now(),
+		}
+	}
+
 	return metav1.Condition{
 		Type:               string(kaiv1.ConditionDependenciesFulfilled),
 		Status:             metav1.ConditionTrue,
 		Reason:             string(kaiv1.DependenciesFulfilled),
 		Message:            "Dependencies are fulfilled",
-		ObservedGeneration: gen,
+		ObservedGeneration: object.GetGeneration(),
 		LastTransitionTime: metav1.Now(),
 	}
 }

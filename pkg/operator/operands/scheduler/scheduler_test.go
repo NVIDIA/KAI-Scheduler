@@ -137,7 +137,7 @@ var _ = Describe("Scheduler", func() {
 			cm := cmObj.(*v1.ConfigMap)
 
 			Expect(err).To(BeNil())
-			Expect(cm.Data["config.yaml"]).To(Equal(`actions: allocate, consolidation, reclaim, preempt, stalegangeviction
+			Expect(cm.Data["config.yaml"]).To(MatchYAML(`actions: allocate, consolidation, reclaim, preempt, stalegangeviction
 tiers:
     - plugins:
         - name: predicates
@@ -176,7 +176,7 @@ tiers:
 			cm := cmObj.(*v1.ConfigMap)
 
 			Expect(err).To(BeNil())
-			Expect(cm.Data["config.yaml"]).To(Equal(`actions: allocate, reclaim, preempt, stalegangeviction
+			Expect(cm.Data["config.yaml"]).To(MatchYAML(`actions: allocate, reclaim, preempt, stalegangeviction
 tiers:
     - plugins:
         - name: predicates
