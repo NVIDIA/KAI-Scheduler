@@ -54,10 +54,7 @@ rules:
   resources:
   - customresourcedefinitions
   resourceNames:
-  - configs.kai.scheduler
-  - schedulingshards.kai.scheduler
-  - bindrequests.scheduling.run.ai
-  - podgroups.scheduling.run.ai
+  - queues.scheduling.run.ai
   verbs:
   - create
   - delete
