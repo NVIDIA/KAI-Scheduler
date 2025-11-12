@@ -5,6 +5,7 @@ package binder
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -247,6 +248,18 @@ func buildArgsList(kaiConfig *kaiv1.Config, config *kaiv1binder.Binder, fakeGPU 
 
 	if config.ResourceReservation.RuntimeClassName != nil && len(*config.ResourceReservation.RuntimeClassName) > 0 {
 		args = append(args, []string{fmt.Sprintf("--runtime-class-name=%s", *config.ResourceReservation.RuntimeClassName)}...)
+	}
+
+	// Serialize and add GPU reservation pod resource configurations
+	if config.ResourceReservation.PodResources != nil {
+		resourceRequirements := v1.ResourceRequirements{
+			Requests: config.ResourceReservation.PodResources.Requests,
+			Limits:   config.ResourceReservation.PodResources.Limits,
+		}
+		resourcesJSON, err := json.Marshal(resourceRequirements)
+		if err == nil {
+			args = append(args, []string{"--resource-reservation-pod-resources", string(resourcesJSON)}...)
+		}
 	}
 
 	return args
