@@ -350,6 +350,7 @@ func addMinRuntimePluginIfNeeded(plugins *[]conf.PluginOption, minRuntime *kaiv1
 	}
 
 	minRuntimeArgs := make(map[string]string)
+
 	if minRuntime.PreemptMinRuntime != nil {
 		minRuntimeArgs["defaultPreemptMinRuntime"] = *minRuntime.PreemptMinRuntime
 	}
