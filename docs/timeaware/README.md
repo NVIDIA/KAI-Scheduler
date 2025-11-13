@@ -52,49 +52,31 @@ The following plot demonstrates the GPU allocation over time in a 16 GPU cluster
 
 ## Setup and Configurations
 
-> Note: this section is not finalized and is expected to change in an upcoming KAI release
+### Quick setup
 
-### Enabling prometheus
+Enable prometheus in KAI operator:
 
-> Using a kai-operated prometheus assumes that the [prometheus operator](https://prometheus-operator.dev/docs/getting-started/installation/) is installed in the cluster
-
-To enable prometheus via kai-operator, apply the following patch:
 ```sh
 kubectl patch config kai-config --type merge -p '{"spec":{"prometheus":{"enabled":true}}}'
 ```
 
-You can also customize the following configurations:
+It's recommended to wait for the prometheus pod to be available. Look for it in `kai-scheduler` namespace:
 
-```
-  externalPrometheusHealthProbe	# defines the configuration for external Prometheus connectivity validation, with defaults.
-  externalPrometheusUrl	# defines the URL of an external Prometheus instance to use. When set, KAI will not deploy its own Prometheus but will configure ServiceMonitors for the external instance and validate connectivity
-  retentionPeriod # defines how long to retain data (e.g., "2w", "1d", "30d")
-  sampleInterval # defines the interval of sampling (e.g., "1m", "30s", "5m")
-  serviceMonitor # defines ServiceMonitor configuration for KAI services
-  storageClassName # defines the name of the storageClass that will be used to store the TSDB data. defaults to "standard".
-  storageSize # defines the size of the storage (e.g., "20Gi", "30Gi")
+```sh
+watch kubectl get pod -n kai-scheduler prometheus-prometheus-0
 ```
 
-If you choose to use your own prometheus, make sure that it's configured to watch the relevant service monitors with `accounting: kai` labels. For example:
-``` yaml
-apiVersion: monitoring.coreos.com/v1
-kind: Prometheus
-metadata:
-  name: external-prometheus
-  namespace: other-namespace
-spec:
-  ... # Other prometheus configurations..
-  serviceMonitorSelector:
-    matchLabels:
-      accounting: kai
-  ...
+And configure the scheduler to connect to it by patching the scheduling shard:
+
+```sh
+kubectl patch schedulingshard -nkai-scheudler default --type merge -p '{"spec":{"usageDBConfig":{"clientType":"prometheus"}}}'
 ```
+
+The scheduler should now restart and attempt to connect to prometheus.
 
 ### Scheduler configurations
 
-In order to use time-aware fairness, you need to configure the scheduler to connect to prometheus. If using more than one scheduling shards in the cluster, each shard can be configured independently.
-
-To edit the default scheduling shard:
+You can further configure the scheduler by editing the scheduling shard:
 
 ```sh
 kubectl edit schedulingshard default
@@ -105,21 +87,14 @@ Add the following section under `spec`:
 ```yaml
   usageDBConfig:
     clientType: prometheus
-    connectionString: http://prometheus-operated.kai-scheduler.svc.cluster.local:9090
+    connectionString: http://prometheus-operated.kai-scheduler.svc.cluster.local:9090 # Optional: if not configured, the kai config will populate it 
     usageParams:
-      halfLifePeriod: 10m # Change to the desired value
-      windowSize: 10m # Change to the desired value
-      windowType: sliding # Change to the desired value (sliding/tumbling)
+      windowSize: 1w # The time period considered for fairness calculations. One week is the default
+      windowType: sliding # Change to the desired value (sliding/tumbling). Sliding is the default
+      halfLifePeriod: 10m # Leave empty to not use time decay
 ```
-*This configuration assumes using the kai operated prometheus. Change connectionString if relevant.*
 
-Configure windowSize and halfLifePeriod to desired values.
-
-### External prometheus
-
-You can configure kai-scheduler to connect to any external DB that's compatible with the prometheus API - simply edit the connectionString accordingly. Note that it has to be accessible from the scheduler pod, and have access to queue controller and kube-state metrics.
-
-### kValue
+#### kValue
 
 KValue is a parameter used by the proportion plugin to determine the significance of historical usage in fairness calculations - higher values mean more aggressive effects on fairness. To set it, add it to the scheduling shard spec:
 ```sh
@@ -128,10 +103,13 @@ kubectl edit schedulingshard default
 
 ```yaml
 spec:
+  ... # Other configurations
   kValue: 0.5
+  usageDBConfig:
+    ... # Other configurations
 ```
 
-### Advanced: overriding metrics
+#### Advanced: overriding metrics
 
 > *This configuration should not be changed under normal conditions*
 
@@ -150,6 +128,27 @@ kubectl edit schedulingshard default
       gpuCapacityMetric: sum(kube_node_status_capacity{resource=\"nvidia_com_gpu\"})
       cpuCapacityMetric: sum(kube_node_status_capacity{resource=\"cpu\"})
       memoryCapacityMetric: sum(kube_node_status_capacity{resource=\"memory\"})
+```
+
+###  Prometheus configurations
+
+> Using a kai-operated prometheus assumes that the [prometheus operator](https://prometheus-operator.dev/docs/getting-started/installation/) is installed in the cluster
+
+To enable prometheus via kai-operator, apply the following patch:
+```sh
+kubectl patch config kai-config --type merge -p '{"spec":{"prometheus":{"enabled":true}}}'
+```
+
+You can also customize the following configurations:
+
+```
+  externalPrometheusHealthProbe	# defines the configuration for external Prometheus connectivity validation, with defaults.
+  externalPrometheusUrl	# defines the URL of an external Prometheus instance to use. When set, KAI will not deploy its own Prometheus but will configure ServiceMonitors for the external instance and validate connectivity
+  retentionPeriod # defines how long to retain data (e.g., "2w", "1d", "30d")
+  sampleInterval # defines the interval of sampling (e.g., "1m", "30s", "5m")
+  serviceMonitor # defines ServiceMonitor configuration for KAI services
+  storageClassName # defines the name of the storageClass that will be used to store the TSDB data. defaults to "standard".
+  storageSize # defines the size of the storage (e.g., "20Gi", "30Gi")
 ```
 
 ## Troubleshooting
