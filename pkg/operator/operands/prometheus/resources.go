@@ -24,7 +24,9 @@ import (
 )
 
 const (
-	mainResourceName = "prometheus"
+	mainResourceName              = "prometheus"
+	serviceMonitorAccountingLabel = "accounting"
+	serviceMonitorAccountingValue = "kai"
 )
 
 func prometheusForKAIConfig(
@@ -96,7 +98,7 @@ func prometheusForKAIConfig(
 	if config.ServiceMonitor != nil && *config.ServiceMonitor.Enabled {
 		prometheusSpec.ServiceMonitorSelector = &metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				"accounting": mainResourceName,
+				serviceMonitorAccountingLabel: serviceMonitorAccountingValue,
 			},
 		}
 		prometheusSpec.ServiceMonitorNamespaceSelector = &metav1.LabelSelector{}
@@ -136,18 +138,26 @@ func serviceMonitorsForKAIConfig(
 			return nil, err
 		}
 
-		serviceMonitorObj.GetLabels()["accounting"] = mainResourceName
+		serviceMonitorObj.GetLabels()[serviceMonitorAccountingLabel] = serviceMonitorAccountingValue
+
+		namespaces := []string{kaiConfig.Spec.Namespace}
+		if kaiService.Namespaces != nil {
+			namespaces = kaiService.Namespaces
+		}
+
+		labelSelector := map[string]string{"app": kaiService.Name}
+		if kaiService.LabelSelector != nil {
+			labelSelector = kaiService.LabelSelector
+		}
 
 		// Set the ServiceMonitor spec from configuration
 		serviceMonitorSpec := monitoringv1.ServiceMonitorSpec{
 			JobLabel: kaiService.JobLabel,
 			NamespaceSelector: monitoringv1.NamespaceSelector{
-				MatchNames: []string{kaiConfig.Spec.Namespace},
+				MatchNames: namespaces,
 			},
 			Selector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": kaiService.Name,
-				},
+				MatchLabels: labelSelector,
 			},
 			Endpoints: []monitoringv1.Endpoint{
 				{
@@ -172,35 +182,6 @@ func serviceMonitorsForKAIConfig(
 		serviceMonitors = append(serviceMonitors, serviceMonitorObj)
 	}
 
-	kubeStateMetric := &monitoringv1.ServiceMonitor{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kube-state-metrics",
-			Namespace: kaiConfig.Spec.Namespace,
-			Labels: map[string]string{
-				"accounting": mainResourceName,
-			},
-		},
-		Spec: monitoringv1.ServiceMonitorSpec{
-			JobLabel: "kube-state-metrics",
-			NamespaceSelector: monitoringv1.NamespaceSelector{
-				MatchNames: []string{"monitoring", "default"},
-			},
-			Selector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app.kubernetes.io/name": "kube-state-metrics",
-				},
-			},
-			Endpoints: []monitoringv1.Endpoint{
-				{
-					Port:            "http",
-					BearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token",
-					Interval:        "30s",
-				},
-			},
-		},
-	}
-
-	serviceMonitors = append(serviceMonitors, kubeStateMetric)
 	return serviceMonitors, nil
 }
 

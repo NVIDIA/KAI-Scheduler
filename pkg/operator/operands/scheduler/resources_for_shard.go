@@ -12,17 +12,18 @@ import (
 	"github.com/spf13/pflag"
 	"golang.org/x/exp/slices"
 
-	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/app/options"
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiConfigUtils "github.com/NVIDIA/KAI-scheduler/pkg/operator/config"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 )
 
@@ -136,11 +137,18 @@ func (s *SchedulerForShard) configMapForShard(
 
 	innerConfig.Actions = strings.Join(actions, ", ")
 
+	var proportionArgs map[string]string
+	if shard.Spec.KValue != nil {
+		proportionArgs = map[string]string{
+			"kValue": strconv.FormatFloat(*shard.Spec.KValue, 'f', -1, 64),
+		}
+	}
+
 	innerConfig.Tiers = []conf.Tier{
 		{
 			Plugins: []conf.PluginOption{
 				{Name: "predicates"},
-				{Name: "proportion"},
+				{Name: "proportion", Arguments: proportionArgs},
 				{Name: "priority"},
 				{Name: "nodeavailability"},
 				{Name: "resourcetype"},
@@ -185,6 +193,12 @@ func (s *SchedulerForShard) configMapForShard(
 		innerConfig.QueueDepthPerAction = shard.Spec.QueueDepthPerAction
 	}
 
+	usageDBConfig, err := getUsageDBConfig(shard, kaiConfig)
+	if err != nil {
+		return nil, err
+	}
+	innerConfig.UsageDBConfig = usageDBConfig
+
 	data, marshalErr := yaml.Marshal(&innerConfig)
 	if marshalErr != nil {
 		return nil, marshalErr
@@ -203,6 +217,41 @@ func validateJobDepthMap(shard *kaiv1.SchedulingShard, innerConfig conf.Schedule
 		}
 	}
 	return nil
+}
+
+func getUsageDBConfig(shard *kaiv1.SchedulingShard, kaiConfig *kaiv1.Config) (*usagedbapi.UsageDBConfig, error) {
+	// Check for nil inputs
+	if shard == nil {
+		return nil, fmt.Errorf("shard cannot be nil")
+	}
+	if kaiConfig == nil {
+		return nil, fmt.Errorf("kaiConfig cannot be nil")
+	}
+
+	if shard.Spec.UsageDBConfig == nil {
+		return nil, nil
+	}
+
+	usageDBConfig := shard.Spec.UsageDBConfig.DeepCopy()
+
+	if usageDBConfig.ClientType != "prometheus" {
+		return usageDBConfig, nil
+	}
+
+	if usageDBConfig.ConnectionString == "" && usageDBConfig.ConnectionStringEnvVar == "" {
+		// Use prometheus from config
+		if kaiConfig.Spec.Prometheus != nil &&
+			kaiConfig.Spec.Prometheus.Enabled != nil &&
+			*kaiConfig.Spec.Prometheus.Enabled {
+			usageDBConfig.ConnectionString = fmt.Sprintf("http://prometheus-operated.%s.svc.cluster.local:9090", kaiConfig.Spec.Namespace)
+		} else if kaiConfig.Spec.Global != nil && kaiConfig.Spec.Global.ExternalTSDBConnection != nil && kaiConfig.Spec.Global.ExternalTSDBConnection.URL != nil {
+			usageDBConfig.ConnectionString = *kaiConfig.Spec.Global.ExternalTSDBConnection.URL
+		} else {
+			return nil, fmt.Errorf("prometheus connection string not configured: either enable internal prometheus or configure external TSDB connection URL")
+		}
+	}
+
+	return usageDBConfig, nil
 }
 
 func (s *SchedulerForShard) serviceForShard(
@@ -300,14 +349,16 @@ func addMinRuntimePluginIfNeeded(plugins *[]conf.PluginOption, minRuntime *kaiv1
 		return
 	}
 
-	minRuntimePlugin := conf.PluginOption{Name: "minruntime", Arguments: map[string]string{}}
+	minRuntimeArgs := make(map[string]string)
 
 	if minRuntime.PreemptMinRuntime != nil {
-		minRuntimePlugin.Arguments["defaultPreemptMinRuntime"] = *minRuntime.PreemptMinRuntime
+		minRuntimeArgs["defaultPreemptMinRuntime"] = *minRuntime.PreemptMinRuntime
 	}
 	if minRuntime.ReclaimMinRuntime != nil {
-		minRuntimePlugin.Arguments["defaultReclaimMinRuntime"] = *minRuntime.ReclaimMinRuntime
+		minRuntimeArgs["defaultReclaimMinRuntime"] = *minRuntime.ReclaimMinRuntime
 	}
+
+	minRuntimePlugin := conf.PluginOption{Name: "minruntime", Arguments: minRuntimeArgs}
 
 	*plugins = append(*plugins, minRuntimePlugin)
 }

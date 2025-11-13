@@ -77,6 +77,19 @@ func (ph *DefaultPluginsHub) GetPodGrouperPlugin(gvk metav1.GroupVersionKind) gr
 	return ph.defaultPlugin
 }
 
+func (ph *DefaultPluginsHub) GetDefaultPlugin() grouper.Grouper {
+	return ph.defaultPlugin
+}
+
+func (ph *DefaultPluginsHub) HasMatchingPlugin(gvk metav1.GroupVersionKind) bool {
+	// search using wildcard version - this hub will return a plugin even if the version is not exact match
+	gvk.Version = "*"
+	if _, found := ph.customPlugins[gvk]; found {
+		return true
+	}
+	return false
+}
+
 func NewDefaultPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 	gangScheduleKnative bool, queueLabelKey, nodePoolLabelKey string,
 	defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string) *DefaultPluginsHub {

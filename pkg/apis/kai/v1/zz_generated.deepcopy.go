@@ -265,11 +265,6 @@ func (in *GlobalConfig) DeepCopyInto(out *GlobalConfig) {
 			(*out)[key] = val
 		}
 	}
-	if in.PrometheusEnabled != nil {
-		in, out := &in.PrometheusEnabled, &out.PrometheusEnabled
-		*out = new(bool)
-		**out = **in
-	}
 	if in.ExternalTSDBConnection != nil {
 		in, out := &in.ExternalTSDBConnection, &out.ExternalTSDBConnection
 		*out = new(Connection)
@@ -422,6 +417,15 @@ func (in *SchedulingShardSpec) DeepCopyInto(out *SchedulingShardSpec) {
 		in, out := &in.MinRuntime, &out.MinRuntime
 		*out = new(MinRuntime)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.KValue != nil {
+		in, out := &in.KValue, &out.KValue
+		*out = new(float64)
+		**out = **in
+	}
+	if in.UsageDBConfig != nil {
+		in, out := &in.UsageDBConfig, &out.UsageDBConfig
+		*out = (*in).DeepCopy()
 	}
 }
 

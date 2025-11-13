@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -26,7 +27,9 @@ import (
 )
 
 const (
-	defaultResourceName = "binder"
+	defaultResourceName                    = "binder"
+	gpuOperatorVersionDefaultCDIDeprecated = "v25.10.0"
+	versionLabelName                       = "app.kubernetes.io/version"
 )
 
 func (b *Binder) deploymentForKAIConfig(
@@ -184,6 +187,10 @@ func isCdiEnabled(ctx context.Context, readerClient client.Reader) (bool, error)
 
 	nvidiaClusterPolicy := nvidiaClusterPolicies.Items[0]
 	if nvidiaClusterPolicy.Spec.CDI.Enabled != nil && *nvidiaClusterPolicy.Spec.CDI.Enabled {
+		gpuOperatorVersion, found := nvidiaClusterPolicy.Labels[versionLabelName]
+		if found && version.CompareKubeAwareVersionStrings(gpuOperatorVersion, gpuOperatorVersionDefaultCDIDeprecated) >= 0 {
+			return true, nil
+		}
 		if nvidiaClusterPolicy.Spec.CDI.Default != nil && *nvidiaClusterPolicy.Spec.CDI.Default {
 			return true, nil
 		}
