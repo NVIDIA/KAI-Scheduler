@@ -21,6 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 )
 
 const (
@@ -58,6 +59,14 @@ type SchedulingShardSpec struct {
 	// MinRuntime specifies the minimum runtime of a jobs in the shard
 	// +kubebuilder:validation:Optional
 	MinRuntime *MinRuntime `json:"minRuntime,omitempty"`
+
+	// KValue specifies the kValue for the proportion plugin. Default is 1.0.
+	// +kubebuilder:validation:Optional
+	KValue *float64 `json:"kValue,omitempty"`
+
+	// UsageDBConfig defines configuration for the usage db client
+	// +kubebuilder:validation:Optional
+	UsageDBConfig *usagedbapi.UsageDBConfig `yaml:"usageDBConfig,omitempty" json:"usageDBConfig,omitempty"`
 }
 
 func (s *SchedulingShardSpec) SetDefaultsWhereNeeded() {

@@ -18,6 +18,7 @@ import (
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -139,7 +140,7 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 func (p *PrometheusClient) queryResourceCapacity(ctx context.Context, capacityMetric string, queryByWindow usageWindowQueryFunction) (float64, error) {
 	decayedCapacityMetric := capacityMetric
 	if p.usageParams.HalfLifePeriod != nil {
-		decayedCapacityMetric = fmt.Sprintf("((%s) * (%s))", capacityMetric, getExponentialDecayQuery(&p.usageParams.HalfLifePeriod.Duration))
+		decayedCapacityMetric = fmt.Sprintf("((%s) * (%s))", capacityMetric, getExponentialDecayQuery(p.usageParams.HalfLifePeriod))
 	}
 
 	capacityResult, warnings, err := queryByWindow(ctx, decayedCapacityMetric)
@@ -170,7 +171,7 @@ func (p *PrometheusClient) queryResourceUsage(
 
 	decayedAllocationMetric := allocationMetric
 	if p.usageParams.HalfLifePeriod != nil {
-		decayedAllocationMetric = fmt.Sprintf("((%s) * (%s))", allocationMetric, getExponentialDecayQuery(&p.usageParams.HalfLifePeriod.Duration))
+		decayedAllocationMetric = fmt.Sprintf("((%s) * (%s))", allocationMetric, getExponentialDecayQuery(p.usageParams.HalfLifePeriod))
 	}
 
 	usageResult, warnings, err := queryByWindow(ctx, decayedAllocationMetric)
@@ -189,7 +190,8 @@ func (p *PrometheusClient) queryResourceUsage(
 
 	usageVector := usageResult.(model.Vector)
 	if len(usageVector) == 0 {
-		return nil, fmt.Errorf("no data returned for cluster usage metric %s", decayedAllocationMetric)
+		log.InfraLogger.V(3).Warnf("No data returned for cluster usage metric %s", decayedAllocationMetric)
+		return queueUsage, nil
 	}
 
 	for _, usageSample := range usageVector {
@@ -205,11 +207,14 @@ func (p *PrometheusClient) queryResourceUsage(
 func (p *PrometheusClient) querySlidingTimeWindow(ctx context.Context, decayedAllocationMetric string) (model.Value, promv1.Warnings, error) {
 	usageQuery := fmt.Sprintf("sum_over_time((%s)[%s:%s])",
 		decayedAllocationMetric,
-		p.usageParams.WindowSize.String(),
+		p.usageParams.WindowSize.Duration.String(),
 		p.queryResolution.String(),
 	)
 
 	usageResult, warnings, err := p.client.Query(ctx, usageQuery, time.Now())
+	if err != nil {
+		err = fmt.Errorf("%w, full query: %s", err, usageQuery)
+	}
 	return usageResult, warnings, err
 }
 
@@ -222,11 +227,16 @@ func (p *PrometheusClient) queryTumblingTimeWindow(ctx context.Context, decayedA
 		End:   time.Now(),
 		Step:  p.queryResolution,
 	})
+
+	if err != nil {
+		err = fmt.Errorf("%w, full query: %s", err, usageQuery)
+	}
+
 	return usageResult, warnings, err
 }
 
 func (p *PrometheusClient) getLatestUsageResetTime() time.Time {
-	maxWindowStartingPoint := time.Now().Add(-*&p.usageParams.WindowSize.Duration)
+	maxWindowStartingPoint := time.Now().Add(-p.usageParams.WindowSize.Duration)
 	lastUsageReset := maxWindowStartingPoint
 	nextInWindowReset := maxWindowStartingPoint
 
@@ -237,12 +247,12 @@ func (p *PrometheusClient) getLatestUsageResetTime() time.Time {
 	return lastUsageReset
 }
 
-func getExponentialDecayQuery(halfLifePeriod *time.Duration) string {
+func getExponentialDecayQuery(halfLifePeriod *metav1.Duration) string {
 	if halfLifePeriod == nil {
 		return ""
 	}
 
-	halfLifeSeconds := halfLifePeriod.Seconds()
+	halfLifeSeconds := halfLifePeriod.Duration.Seconds()
 	now := time.Now().Unix()
 
 	return fmt.Sprintf("0.5^((%d - time()) / %f)", now, halfLifeSeconds)

@@ -14,12 +14,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added enforcement of the `nvidia` runtime class for GPU pods, with the option to enforce a custom runtime class, or disable enforcement entirely.
 - Added a preferred podAntiAffinity term by default for all services, can be set to required instead by setting `global.requireDefaultPodAffinityTerm`
 - Added support for service-level affinities
+- Added time aware scheduling configurations in scheduling shard
 
 ### Fixed
 - (Openshift only) - High CPU usage for the operator pod due to continues reconciles
 - Fixed a bug where the scheduler would not re-try updating podgroup status after failure
 - Fixed a bug where ray workloads gang scheduling would ignore `minReplicas` if autoscaling was not set
 - KAI Config wrong statuses when prometheus operand is enabled
+- GPU-Operator v25.10.0 support for CDI enabled environments
 
 ## [v0.9.1] - 20250-09-15
 

@@ -13,7 +13,7 @@ type Interface interface {
 }
 type UsageDBConfig struct {
 	ClientType             string       `yaml:"clientType" json:"clientType"`
-	ConnectionString       string       `yaml:"connectionString" json:"connectionString"`
+	ConnectionString       string       `yaml:"connectionString,omitempty" json:"connectionString,omitempty"`
 	ConnectionStringEnvVar string       `yaml:"connectionStringEnvVar,omitempty" json:"connectionStringEnvVar,omitempty"`
 	UsageParams            *UsageParams `yaml:"usageParams,omitempty" json:"usageParams,omitempty"`
 }
