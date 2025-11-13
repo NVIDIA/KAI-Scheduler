@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixed a bug where the scheduler would not re-try updating podgroup status after failure
 - Fixed a bug where ray workloads gang scheduling would ignore `minReplicas` if autoscaling was not set
 - KAI Config wrong statuses when prometheus operand is enabled
+- GPU-Operator v25.10.0 support for CDI enabled environments
 
 ## [v0.9.1] - 20250-09-15
 
