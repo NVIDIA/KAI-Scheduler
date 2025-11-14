@@ -96,26 +96,59 @@ var _ = Describe("Binder", func() {
 				Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("kai", "scheduler"))
 			})
 
-			It("sets CDI flag if set in cluser policy", func(ctx context.Context) {
-				clusterPolicy := &nvidiav1.ClusterPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test",
-					},
-					Spec: nvidiav1.ClusterPolicySpec{
-						CDI: nvidiav1.CDIConfigSpec{
-							Enabled: ptr.To(true),
-							Default: ptr.To(true),
+			Context("CDI Detection", func() {
+				var (
+					clusterPolicy *nvidiav1.ClusterPolicy
+				)
+				BeforeEach(func() {
+					clusterPolicy = &nvidiav1.ClusterPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test",
 						},
-					},
-				}
+						Spec: nvidiav1.ClusterPolicySpec{
+							CDI: nvidiav1.CDIConfigSpec{
+								Enabled: ptr.To(true),
+								Default: ptr.To(true),
+							},
+						},
+					}
+				})
 
-				Expect(fakeKubeClient.Create(ctx, clusterPolicy)).To(Succeed())
-				objects, err := b.DesiredState(ctx, fakeKubeClient, kaiConfig)
-				Expect(err).To(BeNil())
+				It("sets CDI flag if set in cluser policy", func(ctx context.Context) {
+					Expect(fakeKubeClient.Create(ctx, clusterPolicy)).To(Succeed())
+					objects, err := b.DesiredState(ctx, fakeKubeClient, kaiConfig)
+					Expect(err).To(BeNil())
 
-				deploymentT := test_utils.FindTypeInObjects[*appsv1.Deployment](objects)
-				Expect(deploymentT).NotTo(BeNil())
-				Expect((*deploymentT).Spec.Template.Spec.Containers[0].Args).To(ContainElement("--cdi-enabled=true"))
+					deploymentT := test_utils.FindTypeInObjects[*appsv1.Deployment](objects)
+					Expect(deploymentT).NotTo(BeNil())
+					Expect((*deploymentT).Spec.Template.Spec.Containers[0].Args).To(ContainElement("--cdi-enabled=true"))
+				})
+
+				It("sets CDI flag to false if not set by default cluser policy", func(ctx context.Context) {
+					clusterPolicy.Spec.CDI.Default = ptr.To(false)
+					Expect(fakeKubeClient.Create(ctx, clusterPolicy)).To(Succeed())
+					objects, err := b.DesiredState(ctx, fakeKubeClient, kaiConfig)
+					Expect(err).To(BeNil())
+
+					deploymentT := test_utils.FindTypeInObjects[*appsv1.Deployment](objects)
+					Expect(deploymentT).NotTo(BeNil())
+					Expect((*deploymentT).Spec.Template.Spec.Containers[0].Args).To(ContainElement("--cdi-enabled=false"))
+				})
+
+				It("detects CDI state with GPU Operator >= v25.10.0", func(ctx context.Context) {
+					clusterPolicy.Labels = map[string]string{
+						versionLabelName: gpuOperatorVersionDefaultCDIDeprecated,
+					}
+					clusterPolicy.Spec.CDI.Default = ptr.To(false)
+					Expect(fakeKubeClient.Create(ctx, clusterPolicy)).To(Succeed())
+
+					objects, err := b.DesiredState(ctx, fakeKubeClient, kaiConfig)
+					Expect(err).To(BeNil())
+
+					deploymentT := test_utils.FindTypeInObjects[*appsv1.Deployment](objects)
+					Expect(deploymentT).NotTo(BeNil())
+					Expect((*deploymentT).Spec.Template.Spec.Containers[0].Args).To(ContainElement("--cdi-enabled=true"))
+				})
 			})
 		})
 

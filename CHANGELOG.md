@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - (Openshift only) - High CPU usage for the operator pod due to continues reconciles
 - Fixed a bug where the scheduler would not re-try updating podgroup status after failure
 - Added missing SCC for Openshift installations
+- GPU-Operator v25.10.0 support for CDI enabled environments
 
 ## [v0.9.1] - 20250-09-15
 
