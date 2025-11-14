@@ -44,6 +44,7 @@ rules:
 - apiGroups:
   - admissionregistration.k8s.io
   resourceNames:
+  - kai-podgroup-validation-v2alpha2
   - kai-queue-validation-v2
   - mutating-kai-admission
   - validating-kai-admission
