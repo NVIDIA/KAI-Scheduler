@@ -13,7 +13,6 @@ import (
 EOF
 
 go mod tidy
-# Download dependencies to module cache instead of vendor directory
 go mod download
 
 SDK_HACK_DIR="$(cd "$(dirname "$(readlink "$0" || echo "$0")")"; pwd)"
@@ -27,7 +26,6 @@ kube::codegen::gen_client \
   --output-pkg github.com/NVIDIA/KAI-scheduler/pkg/apis/client \
   ${SDK_HACK_DIR}/../pkg/apis
 
-# Clean up temporary files
 rm -f generate-dep.go && go mod tidy
 
 changed_files=$(git diff --name-only | grep pkg/apis/client | grep v1alpha2)
