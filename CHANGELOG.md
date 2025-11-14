@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added enforcement of the `nvidia` runtime class for GPU pods, with the option to enforce a custom runtime class, or disable enforcement entirely.
 
 ### Fixed
+- (Openshift only) - High CPU usage for the operator pod due to continues reconciles
 - Fixed a bug where the scheduler would not re-try updating podgroup status after failure
 - Added missing SCC for Openshift installations
 
