@@ -16,7 +16,6 @@ go mod tidy
 go mod download
 
 SDK_HACK_DIR="$(cd "$(dirname "$(readlink "$0" || echo "$0")")"; pwd)"
-# Get code-generator path from module cache
 CODEGEN_PKG=$(go list -m -f '{{.Dir}}' k8s.io/code-generator)
 source ${CODEGEN_PKG}/kube_codegen.sh
 kube::codegen::gen_client \
