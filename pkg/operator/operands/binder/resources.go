@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	mainResourceName = "binder"
+	mainResourceName                       = "binder"
 	gpuOperatorVersionDefaultCDIDeprecated = "v25.10.0"
 	versionLabelName                       = "app.kubernetes.io/version"
 )
