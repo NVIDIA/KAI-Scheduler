@@ -2,7 +2,7 @@
 
 Time aware fairness is a feature in KAI-Scheduler which makes use of historical resource usage by queues for making allocation and reclaim decisions. Key features are:
 
-1. Consider past usage for order of allocation: all else being equal, queues with higher past usage will get to run jobs after queues with lower usage
+1. All else being equal, queues with higher past usage will get to run jobs after queues with lower usage
 2. Reclaim based on usage: queues which are starved over time will reclaim resources from queues which used a lot of resources.
     1. Note: this does not effect in-quota allocation: deserved quota still takes precedence over time-aware fairness
 
@@ -34,11 +34,11 @@ Where:
 
 #### Normalization to cluster capacity
 
-The aggregated usage for each queue is then normalized to the **cluster capacity** at the relevant time period: the scheduler looks at the available resources in the cluster for that time period, and normalizes all resource usage to it. For example, in a cluster with 10 GPUs, and considering a time period of 10 hours, a queue which consumed 24 GPU hours (wether it's 8 GPUs for 3 hours, or 12 GPUs for 2 hours), will get a normalized usage score of 0.24 (used 24 GPU hours out of a potential 100). This normalization ensures that a small amount of resource usage in a vacant cluster will not result in a heavy penalty.
+The aggregated usage for each queue is then normalized to the **cluster capacity** at the relevant time period: the scheduler looks at the available resources in the cluster for that time period, and normalizes all resource usage to it. For example, in a cluster with 10 GPUs, and considering a time period of 10 hours, a queue which consumed 24 GPU hours (wether it's 8 GPUs for 3 hours, or 12 GPUs for 2 hours), will get a normalized usage score of 0.24 (used 24 GPU hours out of a potential 100). This normalization ensures that a small amount of resource usage relative to the cluster size will not result in a heavy penalty.
 
 ### Effect on fair share
 
-Usually, over quota resources is divided to each queue proportionally to it's Over Quota Weight. With time-aware fairness, queues with historical usage will get relatively less resources in over-quota. The significance of the resource usage in this calculation can be controlled with a parameter called "kValue": the bigger it is, the more significant the historical usage be.
+Usually, over quota resources are assigned to each queue proportionally to it's Over Quota Weight. With time-aware fairness, queues with historical usage will get relatively less resources in over-quota. The significance of the resource usage in this calculation can be controlled with a parameter called "kValue": the bigger it is, the more impact (or weight) the historical usage has on the calculated fairshare, i.e. it will decrease the fairshare of that queue.
 
 Check out the [time aware simulator](../../cmd/time-aware-simulator/README.md) to understand scheduling behavior over time better.
 
@@ -91,12 +91,12 @@ Add the following section under `spec`:
     usageParams:
       windowSize: 1w # The time period considered for fairness calculations. One week is the default
       windowType: sliding # Change to the desired value (sliding/tumbling). Sliding is the default
-      halfLifePeriod: 10m # Leave empty to not use time decay
+      halfLifePeriod: 10m # Leave empty to not use time decay. Off by default
 ```
 
 #### kValue
 
-KValue is a parameter used by the proportion plugin to determine the significance of historical usage in fairness calculations - higher values mean more aggressive effects on fairness. To set it, add it to the scheduling shard spec:
+KValue is a parameter used by the proportion plugin to determine the impact of historical usage in fairness calculations - higher values mean more aggressive effects on fairness. To set it, add it to the scheduling shard spec:
 ```sh
 kubectl edit schedulingshard default
 ```
