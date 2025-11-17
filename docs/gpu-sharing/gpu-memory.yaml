@@ -6,7 +6,7 @@ kind: Pod
 metadata:
   name: gpu-sharing
   labels:
-    kai.scheduler/queue: test
+    kai.scheduler/queue: default-queue
   annotations:
     gpu-memory: "2000" # in Mib
 spec:
