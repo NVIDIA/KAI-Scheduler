@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.10.0] - 20250-11-18
+
 ### Added
 - Added parent reference to SubGroup struct in PodGroup CRD to create a hierarchical SubGroup structure
 - Added the option to configure the names of the webhook configuration resources.
