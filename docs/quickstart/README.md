@@ -28,7 +28,7 @@ Pods can now be assigned to the new queue and submitted to the cluster for sched
 
 ### Assigning Pods to Queues
 To schedule a pod using KAI Scheduler, ensure the following:
-1. Specify the queue name using the `kai.scheduler/queue: test` label on the pod/workload.
+1. Specify the queue name using the `kai.scheduler/queue: default-queue` label on the pod/workload.
 2. Set the scheduler name in the pod specification as `kai-scheduler`
 This ensures the pod is placed in the correct scheduling queue and managed by KAI Scheduler.
 
