@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added a preferred podAntiAffinity term by default for all services, can be set to required instead by setting `global.requireDefaultPodAffinityTerm`
 - Added support for service-level affinities
 - Added [time aware scheduling](docs/timeaware/README.md) capabilities
+- Added option to specify container name and type for fraction containers
 
 ### Fixed
 - (Openshift only) - High CPU usage for the operator pod due to continues reconciles
