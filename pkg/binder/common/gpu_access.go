@@ -13,11 +13,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common/gpusharingconfigmap"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 const (
-	visibleDevicesBC  = "RUNAI-VISIBLE-DEVICES" // Deprecated, this value was replaced with NVIDIA_VISIBLE_DEVICES
-	NumOfGpusEnvVarBC = "RUNAI_NUM_OF_GPUS"     // Deprecated, please use GPU_PORTION env var instead
+	visibleDevicesBC         = "RUNAI-VISIBLE-DEVICES" // Deprecated, this value was replaced with NVIDIA_VISIBLE_DEVICES
+	NumOfGpusEnvVarBC        = "RUNAI_NUM_OF_GPUS"     // Deprecated, please use GPU_PORTION env var instead
+	defaultFractionContainer = 0
 )
 
 func AddGPUSharingEnvVars(container *v1.Container, sharedGpuConfigMapName string) {
@@ -154,4 +156,48 @@ func UpdateConfigMapEnvironmentVariable(
 	}
 
 	return nil
+}
+
+func GetFractionContainerRef(pod *v1.Pod) (*gpusharingconfigmap.PodContainerRef, error) {
+	containers := pod.Spec.Containers
+	containerType := getContainerType(pod)
+	if containerType == gpusharingconfigmap.InitContainer {
+		containers = pod.Spec.InitContainers
+		if len(containers) == 0 {
+			return nil, fmt.Errorf("gpu fraction requested for init container, but no init containers found in pod spec")
+		}
+	}
+
+	defaultContainerRef := &gpusharingconfigmap.PodContainerRef{
+		Container: &containers[defaultFractionContainer],
+		Index:     defaultFractionContainer,
+		Type:      containerType,
+	}
+
+	fractionContainerName, found := pod.Annotations[constants.GpuFractionContainerName]
+	if !found {
+		return defaultContainerRef, nil
+	}
+
+	for index, container := range containers {
+		if container.Name == fractionContainerName {
+			return &gpusharingconfigmap.PodContainerRef{
+				Container: &containers[index],
+				Index:     index,
+				Type:      containerType,
+			}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("fraction container of type %s with name %s not found", containerType, fractionContainerName)
+}
+
+func getContainerType(pod *v1.Pod) gpusharingconfigmap.ContainerType {
+	typeOverride, found := pod.Annotations[constants.GpuFractionContainerType]
+	if found {
+		if typeOverride == string(gpusharingconfigmap.InitContainer) {
+			return gpusharingconfigmap.InitContainer
+		}
+	}
+	return gpusharingconfigmap.RegularContainer
 }

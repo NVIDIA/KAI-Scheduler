@@ -20,8 +20,7 @@ import (
 )
 
 const (
-	fractionContainerIndex = 0
-	CdiDeviceNameBase      = "k8s.device-plugin.nvidia.com/gpu=%s"
+	CdiDeviceNameBase = "k8s.device-plugin.nvidia.com/gpu=%s"
 )
 
 type GPUSharing struct {
@@ -54,12 +53,12 @@ func (p *GPUSharing) PreBind(
 		}
 	}
 
-	containerRef := &gpusharingconfigmap.PodContainerRef{
-		Container: &pod.Spec.Containers[fractionContainerIndex],
-		Index:     fractionContainerIndex,
-		Type:      gpusharingconfigmap.RegularContainer,
+	containerRef, err := common.GetFractionContainerRef(pod)
+	if err != nil {
+		return fmt.Errorf("failed to get fraction container ref: %w", err)
 	}
-	err := p.createCapabilitiesConfigMapIfMissing(ctx, pod, containerRef)
+
+	err = p.createCapabilitiesConfigMapIfMissing(ctx, pod, containerRef)
 	if err != nil {
 		return fmt.Errorf("failed to create capabilities configmap: %w", err)
 	}
