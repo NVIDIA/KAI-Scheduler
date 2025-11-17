@@ -56,11 +56,11 @@ func (p *GPUSharing) Mutate(pod *v1.Pod) error {
 		return nil
 	}
 
-	containerRef := &gpusharingconfigmap.PodContainerRef{
-		Container: &pod.Spec.Containers[fractionContainerIndex],
-		Index:     fractionContainerIndex,
-		Type:      gpusharingconfigmap.RegularContainer,
+	containerRef, err := common.GetFractionContainerRef(pod)
+	if err != nil {
+		return fmt.Errorf("failed to get fraction container ref: %w", err)
 	}
+
 	capabilitiesConfigMapName := gpusharingconfigmap.SetGpuCapabilitiesConfigMapName(pod, containerRef)
 	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
 	if err != nil {
