@@ -16,7 +16,7 @@ spec:
   schedulerName: kai-scheduler
   initContainers:
     - name: gpu-init
-      image: nvidia/cuda:11.0-base
+      image: nvidia/cuda:13.0.2-base-ubi8
       command: ["nvidia-smi"]
       args: ["-L"]
   containers:
