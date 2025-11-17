@@ -160,7 +160,7 @@ func UpdateConfigMapEnvironmentVariable(
 
 func GetFractionContainerRef(pod *v1.Pod) (*gpusharingconfigmap.PodContainerRef, error) {
 	containers := pod.Spec.Containers
-	containerType := getContainerType(pod)
+	containerType := getFractionContainerType(pod)
 	if containerType == gpusharingconfigmap.InitContainer {
 		containers = pod.Spec.InitContainers
 		if len(containers) == 0 {
@@ -192,7 +192,7 @@ func GetFractionContainerRef(pod *v1.Pod) (*gpusharingconfigmap.PodContainerRef,
 	return nil, fmt.Errorf("fraction container of type %s with name %s not found", containerType, fractionContainerName)
 }
 
-func getContainerType(pod *v1.Pod) gpusharingconfigmap.ContainerType {
+func getFractionContainerType(pod *v1.Pod) gpusharingconfigmap.ContainerType {
 	typeOverride, found := pod.Annotations[constants.GpuFractionContainerType]
 	if found {
 		if typeOverride == string(gpusharingconfigmap.InitContainer) {
