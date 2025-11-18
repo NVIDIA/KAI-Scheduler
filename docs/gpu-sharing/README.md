@@ -42,3 +42,31 @@ kubectl apply -f gpu-memory.yaml
 In the gpu-memory.yaml file, the pod includes a `gpu-memory` annotation with a value of 2000 (in Mib), meaning:
 * The pod is allowed to consume up to 2000 Mib of a GPU device memory
 * The remaining GPU device memory can be shared with other pods in the cluster
+
+### GPU Fraction with Non-Default Container
+By default, GPU fraction allocation is applied to the first container (index 0) in the pod. However, you can specify a different container to receive the GPU allocation using the `gpu-fraction-container-name` annotation.
+
+#### Specific Container
+To allocate GPU fraction to a specific container in a multi-container pod:
+```
+kubectl apply -f gpu-sharing-non-default-container.yaml
+```
+
+In the gpu-sharing-non-default-container.yaml file, the pod includes:
+* `gpu-fraction: "0.5"` - Requests half of a GPU device memory
+* `gpu-fraction-container-name: "gpu-workload"` - Specifies that the container named "gpu-workload" should receive the GPU allocation instead of the default first container
+
+This is useful for pods with sidecar containers where only one specific container needs GPU access.
+
+#### Init Container
+To allocate GPU fraction to an init container:
+```
+kubectl apply -f gpu-sharing-init-container.yaml
+```
+
+In the gpu-sharing-init-container.yaml file, the pod includes:
+* `gpu-fraction: "0.5"` - Requests half of a GPU device memory
+* `gpu-fraction-container-name: "gpu-init"` - Specifies the init container name. If not defined, will default to the first container.
+* `gpu-fraction-container-type: "InitContainer"` - Indicates the container is an init container
+
+This is useful for workloads that need GPU access during initialization (e.g., model loading, dataset preprocessing) before the main application container starts.
