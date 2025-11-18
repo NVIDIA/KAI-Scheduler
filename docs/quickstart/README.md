@@ -11,6 +11,8 @@ After installing KAI Scheduler, a **two-level queue hierarchy** is automatically
 * `default-parent-queue` – Top-level (parent) queue. By default, this queue has no reserved resource quotas, allowing governance of resource distribution for its leaf queues.
 * `default-queue` – Leaf (child) queue under the `default-parent-queue` top-level queue. Workloads should reference this queue.
 
+The expected default queues are in [default-queues.yaml](default-queues.yaml).
+
 No manual queue setup is required. Both queues will exist immediately after installation, allowing you to start submitting workloads right away.
 To customize scheduling, you can create additional queues or modify existing ones to set quotas, priorities, and hierarchies.
 
@@ -26,7 +28,7 @@ Pods can now be assigned to the new queue and submitted to the cluster for sched
 
 ### Assigning Pods to Queues
 To schedule a pod using KAI Scheduler, ensure the following:
-1. Specify the queue name using the `kai.scheduler/queue: test` label on the pod/workload.
+1. Specify the queue name using the `kai.scheduler/queue: default-queue` label on the pod/workload.
 2. Set the scheduler name in the pod specification as `kai-scheduler`
 This ensures the pod is placed in the correct scheduling queue and managed by KAI Scheduler.
 

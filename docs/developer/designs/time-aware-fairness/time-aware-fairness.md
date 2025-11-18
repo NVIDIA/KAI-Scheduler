@@ -116,7 +116,7 @@ Where:
 - **$C$** is the remaining capacity (max amount to give in current round)
 - **$P'_i$** is the normalized portion for queue i, defined as:
 
-$$P_i = \max{\{W'_i - k \cdot (W'_i - U'_i), 0\}}$$
+$$P_i = \max{\{W'_i + k \cdot (W'_i - U'_i), 0\}}$$
 
 $$P'_i = \frac{P_i}{\sum{P}}$$
 
