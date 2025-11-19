@@ -69,7 +69,7 @@ watch kubectl get pod -n kai-scheduler prometheus-prometheus-0
 And configure the scheduler to connect to it by patching the scheduling shard:
 
 ```sh
-kubectl patch schedulingshard -nkai-scheudler default --type merge -p '{"spec":{"usageDBConfig":{"clientType":"prometheus"}}}'
+kubectl patch schedulingshard default --type merge -p '{"spec":{"usageDBConfig":{"clientType":"prometheus"}}}'
 ```
 
 The scheduler should now restart and attempt to connect to prometheus.
