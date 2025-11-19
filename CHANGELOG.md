@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.10.0] - 20250-11-18
+
 ### Added
 - Added parent reference to SubGroup struct in PodGroup CRD to create a hierarchical SubGroup structure
 - Added the option to configure the names of the webhook configuration resources.
@@ -14,7 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added enforcement of the `nvidia` runtime class for GPU pods, with the option to enforce a custom runtime class, or disable enforcement entirely.
 - Added a preferred podAntiAffinity term by default for all services, can be set to required instead by setting `global.requireDefaultPodAffinityTerm`
 - Added support for service-level affinities
-- Added time aware scheduling configurations in scheduling shard
+- Added [time aware scheduling](docs/timeaware/README.md) capabilities
+- Added option to specify container name and type for fraction containers
 
 ### Fixed
 - (Openshift only) - High CPU usage for the operator pod due to continues reconciles

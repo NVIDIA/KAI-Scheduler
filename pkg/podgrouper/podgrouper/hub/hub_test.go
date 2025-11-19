@@ -49,6 +49,16 @@ var _ = Describe("SupportedTypes", func() {
 			Expect(plugin.Name()).To(BeEquivalentTo("TensorFlow Grouper"))
 		})
 
+		It("should return plugin for exact GVK match - HasMatchingPlugin function", func() {
+			gvk := metav1.GroupVersionKind{
+				Group:   "kubeflow.org",
+				Version: "v1",
+				Kind:    "TFJob",
+			}
+			hasPlugin := hub.HasMatchingPlugin(gvk)
+			Expect(hasPlugin).To(BeTrue())
+		})
+
 		It("should return default plugin for non-existent GVK", func() {
 			gvk := metav1.GroupVersionKind{
 				Group:   "non-existent-group",
@@ -58,6 +68,16 @@ var _ = Describe("SupportedTypes", func() {
 			plugin := hub.GetPodGrouperPlugin(gvk)
 			Expect(plugin).NotTo(BeNil())
 			Expect(plugin.Name()).To(BeEquivalentTo("Default Grouper"))
+		})
+
+		It("non-existent GVK - HasMatchingPlugin returns false", func() {
+			gvk := metav1.GroupVersionKind{
+				Group:   "non-existent-group",
+				Version: "v1",
+				Kind:    "NonExistentKind",
+			}
+			hasPlugin := hub.HasMatchingPlugin(gvk)
+			Expect(hasPlugin).To(BeFalse())
 		})
 	})
 

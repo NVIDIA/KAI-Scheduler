@@ -43,24 +43,42 @@ rules:
   - validatingwebhookconfigurations
   verbs:
   - create
-  - delete
   - get
   - list
+  - watch
+- apiGroups:
+  - admissionregistration.k8s.io
+  resourceNames:
+  - kai-podgroup-validation-v2alpha2
+  - kai-queue-validation-v2
+  - mutating-kai-admission
+  - validating-kai-admission
+  resources:
+  - mutatingwebhookconfigurations
+  - validatingwebhookconfigurations
+  verbs:
+  - delete
   - patch
   - update
-  - watch
 - apiGroups:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions
   verbs:
   - create
-  - delete
   - get
   - list
+  - watch
+- apiGroups:
+  - apiextensions.k8s.io
+  resourceNames:
+  - queues.scheduling.run.ai
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - delete
   - patch
   - update
-  - watch
 - apiGroups:
   - apps
   resources:

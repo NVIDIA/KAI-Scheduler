@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser(description='Plot simulation results from CSV file')
 parser.add_argument('input', nargs='?', default='simulation_results.csv',
                     help='Path to the CSV file (default: simulation_results.csv)')
+parser.add_argument('--output', '-o', type=str, default=None,
+                    help='Save plot to PNG file instead of displaying it')
 args = parser.parse_args()
 
 df = pd.read_csv(args.input)
@@ -38,5 +40,10 @@ ax2.set_title('Fair Share Over Time')
 ax2.grid(True, alpha=0.3)
 
 plt.tight_layout()
-plt.show()
+
+if args.output:
+    plt.savefig(args.output, dpi=300, bbox_inches='tight')
+    print(f"Plot saved to {args.output}")
+else:
+    plt.show()
 
