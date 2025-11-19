@@ -183,6 +183,33 @@ func TestValidateGpuRequests(t *testing.T) {
 			error: fmt.Errorf("cannot request both GPU and GPU memory"),
 		},
 		{
+			name: "forbid GPU resource limit in sidecar container with GPU Memory fraction annotation",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						constants.GpuMemory: "1",
+					},
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name:      "DistractionContainer",
+							Resources: v1.ResourceRequirements{},
+						},
+						{
+							Name: "SneakyGPUContainer",
+							Resources: v1.ResourceRequirements{
+								Limits: v1.ResourceList{
+									constants.GpuResource: *resource.NewMilliQuantity(1, resource.DecimalSI),
+								},
+							},
+						},
+					},
+				},
+			},
+			error: fmt.Errorf("cannot request both GPU and GPU memory"),
+		},
+		{
 			name: "forbid negative GPU memory annotation",
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
