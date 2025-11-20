@@ -122,7 +122,25 @@ func TestValidateGpuRequests(t *testing.T) {
 			error: fmt.Errorf("GPU is not not listed in resource limits"),
 		},
 		{
-			name: "forbid fraction limit annotation without fraction request",
+			name: "forbid fraction limit (1500 milli)",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						constants.GpuFraction: "1.5",
+					},
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Resources: v1.ResourceRequirements{},
+						},
+					},
+				},
+			},
+			error: fmt.Errorf("GPU resource limit annotation cannot be larger than 1"),
+		},
+		{
+			name: "Allow whole GPU resource limit of 2",
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{},
@@ -132,14 +150,34 @@ func TestValidateGpuRequests(t *testing.T) {
 						{
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: *resource.NewMilliQuantity(1500, resource.DecimalSI),
+									constants.GpuResource: resource.MustParse("2"),
 								},
 							},
 						},
 					},
 				},
 			},
-			error: fmt.Errorf("GPU resource limit annotation cannot be larger than 1"),
+			error: nil,
+		},
+		{
+			name: "Allow whole gpu request of 2, represented as millis",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Resources: v1.ResourceRequirements{
+								Limits: v1.ResourceList{
+									constants.GpuResource: *resource.NewMilliQuantity(2000, resource.DecimalSI),
+								},
+							},
+						},
+					},
+				},
+			},
+			error: nil,
 		},
 		{
 			name: "forbid GPU fraction with GPU Memory fraction annotation",
@@ -159,6 +197,33 @@ func TestValidateGpuRequests(t *testing.T) {
 				},
 			},
 			error: fmt.Errorf("cannot request both GPU and GPU memory"),
+		},
+		{
+			name: "Allow multiple containers with whole GPU resource request",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Resources: v1.ResourceRequirements{
+								Limits: v1.ResourceList{
+									constants.GpuResource: resource.MustParse("1"),
+								},
+							},
+						},
+						{
+							Resources: v1.ResourceRequirements{
+								Limits: v1.ResourceList{
+									constants.GpuResource: resource.MustParse("2"),
+								},
+							},
+						},
+					},
+				},
+			},
+			error: nil,
 		},
 		{
 			name: "forbid GPU resource limit with GPU Memory fraction annotation",
@@ -358,5 +423,13 @@ func TestValidateGpuRequests(t *testing.T) {
 				return
 			}
 		})
+	}
+}
+
+func TestMilliVsMustParse(t *testing.T) {
+	milli := resource.NewMilliQuantity(1000, resource.DecimalSI)
+	mustParse := resource.MustParse("1")
+	if !milli.Equal(mustParse) {
+		t.Errorf("MilliValue() and MustParse() are not equal")
 	}
 }
