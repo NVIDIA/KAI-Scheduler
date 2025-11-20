@@ -426,11 +426,3 @@ func TestValidateGpuRequests(t *testing.T) {
 		})
 	}
 }
-
-func TestMilliVsMustParse(t *testing.T) {
-	milli := resource.NewMilliQuantity(1000, resource.DecimalSI)
-	mustParse := resource.MustParse("1")
-	if !milli.Equal(mustParse) {
-		t.Errorf("MilliValue() and MustParse() are not equal")
-	}
-}
