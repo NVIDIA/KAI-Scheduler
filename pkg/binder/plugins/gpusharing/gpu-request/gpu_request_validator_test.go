@@ -26,6 +26,27 @@ func TestValidateGpuRequests(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						constants.MpsAnnotation: "true",
+						constants.GpuFraction:   "0.5",
+					},
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Resources: v1.ResourceRequirements{
+								Limits: v1.ResourceList{},
+							},
+						},
+					},
+				},
+			},
+			error: nil,
+		},
+		{
+			name: "Don't allow MPS and whole gpu limit",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						constants.MpsAnnotation: "true",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -33,14 +54,14 @@ func TestValidateGpuRequests(t *testing.T) {
 						{
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: *resource.NewMilliQuantity(500, resource.DecimalSI),
+									constants.GpuResource: resource.MustParse("1"),
 								},
 							},
 						},
 					},
 				},
 			},
-			error: nil,
+			error: fmt.Errorf("MPS is only supported with GPU fraction request"),
 		},
 		{
 			name: "allow MPS and fractional GPU annotation request",
@@ -102,26 +123,6 @@ func TestValidateGpuRequests(t *testing.T) {
 			error: fmt.Errorf("cannot have both GPU fraction request and whole GPU resource request/limit"),
 		},
 		{
-			name: "forbid GPU resource request without resource limit",
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{},
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							Resources: v1.ResourceRequirements{
-								Requests: v1.ResourceList{
-									constants.GpuResource: *resource.NewMilliQuantity(2, resource.DecimalSI),
-								},
-							},
-						},
-					},
-				},
-			},
-			error: fmt.Errorf("GPU is not not listed in resource limits"),
-		},
-		{
 			name: "forbid fraction limit (1500 milli)",
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
@@ -137,7 +138,7 @@ func TestValidateGpuRequests(t *testing.T) {
 					},
 				},
 			},
-			error: fmt.Errorf("GPU resource limit annotation cannot be larger than 1"),
+			error: fmt.Errorf("gpu-fraction annotation value must be a positive number smaller than 1.0"),
 		},
 		{
 			name: "Allow whole GPU resource limit of 2",
@@ -415,7 +416,7 @@ func TestValidateGpuRequests(t *testing.T) {
 				return
 			}
 			if err != nil && tt.error == nil {
-				t.Errorf("ValidateGpuRequests() actual is nil but didn't expect and error. Error: %v", err)
+				t.Errorf("ValidateGpuRequests() returned an error but expected no error: %v", err)
 				return
 			}
 			if tt.error != nil && err.Error() != tt.error.Error() {
