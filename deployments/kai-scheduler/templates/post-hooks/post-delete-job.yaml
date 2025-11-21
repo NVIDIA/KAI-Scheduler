@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "yourchart.fullname" . }}-post-delete-cleanup
+  name: post-delete-cleanup
   annotations:
     "helm.sh/hook": post-delete
     "helm.sh/hook-delete-policy": hook-succeeded
@@ -9,8 +9,7 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "yourchart.name" . }}
-        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: post-delete-cleanup
     spec:
       serviceAccountName: {{ .Values.postCleanup.serviceAccountName }}
       restartPolicy: Never
