@@ -22,5 +22,5 @@ spec:
             - -c
             - |
               echo "Deleting deployments..."
-              kubectl delete deployment --all --ignore-not-found=true
+              kubectl -n kai-scheduler delete deployment --all --ignore-not-found=true
               echo "Cleanup complete."
