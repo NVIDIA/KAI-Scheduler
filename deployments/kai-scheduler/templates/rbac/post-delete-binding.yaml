@@ -6,7 +6,7 @@ kind: ClusterRoleBinding
 metadata:
   name: post-delete-cleanup
   annotations:
-    "helm.sh/hook": post-install,post-delete
+    "helm.sh/hook": post-delete
     "helm.sh/hook-delete-policy": hook-succeeded
 subjects:
   - kind: ServiceAccount
