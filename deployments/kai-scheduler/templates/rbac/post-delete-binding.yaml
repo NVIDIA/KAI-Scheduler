@@ -4,13 +4,16 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kai-operator
+  name: post-delete-cleanup
+  annotations:
+    "helm.sh/hook": post-delete
+    "helm.sh/hook-delete-policy": hook-succeeded
 subjects:
   - kind: ServiceAccount
-    name: kai-operator
+    name: post-delete-cleanup
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: kai-operator
+  name: post-delete-cleanup
   apiGroup: rbac.authorization.k8s.io
 

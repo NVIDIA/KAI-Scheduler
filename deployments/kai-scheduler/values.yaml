@@ -125,7 +125,7 @@ postCleanup:
     name: crd-upgrader
     pullPolicy: IfNotPresent
     # tag: ""  # Optional: Override global.tag or Chart.AppVersion
-  serviceAccountName: kai-operator
+  serviceAccountName: post-delete-cleanup
 
 defaultQueue:
   createDefaultQueue: true
