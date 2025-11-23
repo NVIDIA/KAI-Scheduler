@@ -189,17 +189,41 @@ jobs:
           echo "Generated changelog entries:"
           cat changelog_entries.txt
 
-      - name: Update CHANGELOG.md
+      - name: Update CHANGELOG.md on appropriate branch
         id: update_changelog
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           DATE=$(date +%Y-%m-%d)
           
-          # Read the generated changelog entries
-          CHANGELOG_ENTRIES=$(cat changelog_entries.txt)
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Create the new version section
-          NEW_SECTION="## [$VERSION] - $DATE"$'\n\n'"$CHANGELOG_ENTRIES"
+          # Determine which branch to update based on version
+          # Extract major.minor from version (e.g., v0.9.3 -> v0.9)
+          if [[ $VERSION =~ ^v([0-9]+)\.([0-9]+)\. ]]; then
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+            VERSION_BRANCH="v${MAJOR}.${MINOR}"
+            echo "Version branch: $VERSION_BRANCH"
+          else
+            echo "Could not parse version: $VERSION"
+            exit 1
+          fi
+          
+          # Try to checkout the version branch, fall back to main if it doesn't exist
+          git fetch origin
+          if git ls-remote --heads origin "$VERSION_BRANCH" | grep -q "$VERSION_BRANCH"; then
+            echo "Checking out existing branch: $VERSION_BRANCH"
+            git checkout "$VERSION_BRANCH"
+            TARGET_BRANCH="$VERSION_BRANCH"
+          else
+            echo "Branch $VERSION_BRANCH does not exist, using main"
+            git checkout main
+            TARGET_BRANCH="main"
+          fi
+          
+          echo "target_branch=$TARGET_BRANCH" >> $GITHUB_OUTPUT
           
           # Check if CHANGELOG.md exists
           if [ ! -f CHANGELOG.md ]; then
@@ -207,18 +231,27 @@ jobs:
             exit 1
           fi
           
-          # Insert the new section after the [Unreleased] section
-          # Using Python for more reliable text manipulation
-          python3 << 'EOF'
+          # Read the generated changelog entries
+          CHANGELOG_ENTRIES=$(cat changelog_entries.txt)
+          
+          # Update CHANGELOG.md using Python
+          python3 << EOF
           import re
+          
+          version = "$VERSION"
+          date = "$DATE"
           
           with open('CHANGELOG.md', 'r') as f:
               content = f.read()
           
-          # Find the Unreleased section
-          unreleased_pattern = r'(## \[Unreleased\].*?\n)'
+          with open('changelog_entries.txt', 'r') as f:
+              changelog_entries = f.read()
           
-          new_section = """$NEW_SECTION"""
+          # Create new version section
+          new_section = f"## [{version}] - {date}\n\n{changelog_entries}"
+          
+          # Find the Unreleased section and insert after it
+          unreleased_pattern = r'(## \[Unreleased\]\s*\n)'
           
           # Insert after Unreleased section
           updated_content = re.sub(
@@ -230,17 +263,70 @@ jobs:
           
           with open('CHANGELOG.md', 'w') as f:
               f.write(updated_content)
+          
+          print(f"✅ Updated CHANGELOG.md with {version}")
           EOF
           
-          echo "Updated CHANGELOG.md"
-
-      - name: Commit CHANGELOG.md
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Commit and push if there are changes
+          TARGET_BRANCH="${{ steps.update_changelog.outputs.target_branch }}"
           git add CHANGELOG.md
-          git commit -m "Update CHANGELOG.md for ${{ steps.version.outputs.version }}"
-          git push origin HEAD:main
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit to CHANGELOG.md"
+          else
+            git commit -m "Update CHANGELOG.md for $VERSION"
+            git push origin "$TARGET_BRANCH"
+            echo "✅ CHANGELOG.md committed and pushed to $TARGET_BRANCH"
+          fi
+          
+          # If we updated a version branch, also update main
+          if [ "$TARGET_BRANCH" != "main" ]; then
+            echo "Also updating main branch..."
+            git fetch origin main
+            git checkout main
+            
+            # Apply the same CHANGELOG update to main
+            python3 << EOF
+          import re
+          
+          version = "$VERSION"
+          date = "$DATE"
+          
+          with open('CHANGELOG.md', 'r') as f:
+              content = f.read()
+          
+          with open('changelog_entries.txt', 'r') as f:
+              changelog_entries = f.read()
+          
+          # Create new version section
+          new_section = f"## [{version}] - {date}\n\n{changelog_entries}"
+          
+          # Find the Unreleased section and insert after it
+          unreleased_pattern = r'(## \[Unreleased\]\s*\n)'
+          
+          # Insert after Unreleased section
+          updated_content = re.sub(
+              unreleased_pattern,
+              r'\1\n' + new_section + '\n\n',
+              content,
+              count=1
+          )
+          
+          with open('CHANGELOG.md', 'w') as f:
+              f.write(updated_content)
+          
+          print(f"✅ Updated CHANGELOG.md on main with {version}")
+          EOF
+            
+            git add CHANGELOG.md
+            if git diff --staged --quiet; then
+              echo "No changes to commit to main"
+            else
+              git commit -m "Update CHANGELOG.md for $VERSION"
+              git push origin main
+              echo "✅ CHANGELOG.md also committed and pushed to main"
+            fi
+          fi
 
       - name: Create GitHub Release
         uses: actions/github-script@v7
