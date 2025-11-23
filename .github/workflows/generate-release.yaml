@@ -268,7 +268,7 @@ jobs:
           EOF
           
           # Commit and push if there are changes
-          TARGET_BRANCH="${{ steps.update_changelog.outputs.target_branch }}"
+          # TARGET_BRANCH is already set above
           git add CHANGELOG.md
           
           if git diff --staged --quiet; then
