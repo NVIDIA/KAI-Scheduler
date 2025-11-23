@@ -1,0 +1,127 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+name: Validate Release Notes
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+permissions:
+  pull-requests: write
+  contents: read
+  issues: write
+
+jobs:
+  validate:
+    name: Validate Release Notes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Get PR body
+        id: pr_body
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+            // Escape for shell - write to file instead
+            const fs = require('fs');
+            fs.writeFileSync('pr_body.txt', body);
+            return body;
+
+      - name: Validate release notes
+        id: validate
+        run: |
+          PR_BODY=$(cat pr_body.txt)
+          
+          # Run validation script
+          RESULT=$(python3 .github/scripts/parse-release-notes.py validate "$PR_BODY")
+          echo "result=$RESULT" >> $GITHUB_OUTPUT
+          
+          # Extract validation status
+          VALID=$(echo "$RESULT" | python3 -c "import sys, json; print(json.load(sys.stdin)['valid'])")
+          MESSAGE=$(echo "$RESULT" | python3 -c "import sys, json; print(json.load(sys.stdin)['message'])")
+          
+          echo "valid=$VALID" >> $GITHUB_OUTPUT
+          echo "message=$MESSAGE" >> $GITHUB_OUTPUT
+          
+          if [ "$VALID" != "True" ]; then
+            echo "::error::$MESSAGE"
+            exit 1
+          fi
+          
+          echo "::notice::$MESSAGE"
+
+      - name: Comment on PR (if validation failed)
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const message = `${{ steps.validate.outputs.message }}`;
+            
+            const body = `## ⚠️ Release Notes Validation Failed
+            
+            ${message}
+            
+            Please update the **Release Notes** section in your PR description following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
+            
+            ### Valid categories:
+            - Added
+            - Changed
+            - Deprecated
+            - Removed
+            - Fixed
+            - Security
+            
+            ### Example:
+            \`\`\`markdown
+            ## Release Notes
+            
+            ### Fixed
+            - Fixed scheduler pod group status update conflict
+            
+            ### Added
+            - Added support for custom runtime classes
+            \`\`\`
+            
+            Or write \`NONE\` if no release notes are needed for this PR.`;
+            
+            // Check if we already commented
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Release Notes Validation Failed')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: body
+              });
+            }
+
+
