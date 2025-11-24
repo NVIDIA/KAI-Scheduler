@@ -56,17 +56,4 @@ In the gpu-sharing-non-default-container.yaml file, the pod includes:
 * `gpu-fraction: "0.5"` - Requests half of a GPU device memory
 * `gpu-fraction-container-name: "gpu-workload"` - Specifies that the container named "gpu-workload" should receive the GPU allocation instead of the default first container
 
-This is useful for pods with sidecar containers where only one specific container needs GPU access.
-
-#### Init Container
-To allocate GPU fraction to an init container:
-```
-kubectl apply -f gpu-sharing-init-container.yaml
-```
-
-In the gpu-sharing-init-container.yaml file, the pod includes:
-* `gpu-fraction: "0.5"` - Requests half of a GPU device memory
-* `gpu-fraction-container-name: "gpu-init"` - Specifies the init container name. If not defined, will default to the first container.
-* `gpu-fraction-container-type: "InitContainer"` - Indicates the container is an init container
-
-This is useful for workloads that need GPU access during initialization (e.g., model loading, dataset preprocessing) before the main application container starts.
+This is useful for pods with sidecar containers where only one specific container needs GPU access. This works the same for init and regular containers.
