@@ -8,6 +8,7 @@ import (
 
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
 )
 
@@ -30,6 +31,7 @@ func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*eng
 		}
 		podGroup := pgLatestUpdate.object.(*enginev2alpha2.PodGroup)
 		podGroupsyncResults := su.syncPodGroup(podGroup, podGroups[i])
+		log.StatusUpdaterLogger.V(1).Infof("SyncPodGroupsWithPendingUpdates: podGroup %s, generation: %d, resourceVersion: %s, syncResults: %s", podGroups[i].Name, podGroups[i].Generation, podGroups[i].ResourceVersion, podGroupsyncResults)
 		// Delete the inflight update if it was applied + the pod group in the lister matches the inFlight
 		if podGroupsyncResults != snapshotStatusIsOlder && appliedUpdateFound {
 			su.appliedPodGroupUpdates.Delete(key)
