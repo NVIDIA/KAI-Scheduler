@@ -29,6 +29,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      
+      - name: Install Python dependencies
+        run: pip install packaging
 
       - name: Check if pre-release
         id: prerelease
@@ -48,6 +51,33 @@ jobs:
           VERSION=${GITHUB_REF_NAME}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
+
+      - name: Determine version branch
+        id: version_branch
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Extract major.minor from version (e.g., v0.9.3 -> v0.9)
+          if [[ $VERSION =~ ^v([0-9]+)\.([0-9]+)\. ]]; then
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+            VERSION_BRANCH="v${MAJOR}.${MINOR}"
+            echo "Version branch: $VERSION_BRANCH"
+          else
+            echo "Error: Could not parse version: $VERSION"
+            exit 1
+          fi
+          
+          # Check if the version branch exists
+          git fetch origin
+          if git ls-remote --heads origin "$VERSION_BRANCH" | grep -q "$VERSION_BRANCH"; then
+            echo "✅ Version branch $VERSION_BRANCH exists"
+            echo "version_branch=$VERSION_BRANCH" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Error: Version branch $VERSION_BRANCH does not exist"
+            echo "Please create the version branch before releasing $VERSION"
+            exit 1
+          fi
 
       - name: Get previous release tag
         id: previous_tag
@@ -163,41 +193,20 @@ jobs:
           echo "Generated changelog entries:"
           cat changelog_entries.txt
 
-      - name: Update CHANGELOG.md on appropriate branch
+      - name: Update CHANGELOG.md on appropriate branches
         id: update_changelog
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           DATE=$(date +%Y-%m-%d)
+          VERSION_BRANCH="${{ steps.version_branch.outputs.version_branch }}"
           
           # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Determine which branch to update based on version
-          # Extract major.minor from version (e.g., v0.9.3 -> v0.9)
-          if [[ $VERSION =~ ^v([0-9]+)\.([0-9]+)\. ]]; then
-            MAJOR="${BASH_REMATCH[1]}"
-            MINOR="${BASH_REMATCH[2]}"
-            VERSION_BRANCH="v${MAJOR}.${MINOR}"
-            echo "Version branch: $VERSION_BRANCH"
-          else
-            echo "Could not parse version: $VERSION"
-            exit 1
-          fi
-          
-          # Try to checkout the version branch, fall back to main if it doesn't exist
-          git fetch origin
-          if git ls-remote --heads origin "$VERSION_BRANCH" | grep -q "$VERSION_BRANCH"; then
-            echo "Checking out existing branch: $VERSION_BRANCH"
-            git checkout "$VERSION_BRANCH"
-            TARGET_BRANCH="$VERSION_BRANCH"
-          else
-            echo "Branch $VERSION_BRANCH does not exist, using main"
-            git checkout main
-            TARGET_BRANCH="main"
-          fi
-          
-          echo "target_branch=$TARGET_BRANCH" >> $GITHUB_OUTPUT
+          # Checkout the target branch
+          echo "Checking out branch: $VERSION_BRANCH"
+          git checkout "$VERSION_BRANCH"
           
           # Check if CHANGELOG.md exists
           if [ ! -f CHANGELOG.md ]; then
@@ -205,101 +214,35 @@ jobs:
             exit 1
           fi
           
-          # Read the generated changelog entries
-          CHANGELOG_ENTRIES=$(cat changelog_entries.txt)
-          
-          # Update CHANGELOG.md using Python
-          python3 << EOF
-          import re
-          
-          version = "$VERSION"
-          date = "$DATE"
-          
-          with open('CHANGELOG.md', 'r') as f:
-              content = f.read()
-          
-          with open('changelog_entries.txt', 'r') as f:
-              changelog_entries = f.read()
-          
-          # Create new version section
-          new_section = f"## [{version}] - {date}\n\n{changelog_entries}"
-          
-          # Find the Unreleased section and insert after it
-          unreleased_pattern = r'(## \[Unreleased\]\s*\n)'
-          
-          # Insert after Unreleased section
-          updated_content = re.sub(
-              unreleased_pattern,
-              r'\1\n' + new_section + '\n\n',
-              content,
-              count=1
-          )
-          
-          with open('CHANGELOG.md', 'w') as f:
-              f.write(updated_content)
-          
-          print(f"✅ Updated CHANGELOG.md with {version}")
-          EOF
+          # Update CHANGELOG.md using the Python script
+          python3 .github/scripts/update-changelog.py CHANGELOG.md "$VERSION" "$DATE" changelog_entries.txt
           
           # Commit and push if there are changes
-          # TARGET_BRANCH is already set above
           git add CHANGELOG.md
           
           if git diff --staged --quiet; then
             echo "No changes to commit to CHANGELOG.md"
           else
             git commit -m "Update CHANGELOG.md for $VERSION"
-            git push origin "$TARGET_BRANCH"
-            echo "✅ CHANGELOG.md committed and pushed to $TARGET_BRANCH"
+            git push origin "$VERSION_BRANCH"
+            echo "✅ CHANGELOG.md committed and pushed to $VERSION_BRANCH"
           fi
           
-          # If we updated a version branch, also update main
-          if [ "$TARGET_BRANCH" != "main" ]; then
-            echo "Also updating main branch..."
-            git fetch origin main
-            git checkout main
-            
-            # Apply the same CHANGELOG update to main
-            python3 << EOF
-          import re
+          # Update main branch
+          echo "Also updating main branch..."
+          git fetch origin main
+          git checkout main
           
-          version = "$VERSION"
-          date = "$DATE"
+          # Apply the same CHANGELOG update to main
+          python3 .github/scripts/update-changelog.py CHANGELOG.md "$VERSION" "$DATE" changelog_entries.txt
           
-          with open('CHANGELOG.md', 'r') as f:
-              content = f.read()
-          
-          with open('changelog_entries.txt', 'r') as f:
-              changelog_entries = f.read()
-          
-          # Create new version section
-          new_section = f"## [{version}] - {date}\n\n{changelog_entries}"
-          
-          # Find the Unreleased section and insert after it
-          unreleased_pattern = r'(## \[Unreleased\]\s*\n)'
-          
-          # Insert after Unreleased section
-          updated_content = re.sub(
-              unreleased_pattern,
-              r'\1\n' + new_section + '\n\n',
-              content,
-              count=1
-          )
-          
-          with open('CHANGELOG.md', 'w') as f:
-              f.write(updated_content)
-          
-          print(f"✅ Updated CHANGELOG.md on main with {version}")
-          EOF
-            
-            git add CHANGELOG.md
-            if git diff --staged --quiet; then
-              echo "No changes to commit to main"
-            else
-              git commit -m "Update CHANGELOG.md for $VERSION"
-              git push origin main
-              echo "✅ CHANGELOG.md also committed and pushed to main"
-            fi
+          git add CHANGELOG.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit to main"
+          else
+            git commit -m "Update CHANGELOG.md for $VERSION"
+            git push origin main
+            echo "✅ CHANGELOG.md also committed and pushed to main"
           fi
 
       - name: Create GitHub Release
@@ -308,7 +251,7 @@ jobs:
           script: |
             const fs = require('fs');
             const version = '${{ steps.version.outputs.version }}';
-            const previousVersion = '${{ steps.version.outputs.previous_version }}';
+            const previousVersion = '${{ steps.previous_tag.outputs.previous_tag }}';
             const changelogEntries = fs.readFileSync('changelog_entries.txt', 'utf8');
             
             // Generate auto-generated release notes from GitHub
