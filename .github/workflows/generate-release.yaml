@@ -149,76 +149,16 @@ jobs:
       - name: Generate changelog entries
         id: generate_changelog
         run: |
-          # Read PRs from file
-          PRS=$(cat prs.json)
-          
-          # Initialize changelog content
-          CHANGELOG_CONTENT=""
-          
-          # Process each PR
-          echo "$PRS" | python3 -c "
-          import sys
-          import json
-          import subprocess
-          
-          prs = json.load(sys.stdin)
-          
-          # Collect all entries by category
-          all_categories = {}
-          
-          for pr in prs:
-              pr_number = pr['number']
-              pr_url = pr['url']
-              author = pr['author']
-              author_url = pr['author_url']
-              pr_body = pr['body']
-              
-              # Format the changelog entry for this PR
-              result = subprocess.run(
-                  ['python3', '.github/scripts/parse-release-notes.py', 'format', 
-                   pr_body, str(pr_number), pr_url, author, author_url],
-                  capture_output=True,
-                  text=True
-              )
-              
-              if result.returncode == 0 and result.stdout.strip():
-                  formatted = result.stdout.strip()
-                  
-                  # Parse the formatted output to extract categories and entries
-                  current_category = None
-                  for line in formatted.split('\n'):
-                      line = line.strip()
-                      if line.startswith('### '):
-                          current_category = line[4:].strip()
-                          if current_category not in all_categories:
-                              all_categories[current_category] = []
-                      elif line.startswith('- ') and current_category:
-                          all_categories[current_category].append(line[2:])
-          
-          # Generate final changelog content
-          category_order = ['Added', 'Changed', 'Deprecated', 'Removed', 'Fixed', 'Security']
-          changelog_lines = []
-          
-          for category in category_order:
-              if category in all_categories and all_categories[category]:
-                  changelog_lines.append(f'### {category}')
-                  for entry in all_categories[category]:
-                      changelog_lines.append(f'- {entry}')
-                  changelog_lines.append('')
-          
-          print('\n'.join(changelog_lines))
-          " > changelog_entries.txt
+          # Use the Python script to aggregate changelog from all PRs
+          python3 .github/scripts/parse-release-notes.py aggregate prs.json > changelog_entries.txt
           
           # Read the generated content
           CHANGELOG_ENTRIES=$(cat changelog_entries.txt)
           
-          if [ -z "$CHANGELOG_ENTRIES" ]; then
+          if [ -z "$CHANGELOG_ENTRIES" ] || [ "$CHANGELOG_ENTRIES" = "No significant changes documented." ]; then
             echo "No release notes found in merged PRs"
-            CHANGELOG_ENTRIES="No significant changes documented."
+            echo "No significant changes documented." > changelog_entries.txt
           fi
-          
-          # Save for later use
-          echo "$CHANGELOG_ENTRIES" > changelog_entries.txt
           
           echo "Generated changelog entries:"
           cat changelog_entries.txt

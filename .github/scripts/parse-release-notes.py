@@ -202,6 +202,68 @@ def format_for_changelog(categories: Dict[str, List[str]], pr_number: int, pr_ur
     return '\n'.join(lines).strip()
 
 
+def aggregate_changelog_from_prs(prs_json_path: str) -> str:
+    """
+    Aggregate changelog entries from multiple PRs.
+    
+    Args:
+        prs_json_path: Path to JSON file containing PR data
+        
+    Returns:
+        Aggregated changelog text with all entries organized by category
+    """
+    # Read PRs from file
+    with open(prs_json_path, 'r') as f:
+        prs = json.load(f)
+    
+    # Collect all entries by category across all PRs
+    all_categories = {}
+    
+    for pr in prs:
+        pr_number = pr['number']
+        pr_url = pr['url']
+        author = pr['author']
+        author_url = pr['author_url']
+        pr_body = pr['body']
+        
+        # Extract and parse release notes
+        release_notes = extract_release_notes_section(pr_body)
+        if release_notes is None or is_opt_out(release_notes):
+            continue
+        
+        categories = parse_release_notes(release_notes)
+        
+        # Format and collect entries
+        for category, entries in categories.items():
+            if category not in all_categories:
+                all_categories[category] = []
+            
+            # Add each entry with PR attribution
+            for entry in entries:
+                # Add PR link and author attribution if not already present
+                if f"#{pr_number}" not in entry and pr_url not in entry:
+                    formatted_entry = f"{entry} [#{pr_number}]({pr_url}) [{author}]({author_url})"
+                else:
+                    formatted_entry = entry
+                
+                # Avoid duplicates
+                if formatted_entry not in all_categories[category]:
+                    all_categories[category].append(formatted_entry)
+    
+    # Generate final changelog content
+    category_order = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"]
+    changelog_lines = []
+    
+    for category in category_order:
+        if category in all_categories and all_categories[category]:
+            changelog_lines.append(f"### {category}")
+            for entry in all_categories[category]:
+                changelog_lines.append(f"- {entry}")
+            changelog_lines.append("")
+    
+    return '\n'.join(changelog_lines).strip()
+
+
 def main():
     """Main entry point for the script."""
     if len(sys.argv) < 2:
@@ -210,6 +272,7 @@ def main():
         print("  validate <pr_body>        - Validate release notes", file=sys.stderr)
         print("  extract <pr_body>         - Extract and parse release notes", file=sys.stderr)
         print("  format <pr_body> <pr_number> <pr_url> <author> <author_url> - Format for changelog", file=sys.stderr)
+        print("  aggregate <prs_json_file> - Aggregate changelog from multiple PRs", file=sys.stderr)
         sys.exit(1)
     
     command = sys.argv[1]
@@ -270,6 +333,24 @@ def main():
         formatted = format_for_changelog(categories, pr_number, pr_url, author, author_url)
         print(formatted)
         sys.exit(0)
+    
+    elif command == "aggregate":
+        if len(sys.argv) < 3:
+            print("Error: aggregate requires prs_json_file", file=sys.stderr)
+            sys.exit(1)
+        
+        prs_json_path = sys.argv[2]
+        
+        try:
+            changelog = aggregate_changelog_from_prs(prs_json_path)
+            if changelog:
+                print(changelog)
+            else:
+                print("No significant changes documented.")
+            sys.exit(0)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
     
     else:
         print(f"Error: Unknown command '{command}'", file=sys.stderr)

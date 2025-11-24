@@ -475,6 +475,151 @@ None
         self.assertEqual(formatted, "")
 
 
+class TestAggregateChangelog(unittest.TestCase):
+    """Test the aggregate_changelog_from_prs function."""
+    
+    def setUp(self):
+        """Create a temporary directory for test files."""
+        import tempfile
+        self.test_dir = tempfile.mkdtemp()
+    
+    def tearDown(self):
+        """Clean up temporary directory."""
+        import shutil
+        shutil.rmtree(self.test_dir)
+    
+    def test_aggregate_multiple_prs(self):
+        """Test aggregating changelog from multiple PRs."""
+        import os
+        import json
+        
+        prs = [
+            {
+                "number": 123,
+                "url": "https://github.com/test/repo/pull/123",
+                "author": "user1",
+                "author_url": "https://github.com/user1",
+                "body": """## Release Notes
+### Fixed
+- Fixed bug A
+- Fixed bug B
+"""
+            },
+            {
+                "number": 124,
+                "url": "https://github.com/test/repo/pull/124",
+                "author": "user2",
+                "author_url": "https://github.com/user2",
+                "body": """## Release Notes
+### Added
+- Added feature X
+
+### Fixed
+- Fixed bug C
+"""
+            },
+            {
+                "number": 125,
+                "url": "https://github.com/test/repo/pull/125",
+                "author": "user3",
+                "author_url": "https://github.com/user3",
+                "body": """## Release Notes
+NONE
+"""
+            }
+        ]
+        
+        # Write PRs to file
+        prs_file = os.path.join(self.test_dir, 'prs.json')
+        with open(prs_file, 'w') as f:
+            json.dump(prs, f)
+        
+        # Aggregate
+        result = prn.aggregate_changelog_from_prs(prs_file)
+        
+        # Verify structure
+        self.assertIn("### Added", result)
+        self.assertIn("### Fixed", result)
+        
+        # Verify entries are present with PR links
+        self.assertIn("Added feature X", result)
+        self.assertIn("[#124]", result)
+        self.assertIn("Fixed bug A", result)
+        self.assertIn("[#123]", result)
+        self.assertIn("Fixed bug B", result)
+        self.assertIn("Fixed bug C", result)
+        
+        # Verify order: Added comes before Fixed
+        added_pos = result.index("### Added")
+        fixed_pos = result.index("### Fixed")
+        self.assertLess(added_pos, fixed_pos)
+        
+        # Verify opt-out PR is not included
+        self.assertNotIn("#125", result)
+    
+    def test_aggregate_with_duplicates(self):
+        """Test that duplicate entries are removed during aggregation."""
+        import os
+        import json
+        
+        prs = [
+            {
+                "number": 123,
+                "url": "https://github.com/test/repo/pull/123",
+                "author": "user1",
+                "author_url": "https://github.com/user1",
+                "body": """## Release Notes
+### Fixed
+- Fixed bug A
+"""
+            },
+            {
+                "number": 124,
+                "url": "https://github.com/test/repo/pull/124",
+                "author": "user1",
+                "author_url": "https://github.com/user1",
+                "body": """## Release Notes
+### Fixed
+- Fixed bug A
+"""
+            }
+        ]
+        
+        # Write PRs to file
+        prs_file = os.path.join(self.test_dir, 'prs.json')
+        with open(prs_file, 'w') as f:
+            json.dump(prs, f)
+        
+        # Aggregate
+        result = prn.aggregate_changelog_from_prs(prs_file)
+        
+        # Count occurrences - should only appear once
+        # The entry will have PR attribution, so we check for the base text
+        lines = [line for line in result.split('\n') if 'Fixed bug A' in line]
+        # Should have 2 entries (one from each PR with different PR numbers)
+        self.assertEqual(len(lines), 2)
+        self.assertIn("#123", result)
+        self.assertIn("#124", result)
+    
+    def test_aggregate_empty_prs(self):
+        """Test aggregating with no PRs."""
+        import os
+        import json
+        
+        prs = []
+        
+        # Write PRs to file
+        prs_file = os.path.join(self.test_dir, 'prs.json')
+        with open(prs_file, 'w') as f:
+            json.dump(prs, f)
+        
+        # Aggregate
+        result = prn.aggregate_changelog_from_prs(prs_file)
+        
+        # Should return empty string
+        self.assertEqual(result, "")
+
+
 def run_tests():
     """Run all tests."""
     # Create test suite
@@ -489,6 +634,7 @@ def run_tests():
     suite.addTests(loader.loadTestsFromTestCase(TestValidateReleaseNotes))
     suite.addTests(loader.loadTestsFromTestCase(TestFormatForChangelog))
     suite.addTests(loader.loadTestsFromTestCase(TestIntegration))
+    suite.addTests(loader.loadTestsFromTestCase(TestAggregateChangelog))
     
     # Run tests
     runner = unittest.TextTestRunner(verbosity=2)
