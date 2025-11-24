@@ -11,11 +11,11 @@ import sys
 import os
 import importlib.util
 
-# Load the parse-release-notes.py module (has hyphens, can't import normally)
+# Load the release-notes.py module (has hyphens, can't import normally)
 script_dir = os.path.dirname(os.path.abspath(__file__))
-script_path = os.path.join(script_dir, 'parse-release-notes.py')
+script_path = os.path.join(script_dir, 'release-notes.py')
 
-spec = importlib.util.spec_from_file_location("parse_release_notes", script_path)
+spec = importlib.util.spec_from_file_location("release_notes", script_path)
 prn = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(prn)
 

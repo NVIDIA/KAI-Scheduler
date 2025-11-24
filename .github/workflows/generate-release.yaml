@@ -150,7 +150,7 @@ jobs:
         id: generate_changelog
         run: |
           # Use the Python script to format changelog from all PRs
-          python3 .github/scripts/parse-release-notes.py format prs.json > changelog_entries.txt
+          python3 .github/scripts/release-notes.py format prs.json > changelog_entries.txt
           
           # Read the generated content
           CHANGELOG_ENTRIES=$(cat changelog_entries.txt)

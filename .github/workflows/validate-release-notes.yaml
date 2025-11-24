@@ -43,7 +43,7 @@ jobs:
           PR_BODY=$(cat pr_body.txt)
           
           # Run validation script
-          RESULT=$(python3 .github/scripts/parse-release-notes.py validate "$PR_BODY")
+          RESULT=$(python3 .github/scripts/release-notes.py validate "$PR_BODY")
           echo "result=$RESULT" >> $GITHUB_OUTPUT
           
           # Extract validation status

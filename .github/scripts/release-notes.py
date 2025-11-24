@@ -224,7 +224,7 @@ def format_changelog_from_prs(prs_json_path: str) -> str:
 def main():
     """Main entry point for the script."""
     if len(sys.argv) < 2:
-        print("Usage: parse-release-notes.py <command> [args...]", file=sys.stderr)
+        print("Usage: release-notes.py <command> [args...]", file=sys.stderr)
         print("Commands:", file=sys.stderr)
         print("  validate <pr_body>        - Validate release notes", file=sys.stderr)
         print("  format <prs_json_file>    - Format changelog from multiple PRs", file=sys.stderr)
