@@ -27,11 +27,12 @@ func (su *defaultStatusUpdater) SyncPodGroupsWithPendingUpdates(podGroups []*eng
 		usedKeys[key] = true
 		pgLatestUpdate, inFlightUpdateFound, appliedUpdateFound := su.getLatestPgUpdate(key)
 		if !inFlightUpdateFound && !appliedUpdateFound {
+			log.InfraLogger.V(1).Infof("SyncPodGroupsWithPendingUpdates: podGroup %s, generation: %d, resourceVersion: %s, no update found", podGroups[i].Name, podGroups[i].Generation, podGroups[i].ResourceVersion)
 			continue
 		}
 		podGroup := pgLatestUpdate.object.(*enginev2alpha2.PodGroup)
 		podGroupsyncResults := su.syncPodGroup(podGroup, podGroups[i])
-		log.StatusUpdaterLogger.V(1).Infof("SyncPodGroupsWithPendingUpdates: podGroup %s, generation: %d, resourceVersion: %s, syncResults: %s", podGroups[i].Name, podGroups[i].Generation, podGroups[i].ResourceVersion, podGroupsyncResults)
+		log.InfraLogger.V(1).Infof("SyncPodGroupsWithPendingUpdates: podGroup %s, generation: %d, resourceVersion: %s, syncResults: %s", podGroups[i].Name, podGroups[i].Generation, podGroups[i].ResourceVersion, podGroupsyncResults)
 		// Delete the inflight update if it was applied + the pod group in the lister matches the inFlight
 		if podGroupsyncResults != snapshotStatusIsOlder && appliedUpdateFound {
 			su.appliedPodGroupUpdates.Delete(key)
