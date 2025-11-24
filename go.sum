@@ -490,8 +490,8 @@ k8s.io/csi-translation-lib v0.34.1 h1:8+QMIWBwPGFsqWw9eAvimA2GaHXGgLLYT61I1NzDnX
 k8s.io/csi-translation-lib v0.34.1/go.mod h1:QXytPJ1KzYQaiMgVm82ANG+RGAUf276m8l9gFT+R6Xg=
 k8s.io/dynamic-resource-allocation v0.34.1 h1:pd9qhOeAFkn8eOO4BthAiGHQc8pu+N6TK/2Fj+jaPwU=
 k8s.io/dynamic-resource-allocation v0.34.1/go.mod h1:Zlpqyh6EKhTVoQDe5BS31/8oMXGfG6c12ydj3ChXyuw=
-k8s.io/endpointslice v0.34.1 h1:+bxZVXN+6NUCyur42p6UkqBmSvXw6FChrwvvnOSbeho=
-k8s.io/endpointslice v0.34.1/go.mod h1:70gpj+tfjoAXm3rPQhAdPAMywVtSPnOTSaau/hTeAYg=
+k8s.io/endpointslice v0.34.2 h1:rwG7vAB2Q3/GPeF7lOSvDSRhg184GSx1VHiqJ//2Ehw=
+k8s.io/endpointslice v0.34.2/go.mod h1:YhcGfLXNyci+LOcTPyQkWosp+iUuXgVEIxWGlhLPyxU=
 k8s.io/externaljwt v0.34.1 h1:IPu6qFFAazvTvrl/dd72KsQv2X0d95nLQaqizJAeo68=
 k8s.io/externaljwt v0.34.1/go.mod h1:LIqFAVwSkcWVlP3c78wxe2VGmgDySxfqX/wwXzVrV/Q=
 k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
