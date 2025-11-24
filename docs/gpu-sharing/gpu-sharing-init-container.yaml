@@ -9,9 +9,7 @@ metadata:
     kai.scheduler/queue: default-queue
   annotations:
     gpu-fraction: "0.5"
-    # Specify an init container to receive the GPU fraction allocation
     gpu-fraction-container-name: "gpu-init"
-    gpu-fraction-container-type: "InitContainer"
 spec:
   schedulerName: kai-scheduler
   initContainers:
