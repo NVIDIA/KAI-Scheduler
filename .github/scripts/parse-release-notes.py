@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Parse and validate release notes from PR descriptions.
+"""
+
+import re
+import sys
+import json
+from typing import Dict, List, Optional, Tuple
+
+
+VALID_CATEGORIES = [
+    "Added",
+    "Changed",
+    "Deprecated",
+    "Removed",
+    "Fixed",
+    "Security"
+]
+
+
+def extract_release_notes_section(pr_body: str) -> Optional[str]:
+    """
+    Extract the Release Notes section from a PR body.
+    
+    Args:
+        pr_body: The full PR body text
+        
+    Returns:
+        The release notes section content, or None if not found
+    """
+    if not pr_body:
+        return None
+    
+    # Match from "## Release Notes" to the next "## " heading (level 2) or end of string
+    # (?m) enables multiline mode, ^## matches ## at start of line
+    # [\s\S]*? matches any character (including newlines) non-greedily
+    pattern = r'(?m)^##\s+Release\s+Notes\s+([\s\S]*?)(?=^##\s|\Z)'
+    match = re.search(pattern, pr_body, re.IGNORECASE)
+    
+    if not match:
+        return None
+    
+    return match.group(1).strip()
+
+
+def clean_content(content: str) -> str:
+    """
+    Remove HTML comments and extra whitespace from content.
+    
+    Args:
+        content: Raw content string
+        
+    Returns:
+        Cleaned content
+    """
+    # Remove HTML comments
+    content = re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
+    # Remove extra whitespace
+    content = '\n'.join(line.strip() for line in content.split('\n'))
+    # Remove multiple consecutive newlines
+    content = re.sub(r'\n\s*\n', '\n', content)
+    return content.strip()
+
+
+def is_opt_out(content: str) -> bool:
+    """
+    Check if the release notes section is an opt-out (NONE).
+    
+    Args:
+        content: The release notes content
+        
+    Returns:
+        True if this is an opt-out
+    """
+    cleaned = clean_content(content)
+    return cleaned.upper() == 'NONE'
+
+
+def parse_release_notes(content: str) -> Dict[str, List[str]]:
+    """
+    Parse release notes content into categories and entries.
+    
+    Args:
+        content: The release notes content
+        
+    Returns:
+        Dictionary mapping category names to lists of entries
+    """
+    cleaned = clean_content(content)
+    categories = {}
+    current_category = None
+    
+    for line in cleaned.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Check if this is a category heading
+        category_match = re.match(r'^###\s+(.+)$', line)
+        if category_match:
+            category = category_match.group(1).strip()
+            if category in VALID_CATEGORIES:
+                current_category = category
+                if current_category not in categories:
+                    categories[current_category] = []
+            else:
+                # Reset current_category for invalid categories
+                # This prevents entries under invalid categories from being
+                # added to the previous valid category
+                current_category = None
+            continue
+        
+        # Check if this is a list item
+        if line.startswith('-') or line.startswith('*'):
+            if current_category:
+                entry = line[1:].strip()
+                if entry:
+                    categories[current_category].append(entry)
+    
+    return categories
+
+
+def validate_release_notes(pr_body: str) -> Tuple[bool, str, Optional[Dict[str, List[str]]]]:
+    """
+    Validate release notes in a PR body.
+    
+    Args:
+        pr_body: The full PR body text
+        
+    Returns:
+        Tuple of (is_valid, message, parsed_categories)
+    """
+    # Extract the release notes section
+    release_notes = extract_release_notes_section(pr_body)
+    
+    if release_notes is None:
+        return False, "Release Notes section not found in PR description", None
+    
+    # Check for opt-out
+    if is_opt_out(release_notes):
+        return True, "Release notes opted out (NONE)", None
+    
+    # Parse the release notes
+    categories = parse_release_notes(release_notes)
+    
+    # Validate that we have at least one category with entries
+    if not categories:
+        return False, "Release notes must contain at least one valid category (Added, Changed, Deprecated, Removed, Fixed, Security) with entries, or 'NONE' to opt out", None
+    
+    # Check that each category has at least one entry
+    empty_categories = [cat for cat, entries in categories.items() if not entries]
+    if empty_categories:
+        return False, f"Categories {', '.join(empty_categories)} have no entries", None
+    
+    return True, "Release notes are valid", categories
+
+
+def format_for_changelog(categories: Dict[str, List[str]], pr_number: int, pr_url: str, author: str, author_url: str) -> str:
+    """
+    Format parsed release notes for inclusion in CHANGELOG.md.
+    
+    Args:
+        categories: Dictionary of categories and their entries
+        pr_number: PR number
+        pr_url: PR URL
+        author: Author username
+        author_url: Author profile URL
+        
+    Returns:
+        Formatted changelog text
+    """
+    lines = []
+    
+    # Order categories according to Keep a Changelog convention
+    category_order = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"]
+    
+    for category in category_order:
+        if category not in categories:
+            continue
+        
+        lines.append(f"### {category}")
+        # Deduplicate entries while preserving order
+        seen = set()
+        unique_entries = []
+        for entry in categories[category]:
+            if entry not in seen:
+                seen.add(entry)
+                unique_entries.append(entry)
+        
+        for entry in unique_entries:
+            # Add PR link and author attribution if not already present
+            if f"#{pr_number}" not in entry and pr_url not in entry:
+                lines.append(f"- {entry} [#{pr_number}]({pr_url}) [{author}]({author_url})")
+            else:
+                lines.append(f"- {entry}")
+        lines.append("")
+    
+    return '\n'.join(lines).strip()
+
+
+def main():
+    """Main entry point for the script."""
+    if len(sys.argv) < 2:
+        print("Usage: parse-release-notes.py <command> [args...]", file=sys.stderr)
+        print("Commands:", file=sys.stderr)
+        print("  validate <pr_body>        - Validate release notes", file=sys.stderr)
+        print("  extract <pr_body>         - Extract and parse release notes", file=sys.stderr)
+        print("  format <pr_body> <pr_number> <pr_url> <author> <author_url> - Format for changelog", file=sys.stderr)
+        sys.exit(1)
+    
+    command = sys.argv[1]
+    
+    if command == "validate":
+        if len(sys.argv) < 3:
+            print("Error: PR body required", file=sys.stderr)
+            sys.exit(1)
+        
+        pr_body = sys.argv[2]
+        is_valid, message, categories = validate_release_notes(pr_body)
+        
+        result = {
+            "valid": is_valid,
+            "message": message,
+            "categories": categories
+        }
+        print(json.dumps(result))
+        sys.exit(0 if is_valid else 1)
+    
+    elif command == "extract":
+        if len(sys.argv) < 3:
+            print("Error: PR body required", file=sys.stderr)
+            sys.exit(1)
+        
+        pr_body = sys.argv[2]
+        release_notes = extract_release_notes_section(pr_body)
+        
+        if release_notes is None:
+            print(json.dumps({"error": "Release notes section not found"}))
+            sys.exit(1)
+        
+        if is_opt_out(release_notes):
+            print(json.dumps({"opt_out": True}))
+            sys.exit(0)
+        
+        categories = parse_release_notes(release_notes)
+        print(json.dumps({"categories": categories}))
+        sys.exit(0)
+    
+    elif command == "format":
+        if len(sys.argv) < 7:
+            print("Error: format requires pr_body, pr_number, pr_url, author, author_url", file=sys.stderr)
+            sys.exit(1)
+        
+        pr_body = sys.argv[2]
+        pr_number = int(sys.argv[3])
+        pr_url = sys.argv[4]
+        author = sys.argv[5]
+        author_url = sys.argv[6]
+        
+        release_notes = extract_release_notes_section(pr_body)
+        if release_notes is None or is_opt_out(release_notes):
+            print("")
+            sys.exit(0)
+        
+        categories = parse_release_notes(release_notes)
+        formatted = format_for_changelog(categories, pr_number, pr_url, author, author_url)
+        print(formatted)
+        sys.exit(0)
+    
+    else:
+        print(f"Error: Unknown command '{command}'", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+
+

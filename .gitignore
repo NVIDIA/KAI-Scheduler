@@ -9,6 +9,7 @@ launch.json
 coverage.out
 vendor/
 /generate-dep.go
+__pycache__/
 
 cmd/fairshare-simulator/fairshare-simulator
 cmd/snapshot-tool/snapshot-tool

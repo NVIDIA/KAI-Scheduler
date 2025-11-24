@@ -1,0 +1,392 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+name: Generate Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+env:
+  DOCKER_REGISTRY: "ghcr.io/nvidia/kai-scheduler"
+
+jobs:
+  generate-changelog-and-release:
+    name: Generate Changelog and Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tag comparison
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF_NAME}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Get previous release tag
+        id: previous_tag
+        run: |
+          # Get the previous release tag
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p')
+          if [ -z "$PREVIOUS_TAG" ]; then
+            # If no previous tag, use first commit
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+          echo "Previous tag: $PREVIOUS_TAG"
+
+      - name: Get merged PRs since last release
+        id: get_prs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previousTag = '${{ steps.previous_tag.outputs.previous_tag }}';
+            const currentTag = '${{ steps.version.outputs.version }}';
+            
+            console.log(`Comparing ${previousTag}...${currentTag}`);
+            
+            // Get commits between tags
+            const comparison = await github.rest.repos.compareCommitsWithBasehead({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              basehead: `${previousTag}...${currentTag}`
+            });
+            
+            console.log(`Found ${comparison.data.commits.length} commits`);
+            
+            // Extract PR numbers from commit messages
+            // Strategy: Look for the first PR number in the commit message
+            // This handles merge commits, squash commits, and cherry-picks correctly
+            const prNumbers = new Set();
+            for (const commit of comparison.data.commits) {
+              const message = commit.commit.message;
+              
+              // Try to find PR number in various formats:
+              // 1. "Merge pull request #123" (merge commits)
+              // 2. "Title (#123)" (squash commits)
+              // 3. "Title (#123) (#456)" (cherry-picks - take first one)
+              const match = message.match(/#(\d+)/);
+              
+              if (match) {
+                const prNumber = parseInt(match[1]);
+                prNumbers.add(prNumber);
+                console.log(`Commit ${commit.sha.substring(0, 7)}: "${message.split('\n')[0]}" -> PR #${prNumber}`);
+              } else {
+                console.log(`Commit ${commit.sha.substring(0, 7)}: No PR reference found in "${message.split('\n')[0]}"`);
+              }
+            }
+            
+            console.log(`Found ${prNumbers.size} unique PRs`);
+            
+            // Fetch PR details
+            const prs = [];
+            for (const prNumber of prNumbers) {
+              try {
+                const pr = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: prNumber
+                });
+                
+                if (pr.data.merged_at) {
+                  prs.push({
+                    number: pr.data.number,
+                    title: pr.data.title,
+                    body: pr.data.body || '',
+                    url: pr.data.html_url,
+                    author: pr.data.user.login,
+                    author_url: pr.data.user.html_url
+                  });
+                }
+              } catch (error) {
+                console.log(`Could not fetch PR #${prNumber}: ${error.message}`);
+              }
+            }
+            
+            console.log(`Retrieved details for ${prs.length} merged PRs`);
+            
+            // Save to file for next step
+            const fs = require('fs');
+            fs.writeFileSync('prs.json', JSON.stringify(prs, null, 2));
+            
+            return prs.length;
+
+      - name: Generate changelog entries
+        id: generate_changelog
+        run: |
+          # Read PRs from file
+          PRS=$(cat prs.json)
+          
+          # Initialize changelog content
+          CHANGELOG_CONTENT=""
+          
+          # Process each PR
+          echo "$PRS" | python3 -c "
+          import sys
+          import json
+          import subprocess
+          
+          prs = json.load(sys.stdin)
+          
+          # Collect all entries by category
+          all_categories = {}
+          
+          for pr in prs:
+              pr_number = pr['number']
+              pr_url = pr['url']
+              author = pr['author']
+              author_url = pr['author_url']
+              pr_body = pr['body']
+              
+              # Format the changelog entry for this PR
+              result = subprocess.run(
+                  ['python3', '.github/scripts/parse-release-notes.py', 'format', 
+                   pr_body, str(pr_number), pr_url, author, author_url],
+                  capture_output=True,
+                  text=True
+              )
+              
+              if result.returncode == 0 and result.stdout.strip():
+                  formatted = result.stdout.strip()
+                  
+                  # Parse the formatted output to extract categories and entries
+                  current_category = None
+                  for line in formatted.split('\n'):
+                      line = line.strip()
+                      if line.startswith('### '):
+                          current_category = line[4:].strip()
+                          if current_category not in all_categories:
+                              all_categories[current_category] = []
+                      elif line.startswith('- ') and current_category:
+                          all_categories[current_category].append(line[2:])
+          
+          # Generate final changelog content
+          category_order = ['Added', 'Changed', 'Deprecated', 'Removed', 'Fixed', 'Security']
+          changelog_lines = []
+          
+          for category in category_order:
+              if category in all_categories and all_categories[category]:
+                  changelog_lines.append(f'### {category}')
+                  for entry in all_categories[category]:
+                      changelog_lines.append(f'- {entry}')
+                  changelog_lines.append('')
+          
+          print('\n'.join(changelog_lines))
+          " > changelog_entries.txt
+          
+          # Read the generated content
+          CHANGELOG_ENTRIES=$(cat changelog_entries.txt)
+          
+          if [ -z "$CHANGELOG_ENTRIES" ]; then
+            echo "No release notes found in merged PRs"
+            CHANGELOG_ENTRIES="No significant changes documented."
+          fi
+          
+          # Save for later use
+          echo "$CHANGELOG_ENTRIES" > changelog_entries.txt
+          
+          echo "Generated changelog entries:"
+          cat changelog_entries.txt
+
+      - name: Update CHANGELOG.md on appropriate branch
+        id: update_changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DATE=$(date +%Y-%m-%d)
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Determine which branch to update based on version
+          # Extract major.minor from version (e.g., v0.9.3 -> v0.9)
+          if [[ $VERSION =~ ^v([0-9]+)\.([0-9]+)\. ]]; then
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+            VERSION_BRANCH="v${MAJOR}.${MINOR}"
+            echo "Version branch: $VERSION_BRANCH"
+          else
+            echo "Could not parse version: $VERSION"
+            exit 1
+          fi
+          
+          # Try to checkout the version branch, fall back to main if it doesn't exist
+          git fetch origin
+          if git ls-remote --heads origin "$VERSION_BRANCH" | grep -q "$VERSION_BRANCH"; then
+            echo "Checking out existing branch: $VERSION_BRANCH"
+            git checkout "$VERSION_BRANCH"
+            TARGET_BRANCH="$VERSION_BRANCH"
+          else
+            echo "Branch $VERSION_BRANCH does not exist, using main"
+            git checkout main
+            TARGET_BRANCH="main"
+          fi
+          
+          echo "target_branch=$TARGET_BRANCH" >> $GITHUB_OUTPUT
+          
+          # Check if CHANGELOG.md exists
+          if [ ! -f CHANGELOG.md ]; then
+            echo "Error: CHANGELOG.md not found"
+            exit 1
+          fi
+          
+          # Read the generated changelog entries
+          CHANGELOG_ENTRIES=$(cat changelog_entries.txt)
+          
+          # Update CHANGELOG.md using Python
+          python3 << EOF
+          import re
+          
+          version = "$VERSION"
+          date = "$DATE"
+          
+          with open('CHANGELOG.md', 'r') as f:
+              content = f.read()
+          
+          with open('changelog_entries.txt', 'r') as f:
+              changelog_entries = f.read()
+          
+          # Create new version section
+          new_section = f"## [{version}] - {date}\n\n{changelog_entries}"
+          
+          # Find the Unreleased section and insert after it
+          unreleased_pattern = r'(## \[Unreleased\]\s*\n)'
+          
+          # Insert after Unreleased section
+          updated_content = re.sub(
+              unreleased_pattern,
+              r'\1\n' + new_section + '\n\n',
+              content,
+              count=1
+          )
+          
+          with open('CHANGELOG.md', 'w') as f:
+              f.write(updated_content)
+          
+          print(f"✅ Updated CHANGELOG.md with {version}")
+          EOF
+          
+          # Commit and push if there are changes
+          # TARGET_BRANCH is already set above
+          git add CHANGELOG.md
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit to CHANGELOG.md"
+          else
+            git commit -m "Update CHANGELOG.md for $VERSION"
+            git push origin "$TARGET_BRANCH"
+            echo "✅ CHANGELOG.md committed and pushed to $TARGET_BRANCH"
+          fi
+          
+          # If we updated a version branch, also update main
+          if [ "$TARGET_BRANCH" != "main" ]; then
+            echo "Also updating main branch..."
+            git fetch origin main
+            git checkout main
+            
+            # Apply the same CHANGELOG update to main
+            python3 << EOF
+          import re
+          
+          version = "$VERSION"
+          date = "$DATE"
+          
+          with open('CHANGELOG.md', 'r') as f:
+              content = f.read()
+          
+          with open('changelog_entries.txt', 'r') as f:
+              changelog_entries = f.read()
+          
+          # Create new version section
+          new_section = f"## [{version}] - {date}\n\n{changelog_entries}"
+          
+          # Find the Unreleased section and insert after it
+          unreleased_pattern = r'(## \[Unreleased\]\s*\n)'
+          
+          # Insert after Unreleased section
+          updated_content = re.sub(
+              unreleased_pattern,
+              r'\1\n' + new_section + '\n\n',
+              content,
+              count=1
+          )
+          
+          with open('CHANGELOG.md', 'w') as f:
+              f.write(updated_content)
+          
+          print(f"✅ Updated CHANGELOG.md on main with {version}")
+          EOF
+            
+            git add CHANGELOG.md
+            if git diff --staged --quiet; then
+              echo "No changes to commit to main"
+            else
+              git commit -m "Update CHANGELOG.md for $VERSION"
+              git push origin main
+              echo "✅ CHANGELOG.md also committed and pushed to main"
+            fi
+          fi
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const version = '${{ steps.version.outputs.version }}';
+            const previousVersion = '${{ steps.version.outputs.previous_version }}';
+            const changelogEntries = fs.readFileSync('changelog_entries.txt', 'utf8');
+            
+            // Generate auto-generated release notes from GitHub
+            console.log(`Generating release notes from ${previousVersion} to ${version}`);
+            const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: version,
+              previous_tag_name: previousVersion
+            });
+            
+            // Extract only the "New Contributors" and "Full Changelog" sections from generated notes
+            const generatedBody = generatedNotes.body;
+            let additionalSections = '';
+            
+            // Look for "New Contributors" section
+            const newContributorsMatch = generatedBody.match(/## New Contributors[\s\S]*?(?=\n##|\n\*\*Full Changelog\*\*|\Z)/);
+            if (newContributorsMatch) {
+              additionalSections += '\n\n' + newContributorsMatch[0].trim();
+            }
+            
+            // Look for "Full Changelog" link
+            const fullChangelogMatch = generatedBody.match(/\*\*Full Changelog\*\*:.*$/m);
+            if (fullChangelogMatch) {
+              additionalSections += '\n\n' + fullChangelogMatch[0].trim();
+            }
+            
+            // Create release body with custom changelog + GitHub generated sections
+            const releaseBody = `${changelogEntries}${additionalSections}`;
+            
+            // Create the release
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: version,
+              name: version,
+              body: releaseBody,
+              draft: false,
+              prerelease: false
+            });
+            
+            console.log(`Created release ${version}`);

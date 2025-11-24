@@ -9,6 +9,21 @@
 
 <!-- What does this PR do and why? -->
 
+## Release Notes
+
+<!-- 
+Add release notes for this PR using Keep a Changelog format.
+Use categories: Added, Changed, Deprecated, Removed, Fixed, Security
+If no release notes needed, write: NONE
+
+Example:
+### Fixed
+- Fixed scheduler pod group status update conflict
+
+### Added
+- Added support for custom runtime classes
+-->
+
 ## Related Issues
 
 Fixes #
@@ -19,7 +34,6 @@ Fixes #
 
 - [ ] Self-reviewed
 - [ ] Added/updated tests (if needed)
-- [ ] Updated [CHANGELOG.md](/CHANGELOG.md) (if needed)
 - [ ] Updated documentation (if needed)
 
 ## Breaking Changes

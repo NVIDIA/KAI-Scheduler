@@ -30,7 +30,7 @@ Help us keep the docs clear and useful by fixing typos, updating outdated inform
 - Fork and Clone – Begin by forking the repository and cloning it to your local machine.
 - Create a Branch – Use a descriptive branch name, such as feature/add-cool-feature or bugfix/fix-issue123.
 - Make Changes – Keep your commits small, focused, and well-documented. For detailed build and test instructions, refer to [Building from Source](docs/developer/building-from-source.md).
-- Log Changes – For behavior-affecting changes (features, fixes, API changes), update the [changelog](CHANGELOG.md) file under the "Unreleased" section. Follow the format at [keepachangelog.com](https://keepachangelog.com/en/1.1.0/). Skip logging internal changes like refactoring or tests.
+- Document Release Notes – When opening a PR, fill in the **Release Notes** section in the PR description. Use the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format with categories like `Added`, `Changed`, `Fixed`, etc. If your changes don't warrant release notes (e.g., internal refactoring, test updates), write `NONE` in the Release Notes section. The changelog will be automatically generated from these notes when a release is created.
 - Submit a PR – Open a pull request and reference any relevant issues or discussions.
 - Coverage - Please look at the coverage change details and create unit tests, integration tests or end-to-end tests to cover new functionality or changes.
 
@@ -100,7 +100,7 @@ Each pull request should meet the following requirements:
 - All tests pass – Run the full test suite locally with: `make build validate test`
 - Test coverage – Add or update tests for any affected code.
 - Documentation – Update relevant documentation to reflect your changes.
-- Changes logged - If your changes warrant logging - like behavior changes (including bugfixes) or new features - add them to the [Changelog](CHANGELOG.md)
+- Release notes – Fill in the **Release Notes** section in the PR description following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format, or write `NONE` if not applicable
 - PR description – Fill out the pull request template completely
 
 ## Getting Help
