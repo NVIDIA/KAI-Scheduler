@@ -85,29 +85,6 @@ func TestGetFractionContainerRef(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						constants.GpuFractionContainerName: "init-container",
-						constants.GpuFractionContainerType: string(gpusharingconfigmap.InitContainer),
-					},
-				},
-				Spec: v1.PodSpec{
-					InitContainers: []v1.Container{
-						{Name: "init-container"},
-					},
-					Containers: []v1.Container{
-						{Name: "container-0"},
-					},
-				},
-			},
-			wantIndex: 0,
-			wantType:  gpusharingconfigmap.InitContainer,
-			wantName:  "init-container",
-			wantErr:   false,
-		},
-		{
-			name: "implicit first init container",
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						constants.GpuFractionContainerType: string(gpusharingconfigmap.InitContainer),
 					},
 				},
 				Spec: v1.PodSpec{
@@ -130,7 +107,6 @@ func TestGetFractionContainerRef(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						constants.GpuFractionContainerName: "init-container-1",
-						constants.GpuFractionContainerType: string(gpusharingconfigmap.InitContainer),
 					},
 				},
 				Spec: v1.PodSpec{
@@ -165,28 +141,7 @@ func TestGetFractionContainerRef(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			errContains: "fraction container of type RegularContainer with name non-existent not found",
-		},
-		{
-			name: "container not found in init containers",
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						constants.GpuFractionContainerName: "non-existent",
-						constants.GpuFractionContainerType: string(gpusharingconfigmap.InitContainer),
-					},
-				},
-				Spec: v1.PodSpec{
-					InitContainers: []v1.Container{
-						{Name: "init-container-0"},
-					},
-					Containers: []v1.Container{
-						{Name: "container-0"},
-					},
-				},
-			},
-			wantErr:     true,
-			errContains: "fraction container of type InitContainer with name non-existent not found",
+			errContains: "container with name non-existent not found for fraction request",
 		},
 		{
 			name: "annotation without type defaults to regular containers",

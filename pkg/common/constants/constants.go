@@ -34,7 +34,6 @@ const (
 	PodGroupAnnotationForPod = "pod-group-name"
 	GpuFraction              = "gpu-fraction"
 	GpuFractionContainerName = "gpu-fraction-container-name"
-	GpuFractionContainerType = "gpu-fraction-container-type"
 	GpuMemory                = "gpu-memory"
 	ReceivedResourceType     = "received-resource-type"
 	GpuFractionsNumDevices   = "gpu-fraction-num-devices"
