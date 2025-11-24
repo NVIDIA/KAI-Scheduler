@@ -119,6 +119,14 @@ crdupgrader:
     pullPolicy: IfNotPresent
     # tag: ""  # Optional: Override global.tag or Chart.AppVersion
 
+postCleanup:
+  image:
+    # using crd-upgrader image for kubectl availability
+    name: crd-upgrader
+    pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
+  serviceAccountName: post-delete-cleanup
+
 defaultQueue:
   createDefaultQueue: true
   parentName: default-parent-queue
