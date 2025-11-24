@@ -159,15 +159,15 @@ def validate_release_notes(pr_body: str) -> Tuple[bool, str, Optional[Dict[str, 
     return True, "Release notes are valid", categories
 
 
-def aggregate_changelog_from_prs(prs_json_path: str) -> str:
+def format_changelog_from_prs(prs_json_path: str) -> str:
     """
-    Aggregate changelog entries from multiple PRs.
+    Format changelog entries from multiple PRs.
     
     Args:
         prs_json_path: Path to JSON file containing PR data
         
     Returns:
-        Aggregated changelog text with all entries organized by category
+        Formatted changelog text with all entries organized by category
     """
     # Read PRs from file
     with open(prs_json_path, 'r') as f:
@@ -227,7 +227,7 @@ def main():
         print("Usage: parse-release-notes.py <command> [args...]", file=sys.stderr)
         print("Commands:", file=sys.stderr)
         print("  validate <pr_body>        - Validate release notes", file=sys.stderr)
-        print("  aggregate <prs_json_file> - Aggregate changelog from multiple PRs", file=sys.stderr)
+        print("  format <prs_json_file>    - Format changelog from multiple PRs", file=sys.stderr)
         sys.exit(1)
     
     command = sys.argv[1]
@@ -248,15 +248,15 @@ def main():
         print(json.dumps(result))
         sys.exit(0 if is_valid else 1)
     
-    elif command == "aggregate":
+    elif command == "format":
         if len(sys.argv) < 3:
-            print("Error: aggregate requires prs_json_file", file=sys.stderr)
+            print("Error: format requires prs_json_file", file=sys.stderr)
             sys.exit(1)
         
         prs_json_path = sys.argv[2]
         
         try:
-            changelog = aggregate_changelog_from_prs(prs_json_path)
+            changelog = format_changelog_from_prs(prs_json_path)
             if changelog:
                 print(changelog)
             else:

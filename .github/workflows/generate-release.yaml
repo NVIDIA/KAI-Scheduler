@@ -149,8 +149,8 @@ jobs:
       - name: Generate changelog entries
         id: generate_changelog
         run: |
-          # Use the Python script to aggregate changelog from all PRs
-          python3 .github/scripts/parse-release-notes.py aggregate prs.json > changelog_entries.txt
+          # Use the Python script to format changelog from all PRs
+          python3 .github/scripts/parse-release-notes.py format prs.json > changelog_entries.txt
           
           # Read the generated content
           CHANGELOG_ENTRIES=$(cat changelog_entries.txt)

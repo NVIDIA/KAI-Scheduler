@@ -377,8 +377,8 @@ None
         self.assertTrue(prn.is_opt_out(release_notes))
 
 
-class TestAggregateChangelog(unittest.TestCase):
-    """Test the aggregate_changelog_from_prs function."""
+class TestFormatChangelog(unittest.TestCase):
+    """Test the format_changelog_from_prs function."""
     
     def setUp(self):
         """Create a temporary directory for test files."""
@@ -390,8 +390,8 @@ class TestAggregateChangelog(unittest.TestCase):
         import shutil
         shutil.rmtree(self.test_dir)
     
-    def test_aggregate_multiple_prs(self):
-        """Test aggregating changelog from multiple PRs."""
+    def test_format_multiple_prs(self):
+        """Test formatting changelog from multiple PRs."""
         import os
         import json
         
@@ -436,8 +436,8 @@ NONE
         with open(prs_file, 'w') as f:
             json.dump(prs, f)
         
-        # Aggregate
-        result = prn.aggregate_changelog_from_prs(prs_file)
+        # Format
+        result = prn.format_changelog_from_prs(prs_file)
         
         # Verify structure
         self.assertIn("### Added", result)
@@ -459,8 +459,8 @@ NONE
         # Verify opt-out PR is not included
         self.assertNotIn("#125", result)
     
-    def test_aggregate_with_duplicates(self):
-        """Test that duplicate entries are removed during aggregation."""
+    def test_format_with_duplicates(self):
+        """Test that duplicate entries are removed during formatting."""
         import os
         import json
         
@@ -492,8 +492,8 @@ NONE
         with open(prs_file, 'w') as f:
             json.dump(prs, f)
         
-        # Aggregate
-        result = prn.aggregate_changelog_from_prs(prs_file)
+        # Format
+        result = prn.format_changelog_from_prs(prs_file)
         
         # Count occurrences - should only appear once
         # The entry will have PR attribution, so we check for the base text
@@ -503,8 +503,8 @@ NONE
         self.assertIn("#123", result)
         self.assertIn("#124", result)
     
-    def test_aggregate_empty_prs(self):
-        """Test aggregating with no PRs."""
+    def test_format_empty_prs(self):
+        """Test formatting with no PRs."""
         import os
         import json
         
@@ -515,8 +515,8 @@ NONE
         with open(prs_file, 'w') as f:
             json.dump(prs, f)
         
-        # Aggregate
-        result = prn.aggregate_changelog_from_prs(prs_file)
+        # Format
+        result = prn.format_changelog_from_prs(prs_file)
         
         # Should return empty string
         self.assertEqual(result, "")
@@ -535,7 +535,7 @@ def run_tests():
     suite.addTests(loader.loadTestsFromTestCase(TestParseReleaseNotes))
     suite.addTests(loader.loadTestsFromTestCase(TestValidateReleaseNotes))
     suite.addTests(loader.loadTestsFromTestCase(TestIntegration))
-    suite.addTests(loader.loadTestsFromTestCase(TestAggregateChangelog))
+    suite.addTests(loader.loadTestsFromTestCase(TestFormatChangelog))
     
     # Run tests
     runner = unittest.TextTestRunner(verbosity=2)
