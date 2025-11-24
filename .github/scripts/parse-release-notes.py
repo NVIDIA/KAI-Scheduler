@@ -159,49 +159,6 @@ def validate_release_notes(pr_body: str) -> Tuple[bool, str, Optional[Dict[str, 
     return True, "Release notes are valid", categories
 
 
-def format_for_changelog(categories: Dict[str, List[str]], pr_number: int, pr_url: str, author: str, author_url: str) -> str:
-    """
-    Format parsed release notes for inclusion in CHANGELOG.md.
-    
-    Args:
-        categories: Dictionary of categories and their entries
-        pr_number: PR number
-        pr_url: PR URL
-        author: Author username
-        author_url: Author profile URL
-        
-    Returns:
-        Formatted changelog text
-    """
-    lines = []
-    
-    # Order categories according to Keep a Changelog convention
-    category_order = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"]
-    
-    for category in category_order:
-        if category not in categories:
-            continue
-        
-        lines.append(f"### {category}")
-        # Deduplicate entries while preserving order
-        seen = set()
-        unique_entries = []
-        for entry in categories[category]:
-            if entry not in seen:
-                seen.add(entry)
-                unique_entries.append(entry)
-        
-        for entry in unique_entries:
-            # Add PR link and author attribution if not already present
-            if f"#{pr_number}" not in entry and pr_url not in entry:
-                lines.append(f"- {entry} [#{pr_number}]({pr_url}) [{author}]({author_url})")
-            else:
-                lines.append(f"- {entry}")
-        lines.append("")
-    
-    return '\n'.join(lines).strip()
-
-
 def aggregate_changelog_from_prs(prs_json_path: str) -> str:
     """
     Aggregate changelog entries from multiple PRs.
@@ -270,8 +227,6 @@ def main():
         print("Usage: parse-release-notes.py <command> [args...]", file=sys.stderr)
         print("Commands:", file=sys.stderr)
         print("  validate <pr_body>        - Validate release notes", file=sys.stderr)
-        print("  extract <pr_body>         - Extract and parse release notes", file=sys.stderr)
-        print("  format <pr_body> <pr_number> <pr_url> <author> <author_url> - Format for changelog", file=sys.stderr)
         print("  aggregate <prs_json_file> - Aggregate changelog from multiple PRs", file=sys.stderr)
         sys.exit(1)
     
@@ -292,47 +247,6 @@ def main():
         }
         print(json.dumps(result))
         sys.exit(0 if is_valid else 1)
-    
-    elif command == "extract":
-        if len(sys.argv) < 3:
-            print("Error: PR body required", file=sys.stderr)
-            sys.exit(1)
-        
-        pr_body = sys.argv[2]
-        release_notes = extract_release_notes_section(pr_body)
-        
-        if release_notes is None:
-            print(json.dumps({"error": "Release notes section not found"}))
-            sys.exit(1)
-        
-        if is_opt_out(release_notes):
-            print(json.dumps({"opt_out": True}))
-            sys.exit(0)
-        
-        categories = parse_release_notes(release_notes)
-        print(json.dumps({"categories": categories}))
-        sys.exit(0)
-    
-    elif command == "format":
-        if len(sys.argv) < 7:
-            print("Error: format requires pr_body, pr_number, pr_url, author, author_url", file=sys.stderr)
-            sys.exit(1)
-        
-        pr_body = sys.argv[2]
-        pr_number = int(sys.argv[3])
-        pr_url = sys.argv[4]
-        author = sys.argv[5]
-        author_url = sys.argv[6]
-        
-        release_notes = extract_release_notes_section(pr_body)
-        if release_notes is None or is_opt_out(release_notes):
-            print("")
-            sys.exit(0)
-        
-        categories = parse_release_notes(release_notes)
-        formatted = format_for_changelog(categories, pr_number, pr_url, author, author_url)
-        print(formatted)
-        sys.exit(0)
     
     elif command == "aggregate":
         if len(sys.argv) < 3:

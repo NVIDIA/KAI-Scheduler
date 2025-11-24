@@ -318,94 +318,6 @@ Some text but no categories
         self.assertIn("no entries", message)
 
 
-class TestFormatForChangelog(unittest.TestCase):
-    """Test the format_for_changelog function."""
-    
-    def test_format_single_category(self):
-        """Test formatting a single category."""
-        categories = {
-            "Fixed": ["Fixed a bug"]
-        }
-        result = prn.format_for_changelog(categories, 123, "https://github.com/test/repo/pull/123", "testuser", "https://github.com/testuser")
-        
-        self.assertIn("### Fixed", result)
-        self.assertIn("Fixed a bug", result)
-        self.assertIn("[#123]", result)
-        self.assertIn("[testuser]", result)
-    
-    def test_format_multiple_categories(self):
-        """Test formatting multiple categories."""
-        categories = {
-            "Added": ["Added feature"],
-            "Fixed": ["Fixed bug"]
-        }
-        result = prn.format_for_changelog(categories, 123, "https://github.com/test/repo/pull/123", "testuser", "https://github.com/testuser")
-        
-        self.assertIn("### Added", result)
-        self.assertIn("### Fixed", result)
-        # Added should come before Fixed (Keep a Changelog order)
-        self.assertLess(result.index("### Added"), result.index("### Fixed"))
-    
-    def test_format_preserves_category_order(self):
-        """Test that categories are ordered according to Keep a Changelog."""
-        categories = {
-            "Fixed": ["Fixed bug"],
-            "Added": ["Added feature"],
-            "Security": ["Security fix"]
-        }
-        result = prn.format_for_changelog(categories, 123, "https://github.com/test/repo/pull/123", "testuser", "https://github.com/testuser")
-        
-        # Check order: Added, Fixed, Security
-        added_pos = result.index("### Added")
-        fixed_pos = result.index("### Fixed")
-        security_pos = result.index("### Security")
-        
-        self.assertLess(added_pos, fixed_pos)
-        self.assertLess(fixed_pos, security_pos)
-    
-    def test_format_skips_missing_categories(self):
-        """Test that missing categories are skipped."""
-        categories = {
-            "Fixed": ["Fixed bug"]
-        }
-        result = prn.format_for_changelog(categories, 123, "https://github.com/test/repo/pull/123", "testuser", "https://github.com/testuser")
-        
-        self.assertNotIn("### Added", result)
-        self.assertNotIn("### Changed", result)
-    
-    def test_format_doesnt_duplicate_pr_link(self):
-        """Test that PR link is not duplicated if already present."""
-        categories = {
-            "Fixed": ["Fixed a bug [#123](https://github.com/test/repo/pull/123)"]
-        }
-        result = prn.format_for_changelog(categories, 123, "https://github.com/test/repo/pull/123", "testuser", "https://github.com/testuser")
-        
-        # Should not add PR link again
-        self.assertEqual(result.count("#123"), 1)
-    
-    def test_format_removes_duplicate_entries(self):
-        """Test that duplicate entries within a category are removed."""
-        categories = {
-            "Fixed": [
-                "Fixed a bug",
-                "Fixed another bug",
-                "Fixed a bug"  # Duplicate
-            ]
-        }
-        result = prn.format_for_changelog(categories, 123, "https://github.com/test/repo/pull/123", "testuser", "https://github.com/testuser")
-        
-        # Should only have 2 unique entries, not 3
-        lines = [line for line in result.split('\n') if line.startswith('- ')]
-        self.assertEqual(len(lines), 2, "Should have only 2 unique entries")
-        
-        # Verify both unique entries are present
-        self.assertIn("Fixed a bug", result)
-        self.assertIn("Fixed another bug", result)
-        
-        # Count occurrences - "Fixed a bug" should appear only once
-        self.assertEqual(result.count("Fixed a bug"), 1)
-
-
 class TestIntegration(unittest.TestCase):
     """Integration tests for complete workflows."""
     
@@ -434,20 +346,12 @@ Fixes #123"""
         self.assertIn("Fixed", categories, f"Categories parsed: {categories}")
         self.assertIn("Added", categories, f"Categories parsed: {categories}")
         
-        # Format
-        formatted = prn.format_for_changelog(categories, 123, "https://github.com/test/repo/pull/123", "testuser", "https://github.com/testuser")
-        
-        # Check output - Added should come before Fixed in Keep a Changelog order
-        self.assertIn("### Added", formatted)
-        self.assertIn("### Fixed", formatted)
-        self.assertIn("custom runtime classes", formatted)
-        self.assertIn("scheduler pod group", formatted)
-        self.assertIn("[#123]", formatted)
-        
-        # Verify order: Added comes before Fixed
-        added_pos = formatted.index("### Added")
-        fixed_pos = formatted.index("### Fixed")
-        self.assertLess(added_pos, fixed_pos, "Added should come before Fixed in changelog")
+        # Verify entries
+        self.assertEqual(len(categories["Added"]), 1)
+        self.assertEqual(len(categories["Fixed"]), 2)
+        self.assertIn("Added support for custom runtime classes", categories["Added"])
+        self.assertIn("Fixed scheduler pod group status update conflict", categories["Fixed"])
+        self.assertIn("Fixed memory leak in binder", categories["Fixed"])
     
     def test_full_workflow_opt_out(self):
         """Test complete workflow with opt-out."""
@@ -467,12 +371,10 @@ None
         self.assertTrue(is_valid)
         self.assertIsNone(categories)
         
-        # Format should return empty
+        # Verify opt-out is detected
         release_notes = prn.extract_release_notes_section(pr_body)
-        categories = prn.parse_release_notes(release_notes) if release_notes and not prn.is_opt_out(release_notes) else {}
-        formatted = prn.format_for_changelog(categories, 123, "https://github.com/test/repo/pull/123", "testuser", "https://github.com/testuser")
-        
-        self.assertEqual(formatted, "")
+        self.assertIsNotNone(release_notes)
+        self.assertTrue(prn.is_opt_out(release_notes))
 
 
 class TestAggregateChangelog(unittest.TestCase):
@@ -632,7 +534,6 @@ def run_tests():
     suite.addTests(loader.loadTestsFromTestCase(TestIsOptOut))
     suite.addTests(loader.loadTestsFromTestCase(TestParseReleaseNotes))
     suite.addTests(loader.loadTestsFromTestCase(TestValidateReleaseNotes))
-    suite.addTests(loader.loadTestsFromTestCase(TestFormatForChangelog))
     suite.addTests(loader.loadTestsFromTestCase(TestIntegration))
     suite.addTests(loader.loadTestsFromTestCase(TestAggregateChangelog))
     
