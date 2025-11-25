@@ -102,6 +102,10 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	topOwner, allOwners, err := r.podGrouper.GetPodOwners(ctx, &pod)
 	if err != nil {
+		if pod.DeletionTimestamp != nil {
+			logger.V(1).Info(fmt.Sprintf("Pod %s/%s is being deleted, it's ok if the owner is not available", pod.Namespace, pod.Name))
+			return ctrl.Result{}, nil
+		}
 		logger.V(1).Error(err, "Failed to find pod top owner", req.Namespace, req.Name)
 		return ctrl.Result{}, err
 	}

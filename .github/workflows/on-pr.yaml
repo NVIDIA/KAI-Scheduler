@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -72,7 +72,7 @@ jobs:
       package_version: ${{ steps.package_version.outputs.PACKAGE_VERSION }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Extract package version
         id: package_version
@@ -116,7 +116,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Cache restore
         uses: actions/cache/restore@v4
@@ -125,7 +125,7 @@ jobs:
           key:  images-${{ github.sha }}
 
       - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.10.0
+        uses: helm/kind-action@v1.13.0
         with:
           cluster_name: kind
           version: v0.30.0

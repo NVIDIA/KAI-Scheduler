@@ -268,7 +268,7 @@ jobs:
             let additionalSections = '';
             
             // Look for "New Contributors" section
-            const newContributorsMatch = generatedBody.match(/## New Contributors[\s\S]*?(?=\n##|\n\*\*Full Changelog\*\*|\Z)/);
+            const newContributorsMatch = generatedBody.match(/## New Contributors[\s\S]*?(?=\n##|\n\*\*Full Changelog\*\*|$)/);
             if (newContributorsMatch) {
               additionalSections += '\n\n' + newContributorsMatch[0].trim();
             }

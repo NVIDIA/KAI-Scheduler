@@ -432,7 +432,6 @@ func TestMutate(t *testing.T) {
 					Annotations: map[string]string{
 						constants.GpuFraction:              "0.5",
 						constants.GpuFractionContainerName: "init-gpu",
-						constants.GpuFractionContainerType: "InitContainer",
 					},
 				},
 				Spec: v1.PodSpec{
