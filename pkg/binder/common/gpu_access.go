@@ -159,45 +159,40 @@ func UpdateConfigMapEnvironmentVariable(
 }
 
 func GetFractionContainerRef(pod *v1.Pod) (*gpusharingconfigmap.PodContainerRef, error) {
-	containers := pod.Spec.Containers
-	containerType := getFractionContainerType(pod)
-	if containerType == gpusharingconfigmap.InitContainer {
-		containers = pod.Spec.InitContainers
-		if len(containers) == 0 {
-			return nil, fmt.Errorf("gpu fraction requested for init container, but no init containers found in pod spec")
-		}
-	}
-
 	defaultContainerRef := &gpusharingconfigmap.PodContainerRef{
-		Container: &containers[defaultFractionContainer],
+		Container: &pod.Spec.Containers[defaultFractionContainer],
 		Index:     defaultFractionContainer,
-		Type:      containerType,
+		Type:      gpusharingconfigmap.RegularContainer,
 	}
 
-	fractionContainerName, found := pod.Annotations[constants.GpuFractionContainerName]
+	name, found := pod.Annotations[constants.GpuFractionContainerName]
 	if !found {
 		return defaultContainerRef, nil
 	}
 
-	for index, container := range containers {
-		if container.Name == fractionContainerName {
-			return &gpusharingconfigmap.PodContainerRef{
-				Container: &containers[index],
-				Index:     index,
-				Type:      containerType,
-			}, nil
+	for index, container := range pod.Spec.InitContainers {
+		if container.Name != name {
+			continue
 		}
+
+		return &gpusharingconfigmap.PodContainerRef{
+			Container: &pod.Spec.InitContainers[index],
+			Index:     index,
+			Type:      gpusharingconfigmap.InitContainer,
+		}, nil
 	}
 
-	return nil, fmt.Errorf("fraction container of type %s with name %s not found", containerType, fractionContainerName)
-}
-
-func getFractionContainerType(pod *v1.Pod) gpusharingconfigmap.ContainerType {
-	typeOverride, found := pod.Annotations[constants.GpuFractionContainerType]
-	if found {
-		if typeOverride == string(gpusharingconfigmap.InitContainer) {
-			return gpusharingconfigmap.InitContainer
+	for index, container := range pod.Spec.Containers {
+		if container.Name != name {
+			continue
 		}
+
+		return &gpusharingconfigmap.PodContainerRef{
+			Container: &pod.Spec.Containers[index],
+			Index:     index,
+			Type:      gpusharingconfigmap.RegularContainer,
+		}, nil
 	}
-	return gpusharingconfigmap.RegularContainer
+
+	return nil, fmt.Errorf("container with name %s not found for fraction request", name)
 }

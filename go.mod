@@ -51,7 +51,7 @@ require (
 	k8s.io/component-helpers v0.34.1
 	k8s.io/cri-client v0.34.1
 	k8s.io/dynamic-resource-allocation v0.34.1
-	k8s.io/endpointslice v0.34.1
+	k8s.io/endpointslice v0.34.2
 	k8s.io/externaljwt v0.34.1
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-aggregator v0.34.1
