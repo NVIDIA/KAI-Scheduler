@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.4'
 
@@ -84,7 +84,7 @@ jobs:
           echo $PACKAGE_VERSION
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.4'
 
@@ -161,7 +161,7 @@ jobs:
           helm upgrade -i kai-scheduler ./images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
             --set "global.gpuSharing=true" --set "global.registry=localhost:30100" --debug --wait
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v6
         with:
           go-version: 1.22
 
