@@ -282,6 +282,8 @@ jobs:
             // Create release body with custom changelog + GitHub generated sections
             const releaseBody = `${changelogEntries}${additionalSections}`;
             
+            const isPrerelease = '${{ steps.prerelease.outputs.is_prerelease }}' === 'true';
+
             // Create the release
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
@@ -290,7 +292,7 @@ jobs:
               name: version,
               body: releaseBody,
               draft: false,
-              prerelease: false
+              prerelease: isPrerelease
             });
             
             console.log(`Created release ${version}`);

@@ -12,6 +12,7 @@ import json
 from typing import Dict, List, Optional, Tuple
 
 
+# Valid categories for release notes, in order that they should be displayed in the changelog
 VALID_CATEGORIES = [
     "Added",
     "Changed",
@@ -207,11 +208,8 @@ def format_changelog_from_prs(prs_json_path: str) -> str:
                 if formatted_entry not in all_categories[category]:
                     all_categories[category].append(formatted_entry)
     
-    # Generate final changelog content
-    category_order = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"]
     changelog_lines = []
-    
-    for category in category_order:
+    for category in VALID_CATEGORIES:
         if category in all_categories and all_categories[category]:
             changelog_lines.append(f"### {category}")
             for entry in all_categories[category]:
