@@ -31,7 +31,7 @@ jobs:
           python-version: '3.11'
       
       - name: Install Python dependencies
-        run: pip install packaging
+        run: pip install packaging==25.0
 
       - name: Check if pre-release
         id: prerelease
