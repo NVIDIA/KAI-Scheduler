@@ -11,7 +11,7 @@ on:
       dry_run:
         description: "Run in dry-run mode (no labels/comments applied)"
         required: false
-        default: "true"
+        default: "false"
 
 jobs:
   stale:
