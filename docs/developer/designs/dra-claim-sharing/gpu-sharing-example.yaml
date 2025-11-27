@@ -1,6 +1,9 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+# Originally copied from https://github.com/jgehrcke/k8s-dra-driver-gpu/blob/main/demo/specs/quickstart/gpu-test3.yaml
+
 # One shared, global claim providing access to a GPU
 # Two pods, each asking for access to the shared GPU
-# Originally copied from https://github.com/jgehrcke/k8s-dra-driver-gpu/blob/main/demo/specs/quickstart/gpu-test3.yaml
 
 ---
 apiVersion: v1
