@@ -40,3 +40,20 @@ Possible solutions:
     - Could probably be the easiest to implement at first, until we get familiar with more use cases
 2. Allow queues to evict claims, even if it will evict foreign pods
     - Need to think how to implement this - maybe an annotation on the claim?
+
+#### Racing 
+
+1. A new `queue` property will be added to the ResourceClaimInfo object
+2. On snapshot, if a claim has a queue label, it will populate this property
+3. Queue label will be immutable
+4. If no queue label exist, the scheduler will consider the first pod that references the claim to be the owner, and will populate this property accordingly
+5. The scheduler will explicitly write the queue owner on all bind requests that refer to this claim. This will make sure that things will stay consistent even if the first bind request to be handled is a foreign allocation.
+6. On bind, the binder will upsert the queue label to the ResourceClaim object, keeping it consistent during it's lifecycle
+
+#### Orphan Claims
+
+What if a claim is already bound, referenced by multiple queues, but doesn't have a queue reference? Several reasons this could happen: migrations, other schedulers...
+
+Options:
+1. Deduct this claim from available resources, and don't attribute it to any queue?
+2. Attribute it to the first queue arbitrarily? (alphabetically, pod/job/queue creation time...) 
