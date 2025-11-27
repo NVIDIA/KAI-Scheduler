@@ -52,8 +52,10 @@ Possible solutions:
 
 #### Orphan Claims
 
-What if a claim is already bound, referenced by multiple queues, but doesn't have a queue reference? Several reasons this could happen: migrations, other schedulers...
+What if a claim is already bound, referenced by multiple queues, but doesn't have a queue reference2? Several reasons this could happen: migrations, other schedulers...
 
 Options:
 1. Deduct this claim from available resources, and don't attribute it to any queue?
 2. Attribute it to the first queue arbitrarily? (alphabetically, pod/job/queue creation time...) 
+3. Is cross-shard an instance of this case? This is actually likely in runai multi-nodepool envs (although for node-exclusive resources like GPUs it shouldn't be a problem)
+
