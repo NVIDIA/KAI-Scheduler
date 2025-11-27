@@ -19,7 +19,6 @@ Fixes #
 
 - [ ] Self-reviewed
 - [ ] Added/updated tests (if needed)
-- [ ] Updated [CHANGELOG.md](/CHANGELOG.md) (if needed)
 - [ ] Updated documentation (if needed)
 
 ## Breaking Changes
