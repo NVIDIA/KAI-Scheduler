@@ -27,3 +27,16 @@ We could do an implicit linking of objects to queues: DRA objects are bound by t
 #### Non-accounted resources
 
 It stands to reason that not all DRA resources will be managed by queues: for example, some resources might represent resources which are not in contention and are not meant to be divided by KAI. We can define, either in scheduler shard configuration, or on the device classes, which resources are meant to be accounted by KAI.
+
+### Complications
+
+#### Resource Locking
+
+Imagine queue A creates a claim and lets queue B share it. Queue B allocates a non-preemptible pod on this claim. Queue A's pod is evicted or finishes running, but queue B's non-preemptible pod keeps running, keeping the claim bound and the resources allocated.
+
+Possible solutions:
+1. Don't allow foreign queues' non-preemptible pods to share claims
+    - What about pods which are protected by min runtime?
+    - Could probably be the easiest to implement at first, until we get familiar with more use cases
+2. Allow queues to evict claims, even if it will evict foreign pods
+    - Need to think how to implement this - maybe an annotation on the claim?
