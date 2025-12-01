@@ -397,7 +397,7 @@ func newTopologyConstraintConfigError(subGroup *subgroup_info.SubGroupInfo, topo
 	}
 	return fmt.Errorf("topology constraint config error: the %s set a topology %s constraint %s, "+
 		"but no level for the topology tree %s matches this level",
-		topologyConstraintPodGroupSet, topologyTree.Name, placementType, placementName)
+		topologyConstraintPodGroupSet, placementType, placementName, topologyTree.Name)
 }
 
 func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
