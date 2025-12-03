@@ -941,10 +941,9 @@ func TestBindRequests(t *testing.T) {
 
 func TestSnapshotPodGroups(t *testing.T) {
 	tests := map[string]struct {
-		objs      []runtime.Object
-		kubeObjs  []runtime.Object
-		kueueObjs []runtime.Object
-		results   []*podgroup_info.PodGroupInfo
+		objs     []runtime.Object
+		kubeObjs []runtime.Object
+		results  []*podgroup_info.PodGroupInfo
 	}{
 		"BasicUsage": {
 			objs: []runtime.Object{
