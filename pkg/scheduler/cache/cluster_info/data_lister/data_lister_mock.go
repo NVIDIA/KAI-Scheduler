@@ -20,7 +20,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	v10 "k8s.io/api/scheduling/v1"
 	v11 "k8s.io/api/storage/v1"
-	v1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 )
 
 // MockDataLister is a mock of DataLister interface.
@@ -258,10 +258,10 @@ func (mr *MockDataListerMockRecorder) ListStorageClasses() *gomock.Call {
 }
 
 // ListTopologies mocks base method.
-func (m *MockDataLister) ListTopologies() ([]*v1alpha1.Topology, error) {
+func (m *MockDataLister) ListTopologies() ([]*kaiv1.Topology, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListTopologies")
-	ret0, _ := ret[0].([]*v1alpha1.Topology)
+	ret0, _ := ret[0].([]*kaiv1.Topology)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

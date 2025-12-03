@@ -17,7 +17,7 @@ import (
 	kaiv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	kaiv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	kaiv2v2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 )
 
 func SetupEnvTest(crdDirectoryPaths []string) (*rest.Config, client.Client, *envtest.Environment, error) {
@@ -70,7 +70,7 @@ func SetupEnvTest(crdDirectoryPaths []string) (*rest.Config, client.Client, *env
 	if err != nil {
 		return nil, nil, testEnv, fmt.Errorf("failed to add resourceapi scheme: %w", err)
 	}
-	err = kueuev1alpha1.AddToScheme(scheme.Scheme)
+	err = kaiv1.AddToScheme(scheme.Scheme)
 	if err != nil {
 		return nil, nil, testEnv, fmt.Errorf("failed to add kueuev1alpha1 scheme: %w", err)
 	}

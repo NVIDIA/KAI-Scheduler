@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
 )
 
@@ -88,12 +88,12 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 		},
 	}
 
-	testTopology := &kueuev1alpha1.Topology{
+	testTopology := &kaiv1.Topology{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-topology",
 		},
-		Spec: kueuev1alpha1.TopologySpec{
-			Levels: []kueuev1alpha1.TopologyLevel{
+		Spec: kaiv1.TopologySpec{
+			Levels: []kaiv1.TopologyLevel{
 				{
 					NodeLabel: "test-topology-label/block",
 				},
@@ -179,7 +179,7 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 				Used:        resource_info.NewResource(1000, 0, 3),
 			},
 		},
-		Topologies: []*kueuev1alpha1.Topology{testTopology},
+		Topologies: []*kaiv1.Topology{testTopology},
 	}
 
 	plugin := New(nil)

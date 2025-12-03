@@ -48,7 +48,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
 
-	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kueueinformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
 )
 
@@ -411,7 +411,7 @@ func (c *ClusterInfo) snapshotConfigMaps() (map[common_info.ConfigMapID]*configm
 	return result, nil
 }
 
-func (c *ClusterInfo) snapshotTopologies() ([]*kueue.Topology, error) {
+func (c *ClusterInfo) snapshotTopologies() ([]*kaiv1.Topology, error) {
 	topologies, err := c.dataLister.ListTopologies()
 	if err != nil {
 		return nil, fmt.Errorf("error listing topologies: %w", err)

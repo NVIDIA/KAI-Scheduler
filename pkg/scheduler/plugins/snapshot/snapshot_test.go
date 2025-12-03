@@ -24,7 +24,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
 )
 
@@ -120,7 +120,7 @@ func TestSnapshotPlugin(t *testing.T) {
 		},
 	}
 
-	testTopology := &kueuev1alpha1.Topology{
+	testTopology := &kaiv1.Topology{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-topology",
 		},

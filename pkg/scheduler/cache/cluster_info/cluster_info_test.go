@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/ptr"
 
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kueueclient "sigs.k8s.io/kueue/client-go/clientset/versioned"
 	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
 	kueueinformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
@@ -1542,7 +1542,7 @@ func TestSnapshotStorageObjects(t *testing.T) {
 	}
 
 	kueueObjects := []runtime.Object{
-		&kueuev1alpha1.Topology{
+		&kaiv1.Topology{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "topology-0",
 			},

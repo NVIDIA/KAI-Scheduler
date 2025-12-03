@@ -3,6 +3,7 @@
 
 package data_lister
 
+// GuyContinue
 import (
 	"fmt"
 
@@ -26,7 +27,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 
-	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kueueInformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
 	kueueLister "sigs.k8s.io/kueue/client-go/listers/kueue/v1alpha1"
 )
@@ -170,6 +171,6 @@ func (k *k8sLister) ListConfigMaps() ([]*v1.ConfigMap, error) {
 
 // +kubebuilder:rbac:groups="kueue.x-k8s.io",resources=topologies,verbs=get;list;watch
 
-func (k *k8sLister) ListTopologies() ([]*kueue.Topology, error) {
+func (k *k8sLister) ListTopologies() ([]*kaiv1.Topology, error) {
 	return k.kueueTopologyLister.List(labels.Everything())
 }
