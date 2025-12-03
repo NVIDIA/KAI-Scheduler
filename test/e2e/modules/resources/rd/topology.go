@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	kueue "sigs.k8s.io/kueue/client-go/clientset/versioned"
 )
 
 const (
@@ -166,8 +165,8 @@ func CleanNodesFromTopology(ctx context.Context,
 
 func CleanRackZoneTopology(ctx context.Context, testTopologyData TestTopologyData, kubeConfig *rest.Config) {
 
-	kueueClient := kueue.NewForConfigOrDie(kubeConfig)
-	err := kueueClient.KueueV1alpha1().Topologies().Delete(
+	kaiClient := kaiclientset.NewForConfigOrDie(kubeConfig)
+	err := kaiClient.KaiV1().Topologies().Delete(
 		context.TODO(), testTopologyData.TopologyCrd.Name, metav1.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred(), "Failed to delete test topology tree %s", testTopologyData.TopologyCrd.Name)
 }

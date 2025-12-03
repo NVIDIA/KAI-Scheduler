@@ -25,7 +25,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
 )
 
 const (
@@ -36,7 +35,6 @@ const (
 func TestSnapshotPlugin(t *testing.T) {
 	fakeKubeClient := fake.NewSimpleClientset()
 	fakeKubeAISchedulerClient := kubeaischedulerver.NewSimpleClientset()
-	fakeKueueClient := kueuefake.NewSimpleClientset()
 
 	testPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -150,7 +148,6 @@ func TestSnapshotPlugin(t *testing.T) {
 	schedulerCache := cache.New(&cache.SchedulerCacheParams{
 		KubeClient:                  fakeKubeClient,
 		KAISchedulerClient:          fakeKubeAISchedulerClient,
-		KueueClient:                 fakeKueueClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      false,

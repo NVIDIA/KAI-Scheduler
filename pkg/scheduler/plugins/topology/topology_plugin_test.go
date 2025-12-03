@@ -23,13 +23,11 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
-	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
 )
 
 func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 	fakeKubeClient := fake.NewSimpleClientset()
 	fakeKubeAISchedulerClient := kubeaischedulerver.NewSimpleClientset()
-	fakeKueueClient := kueuefake.NewSimpleClientset()
 
 	testNodes := []*v1.Node{
 		{
@@ -125,7 +123,6 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 	schedulerCache := cache.New(&cache.SchedulerCacheParams{
 		KubeClient:                  fakeKubeClient,
 		KAISchedulerClient:          fakeKubeAISchedulerClient,
-		KueueClient:                 fakeKueueClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      false,

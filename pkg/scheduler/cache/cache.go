@@ -62,8 +62,6 @@ import (
 	k8splugins "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
-
-	kueueclient "sigs.k8s.io/kueue/client-go/clientset/versioned"
 )
 
 func init() {
@@ -85,7 +83,6 @@ type SchedulerCacheParams struct {
 	RestrictNodeScheduling      bool
 	KubeClient                  kubernetes.Interface
 	KAISchedulerClient          kubeaischedulerver.Interface
-	KueueClient                 kueueclient.Interface
 	UsageDBParams               *usageapi.UsageParams
 	UsageDBClient               usageapi.Interface
 	DetailedFitErrors           bool
@@ -101,7 +98,6 @@ type SchedulerCache struct {
 	workersWaitGroup               sync.WaitGroup
 	kubeClient                     kubernetes.Interface
 	kubeAiSchedulerClient          kubeaischedulerver.Interface
-	kueueClient                    kueueclient.Interface
 	informerFactory                informers.SharedInformerFactory
 	kubeAiSchedulerInformerFactory kubeaischedulerinfo.SharedInformerFactory
 	podLister                      listv1.PodLister
@@ -133,7 +129,6 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 		fullHierarchyFairness:    schedulerCacheParams.FullHierarchyFairness,
 		kubeClient:               draversionawareclient.NewDRAAwareClient(schedulerCacheParams.KubeClient),
 		kubeAiSchedulerClient:    schedulerCacheParams.KAISchedulerClient,
-		kueueClient:              schedulerCacheParams.KueueClient,
 	}
 
 	schedulerName := schedulerCacheParams.SchedulerName
