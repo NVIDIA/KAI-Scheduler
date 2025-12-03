@@ -21,3 +21,11 @@ var (
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
 )
+
+// SchemeGroupVersion is the group version used to register these objects.
+var SchemeGroupVersion = GroupVersion
+
+// Resource takes an unqualified resource and returns a Group-qualified GroupResource.
+func Resource(resource string) schema.GroupResource {
+	return SchemeGroupVersion.WithResource(resource).GroupResource()
+}
