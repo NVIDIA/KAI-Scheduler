@@ -30,7 +30,6 @@ func SetupEnvTest(crdDirectoryPaths []string) (*rest.Config, client.Client, *env
 	if crdDirectoryPaths == nil {
 		crdDirectoryPaths = []string{
 			filepath.Join("..", "..", "deployments", "kai-scheduler", "crds"),
-			filepath.Join("..", "..", "deployments", "external-crds"),
 		}
 	}
 
