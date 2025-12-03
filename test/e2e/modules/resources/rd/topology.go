@@ -14,6 +14,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	kaiclientset "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -21,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kueue "sigs.k8s.io/kueue/client-go/clientset/versioned"
 )
 
@@ -70,8 +71,8 @@ func CreateRackZoneTopology(
 			},
 		},
 	}
-	kueueClient := kueue.NewForConfigOrDie(kubeConfig)
-	_, err := kueueClient.KueueV1alpha1().Topologies().Create(
+	kaiClient := kaiclientset.NewForConfigOrDie(kubeConfig)
+	_, err := kaiClient.KaiV1().Topologies().Create(
 		context.TODO(), testTopologyData.TopologyCrd, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred(), "Failed to create topology tree")
 

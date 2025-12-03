@@ -49,7 +49,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
-	kueueinformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
 )
 
 type ClusterInfo struct {
@@ -74,7 +73,6 @@ const (
 func New(
 	informerFactory informers.SharedInformerFactory,
 	kubeAiSchedulerInformerFactory kubeAiSchedulerinfo.SharedInformerFactory,
-	kueueInformerFactory kueueinformer.SharedInformerFactory,
 	usageLister *usagedb.UsageLister,
 	nodePoolParams *conf.SchedulingNodePoolParams,
 	restrictNodeScheduling bool,
@@ -101,7 +99,7 @@ func New(
 	}
 
 	return &ClusterInfo{
-		dataLister:               data_lister.New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, usageLister, nodePoolSelector),
+		dataLister:               data_lister.New(informerFactory, kubeAiSchedulerInformerFactory, usageLister, nodePoolSelector),
 		nodePoolParams:           nodePoolParams,
 		restrictNodeScheduling:   restrictNodeScheduling,
 		clusterPodAffinityInfo:   clusterPodAffinityInfo,

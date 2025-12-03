@@ -146,7 +146,7 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	_, err = fakeKueueClient.KueueV1alpha1().Topologies().Create(ctx, testTopology, metav1.CreateOptions{})
+	_, err = fakeKubeAISchedulerClient.KaiV1().Topologies().Create(ctx, testTopology, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	schedulerCache.Run(ctx.Done())
