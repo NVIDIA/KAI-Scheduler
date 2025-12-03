@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"testing"
 
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	. "go.uber.org/mock/gomock"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/allocate"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"

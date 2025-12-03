@@ -21,6 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
@@ -28,7 +29,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/dynamicresource"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/scheduler"
 	"github.com/NVIDIA/KAI-scheduler/pkg/env-tests/utils"
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 )
 
 var _ = Describe("Scheduler", Ordered, func() {
