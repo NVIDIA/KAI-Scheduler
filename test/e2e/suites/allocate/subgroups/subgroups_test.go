@@ -111,12 +111,47 @@ var _ = Describe("Allocation scenario with subgroups", Ordered, func() {
 			{Name: "sub-2", MinMember: 1},
 		}
 
+		// Create PodGroups with 0 resources first
+		pg1Empty := pg1.DeepCopy()
+		pg1Empty.Spec.MinMember = 0
+		pg1Empty.Spec.SubGroups = nil
+
 		_, err := testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(namespace).Create(ctx,
-			pg1, metav1.CreateOptions{})
+			pg1Empty, metav1.CreateOptions{})
 		Expect(err).To(Succeed())
+
+		pg2Empty := pg2.DeepCopy()
+		pg2Empty.Spec.MinMember = 0
+		pg2Empty.Spec.SubGroups = nil
+
 		_, err = testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(namespace).Create(ctx,
-			pg2, metav1.CreateOptions{})
+			pg2Empty, metav1.CreateOptions{})
 		Expect(err).To(Succeed())
+
+		// Update existing PodGroups to desired state
+		Eventually(func() error {
+			currentPg1, err := testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(namespace).Get(ctx, pg1Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			currentPg1.Spec = pg1.Spec
+			_, err = testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(namespace).Update(ctx, currentPg1, metav1.UpdateOptions{})
+			return err
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			currentPg2, err := testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(namespace).Get(ctx, pg2Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			currentPg2.Spec = pg2.Spec
+			_, err = testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(namespace).Update(ctx, currentPg2, metav1.UpdateOptions{})
+			return err
+		}).Should(Succeed())
+
+		// Ensure both pod groups exist before testing for unschedulable pods
+		wait.WaitForPodGroupToExist(ctx, testCtx.ControllerClient, namespace, pg1Name)
+		wait.WaitForPodGroupToExist(ctx, testCtx.ControllerClient, namespace, pg2Name)
 
 		pg1Pods := append(pg1SubGroup1Pods, pg1SubGroup2Pods...)
 		wait.ForAtLeastNPodsScheduled(ctx, testCtx.ControllerClient, namespace, pg1SubGroup1Pods, 1)
