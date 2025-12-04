@@ -29,6 +29,7 @@ func getNodeSetID(nodeSet node_info.NodeSet) nodeSetID {
 	hasher := sha256.New()
 	for _, nodeName := range nodeNames {
 		hasher.Write([]byte(nodeName))
+		hasher.Write([]byte{0}) // Adding a null byte as a separator between node names
 	}
 	hash := hasher.Sum(nil)
 	nodeSetID := hex.EncodeToString(hash)

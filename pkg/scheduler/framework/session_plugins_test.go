@@ -116,27 +116,27 @@ func TestPartitionMultiImplementation(t *testing.T) {
 	shardClusterSubseting := func(_ *podgroup_info.PodGroupInfo, _ *subgroup_info.SubGroupInfo, _ map[string]*subgroup_info.PodSet, _ []*pod_info.PodInfo, nodeset node_info.NodeSet) ([]node_info.NodeSet, error) {
 		var subset1 []*node_info.NodeInfo
 		var subset2 []*node_info.NodeInfo
-		for _, node := range nodeset {
+		for _, node := range nodeset.Nodes {
 			if strings.Contains(node.Name, "cluster0") {
 				subset1 = append(subset1, node)
 			} else {
 				subset2 = append(subset2, node)
 			}
 		}
-		return []node_info.NodeSet{subset1, subset2}, nil
+		return []node_info.NodeSet{node_info.NodeSet{Nodes: subset1}, node_info.NodeSet{Nodes: subset2}}, nil
 	}
 
 	topologySubseting := func(_ *podgroup_info.PodGroupInfo, _ *subgroup_info.SubGroupInfo, _ map[string]*subgroup_info.PodSet, _ []*pod_info.PodInfo, nodeset node_info.NodeSet) ([]node_info.NodeSet, error) {
 		var subset1 []*node_info.NodeInfo
 		var subset2 []*node_info.NodeInfo
-		for _, node := range nodeset {
+		for _, node := range nodeset.Nodes {
 			if strings.Contains(node.Name, "rack0") {
 				subset1 = append(subset1, node)
 			} else {
 				subset2 = append(subset2, node)
 			}
 		}
-		return []node_info.NodeSet{subset1, subset2}, nil
+		return []node_info.NodeSet{node_info.NodeSet{Nodes: subset1}, node_info.NodeSet{Nodes: subset2}}, nil
 	}
 
 	ssn := &Session{}
@@ -144,21 +144,21 @@ func TestPartitionMultiImplementation(t *testing.T) {
 	ssn.AddSubsetNodesFn(shardClusterSubseting)
 	ssn.AddSubsetNodesFn(topologySubseting)
 
-	partitions, _ := ssn.SubsetNodesFn(podgroup_info.NewPodGroupInfo("a"), nil, nil, nil, nodes)
+	partitions, _ := ssn.SubsetNodesFn(podgroup_info.NewPodGroupInfo("a"), nil, nil, nil, node_info.NodeSet{Nodes: nodes})
 
 	assert.Equal(t, 4, len(partitions))
 
-	assert.Equal(t, len(partitions[0]), 1)
-	assert.Equal(t, partitions[0][0].Name, "cluster0rack0")
+	assert.Equal(t, len(partitions[0].Nodes), 1)
+	assert.Equal(t, partitions[0].Nodes[0].Name, "cluster0rack0")
 
-	assert.Equal(t, len(partitions[1]), 1)
-	assert.Equal(t, partitions[1][0].Name, "cluster0rack1")
+	assert.Equal(t, len(partitions[1].Nodes), 1)
+	assert.Equal(t, partitions[1].Nodes[0].Name, "cluster0rack1")
 
-	assert.Equal(t, len(partitions[2]), 2)
-	assert.Equal(t, partitions[2][0].Name, "cluster1rack0-1")
-	assert.Equal(t, partitions[2][1].Name, "cluster1rack0-2")
+	assert.Equal(t, len(partitions[2].Nodes), 2)
+	assert.Equal(t, partitions[2].Nodes[0].Name, "cluster1rack0-1")
+	assert.Equal(t, partitions[2].Nodes[1].Name, "cluster1rack0-2")
 
-	assert.Equal(t, len(partitions[3]), 2)
-	assert.Equal(t, partitions[3][0].Name, "cluster1rack1-1")
-	assert.Equal(t, partitions[3][1].Name, "cluster1rack1-2")
+	assert.Equal(t, len(partitions[3].Nodes), 2)
+	assert.Equal(t, partitions[3].Nodes[0].Name, "cluster1rack1-1")
+	assert.Equal(t, partitions[3].Nodes[1].Name, "cluster1rack1-2")
 }
