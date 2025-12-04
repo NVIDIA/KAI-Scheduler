@@ -100,6 +100,27 @@ jobs:
           path: images
           key:  images-${{ github.sha }}
 
+      - name: 🔍 Debug Disk Usage
+        if: always() # Runs even if previous steps fail
+        run: |
+          echo "=============================================================================="
+          echo "1. GLOBAL DISK USAGE (df -h)"
+          echo "=============================================================================="
+          df -h
+
+          echo ""
+          echo "=============================================================================="
+          echo "2. DOCKER USAGE (docker system df)"
+          echo "=============================================================================="
+          docker system df -v
+
+          echo ""
+          echo "=============================================================================="
+          echo "3. TOP 20 LARGEST DIRECTORIES (du)"
+          echo "=============================================================================="
+          # Find largest directories in root, excluding mount points that might hang
+          sudo du -h / --max-depth=4 --exclude=/proc --exclude=/sys --exclude=/dev 2>/dev/null | sort -hr | head -n 20
+
       - name: Build docker images
         run: |
           df -h
