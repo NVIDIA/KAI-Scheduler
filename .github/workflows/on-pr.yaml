@@ -114,13 +114,6 @@ jobs:
           echo "=============================================================================="
           docker system df -v
 
-          echo ""
-          echo "=============================================================================="
-          echo "3. TOP 20 LARGEST DIRECTORIES (du)"
-          echo "=============================================================================="
-          # Find largest directories in root, excluding mount points that might hang
-          sudo du -h / --max-depth=4 --exclude=/proc --exclude=/sys --exclude=/dev 2>/dev/null | sort -hr | head -n 20
-
       - name: Move Docker Data to /mnt
         run: |
           # 1. Stop Docker
