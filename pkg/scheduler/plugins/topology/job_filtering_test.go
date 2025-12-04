@@ -433,7 +433,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			domainLevel: map[DomainID]DomainLevel{
 				"zone1": "zone",
 			},
-			expectedError: "topology constraint config error: the sub-group  set a topology required constraint nonexistent-level, but no level for the topology tree test-topology matches this level",
+			expectedError: "topology constraint error: sub-group  specified 'nonexistent-level' as the required topology constraint level, but the topology tree 'test-topology' does not contain a level with this name",
 		},
 	}
 
@@ -661,7 +661,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				},
 			},
 			expectedLevels: nil,
-			expectedError:  "topology constraint config error: the sub-group test-subgroup set a topology required constraint nonexistent, but no level for the topology tree test-topology matches this level",
+			expectedError:  "topology constraint error: sub-group test-subgroup specified 'nonexistent' as the required topology constraint level, but the topology tree 'test-topology' does not contain a level with this name",
 		},
 		{
 			name: "preferred placement not found in topology",
@@ -683,7 +683,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				},
 			},
 			expectedLevels: nil,
-			expectedError:  "topology constraint config error: the sub-group test-subgroup set a topology preferred constraint nonexistent, but no level for the topology tree test-topology matches this level",
+			expectedError:  "topology constraint error: sub-group test-subgroup specified 'nonexistent' as the preferred topology constraint level, but the topology tree 'test-topology' does not contain a level with this name",
 		},
 		{
 			name: "required placement at first level",
@@ -1500,7 +1500,7 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
 			},
 			expectedDomains: nil,
-			expectedError:   "topology constraint config error: the sub-group test set a topology required constraint zone, but no level for the topology tree test-topology matches this level",
+			expectedError:   "topology constraint error: sub-group test specified 'zone' as the required topology constraint level, but the topology tree 'test-topology' does not contain a level with this name",
 		},
 		{
 			name: "complex topology with multiple levels",
