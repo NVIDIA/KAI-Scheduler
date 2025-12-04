@@ -17,12 +17,11 @@ import (
 
 const (
 	ResourcesWereNotFoundMsg = "no nodes with enough resources were found"
-	DefaultPodgroupError     = "Unable to schedule podgroup"
 	DefaultPodError          = "Unable to schedule pod"
 	OverheadMessage          = "Not enough resources due to pod overhead resources"
 )
 
-type FitError struct {
+type TasksFitError struct {
 	taskNamespace   string
 	taskName        string
 	NodeName        string
@@ -30,8 +29,8 @@ type FitError struct {
 	DetailedReasons []string
 }
 
-func NewFitErrorWithDetailedMessage(name, namespace, nodeName string, reasons []string, detailedReasons ...string) *FitError {
-	fe := &FitError{
+func NewFitErrorWithDetailedMessage(name, namespace, nodeName string, reasons []string, detailedReasons ...string) *TasksFitError {
+	fe := &TasksFitError{
 		taskName:        name,
 		taskNamespace:   namespace,
 		NodeName:        nodeName,
@@ -46,11 +45,11 @@ func NewFitErrorWithDetailedMessage(name, namespace, nodeName string, reasons []
 	return fe
 }
 
-func NewFitError(name, namespace, nodeName string, message string) *FitError {
+func NewFitError(name, namespace, nodeName string, message string) *TasksFitError {
 	return NewFitErrorWithDetailedMessage(name, namespace, nodeName, []string{message})
 }
 
-func NewFitErrorByReasons(name, namespace, nodeName string, err error, reasons ...string) *FitError {
+func NewFitErrorByReasons(name, namespace, nodeName string, err error, reasons ...string) *TasksFitError {
 	message := reasons
 	if len(message) == 0 && err != nil {
 		message = []string{err.Error()}
@@ -62,7 +61,7 @@ func NewFitErrorInsufficientResource(
 	name, namespace, nodeName string,
 	resourceRequested *resource_info.ResourceRequirements, usedResource, capacityResource *resource_info.Resource,
 	capacityGpuMemory int64, gangSchedulingJob bool, messageSuffix string,
-) *FitError {
+) *TasksFitError {
 	availableResource := capacityResource.Clone()
 	availableResource.Sub(usedResource)
 	var shortMessages []string
@@ -93,7 +92,7 @@ func NewFitErrorInsufficientResource(
 		if requestedGPUs > availableGPUs {
 			detailedMessages = append(detailedMessages, k8s_internal.NewInsufficientResourceError(
 				"GPUs",
-				generateRequestedGpuString(resourceRequested),
+				resourceRequested.GpusAsString(),
 				strconv.FormatFloat(usedResource.GPUs(), 'g', 3, 64),
 				strconv.FormatFloat(capacityResource.GPUs(), 'g', 3, 64),
 				gangSchedulingJob))
@@ -159,41 +158,30 @@ func NewFitErrorInsufficientResource(
 	return NewFitErrorWithDetailedMessage(name, namespace, nodeName, shortMessages, detailedMessages...)
 }
 
-func generateRequestedGpuString(resourceRequested *resource_info.ResourceRequirements) string {
-	var requestedGpuString string
-	if resourceRequested.IsFractionalRequest() && resourceRequested.GetNumOfGpuDevices() > 1 {
-		requestedGpuString = fmt.Sprintf("%d X %s", resourceRequested.GetNumOfGpuDevices(),
-			strconv.FormatFloat(resourceRequested.GpuFractionalPortion(), 'g', 3, 64))
-	} else {
-		requestedGpuString = strconv.FormatFloat(resourceRequested.GPUs(), 'g', 3, 64)
-	}
-	return requestedGpuString
-}
-
-func (f *FitError) Error() string {
+func (f *TasksFitError) Error() string {
 	return fmt.Sprintf("Pod %s/%s cannot be scheduled on node %s. reasons: %s", f.taskNamespace, f.taskName,
 		f.NodeName, strings.Join(f.Reasons, ". \n"))
 }
 
-type FitErrors struct {
-	nodes map[string]*FitError
+type TasksFitErrors struct {
+	nodes map[string]*TasksFitError
 	err   string
 }
 
-func NewFitErrors() *FitErrors {
-	f := new(FitErrors)
-	f.nodes = make(map[string]*FitError)
+func NewFitErrors() *TasksFitErrors {
+	f := new(TasksFitErrors)
+	f.nodes = make(map[string]*TasksFitError)
 	return f
 }
 
-func (f *FitErrors) SetError(err string) {
+func (f *TasksFitErrors) SetError(err string) {
 	f.err = err
 }
 
-func (f *FitErrors) SetNodeError(nodeName string, err error) {
-	var fe *FitError
+func (f *TasksFitErrors) SetNodeError(nodeName string, err error) {
+	var fe *TasksFitError
 	switch obj := err.(type) {
-	case *FitError:
+	case *TasksFitError:
 		obj.NodeName = nodeName
 		fe = obj
 	default:
@@ -203,13 +191,13 @@ func (f *FitErrors) SetNodeError(nodeName string, err error) {
 	f.nodes[nodeName] = fe
 }
 
-func (f *FitErrors) AddNodeErrors(errors *FitErrors) {
+func (f *TasksFitErrors) AddNodeErrors(errors *TasksFitErrors) {
 	for nodeName, fitError := range errors.nodes {
 		f.nodes[nodeName] = fitError
 	}
 }
 
-func (f *FitErrors) DetailedError() string {
+func (f *TasksFitErrors) DetailedError() string {
 	if f.err == "" {
 		f.err = ResourcesWereNotFoundMsg
 	}
@@ -222,7 +210,7 @@ func (f *FitErrors) DetailedError() string {
 	return strings.Join(reasonMessages, "")
 }
 
-func (f *FitErrors) Error() string {
+func (f *TasksFitErrors) Error() string {
 	reasons := make(map[string]int)
 
 	sortReasonsHistogram := func() []string {
