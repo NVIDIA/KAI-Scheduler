@@ -121,6 +121,24 @@ jobs:
           # Find largest directories in root, excluding mount points that might hang
           sudo du -h / --max-depth=4 --exclude=/proc --exclude=/sys --exclude=/dev 2>/dev/null | sort -hr | head -n 20
 
+      - name: Move Docker Data to /mnt
+        run: |
+          # 1. Stop Docker
+          sudo systemctl stop docker
+          
+          # 2. Create a directory on the big disk
+          sudo mkdir -p /mnt/docker-data
+          
+          # 3. Configure Docker to use it using daemon.json
+          # We use jq to edit the json safely, or just overwrite it if you prefer
+          echo '{"data-root": "/mnt/docker-data"}' | sudo tee /etc/docker/daemon.json
+          
+          # 4. Restart Docker
+          sudo systemctl start docker
+          
+          # 5. Verify
+          docker info | grep "Docker Root Dir"
+
       - name: Build docker images
         run: |
           df -h
