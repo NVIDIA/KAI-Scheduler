@@ -26,6 +26,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/utils"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
@@ -84,7 +85,7 @@ func attemptToAllocateJob(ssn *framework.Session, stmt *framework.Statement, job
 		job.Namespace, job.Name, queue.Name, resReq)
 
 	nodes := maps.Values(ssn.Nodes)
-	if !common.AllocateJob(ssn, stmt, nodes, job, false) {
+	if !common.AllocateJob(ssn, stmt, node_info.NodeSet{Nodes: nodes}, job, false) {
 		log.InfraLogger.V(3).Infof("Could not allocate resources for job: <%v/%v> of queue <%v>",
 			job.Namespace, job.Name, job.Queue)
 		return false, false

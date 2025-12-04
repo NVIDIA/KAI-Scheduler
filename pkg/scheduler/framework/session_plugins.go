@@ -370,7 +370,7 @@ func logNodeSetsPluginResult(subsetNodesFn api.SubsetNodesFn, podGroup *podgroup
 	nodeSetsByNames := make([]node_info.NodeSet, 0, len(nodeSets))
 	for _, nodeSet := range nodeSets {
 		nodeSetNodeNames := make([]string, 0, len(nodeSets))
-		for _, node := range nodeSet {
+		for _, node := range nodeSet.Nodes {
 			nodeSetNodeNames = append(nodeSetNodeNames, node.Name)
 		}
 		nodeSetsByNames = append(nodeSetsByNames, nodeSet)
