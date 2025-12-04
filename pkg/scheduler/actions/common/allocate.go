@@ -17,7 +17,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
-func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*node_info.NodeInfo,
+func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodeSet node_info.NodeSet,
 	job *podgroup_info.PodGroupInfo, isPipelineOnly bool) bool {
 	ssn.PreJobAllocation(job)
 
@@ -30,14 +30,14 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 		}
 		return false
 	}
-	return allocateSubGroupSet(ssn, stmt, nodes, job, job.RootSubGroupSet, tasksToAllocate, isPipelineOnly)
+	return allocateSubGroupSet(ssn, stmt, nodeSet, job, job.RootSubGroupSet, tasksToAllocate, isPipelineOnly)
 }
 
-func allocateSubGroupSet(ssn *framework.Session, stmt *framework.Statement, nodes []*node_info.NodeInfo,
+func allocateSubGroupSet(ssn *framework.Session, stmt *framework.Statement, nodeSet node_info.NodeSet,
 	job *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, tasksToAllocate []*pod_info.PodInfo,
 	isPipelineOnly bool,
 ) bool {
-	nodeSets, err := ssn.SubsetNodesFn(job, &subGroupSet.SubGroupInfo, subGroupSet.GetAllPodSets(), tasksToAllocate, node_info.NodeSet{Nodes: nodes})
+	nodeSets, err := ssn.SubsetNodesFn(job, &subGroupSet.SubGroupInfo, subGroupSet.GetAllPodSets(), tasksToAllocate, nodeSet)
 	if err != nil {
 		log.InfraLogger.Errorf(
 			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
@@ -64,7 +64,7 @@ func allocateSubGroupSetOnNodes(ssn *framework.Session, stmt *framework.Statemen
 	for _, childSubGroupSet := range orderedSubGroupSets(ssn, subGroupSet.GetChildGroups()) {
 		podSets := childSubGroupSet.GetAllPodSets()
 		subGroupTasks := filterTasksForPodSets(podSets, tasksToAllocate)
-		if !allocateSubGroupSet(ssn, stmt, nodeSet.Nodes, job, childSubGroupSet, subGroupTasks, isPipelineOnly) {
+		if !allocateSubGroupSet(ssn, stmt, nodeSet, job, childSubGroupSet, subGroupTasks, isPipelineOnly) {
 			return false
 		}
 	}
