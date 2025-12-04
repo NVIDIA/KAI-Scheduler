@@ -123,7 +123,7 @@ func TestPartitionMultiImplementation(t *testing.T) {
 				subset2 = append(subset2, node)
 			}
 		}
-		return []node_info.NodeSet{node_info.NodeSet{Nodes: subset1}, node_info.NodeSet{Nodes: subset2}}, nil
+		return []node_info.NodeSet{{Nodes: subset1}, {Nodes: subset2}}, nil
 	}
 
 	topologySubseting := func(_ *podgroup_info.PodGroupInfo, _ *subgroup_info.SubGroupInfo, _ map[string]*subgroup_info.PodSet, _ []*pod_info.PodInfo, nodeset node_info.NodeSet) ([]node_info.NodeSet, error) {
@@ -136,7 +136,7 @@ func TestPartitionMultiImplementation(t *testing.T) {
 				subset2 = append(subset2, node)
 			}
 		}
-		return []node_info.NodeSet{node_info.NodeSet{Nodes: subset1}, node_info.NodeSet{Nodes: subset2}}, nil
+		return []node_info.NodeSet{{Nodes: subset1}, {Nodes: subset2}}, nil
 	}
 
 	ssn := &Session{}
