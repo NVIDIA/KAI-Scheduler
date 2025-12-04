@@ -119,6 +119,18 @@ crdupgrader:
     pullPolicy: IfNotPresent
     # tag: ""  # Optional: Override global.tag or Chart.AppVersion
 
+topologyMigration:
+  # Enable migration of Kueue Topology CRs to KAI Topology CRs
+  # When enabled, a pre-install/pre-upgrade hook will:
+  # 1. Check if Kueue Topology CRD exists
+  # 2. Copy existing Kueue Topologies to KAI Topologies with the same spec
+  # The migrated topologies will have an annotation indicating they were migrated
+  enabled: true
+  image:
+    repository: bitnami/kubectl
+    tag: latest
+    pullPolicy: IfNotPresent
+
 postCleanup:
   image:
     # using crd-upgrader image for kubectl availability

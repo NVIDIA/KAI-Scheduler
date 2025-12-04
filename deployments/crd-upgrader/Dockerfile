@@ -9,7 +9,6 @@ RUN curl -o kubectl -L "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io
 
 
 COPY deployments/kai-scheduler/crds /internal-crds
-COPY deployments/external-crds /external-crds
 COPY NOTICE .
 COPY deployments/crd-upgrader/apply-crds.sh /apply-crds.sh
 RUN chmod +x /apply-crds.sh
