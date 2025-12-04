@@ -9,6 +9,7 @@ import (
 	"math"
 	"slices"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -35,11 +36,9 @@ func (t *topologyPlugin) subSetNodesFn(
 ) ([]node_info.NodeSet, error) {
 	topologyTree, found := t.getJobTopology(subGroup)
 	if !found {
-		job.SetJobFitError(
+		job.AddBasicJobFitError(
 			podgroup_info.PodSchedulingErrors,
-			fmt.Sprintf("Matching topology %s does not exist",
-				subGroup.GetTopologyConstraint().Topology),
-			nil)
+			fmt.Sprintf("Requested topology %s does not exist", subGroup.GetTopologyConstraint().Topology))
 		return []node_info.NodeSet{}, nil
 	}
 	if topologyTree == nil || len(tasks) == 0 {
@@ -61,11 +60,10 @@ func (t *topologyPlugin) subSetNodesFn(
 
 	tasksResources, tasksCount := getTasksAllocationMetadata(tasks)
 
-	if !isJobAllocatableOnDomain(tasksResources, tasksCount, nodeSetDomain) {
-		job.SetJobFitError(
+	if err := isJobAllocatableOnDomain(job, subGroup, tasksResources, tasksCount, nodeSetDomain); err != nil {
+		job.AddBasicJobFitError(
 			podgroup_info.PodSchedulingErrors,
-			fmt.Sprintf("No relevant domains found for workload in topology tree: %s", topologyTree.Name),
-			nil)
+			fmt.Sprintf("No relevant domains found for workload in topology tree: %s", topologyTree.Name))
 		return []node_info.NodeSet{}, nil
 	}
 
@@ -270,7 +268,8 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 	var domains []*DomainInfo
 	for _, level := range relevantLevels {
 		for _, domain := range relevantDomainsByLevel[level] {
-			if !isJobAllocatableOnDomain(tasksResources, tasksCount, domain) { // Filter domains that cannot allocate the job
+			err := isJobAllocatableOnDomain(job, subGroup, tasksResources, tasksCount, domain)
+			if err != nil { // Filter domains that cannot allocate the job
 				continue
 			}
 
@@ -336,12 +335,23 @@ func hasTopologyRequiredConstraint(subGroup *subgroup_info.SubGroupInfo) bool {
 	return subGroup.GetTopologyConstraint().RequiredLevel != ""
 }
 
-func isJobAllocatableOnDomain(tasksResources *resource_info.Resource, tasksCount int, domain *DomainInfo) bool {
+func isJobAllocatableOnDomain(job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo,
+	tasksResources *resource_info.Resource, tasksCount int, domain *DomainInfo) *common_info.TopologyFitError {
 	if domain.AllocatablePods != allocatablePodsNotSet {
-		return domain.AllocatablePods >= tasksCount
+		if domain.AllocatablePods < tasksCount {
+			return common_info.NewTopologyFitError(
+				job.Name, subGroup.GetName(), job.Namespace, string(domain.ID), common_info.UnschedulableWorkloadReason,
+				[]string{fmt.Sprintf("node-group %s can allocatable only %d of %d pods", domain.ID, domain.AllocatablePods, tasksCount)})
+		}
+		return nil
 	}
 
-	return getJobRatioToFreeResources(tasksResources, domain) <= maxAllocatableTasksRatio
+	if getJobRatioToFreeResources(tasksResources, domain) > maxAllocatableTasksRatio {
+		err := common_info.NewTopologyInsufficientResourcesError(
+			job.Name, subGroup.GetName(), job.Namespace, string(domain.ID), tasksResources, domain.IdleOrReleasingResources)
+		return err
+	}
+	return nil
 }
 
 func (*topologyPlugin) calculateRelevantDomainLevels(

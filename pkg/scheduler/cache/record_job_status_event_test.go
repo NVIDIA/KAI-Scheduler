@@ -352,7 +352,7 @@ func TestRecordJobStatusEvent(t *testing.T) {
 			}
 
 			for _, explanation := range tt.jobErrors {
-				podGroupInfo.SetJobFitError(explanation.Reason, explanation.Message, nil)
+				podGroupInfo.AddBasicJobFitError(explanation.Reason, explanation.Message)
 			}
 
 			err := cache.RecordJobStatusEvent(podGroupInfo)

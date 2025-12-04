@@ -51,7 +51,7 @@ var _ = Describe("MinRuntime Plugin", func() {
 				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, minAvailable, nil),
 			},
 			PodStatusIndex: make(map[pod_status.PodStatus]pod_info.PodsMap),
-			NodesFitErrors: make(map[common_info.PodID]*common_info.FitErrors),
+			TasksFitErrors: make(map[common_info.PodID]*common_info.TasksFitErrors),
 		}
 
 		if lastStartTime != nil {

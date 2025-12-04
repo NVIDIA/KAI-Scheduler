@@ -206,7 +206,7 @@ func (ssn *Session) sortGPUs(filteredGPUs []string, pod *pod_info.PodInfo, node 
 }
 
 func (ssn *Session) FittingNode(task *pod_info.PodInfo, node *node_info.NodeInfo, writeFittingDelta bool) bool {
-	var fitErrors *common_info.FitErrors
+	var fitErrors *common_info.TasksFitErrors
 	if writeFittingDelta {
 		fitErrors = common_info.NewFitErrors()
 	}
@@ -271,9 +271,9 @@ func (ssn *Session) OrderedNodesByTask(nodes []*node_info.NodeInfo, task *pod_in
 }
 
 func (ssn *Session) isTaskAllocatableOnNode(task *pod_info.PodInfo, job *podgroup_info.PodGroupInfo,
-	node *node_info.NodeInfo, writeFittingDelta bool) (bool, *common_info.FitError) {
+	node *node_info.NodeInfo, writeFittingDelta bool) (bool, *common_info.TasksFitError) {
 	allocatable := true
-	var fitError *common_info.FitError = nil
+	var fitError *common_info.TasksFitError = nil
 
 	if !node.IsTaskAllocatableOnReleasingOrIdle(task) {
 		allocatable = false

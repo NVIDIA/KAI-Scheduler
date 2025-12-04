@@ -205,7 +205,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					},
 				}
 			},
-			expectedJobFitError: "Matching topology nonexistent-topology does not exist",
+			expectedJobFitError: "Requested topology nonexistent-topology does not exist",
 		},
 		{
 			name: "insufficient allocatable pods - no domains found",
@@ -505,8 +505,8 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				if len(job.JobFitErrors) == 0 {
 					t.Errorf("expected job fit error '%s', but got nil", tt.expectedJobFitError)
 				}
-				if job.JobFitErrors[0].Message != tt.expectedJobFitError {
-					t.Errorf("expected job fit error '%s', but got '%s'", tt.expectedJobFitError, job.JobFitErrors[0].Message)
+				if job.JobFitErrors[0].Messages()[0] != tt.expectedJobFitError {
+					t.Errorf("expected job fit error '%s', but got '%s'", tt.expectedJobFitError, job.JobFitErrors[0].Messages()[0])
 				}
 			}
 

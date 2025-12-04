@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -99,8 +98,8 @@ func TestAddTaskInfo(t *testing.T) {
 					},
 				},
 				activeAllocatedCount: ptr.To(3),
-				JobFitErrors:         make(v2alpha2.UnschedulableExplanations, 0),
-				NodesFitErrors:       map[common_info.PodID]*common_info.FitErrors{},
+				JobFitErrors:         make([]common_info.JobFitError, 0),
+				TasksFitErrors:       map[common_info.PodID]*common_info.TasksFitErrors{},
 			},
 		},
 	}
@@ -178,8 +177,8 @@ func TestDeleteTaskInfo(t *testing.T) {
 						pod_status.Running: {case01_task3.UID: case01_task3},
 					},
 					activeAllocatedCount: ptr.To(1),
-					JobFitErrors:         make(v2alpha2.UnschedulableExplanations, 0),
-					NodesFitErrors:       map[common_info.PodID]*common_info.FitErrors{},
+					JobFitErrors:         make([]common_info.JobFitError, 0),
+					TasksFitErrors:       map[common_info.PodID]*common_info.TasksFitErrors{},
 				}
 			}(),
 		},
@@ -212,8 +211,8 @@ func TestDeleteTaskInfo(t *testing.T) {
 						},
 					},
 					activeAllocatedCount: ptr.To(1),
-					JobFitErrors:         make(v2alpha2.UnschedulableExplanations, 0),
-					NodesFitErrors:       map[common_info.PodID]*common_info.FitErrors{},
+					JobFitErrors:         make([]common_info.JobFitError, 0),
+					TasksFitErrors:       map[common_info.PodID]*common_info.TasksFitErrors{},
 				}
 			}(),
 		},
