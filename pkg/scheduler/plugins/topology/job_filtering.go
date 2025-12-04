@@ -90,10 +90,13 @@ func (t *topologyPlugin) subSetNodesFn(
 
 	var domainNodeSets []node_info.NodeSet
 	for _, jobAllocatableDomain := range jobAllocatableDomains {
-		var domainNodeSet node_info.NodeSet
-		for _, node := range jobAllocatableDomain.Nodes {
-			domainNodeSet = append(domainNodeSet, node)
+		domainNodeSet := node_info.NodeSet{
+			Nodes: make([]*node_info.NodeInfo, 0, len(jobAllocatableDomain.Nodes)),
 		}
+		for _, node := range jobAllocatableDomain.Nodes {
+			domainNodeSet.Nodes = append(domainNodeSet.Nodes, node)
+		}
+		domainNodeSet.ID = getNodeSetID(domainNodeSet)
 		domainNodeSets = append(domainNodeSets, domainNodeSet)
 	}
 

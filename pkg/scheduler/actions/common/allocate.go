@@ -37,7 +37,7 @@ func allocateSubGroupSet(ssn *framework.Session, stmt *framework.Statement, node
 	job *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, tasksToAllocate []*pod_info.PodInfo,
 	isPipelineOnly bool,
 ) bool {
-	nodeSets, err := ssn.SubsetNodesFn(job, &subGroupSet.SubGroupInfo, subGroupSet.GetAllPodSets(), tasksToAllocate, nodes)
+	nodeSets, err := ssn.SubsetNodesFn(job, &subGroupSet.SubGroupInfo, subGroupSet.GetAllPodSets(), tasksToAllocate, node_info.NodeSet{Nodes: nodes})
 	if err != nil {
 		log.InfraLogger.Errorf(
 			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
@@ -57,21 +57,21 @@ func allocateSubGroupSet(ssn *framework.Session, stmt *framework.Statement, node
 	return false
 }
 
-func allocateSubGroupSetOnNodes(ssn *framework.Session, stmt *framework.Statement, nodes node_info.NodeSet,
+func allocateSubGroupSetOnNodes(ssn *framework.Session, stmt *framework.Statement, nodeSet node_info.NodeSet,
 	job *podgroup_info.PodGroupInfo, subGroupSet *subgroup_info.SubGroupSet, tasksToAllocate []*pod_info.PodInfo,
 	isPipelineOnly bool,
 ) bool {
 	for _, childSubGroupSet := range orderedSubGroupSets(ssn, subGroupSet.GetChildGroups()) {
 		podSets := childSubGroupSet.GetAllPodSets()
 		subGroupTasks := filterTasksForPodSets(podSets, tasksToAllocate)
-		if !allocateSubGroupSet(ssn, stmt, nodes, job, childSubGroupSet, subGroupTasks, isPipelineOnly) {
+		if !allocateSubGroupSet(ssn, stmt, nodeSet.Nodes, job, childSubGroupSet, subGroupTasks, isPipelineOnly) {
 			return false
 		}
 	}
 
 	for _, podSet := range orderedPodSets(ssn, subGroupSet.GetChildPodSets()) {
 		podSetTasks := filterTasksForPodSet(podSet, tasksToAllocate)
-		if !allocatePodSet(ssn, stmt, nodes, job, podSet, podSetTasks, isPipelineOnly) {
+		if !allocatePodSet(ssn, stmt, nodeSet, job, podSet, podSetTasks, isPipelineOnly) {
 			return false
 		}
 	}
@@ -104,10 +104,10 @@ func allocatePodSet(ssn *framework.Session, stmt *framework.Statement, nodes nod
 	return false
 }
 
-func allocateTasksOnNodeSet(ssn *framework.Session, stmt *framework.Statement, nodes node_info.NodeSet,
+func allocateTasksOnNodeSet(ssn *framework.Session, stmt *framework.Statement, nodeSet node_info.NodeSet,
 	job *podgroup_info.PodGroupInfo, tasksToAllocate []*pod_info.PodInfo, isPipelineOnly bool) bool {
 	for index, task := range tasksToAllocate {
-		success := allocateTask(ssn, stmt, nodes, task, isPipelineOnly)
+		success := allocateTask(ssn, stmt, nodeSet.Nodes, task, isPipelineOnly)
 		if !success {
 			handleFailedTaskAllocation(job, task, index)
 			return false

@@ -62,7 +62,10 @@ const (
 	migResourcePrefix             = "nvidia.com/mig-"
 )
 
-type NodeSet []*NodeInfo
+type NodeSet struct {
+	Nodes []*NodeInfo
+	ID    string
+}
 
 // NodeInfo is node level aggregated information.
 type NodeInfo struct {
