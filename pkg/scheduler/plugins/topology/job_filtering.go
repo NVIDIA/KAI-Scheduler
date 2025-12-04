@@ -395,9 +395,9 @@ func newTopologyConstraintConfigError(subGroup *subgroup_info.SubGroupInfo, topo
 	} else {
 		topologyConstraintPodGroupSet = fmt.Sprintf("sub-group %s", subGroup.GetName())
 	}
-	return fmt.Errorf("topology constraint error: the %s set a %s topology constraint %s, "+
-		"but no level for the topology tree %s matches this level",
-		topologyConstraintPodGroupSet, placementType, placementName, topologyTree.Name)
+	return fmt.Errorf("topology constraint error: %s specified '%s' as the %s topology constraint level, "+
+		"but the topology tree '%s' does not contain a level with this name",
+		topologyConstraintPodGroupSet, placementName, placementType, topologyTree.Name)
 }
 
 func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
