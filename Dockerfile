@@ -17,7 +17,7 @@ USER 65532:65532
 
 ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "-l", ":10000", "--api-version=2", "/workspace/app", "--"]
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal AS prod
+FROM registry.access.redhat.com/ubi9/ubi-micro AS prod
 ARG TARGETARCH
 ARG SERVICE_NAME
 ENV TARGETARCH=$TARGETARCH
