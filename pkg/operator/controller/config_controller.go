@@ -36,6 +36,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/admission"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/binder"
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/deployable"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/known_types"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/node_scale_adjuster"
@@ -149,8 +150,11 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.StatusReconciler = status_reconciler.New(r.Client, r.deployable)
 
 	builder := ctrl.NewControllerManagedBy(mgr).
-		For(&kaiv1.Config{}).
-		Watches(&nvidiav1.ClusterPolicy{}, handler.EnqueueRequestsFromMapFunc(enqueueWatched))
+		For(&kaiv1.Config{})
+
+	if checkForClusterPolicy(mgr) {
+		builder = builder.Watches(&nvidiav1.ClusterPolicy{}, handler.EnqueueRequestsFromMapFunc(enqueueWatched))
+	}
 
 	for _, collectable := range known_types.KAIConfigRegisteredCollectible {
 		builder = collectable.InitWithBuilder(builder)
@@ -167,4 +171,23 @@ func enqueueWatched(_ context.Context, _ client.Object) []ctrl.Request {
 			},
 		},
 	}
+}
+
+func checkForClusterPolicy(mgr ctrl.Manager) bool {
+	logger := log.FromContext(context.Background())
+	tempClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme()})
+	if err != nil {
+		logger.Info("Failed to create temporary client to check for cluster policy", "error", err)
+		return false
+	}
+
+	clusterPolicyExists, err := common.CheckCRDsAvailable(
+		context.Background(), tempClient, "clusterpolicies.nvidia.com",
+	)
+	if err != nil {
+		logger.Info("Failed to check for ClusterPolicy CRD existence", "error", err)
+		return false
+	}
+
+	return clusterPolicyExists
 }
