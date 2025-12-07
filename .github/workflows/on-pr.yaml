@@ -71,13 +71,6 @@ jobs:
     outputs:
       package_version: ${{ steps.package_version.outputs.PACKAGE_VERSION }}
     steps:
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@v10
-        with:
-          root-reserve-mb: 512
-          swap-size-mb: 1024
-          remove-dotnet: 'true'
-
       - name: Checkout code
         uses: actions/checkout@v6
 
@@ -130,13 +123,6 @@ jobs:
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@v10
-        with:
-          root-reserve-mb: 512
-          swap-size-mb: 1024
-          remove-dotnet: 'true'
-
       - name: Checkout code
         uses: actions/checkout@v6
 
@@ -171,6 +157,27 @@ jobs:
             docker push $new_image
           done
 
+      - name: 🔍 Debug Disk Usage
+        if: always() # Runs even if previous steps fail
+        run: |
+          echo "=============================================================================="
+          echo "1. GLOBAL DISK USAGE (df -h)"
+          echo "=============================================================================="
+          df -h
+
+          echo ""
+          echo "=============================================================================="
+          echo "2. DOCKER USAGE (docker system df)"
+          echo "=============================================================================="
+          docker system df -v
+
+          echo ""
+          echo "=============================================================================="
+          echo "3. TOP 20 LARGEST DIRECTORIES (du)"
+          echo "=============================================================================="
+          # Find largest directories in root, excluding mount points that might hang
+          sudo du -h / --max-depth=4 --exclude=/proc --exclude=/sys --exclude=/dev 2>/dev/null | sort -hr | head -n 20
+
       - name: Deploy fake gpu operator
         run: |
           helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
@@ -197,6 +204,27 @@ jobs:
         run: |
           docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
           rm -rf images
+
+      - name: 🔍 Debug Disk Usage
+        if: always() # Runs even if previous steps fail
+        run: |
+          echo "=============================================================================="
+          echo "1. GLOBAL DISK USAGE (df -h)"
+          echo "=============================================================================="
+          df -h
+
+          echo ""
+          echo "=============================================================================="
+          echo "2. DOCKER USAGE (docker system df)"
+          echo "=============================================================================="
+          docker system df -v
+
+          echo ""
+          echo "=============================================================================="
+          echo "3. TOP 20 LARGEST DIRECTORIES (du)"
+          echo "=============================================================================="
+          # Find largest directories in root, excluding mount points that might hang
+          sudo du -h / --max-depth=4 --exclude=/proc --exclude=/sys --exclude=/dev 2>/dev/null | sort -hr | head -n 20
 
       - name: Run e2e tests
         run: |
