@@ -127,9 +127,9 @@ topologyMigration:
   # The migrated topologies will have an annotation indicating they were migrated
   enabled: true
   image:
-    repository: bitnami/kubectl
-    tag: latest
+    name: crd-upgrader
     pullPolicy: IfNotPresent
+    # tag: ""  # Optional: Override global.tag or Chart.AppVersion
 
 postCleanup:
   image:
