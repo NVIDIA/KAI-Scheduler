@@ -119,6 +119,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+      
+      - name: Open non-blocking debug session with tmate
+        uses: mxschmitt/action-tmate@v5
+        with:
+          detached: true
 
       - name: Move Docker Data to /mnt
         run: |
