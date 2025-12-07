@@ -88,27 +88,37 @@ jobs:
         with:
           go-version: '1.24.4'
 
+      - name: Move Docker Data to /mnt
+        run: |
+          sudo systemctl stop docker
+          sudo mkdir -p /mnt/docker-data
+          echo '{"data-root": "/mnt/docker-data"}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl start docker
+          docker info | grep "Docker Root Dir"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Create image cache directory
-        run: mkdir images
+        run: |
+          sudo mkdir -p /mnt/images
+          sudo chown -R $USER:$USER /mnt/images
 
       - name: Cache for docker images and helm chart
         uses: actions/cache@v4
         with:
-          path: images
+          path: /mnt/images
           key:  images-${{ github.sha }}
 
       - name: Build docker images
         run: |
           make build DOCKER_BUILDX_ADDITIONAL_ARGS=--load VERSION=$PACKAGE_VERSION
-          docker save $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION) | gzip > images/docker_images.tgz
+          docker save $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION) | gzip > /mnt/images/docker_images.tgz
 
       - name: Build helm chart
         run: |
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
-          cp charts/kai-scheduler-$PACKAGE_VERSION.tgz images/
+          cp charts/kai-scheduler-$PACKAGE_VERSION.tgz /mnt/images/
 
   e2e-tests:
     name: Run E2E Tests
@@ -118,10 +128,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Move Docker Data to /mnt
+        run: |
+          sudo systemctl stop docker
+          sudo mkdir -p /mnt/docker-data
+          echo '{"data-root": "/mnt/docker-data"}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl start docker
+          docker info | grep "Docker Root Dir"
+      
+      - name: Create images directory
+        run: |
+          sudo mkdir -p /mnt/images
+          sudo chown -R $USER:$USER /mnt/images
+
       - name: Cache restore
         uses: actions/cache/restore@v4
         with:
-          path: images
+          path: /mnt/images
           key:  images-${{ github.sha }}
 
       - name: Create k8s Kind Cluster
@@ -137,12 +160,11 @@ jobs:
           kubectl wait --for=condition=available --timeout=60s deployment/registry -n kube-registry
 
       - name: Load docker images to registry
-        working-directory: images
         env:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
           kubectl port-forward -n kube-registry deploy/registry 5000:5000 &
-          docker load < docker_images.tgz
+          docker load < /mnt/images/docker_images.tgz
           for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
             new_image=$(echo "$image" | sed -E 's|.*/([^/]+:[^/]+)$|localhost:5000/\1|')
             docker tag $image $new_image
@@ -158,8 +180,9 @@ jobs:
         env:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
-          helm upgrade -i kai-scheduler ./images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
+          helm upgrade -i kai-scheduler /mnt/images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
             --set "global.gpuSharing=true" --set "global.registry=localhost:30100" --debug --wait
+      
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -174,7 +197,7 @@ jobs:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
           docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
-          rm -rf images
+          sudo rm -rf /mnt/images
 
       - name: Run e2e tests
         run: |
