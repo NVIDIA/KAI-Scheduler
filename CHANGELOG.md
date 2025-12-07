@@ -43,7 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - KAI Config wrong statuses when prometheus operand is enabled
 - GPU-Operator v25.10.0 support for CDI enabled environments
 
-## [v0.9.5] - 20250-12-08
+## [v0.9.9] - 20250-12-08
 
 ### Added
 - Option to configure reservation pods runtime class.
