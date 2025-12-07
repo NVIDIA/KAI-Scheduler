@@ -6,9 +6,6 @@ name: Validate Changelog
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
-    branches:
-      - main
-      - 'v*.*'
 
 jobs:
   validate-changelog:
