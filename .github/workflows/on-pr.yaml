@@ -127,11 +127,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
-      
-      - name: Open non-blocking debug session with tmate
-        uses: mxschmitt/action-tmate@v3
-        with:
-          detached: true
 
       - name: Move Docker Data to /mnt
         run: |
@@ -165,8 +160,6 @@ jobs:
           kubectl wait --for=condition=available --timeout=60s deployment/registry -n kube-registry
 
       - name: Load docker images to registry
-        # GuyTodo: Remove
-        # working-directory: /mnt/images
         env:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
@@ -177,27 +170,6 @@ jobs:
             docker tag $image $new_image
             docker push $new_image
           done
-
-      - name: 🔍 Debug Disk Usage
-        if: always() # Runs even if previous steps fail
-        run: |
-          echo "=============================================================================="
-          echo "1. GLOBAL DISK USAGE (df -h)"
-          echo "=============================================================================="
-          df -h
-
-          echo ""
-          echo "=============================================================================="
-          echo "2. DOCKER USAGE (docker system df)"
-          echo "=============================================================================="
-          docker system df -v
-
-          echo ""
-          echo "=============================================================================="
-          echo "3. TOP 20 LARGEST DIRECTORIES (du)"
-          echo "=============================================================================="
-          # Find largest directories in root, excluding mount points that might hang
-          sudo du -h / --max-depth=4 --exclude=/proc --exclude=/sys --exclude=/dev 2>/dev/null | sort -hr | head -n 20
 
       - name: Deploy fake gpu operator
         run: |
@@ -210,6 +182,7 @@ jobs:
         run: |
           helm upgrade -i kai-scheduler /mnt/images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
             --set "global.gpuSharing=true" --set "global.registry=localhost:30100" --debug --wait
+      
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -225,27 +198,6 @@ jobs:
         run: |
           docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
           sudo rm -rf /mnt/images
-
-      - name: 🔍 Debug Disk Usage
-        if: always() # Runs even if previous steps fail
-        run: |
-          echo "=============================================================================="
-          echo "1. GLOBAL DISK USAGE (df -h)"
-          echo "=============================================================================="
-          df -h
-
-          echo ""
-          echo "=============================================================================="
-          echo "2. DOCKER USAGE (docker system df)"
-          echo "=============================================================================="
-          docker system df -v
-
-          echo ""
-          echo "=============================================================================="
-          echo "3. TOP 20 LARGEST DIRECTORIES (du)"
-          echo "=============================================================================="
-          # Find largest directories in root, excluding mount points that might hang
-          sudo du -h / --max-depth=4 --exclude=/proc --exclude=/sys --exclude=/dev 2>/dev/null | sort -hr | head -n 20
 
       - name: Run e2e tests
         run: |
