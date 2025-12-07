@@ -120,6 +120,11 @@ jobs:
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
           cp charts/kai-scheduler-$PACKAGE_VERSION.tgz /mnt/images/
 
+      # GuyDebug: ls /mnt/images
+      - name: List images in /mnt/images
+        run: |
+          ls -la /mnt/images
+
 
 
   e2e-tests:
@@ -148,6 +153,11 @@ jobs:
         with:
           path: /mnt/images
           key:  images-${{ github.sha }}
+
+      # GuyDebug: ls /mnt/images
+      - name: List images in /mnt/images
+        run: |
+          ls -la /mnt/images
 
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.10.0
