@@ -100,7 +100,9 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Create image cache directory
-        run: mkdir /mnt/images
+        run: |
+          sudo mkdir -p /mnt/images
+          sudo chown -R $USER:$USER /mnt/images
 
       - name: Cache for docker images and helm chart
         uses: actions/cache@v4
