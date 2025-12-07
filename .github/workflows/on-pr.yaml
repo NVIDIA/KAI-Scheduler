@@ -174,7 +174,7 @@ jobs:
         env:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
-          helm upgrade -i kai-scheduler ./mnt/images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
+          helm upgrade -i kai-scheduler /mnt/images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
             --set "global.gpuSharing=true" --debug --wait
       - name: Set up Go
         uses: actions/setup-go@v2
