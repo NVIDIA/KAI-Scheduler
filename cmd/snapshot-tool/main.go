@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime/pprof"
 	"syscall"
 	"time"
 
@@ -34,6 +35,7 @@ func main() {
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	verbosity := fs.Int("verbosity", 4, "logging verbosity")
 	filename := fs.String("filename", "", "location of the zipped JSON file")
+	cpuprofile := fs.String("cpuprofile", "", "write cpu profile to file")
 	_ = fs.Parse(os.Args[1:])
 	if filename == nil || len(*filename) == 0 {
 		fs.Usage()
@@ -81,6 +83,15 @@ func main() {
 	stopCh := make(chan struct{})
 	schedulerCache.Run(stopCh)
 	schedulerCache.WaitForCacheSync(stopCh)
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.InfraLogger.Fatalf("Failed to create CPU profile file: %v", err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 
 	ssn, err := framework.OpenSession(
 		schedulerCache, snapshot.Config, snapshot.SchedulerParams, "", &http.ServeMux{},
