@@ -83,6 +83,11 @@ jobs:
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
           echo $PACKAGE_VERSION
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.4'
+      
       - name: Move Docker Data to /mnt
         run: |
           sudo systemctl stop docker
@@ -90,11 +95,6 @@ jobs:
           echo '{"data-root": "/mnt/docker-data"}' | sudo tee /etc/docker/daemon.json
           sudo systemctl start docker
           docker info | grep "Docker Root Dir"
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24.4'
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
