@@ -1,0 +1,34 @@
+name: Debug Cache Content
+
+on:
+  pull_request:
+
+jobs:
+  debug-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache
+            ./cache
+          key: images-f86783a7559573ab7a83e5af247d1a02a565f96c
+
+      - name: List cache contents
+        run: |
+          echo "=== Contents of ~/.cache ==="
+          ls -laR ~/.cache || echo "~/.cache does not exist"
+          echo ""
+          echo "=== Contents of ./cache ==="
+          ls -laR ./cache || echo "./cache does not exist"
+
+      - name: Find all cached files
+        run: |
+          echo "=== Searching for all files in potential cache locations ==="
+          find ~/.cache -type f 2>/dev/null || echo "No files in ~/.cache"
+          find ./cache -type f 2>/dev/null || echo "No files in ./cache"
+
