@@ -135,6 +135,11 @@ jobs:
           echo '{"data-root": "/mnt/docker-data"}' | sudo tee /etc/docker/daemon.json
           sudo systemctl start docker
           docker info | grep "Docker Root Dir"
+      
+      - name: Create images directory
+        run: |
+          sudo mkdir -p /mnt/images
+          sudo chown -R $USER:$USER /mnt/images
 
       - name: Cache restore
         uses: actions/cache/restore@v4
