@@ -26,6 +26,7 @@ const (
 	ConditionTypeDeployed          ConditionType = "Deployed"
 	ConditionTypeAvailable         ConditionType = "Available"
 	ConditionDependenciesFulfilled ConditionType = "DependenciesFulfilled"
+	ConditionTypeReady             ConditionType = "Ready"
 )
 
 type ConditionReason string
@@ -35,6 +36,7 @@ const (
 	Available             ConditionReason = "available"
 	Reconciled            ConditionReason = "reconciled"
 	DependenciesFulfilled ConditionReason = "dependencies_fulfilled"
+	Ready                 ConditionReason = "ready"
 )
 
 // ConfigSpec defines the desired state of Config
