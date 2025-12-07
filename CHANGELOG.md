@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixed Helm chart compatibility with Helm 4 wait logic to prevent indefinite hangs during deployment readiness checks
 
 
-## [v0.9.5] - 20250-10-09
+## [v0.9.9] - 20250-10-09
 
 ### Added
 - Support DRA in kubernetes 1.34
