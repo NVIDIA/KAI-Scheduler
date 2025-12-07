@@ -13,6 +13,6 @@ metadata:
     "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
 data:
   migrate-topologies.sh: |
-{{ .Files.Get "templates/hooks/pre/topology-migration/migrate-topologies.sh" | indent 4 }}
+{{ .Files.Get "scripts/migrate-topologies.sh" | indent 4 }}
 {{- end }}
 
