@@ -129,7 +129,7 @@ jobs:
         uses: actions/checkout@v6
       
       - name: Open non-blocking debug session with tmate
-        uses: mxschmitt/action-tmate@v5
+        uses: mxschmitt/action-tmate@v3
         with:
           detached: true
 
