@@ -14,6 +14,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	kaiclientset "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -21,8 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
-	kueue "sigs.k8s.io/kueue/client-go/clientset/versioned"
 )
 
 const (
@@ -32,7 +32,7 @@ const (
 )
 
 type TestTopologyData struct {
-	TopologyCrd   *kueuev1alpha1.Topology
+	TopologyCrd   *kaiv1alpha1.Topology
 	TopologyNodes map[string]*corev1.Node
 	Zones         map[string][]*corev1.Node
 	Racks         map[string][]*corev1.Node
@@ -58,20 +58,20 @@ func CreateRackZoneTopology(
 	capacity.SkipIfInsufficientClusterTopologyResources(kubeClientset, requiredNodesResources)
 
 	// Create topology tree
-	testTopologyData.TopologyCrd = &kueuev1alpha1.Topology{
+	testTopologyData.TopologyCrd = &kaiv1alpha1.Topology{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "e2e-topology-tree",
 		},
-		Spec: kueuev1alpha1.TopologySpec{
-			Levels: []kueuev1alpha1.TopologyLevel{
+		Spec: kaiv1alpha1.TopologySpec{
+			Levels: []kaiv1alpha1.TopologyLevel{
 				{NodeLabel: TestZoneLabelKey},
 				{NodeLabel: TestRackLabelKey},
 				{NodeLabel: NodeNameLabelKey},
 			},
 		},
 	}
-	kueueClient := kueue.NewForConfigOrDie(kubeConfig)
-	_, err := kueueClient.KueueV1alpha1().Topologies().Create(
+	kaiClient := kaiclientset.NewForConfigOrDie(kubeConfig)
+	_, err := kaiClient.KaiV1alpha1().Topologies().Create(
 		context.TODO(), testTopologyData.TopologyCrd, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred(), "Failed to create topology tree")
 
@@ -165,8 +165,8 @@ func CleanNodesFromTopology(ctx context.Context,
 
 func CleanRackZoneTopology(ctx context.Context, testTopologyData TestTopologyData, kubeConfig *rest.Config) {
 
-	kueueClient := kueue.NewForConfigOrDie(kubeConfig)
-	err := kueueClient.KueueV1alpha1().Topologies().Delete(
+	kaiClient := kaiclientset.NewForConfigOrDie(kubeConfig)
+	err := kaiClient.KaiV1alpha1().Topologies().Delete(
 		context.TODO(), testTopologyData.TopologyCrd.Name, metav1.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred(), "Failed to delete test topology tree %s", testTopologyData.TopologyCrd.Name)
 }

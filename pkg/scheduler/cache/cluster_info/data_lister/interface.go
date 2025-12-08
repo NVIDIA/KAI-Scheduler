@@ -7,8 +7,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	scheduling "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
-	"sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
@@ -29,6 +29,6 @@ type DataLister interface {
 	ListCSIDrivers() ([]*storage.CSIDriver, error)
 	ListBindRequests() ([]*schedulingv1alpha2.BindRequest, error)
 	ListConfigMaps() ([]*v1.ConfigMap, error)
-	ListTopologies() ([]*v1alpha1.Topology, error)
+	ListTopologies() ([]*kaiv1alpha1.Topology, error)
 	ListResourceUsage() (*queue_info.ClusterUsage, error)
 }

@@ -24,7 +24,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -53,7 +53,7 @@ type ClusterInfo struct {
 	CSIDrivers                  map[common_info.CSIDriverID]*csidriver_info.CSIDriverInfo
 	StorageClasses              map[common_info.StorageClassID]*storageclass_info.StorageClassInfo
 	ConfigMaps                  map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
-	Topologies                  []*kueue.Topology
+	Topologies                  []*kaiv1alpha1.Topology
 }
 
 func NewClusterInfo() *ClusterInfo {
@@ -68,7 +68,7 @@ func NewClusterInfo() *ClusterInfo {
 		StorageClaims:      make(map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo),
 		StorageCapacities:  make(map[common_info.StorageCapacityID]*storagecapacity_info.StorageCapacityInfo),
 		ConfigMaps:         make(map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo),
-		Topologies:         []*kueue.Topology{},
+		Topologies:         []*kaiv1alpha1.Topology{},
 	}
 }
 

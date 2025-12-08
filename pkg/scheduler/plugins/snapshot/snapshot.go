@@ -15,7 +15,7 @@ import (
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 
-	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
@@ -45,7 +45,7 @@ type RawKubernetesObjects struct {
 	ResourceClaims         []*resourceapi.ResourceClaim      `json:"resourceClaims"`
 	ResourceSlices         []*resourceapi.ResourceSlice      `json:"resourceSlices"`
 	DeviceClasses          []*resourceapi.DeviceClass        `json:"deviceClasses"`
-	Topologies             []*kueue.Topology                 `json:"topologies"`
+	Topologies             []*kaiv1alpha1.Topology           `json:"topologies"`
 }
 
 type Snapshot struct {
@@ -145,7 +145,7 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 	rawObjects.Topologies, err = dataLister.ListTopologies()
 	if err != nil {
 		log.InfraLogger.Errorf("Error getting raw topologies: %v", err)
-		rawObjects.Topologies = []*kueue.Topology{}
+		rawObjects.Topologies = []*kaiv1alpha1.Topology{}
 	}
 
 	fwork := sp.session.InternalK8sPlugins().FrameworkHandle

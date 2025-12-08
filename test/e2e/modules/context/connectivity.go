@@ -18,6 +18,7 @@ import (
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	kubeAiSchedulerV2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
@@ -53,6 +54,9 @@ func initConnectivity() error {
 		}
 		if err = kaiv1.AddToScheme(controllerClient.Scheme()); err != nil {
 			return fmt.Errorf("failed to add kai v1 to scheme: %w", err)
+		}
+		if err = kaiv1alpha1.AddToScheme(controllerClient.Scheme()); err != nil {
+			return fmt.Errorf("failed to add kai v1alpha1 to scheme: %w", err)
 		}
 		if err = v1alpha1.AddToScheme(controllerClient.Scheme()); err != nil {
 			return fmt.Errorf("failed to add engine v1alpha1 to scheme: %w", err)

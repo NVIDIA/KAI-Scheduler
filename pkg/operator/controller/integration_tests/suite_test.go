@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/controller"
 
@@ -78,7 +79,6 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "..", "..", "..", "deployments", "kai-scheduler", "crds"),
-			filepath.Join("..", "..", "..", "..", "deployments", "external-crds"),
 			"third_party_crds",
 		},
 		ErrorIfCRDPathMissing: true,
@@ -91,6 +91,9 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	err = kaiv1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = kaiv1alpha1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = nvidiav1.AddToScheme(scheme)

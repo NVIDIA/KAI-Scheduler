@@ -69,7 +69,6 @@ require (
 	knative.dev/serving v0.44.0
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/karpenter v1.2.0
-	sigs.k8s.io/kueue v0.14.0-devel.0.20250917151612-1b53cb59049a
 	sigs.k8s.io/lws v0.7.0
 	sigs.k8s.io/yaml v1.6.0
 )

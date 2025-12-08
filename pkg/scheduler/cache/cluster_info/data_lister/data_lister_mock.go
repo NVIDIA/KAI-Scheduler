@@ -12,6 +12,7 @@ package data_lister
 import (
 	reflect "reflect"
 
+	v1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	v1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	v2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
@@ -20,7 +21,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	v10 "k8s.io/api/scheduling/v1"
 	v11 "k8s.io/api/storage/v1"
-	v1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 // MockDataLister is a mock of DataLister interface.
