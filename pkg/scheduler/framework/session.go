@@ -219,7 +219,7 @@ func (ssn *Session) FittingNode(task *pod_info.PodInfo, node *node_info.NodeInfo
 	if !allocatable {
 		if fitError != nil && writeFittingDelta {
 			fitErrors.SetNodeError(node.Name, fitError)
-			job.SetTaskFitError(task, fitErrors)
+			job.AddTaskFitErrors(task, fitErrors)
 		}
 		return false
 	}
@@ -231,7 +231,7 @@ func (ssn *Session) FittingNode(task *pod_info.PodInfo, node *node_info.NodeInfo
 			task.Namespace, task.Name, node.Name, err)
 		if writeFittingDelta {
 			fitErrors.SetNodeError(node.Name, err)
-			job.SetTaskFitError(task, fitErrors)
+			job.AddTaskFitErrors(task, fitErrors)
 		}
 		return false
 	}
