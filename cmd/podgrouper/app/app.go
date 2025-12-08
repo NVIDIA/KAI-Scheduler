@@ -116,7 +116,7 @@ func NewWithScheme(mgrScheme *runtime.Scheme) (*App, error) {
 
 	defaultPluginsHub := pluginshub.NewDefaultPluginsHub(mgr.GetClient(), configs.SearchForLegacyPodGroups,
 		configs.KnativeGangSchedule, configs.SchedulingQueueLabelKey, configs.NodePoolLabelKey,
-		configs.DefaultPrioritiesConfigMapName, configs.DefaultPrioritiesConfigMapNamespace)
+		configs.DefaultConfigPerTypeConfigMapName, configs.DefaultConfigPerTypeConfigMapNamespace)
 
 	app := &App{
 		Mgr:               mgr,
@@ -190,11 +190,11 @@ func getCacheOptions(configs controllers.Configs) cache.Options {
 		&corev1.Pod{}: podByObject,
 	}
 
-	// limit configmap cache to the namespace that contains the configmap of default priorities for pod groups
-	if configs.DefaultPrioritiesConfigMapName != "" && configs.DefaultPrioritiesConfigMapNamespace != "" {
+	// limit configmap cache to the namespace that contains the configmap of default configs for pod groups
+	if configs.DefaultConfigPerTypeConfigMapName != "" && configs.DefaultConfigPerTypeConfigMapNamespace != "" {
 		cacheOptions.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
 			Namespaces: map[string]cache.Config{
-				configs.DefaultPrioritiesConfigMapNamespace: {},
+				configs.DefaultConfigPerTypeConfigMapNamespace: {},
 			},
 		}
 	}

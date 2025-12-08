@@ -34,9 +34,10 @@ type DefaultGrouper struct {
 	queueLabelKey    string
 	nodePoolLabelKey string
 
-	defaultPrioritiesConfigMapName      string
-	defaultPrioritiesConfigMapNamespace string
-	kubeReader                          client.Reader
+	// default config per type - includes the default priority class name and preemptibility per workload type
+	defaultConfigPerTypeConfigMapName      string
+	defaultConfigPerTypeConfigMapNamespace string
+	kubeReader                             client.Reader
 }
 
 func NewDefaultGrouper(queueLabelKey, nodePoolLabelKey string, kubeReader client.Reader) *DefaultGrouper {
@@ -47,9 +48,9 @@ func NewDefaultGrouper(queueLabelKey, nodePoolLabelKey string, kubeReader client
 	}
 }
 
-func (dg *DefaultGrouper) SetDefaultPrioritiesConfigMapParams(defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string) {
-	dg.defaultPrioritiesConfigMapName = defaultPrioritiesConfigMapName
-	dg.defaultPrioritiesConfigMapNamespace = defaultPrioritiesConfigMapNamespace
+func (dg *DefaultGrouper) SetDefaultConfigPerTypeConfigMapParams(defaultConfigPerTypeConfigMapName, defaultConfigPerTypeConfigMapNamespace string) {
+	dg.defaultConfigPerTypeConfigMapName = defaultConfigPerTypeConfigMapName
+	dg.defaultConfigPerTypeConfigMapNamespace = defaultConfigPerTypeConfigMapNamespace
 }
 
 func (dg *DefaultGrouper) Name() string {
@@ -294,18 +295,18 @@ func (dg *DefaultGrouper) getDefaultPriorityClassNameForKind(groupKind *schema.G
 // getDefaultConfigsPerTypeMapping - returns a map of workload groupKind to default workload-type config (priorityClassName and preemptibility).
 // It fetches the defaults from a ConfigMap if configured, otherwise returns an empty map.
 func (dg *DefaultGrouper) getDefaultConfigsPerTypeMapping() (map[string]workloadTypePriorityConfig, error) {
-	if dg.defaultPrioritiesConfigMapName == "" || dg.defaultPrioritiesConfigMapNamespace == "" ||
+	if dg.defaultConfigPerTypeConfigMapName == "" || dg.defaultConfigPerTypeConfigMapNamespace == "" ||
 		dg.kubeReader == nil {
 		return map[string]workloadTypePriorityConfig{}, nil
 	}
 
 	configMap := &v1.ConfigMap{}
 	err := dg.kubeReader.Get(context.Background(), client.ObjectKey{
-		Name:      dg.defaultPrioritiesConfigMapName,
-		Namespace: dg.defaultPrioritiesConfigMapNamespace,
+		Name:      dg.defaultConfigPerTypeConfigMapName,
+		Namespace: dg.defaultConfigPerTypeConfigMapNamespace,
 	}, configMap)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get default priorities configmap: %w", err)
+		return nil, fmt.Errorf("failed to get default configs per type configmap: %w", err)
 	}
 
 	return parseConfigMapDataToDefaultConfigs(configMap)
