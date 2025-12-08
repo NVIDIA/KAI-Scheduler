@@ -40,7 +40,7 @@ func allocateSubGroupSet(ssn *framework.Session, stmt *framework.Statement, node
 	nodeSets, err := ssn.SubsetNodesFn(job, &subGroupSet.SubGroupInfo, subGroupSet.GetAllPodSets(), tasksToAllocate, nodes)
 	if err != nil {
 		log.InfraLogger.Errorf(
-			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
+			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Name, err)
 		return false
 	}
 
@@ -88,7 +88,7 @@ func allocatePodSet(ssn *framework.Session, stmt *framework.Statement, nodes nod
 	nodeSets, err := ssn.SubsetNodesFn(job, &podSet.SubGroupInfo, podSets, tasksToAllocate, nodes)
 	if err != nil {
 		log.InfraLogger.Errorf(
-			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Namespace, err)
+			"Failed to run SubsetNodes on job <%s/%s>: %v", job.Namespace, job.Name, err)
 		return false
 	}
 

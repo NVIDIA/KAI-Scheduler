@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Introduced native KAI Topology CRD to replace dependency on Kueue's Topology CRD, improving compatibility and simplifying installation
 
 ### Fixed
-- Fixed Helm chart compatibility with Helm 4 wait logic to prevent indefinite hangs during deployment readiness checks
+- Fixed a bug where the snapshot tool would not load topology objects [#720](https://github.com/NVIDIA/KAI-Scheduler/pull/720) [itsomri](https://github.com/itsomri)
 
 ## [v0.10.2] - 2025-11-24
 
@@ -47,6 +47,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixed a bug where ray workloads gang scheduling would ignore `minReplicas` if autoscaling was not set
 - KAI Config wrong statuses when prometheus operand is enabled
 - GPU-Operator v25.10.0 support for CDI enabled environments
+
+## [v0.9.9] - 20250-12-08
+
+### Added
+- Option to configure reservation pods runtime class.
+
+### Fixed
+- Fixed Helm chart compatibility with Helm 4 wait logic to prevent indefinite hangs during deployment readiness checks
 
 ## [v0.9.1] - 20250-09-15
 

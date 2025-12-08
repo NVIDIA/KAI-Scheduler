@@ -111,13 +111,32 @@ var _ = Describe("Allocation scenario with subgroups", Ordered, func() {
 			{Name: "sub-2", MinMember: 1},
 		}
 
-		_, err := testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(namespace).Create(ctx,
+		// impose quota limit on queue to ensure that PodGroups will be scheduled before testing
+		queue, err := testCtx.KubeAiSchedClientset.SchedulingV2().Queues("").Get(ctx, testCtx.Queues[0].Name, metav1.GetOptions{})
+		Expect(err).To(Succeed())
+
+		queue.Spec.Resources.GPU.Quota = 0
+		queue.Spec.Resources.GPU.Limit = 0
+		_, err = testCtx.KubeAiSchedClientset.SchedulingV2().Queues("").Update(ctx, queue, metav1.UpdateOptions{})
+		Expect(err).To(Succeed())
+
+		_, err = testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(namespace).Create(ctx,
 			pg1, metav1.CreateOptions{})
 		Expect(err).To(Succeed())
 		_, err = testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(namespace).Create(ctx,
 			pg2, metav1.CreateOptions{})
 		Expect(err).To(Succeed())
 
+		// remove quota limit
+		queue, err = testCtx.KubeAiSchedClientset.SchedulingV2().Queues("").Get(ctx, testCtx.Queues[0].Name, metav1.GetOptions{})
+		Expect(err).To(Succeed())
+
+		queue.Spec.Resources.GPU.Quota = -1
+		queue.Spec.Resources.GPU.Limit = -1
+		queue, err = testCtx.KubeAiSchedClientset.SchedulingV2().Queues("").Update(ctx, queue, metav1.UpdateOptions{})
+		Expect(err).To(Succeed())
+
+		wait.ForAtLeastNPodsScheduled(ctx, testCtx.ControllerClient, namespace, pg1SubGroup1Pods, 1)
 		pg1Pods := append(pg1SubGroup1Pods, pg1SubGroup2Pods...)
 		wait.ForAtLeastNPodsScheduled(ctx, testCtx.ControllerClient, namespace, pg1SubGroup1Pods, 1)
 		wait.ForAtLeastNPodsScheduled(ctx, testCtx.ControllerClient, namespace, pg1SubGroup2Pods, 1)
