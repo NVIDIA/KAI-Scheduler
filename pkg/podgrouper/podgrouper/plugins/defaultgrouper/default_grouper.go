@@ -58,8 +58,8 @@ func (dg *DefaultGrouper) Name() string {
 }
 
 func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
-	priorityClassName, defaults := dg.CalcPriorityClassWithDefaults(topOwner, pod, constants.TrainPriorityClass)
-	preemptibility := dg.CalcPodGroupPreemptibilityWithDefaults(topOwner, pod, defaults)
+	priorityClassName, defaults := dg.calcPriorityClassWithDefaults(topOwner, pod, constants.TrainPriorityClass)
+	preemptibility := dg.calcPodGroupPreemptibilityWithDefaults(topOwner, pod, defaults)
 
 	podGroupMetadata := podgroup.Metadata{
 		Owner: metav1.OwnerReference{
@@ -162,16 +162,16 @@ func (dg *DefaultGrouper) calculateQueueName(topOwner *unstructured.Unstructured
 
 func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstructured, pod *v1.Pod,
 	defaultPriorityClassForJob string) string {
-	priorityClassName, _ := dg.CalcPriorityClassWithDefaults(topOwner, pod, defaultPriorityClassForJob)
+	priorityClassName, _ := dg.calcPriorityClassWithDefaults(topOwner, pod, defaultPriorityClassForJob)
 	return priorityClassName
 }
 
-// CalcPriorityClassWithDefaults - resolves priority class using:
+// calcPriorityClassWithDefaults - resolves priority class using:
 // 1) explicit labels (top owner/pod), if valid
 // 2) defaults from ConfigMap (returned to allow reuse by caller)
 // 3) final fallback to defaultPriorityClassForJob
 // Returns the resolved priority class name and the defaults mapping used (if any).
-func (dg *DefaultGrouper) CalcPriorityClassWithDefaults(topOwner *unstructured.Unstructured, pod *v1.Pod,
+func (dg *DefaultGrouper) calcPriorityClassWithDefaults(topOwner *unstructured.Unstructured, pod *v1.Pod,
 	defaultPriorityClassForJob string) (string, map[string]workloadTypePriorityConfig) {
 	priorityClassName := dg.calcPodGroupPriorityClass(topOwner, pod)
 	if dg.validatePriorityClassExists(priorityClassName) {
@@ -198,15 +198,11 @@ func (dg *DefaultGrouper) CalcPriorityClassWithDefaults(topOwner *unstructured.U
 	return defaultPriorityClassForJob, defaultConfigs
 }
 
-func (dg *DefaultGrouper) calcPodGroupPreemptibility(topOwner *unstructured.Unstructured, pod *v1.Pod) v2alpha2.Preemptibility {
-	return dg.CalcPodGroupPreemptibilityWithDefaults(topOwner, pod, nil)
-}
-
-// CalcPodGroupPreemptibilityWithDefaults - resolves preemptibility using:
+// calcPodGroupPreemptibilityWithDefaults - resolves preemptibility using:
 // 1) explicit labels (top owner/pod)
 // 2) provided defaults (if any)
 // 3) defaults from ConfigMap
-func (dg *DefaultGrouper) CalcPodGroupPreemptibilityWithDefaults(
+func (dg *DefaultGrouper) calcPodGroupPreemptibilityWithDefaults(
 	topOwner *unstructured.Unstructured,
 	pod *v1.Pod,
 	defaults map[string]workloadTypePriorityConfig) v2alpha2.Preemptibility {
