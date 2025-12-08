@@ -21,7 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	kaiv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
@@ -498,7 +498,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 
 		var (
 			topologyNodes []*corev1.Node
-			topologyTree  *kaiv1.Topology
+			topologyTree  *kaiv1alpha1.Topology
 		)
 
 		BeforeAll(func(ctx context.Context) {
@@ -522,12 +522,12 @@ var _ = Describe("Scheduler", Ordered, func() {
 				topologyNodes = append(topologyNodes, nodeObj)
 			}
 
-			topologyTree = &kaiv1.Topology{
+			topologyTree = &kaiv1alpha1.Topology{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: topologyName,
 				},
-				Spec: kaiv1.TopologySpec{
-					Levels: []kaiv1.TopologyLevel{
+				Spec: kaiv1alpha1.TopologySpec{
+					Levels: []kaiv1alpha1.TopologyLevel{
 						{NodeLabel: rackLabelKey},
 						{NodeLabel: hostnameLabelKey},
 					},

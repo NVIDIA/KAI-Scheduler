@@ -27,8 +27,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 
-	kaiv1Listers "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/listers/kai/v1"
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1Listers "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/listers/kai/v1alpha1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 )
 
 type k8sLister struct {
@@ -48,7 +48,7 @@ type k8sLister struct {
 
 	bindRequestLister scheudlinglistv1alpha2.BindRequestLister
 
-	kaiTopologyLister kaiv1Listers.TopologyLister
+	kaiTopologyLister kaiv1alpha1Listers.TopologyLister
 
 	partitionSelector labels.Selector
 }
@@ -78,7 +78,7 @@ func New(
 		csiDriverLister:       informerFactory.Storage().V1().CSIDrivers().Lister(),
 
 		bindRequestLister: kubeAiSchedulerInformerFactory.Scheduling().V1alpha2().BindRequests().Lister(),
-		kaiTopologyLister: kubeAiSchedulerInformerFactory.Kai().V1().Topologies().Lister(),
+		kaiTopologyLister: kubeAiSchedulerInformerFactory.Kai().V1alpha1().Topologies().Lister(),
 
 		partitionSelector: partitionSelector,
 	}
@@ -168,6 +168,6 @@ func (k *k8sLister) ListConfigMaps() ([]*v1.ConfigMap, error) {
 
 // +kubebuilder:rbac:groups="kai.scheduler",resources=topologies,verbs=get;list;watch
 
-func (k *k8sLister) ListTopologies() ([]*kaiv1.Topology, error) {
+func (k *k8sLister) ListTopologies() ([]*kaiv1alpha1.Topology, error) {
 	return k.kaiTopologyLister.List(labels.Everything())
 }

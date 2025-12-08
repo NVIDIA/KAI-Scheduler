@@ -6,7 +6,7 @@ package topology
 import (
 	"strings"
 
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
@@ -34,7 +34,7 @@ type Info struct {
 	Name string
 
 	// Topology resource
-	TopologyResource *kaiv1.Topology
+	TopologyResource *kaiv1alpha1.Topology
 }
 
 // DomainInfo represents a node in the topology tree
@@ -91,7 +91,7 @@ func (t *DomainInfo) AddChild(child *DomainInfo) {
 	t.Children = append(t.Children, child)
 }
 
-func calcDomainId(leafLevelIndex int, levels []kaiv1.TopologyLevel, nodeLabels map[string]string) DomainID {
+func calcDomainId(leafLevelIndex int, levels []kaiv1alpha1.TopologyLevel, nodeLabels map[string]string) DomainID {
 	domainsNames := make([]string, leafLevelIndex+1)
 	for levelIndex := leafLevelIndex; levelIndex >= 0; levelIndex-- {
 		levelLabel := levels[levelIndex].NodeLabel

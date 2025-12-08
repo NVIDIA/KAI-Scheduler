@@ -8,7 +8,7 @@ import (
 	"sort"
 	"testing"
 
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/maps"
@@ -80,9 +80,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				tree := &Info{
 					Name: "test-topology",
-					TopologyResource: &kaiv1.Topology{
-						Spec: kaiv1.TopologySpec{
-							Levels: []kaiv1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 								{NodeLabel: "rack"},
 							},
@@ -160,9 +160,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				return &Info{
 					Name: "test-topology",
-					TopologyResource: &kaiv1.Topology{
-						Spec: kaiv1.TopologySpec{
-							Levels: []kaiv1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 							},
 						},
@@ -196,9 +196,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				return &Info{
 					Name: "test-topology",
-					TopologyResource: &kaiv1.Topology{
-						Spec: kaiv1.TopologySpec{
-							Levels: []kaiv1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 							},
 						},
@@ -234,9 +234,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				tree := &Info{
 					Name: "test-topology",
-					TopologyResource: &kaiv1.Topology{
-						Spec: kaiv1.TopologySpec{
-							Levels: []kaiv1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 							},
 						},
@@ -297,9 +297,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				tree := &Info{
 					Name: "test-topology",
-					TopologyResource: &kaiv1.Topology{
-						Spec: kaiv1.TopologySpec{
-							Levels: []kaiv1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 								{NodeLabel: "rack"},
 							},
@@ -388,9 +388,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				tree := &Info{
 					Name: "test-topology",
-					TopologyResource: &kaiv1.Topology{
-						Spec: kaiv1.TopologySpec{
-							Levels: []kaiv1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 								{NodeLabel: "rack"},
 							},
@@ -551,9 +551,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -577,9 +577,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -602,9 +602,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -629,9 +629,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
 						},
@@ -651,9 +651,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
 						},
@@ -673,9 +673,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
 						},
@@ -695,9 +695,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -720,9 +720,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -748,9 +748,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -775,9 +775,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 						},
 					},
@@ -800,9 +800,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "region"},
 							{NodeLabel: "zone"},
@@ -871,9 +871,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 	twoRacksOneZoneTree := func() *Info {
 		tree := &Info{
 			Name: "test-topology",
-			TopologyResource: &kaiv1.Topology{
-				Spec: kaiv1.TopologySpec{
-					Levels: []kaiv1.TopologyLevel{
+			TopologyResource: &kaiv1alpha1.Topology{
+				Spec: kaiv1alpha1.TopologySpec{
+					Levels: []kaiv1alpha1.TopologyLevel{
 						{NodeLabel: "zone"},
 						{NodeLabel: "rack"},
 					},
@@ -1117,9 +1117,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				tree := &Info{
 					Name: "test-topology",
-					TopologyResource: &kaiv1.Topology{
-						Spec: kaiv1.TopologySpec{
-							Levels: []kaiv1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 							},
 						},
@@ -1365,9 +1365,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
 						},
@@ -1430,9 +1430,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
 						},
@@ -1478,9 +1478,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "region"},
 						},
@@ -1521,9 +1521,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "region"},
 							{NodeLabel: "zone"},
@@ -1595,9 +1595,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 						},
 					},
@@ -1651,9 +1651,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 						},
 					},
@@ -1723,9 +1723,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kaiv1.Topology{
-					Spec: kaiv1.TopologySpec{
-						Levels: []kaiv1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "region"},
 							{NodeLabel: "zone"},

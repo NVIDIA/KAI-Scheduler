@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 )
 
 func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
@@ -86,12 +86,12 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 		},
 	}
 
-	testTopology := &kaiv1.Topology{
+	testTopology := &kaiv1alpha1.Topology{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-topology",
 		},
-		Spec: kaiv1.TopologySpec{
-			Levels: []kaiv1.TopologyLevel{
+		Spec: kaiv1alpha1.TopologySpec{
+			Levels: []kaiv1alpha1.TopologyLevel{
 				{
 					NodeLabel: "test-topology-label/block",
 				},
@@ -143,7 +143,7 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	_, err = fakeKubeAISchedulerClient.KaiV1().Topologies().Create(ctx, testTopology, metav1.CreateOptions{})
+	_, err = fakeKubeAISchedulerClient.KaiV1alpha1().Topologies().Create(ctx, testTopology, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	schedulerCache.Run(ctx.Done())
@@ -176,7 +176,7 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 				Used:        resource_info.NewResource(1000, 0, 3),
 			},
 		},
-		Topologies: []*kaiv1.Topology{testTopology},
+		Topologies: []*kaiv1alpha1.Topology{testTopology},
 	}
 
 	plugin := New(nil)

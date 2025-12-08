@@ -25,7 +25,7 @@ package externalversions
 import (
 	fmt "fmt"
 
-	v1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	v1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	v1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	v2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
@@ -59,9 +59,9 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=kai.scheduler, Version=v1
-	case v1.SchemeGroupVersion.WithResource("topologies"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Kai().V1().Topologies().Informer()}, nil
+	// Group=kai, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("topologies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Kai().V1alpha1().Topologies().Informer()}, nil
 
 		// Group=scheduling.run.ai, Version=v1alpha2
 	case v1alpha2.SchemeGroupVersion.WithResource("bindrequests"):

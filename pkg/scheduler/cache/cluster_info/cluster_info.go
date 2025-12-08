@@ -48,7 +48,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
 
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 )
 
 type ClusterInfo struct {
@@ -409,7 +409,7 @@ func (c *ClusterInfo) snapshotConfigMaps() (map[common_info.ConfigMapID]*configm
 	return result, nil
 }
 
-func (c *ClusterInfo) snapshotTopologies() ([]*kaiv1.Topology, error) {
+func (c *ClusterInfo) snapshotTopologies() ([]*kaiv1alpha1.Topology, error) {
 	topologies, err := c.dataLister.ListTopologies()
 	if err != nil {
 		return nil, fmt.Errorf("error listing topologies: %w", err)

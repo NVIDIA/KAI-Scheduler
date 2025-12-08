@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/ptr"
 
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 
 	kubeAiSchedulerClient "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	kubeAiSchedulerClientFake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
@@ -1525,7 +1525,7 @@ func TestSnapshotStorageObjects(t *testing.T) {
 				Queue: "queue-0",
 			},
 		},
-		&kaiv1.Topology{
+		&kaiv1alpha1.Topology{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "topology-0",
 			},

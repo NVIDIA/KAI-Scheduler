@@ -26,7 +26,7 @@ import (
 	"sync"
 	"time"
 
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
 	ksf "k8s.io/kube-scheduler/framework"
 
@@ -59,7 +59,7 @@ type Session struct {
 	Queues        map[common_info.QueueID]*queue_info.QueueInfo
 	ResourceUsage queue_info.ClusterUsage
 	ConfigMaps    map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
-	Topologies    []*kaiv1.Topology
+	Topologies    []*kaiv1alpha1.Topology
 
 	GpuOrderFns                           []api.GpuOrderFn
 	NodePreOrderFns                       []api.NodePreOrderFn
@@ -353,7 +353,7 @@ func openSession(cache cache.Cache, sessionId string, schedulerParams conf.Sched
 		PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{},
 		Nodes:         map[string]*node_info.NodeInfo{},
 		Queues:        map[common_info.QueueID]*queue_info.QueueInfo{},
-		Topologies:    []*kaiv1.Topology{},
+		Topologies:    []*kaiv1alpha1.Topology{},
 
 		plugins:               map[string]Plugin{},
 		SchedulerParams:       schedulerParams,

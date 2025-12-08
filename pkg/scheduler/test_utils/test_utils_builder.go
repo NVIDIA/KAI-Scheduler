@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 
 	. "go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v2"
@@ -48,7 +48,7 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 	testMetadata TestTopologyBasic,
 	controller *Controller,
 	createCacheMockIfNotExists bool,
-	topologies []*kaiv1.Topology,
+	topologies []*kaiv1alpha1.Topology,
 	clusterPodAffinityInfo *cache.K8sClusterPodAffinityInfo,
 ) *framework.Session {
 	ssn := framework.Session{

@@ -26,7 +26,7 @@ import (
 	fmt "fmt"
 	http "net/http"
 
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/kai/v1alpha1"
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v1alpha2"
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v2"
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v2alpha2"
@@ -37,7 +37,7 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	KaiV1() kaiv1.KaiV1Interface
+	KaiV1alpha1() kaiv1alpha1.KaiV1alpha1Interface
 	SchedulingV1alpha2() schedulingv1alpha2.SchedulingV1alpha2Interface
 	SchedulingV2() schedulingv2.SchedulingV2Interface
 	SchedulingV2alpha2() schedulingv2alpha2.SchedulingV2alpha2Interface
@@ -46,15 +46,15 @@ type Interface interface {
 // Clientset contains the clients for groups.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	kaiV1              *kaiv1.KaiV1Client
+	kaiV1alpha1        *kaiv1alpha1.KaiV1alpha1Client
 	schedulingV1alpha2 *schedulingv1alpha2.SchedulingV1alpha2Client
 	schedulingV2       *schedulingv2.SchedulingV2Client
 	schedulingV2alpha2 *schedulingv2alpha2.SchedulingV2alpha2Client
 }
 
-// KaiV1 retrieves the KaiV1Client
-func (c *Clientset) KaiV1() kaiv1.KaiV1Interface {
-	return c.kaiV1
+// KaiV1alpha1 retrieves the KaiV1alpha1Client
+func (c *Clientset) KaiV1alpha1() kaiv1alpha1.KaiV1alpha1Interface {
+	return c.kaiV1alpha1
 }
 
 // SchedulingV1alpha2 retrieves the SchedulingV1alpha2Client
@@ -116,7 +116,7 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 
 	var cs Clientset
 	var err error
-	cs.kaiV1, err = kaiv1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.kaiV1alpha1, err = kaiv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.kaiV1 = kaiv1.New(c)
+	cs.kaiV1alpha1 = kaiv1alpha1.New(c)
 	cs.schedulingV1alpha2 = schedulingv1alpha2.New(c)
 	cs.schedulingV2 = schedulingv2.New(c)
 	cs.schedulingV2alpha2 = schedulingv2alpha2.New(c)

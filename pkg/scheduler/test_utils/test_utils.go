@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -50,7 +50,7 @@ type TestTopologyBasic struct {
 	Mocks                  *TestMock
 
 	dra_fake.TestDRAObjects
-	Topologies []*kaiv1.Topology
+	Topologies []*kaiv1alpha1.Topology
 }
 
 type TestMock struct {

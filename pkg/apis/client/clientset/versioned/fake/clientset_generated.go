@@ -24,8 +24,8 @@ package fake
 
 import (
 	clientset "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/kai/v1"
-	fakekaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/kai/v1/fake"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/kai/v1alpha1"
+	fakekaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/kai/v1alpha1/fake"
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v1alpha2"
 	fakeschedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v1alpha2/fake"
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v2"
@@ -98,9 +98,9 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// KaiV1 retrieves the KaiV1Client
-func (c *Clientset) KaiV1() kaiv1.KaiV1Interface {
-	return &fakekaiv1.FakeKaiV1{Fake: &c.Fake}
+// KaiV1alpha1 retrieves the KaiV1alpha1Client
+func (c *Clientset) KaiV1alpha1() kaiv1alpha1.KaiV1alpha1Interface {
+	return &fakekaiv1alpha1.FakeKaiV1alpha1{Fake: &c.Fake}
 }
 
 // SchedulingV1alpha2 retrieves the SchedulingV1alpha2Client

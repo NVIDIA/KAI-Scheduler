@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	kaiclientset "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +32,7 @@ const (
 )
 
 type TestTopologyData struct {
-	TopologyCrd   *kaiv1.Topology
+	TopologyCrd   *kaiv1alpha1.Topology
 	TopologyNodes map[string]*corev1.Node
 	Zones         map[string][]*corev1.Node
 	Racks         map[string][]*corev1.Node
@@ -58,12 +58,12 @@ func CreateRackZoneTopology(
 	capacity.SkipIfInsufficientClusterTopologyResources(kubeClientset, requiredNodesResources)
 
 	// Create topology tree
-	testTopologyData.TopologyCrd = &kaiv1.Topology{
+	testTopologyData.TopologyCrd = &kaiv1alpha1.Topology{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "e2e-topology-tree",
 		},
-		Spec: kaiv1.TopologySpec{
-			Levels: []kaiv1.TopologyLevel{
+		Spec: kaiv1alpha1.TopologySpec{
+			Levels: []kaiv1alpha1.TopologyLevel{
 				{NodeLabel: TestZoneLabelKey},
 				{NodeLabel: TestRackLabelKey},
 				{NodeLabel: NodeNameLabelKey},
@@ -71,7 +71,7 @@ func CreateRackZoneTopology(
 		},
 	}
 	kaiClient := kaiclientset.NewForConfigOrDie(kubeConfig)
-	_, err := kaiClient.KaiV1().Topologies().Create(
+	_, err := kaiClient.KaiV1alpha1().Topologies().Create(
 		context.TODO(), testTopologyData.TopologyCrd, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred(), "Failed to create topology tree")
 
@@ -166,7 +166,7 @@ func CleanNodesFromTopology(ctx context.Context,
 func CleanRackZoneTopology(ctx context.Context, testTopologyData TestTopologyData, kubeConfig *rest.Config) {
 
 	kaiClient := kaiclientset.NewForConfigOrDie(kubeConfig)
-	err := kaiClient.KaiV1().Topologies().Delete(
+	err := kaiClient.KaiV1alpha1().Topologies().Delete(
 		context.TODO(), testTopologyData.TopologyCrd.Name, metav1.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred(), "Failed to delete test topology tree %s", testTopologyData.TopologyCrd.Name)
 }
