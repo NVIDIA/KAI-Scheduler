@@ -502,7 +502,7 @@ func (pgi *PodGroupInfo) String() string {
 		pgi.UID, pgi.Namespace, pgi.Queue, pgi.Name, pgi.PodGroup) + res
 }
 
-func (pgi *PodGroupInfo) SetTaskFitError(task *pod_info.PodInfo, fitErrors *common_info.TasksFitErrors) {
+func (pgi *PodGroupInfo) AddTaskFitErrors(task *pod_info.PodInfo, fitErrors *common_info.TasksFitErrors) {
 	existingFitErrors, found := pgi.TasksFitErrors[task.UID]
 	if found {
 		existingFitErrors.AddNodeErrors(fitErrors)
@@ -511,11 +511,11 @@ func (pgi *PodGroupInfo) SetTaskFitError(task *pod_info.PodInfo, fitErrors *comm
 	}
 }
 
-func (pgi *PodGroupInfo) AddBasicJobFitError(reason enginev2alpha2.UnschedulableReason, message string) {
-	pgi.SetJobFitError(common_info.NewJobFitError(pgi.Name, DefaultSubGroup, pgi.Namespace, reason, []string{message}))
+func (pgi *PodGroupInfo) AddSimpleJobFitError(reason enginev2alpha2.UnschedulableReason, message string) {
+	pgi.AddJobFitError(common_info.NewJobFitError(pgi.Name, DefaultSubGroup, pgi.Namespace, reason, []string{message}))
 }
 
-func (pgi *PodGroupInfo) SetJobFitError(err common_info.JobFitError) {
+func (pgi *PodGroupInfo) AddJobFitError(err common_info.JobFitError) {
 	pgi.JobFitErrors = append(pgi.JobFitErrors, err)
 }
 

@@ -26,7 +26,7 @@ func AllocateJob(ssn *framework.Session, stmt *framework.Statement, nodes []*nod
 	result := ssn.IsJobOverQueueCapacityFn(job, tasksToAllocate)
 	if !result.IsSchedulable {
 		if !isPipelineOnly {
-			job.SetJobFitError(common_info.NewJobFitErrorWithQueueContext(
+			job.AddJobFitError(common_info.NewJobFitErrorWithQueueContext(
 				job.Name, podgroup_info.DefaultSubGroup, job.Namespace,
 				result.Reason, result.Message, result.Details))
 		}
@@ -128,7 +128,7 @@ func allocateTask(ssn *framework.Session, stmt *framework.Statement, nodes []*no
 
 		fitErrors := common_info.NewFitErrors()
 		fitErrors.SetError(err.Error())
-		job.SetTaskFitError(task, fitErrors)
+		job.AddTaskFitErrors(task, fitErrors)
 		return false
 	}
 
@@ -207,7 +207,7 @@ func handleFailedTaskAllocation(job *podgroup_info.PodGroupInfo, unschedulableTa
 	taskSubGroup := job.GetSubGroups()[taskSubGroupName]
 
 	if !gangScheduling || taskSubGroup.GetNumActiveUsedTasks() >= int(taskSubGroup.GetMinAvailable()) {
-		job.AddBasicJobFitError(
+		job.AddSimpleJobFitError(
 			podgroup_info.PodSchedulingErrors,
 			fmt.Sprintf("Resources were not found for pod %s/%s due to: %s",
 				unschedulableTask.Namespace, unschedulableTask.Name, allocationError.Error()))
@@ -215,14 +215,14 @@ func handleFailedTaskAllocation(job *podgroup_info.PodGroupInfo, unschedulableTa
 	}
 
 	if len(job.GetSubGroups()) == 1 && taskSubGroup.GetName() == podgroup_info.DefaultSubGroup {
-		job.AddBasicJobFitError(
+		job.AddSimpleJobFitError(
 			podgroup_info.PodSchedulingErrors,
 			fmt.Sprintf("Resources were found for %d pods while %d are required for gang scheduling. "+
 				"Additional pods cannot be scheduled due to: %s",
 				numSchedulableTasks, taskSubGroup.GetMinAvailable(), allocationError.Error()))
 		return
 	}
-	job.AddBasicJobFitError(
+	job.AddSimpleJobFitError(
 		podgroup_info.PodSchedulingErrors,
 		fmt.Sprintf("Resources were found for %d pods from all sub-groups while sub-group %s requires %d pods for gang scheduling. "+
 			"Additional pods cannot be scheduled in this sub-group due to: %s",

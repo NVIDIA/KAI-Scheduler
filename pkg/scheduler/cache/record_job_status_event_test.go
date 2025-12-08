@@ -342,17 +342,17 @@ func TestRecordJobStatusEvent(t *testing.T) {
 					fitError := common_info.NewFitError(string(podID), "namespace-1", node, msg)
 					fitErrors.SetNodeError(node, fitError)
 				}
-				podGroupInfo.SetTaskFitError(podGroupInfo.GetAllPodsMap()[podID], fitErrors)
+				podGroupInfo.AddTaskFitErrors(podGroupInfo.GetAllPodsMap()[podID], fitErrors)
 			}
 
 			for podID, err := range tt.podErrors {
 				fitErrors := common_info.NewFitErrors()
 				fitErrors.SetError(err.Error())
-				podGroupInfo.SetTaskFitError(podGroupInfo.GetAllPodsMap()[podID], fitErrors)
+				podGroupInfo.AddTaskFitErrors(podGroupInfo.GetAllPodsMap()[podID], fitErrors)
 			}
 
 			for _, explanation := range tt.jobErrors {
-				podGroupInfo.AddBasicJobFitError(explanation.Reason, explanation.Message)
+				podGroupInfo.AddSimpleJobFitError(explanation.Reason, explanation.Message)
 			}
 
 			err := cache.RecordJobStatusEvent(podGroupInfo)

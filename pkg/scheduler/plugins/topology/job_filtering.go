@@ -36,7 +36,7 @@ func (t *topologyPlugin) subSetNodesFn(
 ) ([]node_info.NodeSet, error) {
 	topologyTree, found := t.getJobTopology(subGroup)
 	if !found {
-		job.AddBasicJobFitError(
+		job.AddSimpleJobFitError(
 			podgroup_info.PodSchedulingErrors,
 			fmt.Sprintf("Requested topology %s does not exist", subGroup.GetTopologyConstraint().Topology))
 		return []node_info.NodeSet{}, nil
@@ -60,8 +60,8 @@ func (t *topologyPlugin) subSetNodesFn(
 
 	tasksResources, tasksCount := getTasksAllocationMetadata(tasks)
 
-	if err := isJobAllocatableOnDomain(job, subGroup, tasksResources, tasksCount, nodeSetDomain); err != nil {
-		job.AddBasicJobFitError(
+	if err := checkJobDomainFit(job, subGroup, tasksResources, tasksCount, nodeSetDomain); err != nil {
+		job.AddSimpleJobFitError(
 			podgroup_info.PodSchedulingErrors,
 			fmt.Sprintf("No relevant domains found for workload in topology tree: %s", topologyTree.Name))
 		return []node_info.NodeSet{}, nil
@@ -268,7 +268,7 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 	var domains []*DomainInfo
 	for _, level := range relevantLevels {
 		for _, domain := range relevantDomainsByLevel[level] {
-			err := isJobAllocatableOnDomain(job, subGroup, tasksResources, tasksCount, domain)
+			err := checkJobDomainFit(job, subGroup, tasksResources, tasksCount, domain)
 			if err != nil { // Filter domains that cannot allocate the job
 				continue
 			}
@@ -335,7 +335,7 @@ func hasTopologyRequiredConstraint(subGroup *subgroup_info.SubGroupInfo) bool {
 	return subGroup.GetTopologyConstraint().RequiredLevel != ""
 }
 
-func isJobAllocatableOnDomain(job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo,
+func checkJobDomainFit(job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo,
 	tasksResources *resource_info.Resource, tasksCount int, domain *DomainInfo) *common_info.TopologyFitError {
 	if domain.AllocatablePods != allocatablePodsNotSet {
 		if domain.AllocatablePods < tasksCount {
