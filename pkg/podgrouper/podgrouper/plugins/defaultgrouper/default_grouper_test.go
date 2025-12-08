@@ -6,6 +6,7 @@ package defaultgrouper
 import (
 	"testing"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
@@ -326,6 +327,175 @@ func TestGetPodGroupMetadataOnPriorityClassFromDefaultsGroupKindConfigMap(t *tes
 	assert.Equal(t, "high-priority", podGroupMetadata.PriorityClassName)
 }
 
+func TestGetPodGroupMetadataOnPreemptibility_InvalidInConfigMap(t *testing.T) {
+	// Invalid preemptibility in defaults → empty result
+	trainPriorityClass := priorityClassObj(constants.TrainPriorityClass, 1000)
+	defaultsConfigmap := &v1.ConfigMap{
+		ObjectMeta: v12.ObjectMeta{
+			Name:      defaultPrioritiesAndPreemptibleConfigMapName,
+			Namespace: defaultPrioritiesAndPreemptibleConfigMapNamespace,
+		},
+		Data: map[string]string{
+			constants.DefaultPrioritiesConfigMapTypesKey: `[{"typeName":"TestKind","group":"apps","priorityName":"train","preemptibility":"INVALID_VALUE"}]`,
+		},
+	}
+	kubeClient := fake.NewFakeClient(trainPriorityClass, defaultsConfigmap)
+
+	owner := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "TestKind",
+			"apiVersion": "apps/v1",
+			"metadata": map[string]interface{}{
+				"name":      "test_name",
+				"namespace": "test_namespace",
+				"uid":       "1",
+			},
+		},
+	}
+	pod := &v1.Pod{}
+
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, kubeClient)
+	defaultGrouper.SetDefaultConfigPerTypeConfigMapParams(defaultPrioritiesAndPreemptibleConfigMapName, defaultPrioritiesAndPreemptibleConfigMapNamespace)
+	podGroupMetadata, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
+
+	assert.Nil(t, err)
+	assert.Empty(t, string(podGroupMetadata.Preemptibility))
+}
+
+// Table-driven tests with a single valid defaults ConfigMap.
+func TestGetPodGroupMetadata_WithValidDefaultsConfigMap(t *testing.T) {
+	// One configmap with both group-kind and kind-only entries
+	cmPriorityApps := "cm-prio-apps"
+	cmPriorityKind := "cm-prio-kind"
+	myPriority := "my-priority"
+
+	defaultsConfigmap := &v1.ConfigMap{
+		ObjectMeta: v12.ObjectMeta{
+			Name:      defaultPrioritiesAndPreemptibleConfigMapName,
+			Namespace: defaultPrioritiesAndPreemptibleConfigMapNamespace,
+		},
+		Data: map[string]string{
+			constants.DefaultPrioritiesConfigMapTypesKey: `[
+				{"typeName":"TestKind","group":"apps","priorityName":"cm-prio-apps","preemptibility":"Preemptible"},
+				{"typeName":"TestKind","priorityName":"cm-prio-kind","preemptibility":"Non-Preemptible"}
+			]`,
+		},
+	}
+
+	// Priority classes that will be referenced by labels/defaults
+	kubeClient := fake.NewFakeClient(
+		priorityClassObj(cmPriorityApps, 1000),
+		priorityClassObj(cmPriorityKind, 1000),
+		priorityClassObj(myPriority, 1000),
+		defaultsConfigmap,
+	)
+
+	type testCase struct {
+		name               string
+		apiVersion         string
+		ownerLabels        map[string]interface{}
+		podLabels          map[string]string
+		podSpecPriority    string
+		wantPriorityClass  string
+		wantPreemptibility v2alpha2.Preemptibility
+	}
+
+	tests := []testCase{
+		{
+			name:               "defaults_by_groupkind",
+			apiVersion:         "apps/v1",
+			wantPriorityClass:  cmPriorityApps,
+			wantPreemptibility: v2alpha2.Preemptible,
+		},
+		{
+			name:               "defaults_by_kind_fallback",
+			apiVersion:         "batch/v1",
+			wantPriorityClass:  cmPriorityKind,
+			wantPreemptibility: v2alpha2.NonPreemptible,
+		},
+		{
+			name:       "owner_preemptibility_overrides_defaults",
+			apiVersion: "batch/v1",
+			ownerLabels: map[string]interface{}{
+				"kai.scheduler/preemptibility": "preemptible",
+			},
+			wantPriorityClass:  cmPriorityKind,
+			wantPreemptibility: v2alpha2.Preemptible,
+		},
+		{
+			name:       "pod_preemptibility_overrides_defaults",
+			apiVersion: "batch/v1",
+			podLabels: map[string]string{
+				"kai.scheduler/preemptibility": "preemptible",
+			},
+			wantPriorityClass:  cmPriorityKind,
+			wantPreemptibility: v2alpha2.Preemptible,
+		},
+		{
+			name:       "owner_priority_overrides_defaults_preemptibility_from_defaults",
+			apiVersion: "batch/v1",
+			ownerLabels: map[string]interface{}{
+				"priorityClassName": myPriority,
+			},
+			wantPriorityClass:  myPriority,
+			wantPreemptibility: v2alpha2.NonPreemptible,
+		},
+		{
+			name:       "pod_priority_overrides_defaults_preemptibility_from_defaults",
+			apiVersion: "batch/v1",
+			podLabels: map[string]string{
+				"priorityClassName": myPriority,
+			},
+			wantPriorityClass:  myPriority,
+			wantPreemptibility: v2alpha2.NonPreemptible,
+		},
+		{
+			name:              "podspec_priority_overrides_defaults_preemptibility_from_defaults",
+			apiVersion:        "batch/v1",
+			podSpecPriority:   myPriority,
+			wantPriorityClass: myPriority,
+			// Preemptibility still from defaults (kind-only entry)
+			wantPreemptibility: v2alpha2.NonPreemptible,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			owner := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind":       "TestKind",
+					"apiVersion": tt.apiVersion,
+					"metadata": map[string]interface{}{
+						"name":      "test_name",
+						"namespace": "test_namespace",
+						"uid":       "1",
+						"labels":    tt.ownerLabels,
+					},
+				},
+			}
+
+			pod := &v1.Pod{}
+			if tt.podLabels != nil || tt.podSpecPriority != "" {
+				pod.ObjectMeta = v12.ObjectMeta{
+					Labels: tt.podLabels,
+				}
+				if tt.podSpecPriority != "" {
+					pod.Spec = v1.PodSpec{
+						PriorityClassName: tt.podSpecPriority,
+					}
+				}
+			}
+
+			defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, kubeClient)
+			defaultGrouper.SetDefaultConfigPerTypeConfigMapParams(defaultPrioritiesAndPreemptibleConfigMapName, defaultPrioritiesAndPreemptibleConfigMapNamespace)
+
+			pg, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
+			assert.Nil(t, err)
+			assert.Equal(t, tt.wantPriorityClass, pg.PriorityClassName)
+			assert.Equal(t, tt.wantPreemptibility, pg.Preemptibility)
+		})
+	}
+}
 func TestGetPodGroupMetadataOnPriorityClassFromDefaultsKindConfigMap(t *testing.T) {
 	lowPriorityClass := priorityClassObj("low-priority", 1000)
 	defaultsConfigmap := &v1.ConfigMap{
