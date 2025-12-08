@@ -179,14 +179,14 @@ func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstr
 }
 
 func (dg *DefaultGrouper) calcPodGroupPreemptibility(topOwner *unstructured.Unstructured, pod *v1.Pod) v2alpha2.Preemptibility {
-	if preemptibility, found := topOwner.GetLabels()[constants.PreemptibilityLabelKey]; found {
-		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibility); err == nil {
+	if preemptibilityStr, found := topOwner.GetLabels()[constants.PreemptibilityLabelKey]; found {
+		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibilityStr); err == nil {
 			return preemptibility
 		} else {
 			logger.Error(err, "Invalid preemptibility label found on top owner", "topOwner", topOwner.GetName())
 		}
-	} else if preemptibility, found = pod.GetLabels()[constants.PreemptibilityLabelKey]; found {
-		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibility); err == nil {
+	} else if preemptibilityStr, found = pod.GetLabels()[constants.PreemptibilityLabelKey]; found {
+		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibilityStr); err == nil {
 			return preemptibility
 		}
 	}
