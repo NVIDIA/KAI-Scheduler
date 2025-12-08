@@ -79,6 +79,7 @@ func TryToVirtuallyAllocatePreemptorAndGetVictims(
 	preempteeTasks []*pod_info.PodInfo,
 ) (bool, []*pod_info.PodInfo) {
 	preemptorAllocated := false
+	nodeSet := node_info.NodeSet{Nodes: nodes}
 	var newVictims []*pod_info.PodInfo
 
 	potentialVictimsMap := make(map[common_info.PodGroupID]*podgroup_info.PodGroupInfo)
@@ -99,7 +100,7 @@ func TryToVirtuallyAllocatePreemptorAndGetVictims(
 			jobToAllocate.Namespace, jobToAllocate.Name, resReq)
 
 		if jobToAllocate.UID != preemptor.UID {
-			if !AllocateJob(ssn, stmt, nodes, jobToAllocate, true) {
+			if !AllocateJob(ssn, stmt, nodeSet, jobToAllocate, true) {
 				tasksToAllocate := podgroup_info.GetTasksToAllocate(jobToAllocate, ssn.PodSetOrderFn,
 					ssn.TaskOrderFn, false)
 				newVictims = append(newVictims, tasksToAllocate...)
@@ -107,7 +108,7 @@ func TryToVirtuallyAllocatePreemptorAndGetVictims(
 			continue
 		}
 
-		success := AllocateJob(ssn, stmt, nodes, jobToAllocate, true)
+		success := AllocateJob(ssn, stmt, nodeSet, jobToAllocate, true)
 		if !success {
 			return false, []*pod_info.PodInfo{}
 		}

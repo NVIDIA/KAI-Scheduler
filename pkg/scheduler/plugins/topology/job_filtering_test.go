@@ -472,7 +472,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				}
 			}
 			for _, domain := range domains {
-				nodeSetToDomain[topologyTree.Name][getNodeSetID(lo.Values(domain.Nodes))] = domain
+				nodeSetToDomain[topologyTree.Name][getNodeSetID(node_info.NodeSet{Nodes: lo.Values(domain.Nodes)})] = domain
 			}
 
 			// Setup plugin
@@ -487,7 +487,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			// Call the function under test
 			subsets, err := plugin.subSetNodesFn(job, &job.RootSubGroupSet.SubGroupInfo,
 				job.RootSubGroupSet.GetAllPodSets(), podgroup_info.GetTasksToAllocate(job, nil, nil, true),
-				maps.Values(nodesInfoMap))
+				node_info.NodeSet{Nodes: maps.Values(nodesInfoMap)})
 
 			// Check error
 			if tt.expectedError != "" {
@@ -520,10 +520,10 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				if len(subsets) == 0 {
 					t.Errorf("expected subsets to be filled with %v, but got nil", tt.expectedNodesFirstSubset)
 				}
-				if len(subsets[0]) != len(tt.expectedNodesFirstSubset) {
+				if len(subsets[0].Nodes) != len(tt.expectedNodesFirstSubset) {
 					t.Errorf("expected subsets to be filled with %v, but got %v", tt.expectedNodesFirstSubset, subsets[0])
 				}
-				for _, node := range subsets[0] {
+				for _, node := range subsets[0].Nodes {
 					_, ok := tt.expectedNodesFirstSubset[node.Name]
 					assert.True(t, ok, "expected node %s to be in subset %v", node.Name, tt.expectedNodesFirstSubset)
 				}
