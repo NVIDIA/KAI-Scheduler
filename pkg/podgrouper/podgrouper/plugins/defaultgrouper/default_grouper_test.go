@@ -13,6 +13,7 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -495,6 +496,82 @@ func TestGetPodGroupMetadata_WithValidDefaultsConfigMap(t *testing.T) {
 			assert.Equal(t, tt.wantPreemptibility, pg.Preemptibility)
 		})
 	}
+}
+
+// Covers CalcPodGroupLabels branch where pod user is copied when owner has no user
+func TestCalcPodGroupLabels_PodUserCopiedWhenOwnerMissing(t *testing.T) {
+	owner := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "K",
+			"apiVersion": "v1",
+			"metadata": map[string]interface{}{
+				"name":      "n",
+				"namespace": "ns",
+				"uid":       "1",
+				"labels":    map[string]interface{}{},
+			},
+		},
+	}
+	pod := &v1.Pod{
+		ObjectMeta: v12.ObjectMeta{
+			Labels: map[string]string{
+				constants.UserLabelKey: "podUser",
+			},
+		},
+	}
+	dg := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
+	lbls := dg.CalcPodGroupLabels(owner, pod)
+	assert.Equal(t, "podUser", lbls[constants.UserLabelKey])
+}
+
+// Covers wrapper CalcPodGroupPriorityClass call path
+func TestCalcPodGroupPriorityClass_WrapperFallbackTrain(t *testing.T) {
+	train := priorityClassObj(constants.TrainPriorityClass, 1000)
+	dg := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient(train))
+
+	owner := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "SomeKind",
+			"apiVersion": "group/v1",
+			"metadata": map[string]interface{}{
+				"name":      "n",
+				"namespace": "ns",
+				"uid":       "1",
+			},
+		},
+	}
+	pod := &v1.Pod{}
+	pc := dg.CalcPodGroupPriorityClass(owner, pod, constants.TrainPriorityClass)
+	assert.Equal(t, constants.TrainPriorityClass, pc)
+}
+
+// Covers getDefaultPriorityClassNameForKind return "" when no match in defaults
+func TestGetDefaultPriorityClassNameForKind_NoMatch(t *testing.T) {
+	dg := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
+	defaults := map[string]workloadTypePriorityConfig{
+		"OtherKind.apps": {TypeName: "OtherKind", Group: "apps", PriorityName: "p"},
+	}
+	gk := &schema.GroupKind{Group: "apps", Kind: "UnknownKind"}
+	pc := dg.getDefaultPriorityClassNameForKind(gk, defaults)
+	assert.Equal(t, "", pc)
+}
+
+// Covers parseConfigMapDataToDefaultConfigs error branch (missing key)
+func TestParseConfigMapDataToDefaultConfigs_MissingKey(t *testing.T) {
+	cm := &v1.ConfigMap{
+		ObjectMeta: v12.ObjectMeta{
+			Name:      "cm",
+			Namespace: "ns",
+		},
+		Data: map[string]string{
+			"wrong-key": `[]`,
+		},
+	}
+	_, err := parseConfigMapDataToDefaultConfigs(cm)
+	assert.NotNil(t, err)
+
+	_, err = parseConfigMapDataToDefaultConfigs(nil)
+	assert.NotNil(t, err)
 }
 
 // Missing defaults ConfigMap should trigger fallback to train priority and empty preemptibility.
