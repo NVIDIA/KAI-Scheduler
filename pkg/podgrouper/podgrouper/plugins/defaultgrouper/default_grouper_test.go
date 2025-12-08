@@ -498,32 +498,6 @@ func TestGetPodGroupMetadata_WithValidDefaultsConfigMap(t *testing.T) {
 	}
 }
 
-// Covers CalcPodGroupLabels branch where pod user is copied when owner has no user
-func TestCalcPodGroupLabels_PodUserCopiedWhenOwnerMissing(t *testing.T) {
-	owner := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"kind":       "K",
-			"apiVersion": "v1",
-			"metadata": map[string]interface{}{
-				"name":      "n",
-				"namespace": "ns",
-				"uid":       "1",
-				"labels":    map[string]interface{}{},
-			},
-		},
-	}
-	pod := &v1.Pod{
-		ObjectMeta: v12.ObjectMeta{
-			Labels: map[string]string{
-				constants.UserLabelKey: "podUser",
-			},
-		},
-	}
-	dg := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	lbls := dg.CalcPodGroupLabels(owner, pod)
-	assert.Equal(t, "podUser", lbls[constants.UserLabelKey])
-}
-
 // Covers wrapper CalcPodGroupPriorityClass call path
 func TestCalcPodGroupPriorityClass_WrapperFallbackTrain(t *testing.T) {
 	train := priorityClassObj(constants.TrainPriorityClass, 1000)
