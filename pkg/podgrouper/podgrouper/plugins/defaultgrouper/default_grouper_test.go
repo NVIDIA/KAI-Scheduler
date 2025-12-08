@@ -496,6 +496,65 @@ func TestGetPodGroupMetadata_WithValidDefaultsConfigMap(t *testing.T) {
 		})
 	}
 }
+
+// Missing defaults ConfigMap should trigger fallback to train priority and empty preemptibility.
+func TestGetPodGroupMetadata_DefaultsConfigMapMissing_FallbackToTrain(t *testing.T) {
+	trainPriorityClass := priorityClassObj(constants.TrainPriorityClass, 1000)
+	kubeClient := fake.NewFakeClient(trainPriorityClass)
+
+	owner := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "TestKind",
+			"apiVersion": "apps/v1",
+			"metadata": map[string]interface{}{
+				"name":      "test_name",
+				"namespace": "test_namespace",
+				"uid":       "1",
+				"labels": map[string]interface{}{
+					"priorityClassName": constants.TrainPriorityClass,
+				},
+			},
+		},
+	}
+	pod := &v1.Pod{}
+
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, kubeClient)
+	// Point to a non-existent ConfigMap to hit the error path in getDefaultConfigsPerTypeMapping
+	defaultGrouper.SetDefaultConfigPerTypeConfigMapParams("unexisting-cm", defaultPrioritiesAndPreemptibleConfigMapNamespace)
+
+	pg, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
+	assert.Nil(t, err)
+	assert.Equal(t, constants.TrainPriorityClass, pg.PriorityClassName)
+	assert.Empty(t, string(pg.Preemptibility))
+}
+
+// Empty GroupKind on owner should fall back to train priority and empty preemptibility.
+func TestGetPodGroupMetadata_EmptyGroupKind_FallbackToTrain(t *testing.T) {
+	trainPriorityClass := priorityClassObj(constants.TrainPriorityClass, 1000)
+	kubeClient := fake.NewFakeClient(trainPriorityClass)
+
+	owner := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "",
+			"apiVersion": "",
+			"metadata": map[string]interface{}{
+				"name":      "test_name",
+				"namespace": "test_namespace",
+				"uid":       "1",
+			},
+		},
+	}
+	pod := &v1.Pod{}
+
+	defaultGrouper := NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, kubeClient)
+	// Even if config is set correctly, empty GroupKind should cause fallback
+	defaultGrouper.SetDefaultConfigPerTypeConfigMapParams(defaultPrioritiesAndPreemptibleConfigMapName, defaultPrioritiesAndPreemptibleConfigMapNamespace)
+
+	pg, err := defaultGrouper.GetPodGroupMetadata(owner, pod)
+	assert.Nil(t, err)
+	assert.Equal(t, constants.TrainPriorityClass, pg.PriorityClassName)
+	assert.Empty(t, string(pg.Preemptibility))
+}
 func TestGetPodGroupMetadataOnPriorityClassFromDefaultsKindConfigMap(t *testing.T) {
 	lowPriorityClass := priorityClassObj("low-priority", 1000)
 	defaultsConfigmap := &v1.ConfigMap{
