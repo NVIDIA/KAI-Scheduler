@@ -3,10 +3,12 @@ package common_info
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	"github.com/dustin/go-humanize"
 )
 
 const (
@@ -152,8 +154,11 @@ func NewTopologyInsufficientResourcesError(
 		requestedGPUs := resourceRequested.GPUs()
 		availableGPUs := availableResource.GPUs()
 		if requestedGPUs > availableGPUs {
-			detailedMessages = append(detailedMessages, fmt.Sprintf("%s didn't have enough resource: GPUs, requested: %f, available: %f",
-				domainID, requestedGPUs, availableGPUs))
+			detailedMessages = append(detailedMessages, fmt.Sprintf("%s didn't have enough resource: GPUs, requested: %s, available: %s",
+				domainID,
+				strconv.FormatFloat(requestedGPUs, 'g', 3, 64),
+				strconv.FormatFloat(availableGPUs, 'g', 3, 64),
+			))
 			shortMessages = append(shortMessages, "node-group(s) didn't have enough resources: GPUs")
 		}
 	}
@@ -161,14 +166,20 @@ func NewTopologyInsufficientResourcesError(
 	requestedCPUs := int64(resourceRequested.Cpu())
 	availableCPUs := int64(availableResource.Cpu())
 	if requestedCPUs > availableCPUs {
-		detailedMessages = append(detailedMessages, fmt.Sprintf("%s didn't have enough resources: CPU cores, requested: %d, available: %d",
-			domainID, requestedCPUs, availableCPUs))
+		detailedMessages = append(detailedMessages, fmt.Sprintf("%s didn't have enough resources: CPU cores, requested: %s, available: %s",
+			domainID,
+			humanize.FtoaWithDigits(resourceRequested.Cpu()/resource_info.MilliCPUToCores, 3),
+			humanize.FtoaWithDigits(availableResource.Cpu()/resource_info.MilliCPUToCores, 3),
+		))
 		shortMessages = append(shortMessages, "node-group(s) didn't have enough resources: CPU cores")
 	}
 
 	if resourceRequested.Memory() > availableResource.Memory() {
-		detailedMessages = append(detailedMessages, fmt.Sprintf("%s didn't have enough resources: memory, requested: %f, available: %f",
-			domainID, resourceRequested.Memory(), availableResource.Memory()))
+		detailedMessages = append(detailedMessages, fmt.Sprintf("%s didn't have enough resources: memory, requested: %s, available: %s",
+			domainID,
+			humanize.FtoaWithDigits(resourceRequested.Memory()/resource_info.MemoryToGB, 3),
+			humanize.FtoaWithDigits(availableResource.Memory()/resource_info.MemoryToGB, 3),
+		))
 		shortMessages = append(shortMessages, "node-group(s) didn't have enough resources: memory")
 	}
 
