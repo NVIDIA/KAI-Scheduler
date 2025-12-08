@@ -380,15 +380,24 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 	}
 
 	if requiredPlacement != "" && !foundRequiredLevel {
-		return nil, fmt.Errorf("topology %s doesn't have a required domain level named %s",
-			topologyTree.Name, requiredPlacement)
+		return nil, newTopologyConstraintConfigError(subGroup, topologyTree, "required", requiredPlacement)
 	}
 	if preferredPlacement != "" && !foundPreferredLevel {
-		return nil, fmt.Errorf("topology %s doesn't have a preferred domain level named %s",
-			topologyTree.Name, preferredPlacement,
-		)
+		return nil, newTopologyConstraintConfigError(subGroup, topologyTree, "preferred", preferredPlacement)
 	}
 	return relevantLevels, nil
+}
+
+func newTopologyConstraintConfigError(subGroup *subgroup_info.SubGroupInfo, topologyTree *Info, placementType string, placementName DomainLevel) error {
+	var topologyConstraintPodGroupSet string
+	if subGroup.GetName() == podgroup_info.DefaultSubGroup {
+		topologyConstraintPodGroupSet = "workload"
+	} else {
+		topologyConstraintPodGroupSet = fmt.Sprintf("sub-group %s", subGroup.GetName())
+	}
+	return fmt.Errorf("topology constraint error: %s specified '%s' as the %s topology constraint level, "+
+		"but the topology tree '%s' does not contain a level with this name",
+		topologyConstraintPodGroupSet, placementName, placementType, topologyTree.Name)
 }
 
 func (*topologyPlugin) treeAllocatableCleanup(topologyTree *Info) {
