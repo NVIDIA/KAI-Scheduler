@@ -376,8 +376,8 @@ func TestGetPodGroupMetadata_WithValidDefaultsConfigMap(t *testing.T) {
 		},
 		Data: map[string]string{
 			constants.DefaultPrioritiesConfigMapTypesKey: `[
-				{"typeName":"TestKind","group":"apps","priorityName":"cm-prio-apps","preemptibility":"Preemptible"},
-				{"typeName":"TestKind","priorityName":"cm-prio-kind","preemptibility":"Non-Preemptible"}
+				{"typeName":"TestKind","group":"apps","priorityName":"cm-prio-apps","preemptibility":"preemptible"},
+				{"typeName":"TestKind","priorityName":"cm-prio-kind","preemptibility":"non-preemptible"}
 			]`,
 		},
 	}
