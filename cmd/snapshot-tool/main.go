@@ -210,6 +210,13 @@ func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.C
 		}
 	}
 
+	for _, topology := range rawObjects.Topologies {
+		_, err := kueueClient.KueueV1alpha1().Topologies().Create(context.TODO(), topology, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create topology: %v", err)
+		}
+	}
+
 	for _, resourceClaim := range rawObjects.ResourceClaims {
 		_, err := kubeClient.ResourceV1().ResourceClaims(resourceClaim.Namespace).Create(context.TODO(), resourceClaim, v1.CreateOptions{})
 		if err != nil {
