@@ -69,7 +69,7 @@ func LowestCommonDomainID(nodeSet node_info.NodeSet, levels []kueuev1alpha1.Topo
 		return rootDomainId, rootLevel
 	}
 
-	return DomainID(strings.Join(domainParts, ".")), DomainLevel(domainParts[len(domainParts)-1])
+	return DomainID(strings.Join(domainParts, ".")), DomainLevel(levels[len(domainParts)-1].NodeLabel)
 }
 
 // For a given node to be part of the topology correctly, it must have a label for each level of the topology. TODO make this common
