@@ -4,30 +4,13 @@
 package topology
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"slices"
 	"strings"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
-	"github.com/samber/lo"
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 type nodeSetID = string
-
-// Function that accepts a node set (list of nodes) and return an identifier for the node set that can
-// be used as a key in a map
-func getNodeSetID(nodeSet node_info.NodeSet) nodeSetID {
-	nodeNames := lo.Map(nodeSet, func(node *node_info.NodeInfo, _ int) string {
-		return node.Name
-	})
-	slices.Sort(nodeNames)
-	concatenated := strings.Join(nodeNames, ",")
-
-	hash := sha256.Sum256([]byte(concatenated))
-	return nodeSetID(hex.EncodeToString(hash[:]))
-}
 
 // LowestCommonDomainID returns the lowest common domain ID for a given node set and levels. If a node is missing one of
 // the levels, the function will assume it's outside the topology and ignore it.
