@@ -154,27 +154,6 @@ func initTasksRepresentorMetadataStruct(tasksToAllocate []*pod_info.PodInfo) (*j
 	return jobAllocationData, nil
 }
 
-// func (t *topologyPlugin) nodeSetToDomainFn(
-// 	nodeSet node_info.NodeSet, topologyTree *Info,
-// ) (*DomainInfo, error) {
-// 	domainPath := LowestCommonDomainID(nodeSet, topologyTree.TopologyResource.Spec.Levels)
-// 	if len(domainPath) == 0 {
-// 		return nil, fmt.Errorf("no domain path found for node set in topology %s", topologyTree.Name)
-// 	}
-// 	for l, domainID := range domainPath {
-// 		level := topologyTree.TopologyResource.Spec.Levels[l].NodeLabel // todo handle panics
-// 		domain, ok := topologyTree.DomainsByLevel[level]
-// 		if !ok {
-// 			return nil, fmt.Errorf("domain not found for node set in topology %s", topologyTree.Name)
-// 		}
-// 	}
-// 	domain, ok := topologyTree.DomainsByLevel[domainID]
-// 	if !ok {
-// 		return nil, fmt.Errorf("domain not found for node set in topology %s", topologyTree.Name)
-// 	}
-// 	return domain, nil
-// }
-
 func (t *topologyPlugin) calcSubTreeAllocatable(
 	jobAllocationData *jobAllocationMetaData, domain *DomainInfo,
 ) (int, error) {
