@@ -89,7 +89,11 @@ func main() {
 		if err != nil {
 			log.InfraLogger.Fatalf("Failed to create CPU profile file: %v", err)
 		}
-		pprof.StartCPUProfile(f)
+		err = pprof.StartCPUProfile(f)
+		if err != nil {
+			log.InfraLogger.Fatalf("Failed to start CPU profile: %v", err)
+		}
+
 		defer pprof.StopCPUProfile()
 	}
 
