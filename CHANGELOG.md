@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [v0.10.2] - 2025-12-09
+
+### Added
+- Added support for having the default "preemptibility" per top-owner-type read from the default configs configmap in the pod-grouper
 
 ### Fixed
 - Fixed confusing resource division log message [#734](https://github.com/NVIDIA/KAI-Scheduler/pull/734) [itsomri](https://github.com/itsomri)

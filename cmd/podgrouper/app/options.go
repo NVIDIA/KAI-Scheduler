@@ -12,21 +12,21 @@ import (
 )
 
 type Options struct {
-	MetricsAddr                         string
-	ProbeAddr                           string
-	EnableLeaderElection                bool
-	NodePoolLabelKey                    string
-	QPS                                 int
-	Burst                               int
-	MaxConcurrentReconciles             int
-	SearchForLegacyPodGroups            bool
-	KnativeGangSchedule                 bool
-	SchedulerName                       string
-	SchedulingQueueLabelKey             string
-	PodLabelSelectorStr                 string
-	NamespaceLabelSelectorStr           string
-	DefaultPrioritiesConfigMapName      string
-	DefaultPrioritiesConfigMapNamespace string
+	MetricsAddr                            string
+	ProbeAddr                              string
+	EnableLeaderElection                   bool
+	NodePoolLabelKey                       string
+	QPS                                    int
+	Burst                                  int
+	MaxConcurrentReconciles                int
+	SearchForLegacyPodGroups               bool
+	KnativeGangSchedule                    bool
+	SchedulerName                          string
+	SchedulingQueueLabelKey                string
+	PodLabelSelectorStr                    string
+	NamespaceLabelSelectorStr              string
+	DefaultConfigPerTypeConfigMapName      string
+	DefaultConfigPerTypeConfigMapNamespace string
 }
 
 func (o *Options) AddFlags(fs *flag.FlagSet) {
@@ -41,24 +41,24 @@ func (o *Options) AddFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&o.KnativeGangSchedule, "knative-gang-schedule", true, "Schedule knative revision as a gang. Defaults to true")
 	fs.StringVar(&o.SchedulerName, "scheduler-name", constants.DefaultSchedulerName, "The name of the scheduler used to schedule pod groups")
 	fs.StringVar(&o.SchedulingQueueLabelKey, "queue-label-key", constants.DefaultQueueLabel, "Scheduling queue label key name")
-	fs.StringVar(&o.DefaultPrioritiesConfigMapName, "default-priorities-configmap-name", "", "The name of the configmap that contains default priorities for pod groups")
-	fs.StringVar(&o.DefaultPrioritiesConfigMapNamespace, "default-priorities-configmap-namespace", "", "The namespace of the configmap that contains default priorities for pod groups")
+	fs.StringVar(&o.DefaultConfigPerTypeConfigMapName, "default-priorities-configmap-name", "", "The name of the configmap that contains default configs (priorities and preemptibility) for pod groups")
+	fs.StringVar(&o.DefaultConfigPerTypeConfigMapNamespace, "default-priorities-configmap-namespace", "", "The namespace of the configmap that contains default configs (priorities and preemptibility) for pod groups")
 	flag.StringVar(&o.PodLabelSelectorStr, "pod-label-selector", "", "Pod label selector in key=value comma-separated format")
 	flag.StringVar(&o.NamespaceLabelSelectorStr, "namespace-label-selector", "", "Namespace label selector in key=value comma-separated format")
 }
 
 func (o *Options) Configs() controllers.Configs {
 	return controllers.Configs{
-		NodePoolLabelKey:                    o.NodePoolLabelKey,
-		MaxConcurrentReconciles:             o.MaxConcurrentReconciles,
-		SearchForLegacyPodGroups:            o.SearchForLegacyPodGroups,
-		KnativeGangSchedule:                 o.KnativeGangSchedule,
-		SchedulerName:                       o.SchedulerName,
-		SchedulingQueueLabelKey:             o.SchedulingQueueLabelKey,
-		PodLabelSelector:                    parseLabelSelector(o.PodLabelSelectorStr),
-		NamespaceLabelSelector:              parseLabelSelector(o.NamespaceLabelSelectorStr),
-		DefaultPrioritiesConfigMapName:      o.DefaultPrioritiesConfigMapName,
-		DefaultPrioritiesConfigMapNamespace: o.DefaultPrioritiesConfigMapNamespace,
+		NodePoolLabelKey:                       o.NodePoolLabelKey,
+		MaxConcurrentReconciles:                o.MaxConcurrentReconciles,
+		SearchForLegacyPodGroups:               o.SearchForLegacyPodGroups,
+		KnativeGangSchedule:                    o.KnativeGangSchedule,
+		SchedulerName:                          o.SchedulerName,
+		SchedulingQueueLabelKey:                o.SchedulingQueueLabelKey,
+		PodLabelSelector:                       parseLabelSelector(o.PodLabelSelectorStr),
+		NamespaceLabelSelector:                 parseLabelSelector(o.NamespaceLabelSelectorStr),
+		DefaultConfigPerTypeConfigMapName:      o.DefaultConfigPerTypeConfigMapName,
+		DefaultConfigPerTypeConfigMapNamespace: o.DefaultConfigPerTypeConfigMapNamespace,
 	}
 }
 
