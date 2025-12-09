@@ -120,6 +120,9 @@ crdupgrader:
     # tag: ""  # Optional: Override global.tag or Chart.AppVersion
 
 postCleanup:
+  # enabled: Set to false to disable post-delete cleanup resources.
+  # This is useful when not using Helm for installation/uninstallation (e.g., when using kustomize).
+  # When disabled, the post-delete Job, ClusterRole, ClusterRoleBinding, and ServiceAccount will not be created.
   enabled: true
   image:
     # using crd-upgrader image for kubectl availability
