@@ -266,10 +266,14 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 	}
 
 	var domains []*DomainInfo
-	for _, level := range relevantLevels {
+	var fitErrors []common_info.JobFitError
+	for i, level := range relevantLevels {
 		for _, domain := range relevantDomainsByLevel[level] {
 			err := checkJobDomainFit(job, subGroup, tasksResources, tasksCount, domain)
 			if err != nil { // Filter domains that cannot allocate the job
+				if i == len(relevantLevels)-1 {
+					fitErrors = append(fitErrors, err)
+				}
 				continue
 			}
 
@@ -278,6 +282,9 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 	}
 
 	if len(domains) == 0 {
+		for _, fitError := range fitErrors {
+			job.AddJobFitError(fitError)
+		}
 		return nil, fmt.Errorf("no domains found for the job <%s/%s>, workload topology name: %s",
 			job.Namespace, job.Name, topologyTree.Name)
 	}
@@ -341,7 +348,7 @@ func checkJobDomainFit(job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.
 		if domain.AllocatablePods < tasksCount {
 			return common_info.NewTopologyFitError(
 				job.Name, subGroup.GetName(), job.Namespace, string(domain.ID), common_info.UnschedulableWorkloadReason,
-				[]string{fmt.Sprintf("node-group %s can allocatable only %d of %d pods", domain.ID, domain.AllocatablePods, tasksCount)})
+				[]string{fmt.Sprintf("node-group %s can allocate only %d of %d required pods", domain.ID, domain.AllocatablePods, tasksCount)})
 		}
 		return nil
 	}

@@ -28,7 +28,7 @@ func TestJobFitErrorsToDetailedMessage(t *testing.T) {
 					[]string{"not enough CPU"},
 					"detailed: not enough CPU"),
 			},
-			want: "\nNot enough resources for the workload.\ndetailed: not enough CPU.",
+			want: "\nNot enough resources for the workload.\nsubgroup subgroup1: detailed: not enough CPU.",
 		},
 		{
 			name: "Multiple fit errors",
@@ -42,7 +42,7 @@ func TestJobFitErrorsToDetailedMessage(t *testing.T) {
 					[]string{"not enough memory"},
 					"detailed: not enough memory"),
 			},
-			want: "\nUnable to schedule podgroup.\ndetailed: not enough CPU.\ndetailed: not enough memory.",
+			want: "\nUnable to schedule podgroup.\nsubgroup subgroup1: detailed: not enough CPU.\nsubgroup subgroup1: detailed: not enough memory.",
 		},
 		{
 			name: "Multiple fit errors with sorting",
@@ -56,7 +56,21 @@ func TestJobFitErrorsToDetailedMessage(t *testing.T) {
 					[]string{"not enough CPU"},
 					"a-message"),
 			},
-			want: "\nUnable to schedule podgroup.\na-message.\nz-message.",
+			want: "\nUnable to schedule podgroup.\nsubgroup subgroup1: a-message.\nsubgroup subgroup1: z-message.",
+		},
+		{
+			name: "Multiple fit errors with topology fit errors",
+			fitErrors: []JobFitError{
+				NewTopologyFitError("job1", "subgroup1", "namespace1", "zone1",
+					UnschedulableWorkloadReason,
+					[]string{"not enough CPU"},
+					"detailed: not enough CPU"),
+				NewTopologyFitError("job1", "subgroup1", "namespace1", "zone2",
+					UnschedulableWorkloadReason,
+					[]string{"not enough memory"},
+					"detailed: not enough memory"),
+			},
+			want: "\nUnable to schedule podgroup.\n<zone1>: subgroup subgroup1: detailed: not enough CPU.\n<zone2>: subgroup subgroup1: detailed: not enough memory.",
 		},
 	}
 	for _, tt := range tests {
@@ -88,12 +102,12 @@ func TestJobFitErrorsToMessage(t *testing.T) {
 			fitErrors: []JobFitError{
 				NewJobFitError("job1", "subgroup1", "namespace1",
 					UnschedulableWorkloadReason,
-					[]string{"not enough CPU"}),
+					[]string{"node-group(s) didn't have enough resources: CPU cores"}),
 				NewJobFitError("job1", "subgroup1", "namespace1",
 					UnschedulableWorkloadReason,
-					[]string{"not enough CPU"}),
+					[]string{"node-group(s) didn't have enough resources: CPU cores"}),
 			},
-			want: "Unable to schedule podgroup: not enough CPU.",
+			want: "Unable to schedule podgroup: 2 node-group(s) didn't have enough resources: CPU cores.",
 		},
 		{
 			name: "Multiple fit errors with different messages",
@@ -267,11 +281,12 @@ func TestTopologyFitError_DetailedMessage(t *testing.T) {
 			name: "Get detailed message with domain",
 			err: &TopologyFitError{
 				JobFitErrorBase: JobFitErrorBase{
+					subGroupName:     "default",
 					detailedMessages: []string{"message1", "message2"},
 				},
 				nodesGroupName: "domain1",
 			},
-			want: "\n<domain1>: message1, message2.",
+			want: "<domain1>: message1, message2",
 		},
 	}
 	for _, tt := range tests {
