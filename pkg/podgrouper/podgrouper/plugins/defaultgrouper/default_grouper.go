@@ -198,10 +198,6 @@ func (dg *DefaultGrouper) calcPriorityClassWithDefaults(topOwner *unstructured.U
 	return defaultPriorityClassForJob, defaultConfigs
 }
 
-// calcPodGroupPreemptibilityWithDefaults - resolves preemptibility using:
-// 1) explicit labels (top owner/pod)
-// 2) provided defaults (if any)
-// 3) defaults from ConfigMap
 func (dg *DefaultGrouper) calcPodGroupPreemptibilityWithDefaults(
 	topOwner *unstructured.Unstructured,
 	pod *v1.Pod,
