@@ -1,6 +1,6 @@
+{{- if .Values.postCleanup.enabled }}
 # Copyright 2025 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
-
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -27,3 +27,4 @@ spec:
               echo "Deleting deployments..."
               kubectl -n kai-scheduler delete deployment --all --ignore-not-found=true
               echo "Cleanup complete."
+{{- end }}
