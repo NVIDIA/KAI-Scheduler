@@ -47,8 +47,12 @@ func JobFitErrorsToMessage(fitErrors []JobFitError) string {
 		}
 
 		var reasonStrings []string
-		for k := range messages {
-			reasonStrings = append(reasonStrings, fmt.Sprintf("%v", k))
+		for message, messageCount := range messages {
+			if messageCount > 1 {
+				reasonStrings = append(reasonStrings, fmt.Sprintf("%d %v", messageCount, message))
+			} else {
+				reasonStrings = append(reasonStrings, message)
+			}
 		}
 		sort.Strings(reasonStrings)
 		return reasonStrings
@@ -97,7 +101,10 @@ func (f *JobFitErrorBase) Reason() enginev2alpha2.UnschedulableReason {
 }
 
 func (f *JobFitErrorBase) DetailedMessage() string {
-	return strings.Join(f.detailedMessages, ", ")
+	if f.subGroupName == DefaultSubGroupName {
+		return strings.Join(f.detailedMessages, ", ")
+	}
+	return fmt.Sprintf("subgroup %s: %s", f.subGroupName, strings.Join(f.detailedMessages, ", "))
 }
 
 func (f *JobFitErrorBase) Messages() []string {
@@ -126,7 +133,7 @@ func NewTopologyFitError(jobName, subGroupName, jobNamespace, nodesGroupName str
 }
 
 func (f *TopologyFitError) DetailedMessage() string {
-	return fmt.Sprintf("\n<%v>: %v.", f.nodesGroupName, f.JobFitErrorBase.DetailedMessage())
+	return fmt.Sprintf("<%v>: %v", f.nodesGroupName, f.JobFitErrorBase.DetailedMessage())
 }
 
 func NewTopologyInsufficientResourcesError(
