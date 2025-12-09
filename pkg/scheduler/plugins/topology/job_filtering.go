@@ -285,8 +285,12 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 		for _, fitError := range fitErrors {
 			job.AddJobFitError(fitError)
 		}
-		return nil, fmt.Errorf("no domains found for the job <%s/%s>, workload topology name: %s",
-			job.Namespace, job.Name, topologyTree.Name)
+		constrainedObjectDescription := fmt.Sprintf("job <%s/%s>", job.Namespace, job.Name)
+		if subGroup.GetName() != podgroup_info.DefaultSubGroup {
+			constrainedObjectDescription += fmt.Sprintf(", subgroup %s", subGroup.GetName())
+		}
+		return nil, fmt.Errorf("topology %s, requirement %s couldn't be satisfied for %s",
+			topologyTree.Name, subGroup.GetTopologyConstraint().RequiredLevel, constrainedObjectDescription)
 	}
 
 	return domains, nil
