@@ -1470,7 +1470,7 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 					[]string{"node-group zone1 can allocate only 1 of 2 required pods"},
 				),
 			},
-			expectedError: "no domains found for the job <test-namespace/test-job>, workload topology name: test-topology",
+			expectedError: "topology test-topology, requirement zone couldn't be satisfied for job <test-namespace/test-job>, subgroup test",
 		},
 		{
 			name: "no domains can allocate the job - using IdleOrReleasingResources",
@@ -1561,7 +1561,7 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 					"zone2 didn't have enough resources: CPU cores, requested: 1, available: 0.6",
 				),
 			},
-			expectedError: "no domains found for the job <test-namespace/test-job>, workload topology name: test-topology",
+			expectedError: "topology test-topology, requirement zone couldn't be satisfied for job <test-namespace/test-job>, subgroup test",
 		},
 		{
 			name: "no relevant domain levels",
