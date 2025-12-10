@@ -56,6 +56,8 @@ type DomainInfo struct {
 
 	// Total available resources in this domain
 	IdleOrReleasingResources *resource_info.Resource
+
+	Index int
 }
 
 func NewDomainInfo(id DomainID, level DomainLevel) *DomainInfo {

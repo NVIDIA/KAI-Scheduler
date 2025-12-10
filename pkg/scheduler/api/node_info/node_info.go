@@ -89,6 +89,9 @@ type NodeInfo struct {
 
 	PodAffinityInfo pod_affinity.NodePodAffinityInfo
 
+	TopologyPath []int
+	TopologyName string
+
 	GpuSharingNodeInfo
 }
 

@@ -62,3 +62,39 @@ func IsNodePartOfTopology(nodeInfo *node_info.NodeInfo, levels []kueuev1alpha1.T
 	}
 	return true
 }
+
+func LowestCommonDomainIDFast(nodeSet node_info.NodeSet, topologyTree *Info) (DomainID, DomainLevel, map[string]*node_info.NodeInfo) {
+	validNodes := map[string]*node_info.NodeInfo{}
+	var validNodesArray []node_info.NodeInfo
+	for _, node := range nodeSet {
+		if node.TopologyName != topologyTree.Name {
+			continue
+		}
+		validNodes[node.Name] = node
+		validNodesArray = append(validNodesArray, *node)
+	}
+
+	if len(validNodesArray) == 0 {
+		return rootDomainId, rootLevel, validNodes
+	}
+
+	var domainParts []string
+	for l := range topologyTree.TopologyResource.Spec.Levels {
+		level := topologyTree.TopologyResource.Spec.Levels[l]
+		value := ""
+		for j := range len(validNodesArray) - 1 {
+			if validNodesArray[j].TopologyPath[l] != validNodesArray[j+1].TopologyPath[l] {
+				if len(domainParts) == 0 {
+					return rootDomainId, rootLevel, validNodes
+				}
+				return DomainID(strings.Join(domainParts, ".")), DomainLevel(level.NodeLabel), validNodes
+			}
+
+			if value == "" {
+				value = validNodesArray[j].Node.Labels[level.NodeLabel]
+			}
+		}
+		domainParts = append(domainParts, value)
+	}
+	return DomainID(strings.Join(domainParts, ".")), DomainLevel(domainParts[len(domainParts)-1]), validNodes
+}
