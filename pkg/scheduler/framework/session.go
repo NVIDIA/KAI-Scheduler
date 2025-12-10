@@ -22,6 +22,7 @@ package framework
 import (
 	"fmt"
 	"net/http"
+	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -247,24 +248,42 @@ func (ssn *Session) OrderedNodesByTask(nodes []*node_info.NodeInfo, task *pod_in
 
 	ssn.NodePreOrderFn(task, nodes)
 
-	for _, node := range nodes {
-		wg.Add(1)
-		go func(node *node_info.NodeInfo) {
-			defer wg.Done()
-			score, err := ssn.NodeOrderFn(task, node)
-			if err != nil {
-				log.InfraLogger.Errorf("Error in Calculating Priority for the node:%v", err)
-				return
-			}
-
-			mutex.Lock()
-			nodeScores[score] = append(nodeScores[score], node)
-			mutex.Unlock()
-
-			log.InfraLogger.V(5).Infof("Overall priority node score of node <%v> for task <%v/%v> is: %f",
-				node.Name, task.Namespace, task.Name, score)
-		}(node)
+	// Use a worker pool instead of one goroutine per node
+	numWorkers := runtime.GOMAXPROCS(0)
+	if numWorkers > len(nodes) {
+		numWorkers = len(nodes)
 	}
+
+	// Create a channel to distribute work to workers
+	nodeChan := make(chan *node_info.NodeInfo, numWorkers)
+
+	// Start worker pool
+	for range numWorkers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for node := range nodeChan {
+				score, err := ssn.NodeOrderFn(task, node)
+				if err != nil {
+					log.InfraLogger.Errorf("Error in Calculating Priority for the node:%v", err)
+					continue
+				}
+
+				mutex.Lock()
+				nodeScores[score] = append(nodeScores[score], node)
+				mutex.Unlock()
+
+				log.InfraLogger.V(5).Infof("Overall priority node score of node <%v> for task <%v/%v> is: %f",
+					node.Name, task.Namespace, task.Name, score)
+			}
+		}()
+	}
+
+	// Feed work to the workers
+	for _, node := range nodes {
+		nodeChan <- node
+	}
+	close(nodeChan)
 
 	wg.Wait()
 	return sortNodesByScore(nodeScores)
