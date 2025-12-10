@@ -44,7 +44,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.34.2
 	k8s.io/apimachinery v0.34.2
 	k8s.io/apiserver v0.34.2
-	k8s.io/cli-runtime v0.34.1
+	k8s.io/cli-runtime v0.34.2
 	k8s.io/client-go v0.34.2
 	k8s.io/cluster-bootstrap v0.34.1
 	k8s.io/component-base v0.34.2
