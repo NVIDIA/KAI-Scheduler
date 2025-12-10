@@ -10,16 +10,16 @@ import (
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
-// LowestCommonDomainID returns the lowest common domain ID for a given node set and levels. If a node is missing one of
-// the levels, the function will assume it's outside the topology and ignore it.
-func LowestCommonDomainID(nodeSet node_info.NodeSet, levels []kueuev1alpha1.TopologyLevel) (DomainID, DomainLevel) {
-	var validNodes, invalidNodes node_info.NodeSet
+// LowestCommonDomainID returns the lowest common domain ID, level, and valid (=in domain) nodes for a given node
+// set and levels. If a node is missing one of the levels, the function will assume it's outside the topology and it
+// will not be included in the valid nodes map.
+func LowestCommonDomainID(nodeSet node_info.NodeSet, levels []kueuev1alpha1.TopologyLevel) (DomainID, DomainLevel, map[string]*node_info.NodeInfo) {
+	validNodes := map[string]*node_info.NodeInfo{}
 	for _, node := range nodeSet {
-		if IsNodePartOfTopology(node, levels) {
-			validNodes = append(validNodes, node)
-		} else {
-			invalidNodes = append(invalidNodes, node)
+		if !IsNodePartOfTopology(node, levels) {
+			continue
 		}
+		validNodes[node.Name] = node
 	}
 
 	var domainParts []string
@@ -47,10 +47,10 @@ func LowestCommonDomainID(nodeSet node_info.NodeSet, levels []kueuev1alpha1.Topo
 	}
 
 	if len(domainParts) == 0 {
-		return rootDomainId, rootLevel
+		return rootDomainId, rootLevel, validNodes
 	}
 
-	return DomainID(strings.Join(domainParts, ".")), DomainLevel(levels[len(domainParts)-1].NodeLabel)
+	return DomainID(strings.Join(domainParts, ".")), DomainLevel(levels[len(domainParts)-1].NodeLabel), validNodes
 }
 
 // For a given node to be part of the topology correctly, it must have a label for each level of the topology. TODO make this common
