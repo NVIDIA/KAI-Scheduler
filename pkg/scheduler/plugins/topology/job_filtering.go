@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strings"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -61,9 +62,17 @@ func (t *topologyPlugin) subSetNodesFn(
 	tasksResources, tasksCount := getTasksAllocationMetadata(tasks)
 
 	if err := checkJobDomainFit(job, subGroup, tasksResources, tasksCount, nodeSetDomain); err != nil {
-		job.AddSimpleJobFitError(
-			podgroup_info.PodSchedulingErrors,
-			fmt.Sprintf("No relevant domains found for workload in topology tree: %s", topologyTree.Name))
+		if nodeSetDomain.ID == rootDomainId {
+			job.AddSimpleJobFitError(
+				podgroup_info.PodSchedulingErrors,
+				getNoTopologyMatchError(job, subGroup, topologyTree, "not enough resources in the cluster to allocate the job").Error())
+
+		} else {
+			job.AddSimpleJobFitError(
+				podgroup_info.PodSchedulingErrors,
+				getNoTopologyMatchError(job, subGroup, topologyTree,
+					fmt.Sprintf("not enough resources in %s to allocate the job", string(nodeSetDomain.ID))).Error())
+		}
 		return []node_info.NodeSet{}, nil
 	}
 
@@ -266,13 +275,13 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 	}
 
 	var domains []*DomainInfo
-	var fitErrors []common_info.JobFitError
-	for i, level := range relevantLevels {
+	var topLevelFitErrors []common_info.JobFitError
+	for levelIndex, level := range relevantLevels {
 		for _, domain := range relevantDomainsByLevel[level] {
 			err := checkJobDomainFit(job, subGroup, tasksResources, tasksCount, domain)
 			if err != nil { // Filter domains that cannot allocate the job
-				if i == len(relevantLevels)-1 {
-					fitErrors = append(fitErrors, err)
+				if levelIndex == len(relevantLevels)-1 {
+					topLevelFitErrors = append(topLevelFitErrors, err)
 				}
 				continue
 			}
@@ -282,15 +291,13 @@ func (t *topologyPlugin) getJobAllocatableDomains(
 	}
 
 	if len(domains) == 0 {
-		for _, fitError := range fitErrors {
+		for _, fitError := range topLevelFitErrors {
 			job.AddJobFitError(fitError)
 		}
-		constrainedObjectDescription := fmt.Sprintf("job <%s/%s>", job.Namespace, job.Name)
-		if subGroup.GetName() != podgroup_info.DefaultSubGroup {
-			constrainedObjectDescription += fmt.Sprintf(", subgroup %s", subGroup.GetName())
-		}
-		return nil, fmt.Errorf("topology %s, requirement %s couldn't be satisfied for %s",
-			topologyTree.Name, subGroup.GetTopologyConstraint().RequiredLevel, constrainedObjectDescription)
+		job.AddSimpleJobFitError(
+			podgroup_info.PodSchedulingErrors,
+			getNoTopologyMatchError(job, subGroup, topologyTree).Error())
+		return []*DomainInfo{}, nil
 	}
 
 	return domains, nil
@@ -547,4 +554,17 @@ func useRepresentorPodsAccounting(tasks []*pod_info.PodInfo) bool {
 		}
 	}
 	return true
+}
+
+func getNoTopologyMatchError(job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo, topologyTree *Info, suffixes ...string) error {
+	constrainedObjectDescription := fmt.Sprintf("job <%s/%s>", job.Namespace, job.Name)
+	if len(subGroup.GetName()) > 0 && subGroup.GetName() != podgroup_info.DefaultSubGroup {
+		constrainedObjectDescription += fmt.Sprintf(", subgroup %s", subGroup.GetName())
+	}
+	suffix := ""
+	if len(suffixes) > 0 {
+		suffix = fmt.Sprintf(": %s", strings.Join(suffixes, ", "))
+	}
+	return fmt.Errorf("topology %s, requirement %s couldn't be satisfied for %s%s",
+		topologyTree.Name, subGroup.GetTopologyConstraint().RequiredLevel, constrainedObjectDescription, suffix)
 }

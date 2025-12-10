@@ -109,6 +109,7 @@ type TestExpectedResultBasic struct {
 	GPUGroups                   []string
 	DontValidateGPUGroup        bool
 	LastStartTimestampOlderThan *time.Duration
+	ExpectedErrorMessage        string
 }
 
 type TestExpectedNodesResources struct {
@@ -192,6 +193,19 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 		}
 		if jobExpectedResult.MemoryRequired != 0 && sumOfJobRequestedMemory != jobExpectedResult.MemoryRequired {
 			t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses Memory: %v, was expecting Memory: %v", testNumber, testMetadata.Name, jobName, sumOfJobRequestedMemory, jobExpectedResult.MemoryRequired)
+		}
+
+		// Validate expected error message for jobs that didn't get allocated
+		if len(jobExpectedResult.ExpectedErrorMessage) > 0 {
+			if len(job.JobFitErrors) == 0 {
+				t.Errorf("Test number: %d, name: %s, has failed. Job: %s expected error message but got no fit errors", testNumber, testMetadata.Name, jobName)
+			} else {
+				actualErrorMessage := common_info.JobFitErrorsToDetailedMessage(job.JobFitErrors)
+				if actualErrorMessage != jobExpectedResult.ExpectedErrorMessage {
+					t.Errorf("Test number: %d, name: %s, has failed. Job: %s\nExpected error message:\n%s\nActual error message:\n%s",
+						testNumber, testMetadata.Name, jobName, jobExpectedResult.ExpectedErrorMessage, actualErrorMessage)
+				}
+			}
 		}
 	}
 
