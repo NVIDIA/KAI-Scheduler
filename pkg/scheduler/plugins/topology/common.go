@@ -10,8 +10,6 @@ import (
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
-type nodeSetID = string
-
 // LowestCommonDomainID returns the lowest common domain ID for a given node set and levels. If a node is missing one of
 // the levels, the function will assume it's outside the topology and ignore it.
 func LowestCommonDomainID(nodeSet node_info.NodeSet, levels []kueuev1alpha1.TopologyLevel) (DomainID, DomainLevel) {
