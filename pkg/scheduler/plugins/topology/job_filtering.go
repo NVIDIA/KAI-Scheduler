@@ -46,7 +46,7 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{nodeSet}, nil
 	}
 
-	id, level := LowestCommonDomainID(nodeSet, topologyTree.TopologyResource.Spec.Levels)
+	id, level, validNodes := LowestCommonDomainID(nodeSet, topologyTree.TopologyResource.Spec.Levels)
 	domain, ok := topologyTree.DomainsByLevel[level][id]
 	if !ok {
 		return nil, fmt.Errorf("domain not found for node set in topology %s", topologyTree.Name)
@@ -99,6 +99,9 @@ func (t *topologyPlugin) subSetNodesFn(
 	for _, jobAllocatableDomain := range jobAllocatableDomains {
 		var domainNodeSet node_info.NodeSet
 		for _, node := range jobAllocatableDomain.Nodes {
+			if _, ok := validNodes[node.Name]; !ok {
+				continue
+			}
 			domainNodeSet = append(domainNodeSet, node)
 		}
 		domainNodeSets = append(domainNodeSets, domainNodeSet)
