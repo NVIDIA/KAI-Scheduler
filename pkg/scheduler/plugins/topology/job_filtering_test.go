@@ -259,7 +259,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 
 				return tree
 			},
-			expectedError: "",
+			expectedJobFitError: "topology test-topology, requirement  couldn't be satisfied for job </test-job>: not enough resources in zone1 to allocate the job",
 		},
 		{
 			name: "successful allocation with mixed GPU tasks - usePodCountAccounting returns false",
@@ -1469,8 +1469,13 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 					common_info.UnschedulableWorkloadReason,
 					[]string{"node-group zone1 can allocate only 1 of 2 required pods"},
 				),
+				common_info.NewJobFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					common_info.UnschedulableWorkloadReason,
+					[]string{"topology test-topology, requirement zone couldn't be satisfied for job <test-namespace/test-job>, subgroup test"}),
 			},
-			expectedError: "topology test-topology, requirement zone couldn't be satisfied for job <test-namespace/test-job>, subgroup test",
 		},
 		{
 			name: "no domains can allocate the job - using IdleOrReleasingResources",
@@ -1560,8 +1565,14 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 					"zone2 didn't have enough resource: GPUs, requested: 1, available: 0",
 					"zone2 didn't have enough resources: CPU cores, requested: 1, available: 0.6",
 				),
+				common_info.NewJobFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					common_info.UnschedulableWorkloadReason,
+					[]string{"topology test-topology, requirement zone couldn't be satisfied for job <test-namespace/test-job>, subgroup test"},
+				),
 			},
-			expectedError: "topology test-topology, requirement zone couldn't be satisfied for job <test-namespace/test-job>, subgroup test",
 		},
 		{
 			name: "no relevant domain levels",

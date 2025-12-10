@@ -101,7 +101,7 @@ func (f *JobFitErrorBase) Reason() enginev2alpha2.UnschedulableReason {
 }
 
 func (f *JobFitErrorBase) DetailedMessage() string {
-	if f.subGroupName == DefaultSubGroupName {
+	if len(f.subGroupName) == 0 || f.subGroupName == DefaultSubGroupName {
 		return strings.Join(f.detailedMessages, ", ")
 	}
 	return fmt.Sprintf("subgroup %s: %s", f.subGroupName, strings.Join(f.detailedMessages, ", "))
