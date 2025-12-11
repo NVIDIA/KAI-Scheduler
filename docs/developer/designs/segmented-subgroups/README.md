@@ -63,6 +63,9 @@ Leverage the existing Hierarchical Topology Constraints mechanism and provide sy
                     resources:
                       limits:
                         nvidia.com/gpu: 1
+        - name: driver
+          replicas: 1
+          ...
       ```
   - PodGroup Spec:
     - TopologyConstaints will be added the following:
@@ -87,9 +90,11 @@ Leverage the existing Hierarchical Topology Constraints mechanism and provide sy
 ### Validation
 - **Divisibility**: `MinMembers` of a SubGroup should be devided by its `SegmentSize` without reminder
 - **Leaf Constraint**: Segment properties should only be allowed on leaf SubGroup (in case there are no subgroups on the PodGroup, the PodGroup itself is the root and leaf subgroup)
+
 ### PodGrouper
 - Read the podTemplate annotations from above and create the PodGroup with the appropriate TopologyConstaints on the leaf subgroups.
 - If podIndexLabel is not specified, it will infer it from the workload type based on the following table:
+
 #### Workload to Index Label
 | **Workload Kind**   | **Default Index Label**                  | **Note**                                   |
 |---------------------|------------------------------------------|--------------------------------------------|
@@ -98,6 +103,7 @@ Leverage the existing Hierarchical Topology Constraints mechanism and provide sy
 | **PyTorchJob**      | training.kubeflow.org/replica-index      | Standard Kubeflow training operator label. |
 | **TFJob**           | training.kubeflow.org/replica-index      | Standard Kubeflow training operator label. |
 | **LeaderWorkerSet** | leaderworkerset.sigs.k8s.io/worker-index | Primary index within the group.            |
+
 ### Scheduler
 When the scheduler processes a snapshot containing a PodGroup with segment definitions:
 1. **Logical Mapping:** It divides the pod count by the segmentSize to determine the number of required segments.
@@ -106,6 +112,7 @@ When the scheduler processes a snapshot containing a PodGroup with segment defin
 3. **Assignment:** Pods are assigned to these virtual subgroups based on the following logic:
    $$\text{SegmentID} = \lfloor \frac{\text{PodIndex}}{\text{SegmentSize}} \rfloor$$
 From there on, the scheduler should behave as it does today with Hierarchal subgroups.
+
 #### Segment Internal Scheduler Representation
 ```mermaid
 graph LR
@@ -154,6 +161,7 @@ graph LR
     style UserView fill:#eceff1,stroke:#546e7a,stroke-width:2px
     style InternalView fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
 ```
+
 ### Container segment inference
 - The workload framework (JobSetController, PyTorchController, etc.) is responsible for injecting the pod index to the container.
 * Containers infer their segment by combining their index with the segment size (index 1 with segment size 4 -> segment-0, index 5 with segment size 4 -> segment-1)
