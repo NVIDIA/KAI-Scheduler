@@ -94,7 +94,7 @@ Leverage the existing Hierarchical Topology Constraints mechanism and provide sy
 
 ### PodGrouper
 - Read the podTemplate annotations from above and create the PodGroup with the appropriate TopologyConstaints on the leaf subgroups.
-    - At the moment, the PodGrouper only create SubGroups for Grove workloads. We will need to support appropriate grouping for other workloads as well before we can support segments.
+  - At the moment, the PodGrouper only create SubGroups for Grove workloads. We will need to support appropriate grouping for other workloads as well before we can support segments. The exact grouping logic is out of scope for this design, and is assumed to create a subgroup for each PodTemplate.
 - If podIndexLabel is not specified, it will infer it from the workload type based on the following table:
 
 #### Workload to Index Label
