@@ -19,6 +19,7 @@ I want to specify segment size and topology via annotations on my workload witho
 
 ## Assumptions
 1. Distributed workloads frameworks are responsible for ordering their pods, and advertizing their index as a label on the pod and informing the inner container of it (in any way they wish)
+2. For workloads that should support segmentation, the PodGrouper creates a SubGroup for each PodTemplate (see [PodGrouper](#podgrouper)).
 
 ## Proposal
 ### Summary
@@ -170,4 +171,3 @@ graph LR
 
 ## Open Questions
 - Slice/Segment terminology
-
