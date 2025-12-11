@@ -5,15 +5,16 @@ FROM registry.access.redhat.com/ubi9/ubi-minimal
 ARG TARGETARCH
 ENV TARGETARCH=$TARGETARCH
 RUN curl -o kubectl -L "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$TARGETARCH/kubectl" \
-&& chmod +x kubectl && mv kubectl /usr/bin/kubectl
+&& chmod +x kubectl
 
+FROM nvcr.io/nvidia/distroless/go:v3.2.1
 
-COPY deployments/kai-scheduler/crds /internal-crds
-COPY deployments/external-crds /external-crds
-COPY NOTICE .
-COPY deployments/crd-upgrader/apply-crds.sh /apply-crds.sh
-RUN chmod +x /apply-crds.sh
+COPY --from=builder --chmod=0755 kubectl /usr/bin/kubectl
+COPY --chmod=0644 deployments/kai-scheduler/crds /internal-crds
+COPY --chmod=0644 deployments/external-crds /external-crds
+COPY --chmod=0644 NOTICE .
+COPY --chmod=0755 deployments/crd-upgrader/apply-crds.sh /apply-crds.sh
 
 USER 65532:65532
 
-CMD ["/apply-crds.sh"]
+CMD ["/busybox/sh","/apply-crds.sh"]
