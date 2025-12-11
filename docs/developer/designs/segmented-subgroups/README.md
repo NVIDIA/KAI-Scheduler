@@ -47,13 +47,13 @@ Leverage the existing Hierarchical Topology Constraints mechanism and provide sy
       apiVersion: scheduling.kai.nvidia.com/v2alpha2
       kind: PodGroup
       metadata:
-      	name: pg
+        name: pg
       spec:
-      	minMember: 16
-      	topologyConstraint:
-      		segmentSize: 4
-      		segmentRequiredTopologyLevel: rack
-      		podIndexLabel: xx.xx/pod-idx
+        minMember: 16
+        topologyConstraint:
+          segmentSize: 4
+          segmentRequiredTopologyLevel: rack
+          podIndexLabel: xx.xx/pod-idx
     ```
 ### Validation
 - **Divisibility**: `MinMembers` of a SubGroup should be devided by its `SegmentSize` without reminder
@@ -61,7 +61,7 @@ Leverage the existing Hierarchical Topology Constraints mechanism and provide sy
 ### PodGrouper
 - Read the podTemplate annotations from above and create the PodGroup with the appropriate TopologyConstaints on the leaf subgroups.
 - If podIndexLabel is not specified, it will infer it from the workload type based on the following table:
-**Workload to Index Label**
+#### Workload to Index Label
 | **Workload Kind**   | **Default Index Label**                  | **Note**                                   |
 |---------------------|------------------------------------------|--------------------------------------------|
 | **Job (Indexed)**   | batch.kubernetes.io/job-completion-index | Standard K8s Indexed Job label.            |
@@ -75,7 +75,7 @@ When the scheduler processes a snapshot containing a PodGroup with segment defin
 2. **Virtual Subgroups:** It creates in-memory child subgroups, applying the topology constraints to these children.
    Each subgroup should have `SegmentSize` as its `MinMembers`, up to a total sum of the parent `MinMembers`. Each subgroup added after that will have `MinMembers` of 0.
 3. **Assignment:** Pods are assigned to these virtual subgroups based on the following logic:
-    $$\text{SegmentID} = \lfloor \frac{\text{PodIndex}}{\text{SegmentSize}} \rfloor$$
+   $$\text{SegmentID} = \lfloor \frac{\text{PodIndex}}{\text{SegmentSize}} \rfloor$$
 From there on, the scheduler should behave as it does today with Hierarchal subgroups.
 #### Segment Internal Scheduler Representation
 ```mermaid
@@ -131,3 +131,4 @@ graph LR
 
 ## Open Questions
 - Slice/Segment terminology
+
