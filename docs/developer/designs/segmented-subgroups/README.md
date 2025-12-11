@@ -55,6 +55,7 @@ Leverage the existing Hierarchical Topology Constraints mechanism and provide sy
                   annotations:
                     kai.scheduler/segment-size: "4"
                     kai.scheduler/segment-topology-required-placement: "rack"
+                    kai.scheduler/topology: "network"
                 spec:
                   containers:
                   - name: worker
