@@ -4,12 +4,13 @@
 package topology
 
 import (
+	"strings"
+
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	"github.com/samber/lo"
 )
 
 const (
@@ -26,7 +27,6 @@ type topologyPlugin struct {
 
 	// Defines order among nodes in a sub-group based on the sub-group's preferred level topology constraint.
 	subGroupNodeScores map[subgroupName]map[string]float64
-	nodeSetToDomain    map[topologyName]map[nodeSetID]*DomainInfo
 	session            *framework.Session
 }
 
@@ -34,7 +34,6 @@ func New(_ framework.PluginArguments) framework.Plugin {
 	return &topologyPlugin{
 		TopologyTrees:      map[topologyName]*Info{},
 		subGroupNodeScores: map[subgroupName]map[string]float64{},
-		nodeSetToDomain:    map[topologyName]map[nodeSetID]*DomainInfo{},
 		session:            nil,
 	}
 }
@@ -73,32 +72,31 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 			t.addNodeDataToTopology(topologyTree, topology, nodeInfo)
 		}
 
-		t.TopologyTrees[topology.Name] = topologyTree
-
-		t.buildNodeSetToDomainMapping(topology.Name, topologyTree)
-	}
-}
-
-func (t *topologyPlugin) buildNodeSetToDomainMapping(topologyName topologyName, topologyTree *Info) {
-	t.nodeSetToDomain[topologyName] = map[nodeSetID]*DomainInfo{}
-	domains := []*DomainInfo{}
-	for _, levelDomains := range topologyTree.DomainsByLevel {
-		for _, domain := range levelDomains {
-			domains = append(domains, domain)
+		for _, level := range topologyTree.DomainsByLevel {
+			index := 0
+			for _, domain := range level {
+				domain.Index = index
+				index++
+			}
 		}
-	}
-	for _, domain := range domains {
-		t.nodeSetToDomain[topologyName][getNodeSetID(lo.Values(domain.Nodes))] = domain
-	}
 
-	t.nodeSetToDomain[topologyName][getNodeSetID(lo.Values(t.session.Nodes))] = topologyTree.DomainsByLevel[rootLevel][rootDomainId]
+		for _, nodeInfo := range nodes {
+			if nodeInfo.TopologyName != topology.Name {
+				continue
+			}
+			nodeInfo.TopologyPath = t.calculateNodeTopologyPath(nodeInfo, topologyTree)
+		}
+
+		t.TopologyTrees[topology.Name] = topologyTree
+	}
 }
 
-func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
+func (t *topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
 	// Validate that the node is part of the topology
-	if !isNodePartOfTopology(nodeInfo, topology) {
+	if !IsNodePartOfTopology(nodeInfo, topology.Spec.Levels) {
 		return
 	}
+	nodeInfo.TopologyName = topology.Name
 
 	var nodeContainingChildDomain *DomainInfo
 	for levelIndex := len(topology.Spec.Levels) - 1; levelIndex >= 0; levelIndex-- {
@@ -129,14 +127,27 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueue
 	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddNode(nodeInfo)
 }
 
-// For a given node to be part of the topology correctly, it must have a label for each level of the topology
-func isNodePartOfTopology(nodeInfo *node_info.NodeInfo, singleTopology *kueuev1alpha1.Topology) bool {
-	for _, level := range singleTopology.Spec.Levels {
-		if _, found := nodeInfo.Node.Labels[level.NodeLabel]; !found {
-			return false
+func (t *topologyPlugin) calculateNodeTopologyPath(nodeInfo *node_info.NodeInfo, topologyTree *Info) []int {
+	path := []int{}
+	prefix := ""
+	for _, level := range topologyTree.TopologyResource.Spec.Levels {
+		levelDomains := topologyTree.DomainsByLevel[DomainLevel(level.NodeLabel)]
+		prefix = appendToPrefix(prefix, nodeInfo.Node.Labels[level.NodeLabel])
+		domainId := DomainID(prefix)
+		domain, foundDomain := levelDomains[domainId]
+		if !foundDomain {
+			return nil
 		}
+		path = append(path, domain.Index)
 	}
-	return true
+	return path
 }
 
 func (t *topologyPlugin) OnSessionClose(_ *framework.Session) {}
+
+func appendToPrefix(prefix, domainId string) string {
+	if prefix != "" {
+		return strings.Join([]string{prefix, domainId}, ".")
+	}
+	return domainId
+}
