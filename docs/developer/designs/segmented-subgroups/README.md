@@ -15,7 +15,7 @@ I want my 16 pods distributed training job to be split into 4 groups of 4 pods, 
 ### Story 2: Multi-Level Constraints
 Same as store 1, but the groups should be within the same zone.
 ### Story 3: Simple Annotation-Based Configuration
-I want to specify slice size and topology via annotations on my Job/PyTorchJob without manually defining subgroups, letting the system automatically create the appropriate structure.
+I want to specify segment size and topology via annotations on my workload without manually defining subgroups, letting the system automatically create the appropriate structure.
 
 ## Assumptions
 1. Distributed workloads frameworks are responsible for ordering their pods, and advertizing their index as a label on the pod and informing the inner container of it (in any way they wish)
