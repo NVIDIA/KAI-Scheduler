@@ -64,8 +64,8 @@ func IsNodePartOfTopology(nodeInfo *node_info.NodeInfo, levels []kueuev1alpha1.T
 }
 
 func LowestCommonDomainIDFast(nodeSet node_info.NodeSet, topologyTree *Info) (DomainID, DomainLevel, map[string]*node_info.NodeInfo) {
-	validNodes := map[string]*node_info.NodeInfo{}
-	var validNodesArray []node_info.NodeInfo
+	validNodes := make(map[string]*node_info.NodeInfo, len(nodeSet))
+	validNodesArray := make([]node_info.NodeInfo, 0, len(nodeSet))
 	for _, node := range nodeSet {
 		if node.TopologyName != topologyTree.Name {
 			continue
@@ -78,7 +78,7 @@ func LowestCommonDomainIDFast(nodeSet node_info.NodeSet, topologyTree *Info) (Do
 		return rootDomainId, rootLevel, validNodes
 	}
 
-	var domainParts []string
+	domainParts := make([]string, 0, len(topologyTree.TopologyResource.Spec.Levels))
 	for l := range topologyTree.TopologyResource.Spec.Levels {
 		level := topologyTree.TopologyResource.Spec.Levels[l]
 		value := ""
