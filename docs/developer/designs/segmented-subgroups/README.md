@@ -131,13 +131,3 @@ graph LR
 
 ## Open Questions
 - Slice/Segment terminology
-
-## Self Questions
-- What should we do about the `minMembers` field?
-  - What should be on the parent SubGroup?
-    - We may keep the original value as currently it has no effect on mid-level SubGroups
-  - What should be on the child (segment) SubGroups?
-    - Each subgroup should have `SegmentSize` as its `MinMembers`, up to a total sum of the original `MinMembers`. Each subgroup added after that will have `MinMembers` of 0.
-- What happens today when a PodGroup is created first and then Pods that belong to it are created? Do they change the PodGroup? Are they labeled with `subgroup-name` using the pre-existing PodGroup or their own “PodGroupMetadata”?
-  - It uses its own PodGroupMetadata, and changed the existing PodGroup appropriately (with some fields being ignored) - meaning the Workload Spec is the primary source for configuration, and that we may rely on the PodGrouper logic to happen even when the PodGroup is created first.
-- Should `PodIndexLabel` exist on the PodGroup spec? If so, how can the PodGrouper consume it in order to calculate `SegmentIndex`? GuyNote - maybe we should move the `SegmentIndex` calculation logic to the Scheduler instead of the PodGrouper.
