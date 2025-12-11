@@ -75,7 +75,7 @@ When the scheduler processes a snapshot containing a PodGroup with segment defin
 2. **Virtual Subgroups:** It creates in-memory child subgroups, applying the topology constraints to these children.
    Each subgroup should have `SegmentSize` as its `MinMembers`, up to a total sum of the parent `MinMembers`. Each subgroup added after that will have `MinMembers` of 0.
 3. **Assignment:** Pods are assigned to these virtual subgroups based on the following logic:
-   $$\text{SegmentID} = \lfloor \frac{\text{PodIndex}}{\text{SegmentSize}} \rfloor$$
+    $$\text{SegmentID} = \lfloor \frac{\text{PodIndex}}{\text{SegmentSize}} \rfloor$$
 From there on, the scheduler should behave as it does today with Hierarchal subgroups.
 #### Segment Internal Scheduler Representation
 ```mermaid
