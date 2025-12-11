@@ -87,12 +87,14 @@ Leverage the existing Hierarchical Topology Constraints mechanism and provide sy
           segmentRequiredTopologyLevel: rack
           podIndexLabel: xx.xx/pod-idx
     ```
+
 ### Validation
 - **Divisibility**: `MinMembers` of a SubGroup should be devided by its `SegmentSize` without reminder
 - **Leaf Constraint**: Segment properties should only be allowed on leaf SubGroup (in case there are no subgroups on the PodGroup, the PodGroup itself is the root and leaf subgroup)
 
 ### PodGrouper
 - Read the podTemplate annotations from above and create the PodGroup with the appropriate TopologyConstaints on the leaf subgroups.
+    - At the moment, the PodGrouper only create SubGroups for Grove workloads. We will need to support appropriate grouping for other workloads as well before we can support segments.
 - If podIndexLabel is not specified, it will infer it from the workload type based on the following table:
 
 #### Workload to Index Label
