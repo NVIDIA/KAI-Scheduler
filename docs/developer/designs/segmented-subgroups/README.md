@@ -99,10 +99,10 @@ graph LR
         RootSG("Parent Subgroup<br/>(16 Pods)"):::rootNode
         
         %% Virtual Segments
-        VS0("Subgroup 0<br/>(Constraint: Rack)"):::virtualNode
-        VS1("Subgroup 1<br/>(Constraint: Rack)"):::virtualNode
-        VS2("Subgroup 2<br/>(Constraint: Rack)"):::virtualNode
-        VS3("Subgroup 3<br/>(Constraint: Rack)"):::virtualNode
+        VS0("Subgroup 0<br/>(MinMember: 4<br/>Constraint: Rack)"):::virtualNode
+        VS1("Subgroup 1<br/>(MinMember: 4<br/>Constraint: Rack)"):::virtualNode
+        VS2("Subgroup 2<br/>(MinMember: 4<br/>Constraint: Rack)"):::virtualNode
+        VS3("Subgroup 3<br/>(MinMember: 4<br/>Constraint: Rack)"):::virtualNode
 
         %% Pod Assignments
         Pods0("Pods [0, 1, 2, 3]"):::podNode
