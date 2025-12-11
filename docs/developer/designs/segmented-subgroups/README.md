@@ -171,3 +171,8 @@ graph LR
 
 ## Open Questions
 - Slice/Segment terminology
+- What should we do when segment requirements are defined on a non-indexed workload?
+  - We can either:
+    - Error out
+    - Ignore the segment requirements
+- Maybe we should start by supporting flat hierarchy workloads only?
