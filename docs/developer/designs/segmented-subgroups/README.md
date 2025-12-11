@@ -35,6 +35,34 @@ Leverage the existing Hierarchical Topology Constraints mechanism and provide sy
     - `kai.scheduler/segment-topology-required-placement`
     - `kai.scheduler/segment-topology-preferred-placement`
     - `kai.scheduler/pod-index-label`
+  - Example JobSet:
+      ```yaml
+      apiVersion: jobset.x-k8s.io/v1alpha2
+      kind: JobSet
+      metadata:
+        name: distributed-training
+      spec:
+        replicatedJobs:
+        - name: workers
+          replicas: 1
+          template:
+            spec:
+              parallelism: 16
+              completions: 16
+              completionMode: Indexed
+              template:
+                metadata:
+                  annotations:
+                    kai.scheduler/segment-size: "4"
+                    kai.scheduler/segment-topology-required-placement: "rack"
+                spec:
+                  containers:
+                  - name: worker
+                    image: training:latest
+                    resources:
+                      limits:
+                        nvidia.com/gpu: 1
+      ```
   - PodGroup Spec:
     - TopologyConstaints will be added the following:
       - `segmentSize`
