@@ -19,7 +19,7 @@ I want my 16 pods distributed training job to be split into 4 groups of 4 pods, 
 
 ### Story 2: Multi-Level Constraints
 
-Same as store 1, but the groups should be within the same zone.
+Same as story 1, but the groups should be within the same zone.
 
 ### Story 3: Simple Annotation-Based Configuration
 
@@ -27,7 +27,7 @@ I want to specify segment size and topology via annotations on my workload witho
 
 ## Assumptions
 
-1. _Distributed workloads frameworks are responsible for ordering their pods_, and advertizing their index(also known as `rank` in PyTorch) as a label on the pod and informing the process of it (in any way they wish).
+1. _Distributed workloads frameworks are responsible for ordering their pods_, and advertising their index(also known as `rank` in PyTorch) as a label on the pod and informing the process of it (in any way they wish).
 2. The PodGrouper creates a SubGroup for each PodTemplate within a workload.
 3. Segmentation should only be supported for _homogeneous SubGroups_ within a workload.
 
@@ -82,11 +82,11 @@ I want to specify segment size and topology via annotations on my workload witho
 
 ### Validation
 
-- **Divisibility**: `MinMembers` of a SubGroup should be devided by its `SegmentSize` without reminder. This is to ensure that the SubGroup can be satisfied by the segment requirements.
+- **Divisibility**: `MinMembers` of a SubGroup should be divided by its `SegmentSize` without remainder. This is to ensure that the SubGroup can be satisfied by the segment requirements.
 
 ### PodGrouper
 
-- Read the podTemplate annotations from above and create the PodGroup with the appropriate TopologyConstaints on the leaf subgroups.
+- Read the podTemplate annotations from above and create the PodGroup with the appropriate TopologyConstraints on the leaf subgroups.
   - At the moment, the PodGrouper only create SubGroups for Grove workloads. We will need to support appropriate grouping for other workloads as well before we can support segments. The exact grouping logic is out of scope for this design, and is assumed to create a subgroup for each PodTemplate.
 - If podIndexLabel is not specified, it will infer it from the workload type based on the following table:
 
@@ -101,7 +101,7 @@ I want to specify segment size and topology via annotations on my workload witho
 | **LeaderWorkerSet** | leaderworkerset.sigs.k8s.io/worker-index |
 
 - Divide the pod count by the segmentSize to determine the number of required segments.
-- Create child subgroups with the segment topology constraints. Each subgroup should have `SegmentSize` as its `MinMembers`, up to a total sum of the parent `MinMembers`. Each subgroup added after that will have `MinMembers` of 0.
+- Create child subgroups with the segment topology constraints. Each subgroup should have `SegmentSize` as its `MinMembers`, up to a total sum of the parent `MinMembers`. Overflow pods will go to segments with `MinMembers=0`.
 - Assign the pods to these subgroups based on the following logic: $$\text{SegmentID} = \lfloor \frac{\text{PodIndex}}{\text{SegmentSize}} \rfloor$$
 
 #### Segment requirements to SubGroup tree mapping
