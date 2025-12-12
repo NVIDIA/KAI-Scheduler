@@ -60,18 +60,9 @@ I want to specify segment size and topology via annotations on my workload witho
         Master:
           replicas: 1
           template:
-            metadata:
-              annotations:
-                kai.scheduler/segment-size: "4"
-                kai.scheduler/segment-topology-required-placement: "rack"
-                kai.scheduler/topology: "cluster-topology"
             spec:
               containers:
-              - name: pytorch
-                image: pytorch/pytorch:latest
-                command:
-                - python
-                - train.py
+                ...
         Worker:
           replicas: 16
           template:
@@ -82,11 +73,11 @@ I want to specify segment size and topology via annotations on my workload witho
                 kai.scheduler/topology: "cluster-topology"
             spec:
               containers:
-              - name: pytorch
-                image: pytorch/pytorch:latest
-                command:
-                - python
-                - train.py
+                - name: pytorch
+                  image: pytorch/pytorch:latest
+                  command:
+                    - python
+                    - train.py
     ```
 
 ### Validation
@@ -94,16 +85,6 @@ I want to specify segment size and topology via annotations on my workload witho
 - **Divisibility**: `MinMembers` of a SubGroup should be devided by its `SegmentSize` without reminder. This is to ensure that the SubGroup can be satisfied by the segment requirements.
 
 ### PodGrouper
-
-- When informed of pods that belong to a workload with segment requirements, the PodGrouper will:
-  - Create a subgroup for the homogeneous pods group as parent subgroup for the segments subgroups.
-  - Read the podTemplate segment requirements annotations, and calculate the required segments count by dividing the pod count (minimized by the subgroup's `MinMembers`) by the `SegmentSize`.
-  - Create the required number of segment subgroups with the appropriate TopologyConstaints, where each segment has `SegmentSize` as its `MinMembers`.
-  - Create the PodGroup.
-  - Assign the pods to the appropriate segment subgroup by labeling them with the segment subgroup name on `kai.scheduler/subgroup-name` label.
-- 
-
-
 
 - Read the podTemplate annotations from above and create the PodGroup with the appropriate TopologyConstaints on the leaf subgroups.
   - At the moment, the PodGrouper only create SubGroups for Grove workloads. We will need to support appropriate grouping for other workloads as well before we can support segments. The exact grouping logic is out of scope for this design, and is assumed to create a subgroup for each PodTemplate.
@@ -172,4 +153,3 @@ graph LR
     style UserView fill:#eceff1,stroke:#546e7a,stroke-width:2px
     style InternalView fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
 ```
-
