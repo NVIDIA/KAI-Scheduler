@@ -27,16 +27,14 @@ I want to specify segment size and topology via annotations on my workload witho
 
 ## Assumptions
 
-1. _Distributed workloads frameworks are responsible for ordering their pods_, and advertizing their index(also known as "rank") as a label on the pod and informing the inner container of it (in any way they wish).
+1. _Distributed workloads frameworks are responsible for ordering their pods_, and advertizing their index(also known as `rank` in PyTorch) as a label on the pod and informing the process of it (in any way they wish).
 2. The PodGrouper creates a SubGroup for each PodTemplate within a workload.
 3. Segmentation should only be supported for _homogeneous SubGroups_ within a workload.
 
 ## Proposal
 
-### Summary
-
 - We will leverage the pod ordering established by the workload framework to assign each pod to its corresponding segment (e.g. when segment size is 4, pods with indices 0-3 belong to segment-0, pods with indices 4-7 belong to segment-1).
-- Users are responsible for providing the segment size to their workload containers, enabling them to calculate their own segment index.
+- Users are responsible for providing the segment size to their workload processes, enabling them to calculate their own segment index.
 - We will represent each segment as a SubGroup with its corresponding Topology Constraints.
 - This approach builds upon the existing Hierarchical Topology Constraints mechanism, providing a simplified interface that automatically translates segment specifications into the underlying SubGroup structure.
 
@@ -51,37 +49,44 @@ I want to specify segment size and topology via annotations on my workload witho
   - `kai.scheduler/segment-topology-required-placement` - Required Topology level
   - `kai.scheduler/segment-topology-preferred-placement` - Preferred Topology level
   - `kai.scheduler/pod-index-label` - The label that denotes the pod's index. If not set, inferred from the workload type (see [Workload to Index Label](#workload-to-index-label))
-  - Example JobSet:
+  - Example PyTorchJob:
     ```yaml
-    apiVersion: jobset.x-k8s.io/v1alpha2
-    kind: JobSet
+    apiVersion: kubeflow.org/v1
+    kind: PyTorchJob
     metadata:
       name: distributed-training
     spec:
-      replicatedJobs:
-      - name: workers
-        replicas: 1
-        template:
-          spec:
-            parallelism: 16
-            completions: 16
-            completionMode: Indexed
-            template:
-              metadata:
-                annotations:
-                  kai.scheduler/segment-size: "4"
-                  kai.scheduler/segment-topology-required-placement: "rack"
-                  kai.scheduler/topology: "network"
-              spec:
-                containers:
-                - name: worker
-                  image: training:latest
-                  resources:
-                    limits:
-                      nvidia.com/gpu: 1
-      - name: driver
-        replicas: 1
-        ...
+      pytorchReplicaSpecs:
+        Master:
+          replicas: 1
+          template:
+            metadata:
+              annotations:
+                kai.scheduler/segment-size: "4"
+                kai.scheduler/segment-topology-required-placement: "rack"
+                kai.scheduler/topology: "cluster-topology"
+            spec:
+              containers:
+              - name: pytorch
+                image: pytorch/pytorch:latest
+                command:
+                - python
+                - train.py
+        Worker:
+          replicas: 16
+          template:
+            metadata:
+              annotations:
+                kai.scheduler/segment-size: "4"
+                kai.scheduler/segment-topology-required-placement: "rack"
+                kai.scheduler/topology: "cluster-topology"
+            spec:
+              containers:
+              - name: pytorch
+                image: pytorch/pytorch:latest
+                command:
+                - python
+                - train.py
     ```
 
 ### Validation
@@ -90,10 +95,16 @@ I want to specify segment size and topology via annotations on my workload witho
 
 ### PodGrouper
 
-<!-- GuyContinue -->
-<!-- GuyToKnow: What happens when a PodGroup has leaf subgroups with minMember that can't be satisfied? Does it make the whole PodGroup unschedulable? What does the root minMember mean? -->
+- When informed of pods that belong to a workload with segment requirements, the PodGrouper will:
+  - Create a subgroup for the homogeneous pods group as parent subgroup for the segments subgroups.
+  - Read the podTemplate segment requirements annotations, and calculate the required segments count by dividing the pod count (minimized by the subgroup's `MinMembers`) by the `SegmentSize`.
+  - Create the required number of segment subgroups with the appropriate TopologyConstaints, where each segment has `SegmentSize` as its `MinMembers`.
+  - Create the PodGroup.
+  - Assign the pods to the appropriate segment subgroup by labeling them with the segment subgroup name on `kai.scheduler/subgroup-name` label.
+- 
 
-- When informed of a pod that belongs to a workload with segment requirements, will
+
+
 - Read the podTemplate annotations from above and create the PodGroup with the appropriate TopologyConstaints on the leaf subgroups.
   - At the moment, the PodGrouper only create SubGroups for Grove workloads. We will need to support appropriate grouping for other workloads as well before we can support segments. The exact grouping logic is out of scope for this design, and is assumed to create a subgroup for each PodTemplate.
 - If podIndexLabel is not specified, it will infer it from the workload type based on the following table:
@@ -108,18 +119,11 @@ I want to specify segment size and topology via annotations on my workload witho
 | **TFJob**           | training.kubeflow.org/replica-index      |
 | **LeaderWorkerSet** | leaderworkerset.sigs.k8s.io/worker-index |
 
-### Scheduler
+- Divide the pod count by the segmentSize to determine the number of required segments.
+- Create child subgroups with the segment topology constraints. Each subgroup should have `SegmentSize` as its `MinMembers`, up to a total sum of the parent `MinMembers`. Each subgroup added after that will have `MinMembers` of 0.
+- Assign the pods to these subgroups based on the following logic: $$\text{SegmentID} = \lfloor \frac{\text{PodIndex}}{\text{SegmentSize}} \rfloor$$
 
-When the scheduler processes a snapshot containing a PodGroup with segment definitions:
-
-1. **Logical Mapping:** It divides the pod count by the segmentSize to determine the number of required segments.
-2. **Virtual Subgroups:** It creates in-memory child subgroups, applying the topology constraints to these children.
-   Each subgroup should have `SegmentSize` as its `MinMembers`, up to a total sum of the parent `MinMembers`. Each subgroup added after that will have `MinMembers` of 0.
-3. **Assignment:** Pods are assigned to these virtual subgroups based on the following logic:
-   $$\text{SegmentID} = \lfloor \frac{\text{PodIndex}}{\text{SegmentSize}} \rfloor$$
-   From there on, the scheduler should behave as it does today with Hierarchal subgroups.
-
-#### Segment Internal Scheduler Representation
+#### Segment requirements to SubGroup tree mapping
 
 ```mermaid
 graph LR
@@ -169,40 +173,3 @@ graph LR
     style InternalView fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
 ```
 
-### Container segment inference
-
-- The workload framework (JobSetController, PyTorchController, etc.) is responsible for injecting the pod index to the container.
-- Containers infer their segment by combining their index with the segment size (index 1 with segment size 4 -> segment-0, index 5 with segment size 4 -> segment-1)
-
-### Specific Workload Framework Notes
-
-#### LWS
-
-- LWS has its own way of defining Topology Constaints called SubGroups. It uses kubernetes pod affinity to group pods into topology domains. This may interfere with our topology aware scheduling and should not be allowed to be used in combination with our Topology Constraints.
-- LWS workers are indexed and injected with the `LWS_WORKER_INDEX` environment variable.
-
-#### PyTorchJob
-
-- PyTorchJob is indexed and injected with the `RANK` environment variable. It also injects the `WORLD_SIZE` environment variable which is the total number of replicas (including all workers and drivers).
-
-#### TFJob
-
-- TFJob is indexed and injected with the `TF_CONFIG` environment variable, which contains its index, and a list of all other pods in the job (including workers and chiefs).
-
-## Open Questions
-
-- What should we do when segment requirements are defined on a non-indexed workload?
-  - We can either:
-    - Error out - V
-    - Ignore the segment requirements
-
-## Review Takedowns
-
-- Remove PodGroup spec enrichment
-
-## To Check
-
-- Are leaders indexed? Should they be segmented?
-- LWS - Leaders may be unified with workers, why and how should we handle this?
-- PyTorchJob - How do they handle segmentation?
-- Is partial segments reasonable? How should we handle it?
