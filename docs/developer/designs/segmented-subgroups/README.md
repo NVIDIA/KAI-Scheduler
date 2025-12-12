@@ -88,7 +88,10 @@ I want to specify segment size and topology via annotations on my workload witho
 
 - Read the podTemplate annotations from above and create the PodGroup with the appropriate TopologyConstraints on the leaf subgroups.
   - At the moment, the PodGrouper only create SubGroups for Grove workloads. We will need to support appropriate grouping for other workloads as well before we can support segments. The exact grouping logic is out of scope for this design, and is assumed to create a subgroup for each PodTemplate.
-- If podIndexLabel is not specified, it will infer it from the workload type based on the following table:
+- If podIndexLabel is not specified, it will infer it from the workload type based on the below [Workload to Index Label](#workload-to-index-label) table.
+- Divide the pod count by the segmentSize to determine the number of required segments.
+- Create child subgroups with the segment topology constraints. Each subgroup should have `SegmentSize` as its `MinMembers`, up to a total sum of the parent `MinMembers`. Overflow pods will go to segments with `MinMembers=0`.
+- Assign the pods to these subgroups based on the following logic: $$\text{SegmentID} = \lfloor \frac{\text{PodIndex}}{\text{SegmentSize}} \rfloor$$
 
 #### Workload to Index Label
 
@@ -99,10 +102,6 @@ I want to specify segment size and topology via annotations on my workload witho
 | **PyTorchJob**      | training.kubeflow.org/replica-index      |
 | **TFJob**           | training.kubeflow.org/replica-index      |
 | **LeaderWorkerSet** | leaderworkerset.sigs.k8s.io/worker-index |
-
-- Divide the pod count by the segmentSize to determine the number of required segments.
-- Create child subgroups with the segment topology constraints. Each subgroup should have `SegmentSize` as its `MinMembers`, up to a total sum of the parent `MinMembers`. Overflow pods will go to segments with `MinMembers=0`.
-- Assign the pods to these subgroups based on the following logic: $$\text{SegmentID} = \lfloor \frac{\text{PodIndex}}{\text{SegmentSize}} \rfloor$$
 
 #### Segment requirements to SubGroup tree mapping
 
