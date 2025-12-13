@@ -21,6 +21,7 @@ package resource_info
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -158,6 +159,10 @@ func (r *Resource) GPUs() float64 {
 	return r.gpus
 }
 
+func (r *Resource) GpusAsString() string {
+	return strconv.FormatFloat(r.gpus, 'g', 3, 64)
+}
+
 func (r *Resource) GetSumGPUs() float64 {
 	var totalMigGPUs float64
 	for resourceName, quant := range r.ScalarResources() {
@@ -186,6 +191,16 @@ func (r *Resource) AddGPUs(addGpus float64) {
 
 func (r *Resource) SubGPUs(subGpus float64) {
 	r.gpus -= subGpus
+}
+
+func (r *Resource) MigResources() map[v1.ResourceName]int64 {
+	migResources := make(map[v1.ResourceName]int64)
+	for name, quant := range r.scalarResources {
+		if IsMigResource(name) {
+			migResources[name] = quant
+		}
+	}
+	return migResources
 }
 
 func StringResourceArray(ra []*Resource) string {

@@ -74,8 +74,8 @@ type PodGroupInfo struct {
 	Priority       int32
 	Preemptibility enginev2alpha2.Preemptibility
 
-	JobFitErrors   enginev2alpha2.UnschedulableExplanations
-	NodesFitErrors map[common_info.PodID]*common_info.FitErrors
+	JobFitErrors   []common_info.JobFitError
+	TasksFitErrors map[common_info.PodID]*common_info.TasksFitErrors
 
 	Allocated *resource_info.Resource
 
@@ -106,8 +106,8 @@ func NewPodGroupInfo(uid common_info.PodGroupID, tasks ...*pod_info.PodInfo) *Po
 		UID:       uid,
 		Allocated: resource_info.EmptyResource(),
 
-		JobFitErrors:   make(enginev2alpha2.UnschedulableExplanations, 0),
-		NodesFitErrors: make(map[common_info.PodID]*common_info.FitErrors),
+		JobFitErrors:   make([]common_info.JobFitError, 0),
+		TasksFitErrors: make(map[common_info.PodID]*common_info.TasksFitErrors),
 
 		PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{},
 
@@ -462,8 +462,8 @@ func (pgi *PodGroupInfo) CloneWithTasks(tasks []*pod_info.PodInfo) *PodGroupInfo
 
 		Allocated: resource_info.EmptyResource(),
 
-		JobFitErrors:   make(enginev2alpha2.UnschedulableExplanations, 0),
-		NodesFitErrors: make(map[common_info.PodID]*common_info.FitErrors),
+		JobFitErrors:   make([]common_info.JobFitError, 0),
+		TasksFitErrors: make(map[common_info.PodID]*common_info.TasksFitErrors),
 
 		PodGroup:    pgi.PodGroup,
 		PodGroupUID: pgi.PodGroupUID,
@@ -502,21 +502,21 @@ func (pgi *PodGroupInfo) String() string {
 		pgi.UID, pgi.Namespace, pgi.Queue, pgi.Name, pgi.PodGroup) + res
 }
 
-func (pgi *PodGroupInfo) SetTaskFitError(task *pod_info.PodInfo, fitErrors *common_info.FitErrors) {
-	existingFitErrors, found := pgi.NodesFitErrors[task.UID]
+func (pgi *PodGroupInfo) AddTaskFitErrors(task *pod_info.PodInfo, fitErrors *common_info.TasksFitErrors) {
+	existingFitErrors, found := pgi.TasksFitErrors[task.UID]
 	if found {
 		existingFitErrors.AddNodeErrors(fitErrors)
 	} else {
-		pgi.NodesFitErrors[task.UID] = fitErrors
+		pgi.TasksFitErrors[task.UID] = fitErrors
 	}
 }
 
-func (pgi *PodGroupInfo) SetJobFitError(reason enginev2alpha2.UnschedulableReason, message string, details *enginev2alpha2.UnschedulableExplanationDetails) {
-	pgi.JobFitErrors = append(pgi.JobFitErrors, enginev2alpha2.UnschedulableExplanation{
-		Reason:  reason,
-		Message: message,
-		Details: details,
-	})
+func (pgi *PodGroupInfo) AddSimpleJobFitError(reason enginev2alpha2.UnschedulableReason, message string) {
+	pgi.AddJobFitError(common_info.NewJobFitError(pgi.Name, DefaultSubGroup, pgi.Namespace, reason, []string{message}))
+}
+
+func (pgi *PodGroupInfo) AddJobFitError(err common_info.JobFitError) {
+	pgi.JobFitErrors = append(pgi.JobFitErrors, err)
 }
 
 func (pgi *PodGroupInfo) GetSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {

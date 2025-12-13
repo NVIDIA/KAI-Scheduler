@@ -246,7 +246,7 @@ func (ni *NodeInfo) isTaskStorageAllocatableOnReleasingOrIdle(task *pod_info.Pod
 	return true, nil
 }
 
-func (ni *NodeInfo) FittingError(task *pod_info.PodInfo, isGangTask bool) *common_info.FitError {
+func (ni *NodeInfo) FittingError(task *pod_info.PodInfo, isGangTask bool) *common_info.TasksFitError {
 	enoughResources := ni.lessEqualTaskToNodeResources(task.ResReq, ni.Idle)
 	if !enoughResources {
 		totalUsed := ni.Used.Clone()
