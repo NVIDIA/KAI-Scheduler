@@ -120,6 +120,7 @@ crdupgrader:
     # tag: ""  # Optional: Override global.tag or Chart.AppVersion
 
 postCleanup:
+  enabled: true
   image:
     # using crd-upgrader image for kubectl availability
     name: crd-upgrader

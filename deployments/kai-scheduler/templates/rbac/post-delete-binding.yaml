@@ -1,3 +1,4 @@
+{{- if .Values.postCleanup.enabled }}
 # Copyright 2025 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
 ---
@@ -16,4 +17,4 @@ roleRef:
   kind: ClusterRole
   name: post-delete-cleanup
   apiGroup: rbac.authorization.k8s.io
-
+{{- end }}
