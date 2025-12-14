@@ -26,7 +26,7 @@ func TestAllocateTopologyIntegrationTest(t *testing.T) {
 
 func getTopologyAllocateTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 	return []integration_tests_utils.TestTopologyMetadata{
-		/*{
+		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Multi-level topology - pack job in single rack with preferred level",
 				Topologies: []*kueuev1alpha1.Topology{
@@ -398,7 +398,6 @@ func getTopologyAllocateTestsMetadata() []integration_tests_utils.TestTopologyMe
 			},
 			RoundsUntilMatch: 1,
 		},
-
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Topology with partial allocation - one rack full, allocate remaining in another",
@@ -692,7 +691,7 @@ func getTopologyAllocateTestsMetadata() []integration_tests_utils.TestTopologyMe
 				},
 			},
 			RoundsUntilMatch: 1,
-		},*/
+		},
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Topology constraint failure - sufficient cluster resources but fragmented across domains",

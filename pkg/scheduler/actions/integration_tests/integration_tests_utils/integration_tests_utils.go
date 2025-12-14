@@ -50,7 +50,6 @@ func RunTests(t *testing.T, testsMetadata []TestTopologyMetadata) {
 
 func RunTest(t *testing.T, testMetadata TestTopologyMetadata, testNumber int, controller *Controller) {
 	t.Logf("Running test number: %v, test name: %v", testNumber, testMetadata.TestTopologyBasic.Name)
-	//ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
 	var ssn *framework.Session
 
 	runRoundsUntilMatch(testMetadata, controller, &ssn)
