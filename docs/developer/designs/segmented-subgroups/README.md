@@ -27,14 +27,15 @@ I want to specify segment size and topology via annotations on my workload witho
 
 ## Assumptions
 
-1. _Distributed workloads frameworks are responsible for ordering their pods_, and advertising their index(also known as `rank` in PyTorch) as a label on the pod and informing the process of it (in any way they wish).
+1. _Distributed workloads frameworks are responsible for ordering their pods_, and advertising their index as a label on the pod. Note that pod index is distinct from distributed training "rank" (see Proposal section for details).
 2. The PodGrouper creates a SubGroup for each PodTemplate within a workload.
 3. Segmentation should only be supported for _homogeneous SubGroups_ within a workload.
 
 ## Proposal
 
 - We will leverage the pod ordering established by the workload framework to assign each pod to its corresponding segment (e.g. when segment size is 4, pods with indices 0-3 belong to segment-0, pods with indices 4-7 belong to segment-1).
-- Users are responsible for providing the segment size to their workload processes, enabling them to calculate their own segment index.
+  > **Note**: Pod index is used for segment assignment at scheduling time, not the distributed training "rank" which may be assigned dynamically at runtime. For frameworks where pod index maps predictably to rank, users can configure segment size accordingly. For frameworks with dynamic rank assignment, segment-based co-location still works, but users should be aware that rank assignment is independent of segment assignment.
+- KAI will inject the assigned segment index as an environment variable (e.g., `KAI_SEGMENT_INDEX`) into the pod, similar to SLURM's `SLURM_PROCID`. This allows the workload process to determine its segment without needing to calculate it.
 - We will represent each segment as a SubGroup with its corresponding Topology Constraints.
 - This approach builds upon the existing Hierarchical Topology Constraints mechanism, providing a simplified interface that automatically translates segment specifications into the underlying SubGroup structure.
 
@@ -152,3 +153,20 @@ graph LR
     style UserView fill:#eceff1,stroke:#546e7a,stroke-width:2px
     style InternalView fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
 ```
+
+## Self Notes
+
+### Review Takedowns
+
+- Remove PodGroup spec enrichment - V
+
+### To Check
+
+- Are leaders indexed? Should they be segmented?
+- LWS - Leaders may be unified with workers, why and how should we handle this?
+- PyTorchJob - How do they handle segmentation?
+- Is partial segments reasonable? How should we handle it?
+- In Kueue, are users responsible for passing the segment size to their workload processes?
+
+<!-- GuyContinue -->
+<!-- GuyToKnow: What happens when a PodGroup has leaf subgroups with minMember that can't be satisfied? Does it make the whole PodGroup unschedulable? What does the root minMember mean? -->
