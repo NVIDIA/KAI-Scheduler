@@ -65,11 +65,19 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					CPUMillis:  1000,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+						"rack": "rack1",
+					},
 				},
 				"node-2": {
 					CPUMillis:  400,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+						"rack": "rack2",
+					},
 				},
 			},
 			nodesToDomains: map[string]DomainID{
@@ -282,11 +290,19 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					CPUMillis:  2000,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"rack": "rack1",
+						"zone": "zone1",
+					},
 				},
 				"node-2": {
 					CPUMillis:  2000,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"rack": "rack2",
+						"zone": "zone1",
+					},
 				},
 			},
 			nodesToDomains: map[string]DomainID{
