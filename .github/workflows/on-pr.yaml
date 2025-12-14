@@ -120,10 +120,42 @@ jobs:
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
           cp charts/kai-scheduler-$PACKAGE_VERSION.tgz /mnt/images/
 
+  check-e2e-required:
+    name: Check if E2E tests are required
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Check changed files
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docs:
+              - '**/*.md'
+              - 'docs/**'
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+
+  skip-e2e-message:
+    name: Skip E2E Tests Message
+    needs: [ check-e2e-required ]
+    if: needs.check-e2e-required.outputs.code != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip message
+        run: |
+          echo "⏭️  Skipping E2E tests - only documentation files (.md or docs/) were changed."
+
   e2e-tests:
     name: Run E2E Tests
-    if: ${{ !startsWith(github.event.pull_request.title, 'docs:') && !startsWith(github.event.pull_request.title, 'docs(') }}
-    needs: [ build ]
+    needs: [ build, check-e2e-required ]
+    if: needs.check-e2e-required.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
