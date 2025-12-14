@@ -38,6 +38,7 @@ type QueueReconciler struct {
 //+kubebuilder:rbac:groups=scheduling.run.ai,resources=queues/finalizers,verbs=update
 
 //+kubebuilder:rbac:groups=scheduling.run.ai,resources=podgroups,verbs=get;list;watch
+//+kubebuilder:rbac:groups="resource.k8s.io",resources=resourceclaims;resourceslices,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
