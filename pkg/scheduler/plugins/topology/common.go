@@ -10,6 +10,8 @@ import (
 	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
+var lcaFnCalls = 0
+
 // LowestCommonDomainID returns the lowest common domain ID, level, and valid (=in domain) nodes for a given node
 // set and levels. If a node is missing one of the levels, the function will assume it's outside the topology and it
 // will not be included in the valid nodes map.
@@ -64,6 +66,7 @@ func IsNodePartOfTopology(nodeInfo *node_info.NodeInfo, levels []kueuev1alpha1.T
 }
 
 func LowestCommonDomainIDFast(nodeSet node_info.NodeSet, topologyTree *Info) (DomainID, DomainLevel, map[string]*node_info.NodeInfo) {
+	lcaFnCalls++
 	validNodes := make(map[string]*node_info.NodeInfo, len(nodeSet))
 	validNodesArray := make([]node_info.NodeInfo, 0, len(nodeSet))
 	for _, node := range nodeSet {

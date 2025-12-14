@@ -11,6 +11,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
 const (
@@ -143,7 +144,10 @@ func (t *topologyPlugin) calculateNodeTopologyPath(nodeInfo *node_info.NodeInfo,
 	return path
 }
 
-func (t *topologyPlugin) OnSessionClose(_ *framework.Session) {}
+func (t *topologyPlugin) OnSessionClose(_ *framework.Session) {
+	log.InfraLogger.V(4).Infof("subSetNodesFn calls: %d", subSetNodesFnCalls)
+	log.InfraLogger.V(4).Infof("lcaFn calls: %d", lcaFnCalls)
+}
 
 func appendToPrefix(prefix, domainId string) string {
 	if prefix != "" {

@@ -23,6 +23,8 @@ const (
 	maxAllocatableTasksRatio         = 1.0
 )
 
+var subSetNodesFnCalls = 0
+
 type jobAllocationMetaData struct {
 	maxPodResources    *resource_info.ResourceRequirements
 	allocationTestPods []*pod_info.PodInfo
@@ -33,6 +35,7 @@ func (t *topologyPlugin) subSetNodesFn(
 	job *podgroup_info.PodGroupInfo, subGroup *subgroup_info.SubGroupInfo, podSets map[string]*subgroup_info.PodSet,
 	tasks []*pod_info.PodInfo, nodeSet node_info.NodeSet,
 ) ([]node_info.NodeSet, error) {
+	subSetNodesFnCalls++
 	topologyTree, found := t.getJobTopology(subGroup)
 	if !found {
 		job.SetJobFitError(
