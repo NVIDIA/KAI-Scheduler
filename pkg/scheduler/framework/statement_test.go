@@ -11,6 +11,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -108,9 +109,11 @@ func TestStatement_Evict_Unevict(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
 			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
-			ssn := &Session{}
-			ssn.PodGroupInfos = jobsInfoMap
-			ssn.Nodes = nodesInfoMap
+			ssn := &Session{
+				ClusterInfo: &api.ClusterInfo{},
+			}
+			ssn.ClusterInfo.PodGroupInfos = jobsInfoMap
+			ssn.ClusterInfo.Nodes = nodesInfoMap
 
 			s := &Statement{
 				operations: []Operation{},
@@ -132,13 +135,13 @@ func TestStatement_Evict_Unevict(t *testing.T) {
 				t.Errorf("unevict() error = %v", err)
 			}
 
-			actualTask := ssn.PodGroupInfos[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
+			actualTask := ssn.ClusterInfo.PodGroupInfos[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 			assert.Equal(t, actualTask.NodeName, originalTask.NodeName)
 			assert.Equal(t, actualTask.Status, originalTask.Status)
 			assert.Equal(t, *actualTask.ResReq, *originalTask.ResReq)
 			assert.Equal(t, actualTask.GPUGroups, originalTask.GPUGroups)
 
-			actualJob := ssn.PodGroupInfos[tt.args.jobName]
+			actualJob := ssn.ClusterInfo.PodGroupInfos[tt.args.jobName]
 			assert.Equal(t, *originalJob.Allocated, *actualJob.Allocated)
 			assert.Equal(t, tt.expected.jobGpuAllocation, actualJob.Allocated.GPUs())
 
@@ -261,8 +264,10 @@ func TestStatement_Evict(t *testing.T) {
 			s := &Statement{
 				operations: []Operation{},
 				ssn: &Session{
-					PodGroupInfos: jobsInfoMap,
-					Nodes:         nodesInfoMap,
+					ClusterInfo: &api.ClusterInfo{
+						PodGroupInfos: jobsInfoMap,
+						Nodes:         nodesInfoMap,
+					},
 				},
 				sessionID: "1234",
 			}
@@ -407,8 +412,10 @@ func TestStatement_Evict_Undo_Undo(t *testing.T) {
 			s := &Statement{
 				operations: []Operation{},
 				ssn: &Session{
-					PodGroupInfos: jobsInfoMap,
-					Nodes:         nodesInfoMap,
+					ClusterInfo: &api.ClusterInfo{
+						PodGroupInfos: jobsInfoMap,
+						Nodes:         nodesInfoMap,
+					},
 				},
 				sessionID: "1234",
 			}
@@ -627,9 +634,11 @@ func TestStatement_Pipeline_Unpipeline(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
 			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
-			ssn := &Session{}
-			ssn.PodGroupInfos = jobsInfoMap
-			ssn.Nodes = nodesInfoMap
+			ssn := &Session{
+				ClusterInfo: &api.ClusterInfo{},
+			}
+			ssn.ClusterInfo.PodGroupInfos = jobsInfoMap
+			ssn.ClusterInfo.Nodes = nodesInfoMap
 
 			s := &Statement{
 				operations: []Operation{},
@@ -655,13 +664,13 @@ func TestStatement_Pipeline_Unpipeline(t *testing.T) {
 				t.Errorf("unpipeline() error = %v", err)
 			}
 
-			actualTask := ssn.PodGroupInfos[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
+			actualTask := ssn.ClusterInfo.PodGroupInfos[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 			assert.Equal(t, actualTask.NodeName, originalPipelineTask.NodeName)
 			assert.Equal(t, actualTask.Status, originalPipelineTask.Status)
 			assert.Equal(t, *actualTask.ResReq, *originalPipelineTask.ResReq)
 			assert.Equal(t, actualTask.GPUGroups, originalPipelineTask.GPUGroups)
 
-			actualPipelinedJob := ssn.PodGroupInfos[tt.args.jobName]
+			actualPipelinedJob := ssn.ClusterInfo.PodGroupInfos[tt.args.jobName]
 			assert.Equal(t, *originalPipelineJob.Allocated, *actualPipelinedJob.Allocated)
 			assert.Equal(t, tt.expected.jobGpuAllocated, actualPipelinedJob.Allocated.GPUs())
 
@@ -765,8 +774,10 @@ func TestStatement_Pipeline(t *testing.T) {
 			s := &Statement{
 				operations: []Operation{},
 				ssn: &Session{
-					PodGroupInfos: jobsInfoMap,
-					Nodes:         nodesInfoMap,
+					ClusterInfo: &api.ClusterInfo{
+						PodGroupInfos: jobsInfoMap,
+						Nodes:         nodesInfoMap,
+					},
 				},
 				sessionID: "1234",
 			}
@@ -891,8 +902,10 @@ func TestStatement_Pipeline_Undo_Undo(t *testing.T) {
 			s := &Statement{
 				operations: []Operation{},
 				ssn: &Session{
-					PodGroupInfos: jobsInfoMap,
-					Nodes:         nodesInfoMap,
+					ClusterInfo: &api.ClusterInfo{
+						PodGroupInfos: jobsInfoMap,
+						Nodes:         nodesInfoMap,
+					},
 				},
 				sessionID: "1234",
 			}
@@ -997,9 +1010,11 @@ func TestStatement_Allocate_Unallocate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.testMetadata.Jobs)
 			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.testMetadata.Nodes, tasksToNodeMap, nil)
-			ssn := &Session{}
-			ssn.PodGroupInfos = jobsInfoMap
-			ssn.Nodes = nodesInfoMap
+			ssn := &Session{
+				ClusterInfo: &api.ClusterInfo{},
+			}
+			ssn.ClusterInfo.PodGroupInfos = jobsInfoMap
+			ssn.ClusterInfo.Nodes = nodesInfoMap
 
 			s := &Statement{
 				operations: []Operation{},
@@ -1022,13 +1037,13 @@ func TestStatement_Allocate_Unallocate(t *testing.T) {
 				}
 			}
 
-			actualAllocatedTask := ssn.PodGroupInfos[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
+			actualAllocatedTask := ssn.ClusterInfo.PodGroupInfos[tt.args.jobName].GetAllPodsMap()[tt.args.podName]
 			assert.Equal(t, actualAllocatedTask.NodeName, originalAllocateTask.NodeName)
 			assert.Equal(t, actualAllocatedTask.Status, originalAllocateTask.Status)
 			assert.Equal(t, *actualAllocatedTask.ResReq, *originalAllocateTask.ResReq)
 			assert.Equal(t, actualAllocatedTask.GPUGroups, originalAllocateTask.GPUGroups)
 
-			actualAllocatedJob := ssn.PodGroupInfos[tt.args.jobName]
+			actualAllocatedJob := ssn.ClusterInfo.PodGroupInfos[tt.args.jobName]
 			assert.Equal(t, *originalAllocateJob.Allocated, *actualAllocatedJob.Allocated)
 			assert.Equal(t, tt.expected.jobAllocated.GPUs(), actualAllocatedJob.Allocated.GPUs())
 
@@ -1111,8 +1126,10 @@ func TestStatement_Allocate(t *testing.T) {
 			s := &Statement{
 				operations: []Operation{},
 				ssn: &Session{
-					PodGroupInfos: jobsInfoMap,
-					Nodes:         nodesInfoMap,
+					ClusterInfo: &api.ClusterInfo{
+						PodGroupInfos: jobsInfoMap,
+						Nodes:         nodesInfoMap,
+					},
 				},
 				sessionID: "1234",
 			}
@@ -1214,8 +1231,10 @@ func TestStatement_Allocate_Undo_Undo(t *testing.T) {
 			s := &Statement{
 				operations: []Operation{},
 				ssn: &Session{
-					PodGroupInfos: jobsInfoMap,
-					Nodes:         nodesInfoMap,
+					ClusterInfo: &api.ClusterInfo{
+						PodGroupInfos: jobsInfoMap,
+						Nodes:         nodesInfoMap,
+					},
 				},
 				sessionID: "1234",
 			}

@@ -86,8 +86,8 @@ func (jobsOrder *JobsOrderByQueues) PopNextJob() *podgroup_info.PodGroupInfo {
 }
 
 func (jobsOrder *JobsOrderByQueues) PushJob(job *podgroup_info.PodGroupInfo) {
-	queue := jobsOrder.ssn.Queues[job.Queue]
-	department := jobsOrder.ssn.Queues[queue.ParentQueue]
+	queue := jobsOrder.ssn.ClusterInfo.Queues[job.Queue]
+	department := jobsOrder.ssn.ClusterInfo.Queues[queue.ParentQueue]
 
 	if _, found := jobsOrder.departmentIdToDepartmentMetadata[department.UID]; !found {
 		jobsOrder.initializePriorityQueueForDepartment(department, jobsOrder.jobsOrderInitOptions.VictimQueue)
@@ -187,7 +187,7 @@ func (jobsOrder *JobsOrderByQueues) initializePriorityQueueForDepartment(departm
 }
 
 func (jobsOrder *JobsOrderByQueues) initializePriorityQueue(job *podgroup_info.PodGroupInfo, reverseOrder bool) {
-	queue := jobsOrder.ssn.Queues[job.Queue]
+	queue := jobsOrder.ssn.ClusterInfo.Queues[job.Queue]
 	jobsOrder.queueIdToQueueMetadata[job.Queue] = &jobsQueueMetadata{
 		jobsInQueue: scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
 			if reverseOrder {
@@ -201,13 +201,13 @@ func (jobsOrder *JobsOrderByQueues) initializePriorityQueue(job *podgroup_info.P
 
 func (jobsOrder *JobsOrderByQueues) buildActiveJobOrderPriorityQueues(reverseOrder bool) {
 	jobsOrder.departmentIdToDepartmentMetadata = map[common_info.QueueID]*departmentMetadata{}
-	for _, queue := range jobsOrder.ssn.Queues {
+	for _, queue := range jobsOrder.ssn.ClusterInfo.Queues {
 		if _, found := jobsOrder.queueIdToQueueMetadata[queue.UID]; !found || jobsOrder.queueIdToQueueMetadata[queue.UID].jobsInQueue.Len() == 0 {
 			log.InfraLogger.V(7).Infof("Skipping queue <%s> because no jobs in it", queue.Name)
 			continue
 		}
 
-		if _, found := jobsOrder.ssn.Queues[queue.ParentQueue]; !found {
+		if _, found := jobsOrder.ssn.ClusterInfo.Queues[queue.ParentQueue]; !found {
 			log.InfraLogger.V(7).Warnf("Queue's department doesn't exist. Queue: <%v>, Department: <%v>",
 				queue.Name, queue.ParentQueue)
 			continue
@@ -234,7 +234,7 @@ func (jobsOrder *JobsOrderByQueues) buildActiveJobOrderPriorityQueues(reverseOrd
 		scheduler_util.QueueCapacityInfinite)
 	for departmentUID := range jobsOrder.departmentIdToDepartmentMetadata {
 		log.InfraLogger.V(7).Infof("active Department <%s> ", departmentUID)
-		jobsOrder.activeDepartments.Push(jobsOrder.ssn.Queues[departmentUID])
+		jobsOrder.activeDepartments.Push(jobsOrder.ssn.ClusterInfo.Queues[departmentUID])
 	}
 }
 
