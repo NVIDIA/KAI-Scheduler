@@ -28,79 +28,109 @@ I want to specify segment size and topology via annotations on my workload witho
 ## Assumptions
 
 1. _Distributed workloads frameworks are responsible for ordering their pods_, and advertising their index as a label on the pod. Note that pod index is distinct from distributed training "rank" (see Proposal section for details).
-2. The PodGrouper creates a SubGroup for each PodTemplate within a workload.
-3. Segmentation should only be supported for _homogeneous SubGroups_ within a workload.
+2. Segmentation applies to the entire workload, with all replica types (master, workers, etc.) segmented together using a global index (in the future, we might support per-replica type segmentation).
 
 ## Proposal
 
-- We will leverage the pod ordering established by the workload framework to assign each pod to its corresponding segment (e.g. when segment size is 4, pods with indices 0-3 belong to segment-0, pods with indices 4-7 belong to segment-1).
-  > **Note**: Pod index is used for segment assignment at scheduling time, not the distributed training "rank" which may be assigned dynamically at runtime. For frameworks where pod index maps predictably to rank, users can configure segment size accordingly, and infer their segment index from the pod index (e.g. `segment_index = pod_index / segment_size`). For frameworks with dynamic rank assignment, segment-based co-location still works, but users should be aware that rank assignment is independent of segment assignment.
+- We will compute a **global index** for each pod across all replica types in the workload, then assign each pod to its corresponding segment (e.g. when segment size is 4, pods with global indices 0-3 belong to segment-0, pods with global indices 4-7 belong to segment-1).
+  > **Note**: Pod index is used for segment assignment at scheduling time, not the distributed training "rank" which may be assigned dynamically at runtime. For frameworks where pod index maps predictably to rank, users can configure segment size accordingly, and infer their segment index from the pod index (e.g. `segment_index = global_index / segment_size`). For frameworks with dynamic rank assignment, segment-based co-location still works, but users should be aware that rank assignment is independent of segment assignment.
 - We will represent each segment as a SubGroup with its corresponding Topology Constraints.
 - This approach builds upon the existing Hierarchical Topology Constraints mechanism, providing a simplified interface that automatically translates segment specifications into the underlying SubGroup structure.
 
 ### API
 
-- Users may define segment requirements via 4 new fields:
-  - SegmentSize - Pod count for each segment
-  - SegmentTopology[Required/Preferred]Placement - Required/Preferred Topology level
-  - PodIndexLabel - optional; The label that denotes the pod's index. If not set, inferred from the workload type.
-- Users may define segment requirements via 4 new annotations on Workload's PodTemplate:
+- Users may define segment requirements via annotations on the **Workload root** (consistent with existing topology constraints):
   - `kai.scheduler/segment-size` - Pod count for each segment
   - `kai.scheduler/segment-topology-required-placement` - Required Topology level
   - `kai.scheduler/segment-topology-preferred-placement` - Preferred Topology level
-  - `kai.scheduler/pod-index-label` - The label that denotes the pod's index. If not set, inferred from the workload type (see [Workload to Index Label](#workload-to-index-label))
-  - Example PyTorchJob:
-    ```yaml
-    apiVersion: kubeflow.org/v1
-    kind: PyTorchJob
-    metadata:
-      name: distributed-training
-    spec:
-      pytorchReplicaSpecs:
-        Master:
-          replicas: 1
-          template:
-            spec:
-              containers: ...
-        Worker:
-          replicas: 16
-          template:
-            metadata:
-              annotations:
-                kai.scheduler/segment-size: "4"
-                kai.scheduler/segment-topology-required-placement: "rack"
-                kai.scheduler/topology: "cluster-topology"
-            spec:
-              containers:
-                - name: pytorch
-                  image: pytorch/pytorch:latest
-                  command:
-                    - python
-                    - train.py
-    ```
+  - `kai.scheduler/pod-index-label` - (Optional) The label that denotes the pod's global index.
 
-### Validation
+    > **⚠️ Important**: When `pod-index-label` is specified, the user asserts that the label values are **globally unique across all pods in the workload** (no overlapping indices between replica types). If not set, the PodGrouper computes a composite global index automatically based on the workload type (see [Global Index Computation](#global-index-computation)).
 
-- **Divisibility**: `MinMembers` of a SubGroup should be divided by its `SegmentSize` without remainder. This is to ensure that the SubGroup can be satisfied by the segment requirements.
+- Example TFJob:
+  ```yaml
+  apiVersion: kubeflow.org/v1
+  kind: TFJob
+  metadata:
+    name: distributed-training
+    annotations:
+      kai.scheduler/topology: "cluster-topology"
+      kai.scheduler/segment-size: "4"
+      kai.scheduler/segment-topology-required-placement: "rack"
+  spec:
+    tfReplicaSpecs:
+      Chief:
+        replicas: 1
+        template:
+          spec:
+            containers:
+              - name: tensorflow
+                image: tensorflow/tensorflow:latest
+      PS:
+        replicas: 2
+        template:
+          spec:
+            containers:
+              - name: tensorflow
+                image: tensorflow/tensorflow:latest
+      Worker:
+        replicas: 16
+        template:
+          spec:
+            containers:
+              - name: tensorflow
+                image: tensorflow/tensorflow:latest
+  ```
+
+  This creates segments with composite global indices:
+  - **Segment 0**: Chief-0 (idx 0), PS-0 (idx 1), PS-1 (idx 2), Worker-0 (idx 3)
+  - **Segment 1**: Worker-1 (idx 4), Worker-2 (idx 5), Worker-3 (idx 6), Worker-4 (idx 7)
+  - **Segment 2-4**: Remaining workers in groups of 4
+
+### Global Index Computation
+
+When `pod-index-label` is **not specified**, the PodGrouper computes a composite global index by combining replica type ordering with replica index. This handles workloads where each replica type has its own index space starting at 0 (e.g., TFJob where Chief, PS, and Worker all start at index 0).
+
+The global index is computed as:
+$$\text{GlobalIndex} = \sum_{i=0}^{\text{typeIndex}-1} \text{replicas}[i] + \text{replicaIndex}$$
+
+Where `typeIndex` is the position of the pod's replica type in the framework-specific ordering.
+
+When `pod-index-label` **is specified**, the PodGrouper reads the global index directly from that label:
+$$\text{GlobalIndex} = \text{pod.labels[pod-index-label]}$$
+
+#### Workload to Index Computation
+
+| **Workload Kind**   | **Replica Type Order** | **Index Label** |
+| ------------------- | ---------------------- | --------------- |
+| **Job (Indexed)**   | N/A (single type) | `batch.kubernetes.io/job-completion-index` |
+| **JobSet**          | N/A (single type) | `batch.kubernetes.io/job-completion-index` |
+| **PyTorchJob**      | Master → Worker | `training.kubeflow.org/replica-index` (composite) |
+| **TFJob**           | Chief → PS → Evaluator → Worker | `training.kubeflow.org/replica-index` (composite) |
+| **MPIJob**          | Launcher → Worker | `training.kubeflow.org/replica-index` (composite) |
+| **JAXJob**          | Worker | `training.kubeflow.org/replica-index` |
+| **XGBoostJob**      | Master → Worker | `training.kubeflow.org/replica-index` (composite) |
+| **LeaderWorkerSet** | N/A (global index) | `leaderworkerset.sigs.k8s.io/worker-index` |
+
+> **Unsupported Workloads**: Workloads not listed in the table above (e.g., RayJobs, custom CRDs) do not have automatic index computation. For these workloads:
+> - If `pod-index-label` is specified, it will be used for segmentation (user asserts global uniqueness)
+> - If `pod-index-label` is not specified, segment annotations are ignored and the PodGrouper logs a warning
 
 ### PodGrouper
 
-- Read the podTemplate annotations from above and create the PodGroup with the appropriate TopologyConstraints on the leaf subgroups.
-  - At the moment, the PodGrouper only create SubGroups for Grove workloads. We will need to support appropriate grouping for other workloads as well before we can support segments. The exact grouping logic is out of scope for this design, and is assumed to create a subgroup for each PodTemplate.
-- If podIndexLabel is not specified, it will infer it from the workload type based on the below [Workload to Index Label](#workload-to-index-label) table.
-- Divide the pod count by the segmentSize to determine the number of required segments.
-- Create child subgroups with the segment topology constraints. Each subgroup should have `SegmentSize` as its `MinMembers`, up to a total sum of the parent `MinMembers`. Overflow pods will go to segments with `MinMembers=0`.
-- Assign the pods to these subgroups based on the following logic: $$\text{SegmentID} = \lfloor \frac{\text{PodIndex}}{\text{SegmentSize}} \rfloor$$
+When the PodGrouper detects segment annotations on the workload root, it performs the following:
 
-#### Workload to Index Label
-
-| **Workload Kind**   | **Default Index Label**                  |
-| ------------------- | ---------------------------------------- |
-| **Job (Indexed)**   | batch.kubernetes.io/job-completion-index |
-| **JobSet**          | batch.kubernetes.io/job-completion-index |
-| **PyTorchJob**      | training.kubeflow.org/replica-index      |
-| **TFJob**           | training.kubeflow.org/replica-index      |
-| **LeaderWorkerSet** | leaderworkerset.sigs.k8s.io/worker-index |
+1. **Calculate total pod count**: Sum the replicas across all replica types in the workload.
+2. **Calculate number of segments**: 
+$$\text{NumSegments} = \lceil \frac{\text{TotalPodCount}}{\text{SegmentSize}} \rceil$$
+4. **Create PodGroup with segment SubGroups**: Create a PodGroup for the workload with `NumSegments` child SubGroups. Each SubGroup has:
+   - `MinMember` = `SegmentSize` (except the last segment which may have fewer if TotalPodCount is not divisible by SegmentSize)
+   - Topology constraints from the segment annotations
+5. **Assign pods to SubGroups**: When a pod is created, compute its global index and assign it to the appropriate segment:
+   - If `pod-index-label` is specified, read the index directly from that label.
+   - Otherwise, compute composite index using replica type ordering and replica index.
+   - Assign to segment: 
+   $$\text{SegmentID} = \lfloor \frac{\text{GlobalIndex}}{\text{SegmentSize}} \rfloor$$
 
 #### Segment requirements to SubGroup tree mapping
 
@@ -115,33 +145,36 @@ graph LR
     %% === Left Container: User View ===
     subgraph UserView ["PodGroup USER VIEW"]
         direction TB
-        yamlSpec("YAML Spec<br/>minMember: 16<br/>segmentSize: 4<br/>constraint: rack"):::yamlNode
+        yamlSpec("YAML Spec<br/>minMember: 19<br/>segmentSize: 4<br/>constraint: rack"):::yamlNode
     end
 
     %% === Right Container: Internal State ===
     subgraph InternalView ["INTERNAL VIEW: Virtual Subgroup Tree"]
         direction TB
 
-        RootSG("Parent Subgroup<br/>(16 Pods)"):::rootNode
+        RootSG("Parent Subgroup<br/>(19 Pods: 1 Chief + 2 PS + 16 Workers)"):::rootNode
 
         %% Virtual Segments
         VS0("Subgroup 0<br/>(MinMember: 4<br/>Constraint: Rack)"):::virtualNode
         VS1("Subgroup 1<br/>(MinMember: 4<br/>Constraint: Rack)"):::virtualNode
         VS2("Subgroup 2<br/>(MinMember: 4<br/>Constraint: Rack)"):::virtualNode
         VS3("Subgroup 3<br/>(MinMember: 4<br/>Constraint: Rack)"):::virtualNode
+        VS4("Subgroup 4<br/>(MinMember: 3<br/>Constraint: Rack)"):::virtualNode
 
         %% Pod Assignments
-        Pods0("Pods [0, 1, 2, 3]"):::podNode
-        Pods1("Pods [4, 5, 6, 7]"):::podNode
-        Pods2("Pods [8, 9, 10, 11]"):::podNode
-        Pods3("Pods [12, 13, 14, 15]"):::podNode
+        Pods0("Chief-0, PS-0, PS-1, Worker-0"):::podNode
+        Pods1("Worker-1..4"):::podNode
+        Pods2("Worker-5..8"):::podNode
+        Pods3("Worker-9..12"):::podNode
+        Pods4("Worker-13..15"):::podNode
 
         %% Tree Connections
-        RootSG --> VS0 & VS1 & VS2 & VS3
+        RootSG --> VS0 & VS1 & VS2 & VS3 & VS4
         VS0 --> Pods0
         VS1 --> Pods1
         VS2 --> Pods2
         VS3 --> Pods3
+        VS4 --> Pods4
     end
 
     %% === Connection ===
