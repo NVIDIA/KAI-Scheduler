@@ -244,11 +244,11 @@ func (pp *proportionPlugin) calculateResourcesProportion(ssn *framework.Session)
 
 	pp.createQueueAttributes(ssn)
 	log.InfraLogger.V(3).Infof("Total allocatable resources are <%s>, number of nodes: <%d>, number of "+
-		"queues: <%d>", pp.totalResource, len(ssn.Nodes), len(pp.queues))
+		"queues: <%d>", pp.totalResource, len(ssn.ClusterInfo.Nodes), len(pp.queues))
 }
 
 func (pp *proportionPlugin) setTotalResources(ssn *framework.Session) {
-	for _, node := range ssn.Nodes {
+	for _, node := range ssn.ClusterInfo.Nodes {
 		pp.totalResource.Add(getNodeResources(ssn, node))
 	}
 }
@@ -303,7 +303,7 @@ func (pp *proportionPlugin) buildReclaimerInfo(reclaimer *podgroup_info.PodGroup
 }
 
 func (pp *proportionPlugin) createQueueResourceAttrs(ssn *framework.Session) {
-	for _, queue := range ssn.Queues {
+	for _, queue := range ssn.ClusterInfo.Queues {
 		queueAttributes := &rs.QueueAttributes{
 			UID:               queue.UID,
 			Name:              queue.Name,
@@ -332,7 +332,7 @@ func (pp *proportionPlugin) createQueueResourceAttrs(ssn *framework.Session) {
 		overQuotaWeight = queue.Resources.GPU.OverQuotaWeight
 		queueAttributes.SetQuotaResources(rs.GpuResource, deserved, limit, overQuotaWeight)
 
-		usage, found := ssn.ResourceUsage.Queues[queue.UID]
+		usage, found := ssn.ClusterInfo.QueueResourceUsage.Queues[queue.UID]
 		if found {
 			queueAttributes.SetResourceUsage(usage)
 		}
@@ -343,7 +343,7 @@ func (pp *proportionPlugin) createQueueResourceAttrs(ssn *framework.Session) {
 }
 
 func (pp *proportionPlugin) updateQueuesCurrentResourceUsage(ssn *framework.Session) {
-	for _, job := range ssn.PodGroupInfos {
+	for _, job := range ssn.ClusterInfo.PodGroupInfos {
 		log.InfraLogger.V(7).Infof("Updateding queue consumed resources based on job <%s/%s>.",
 			job.Namespace, job.Name)
 
@@ -435,7 +435,7 @@ func (pp *proportionPlugin) getChildQueues(parentQueue *rs.QueueAttributes) map[
 
 func (pp *proportionPlugin) allocateHandlerFn(ssn *framework.Session) func(event *framework.Event) {
 	return func(event *framework.Event) {
-		job := ssn.PodGroupInfos[event.Task.Job]
+		job := ssn.ClusterInfo.PodGroupInfos[event.Task.Job]
 		isPreemptibleJob := job.IsPreemptibleJob()
 		taskResources := utils.QuantifyResourceRequirements(event.Task.AcceptedResource)
 
@@ -459,7 +459,7 @@ func (pp *proportionPlugin) allocateHandlerFn(ssn *framework.Session) func(event
 
 func (pp *proportionPlugin) deallocateHandlerFn(ssn *framework.Session) func(event *framework.Event) {
 	return func(event *framework.Event) {
-		job := ssn.PodGroupInfos[event.Task.Job]
+		job := ssn.ClusterInfo.PodGroupInfos[event.Task.Job]
 		isPreemptibleJob := job.IsPreemptibleJob()
 		taskResources := utils.QuantifyResourceRequirements(event.Task.AcceptedResource)
 

@@ -21,6 +21,7 @@ import (
 
 	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	_ "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
@@ -52,7 +53,6 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 	clusterPodAffinityInfo *cache.K8sClusterPodAffinityInfo,
 ) *framework.Session {
 	ssn := framework.Session{
-		Nodes: nodesInfoMap,
 		Config: &conf.SchedulerConfiguration{
 			Tiers: []conf.Tier{
 				{
@@ -60,9 +60,12 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 				},
 			},
 		},
-		Queues:        queueInfoMap,
-		PodGroupInfos: jobInfoMap,
-		Topologies:    topologies,
+		ClusterInfo: &api.ClusterInfo{
+			Nodes:         nodesInfoMap,
+			Queues:        queueInfoMap,
+			PodGroupInfos: jobInfoMap,
+			Topologies:    topologies,
+		},
 	}
 	ssn.OverrideMaxNumberConsolidationPreemptees(-1)
 	ssn.OverrideAllowConsolidatingReclaim(true)

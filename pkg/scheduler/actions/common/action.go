@@ -60,7 +60,7 @@ func GetJobsToAllocate(ssn *framework.Session, preempteeTasks []*pod_info.PodInf
 	preemptor *podgroup_info.PodGroupInfo) *utils.JobsOrderByQueues {
 	allJobsToAllocate := utils.GetAllPendingJobs(ssn)
 	for _, task := range preempteeTasks {
-		preempteeJob := ssn.PodGroupInfos[task.Job]
+		preempteeJob := ssn.ClusterInfo.PodGroupInfos[task.Job]
 		allJobsToAllocate[preempteeJob.UID] = preempteeJob
 	}
 	// add preemptor to allJobsToAllocate if it's not there
@@ -83,7 +83,7 @@ func TryToVirtuallyAllocatePreemptorAndGetVictims(
 
 	potentialVictimsMap := make(map[common_info.PodGroupID]*podgroup_info.PodGroupInfo)
 	for _, task := range preempteeTasks {
-		job := ssn.PodGroupInfos[task.Job]
+		job := ssn.ClusterInfo.PodGroupInfos[task.Job]
 		potentialVictimsMap[job.UID] = job
 	}
 

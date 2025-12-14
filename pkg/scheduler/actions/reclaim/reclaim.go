@@ -53,7 +53,7 @@ func (ra *reclaimAction) Execute(ssn *framework.Session) {
 		FilterUnready:     true,
 		MaxJobsQueueDepth: ssn.GetJobsDepth(framework.Reclaim),
 	})
-	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
 
 	log.InfraLogger.V(2).Infof("There are <%d> PodGroupInfos and <%d> Queues in total for scheduling",
 		jobsOrderByQueues.Len(), ssn.CountLeafQueues())
@@ -102,14 +102,14 @@ func (ra *reclaimAction) Execute(ssn *framework.Session) {
 func (ra *reclaimAction) attemptToReclaimForSpecificJob(
 	ssn *framework.Session, reclaimer *podgroup_info.PodGroupInfo,
 ) (bool, *framework.Statement, []string) {
-	queue := ssn.Queues[reclaimer.Queue]
+	queue := ssn.ClusterInfo.Queues[reclaimer.Queue]
 	resReq := podgroup_info.GetTasksToAllocateInitResource(reclaimer, ssn.PodSetOrderFn, ssn.TaskOrderFn, false)
 	log.InfraLogger.V(3).Infof("Attempting to reclaim for job: <%v/%v> of queue <%v>, resources: <%v>",
 		reclaimer.Namespace, reclaimer.Name, queue.Name, resReq)
 
 	ssn.OnJobSolutionStart()
 
-	feasibleNodes := common.FeasibleNodesForJob(maps.Values(ssn.Nodes), reclaimer)
+	feasibleNodes := common.FeasibleNodesForJob(maps.Values(ssn.ClusterInfo.Nodes), reclaimer)
 	solver := solvers.NewJobsSolver(
 		feasibleNodes,
 		ssn.ReclaimScenarioValidatorFn,
@@ -127,7 +127,7 @@ func getOrderedVictimsQueue(ssn *framework.Session, reclaimer *podgroup_info.Pod
 			MaxJobsQueueDepth:        scheduler_util.QueueCapacityInfinite,
 		})
 		jobs := map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{}
-		for _, job := range ssn.PodGroupInfos {
+		for _, job := range ssn.ClusterInfo.PodGroupInfos {
 			if job.Queue == reclaimer.Queue {
 				continue
 			}
