@@ -34,8 +34,7 @@ I want to specify segment size and topology via annotations on my workload witho
 ## Proposal
 
 - We will leverage the pod ordering established by the workload framework to assign each pod to its corresponding segment (e.g. when segment size is 4, pods with indices 0-3 belong to segment-0, pods with indices 4-7 belong to segment-1).
-  > **Note**: Pod index is used for segment assignment at scheduling time, not the distributed training "rank" which may be assigned dynamically at runtime. For frameworks where pod index maps predictably to rank, users can configure segment size accordingly. For frameworks with dynamic rank assignment, segment-based co-location still works, but users should be aware that rank assignment is independent of segment assignment.
-- KAI will inject the assigned segment index as an environment variable (e.g., `KAI_SEGMENT_INDEX`) into the pod, similar to SLURM's `SLURM_PROCID`. This allows the workload process to determine its segment without needing to calculate it.
+  > **Note**: Pod index is used for segment assignment at scheduling time, not the distributed training "rank" which may be assigned dynamically at runtime. For frameworks where pod index maps predictably to rank, users can configure segment size accordingly, and infer their segment index from the pod index (e.g. `segment_index = pod_index / segment_size`). For frameworks with dynamic rank assignment, segment-based co-location still works, but users should be aware that rank assignment is independent of segment assignment.
 - We will represent each segment as a SubGroup with its corresponding Topology Constraints.
 - This approach builds upon the existing Hierarchical Topology Constraints mechanism, providing a simplified interface that automatically translates segment specifications into the underlying SubGroup structure.
 
@@ -62,8 +61,7 @@ I want to specify segment size and topology via annotations on my workload witho
           replicas: 1
           template:
             spec:
-              containers:
-                ...
+              containers: ...
         Worker:
           replicas: 16
           template:
@@ -154,19 +152,6 @@ graph LR
     style InternalView fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
 ```
 
-## Self Notes
+## Future Enhancements
 
-### Review Takedowns
-
-- Remove PodGroup spec enrichment - V
-
-### To Check
-
-- Are leaders indexed? Should they be segmented?
-- LWS - Leaders may be unified with workers, why and how should we handle this?
-- PyTorchJob - How do they handle segmentation?
-- Is partial segments reasonable? How should we handle it?
-- In Kueue, are users responsible for passing the segment size to their workload processes?
-
-<!-- GuyContinue -->
-<!-- GuyToKnow: What happens when a PodGroup has leaf subgroups with minMember that can't be satisfied? Does it make the whole PodGroup unschedulable? What does the root minMember mean? -->
+- **Segment Index Injection**: KAI could inject the assigned segment index as an environment variable (e.g., `KAI_SEGMENT_INDEX`) into the pod, similar to SLURM's `SLURM_PROCID`. This would allow the workload process to determine its segment without needing to calculate it.
