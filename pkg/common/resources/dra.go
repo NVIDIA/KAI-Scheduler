@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
@@ -71,11 +72,11 @@ func RemoveReservedFor(claim *resourceapi.ResourceClaim, pod *v1.Pod) {
 // ExtractDRAGPUResources extracts GPU resources from DRA ResourceClaims in a pod.
 // It loops through all ResourceClaims in the pod spec, identifies GPU claims by DeviceClassName,
 // and returns a ResourceList with GPU resources aggregated.
-func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.Client) (v1.ResourceList, error) {
+func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.Client) v1.ResourceList {
 	gpuResources := v1.ResourceList{}
 
 	if len(pod.Spec.ResourceClaims) == 0 {
-		return gpuResources, nil
+		return gpuResources
 	}
 
 	// Map to group claims by DeviceClassName and count devices
@@ -85,6 +86,10 @@ func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.
 		claimName, err := GetResourceClaimName(pod, &podClaim)
 		if err != nil {
 			// Skip claims that don't have a name yet (e.g., from templates not yet created)
+			logger := log.FromContext(ctx)
+			logger.V(1).Error(err, "failed to get resource claim name for pod",
+				"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name),
+				"claim", podClaim.Name)
 			continue
 		}
 
@@ -97,12 +102,20 @@ func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.
 		err = kubeClient.Get(ctx, claimKey, claim)
 		if err != nil {
 			// Skip claims that don't exist yet or can't be fetched
+			logger := log.FromContext(ctx)
+			logger.V(1).Error(err, "failed to get resource claim for pod",
+				"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name),
+				"claim", claimName)
 			continue
 		}
 
 		gpuCount, err := countGPUDevicesFromClaim(claim)
 		if err != nil {
 			// Skip invalid claims but continue processing others
+			logger := log.FromContext(ctx)
+			logger.V(1).Error(err, "failed to count GPU devices for claim",
+				"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name),
+				"claim", claimName)
 			continue
 		}
 
@@ -122,7 +135,7 @@ func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.
 		}
 	}
 
-	return gpuResources, nil
+	return gpuResources
 }
 
 // isGPUDeviceClass checks if a DeviceClassName represents a GPU.
