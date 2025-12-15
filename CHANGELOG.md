@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ## Fixed
-- Fixed reclaim/preempt/consolidate actions for topology workloads [#739](https://github.com/NVIDIA/KAI-Scheduler/pull/739)  [itsomri](https://github.com/itsomri)
+- Fixed reclaim/preempt/consolidate actions for topology workloads [#748](https://github.com/NVIDIA/KAI-Scheduler/pull/748)  [itsomri](https://github.com/itsomri)
 
 ## [v0.10.2] - 2025-12-09
 
@@ -16,8 +16,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Fixed confusing resource division log message [#734](https://github.com/NVIDIA/KAI-Scheduler/pull/734) [itsomri](https://github.com/itsomri)
-
-### Fixed
 - Fixed a bug where the snapshot tool would not load topology objects [#731](https://github.com/NVIDIA/KAI-Scheduler/pull/731) [itsomri](https://github.com/itsomri)
 
 ## [v0.10.2] - 2025-11-24
