@@ -4,8 +4,6 @@
 package api
 
 import (
-	"time"
-
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -50,7 +48,7 @@ type UsageParams struct {
 	// Window type for time-series aggregation. If not set, defaults to sliding.
 	WindowType *WindowType `yaml:"windowType,omitempty" json:"windowType,omitempty"`
 	// The start timestamp of the tumbling window. If not set, defaults to the current time.
-	TumblingWindowStartTime *time.Time `yaml:"tumblingWindowStartTime,omitempty" json:"tumblingWindowStartTime,omitempty"`
+	TumblingWindowStartTime *metav1.Time `yaml:"tumblingWindowStartTime,omitempty" json:"tumblingWindowStartTime,omitempty"`
 	// The cron string defining the behavior of the cron window.
 	CronWindowDurationString string `yaml:"cronWindowDurationString,omitempty" json:"cronWindowDurationString,omitempty"`
 	// Fetch interval of the usage. Default is 1 minute.

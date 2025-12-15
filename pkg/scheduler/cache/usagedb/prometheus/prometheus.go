@@ -25,7 +25,7 @@ const (
 	queueNameLabel = "queue_name"
 )
 
-type getLatestUsageResetTime func() time.Time
+type getLatestUsageResetTime func(now time.Time) time.Time
 type usageWindowQueryFunction func(ctx context.Context, decayedAllocationMetric string) (model.Value, promv1.Warnings, error)
 
 var _ api.Interface = &PrometheusClient{}
@@ -42,7 +42,7 @@ type PrometheusClient struct {
 	capacityMetricsMap      map[string]string
 	usageWindowQuery        usageWindowQueryFunction
 	cronWindowExpression    *cronexpr.Expression
-	tumblingWindowStartTime time.Time
+	tumblingWindowStartTime metav1.Time
 }
 
 func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface, error) {
@@ -230,7 +230,7 @@ func (p *PrometheusClient) querySlidingTimeWindow(ctx context.Context, decayedAl
 func (p *PrometheusClient) createTumblingWindowQueryFunction(getLatestUsageResetTime getLatestUsageResetTime) usageWindowQueryFunction {
 	return func(ctx context.Context, decayedAllocationMetric string) (model.Value, promv1.Warnings, error) {
 		usageQuery := fmt.Sprintf("sum_over_time(%s)", decayedAllocationMetric)
-		lastUsageReset := getLatestUsageResetTime()
+		lastUsageReset := getLatestUsageResetTime(time.Now())
 
 		usageResult, warnings, err := p.client.QueryRange(ctx, usageQuery, promv1.Range{
 			Start: lastUsageReset,
@@ -246,9 +246,7 @@ func (p *PrometheusClient) createTumblingWindowQueryFunction(getLatestUsageReset
 	}
 }
 
-func (p *PrometheusClient) getLatestUsageResetTime_CronWindow() time.Time {
-	now := time.Now()
-
+func (p *PrometheusClient) getLatestUsageResetTime_CronWindow(now time.Time) time.Time {
 	// Calculate a duration that we know is going to be bigger then the duration
 	// between now and the closest previous occurrence of the cron expression.
 	thirdNext := p.cronWindowExpression.NextN(now, 3)[2]
@@ -261,8 +259,8 @@ func (p *PrometheusClient) getLatestUsageResetTime_CronWindow() time.Time {
 	previousResetTime := startTime
 	currentResetTime := p.cronWindowExpression.Next(startTime)
 
-	// Keep finding the next reset time until it's after the current time
-	for currentResetTime.Before(now) || currentResetTime.Equal(now) {
+	// Keep finding the next reset time until it's after or equal to the current time
+	for currentResetTime.Before(now) {
 		previousResetTime = currentResetTime
 		currentResetTime = p.cronWindowExpression.Next(currentResetTime)
 	}
@@ -270,14 +268,14 @@ func (p *PrometheusClient) getLatestUsageResetTime_CronWindow() time.Time {
 	return previousResetTime
 }
 
-func (p *PrometheusClient) getLatestUsageResetTime_TumblingWindow() time.Time {
-	startTime := p.tumblingWindowStartTime
+func (p *PrometheusClient) getLatestUsageResetTime_TumblingWindow(now time.Time) time.Time {
+	startTime := p.tumblingWindowStartTime.Time
 
 	previousResetTime := startTime
 	currentResetTime := startTime.Add(p.usageParams.WindowSize.Duration)
 
-	// Keep finding the next reset time until it's after the current time
-	for currentResetTime.Before(time.Now()) || currentResetTime.Equal(time.Now()) {
+	// Keep finding the next reset time until it's after or equal to the current time
+	for currentResetTime.Before(now) {
 		previousResetTime = currentResetTime
 		currentResetTime = currentResetTime.Add(p.usageParams.WindowSize.Duration)
 	}
