@@ -52,7 +52,7 @@ const (
 // IsValid returns true if the WindowType is a valid value
 func (wt WindowType) IsValid() bool {
 	switch wt {
-	case TumblingWindow, SlidingWindow:
+	case TumblingWindow, SlidingWindow, CronWindow:
 		return true
 	default:
 		return false

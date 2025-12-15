@@ -270,6 +270,10 @@ func (p *PrometheusClient) getLatestUsageResetTime_CronWindow(now time.Time) tim
 
 func (p *PrometheusClient) getLatestUsageResetTime_TumblingWindow(now time.Time) time.Time {
 	startTime := p.tumblingWindowStartTime.Time
+	if startTime.After(now) {
+		// If the start time is in the future, return the current time. The tumbling window in this case will have size 0.
+		return now
+	}
 
 	previousResetTime := startTime
 	currentResetTime := startTime.Add(p.usageParams.WindowSize.Duration)
