@@ -115,14 +115,10 @@ func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.
 		}
 	}
 
-	// Convert aggregated counts to ResourceList
-	if len(deviceClassCounts) > 0 {
-		totalGPUs := int64(0)
-		for _, count := range deviceClassCounts {
-			totalGPUs += count
-		}
-		if totalGPUs > 0 {
-			gpuResources[constants.GpuResource] = *resource.NewQuantity(totalGPUs, resource.DecimalSI)
+	// Convert aggregated counts to ResourceList mapping deviceClass name to its count
+	for deviceClassName, count := range deviceClassCounts {
+		if count > 0 {
+			gpuResources[v1.ResourceName(deviceClassName)] = *resource.NewQuantity(count, resource.DecimalSI)
 		}
 	}
 

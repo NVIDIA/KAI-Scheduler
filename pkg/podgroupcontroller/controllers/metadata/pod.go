@@ -86,9 +86,8 @@ func calculatedAllocatedResources(ctx context.Context, pod *v1.Pod, kubeClient c
 	if err != nil {
 		// Log but continue processing - DRA extraction failures shouldn't block resource calculation
 		logger := log.FromContext(ctx)
-		logger.V(1).Info("failed to extract DRA GPU allocated resources from pod",
-			"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name),
-			"error", err)
+		logger.V(1).Error(err, "failed to extract DRA GPU allocated resources from pod",
+			"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 	} else {
 		allocatedResources = resources.SumResources(allocatedResources, draGPUAllocated)
 	}
@@ -112,9 +111,8 @@ func calculateRequestedResources(ctx context.Context, pod *v1.Pod, kubeClient cl
 	if err != nil {
 		// Log but continue processing - DRA extraction failures shouldn't block resource calculation
 		logger := log.FromContext(ctx)
-		logger.V(1).Info("failed to extract DRA GPU requested resources from pod",
-			"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name),
-			"error", err)
+		logger.V(1).Error(err, "failed to extract DRA GPU requested resources from pod",
+			"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 	} else {
 		requestedResources = resources.SumResources(requestedResources, draGPURequested)
 	}
