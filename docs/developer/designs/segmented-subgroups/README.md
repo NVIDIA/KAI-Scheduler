@@ -188,3 +188,4 @@ graph LR
 ## Future Enhancements
 
 - **Segment Index Injection**: KAI could inject the assigned segment index as an environment variable (e.g., `KAI_SEGMENT_INDEX`) into the pod, similar to SLURM's `SLURM_PROCID`. This would allow the workload process to determine its segment without needing to calculate it.
+- **Per-Replica Type Segmentation**: We should support per-replica type segmentation in the future, where each replica type is segmented separately.
