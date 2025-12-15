@@ -104,7 +104,6 @@ $$\text{GlobalIndex} = \text{pod.labels[pod-index-label]}$$
 | **Workload Kind**   | **Replica Type Order** | **Index Label** |
 | ------------------- | ---------------------- | --------------- |
 | **Job (Indexed)**   | N/A (single type) | `batch.kubernetes.io/job-completion-index` |
-| **JobSet**          | N/A (single type) | `batch.kubernetes.io/job-completion-index` |
 | **PyTorchJob**      | Master → Worker | `training.kubeflow.org/replica-index` (composite) |
 | **TFJob**           | Chief → PS → Evaluator → Worker | `training.kubeflow.org/replica-index` (composite) |
 | **MPIJob**          | Launcher → Worker | `training.kubeflow.org/replica-index` (composite) |
