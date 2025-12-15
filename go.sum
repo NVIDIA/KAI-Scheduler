@@ -492,8 +492,8 @@ k8s.io/dynamic-resource-allocation v0.34.1 h1:pd9qhOeAFkn8eOO4BthAiGHQc8pu+N6TK/
 k8s.io/dynamic-resource-allocation v0.34.1/go.mod h1:Zlpqyh6EKhTVoQDe5BS31/8oMXGfG6c12ydj3ChXyuw=
 k8s.io/endpointslice v0.34.2 h1:rwG7vAB2Q3/GPeF7lOSvDSRhg184GSx1VHiqJ//2Ehw=
 k8s.io/endpointslice v0.34.2/go.mod h1:YhcGfLXNyci+LOcTPyQkWosp+iUuXgVEIxWGlhLPyxU=
-k8s.io/externaljwt v0.34.1 h1:IPu6qFFAazvTvrl/dd72KsQv2X0d95nLQaqizJAeo68=
-k8s.io/externaljwt v0.34.1/go.mod h1:LIqFAVwSkcWVlP3c78wxe2VGmgDySxfqX/wwXzVrV/Q=
+k8s.io/externaljwt v0.34.3 h1:LGYdoQlons7rT5gTXqZkWLi3Buc1k7alzcGINHEwLeE=
+k8s.io/externaljwt v0.34.3/go.mod h1:LIqFAVwSkcWVlP3c78wxe2VGmgDySxfqX/wwXzVrV/Q=
 k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
 k8s.io/klog/v2 v2.130.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
 k8s.io/kube-aggregator v0.34.1 h1:WNLV0dVNoFKmuyvdWLd92iDSyD/TSTjqwaPj0U9XAEU=
