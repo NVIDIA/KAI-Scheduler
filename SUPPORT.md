@@ -21,6 +21,7 @@ The following versions are currently supported.
 | Version | Type | Release Date | End of Support | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **v0.12** | **LTS** | *Upcoming* | *TBD* | **Next Release** |
+| **v0.10** | Standard | Dec 2025 | *Until v0.12* | **Current** |
 | **v0.9** | **LTS** | Sep 2025 | **Sep 2026** | **Maintenance** |
 | **v0.6** | **LTS** | Jun 2025 | **Jun 2026** | **Maintenance** |
 | **v0.4** | **LTS** | Apr 2025 | **Apr 2026** | **Maintenance** |
