@@ -1,6 +1,6 @@
 module github.com/NVIDIA/KAI-scheduler
 
-go 1.24.4
+go 1.24.6
 
 require (
 	github.com/NVIDIA/go-nvml v0.12.4-1
@@ -25,7 +25,7 @@ require (
 	github.com/prometheus/common v0.66.1
 	github.com/ray-project/kuberay/ray-operator v1.4.2
 	github.com/run-ai/kwok-operator v0.0.0-20240926063032-05b6364bc7c7
-	github.com/samber/lo v1.47.0
+	github.com/samber/lo v1.51.0
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/xhit/go-str2duration/v2 v2.1.0
@@ -67,8 +67,8 @@ require (
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	knative.dev/pkg v0.0.0-20250117084104-c43477f0052b
 	knative.dev/serving v0.44.0
-	sigs.k8s.io/controller-runtime v0.21.0
-	sigs.k8s.io/karpenter v1.2.0
+	sigs.k8s.io/controller-runtime v0.22.1
+	sigs.k8s.io/karpenter v1.8.0
 	sigs.k8s.io/kueue v0.14.0-devel.0.20250917151612-1b53cb59049a
 	sigs.k8s.io/lws v0.7.0
 	sigs.k8s.io/yaml v1.6.0
@@ -82,7 +82,7 @@ require (
 	github.com/NVIDIA/k8s-kata-manager v0.2.3 // indirect
 	github.com/NVIDIA/k8s-operator-libs v0.0.0-20250311214045-7d667fbaa7ac // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
-	github.com/awslabs/operatorpkg v0.0.0-20241205163410-0fff9f28d115 // indirect
+	github.com/awslabs/operatorpkg v0.0.0-20250909182303-e8e550b6f339 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/blendle/zapdriver v1.3.1 // indirect
@@ -175,7 +175,7 @@ require (
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/term v0.37.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
+	golang.org/x/time v0.13.0 // indirect
 	golang.org/x/tools v0.38.0 // indirect
 	google.golang.org/genproto v0.0.0-20250303144028-a0af3efb3deb // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb // indirect
