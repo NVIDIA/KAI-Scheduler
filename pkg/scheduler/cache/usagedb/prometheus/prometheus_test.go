@@ -38,7 +38,7 @@ func TestNewPrometheusClient(t *testing.T) {
 			address: "http://localhost:9090",
 			params: &api.UsageParams{
 				WindowType:               &[]api.WindowType{api.TumblingWindow}[0],
-				TumblingWindowCronString: "invalid",
+				CronWindowDurationString: "invalid",
 			},
 			expectError:   true,
 			errorContains: "error parsing cron string 'invalid' for usage tumbling window",
@@ -48,7 +48,7 @@ func TestNewPrometheusClient(t *testing.T) {
 			address: "http://localhost:9090",
 			params: &api.UsageParams{
 				WindowType:               &[]api.WindowType{api.SlidingWindow}[0],
-				TumblingWindowCronString: "invalid",
+				CronWindowDurationString: "invalid",
 			},
 			expectError:   false,
 			errorContains: "",
