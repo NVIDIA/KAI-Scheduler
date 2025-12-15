@@ -38,7 +38,7 @@ jobs:
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
 
       - name: Upload As Release Asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: charts/kai-scheduler-${{ env.PACKAGE_VERSION }}.tgz
         env:
