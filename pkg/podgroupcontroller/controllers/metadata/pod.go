@@ -107,15 +107,8 @@ func calculateRequestedResources(ctx context.Context, pod *v1.Pod, kubeClient cl
 	requestedResources = resources.SumResources(requestedResources, gpuSharingRequestedResources)
 
 	// Extract DRA GPU resources for requested (all active pods)
-	draGPURequested, err := commonresources.ExtractDRAGPUResources(ctx, pod, kubeClient)
-	if err != nil {
-		// Log but continue processing - DRA extraction failures shouldn't block resource calculation
-		logger := log.FromContext(ctx)
-		logger.V(1).Error(err, "failed to extract DRA GPU requested resources from pod",
-			"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
-	} else {
-		requestedResources = resources.SumResources(requestedResources, draGPURequested)
-	}
+	draGPURequested := commonresources.ExtractDRAGPUResources(ctx, pod, kubeClient)
+	requestedResources = resources.SumResources(requestedResources, draGPURequested)
 
 	return requestedResources, nil
 }
