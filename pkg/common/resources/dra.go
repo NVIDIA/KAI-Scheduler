@@ -72,11 +72,11 @@ func RemoveReservedFor(claim *resourceapi.ResourceClaim, pod *v1.Pod) {
 // ExtractDRAGPUResources extracts GPU resources from DRA ResourceClaims in a pod.
 // It loops through all ResourceClaims in the pod spec, identifies GPU claims by DeviceClassName,
 // and returns a ResourceList with GPU resources aggregated.
-func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.Client) v1.ResourceList {
+func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.Client) (v1.ResourceList, error) {
 	gpuResources := v1.ResourceList{}
 
 	if len(pod.Spec.ResourceClaims) == 0 {
-		return gpuResources
+		return gpuResources, nil
 	}
 
 	// Map to group claims by DeviceClassName and count devices
@@ -85,12 +85,8 @@ func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.
 	for _, podClaim := range pod.Spec.ResourceClaims {
 		claimName, err := GetResourceClaimName(pod, &podClaim)
 		if err != nil {
-			// Skip claims that don't have a name yet (e.g., from templates not yet created)
-			logger := log.FromContext(ctx)
-			logger.V(1).Error(err, "failed to get resource claim name for pod",
-				"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name),
-				"claim", podClaim.Name)
-			continue
+			return nil, fmt.Errorf("failed to get resource claim name for pod %s/%s, claim %s: %w",
+				pod.Namespace, pod.Name, podClaim.Name, err)
 		}
 
 		claim := &resourceapi.ResourceClaim{}
@@ -101,12 +97,8 @@ func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.
 
 		err = kubeClient.Get(ctx, claimKey, claim)
 		if err != nil {
-			// Skip claims that don't exist yet or can't be fetched
-			logger := log.FromContext(ctx)
-			logger.V(1).Error(err, "failed to get resource claim for pod",
-				"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name),
-				"claim", claimName)
-			continue
+			return nil, fmt.Errorf("failed to get resource claim %s/%s for pod %s/%s: %w",
+				pod.Namespace, claimName, pod.Namespace, pod.Name, err)
 		}
 
 		gpuCount, err := countGPUDevicesFromClaim(claim)
@@ -135,7 +127,7 @@ func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.
 		}
 	}
 
-	return gpuResources
+	return gpuResources, nil
 }
 
 // isGPUDeviceClass checks if a DeviceClassName represents a GPU.

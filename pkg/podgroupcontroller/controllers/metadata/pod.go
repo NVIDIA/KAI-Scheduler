@@ -82,7 +82,10 @@ func calculatedAllocatedResources(ctx context.Context, pod *v1.Pod, kubeClient c
 	allocatedResources = resources.SumResources(allocatedResources, gpuSharingReceivedResources)
 
 	// Extract DRA GPU resources for allocated (only allocated pods)
-	draGPUAllocated := commonresources.ExtractDRAGPUResources(ctx, pod, kubeClient)
+	draGPUAllocated, err := commonresources.ExtractDRAGPUResources(ctx, pod, kubeClient)
+	if err != nil {
+		return nil, err
+	}
 	allocatedResources = resources.SumResources(allocatedResources, draGPUAllocated)
 
 	return allocatedResources, nil
@@ -100,7 +103,10 @@ func calculateRequestedResources(ctx context.Context, pod *v1.Pod, kubeClient cl
 	requestedResources = resources.SumResources(requestedResources, gpuSharingRequestedResources)
 
 	// Extract DRA GPU resources for requested (all active pods)
-	draGPURequested := commonresources.ExtractDRAGPUResources(ctx, pod, kubeClient)
+	draGPURequested, err := commonresources.ExtractDRAGPUResources(ctx, pod, kubeClient)
+	if err != nil {
+		return nil, err
+	}
 	requestedResources = resources.SumResources(requestedResources, draGPURequested)
 
 	return requestedResources, nil

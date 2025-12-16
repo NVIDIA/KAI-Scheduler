@@ -13,7 +13,9 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
@@ -65,6 +67,16 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 			claim, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
+			// Wait for the ResourceClaim to be accessible via the controller client
+			// This ensures ExtractDRAGPUResources can successfully read the claim
+			Eventually(func() error {
+				claimObj := &resourceapi.ResourceClaim{}
+				return testCtx.ControllerClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace,
+					Name:      claim.Name,
+				}, claimObj)
+			}).Should(Succeed(), "ResourceClaim should be accessible via controller client")
+
 			pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 				Claims: []v1.ResourceClaim{
 					{
@@ -89,6 +101,16 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 			claim := rd.CreateResourceClaim(namespace, "fake-device-class", 1)
 			claim, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
+
+			// Wait for the ResourceClaim to be accessible via the controller client
+			// This ensures ExtractDRAGPUResources can successfully read the claim
+			Eventually(func() error {
+				claimObj := &resourceapi.ResourceClaim{}
+				return testCtx.ControllerClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace,
+					Name:      claim.Name,
+				}, claimObj)
+			}).Should(Succeed(), "ResourceClaim should be accessible via controller client")
 
 			pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 				Claims: []v1.ResourceClaim{
@@ -227,6 +249,24 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 			claim2 := rd.CreateResourceClaim(namespace, gpuDeviceClassName, 2)
 			claim2, err = testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim2, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
+
+			// Wait for the ResourceClaims to be accessible via the controller client
+			// This ensures ExtractDRAGPUResources can successfully read the claims
+			Eventually(func() error {
+				claimObj := &resourceapi.ResourceClaim{}
+				return testCtx.ControllerClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace,
+					Name:      claim1.Name,
+				}, claimObj)
+			}).Should(Succeed(), "ResourceClaim1 should be accessible via controller client")
+
+			Eventually(func() error {
+				claimObj := &resourceapi.ResourceClaim{}
+				return testCtx.ControllerClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace,
+					Name:      claim2.Name,
+				}, claimObj)
+			}).Should(Succeed(), "ResourceClaim2 should be accessible via controller client")
 
 			// Create PodGroup
 			podGroupName := utils.GenerateRandomK8sName(10)

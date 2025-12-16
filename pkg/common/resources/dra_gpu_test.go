@@ -235,7 +235,8 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeEmpty())
 			})
 		})
@@ -279,7 +280,8 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				Expect(err).NotTo(HaveOccurred())
 				gpuQuantity, exists := result[constants.GpuResource]
 				Expect(exists).To(BeTrue(), "result should contain GPU resource")
 				Expect(gpuQuantity.Value()).To(Equal(int64(2)))
@@ -348,7 +350,8 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				Expect(err).NotTo(HaveOccurred())
 				gpuQuantity, exists := result[constants.GpuResource]
 				Expect(exists).To(BeTrue(), "result should contain GPU resource")
 				Expect(gpuQuantity.Value()).To(Equal(int64(5)))
@@ -400,7 +403,8 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				Expect(err).NotTo(HaveOccurred())
 				gpuQuantity, exists := result[constants.GpuResource]
 				Expect(exists).To(BeTrue(), "result should contain GPU resource")
 				Expect(gpuQuantity.Value()).To(Equal(int64(1)))
@@ -408,7 +412,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 		})
 
 		Context("when ResourceClaims don't exist", func() {
-			It("should skip missing claims and return empty ResourceList", func() {
+			It("should return error when claim doesn't exist", func() {
 				pod := &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-pod",
@@ -424,11 +428,12 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
-				Expect(result).To(BeEmpty())
+				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeNil())
 			})
 
-			It("should skip claims with missing template status", func() {
+			It("should return error when claim name cannot be determined", func() {
 				pod := &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-pod",
@@ -447,8 +452,9 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
-				Expect(result).To(BeEmpty())
+				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeNil())
 			})
 		})
 
@@ -491,7 +497,8 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeEmpty())
 			})
 
@@ -558,7 +565,8 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				Expect(err).NotTo(HaveOccurred())
 				gpuQuantity, exists := result[constants.GpuResource]
 				Expect(exists).To(BeTrue(), "result should contain GPU resource")
 				Expect(gpuQuantity.Value()).To(Equal(int64(2)))
@@ -628,7 +636,8 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
+				Expect(err).NotTo(HaveOccurred())
 				gpuQuantity, exists := result[constants.GpuResource]
 				Expect(exists).To(BeTrue(), "result should contain GPU resource")
 				// ExactCount: 2, All: 1 (conservative estimate) = 3 total
