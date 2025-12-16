@@ -1,4 +1,5 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Coverage](https://github.com/NVIDIA/KAI-Scheduler/raw/coverage-badge/badges/coverage.svg)](https://github.com/NVIDIA/KAI-Scheduler/blob/main/.github/workflows/update-coverage-badge.yaml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/NVIDIA/KAI-Scheduler)
 # KAI Scheduler
 KAI Scheduler is a robust, efficient, and scalable [Kubernetes scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/) that optimizes GPU resource allocation for AI and machine learning workloads.
 
@@ -8,6 +9,15 @@ KAI Scheduler allows administrators of Kubernetes clusters to dynamically alloca
 KAI Scheduler supports the entire AI lifecycle, from small, interactive jobs that require minimal resources to large training and inference, all within the same cluster. 
 It ensures optimal resource allocation while maintaining resource fairness between the different consumers.
 It can run alongside other schedulers installed on the cluster.
+
+## Latest News 🔥
+
+- [2025/11] **KubeCon NA 2025 Talk:** Watch the recording of the presentation "[Lightning Talk: Mind the Topology: Smarter Scheduling for AI Workloads on Kubernetes](https://youtu.be/o5i7pTWZjfo?si=su5iTOAS4r4O1TPa)" to learn how KAI's Topology-Aware Scheduling (TAS) optimizes placement for modern disaggregated serving architectures.
+- [2025/11] **Integration with [Grove](https://github.com/ai-dynamo/grove) & Dynamo:** KAI's Topology-Aware and Hierarchical Gang Scheduling capabilities are integrated with Grove to orchestrate complex, multi-component workloads like disaggregated serving and agentic pipelines at scale. Read the [blog post](https://developer.nvidia.com/blog/streamline-complex-ai-inference-on-kubernetes-with-nvidia-grove/) for more details.
+- [2025/10] [**v0.10.0 Release:**](https://github.com/NVIDIA/KAI-Scheduler/releases/tag/v0.10.0) Major features released, including [Topology-Aware Scheduling (TAS)](https://github.com/NVIDIA/KAI-Scheduler/tree/main/docs/topology), [Hierarchical PodGroups](https://github.com/NVIDIA/KAI-Scheduler/tree/main/docs/developer/designs/hierarchical-podgroup), and [Time-aware Fairness](https://github.com/NVIDIA/KAI-Scheduler/tree/main/docs/timeaware).
+- [2025/10] **KubeRay Integration:** KAI Scheduler is now natively integrated for [Ray workloads on Kubernetes](https://docs.ray.io/en/master/cluster/kubernetes/k8s-ecosystem/kai-scheduler.html).
+- [2025/08] **Time-Aware Fair-Sharing:** [Proposal for Time-aware fair-sharing](https://github.com/NVIDIA/KAI-Scheduler/blob/main/docs/developer/designs/time-aware-fairness/time-aware-fairness.md) is discussed at batch-wg. [Watch the recording.](https://zoom.us/rec/play/uW5ex5dmQP8_7UqOv5UjOGq8IqZeIa8AhKILqvDUQ6CnBAIdJjPY-BLfUWnoYblvDP-ZIvAp48p7XJNv.Cx5t7x1DwGqJgIYB?eagerLoadZvaPages=&accessLevel=meeting&canPlayFromShare=true&from=share_recording_detail&startTime=1755010542000&componentName=rec-play&originRequestUrl=https%3A%2F%2Fzoom.us%2Frec%2Fshare%2Frd_j_7ZDpC8lXxGNdQwguK2ZunoM3R93HR1Eo4A9rxD7b5lWSbmojDKc8OZ00ZMK.QxgEeMOxMcuiDkIY%3FstartTime%3D1755010542000)
+- [2025/04] **Project Introduction:** Recording of the [KAI Scheduler introduction presented at the batch-wg meeting](https://zoom.us/rec/play/E1weaHroJpuTdXx6s9pjMu6oS78BiA53wsnvV9MWe_rIdwmDLFOG8J4XEPNW8-hIp4-HSFNdsbbP7mcv.YstbxFdS7z7tOfKw?eagerLoadZvaPages=&accessLevel=meeting&canPlayFromShare=true&from=share_recording_detail&startTime=1744124229000&componentName=rec-play&originRequestUrl=https%3A%2F%2Fzoom.us%2Frec%2Fshare%2FwP2WH6bqd7Dj8dupZD3YQTMWgG4AP5361_0h5vicI69LNb25JdQB8wn6fkvtLw2f.rLrRcQTSO1OCyRNu%3FstartTime%3D1744124229000).
 
 ## Key Features
 * [Batch Scheduling](docs/batch/README.md): Ensure all pods in a group are scheduled simultaneously or not at all.
@@ -21,6 +31,9 @@ It can run alongside other schedulers installed on the cluster.
 * Dynamic Resource Allocation (DRA): Support vendor-specific hardware resources through Kubernetes ResourceClaims (e.g., GPUs from NVIDIA or AMD).
 * [GPU Sharing](docs/gpu-sharing/README.md): Allow multiple workloads to efficiently share single or multiple GPUs, maximizing resource utilization.
 * Cloud & On-premise Support: Fully compatible with dynamic cloud infrastructures (including auto-scalers like Karpenter) as well as static on-premise deployments.
+
+> [!NOTE]
+> KAI Scheduler is built based on [kube-batch](https://github.com/kubernetes-sigs/kube-batch).
 
 ## Prerequisites
 Before installing KAI Scheduler, ensure you have:
@@ -64,15 +77,15 @@ To start scheduling workloads with KAI Scheduler, please continue to [Quick Star
 ## Roadmap
 
 ### High-level overview of the main priorities for 2025
-* Refactor the codebase to enhance vendor neutrality
+* Refactor the codebase to enhance vendor neutrality https://github.com/NVIDIA/KAI-Scheduler/issues/134
 * Support Scheduling Gates https://github.com/NVIDIA/KAI-Scheduler/issues/63
 * Research on possible integration with Kueue https://github.com/NVIDIA/KAI-Scheduler/issues/68
 * Add Topology Aware Scheduling support of pod-group https://github.com/NVIDIA/KAI-Scheduler/issues/66
-* Support Min Run Time per workloads
+* Support Min Run Time per workloads https://github.com/NVIDIA/KAI-Scheduler/issues/136
 * Support Max Run Time per workload (with delayed requeue)
 * Add more PriorityClasses as part of the default KAI install
 * Support JobSet
-* Support LWS (LeaderWorkerSet)
+* Support LWS (LeaderWorkerSet) https://github.com/NVIDIA/KAI-Scheduler/issues/124
 * Add metrics for pod and pod-group preemptions
 * Decouple Priority and Preemption
 

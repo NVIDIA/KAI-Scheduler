@@ -55,8 +55,8 @@ type Configs struct {
 	PodLabelSelector       map[string]string
 	NamespaceLabelSelector map[string]string
 
-	DefaultPrioritiesConfigMapName      string
-	DefaultPrioritiesConfigMapNamespace string
+	DefaultConfigPerTypeConfigMapName      string
+	DefaultConfigPerTypeConfigMapNamespace string
 }
 
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch

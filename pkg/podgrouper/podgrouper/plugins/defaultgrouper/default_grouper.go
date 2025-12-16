@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
@@ -33,9 +34,10 @@ type DefaultGrouper struct {
 	queueLabelKey    string
 	nodePoolLabelKey string
 
-	defaultPrioritiesConfigMapName      string
-	defaultPrioritiesConfigMapNamespace string
-	kubeReader                          client.Reader
+	// default config per type - includes the default priority class name and preemptibility per workload type
+	defaultConfigPerTypeConfigMapName      string
+	defaultConfigPerTypeConfigMapNamespace string
+	kubeReader                             client.Reader
 }
 
 func NewDefaultGrouper(queueLabelKey, nodePoolLabelKey string, kubeReader client.Reader) *DefaultGrouper {
@@ -46,9 +48,9 @@ func NewDefaultGrouper(queueLabelKey, nodePoolLabelKey string, kubeReader client
 	}
 }
 
-func (dg *DefaultGrouper) SetDefaultPrioritiesConfigMapParams(defaultPrioritiesConfigMapName, defaultPrioritiesConfigMapNamespace string) {
-	dg.defaultPrioritiesConfigMapName = defaultPrioritiesConfigMapName
-	dg.defaultPrioritiesConfigMapNamespace = defaultPrioritiesConfigMapNamespace
+func (dg *DefaultGrouper) SetDefaultConfigPerTypeConfigMapParams(defaultConfigPerTypeConfigMapName, defaultConfigPerTypeConfigMapNamespace string) {
+	dg.defaultConfigPerTypeConfigMapName = defaultConfigPerTypeConfigMapName
+	dg.defaultConfigPerTypeConfigMapNamespace = defaultConfigPerTypeConfigMapNamespace
 }
 
 func (dg *DefaultGrouper) Name() string {
@@ -56,6 +58,9 @@ func (dg *DefaultGrouper) Name() string {
 }
 
 func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
+	priorityClassName, defaults := dg.calcPriorityClassWithDefaults(topOwner, pod, constants.TrainPriorityClass)
+	preemptibility := dg.calcPodGroupPreemptibilityWithDefaults(topOwner, pod, defaults)
+
 	podGroupMetadata := podgroup.Metadata{
 		Owner: metav1.OwnerReference{
 			APIVersion: topOwner.GetAPIVersion(),
@@ -68,8 +73,8 @@ func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructure
 		Annotations:       dg.CalcPodGroupAnnotations(topOwner, pod),
 		Labels:            dg.CalcPodGroupLabels(topOwner, pod),
 		Queue:             dg.CalcPodGroupQueue(topOwner, pod),
-		PriorityClassName: dg.CalcPodGroupPriorityClass(topOwner, pod, constants.TrainPriorityClass),
-		Preemptibility:    dg.calcPodGroupPreemptibility(topOwner, pod),
+		PriorityClassName: priorityClassName,
+		Preemptibility:    preemptibility,
 		MinAvailable:      1,
 	}
 
@@ -157,42 +162,80 @@ func (dg *DefaultGrouper) calculateQueueName(topOwner *unstructured.Unstructured
 
 func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstructured, pod *v1.Pod,
 	defaultPriorityClassForJob string) string {
+	priorityClassName, _ := dg.calcPriorityClassWithDefaults(topOwner, pod, defaultPriorityClassForJob)
+	return priorityClassName
+}
+
+// calcPriorityClassWithDefaults - resolves priority class using:
+// 1) explicit labels (top owner/pod), if valid
+// 2) defaults from ConfigMap (returned to allow reuse by caller)
+// 3) final fallback to defaultPriorityClassForJob
+// Returns the resolved priority class name and the defaults mapping used (if any).
+func (dg *DefaultGrouper) calcPriorityClassWithDefaults(topOwner *unstructured.Unstructured, pod *v1.Pod,
+	defaultPriorityClassForJob string) (string, map[string]workloadTypePriorityConfig) {
 	priorityClassName := dg.calcPodGroupPriorityClass(topOwner, pod)
 	if dg.validatePriorityClassExists(priorityClassName) {
-		return priorityClassName
+		return priorityClassName, nil
 	}
-
 	if priorityClassName != "" {
 		logger.V(1).Info("priorityClassName from pod or owner labels is not valid, falling back to default",
 			"priorityClassName", priorityClassName, "topOwner", topOwner.GetName(), "pod", pod.GetName())
 	}
 
 	groupKind := topOwner.GroupVersionKind().GroupKind()
-	priorityClassName = dg.getDefaultPriorityClassNameForKind(&groupKind)
-	if dg.validatePriorityClassExists(priorityClassName) {
-		return priorityClassName
+	defaultConfigs, err := dg.getDefaultConfigsPerTypeMapping()
+	if err == nil {
+		priorityClassName = dg.getDefaultPriorityClassNameForKind(&groupKind, defaultConfigs)
+		if dg.validatePriorityClassExists(priorityClassName) {
+			return priorityClassName, defaultConfigs
+		}
+	} else {
+		logger.Error(err, "Unable to get default values mapping for priority class", "topOwner", topOwner.GetName(), "pod", pod.GetName())
 	}
 
 	logger.V(1).Info("No default priority class found for group kind, using default fallback",
 		"groupKind", groupKind.String(), "defaultFallback", defaultPriorityClassForJob)
-	return defaultPriorityClassForJob
+	return defaultPriorityClassForJob, defaultConfigs
 }
 
-func (dg *DefaultGrouper) calcPodGroupPreemptibility(topOwner *unstructured.Unstructured, pod *v1.Pod) v2alpha2.Preemptibility {
-	if preemptibility, found := topOwner.GetLabels()[constants.PreemptibilityLabelKey]; found {
-		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibility); err == nil {
+func (dg *DefaultGrouper) calcPodGroupPreemptibilityWithDefaults(
+	topOwner *unstructured.Unstructured,
+	pod *v1.Pod,
+	defaults map[string]workloadTypePriorityConfig) v2alpha2.Preemptibility {
+	if preemptibilityStr, found := topOwner.GetLabels()[constants.PreemptibilityLabelKey]; found {
+		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibilityStr); err == nil {
 			return preemptibility
 		} else {
 			logger.Error(err, "Invalid preemptibility label found on top owner", "topOwner", topOwner.GetName())
 		}
-	} else if preemptibility, found = pod.GetLabels()[constants.PreemptibilityLabelKey]; found {
-		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibility); err == nil {
+	} else if preemptibilityStr, found = pod.GetLabels()[constants.PreemptibilityLabelKey]; found {
+		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibilityStr); err == nil {
 			return preemptibility
+		} else {
+			logger.Error(err, "Invalid preemptibility label found on pod", "pod", pod.GetName())
 		}
 	}
 
-	logger.V(1).Info("No valid preemptibility label found", "topOwner", topOwner.GetName(), "pod", pod.GetName())
+	if defaults == nil || len(defaults) == 0 {
+		var err error
+		defaults, err = dg.getDefaultConfigsPerTypeMapping()
+		if err != nil {
+			logger.Error(err, "Unable to get default values mapping for preemptibility", "topOwner", topOwner.GetName(), "pod", pod.GetName())
+			return ""
+		}
+	}
 
+	groupKind := topOwner.GroupVersionKind().GroupKind()
+	defaultConfig, found := selectDefaultsForKind(defaults, &groupKind)
+	if found && defaultConfig.Preemptibility != "" {
+		if preemptibility, err := v2alpha2.ParsePreemptibility(strings.ToLower(defaultConfig.Preemptibility)); err == nil {
+			return preemptibility
+		} else {
+			logger.Error(err, "Invalid preemptibility found in defaults configmap")
+		}
+	}
+
+	logger.V(1).Info("No valid preemptibility label or default found", "topOwner", topOwner.GetName(), "pod", pod.GetName())
 	return ""
 }
 
@@ -221,73 +264,67 @@ func (dg *DefaultGrouper) validatePriorityClassExists(priorityClassName string) 
 	return true
 }
 
-// getDefaultPriorityClassNameForKind - returns the default priority class name for a given group kind.
-func (dg *DefaultGrouper) getDefaultPriorityClassNameForKind(groupKind *schema.GroupKind) string {
+// getDefaultPriorityClassNameForKind - returns the default priority class name for a given group kind
+func (dg *DefaultGrouper) getDefaultPriorityClassNameForKind(groupKind *schema.GroupKind, defaultConfigs map[string]workloadTypePriorityConfig) string {
+	if defaultConfigs == nil || len(defaultConfigs) == 0 {
+		logger.V(3).Info("Unable to get default priority class name: defaults mapping is empty, using default priority class fallback")
+		return ""
+	}
+
 	if groupKind == nil || groupKind.String() == "" || groupKind.Kind == "" {
 		logger.V(3).Info("Unable to get default priority class name: GroupKind is empty, using default priority class fallback")
 		return ""
 	}
 
-	defaultPriorities, err := dg.getDefaultPrioritiesPerTypeMapping()
-	if err != nil {
-		logger.V(1).Error(err, "Unable to get default priorities mapping")
-		return ""
-	}
-
-	// Check if the groupKind is in the default priorities map.
-	// It could be defined by its full name (e.g., "Deployment.apps") or just the kind (e.g., "Deployment").
-	// This is to support the cases where we have two different group versions for the same kind.
-
-	if priorityClassName, found := defaultPriorities[groupKind.String()]; found {
-		return priorityClassName
-	}
-	if priorityClassName, found := defaultPriorities[groupKind.Kind]; found {
-		return priorityClassName
+	defaultConfig, found := selectDefaultsForKind(defaultConfigs, groupKind)
+	if found {
+		return defaultConfig.PriorityName
 	}
 
 	return ""
 }
 
-// getDefaultPrioritiesPerTypeMapping - returns a map of workload groupKind to default priority class name.
-// It fetches the default priorities from a ConfigMap if configured, otherwise returns an empty map.
-func (dg *DefaultGrouper) getDefaultPrioritiesPerTypeMapping() (map[string]string, error) {
-	if dg.defaultPrioritiesConfigMapName == "" || dg.defaultPrioritiesConfigMapNamespace == "" ||
+// getDefaultConfigsPerTypeMapping - returns a map of workload groupKind to default workload-type config (priorityClassName and preemptibility).
+// It fetches the defaults from a ConfigMap if configured, otherwise returns an empty map.
+func (dg *DefaultGrouper) getDefaultConfigsPerTypeMapping() (map[string]workloadTypePriorityConfig, error) {
+	if dg.defaultConfigPerTypeConfigMapName == "" || dg.defaultConfigPerTypeConfigMapNamespace == "" ||
 		dg.kubeReader == nil {
-		return map[string]string{}, nil
+		return map[string]workloadTypePriorityConfig{}, nil
 	}
 
 	configMap := &v1.ConfigMap{}
 	err := dg.kubeReader.Get(context.Background(), client.ObjectKey{
-		Name:      dg.defaultPrioritiesConfigMapName,
-		Namespace: dg.defaultPrioritiesConfigMapNamespace,
+		Name:      dg.defaultConfigPerTypeConfigMapName,
+		Namespace: dg.defaultConfigPerTypeConfigMapNamespace,
 	}, configMap)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get default priorities configmap: %w", err)
+		return nil, fmt.Errorf("failed to get default configs per type configmap: %w", err)
 	}
 
-	return parseConfigMapDataToDefaultPriorities(configMap)
+	return parseConfigMapDataToDefaultConfigs(configMap)
 }
 
 // workloadTypePriorityConfig - an internal struct type
 // to be able to json-parse the configmap data.
 type workloadTypePriorityConfig struct {
-	TypeName     string `json:"typeName"`
-	Group        string `json:"group"`
-	PriorityName string `json:"priorityName"`
+	TypeName       string `json:"typeName"`
+	Group          string `json:"group"`
+	PriorityName   string `json:"priorityName"`
+	Preemptibility string `json:"preemptibility"`
 }
 
-// prioritiesConfigListToMapping - returns a map of type name -> default priority class name
-func prioritiesConfigListToMapping(configs *[]workloadTypePriorityConfig) map[string]string {
-	res := map[string]string{}
+// configsToMapPerGroupKind - returns a map of groupKind -> default workload-type config
+func configsToMapPerGroupKind(configs *[]workloadTypePriorityConfig) map[string]workloadTypePriorityConfig {
+	res := map[string]workloadTypePriorityConfig{}
 	for _, config := range *configs {
 		groupKind := schema.GroupKind{Group: config.Group, Kind: config.TypeName}.String()
-		res[groupKind] = config.PriorityName
+		res[groupKind] = config
 	}
 	return res
 }
 
-// parseConfigMapDataToDefaultPriorities - parses the data from the ConfigMap.
-func parseConfigMapDataToDefaultPriorities(cm *v1.ConfigMap) (map[string]string, error) {
+// parseConfigMapDataToDefaultConfigs - parses the data from the ConfigMap and returns it as a map of groupKind -> default config.
+func parseConfigMapDataToDefaultConfigs(cm *v1.ConfigMap) (map[string]workloadTypePriorityConfig, error) {
 	if cm == nil || cm.Data == nil {
 		return nil, fmt.Errorf("default priorities configmap is empty, cannot parse default priorities")
 	}
@@ -302,5 +339,24 @@ func parseConfigMapDataToDefaultPriorities(cm *v1.ConfigMap) (map[string]string,
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal default priorities configmap data: %s", err.Error())
 	}
-	return prioritiesConfigListToMapping(&configs), nil
+	return configsToMapPerGroupKind(&configs), nil
+}
+
+// selectDefaultsForKind - returns defaults for a given group kind from a combined defaults mapping
+func selectDefaultsForKind(defaults map[string]workloadTypePriorityConfig, groupKind *schema.GroupKind) (workloadTypePriorityConfig, bool) {
+	if defaults == nil || len(defaults) == 0 || groupKind == nil || groupKind.String() == "" {
+		return workloadTypePriorityConfig{}, false
+	}
+
+	// Check if the groupKind is in the default configs map.
+	// It could be defined by its full name (e.g., "Deployment.apps") or just the kind (e.g., "Deployment").
+	// This is to support the cases where we have two different group versions for the same kind.
+
+	if defaultConfig, found := defaults[groupKind.String()]; found {
+		return defaultConfig, true
+	}
+	if defaultConfig, found := defaults[groupKind.Kind]; found {
+		return defaultConfig, true
+	}
+	return workloadTypePriorityConfig{}, false
 }

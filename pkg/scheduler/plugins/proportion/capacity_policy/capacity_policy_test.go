@@ -75,7 +75,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.Preemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -138,7 +138,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Name:         "job-a",
 						Namespace:    "team-a",
 						Queue:        "leaf-queue",
-						JobFitErrors: make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors: make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -226,7 +226,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.NonPreemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -293,7 +293,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.NonPreemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -384,7 +384,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.NonPreemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -451,7 +451,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.NonPreemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -543,7 +543,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.NonPreemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -613,7 +613,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.NonPreemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -683,7 +683,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.Preemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -753,7 +753,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.Preemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -826,7 +826,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.NonPreemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -899,7 +899,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.NonPreemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -972,7 +972,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.Preemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
@@ -1045,7 +1045,7 @@ var _ = Describe("Capacity Policy Check", func() {
 						Namespace:      "team-a",
 						Queue:          "leaf-queue",
 						Preemptibility: v2alpha2.Preemptible,
-						JobFitErrors:   make(v2alpha2.UnschedulableExplanations, 0),
+						JobFitErrors:   make([]common_info.JobFitError, 0),
 						PodSets: map[string]*subgroup_info.PodSet{
 							podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
 								WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
