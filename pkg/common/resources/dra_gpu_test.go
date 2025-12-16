@@ -235,8 +235,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
-				Expect(err).NotTo(HaveOccurred())
+				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
 				Expect(result).To(BeEmpty())
 			})
 		})
@@ -280,8 +279,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
-				Expect(err).NotTo(HaveOccurred())
+				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
 				gpuQuantity, exists := result[constants.GpuResource]
 				Expect(exists).To(BeTrue(), "result should contain GPU resource")
 				Expect(gpuQuantity.Value()).To(Equal(int64(2)))
@@ -350,8 +348,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
-				Expect(err).NotTo(HaveOccurred())
+				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
 				gpuQuantity, exists := result[constants.GpuResource]
 				Expect(exists).To(BeTrue(), "result should contain GPU resource")
 				Expect(gpuQuantity.Value()).To(Equal(int64(5)))
@@ -403,8 +400,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
-				Expect(err).NotTo(HaveOccurred())
+				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
 				gpuQuantity, exists := result[constants.GpuResource]
 				Expect(exists).To(BeTrue(), "result should contain GPU resource")
 				Expect(gpuQuantity.Value()).To(Equal(int64(1)))
@@ -428,8 +424,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
-				Expect(err).NotTo(HaveOccurred())
+				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
 				Expect(result).To(BeEmpty())
 			})
 
@@ -452,8 +447,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
-				Expect(err).NotTo(HaveOccurred())
+				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
 				Expect(result).To(BeEmpty())
 			})
 		})
@@ -497,8 +491,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
-				Expect(err).NotTo(HaveOccurred())
+				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
 				Expect(result).To(BeEmpty())
 			})
 
@@ -565,8 +558,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
-				Expect(err).NotTo(HaveOccurred())
+				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
 				gpuQuantity, exists := result[constants.GpuResource]
 				Expect(exists).To(BeTrue(), "result should contain GPU resource")
 				Expect(gpuQuantity.Value()).To(Equal(int64(2)))
@@ -636,8 +628,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				result, err := ExtractDRAGPUResources(ctx, pod, fakeClient)
-				Expect(err).NotTo(HaveOccurred())
+				result := ExtractDRAGPUResources(ctx, pod, fakeClient)
 				gpuQuantity, exists := result[constants.GpuResource]
 				Expect(exists).To(BeTrue(), "result should contain GPU resource")
 				// ExactCount: 2, All: 1 (conservative estimate) = 3 total
