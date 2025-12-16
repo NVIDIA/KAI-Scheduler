@@ -23,6 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Disclaimer: This Topology CRD was derived from Kueue's Topology CRD structure.
+
 // +genclient
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
@@ -30,7 +32,6 @@ import (
 // +kubebuilder:resource:scope=Cluster
 
 // Topology is the Schema for the topology API
-// Disclaimer: This Topology CRD was derived from Kueue's Topology CRD structure.
 type Topology struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
