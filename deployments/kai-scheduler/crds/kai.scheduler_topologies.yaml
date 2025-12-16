@@ -38,9 +38,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: |-
-          Topology is the Schema for the topology API
-          Disclaimer: This Topology CRD was derived from Kueue's Topology CRD structure.
+        description: Topology is the Schema for the topology API
         properties:
           apiVersion:
             description: |-
