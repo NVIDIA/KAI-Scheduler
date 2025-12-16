@@ -9,7 +9,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	"github.com/samber/lo"
 )
 
 const (
@@ -26,7 +25,6 @@ type topologyPlugin struct {
 
 	// Defines order among nodes in a sub-group based on the sub-group's preferred level topology constraint.
 	subGroupNodeScores map[subgroupName]map[string]float64
-	nodeSetToDomain    map[topologyName]map[nodeSetID]*DomainInfo
 	session            *framework.Session
 }
 
@@ -34,7 +32,6 @@ func New(_ framework.PluginArguments) framework.Plugin {
 	return &topologyPlugin{
 		TopologyTrees:      map[topologyName]*Info{},
 		subGroupNodeScores: map[subgroupName]map[string]float64{},
-		nodeSetToDomain:    map[topologyName]map[nodeSetID]*DomainInfo{},
 		session:            nil,
 	}
 }
@@ -74,29 +71,12 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 		}
 
 		t.TopologyTrees[topology.Name] = topologyTree
-
-		t.buildNodeSetToDomainMapping(topology.Name, topologyTree)
 	}
-}
-
-func (t *topologyPlugin) buildNodeSetToDomainMapping(topologyName topologyName, topologyTree *Info) {
-	t.nodeSetToDomain[topologyName] = map[nodeSetID]*DomainInfo{}
-	domains := []*DomainInfo{}
-	for _, levelDomains := range topologyTree.DomainsByLevel {
-		for _, domain := range levelDomains {
-			domains = append(domains, domain)
-		}
-	}
-	for _, domain := range domains {
-		t.nodeSetToDomain[topologyName][getNodeSetID(lo.Values(domain.Nodes))] = domain
-	}
-
-	t.nodeSetToDomain[topologyName][getNodeSetID(lo.Values(t.session.Nodes))] = topologyTree.DomainsByLevel[rootLevel][rootDomainId]
 }
 
 func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
 	// Validate that the node is part of the topology
-	if !isNodePartOfTopology(nodeInfo, topology) {
+	if !IsNodePartOfTopology(nodeInfo, topology.Spec.Levels) {
 		return
 	}
 
@@ -127,16 +107,6 @@ func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueue
 
 	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddChild(nodeContainingChildDomain)
 	topologyTree.DomainsByLevel[rootLevel][rootDomainId].AddNode(nodeInfo)
-}
-
-// For a given node to be part of the topology correctly, it must have a label for each level of the topology
-func isNodePartOfTopology(nodeInfo *node_info.NodeInfo, singleTopology *kueuev1alpha1.Topology) bool {
-	for _, level := range singleTopology.Spec.Levels {
-		if _, found := nodeInfo.Node.Labels[level.NodeLabel]; !found {
-			return false
-		}
-	}
-	return true
 }
 
 func (t *topologyPlugin) OnSessionClose(_ *framework.Session) {}

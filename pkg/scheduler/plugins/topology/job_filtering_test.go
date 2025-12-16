@@ -8,7 +8,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
@@ -66,11 +65,19 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					CPUMillis:  1000,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+						"rack": "rack1",
+					},
 				},
 				"node-2": {
 					CPUMillis:  400,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+						"rack": "rack2",
+					},
 				},
 			},
 			nodesToDomains: map[string]DomainID{
@@ -283,11 +290,19 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					CPUMillis:  2000,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"rack": "rack1",
+						"zone": "zone1",
+					},
 				},
 				"node-2": {
 					CPUMillis:  2000,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"rack": "rack2",
+						"zone": "zone1",
+					},
 				},
 			},
 			nodesToDomains: map[string]DomainID{
@@ -462,26 +477,12 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				}
 			}
 
-			// Setup nodeSetToDomain mapping
-			nodeSetToDomain := map[topologyName]map[nodeSetID]*DomainInfo{}
-			nodeSetToDomain[topologyTree.Name] = map[nodeSetID]*DomainInfo{}
-			domains := []*DomainInfo{}
-			for _, levelDomains := range topologyTree.DomainsByLevel {
-				for _, domain := range levelDomains {
-					domains = append(domains, domain)
-				}
-			}
-			for _, domain := range domains {
-				nodeSetToDomain[topologyTree.Name][getNodeSetID(lo.Values(domain.Nodes))] = domain
-			}
-
 			// Setup plugin
 			plugin := &topologyPlugin{
 				TopologyTrees: map[string]*Info{
 					"test-topology": topologyTree,
 				},
 				subGroupNodeScores: map[subgroupName]map[string]float64{},
-				nodeSetToDomain:    nodeSetToDomain,
 			}
 
 			// Call the function under test

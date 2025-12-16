@@ -46,22 +46,23 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{nodeSet}, nil
 	}
 
-	nodeSetDomain, ok := t.nodeSetToDomain[topologyTree.Name][getNodeSetID(nodeSet)]
+	id, level, validNodes := LowestCommonDomainID(nodeSet, topologyTree.TopologyResource.Spec.Levels)
+	domain, ok := topologyTree.DomainsByLevel[level][id]
 	if !ok {
 		return nil, fmt.Errorf("domain not found for node set in topology %s", topologyTree.Name)
 	}
 
 	t.treeAllocatableCleanup(topologyTree)
-	calcSubTreeFreeResources(nodeSetDomain)
+	calcSubTreeFreeResources(domain)
 	if useRepresentorPodsAccounting(tasks) {
-		if err := t.calcTreeAllocatable(tasks, nodeSetDomain); err != nil {
+		if err := t.calcTreeAllocatable(tasks, domain); err != nil {
 			return nil, err
 		}
 	}
 
 	tasksResources, tasksCount := getTasksAllocationMetadata(tasks)
 
-	if !isJobAllocatableOnDomain(tasksResources, tasksCount, nodeSetDomain) {
+	if !isJobAllocatableOnDomain(tasksResources, tasksCount, domain) {
 		job.SetJobFitError(
 			podgroup_info.PodSchedulingErrors,
 			fmt.Sprintf("No relevant domains found for workload in topology tree: %s", topologyTree.Name),
@@ -76,9 +77,9 @@ func (t *topologyPlugin) subSetNodesFn(
 	if maxDepthLevel == "" {
 		maxDepthLevel = requiredLevel
 	}
-	sortTreeFromRoot(tasks, nodeSetDomain, maxDepthLevel)
+	sortTreeFromRoot(tasks, domain, maxDepthLevel)
 	if preferredLevel != "" {
-		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(nodeSetDomain, preferredLevel)
+		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(domain, preferredLevel)
 	}
 
 	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroup, podSets, tasksResources, tasksCount, topologyTree)
@@ -92,6 +93,9 @@ func (t *topologyPlugin) subSetNodesFn(
 	for _, jobAllocatableDomain := range jobAllocatableDomains {
 		var domainNodeSet node_info.NodeSet
 		for _, node := range jobAllocatableDomain.Nodes {
+			if _, ok := validNodes[node.Name]; !ok {
+				continue
+			}
 			domainNodeSet = append(domainNodeSet, node)
 		}
 		domainNodeSets = append(domainNodeSets, domainNodeSet)
