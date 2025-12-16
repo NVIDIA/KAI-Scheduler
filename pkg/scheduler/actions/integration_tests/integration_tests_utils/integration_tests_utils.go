@@ -50,11 +50,25 @@ func RunTests(t *testing.T, testsMetadata []TestTopologyMetadata) {
 
 func RunTest(t *testing.T, testMetadata TestTopologyMetadata, testNumber int, controller *Controller) {
 	t.Logf("Running test number: %v, test name: %v", testNumber, testMetadata.TestTopologyBasic.Name)
-	ssn := test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
+	var ssn *framework.Session
 
 	runRoundsUntilMatch(testMetadata, controller, &ssn)
+	ssn = prepareSessionForMatch(ssn, testMetadata, controller)
 	test_utils.MatchExpectedAndRealTasks(t, testNumber, testMetadata.TestTopologyBasic, ssn)
 	runRoundsAfterAndMatch(t, testMetadata, controller, ssn, testNumber)
+}
+
+// prepare session for match by rebuilding the session while preserving the podgroup errors
+func prepareSessionForMatch(ssn *framework.Session, testMetadata TestTopologyMetadata, controller *Controller) *framework.Session {
+	jobFitErrors := make(map[string][]common_info.JobFitError)
+	for jobId, job := range ssn.PodGroupInfos {
+		jobFitErrors[string(jobId)] = job.JobFitErrors
+	}
+	ssn = test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
+	for jobId, job := range ssn.PodGroupInfos {
+		job.JobFitErrors = jobFitErrors[string(jobId)]
+	}
+	return ssn
 }
 
 func runRoundsAfterAndMatch(t *testing.T, testMetadata TestTopologyMetadata, controller *Controller, ssn *framework.Session, testNumber int) {
@@ -80,6 +94,7 @@ func runRoundsUntilMatch(testMetadata TestTopologyMetadata, controller *Controll
 }
 
 func runSchedulerOneRound(testMetadata *TestTopologyMetadata, controller *Controller, ssn **framework.Session) {
+	*ssn = test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
 	for _, action := range schedulerActions {
 		log.InfraLogger.SetAction(string(action.Name()))
 		action.Execute(*ssn)
@@ -118,8 +133,6 @@ func runSchedulerOneRound(testMetadata *TestTopologyMetadata, controller *Contro
 
 		}
 	}
-
-	*ssn = test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
 }
 
 func SetSchedulerActions() {

@@ -462,7 +462,7 @@ type allocatableTestData struct {
 	expectedMessageContains []string
 	expectOverheadMessage   bool
 }
-type allocatableTestFunction func(ni *NodeInfo, task *pod_info.PodInfo) (bool, *common_info.FitError)
+type allocatableTestFunction func(ni *NodeInfo, task *pod_info.PodInfo) (bool, *common_info.TasksFitError)
 
 func TestIsTaskAllocatable(t *testing.T) {
 	nodeCapacityDifferent := common_info.BuildNode("n2", common_info.BuildResourceList("1000m", "1G"))
@@ -575,7 +575,7 @@ func TestIsTaskAllocatable(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			runAllocatableTest(
 				t, testData, testName,
-				func(ni *NodeInfo, task *pod_info.PodInfo) (bool, *common_info.FitError) {
+				func(ni *NodeInfo, task *pod_info.PodInfo) (bool, *common_info.TasksFitError) {
 					return ni.IsTaskAllocatable(task), ni.FittingError(task, false)
 				},
 			)
@@ -611,7 +611,7 @@ func TestIsTaskAllocatableOnReleasingOrIdle(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			runAllocatableTest(
 				t, testData, testName,
-				func(ni *NodeInfo, task *pod_info.PodInfo) (bool, *common_info.FitError) {
+				func(ni *NodeInfo, task *pod_info.PodInfo) (bool, *common_info.TasksFitError) {
 					return ni.IsTaskAllocatableOnReleasingOrIdle(task), nil
 				},
 			)
