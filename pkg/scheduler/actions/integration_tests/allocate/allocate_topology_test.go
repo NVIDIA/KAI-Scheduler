@@ -6,8 +6,8 @@ package allocate_test
 import (
 	"testing"
 
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -29,13 +29,13 @@ func getTopologyAllocateTestsMetadata() []integration_tests_utils.TestTopologyMe
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Multi-level topology - pack job in single rack with preferred level",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "datacenter-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "topology.kubernetes.io/zone",
 								},
@@ -118,13 +118,13 @@ func getTopologyAllocateTestsMetadata() []integration_tests_utils.TestTopologyMe
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Topology packing - prefer domains with existing allocations",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "rack-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "topology.kubernetes.io/rack",
 								},
@@ -215,13 +215,13 @@ func getTopologyAllocateTestsMetadata() []integration_tests_utils.TestTopologyMe
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Topology constraint - job cannot fit in single domain, stays pending",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "rack-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "topology.kubernetes.io/rack",
 								},
@@ -295,13 +295,13 @@ func getTopologyAllocateTestsMetadata() []integration_tests_utils.TestTopologyMe
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Three-level topology - allocate with required and preferred constraints",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "complex-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "topology.kubernetes.io/region",
 								},
@@ -401,13 +401,13 @@ func getTopologyAllocateTestsMetadata() []integration_tests_utils.TestTopologyMe
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Topology with partial allocation - one rack full, allocate remaining in another",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "rack-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "topology.kubernetes.io/rack",
 								},
@@ -511,13 +511,13 @@ func getTopologyAllocateTestsMetadata() []integration_tests_utils.TestTopologyMe
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Preferred topology only - still allocates when preferred level cannot be satisfied",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "rack-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "topology.kubernetes.io/rack",
 								},
@@ -618,13 +618,13 @@ func getTopologyAllocateTestsMetadata() []integration_tests_utils.TestTopologyMe
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Topology with CPU constraints - allocate within topology domain respecting CPU limits",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "rack-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "topology.kubernetes.io/rack",
 								},
@@ -695,13 +695,13 @@ func getTopologyAllocateTestsMetadata() []integration_tests_utils.TestTopologyMe
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Topology constraint failure - sufficient cluster resources but fragmented across domains",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "rack-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "topology.kubernetes.io/rack",
 								},

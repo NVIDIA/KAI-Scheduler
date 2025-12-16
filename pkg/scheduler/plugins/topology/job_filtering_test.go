@@ -1495,9 +1495,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
 						},
