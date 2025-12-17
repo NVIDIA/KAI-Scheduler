@@ -288,13 +288,19 @@ func (su *defaultStatusUpdater) markPodGroupUnschedulable(job *podgroup_info.Pod
 		// Don't update podgroup condition if there are any allocated pods (RUN-20673)
 		return false
 	}
+
+	unschedulableExplanations := make([]enginev2alpha2.UnschedulableExplanation, 0, len(job.JobFitErrors))
+	for _, jobFitError := range job.JobFitErrors {
+		unschedulableExplanations = append(unschedulableExplanations, jobFitError.ToUnschedulableExplanation())
+	}
+
 	return su.updatePodGroupSchedulingCondition(job.PodGroup, &enginev2alpha2.SchedulingCondition{
 		Type:     enginev2alpha2.UnschedulableOnNodePool,
 		NodePool: utils.GetNodePoolNameFromLabels(job.PodGroup.Labels, su.nodePoolLabelKey),
 		Reason:   enginev2alpha2.PodGroupReasonUnschedulable,
 		Message:  message,
 		Status:   v1.ConditionTrue,
-		Reasons:  job.JobFitErrors,
+		Reasons:  unschedulableExplanations,
 	})
 }
 
@@ -332,7 +338,7 @@ func (su *defaultStatusUpdater) recordUnschedulablePodsEvents(job *podgroup_info
 	var errs []error
 	for _, taskInfo := range job.PodStatusIndex[pod_status.Pending] {
 		msg := common_info.DefaultPodError
-		fitError := job.NodesFitErrors[taskInfo.UID]
+		fitError := job.TasksFitErrors[taskInfo.UID]
 		if fitError != nil {
 			msg = fitError.Error()
 
@@ -342,7 +348,7 @@ func (su *defaultStatusUpdater) recordUnschedulablePodsEvents(job *podgroup_info
 				log.InfraLogger.V(6).Infof("Full fit error: %s", fitError.DetailedError())
 			}
 		} else if len(job.JobFitErrors) > 0 {
-			msg = fmt.Sprintf("%s", job.JobFitErrors)
+			msg = fmt.Sprintf("%s", common_info.JobFitErrorsToMessage(job.JobFitErrors))
 		}
 
 		msg = su.addNodePoolPrefixIfNeeded(job, msg)
@@ -377,10 +383,16 @@ func (su *defaultStatusUpdater) updatePodGroupAnnotations(job *podgroup_info.Pod
 }
 
 func (su *defaultStatusUpdater) recordUnschedulablePodGroup(job *podgroup_info.PodGroupInfo) bool {
-	msg := common_info.DefaultPodgroupError
+	var msg string
+	msg = common_info.JobFitErrorsToMessage(job.JobFitErrors)
+	if su.detailedFitErrors {
+		msg = common_info.JobFitErrorsToDetailedMessage(job.JobFitErrors)
+	} else {
+		log.InfraLogger.V(6).Infof("Full job fit error: %s", common_info.JobFitErrorsToDetailedMessage(job.JobFitErrors))
+	}
 
-	if len(job.JobFitErrors) > 0 {
-		msg = fmt.Sprintf("%s", job.JobFitErrors)
+	if len(msg) == 0 {
+		msg = string(common_info.DefaultPodgroupError)
 	}
 
 	msg = su.addNodePoolPrefixIfNeeded(job, msg)

@@ -69,6 +69,8 @@ When `gpu-operator` <v25.10.0 is installed, the following flag should be added t
 ```
 
 ## Support & Breaking changes
+For details on our release lifecycle, LTS versions, and supported releases, see the [Support Policy](SUPPORT.md).
+
 Refer to the [Breaking Changes](https://github.com/NVIDIA/KAI-Scheduler/blob/main/docs/migrationguides/README.md) doc for more info
 
 ## Quick Start

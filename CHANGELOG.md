@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Added support for having the default "preemptibility" per top-owner-type read from the default configs configmap in the pod-grouper
 - Added option to profile CPU when running the snapshot tool [#726](https://github.com/NVIDIA/KAI-Scheduler/pull/726) [itsomri](https://github.com/itsomri)
+- GPU resource bookkeeping for DRA enabled resources
 - Add a "tumbling window" usage configuration - calculate a tumbling window size based on a start timne configuration and a duration config field.
 
 ### Fixed

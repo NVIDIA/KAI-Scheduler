@@ -205,7 +205,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					},
 				}
 			},
-			expectedJobFitError: "Matching topology nonexistent-topology does not exist",
+			expectedJobFitError: "Requested topology nonexistent-topology does not exist",
 		},
 		{
 			name: "insufficient allocatable pods - no domains found",
@@ -259,7 +259,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 
 				return tree
 			},
-			expectedError: "",
+			expectedJobFitError: "topology test-topology, requirement  couldn't be satisfied for job </test-job>: not enough resources in zone1 to allocate the job",
 		},
 		{
 			name: "successful allocation with mixed GPU tasks - usePodCountAccounting returns false",
@@ -505,8 +505,8 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				if len(job.JobFitErrors) == 0 {
 					t.Errorf("expected job fit error '%s', but got nil", tt.expectedJobFitError)
 				}
-				if job.JobFitErrors[0].Message != tt.expectedJobFitError {
-					t.Errorf("expected job fit error '%s', but got '%s'", tt.expectedJobFitError, job.JobFitErrors[0].Message)
+				if job.JobFitErrors[0].Messages()[0] != tt.expectedJobFitError {
+					t.Errorf("expected job fit error '%s', but got '%s'", tt.expectedJobFitError, job.JobFitErrors[0].Messages()[0])
 				}
 			}
 
@@ -1346,6 +1346,7 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 		taskOrderFunc      common_info.LessFn
 		expectedDomains    []*DomainInfo
 		expectedError      string
+		expectedFitErrors  []common_info.JobFitError
 	}{
 		{
 			name: "return multi domain",
@@ -1459,7 +1460,119 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
 			},
 			expectedDomains: []*DomainInfo{},
-			expectedError:   "no domains found for the job <test-namespace/test-job>, workload topology name: test-topology",
+			expectedFitErrors: []common_info.JobFitError{
+				common_info.NewTopologyFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					"zone1",
+					common_info.UnschedulableWorkloadReason,
+					[]string{"node-group zone1 can allocate only 1 of 2 required pods"},
+				),
+				common_info.NewJobFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					common_info.UnschedulableWorkloadReason,
+					[]string{"topology test-topology, requirement zone couldn't be satisfied for job <test-namespace/test-job>, subgroup test"}),
+			},
+		},
+		{
+			name: "no domains can allocate the job - using IdleOrReleasingResources",
+			job: &podgroup_info.PodGroupInfo{
+				Name:      "test-job",
+				Namespace: "test-namespace",
+				PodSets: map[string]*subgroup_info.PodSet{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil).
+						WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending, ResReq: resource_info.NewResourceRequirementsWithGpus(1)},
+							"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending, ResReq: resource_info.NewResourceRequirements(0, 1000, 0)},
+						}),
+				},
+			},
+			topologyConstraint: &topology_info.TopologyConstraintInfo{
+				RequiredLevel: "zone",
+			},
+			topologyTree: &Info{
+				Name: "test-topology",
+				TopologyResource: &kueuev1alpha1.Topology{
+					Spec: kueuev1alpha1.TopologySpec{
+						Levels: []kueuev1alpha1.TopologyLevel{
+							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
+						},
+					},
+				},
+				DomainsByLevel: map[DomainLevel]LevelDomainInfos{
+					"rack": {
+						"rack1.zone1": {
+							ID:                       "rack1.zone1",
+							Level:                    "rack",
+							IdleOrReleasingResources: resource_info.NewResource(500, 0, 0), // Insufficient resources
+							AllocatablePods:          -1,
+						},
+						"rack2.zone2": {
+							ID:                       "rack2.zone2",
+							Level:                    "rack",
+							IdleOrReleasingResources: resource_info.NewResource(600, 0, 0), // Insufficient resources
+							AllocatablePods:          -1,
+						},
+					},
+					"zone": {
+						"zone1": {
+							ID:                       "zone1",
+							Level:                    "zone",
+							IdleOrReleasingResources: resource_info.NewResource(500, 0, 0), // Insufficient resources
+							AllocatablePods:          -1,
+						},
+						"zone2": {
+							ID:                       "zone2",
+							Level:                    "zone",
+							IdleOrReleasingResources: resource_info.NewResource(600, 0, 0), // Insufficient resources
+							AllocatablePods:          -1,
+						},
+					},
+				},
+			},
+			taskOrderFunc: func(l, r interface{}) bool {
+				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
+			},
+			expectedDomains: []*DomainInfo{},
+			expectedFitErrors: []common_info.JobFitError{
+				common_info.NewTopologyFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					"zone1",
+					common_info.UnschedulableWorkloadReason,
+					[]string{
+						"node-group(s) didn't have enough resources: GPUs",
+						"node-group(s) didn't have enough resources: CPU cores",
+					},
+					"zone1 didn't have enough resource: GPUs, requested: 1, available: 0",
+					"zone1 didn't have enough resources: CPU cores, requested: 1, available: 0.5",
+				),
+				common_info.NewTopologyFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					"zone2",
+					common_info.UnschedulableWorkloadReason,
+					[]string{
+						"node-group(s) didn't have enough resources: GPUs",
+						"node-group(s) didn't have enough resources: CPU cores",
+					},
+					"zone2 didn't have enough resource: GPUs, requested: 1, available: 0",
+					"zone2 didn't have enough resources: CPU cores, requested: 1, available: 0.6",
+				),
+				common_info.NewJobFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					common_info.UnschedulableWorkloadReason,
+					[]string{"topology test-topology, requirement zone couldn't be satisfied for job <test-namespace/test-job>, subgroup test"},
+				),
+			},
 		},
 		{
 			name: "no relevant domain levels",
@@ -1883,6 +1996,20 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 				}
 				if err.Error() != tt.expectedError {
 					t.Errorf("expected error '%s', but got '%s'", tt.expectedError, err.Error())
+				}
+				if len(tt.job.JobFitErrors) != len(tt.expectedFitErrors) {
+					t.Errorf("expected %d fit errors, but got %d", len(tt.expectedFitErrors), len(tt.job.JobFitErrors))
+				}
+				if len(tt.expectedFitErrors) > 0 {
+					for i, expectedFitError := range tt.expectedFitErrors {
+						actualFitError := tt.job.JobFitErrors[i]
+						if !slices.Equal(expectedFitError.Messages(), actualFitError.Messages()) {
+							t.Errorf("expected fit error %d: messages %v, but got %v", i, expectedFitError.Messages(), actualFitError.Messages())
+						}
+						if expectedFitError.DetailedMessage() != actualFitError.DetailedMessage() {
+							t.Errorf("expected fit error %d: detailed message %s, but got %s", i, expectedFitError.DetailedMessage(), actualFitError.DetailedMessage())
+						}
+					}
 				}
 				return
 			}
