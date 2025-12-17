@@ -46,7 +46,7 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{nodeSet}, nil
 	}
 
-	id, level, validNodes := LowestCommonDomainID(nodeSet, topologyTree.TopologyResource.Spec.Levels)
+	id, level, validNodes := lowestCommonDomainID(nodeSet, topologyTree.TopologyResource.Spec.Levels)
 	domain, ok := topologyTree.DomainsByLevel[level][id]
 	if !ok {
 		return nil, fmt.Errorf("domain not found for node set in topology %s", topologyTree.Name)

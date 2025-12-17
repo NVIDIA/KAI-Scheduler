@@ -76,7 +76,7 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 
 func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
 	// Validate that the node is part of the topology
-	if !IsNodePartOfTopology(nodeInfo, topology.Spec.Levels) {
+	if !isNodePartOfTopology(nodeInfo, topology.Spec.Levels) {
 		return
 	}
 

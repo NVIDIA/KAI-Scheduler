@@ -57,7 +57,7 @@ func TestIsNodePartOfTopology(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			node := newNodeInfo("node-1", tt.labels)
-			assert.Equal(t, tt.expected, IsNodePartOfTopology(node, levels))
+			assert.Equal(t, tt.expected, isNodePartOfTopology(node, levels))
 		})
 	}
 }
@@ -128,7 +128,7 @@ func TestLowestCommonDomainID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			domainID, domainLevel, valid := LowestCommonDomainID(tt.nodes, levels)
+			domainID, domainLevel, valid := lowestCommonDomainID(tt.nodes, levels)
 
 			assert.Equal(t, tt.expectedID, domainID)
 			assert.Equal(t, tt.expectedLevel, domainLevel)
