@@ -221,7 +221,8 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				RequiredCPUsPerTask: 2000, // Too much for any node
 				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
 					&topology_info.TopologyConstraintInfo{
-						Topology: "test-topology",
+						Topology:      "test-topology",
+						RequiredLevel: "zone",
 					},
 				),
 				Tasks: []*tasks_fake.TestTaskBasic{
@@ -233,6 +234,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					CPUMillis:  1000,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+					},
 				},
 			},
 			nodesToDomains: map[string]DomainID{
@@ -266,7 +270,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 
 				return tree
 			},
-			expectedJobFitError: "topology test-topology, requirement  couldn't be satisfied for job </test-job>: not enough resources in zone1 to allocate the job",
+			expectedJobFitError: "topology test-topology, requirement zone couldn't be satisfied for job </test-job>: not enough resources in zone1 to allocate the job",
 		},
 		{
 			name: "successful allocation with mixed GPU tasks - usePodCountAccounting returns false",
@@ -452,8 +456,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("test %d: %s", i, tt.name)
 			// Setup test data
 			jobName := tt.job.Name
 			clusterPodGroups := append(tt.allocatedPodGroups, tt.job)
