@@ -74,6 +74,7 @@ func (t *topologyPlugin) subSetNodesFn(
 				getNoTopologyMatchError(job, subGroup, topologyTree,
 					fmt.Sprintf("not enough resources in %s to allocate the job", string(domain.ID))).Error())
 		}
+		return []node_info.NodeSet{}, nil
 	}
 
 	// Sorting the tree for both packing and closest preferred level domain scoring
