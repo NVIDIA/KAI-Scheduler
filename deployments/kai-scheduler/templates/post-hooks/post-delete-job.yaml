@@ -26,5 +26,7 @@ spec:
             - |
               echo "Deleting deployments..."
               kubectl -n kai-scheduler delete deployment --all --ignore-not-found=true
+              kubectl delete mutatingwebhookconfiguration mutating-kai-admission --ignore-not-found
+              kubectl delete validatingwebhookconfiguration validating-kai-admission --ignore-not-found
               echo "Cleanup complete."
 {{- end }}
