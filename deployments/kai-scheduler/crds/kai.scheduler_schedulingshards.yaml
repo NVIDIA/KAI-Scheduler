@@ -109,7 +109,7 @@ spec:
                     description: UsageParams defines common params for all usage db
                       clients. Some clients may not support all the params.
                     properties:
-                      cronWindowDurationString:
+                      cronString:
                         description: The cron string defining the behavior of the
                           cron window.
                         type: string

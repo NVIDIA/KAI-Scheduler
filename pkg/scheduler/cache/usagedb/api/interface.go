@@ -50,7 +50,7 @@ type UsageParams struct {
 	// The start timestamp of the tumbling window. If not set, defaults to the current time.
 	TumblingWindowStartTime *metav1.Time `yaml:"tumblingWindowStartTime,omitempty" json:"tumblingWindowStartTime,omitempty"`
 	// The cron string defining the behavior of the cron window.
-	CronWindowDurationString string `yaml:"cronWindowDurationString,omitempty" json:"cronWindowDurationString,omitempty"`
+	CronString string `yaml:"cronString,omitempty" json:"cronString,omitempty"`
 	// Fetch interval of the usage. Default is 1 minute.
 	FetchInterval *metav1.Duration `yaml:"fetchInterval,omitempty" json:"fetchInterval,omitempty"`
 	// Staleness period of the usage. Default is 5 minutes.
@@ -80,7 +80,7 @@ func (p *UsageParams) DeepCopy() *UsageParams {
 		startTime := *p.TumblingWindowStartTime
 		out.TumblingWindowStartTime = &startTime
 	}
-	out.CronWindowDurationString = p.CronWindowDurationString
+	out.CronString = p.CronString
 	if p.FetchInterval != nil {
 		duration := *p.FetchInterval
 		out.FetchInterval = &duration

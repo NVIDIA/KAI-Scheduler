@@ -95,9 +95,9 @@ func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface
 
 		clientObj.usageWindowQuery = clientObj.createTumblingWindowQueryFunction(clientObj.getLatestUsageResetTime_TumblingWindow)
 	case api.CronWindow:
-		cronExpression, err := cronexpr.Parse(params.CronWindowDurationString)
+		cronExpression, err := cronexpr.Parse(params.CronString)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing cron string '%s' for usage tumbling window: %v", params.CronWindowDurationString, err)
+			return nil, fmt.Errorf("error parsing cron string '%s' for usage tumbling window: %v", params.CronString, err)
 		}
 		clientObj.cronWindowExpression = cronExpression
 
