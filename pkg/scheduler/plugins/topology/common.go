@@ -11,8 +11,8 @@ import (
 )
 
 // lowestCommonDomainID returns the lowest common domain ID, level, and valid (=in domain) nodes for a given node
-// set and ordered levels. If a node is missing one of the levels, the function will assume it's outside the topology
-// and it will not be included in the valid nodes map.
+// set and levels in descending order (like in the topology CRD). If a node is missing one of the levels, the function
+// will assume it's outside the topology and it will not be included in the valid nodes map.
 func lowestCommonDomainID(nodeSet node_info.NodeSet, levels []kueuev1alpha1.TopologyLevel) (DomainID, DomainLevel, map[string]*node_info.NodeInfo) {
 	validNodes := map[string]*node_info.NodeInfo{}
 	for _, node := range nodeSet {
