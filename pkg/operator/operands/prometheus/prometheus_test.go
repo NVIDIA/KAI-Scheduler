@@ -533,6 +533,74 @@ var _ = Describe("prometheusForKAIConfig", func() {
 			Expect(len(objects)).To(Equal(0))
 		})
 	})
+
+	Context("when configuring storage size", func() {
+		BeforeEach(func(ctx context.Context) {
+			// Add Prometheus CRD to fake client to simulate Prometheus Operator being installed
+			prometheusCRD := &metav1.PartialObjectMetadata{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "CustomResourceDefinition",
+					APIVersion: "apiextensions.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "prometheuses.monitoring.coreos.com",
+				},
+			}
+			Expect(fakeKubeClient.Create(ctx, prometheusCRD)).To(Succeed())
+		})
+
+		It("should use default storage size when not configured", func(ctx context.Context) {
+			// Don't set StorageSize, it should default to "50Gi"
+			kaiConfig.Spec.Prometheus.StorageSize = nil
+
+			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+			Expect(err).To(BeNil())
+			Expect(len(objects)).To(Equal(1))
+
+			prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
+			Expect(prometheusObj).NotTo(BeNil())
+			Expect((*prometheusObj).Spec.Storage).NotTo(BeNil())
+			Expect((*prometheusObj).Spec.Storage.VolumeClaimTemplate.Spec.Resources.Requests.Storage().String()).To(Equal("50Gi"))
+		})
+
+		It("should use custom storage size when configured", func(ctx context.Context) {
+			// Set custom storage size
+			kaiConfig.Spec.Prometheus.StorageSize = ptr.To("100Gi")
+
+			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+			Expect(err).To(BeNil())
+			Expect(len(objects)).To(Equal(1))
+
+			prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
+			Expect(prometheusObj).NotTo(BeNil())
+			Expect((*prometheusObj).Spec.Storage).NotTo(BeNil())
+			Expect((*prometheusObj).Spec.Storage.VolumeClaimTemplate.Spec.Resources.Requests.Storage().String()).To(Equal("100Gi"))
+		})
+
+		It("should handle different storage size formats", func(ctx context.Context) {
+			testCases := []struct {
+				input    string
+				expected string
+			}{
+				{"20Gi", "20Gi"},
+				{"1Ti", "1Ti"},
+				{"500Mi", "500Mi"},
+			}
+
+			for _, tc := range testCases {
+				kaiConfig.Spec.Prometheus.StorageSize = ptr.To(tc.input)
+
+				objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+				Expect(err).To(BeNil(), "Failed for input: "+tc.input)
+				Expect(len(objects)).To(Equal(1))
+
+				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
+				Expect(prometheusObj).NotTo(BeNil())
+				Expect((*prometheusObj).Spec.Storage).NotTo(BeNil())
+				Expect((*prometheusObj).Spec.Storage.VolumeClaimTemplate.Spec.Resources.Requests.Storage().String()).To(Equal(tc.expected), "Failed for input: "+tc.input)
+			}
+		})
+	})
 })
 
 func kaiConfigForPrometheus() *kaiv1.Config {
