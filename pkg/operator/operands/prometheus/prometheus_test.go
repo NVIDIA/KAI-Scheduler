@@ -70,17 +70,7 @@ var _ = Describe("Prometheus", func() {
 			It("should add deprecation timestamp when Prometheus instance exists", func(ctx context.Context) {
 				kaiConfig.Spec.Prometheus.Enabled = ptr.To(false)
 
-				// Add Prometheus CRD
-				prometheusCRD := &metav1.PartialObjectMetadata{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "CustomResourceDefinition",
-						APIVersion: "apiextensions.k8s.io/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "prometheuses.monitoring.coreos.com",
-					},
-				}
-				Expect(fakeKubeClient.Create(ctx, prometheusCRD)).To(Succeed())
+				Expect(fakeKubeClient.Create(ctx, getPrometheusCRD())).To(Succeed())
 
 				// Create existing Prometheus instance
 				existingPrometheus := &monitoringv1.Prometheus{
@@ -107,29 +97,8 @@ var _ = Describe("Prometheus", func() {
 
 		Context("when Prometheus is enabled", func() {
 			BeforeEach(func(ctx context.Context) {
-				// Add Prometheus CRD to fake client to simulate Prometheus Operator being installed
-				prometheusCRD := &metav1.PartialObjectMetadata{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "CustomResourceDefinition",
-						APIVersion: "apiextensions.k8s.io/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "prometheuses.monitoring.coreos.com",
-					},
-				}
-				Expect(fakeKubeClient.Create(ctx, prometheusCRD)).To(Succeed())
-
-				// Add ServiceMonitor CRD to fake client to simulate Prometheus Operator being installed
-				serviceMonitorCRD := &metav1.PartialObjectMetadata{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "CustomResourceDefinition",
-						APIVersion: "apiextensions.k8s.io/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "servicemonitors.monitoring.coreos.com",
-					},
-				}
-				Expect(fakeKubeClient.Create(ctx, serviceMonitorCRD)).To(Succeed())
+				Expect(fakeKubeClient.Create(ctx, getPrometheusCRD())).To(Succeed())
+				Expect(fakeKubeClient.Create(ctx, getServiceMonitorCRD())).To(Succeed())
 			})
 
 			It("should return Prometheus object when Prometheus Operator is installed", func(ctx context.Context) {
@@ -191,27 +160,8 @@ var _ = Describe("Prometheus", func() {
 
 		Context("when Prometheus CRD exists", func() {
 			It("should return true", func(ctx context.Context) {
-				prometheusCRD := &metav1.PartialObjectMetadata{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "CustomResourceDefinition",
-						APIVersion: "apiextensions.k8s.io/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "prometheuses.monitoring.coreos.com",
-					},
-				}
-				Expect(fakeKubeClient.Create(ctx, prometheusCRD)).To(Succeed())
-
-				serviceMonitorCRD := &metav1.PartialObjectMetadata{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "CustomResourceDefinition",
-						APIVersion: "apiextensions.k8s.io/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "servicemonitors.monitoring.coreos.com",
-					},
-				}
-				Expect(fakeKubeClient.Create(ctx, serviceMonitorCRD)).To(Succeed())
+				Expect(fakeKubeClient.Create(ctx, getPrometheusCRD())).To(Succeed())
+				Expect(fakeKubeClient.Create(ctx, getServiceMonitorCRD())).To(Succeed())
 
 				installed, err := common.CheckPrometheusCRDsAvailable(ctx, fakeKubeClient, "prometheus", "serviceMonitor")
 				Expect(err).To(BeNil())
@@ -393,29 +343,8 @@ var _ = Describe("prometheusForKAIConfig", func() {
 
 	Context("when Prometheus is enabled", func() {
 		BeforeEach(func(ctx context.Context) {
-			// Add Prometheus CRD to fake client to simulate Prometheus Operator being installed
-			prometheusCRD := &metav1.PartialObjectMetadata{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "CustomResourceDefinition",
-					APIVersion: "apiextensions.k8s.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "prometheuses.monitoring.coreos.com",
-				},
-			}
-			Expect(fakeKubeClient.Create(ctx, prometheusCRD)).To(Succeed())
-
-			// Add ServiceMonitor CRD to fake client to simulate Prometheus Operator being installed
-			serviceMonitorCRD := &metav1.PartialObjectMetadata{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "CustomResourceDefinition",
-					APIVersion: "apiextensions.k8s.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "servicemonitors.monitoring.coreos.com",
-				},
-			}
-			Expect(fakeKubeClient.Create(ctx, serviceMonitorCRD)).To(Succeed())
+			Expect(fakeKubeClient.Create(ctx, getPrometheusCRD())).To(Succeed())
+			Expect(fakeKubeClient.Create(ctx, getServiceMonitorCRD())).To(Succeed())
 		})
 
 		It("should create new Prometheus object when none exists", func(ctx context.Context) {
@@ -470,17 +399,7 @@ var _ = Describe("prometheusForKAIConfig", func() {
 
 	Context("when external Prometheus URL is provided", func() {
 		BeforeEach(func(ctx context.Context) {
-			// Add ServiceMonitor CRD to fake client to simulate Prometheus Operator being installed
-			serviceMonitorCRD := &metav1.PartialObjectMetadata{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "CustomResourceDefinition",
-					APIVersion: "apiextensions.k8s.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "servicemonitors.monitoring.coreos.com",
-				},
-			}
-			Expect(fakeKubeClient.Create(ctx, serviceMonitorCRD)).To(Succeed())
+			Expect(fakeKubeClient.Create(ctx, getServiceMonitorCRD())).To(Succeed())
 		})
 
 		It("should return ServiceMonitors only when external Prometheus URL is valid", func(ctx context.Context) {
@@ -514,16 +433,7 @@ var _ = Describe("prometheusForKAIConfig", func() {
 			kaiConfig.Spec.Prometheus.ExternalPrometheusUrl = ptr.To("http://prometheus.example.com:9090")
 
 			// Remove ServiceMonitor CRD
-			serviceMonitorCRD := &metav1.PartialObjectMetadata{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "CustomResourceDefinition",
-					APIVersion: "apiextensions.k8s.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "servicemonitors.monitoring.coreos.com",
-				},
-			}
-			Expect(fakeKubeClient.Delete(ctx, serviceMonitorCRD)).To(Succeed())
+			Expect(fakeKubeClient.Delete(ctx, getServiceMonitorCRD())).To(Succeed())
 
 			objects, err := prometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 
@@ -536,17 +446,7 @@ var _ = Describe("prometheusForKAIConfig", func() {
 
 	Context("when configuring storage size", func() {
 		BeforeEach(func(ctx context.Context) {
-			// Add Prometheus CRD to fake client to simulate Prometheus Operator being installed
-			prometheusCRD := &metav1.PartialObjectMetadata{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "CustomResourceDefinition",
-					APIVersion: "apiextensions.k8s.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "prometheuses.monitoring.coreos.com",
-				},
-			}
-			Expect(fakeKubeClient.Create(ctx, prometheusCRD)).To(Succeed())
+			Expect(fakeKubeClient.Create(ctx, getPrometheusCRD())).To(Succeed())
 		})
 
 		It("should use default storage size when not configured", func(ctx context.Context) {
@@ -638,17 +538,7 @@ var _ = Describe("deprecatePrometheusForKAIConfig", func() {
 
 	Context("when Prometheus CRD is available", func() {
 		BeforeEach(func(ctx context.Context) {
-			// Add Prometheus CRD to fake client
-			prometheusCRD := &metav1.PartialObjectMetadata{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "CustomResourceDefinition",
-					APIVersion: "apiextensions.k8s.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "prometheuses.monitoring.coreos.com",
-				},
-			}
-			Expect(fakeKubeClient.Create(ctx, prometheusCRD)).To(Succeed())
+			Expect(fakeKubeClient.Create(ctx, getPrometheusCRD())).To(Succeed())
 		})
 
 		Context("when no Prometheus instance exists", func() {
@@ -803,17 +693,7 @@ var _ = Describe("prometheusForKAIConfig deprecation annotation removal", func()
 		kaiConfig = kaiConfigForPrometheus()
 		kaiConfig.Spec.Prometheus.Enabled = ptr.To(true)
 
-		// Add Prometheus CRD to fake client
-		prometheusCRD := &metav1.PartialObjectMetadata{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "CustomResourceDefinition",
-				APIVersion: "apiextensions.k8s.io/v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "prometheuses.monitoring.coreos.com",
-			},
-		}
-		Expect(fakeKubeClient.Create(ctx, prometheusCRD)).To(Succeed())
+		Expect(fakeKubeClient.Create(ctx, getPrometheusCRD())).To(Succeed())
 	})
 
 	Context("when Prometheus is re-enabled", func() {
@@ -940,3 +820,29 @@ var _ = Describe("External Prometheus Validation", func() {
 		})
 	})
 })
+
+func getServiceMonitorCRD() *metav1.PartialObjectMetadata {
+	serviceMonitorCRD := &metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CustomResourceDefinition",
+			APIVersion: "apiextensions.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "servicemonitors.monitoring.coreos.com",
+		},
+	}
+	return serviceMonitorCRD
+}
+
+func getPrometheusCRD() *metav1.PartialObjectMetadata {
+	prometheusCRD := &metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CustomResourceDefinition",
+			APIVersion: "apiextensions.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "prometheuses.monitoring.coreos.com",
+		},
+	}
+	return prometheusCRD
+}
