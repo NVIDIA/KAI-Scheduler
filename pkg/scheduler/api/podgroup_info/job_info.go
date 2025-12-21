@@ -542,6 +542,9 @@ func (pgi *PodGroupInfo) generateSchedulingConstraintsSignature() common_info.Sc
 		key := pod.GetSchedulingConstraintsSignature()
 		signatures = append(signatures, key)
 	}
+
+	signatures = append(signatures, pgi.getSubGroupsSchedulingConstraintsSignatures()...)
+
 	slices.Sort(signatures)
 
 	for _, signature := range signatures {
@@ -549,6 +552,20 @@ func (pgi *PodGroupInfo) generateSchedulingConstraintsSignature() common_info.Sc
 	}
 
 	return common_info.SchedulingConstraintsSignature(fmt.Sprintf("%x", hash.Sum(nil)))
+}
+
+func (pgi *PodGroupInfo) getSubGroupsSchedulingConstraintsSignatures() []common_info.SchedulingConstraintsSignature {
+	var signatures []common_info.SchedulingConstraintsSignature
+	subGroupSets, podSets := pgi.RootSubGroupSet.GetAllDescendants()
+	for _, subGroupSet := range subGroupSets {
+		signature := subGroupSet.GetSchedulingConstraintsSignature()
+		signatures = append(signatures, signature)
+	}
+	for _, podSet := range podSets {
+		signature := podSet.GetSchedulingConstraintsSignature()
+		signatures = append(signatures, signature)
+	}
+	return signatures
 }
 
 func (jr *JobRequirement) Get(resourceName v1.ResourceName) float64 {

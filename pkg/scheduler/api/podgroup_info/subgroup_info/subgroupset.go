@@ -79,6 +79,19 @@ func (sgs *SubGroupSet) GetAllPodSets() map[string]*PodSet {
 	return result
 }
 
+func (sgs *SubGroupSet) GetAllDescendants() ([]*SubGroupSet, []*PodSet) {
+	subGroupSets := []*SubGroupSet{sgs}
+	podSets := append([]*PodSet{}, sgs.podSets...)
+
+	for _, subGroup := range sgs.groups {
+		childSubGroups, childPodSets := subGroup.GetAllDescendants()
+		subGroupSets = append(subGroupSets, childSubGroups...)
+		podSets = append(podSets, childPodSets...)
+	}
+
+	return subGroupSets, podSets
+}
+
 func (sgs *SubGroupSet) SetParent(parent *SubGroupSet) {
 	sgs.parent = parent
 }
