@@ -84,63 +84,6 @@ func (p *Prometheus) SetDefaultsWhereNeeded() {
 	p.ServiceMonitor.SetDefaultsWhereNeeded()
 }
 
-// CalculateStorageSize estimates the required storage size based on TSDB parameters according to design
-func (p *Prometheus) CalculateStorageSize(ctx context.Context, client client.Reader) (string, error) {
-
-	if p.StorageSize != nil {
-		return *p.StorageSize, nil
-	}
-
-	logger := log.FromContext(ctx)
-	defaultStorageSize := "30Gi"
-	// Get number of NodePools (SchedulingShards)
-	nodePools, err := p.getNodePoolCount(ctx, client)
-	if err != nil {
-		logger.Error(err, "Failed to get NodePool count")
-		return defaultStorageSize, err // Fallback to default
-	}
-
-	// Get number of Queues
-	numQueues, err := p.getQueueCount(ctx, client)
-	if err != nil {
-		logger.Error(err, "Failed to get Queue count")
-		return defaultStorageSize, err // Fallback to default
-	}
-
-	// Parse retention period to minutes
-	retentionMinutes, err := p.parseDurationToMinutes(p.RetentionPeriod)
-	if err != nil {
-		logger.Error(err, "Failed to parse retention period")
-		return defaultStorageSize, err // Fallback to default
-	}
-
-	// Parse sample frequency to minutes
-	sampleIntervalMinutes, err := p.parseDurationToMinutes(p.SampleInterval)
-	if err != nil {
-		logger.Error(err, "Failed to parse sample frequency")
-		return defaultStorageSize, err // Fallback to default
-	}
-
-	// Calculate storage size using the formula
-	sampleSize := 2.0           // [bytes]
-	recordedResourcesLen := 5.0 // overspec the storage size for future growth
-	storageSizeGi := ((sampleSize * recordedResourcesLen * float64(nodePools) * float64(numQueues) * float64(retentionMinutes)) / float64(sampleIntervalMinutes)) / (1024 * 1024 * 1024)
-
-	// Convert to Gi string, ensuring minimum of 1Gi
-	if storageSizeGi < 1.0 {
-		storageSizeGi = 1.0
-	}
-
-	logger.Info("Calculated storage size",
-		"nodePools", nodePools,
-		"numQueues", numQueues,
-		"retentionMinutes", retentionMinutes,
-		"sampleIntervalMinutes", sampleIntervalMinutes,
-		"storageSizeGi", storageSizeGi)
-
-	return fmt.Sprintf("%.0fGi", storageSizeGi), nil
-}
-
 // getNodePoolCount returns the number of NodePools (SchedulingShards) in the cluster
 func (p *Prometheus) getNodePoolCount(ctx context.Context, client client.Reader) (int, error) {
 	// Use unstructured objects to avoid import cycles

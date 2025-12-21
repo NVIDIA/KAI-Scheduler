@@ -27,6 +27,8 @@ const (
 	mainResourceName              = "prometheus"
 	serviceMonitorAccountingLabel = "accounting"
 	serviceMonitorAccountingValue = "kai"
+	defaultStorageSize            = "50Gi"
+	deprecationTimestampKey       = "kai/deprecation-timestamp"
 )
 
 func prometheusForKAIConfig(
@@ -72,10 +74,9 @@ func prometheusForKAIConfig(
 	prometheusSpec := monitoringv1.PrometheusSpec{}
 
 	// Configure TSDB storage
-	storageSize, err := config.CalculateStorageSize(ctx, runtimeClient)
-	if err != nil {
-		logger.Error(err, "Failed to calculate storage size")
-		return nil, err
+	storageSize := defaultStorageSize
+	if config.StorageSize != nil {
+		storageSize = *config.StorageSize
 	}
 	prometheusSpec.Storage = &monitoringv1.StorageSpec{
 		VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
