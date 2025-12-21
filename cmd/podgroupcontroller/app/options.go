@@ -11,6 +11,7 @@ import (
 
 type Options struct {
 	MetricsAddr                  string
+	MetricsNamespace             string
 	EnableLeaderElection         bool
 	SkipControllerNameValidation bool // Set true for env tests
 	ProbeAddr                    string
@@ -31,6 +32,8 @@ func InitOptions(fs *flag.FlagSet) *Options {
 
 	fs.StringVar(&options.MetricsAddr, "metrics-bind-address", ":8080",
 		"The address the metric endpoint binds to.")
+	fs.StringVar(&options.MetricsNamespace, "metrics-namespace", constants.DefaultMetricsNamespace,
+		"Metrics namespace.")
 	fs.StringVar(&options.ProbeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
 	fs.BoolVar(&options.EnableLeaderElection, "leader-elect", false,

@@ -5,9 +5,11 @@ package app
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgroupcontroller/controllers"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgroupcontroller/metrics"
 
 	v1 "k8s.io/api/core/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
@@ -24,6 +26,7 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	// +kubebuilder:scaffold:imports
@@ -51,6 +54,9 @@ func init() {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 
 func Run(options *Options, config *rest.Config, ctx context.Context) error {
+	metrics.InitMetrics(options.MetricsNamespace)
+	setupLog.Info(fmt.Sprintf("PodGroup metrics initialized and registered with namespace: %s", options.MetricsNamespace))
+
 	config.QPS = float32(options.Qps)
 	config.Burst = options.Burst
 
@@ -64,7 +70,10 @@ func Run(options *Options, config *rest.Config, ctx context.Context) error {
 	}
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
-		Scheme:                 scheme,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: options.MetricsAddr,
+		},
 		Cache:                  cacheOptions,
 		HealthProbeBindAddress: options.ProbeAddr,
 		LeaderElection:         options.EnableLeaderElection,
