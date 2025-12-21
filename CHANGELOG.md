@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - GPU Memory pods are not reclaimed or consolidated correctly
 - Added missing leases permission for the operator [#753](https://github.com/NVIDIA/KAI-Scheduler/pull/753) [dttung2905](https://github.com/dttung2905)
 - Fixed reclaim/preempt/consolidate actions for topology workloads [#739](https://github.com/NVIDIA/KAI-Scheduler/pull/739)  [itsomri](https://github.com/itsomri)
+- Fixed scheduling signature to include topology constraints from subgroups [#755](https://github.com/NVIDIA/KAI-Scheduler/pull/755) [gshaibi](https://github.com/gshaibi)
 
 ## [v0.10.2] - 2025-11-24
 
