@@ -32,6 +32,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 )
 
 func jobInfoEqual(l, r *PodGroupInfo) bool {
@@ -1066,5 +1067,81 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 		if got != tt.expected {
 			t.Errorf("IsStale() for case '%s' got %v, want %v", tt.name, got, tt.expected)
 		}
+	}
+}
+
+func TestGetSchedulingConstraintsSignature_DifferentTopologyConstraints(t *testing.T) {
+	tests := []struct {
+		name                string
+		topologyConstraint1 *topology_info.TopologyConstraintInfo
+		topologyConstraint2 *topology_info.TopologyConstraintInfo
+		expectDifferent     bool
+	}{
+		{
+			name:                "different required level produces different signature",
+			topologyConstraint1: &topology_info.TopologyConstraintInfo{Topology: "default", RequiredLevel: "rack"},
+			topologyConstraint2: &topology_info.TopologyConstraintInfo{Topology: "default", RequiredLevel: "host"},
+			expectDifferent:     true,
+		},
+		{
+			name:                "different preferred level produces different signature",
+			topologyConstraint1: &topology_info.TopologyConstraintInfo{Topology: "default", PreferredLevel: "zone"},
+			topologyConstraint2: &topology_info.TopologyConstraintInfo{Topology: "default", PreferredLevel: "rack"},
+			expectDifferent:     true,
+		},
+		{
+			name:                "different topology produces different signature",
+			topologyConstraint1: &topology_info.TopologyConstraintInfo{Topology: "topology1", RequiredLevel: "rack"},
+			topologyConstraint2: &topology_info.TopologyConstraintInfo{Topology: "topology2", RequiredLevel: "rack"},
+			expectDifferent:     true,
+		},
+		{
+			name:                "nil vs non-nil topology constraint produces different signature",
+			topologyConstraint1: nil,
+			topologyConstraint2: &topology_info.TopologyConstraintInfo{Topology: "default", RequiredLevel: "rack"},
+			expectDifferent:     true,
+		},
+		{
+			name:                "identical topology constraints produce same signature",
+			topologyConstraint1: &topology_info.TopologyConstraintInfo{Topology: "default", RequiredLevel: "rack"},
+			topologyConstraint2: &topology_info.TopologyConstraintInfo{Topology: "default", RequiredLevel: "rack"},
+			expectDifferent:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pgi1 := createPodGroupWithTopologyConstraint(tt.topologyConstraint1)
+			pgi2 := createPodGroupWithTopologyConstraint(tt.topologyConstraint2)
+
+			sig1 := pgi1.GetSchedulingConstraintsSignature()
+			sig2 := pgi2.GetSchedulingConstraintsSignature()
+
+			if tt.expectDifferent && sig1 == sig2 {
+				t.Errorf("Expected different signatures but got same: %s", sig1)
+			}
+			if !tt.expectDifferent && sig1 != sig2 {
+				t.Errorf("Expected same signatures but got different: %s vs %s", sig1, sig2)
+			}
+		})
+	}
+}
+
+func createPodGroupWithTopologyConstraint(tc *topology_info.TopologyConstraintInfo) *PodGroupInfo {
+	uid := common_info.PodGroupID("test-uid")
+
+	subGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, tc)
+	defaultSubGroup := subgroup_info.NewPodSet(DefaultSubGroup, 1, nil)
+	subGroupSet.AddPodSet(defaultSubGroup)
+
+	return &PodGroupInfo{
+		UID:                  uid,
+		Allocated:            common_info.BuildResource("0", "0"),
+		RootSubGroupSet:      subGroupSet,
+		PodSets:              subGroupSet.GetAllPodSets(),
+		PodStatusIndex:       map[pod_status.PodStatus]pod_info.PodsMap{},
+		JobFitErrors:         make([]common_info.JobFitError, 0),
+		TasksFitErrors:       make(map[common_info.PodID]*common_info.TasksFitErrors),
+		activeAllocatedCount: ptr.To(0),
 	}
 }
