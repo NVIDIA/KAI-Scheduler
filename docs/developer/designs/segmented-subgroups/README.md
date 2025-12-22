@@ -19,7 +19,7 @@ I want my 16 pods distributed training job to be split into 4 groups of 4 pods, 
 
 ### Story 2: Multi-Level Constraints
 
-Same as story 1, but the groups should be within the same zone.
+Same as story 1, but all 16 pods should be within the same zone.  
 
 ### Story 3: Simple Annotation-Based Configuration
 
@@ -121,7 +121,7 @@ $$\text{NumSegments} = \lceil \frac{\text{ReplicaCount}}{\text{SegmentSize}} \rc
 2. **Create segment SubGroups**: Under the replica type's SubGroup, create `NumSegments` child SubGroups. Each SubGroup has:
    - `MinMember` = `SegmentSize` for segments covering mandatory pods (up to the replica type's MinMember)
    - `MinMember` = `0` for segments covering excess/elastic pods (beyond the replica type's MinMember)
-   - The last segment may have fewer pods if the count is not divisible by SegmentSize
+   - The last segment may have fewer pods (smaller `MinMember`) if the count is not divisible by SegmentSize
    - Topology constraints from the segment annotations
 3. **Assign pods to segment SubGroups**: When a pod is created, read its replica index and assign it to the appropriate segment:
    - Read the index from the configured or default index label
@@ -145,11 +145,11 @@ To support elastic workloads where the number of pods can exceed the minimum req
 ```mermaid
 graph LR
     %% === Styles ===
-    classDef yamlNode fill:#f4f4f4,stroke:#333,stroke-width:1px,font-family:monospace,text-align:left;
+    classDef yamlNode fill:#f4f4f4,stroke:#333,stroke-width:1px,font-family:monospace,text-align:left,color:#000;
     classDef rootNode fill:#bbdefb,stroke:#0d47a1,stroke-width:2px,color:#000;
-    classDef replicaNode fill:#e1bee7,stroke:#7b1fa2,stroke-width:2px;
-    classDef virtualNode fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px,stroke-dasharray: 5 5;
-    classDef podNode fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef replicaNode fill:#e1bee7,stroke:#7b1fa2,stroke-width:2px,color:#000;
+    classDef virtualNode fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px,stroke-dasharray: 5 5,color:#000;
+    classDef podNode fill:#fff9c4,stroke:#fbc02d,stroke-width:1px,color:#000;
 
     %% === Left Container: User View ===
     subgraph UserView ["PodGroup USER VIEW"]
@@ -197,8 +197,8 @@ graph LR
     UserView == "Interpreted As" ==> WorkerSG
 
     %% Apply styles
-    style UserView fill:#eceff1,stroke:#546e7a,stroke-width:2px
-    style InternalView fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style UserView fill:#eceff1,stroke:#546e7a,stroke-width:2px,color:#000
+    style InternalView fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
 ```
 
 ## Future Enhancements
