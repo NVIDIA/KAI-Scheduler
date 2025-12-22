@@ -39,6 +39,11 @@ const (
 	// Example: 1-hour windows at 0-1h, 1-2h, 2-3h
 	TumblingWindow WindowType = "tumbling"
 
+	// CronWindow represents a tumbling window that is defined by a cron string.
+	// In this configuration, the window size is not used, and the window is defined by the cron string.
+	// Example: every 1 hour at 00:00:00, every 1 hour at 01:00:00, etc.
+	CronWindow WindowType = "cron"
+
 	// SlidingWindow represents overlapping time windows that slide forward
 	// Example: a 1-hour sliding window will consider the usage of the last 1 hour prior to the current time.
 	SlidingWindow WindowType = "sliding"
@@ -47,7 +52,7 @@ const (
 // IsValid returns true if the WindowType is a valid value
 func (wt WindowType) IsValid() bool {
 	switch wt {
-	case TumblingWindow, SlidingWindow:
+	case TumblingWindow, SlidingWindow, CronWindow:
 		return true
 	default:
 		return false

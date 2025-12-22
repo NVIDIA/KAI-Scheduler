@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.10.4]
+
+## Added 
+- Add a "tumbling window" usage configuration - calculate a tumbling window size based on a start timne configuration and a duration config field.
+
+
+## [v0.10.3]
+
 ## Fixed
 - Fixed reclaim/preempt/consolidate actions for topology workloads [#748](https://github.com/NVIDIA/KAI-Scheduler/pull/748)  [itsomri](https://github.com/itsomri)
 
@@ -17,6 +25,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - Fixed confusing resource division log message [#734](https://github.com/NVIDIA/KAI-Scheduler/pull/734) [itsomri](https://github.com/itsomri)
 - Fixed a bug where the snapshot tool would not load topology objects [#731](https://github.com/NVIDIA/KAI-Scheduler/pull/731) [itsomri](https://github.com/itsomri)
+
+### Changed
+- Renamed the previous "tumbling" option for the scheduler usage window type to "cron".
 
 ## [v0.10.2] - 2025-11-24
 

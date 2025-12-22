@@ -109,6 +109,10 @@ spec:
                     description: UsageParams defines common params for all usage db
                       clients. Some clients may not support all the params.
                     properties:
+                      cronString:
+                        description: The cron string defining the behavior of the
+                          cron window.
+                        type: string
                       extraParams:
                         additionalProperties:
                           type: string
@@ -125,9 +129,10 @@ spec:
                       stalenessPeriod:
                         description: Staleness period of the usage. Default is 5 minutes.
                         type: string
-                      tumblingWindowCronString:
-                        description: A cron string used to determine when to reset
-                          resource usage for all queues.
+                      tumblingWindowStartTime:
+                        description: The start timestamp of the tumbling window. If
+                          not set, defaults to the current time.
+                        format: date-time
                         type: string
                       waitTimeout:
                         description: Wait timeout of the usage. Default is 1 minute.
