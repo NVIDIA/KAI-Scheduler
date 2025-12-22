@@ -59,6 +59,11 @@ func (in *Prometheus) DeepCopyInto(out *Prometheus) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.PersistentStorage != nil {
+		in, out := &in.PersistentStorage, &out.PersistentStorage
+		*out = new(bool)
+		**out = **in
+	}
 	if in.StorageSize != nil {
 		in, out := &in.StorageSize, &out.StorageSize
 		*out = new(string)
