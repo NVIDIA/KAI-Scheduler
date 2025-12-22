@@ -27,6 +27,8 @@ const (
 	mainResourceName              = "prometheus"
 	serviceMonitorAccountingLabel = "accounting"
 	serviceMonitorAccountingValue = "kai"
+	defaultStorageSize            = "50Gi"
+	deprecationTimestampKey       = "kai/deprecation-timestamp"
 )
 
 func prometheusForKAIConfig(
@@ -72,10 +74,9 @@ func prometheusForKAIConfig(
 	prometheusSpec := monitoringv1.PrometheusSpec{}
 
 	// Configure TSDB storage
-	storageSize, err := config.CalculateStorageSize(ctx, runtimeClient)
-	if err != nil {
-		logger.Error(err, "Failed to calculate storage size")
-		return nil, err
+	storageSize := defaultStorageSize
+	if config.StorageSize != nil {
+		storageSize = *config.StorageSize
 	}
 	prometheusSpec.Storage = &monitoringv1.StorageSpec{
 		VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
@@ -106,8 +107,109 @@ func prometheusForKAIConfig(
 
 	prometheusSpec.ServiceAccountName = mainResourceName
 
+	// Remove deprecation timestamp annotation if it exists (prometheus is now enabled)
+	annotations := prometheus.GetAnnotations()
+	if annotations != nil {
+		if _, exists := annotations[deprecationTimestampKey]; exists {
+			delete(annotations, deprecationTimestampKey)
+			prometheus.SetAnnotations(annotations)
+			logger.Info("Removed deprecation timestamp annotation from Prometheus instance")
+		}
+	}
+
 	prometheus.(*monitoringv1.Prometheus).Spec = prometheusSpec
 	return []client.Object{prometheus}, nil
+}
+
+// deprecatePrometheusForKAIConfig handles graceful deletion of Prometheus instances
+// when Prometheus is disabled. It adds a deprecation timestamp and only deletes
+// after the retention period has passed.
+func deprecatePrometheusForKAIConfig(
+	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
+) ([]client.Object, error) {
+	logger := log.FromContext(ctx)
+
+	// Check if Prometheus CRD exists
+	hasPrometheusOperator, err := common.CheckPrometheusCRDsAvailable(ctx, runtimeClient, "prometheus")
+	if err != nil {
+		logger.Error(err, "Failed to check for Prometheus Operator installation")
+		return []client.Object{}, err
+	}
+
+	if !hasPrometheusOperator {
+		logger.V(1).Info("Prometheus CRD not available, nothing to deprecate")
+		return []client.Object{}, nil
+	}
+
+	// Try to get existing Prometheus instance
+	prometheusObj := &monitoringv1.Prometheus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      mainResourceName,
+			Namespace: kaiConfig.Spec.Namespace,
+		},
+	}
+
+	err = runtimeClient.Get(ctx, client.ObjectKeyFromObject(prometheusObj), prometheusObj)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return []client.Object{}, nil
+		}
+		logger.Error(err, "Failed to get Prometheus instance")
+		return []client.Object{}, err
+	}
+
+	// Get current annotations
+	annotations := prometheusObj.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+
+	// Check if deprecation timestamp exists
+	deprecationTimeStr, exists := annotations[deprecationTimestampKey]
+	if !exists {
+		// Add deprecation timestamp
+		annotations[deprecationTimestampKey] = metav1.Now().Format(time.RFC3339)
+		prometheusObj.SetAnnotations(annotations)
+		logger.Info("Added deprecation timestamp to Prometheus instance", "timestamp", annotations[deprecationTimestampKey])
+		return []client.Object{prometheusObj}, nil
+	}
+
+	// Parse the deprecation timestamp
+	deprecationTime, err := time.Parse(time.RFC3339, deprecationTimeStr)
+	if err != nil {
+		logger.Error(err, "Failed to parse deprecation timestamp, re-setting it", "timestamp", deprecationTimeStr)
+		annotations[deprecationTimestampKey] = metav1.Now().Format(time.RFC3339)
+		prometheusObj.SetAnnotations(annotations)
+		return []client.Object{prometheusObj}, nil
+	}
+
+	// Use retention period from config, default to 30 days
+	retentionPeriod := 30 * 24 * time.Hour
+	if kaiConfig.Spec.Prometheus != nil && kaiConfig.Spec.Prometheus.RetentionPeriod != nil {
+		duration, err := time.ParseDuration(*kaiConfig.Spec.Prometheus.RetentionPeriod)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse retention period %q: %w", *kaiConfig.Spec.Prometheus.RetentionPeriod, err)
+		}
+		retentionPeriod = duration
+	}
+
+	// Check if retention period has passed
+	deletionTime := deprecationTime.Add(retentionPeriod)
+	if time.Now().After(deletionTime) {
+		logger.Info("Retention period has passed, allowing Prometheus deletion",
+			"deprecationTime", deprecationTime,
+			"retentionPeriod", retentionPeriod,
+			"deletionTime", deletionTime)
+		return []client.Object{}, nil
+	}
+
+	// Retention period has not passed yet, keep the instance
+	remainingTime := time.Until(deletionTime)
+	logger.Info("Prometheus instance marked for deprecation, waiting for retention period",
+		"deprecationTime", deprecationTime,
+		"retentionPeriod", retentionPeriod,
+		"remainingTime", remainingTime)
+	return []client.Object{prometheusObj}, nil
 }
 
 func serviceMonitorsForKAIConfig(
