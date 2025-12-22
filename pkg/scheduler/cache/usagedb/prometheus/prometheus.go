@@ -25,6 +25,7 @@ const (
 	queueNameLabel = "queue_name"
 )
 
+type getLatestUsageResetTime func(now time.Time) time.Time
 type usageWindowQueryFunction func(ctx context.Context, decayedAllocationMetric string) (model.Value, promv1.Warnings, error)
 
 var _ api.Interface = &PrometheusClient{}
@@ -35,12 +36,13 @@ type PrometheusClient struct {
 	usageParams *api.UsageParams
 
 	// Extra params
-	usageQueryTimeout            time.Duration
-	queryResolution              time.Duration
-	allocationMetricsMap         map[string]string
-	capacityMetricsMap           map[string]string
-	usageWindowQuery             usageWindowQueryFunction
-	tumblingWindowCronExpression *cronexpr.Expression
+	usageQueryTimeout       time.Duration
+	queryResolution         time.Duration
+	allocationMetricsMap    map[string]string
+	capacityMetricsMap      map[string]string
+	usageWindowQuery        usageWindowQueryFunction
+	cronWindowExpression    *cronexpr.Expression
+	tumblingWindowStartTime metav1.Time
 }
 
 func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface, error) {
@@ -86,13 +88,20 @@ func NewPrometheusClient(address string, params *api.UsageParams) (api.Interface
 	}
 	switch *params.WindowType {
 	case api.TumblingWindow:
-		clientObj.usageWindowQuery = clientObj.queryTumblingTimeWindow
-
-		cronExpression, err := cronexpr.Parse(params.TumblingWindowCronString)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing cron string '%s' for usage tumbling window: %v", params.TumblingWindowCronString, err)
+		if params.TumblingWindowStartTime == nil {
+			return nil, fmt.Errorf("prometheus client window type is set as 'tumbling', but the tumblingWindowStartTime is null")
 		}
-		clientObj.tumblingWindowCronExpression = cronExpression
+		clientObj.tumblingWindowStartTime = *params.TumblingWindowStartTime
+
+		clientObj.usageWindowQuery = clientObj.createTumblingWindowQueryFunction(clientObj.getLatestUsageResetTime_TumblingWindow)
+	case api.CronWindow:
+		cronExpression, err := cronexpr.Parse(params.CronString)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing cron string '%s' for usage tumbling window: %v", params.CronString, err)
+		}
+		clientObj.cronWindowExpression = cronExpression
+
+		clientObj.usageWindowQuery = clientObj.createTumblingWindowQueryFunction(clientObj.getLatestUsageResetTime_CronWindow)
 	case api.SlidingWindow:
 		clientObj.usageWindowQuery = clientObj.querySlidingTimeWindow
 	}
@@ -218,33 +227,64 @@ func (p *PrometheusClient) querySlidingTimeWindow(ctx context.Context, decayedAl
 	return usageResult, warnings, err
 }
 
-func (p *PrometheusClient) queryTumblingTimeWindow(ctx context.Context, decayedAllocationMetric string) (model.Value, promv1.Warnings, error) {
-	usageQuery := fmt.Sprintf("sum_over_time(%s)", decayedAllocationMetric)
-	lastUsageReset := p.getLatestUsageResetTime()
+func (p *PrometheusClient) createTumblingWindowQueryFunction(getLatestUsageResetTime getLatestUsageResetTime) usageWindowQueryFunction {
+	return func(ctx context.Context, decayedAllocationMetric string) (model.Value, promv1.Warnings, error) {
+		usageQuery := fmt.Sprintf("sum_over_time(%s)", decayedAllocationMetric)
+		lastUsageReset := getLatestUsageResetTime(time.Now())
 
-	usageResult, warnings, err := p.client.QueryRange(ctx, usageQuery, promv1.Range{
-		Start: lastUsageReset,
-		End:   time.Now(),
-		Step:  p.queryResolution,
-	})
+		usageResult, warnings, err := p.client.QueryRange(ctx, usageQuery, promv1.Range{
+			Start: lastUsageReset,
+			End:   time.Now(),
+			Step:  p.queryResolution,
+		})
 
-	if err != nil {
-		err = fmt.Errorf("%w, full query: %s", err, usageQuery)
+		if err != nil {
+			err = fmt.Errorf("%w, full query: %s", err, usageQuery)
+		}
+
+		return usageResult, warnings, err
 	}
-
-	return usageResult, warnings, err
 }
 
-func (p *PrometheusClient) getLatestUsageResetTime() time.Time {
-	maxWindowStartingPoint := time.Now().Add(-p.usageParams.WindowSize.Duration)
-	lastUsageReset := maxWindowStartingPoint
-	nextInWindowReset := maxWindowStartingPoint
+func (p *PrometheusClient) getLatestUsageResetTime_CronWindow(now time.Time) time.Time {
+	// Calculate a duration that we know is going to be bigger then the duration
+	// between now and the closest previous occurrence of the cron expression.
+	thirdNext := p.cronWindowExpression.NextN(now, 3)[2]
+	intervalToThirdOccurrence := thirdNext.Sub(now)
 
-	for nextInWindowReset.Before(time.Now()) {
-		lastUsageReset = nextInWindowReset
-		nextInWindowReset = p.tumblingWindowCronExpression.Next(nextInWindowReset)
+	// Start looking for the closest previous occurrence from the time
+	// that is bigger then a single cron expression interval.
+	startTime := now.Add(-intervalToThirdOccurrence)
+
+	previousResetTime := startTime
+	currentResetTime := p.cronWindowExpression.Next(startTime)
+
+	// Keep finding the next reset time until it's after or equal to the current time
+	for currentResetTime.Before(now) {
+		previousResetTime = currentResetTime
+		currentResetTime = p.cronWindowExpression.Next(currentResetTime)
 	}
-	return lastUsageReset
+
+	return previousResetTime
+}
+
+func (p *PrometheusClient) getLatestUsageResetTime_TumblingWindow(now time.Time) time.Time {
+	startTime := p.tumblingWindowStartTime.Time
+	if startTime.After(now) {
+		// If the start time is in the future, return the current time. The tumbling window in this case will have size 0.
+		return now
+	}
+
+	previousResetTime := startTime
+	currentResetTime := startTime.Add(p.usageParams.WindowSize.Duration)
+
+	// Keep finding the next reset time until it's after or equal to the current time
+	for currentResetTime.Before(now) {
+		previousResetTime = currentResetTime
+		currentResetTime = currentResetTime.Add(p.usageParams.WindowSize.Duration)
+	}
+
+	return previousResetTime
 }
 
 func getExponentialDecayQuery(halfLifePeriod *metav1.Duration) string {
