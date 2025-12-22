@@ -5,6 +5,8 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: batch-job
+  labels:
+    kai.scheduler/queue: default-queue
 spec:
   parallelism: 2
   completions: 2
