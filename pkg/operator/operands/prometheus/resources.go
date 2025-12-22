@@ -183,31 +183,31 @@ func deprecatePrometheusForKAIConfig(
 		return []client.Object{prometheusObj}, nil
 	}
 
-	// Calculate the grace period (use retention period from config, default to 30 days)
-	gracePeriod := 30 * 24 * time.Hour
+	// Use retention period from config, default to 30 days
+	retentionPeriod := 30 * 24 * time.Hour
 	if kaiConfig.Spec.Prometheus != nil && kaiConfig.Spec.Prometheus.RetentionPeriod != nil {
 		duration, err := time.ParseDuration(*kaiConfig.Spec.Prometheus.RetentionPeriod)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse retention period %q: %w", *kaiConfig.Spec.Prometheus.RetentionPeriod, err)
 		}
-		gracePeriod = duration
+		retentionPeriod = duration
 	}
 
-	// Check if grace period has passed
-	deletionTime := deprecationTime.Add(gracePeriod)
+	// Check if retention period has passed
+	deletionTime := deprecationTime.Add(retentionPeriod)
 	if time.Now().After(deletionTime) {
-		logger.Info("Grace period has passed, allowing Prometheus deletion",
+		logger.Info("Retention period has passed, allowing Prometheus deletion",
 			"deprecationTime", deprecationTime,
-			"gracePeriod", gracePeriod,
+			"retentionPeriod", retentionPeriod,
 			"deletionTime", deletionTime)
 		return []client.Object{}, nil
 	}
 
-	// Grace period has not passed yet, keep the instance
+	// Retention period has not passed yet, keep the instance
 	remainingTime := time.Until(deletionTime)
-	logger.Info("Prometheus instance marked for deprecation, waiting for grace period",
+	logger.Info("Prometheus instance marked for deprecation, waiting for retention period",
 		"deprecationTime", deprecationTime,
-		"gracePeriod", gracePeriod,
+		"retentionPeriod", retentionPeriod,
 		"remainingTime", remainingTime)
 	return []client.Object{prometheusObj}, nil
 }
