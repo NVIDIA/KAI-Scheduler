@@ -11,7 +11,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-e2e-required:
+    name: Check if E2E tests are required
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Check changed files
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docs:
+              - '**/*.md'
+              - 'docs/**'
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
   validate-and-test:
+    needs: [ check-e2e-required ]
+    if: needs.check-e2e-required.outputs.code == 'true'
     name: Validate & Test
     runs-on: ubuntu-latest
     steps:
@@ -66,6 +89,8 @@ jobs:
           path: pr_number.txt
 
   build:
+    needs: [ check-e2e-required ]
+    if: needs.check-e2e-required.outputs.code == 'true'
     name: Build
     runs-on: ubuntu-latest
     outputs:
@@ -119,28 +144,6 @@ jobs:
         run: |
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
           cp charts/kai-scheduler-$PACKAGE_VERSION.tgz /mnt/images/
-
-  check-e2e-required:
-    name: Check if E2E tests are required
-    runs-on: ubuntu-latest
-    outputs:
-      code: ${{ steps.filter.outputs.code }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Check changed files
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            docs:
-              - '**/*.md'
-              - 'docs/**'
-            code:
-              - '**'
-              - '!**/*.md'
-              - '!docs/**'
 
   skip-e2e-message:
     name: Skip E2E Tests Message
