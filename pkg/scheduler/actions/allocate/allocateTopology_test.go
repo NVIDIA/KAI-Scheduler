@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"testing"
 
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	. "go.uber.org/mock/gomock"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/allocate"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
@@ -44,13 +44,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required topology level - schedule all tasks on the same rack",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -164,13 +164,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required topology level - could not schedule on first domain due to affinity, goes to next",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -271,13 +271,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required topology with multiple levels - schedule all tasks on the same spine",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -384,13 +384,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required topology with multiple levels - schedule all tasks on the same rack",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -529,13 +529,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required topology with multiple levels - schedule all tasks on the same partially occupied rack",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -642,13 +642,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required topology with multiple levels - job remains pending as no available rack can be found",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -808,13 +808,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Preferred topology - schedule job on the same rack",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -916,13 +916,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Preferred topology - schedule job even if preferred constraint can't be met",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -1042,13 +1042,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Combined preferred and required topology constraints - schedule job although preferred constraint cannot be satisfied",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -1210,13 +1210,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required topology at multiple subgroup hierarchy levels - subgroup on the same rack and workload in the same zone",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/zone",
 								},
@@ -1354,13 +1354,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required topology at multiple subgroup hierarchy levels - rack, spine and zone",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/zone",
 								},
@@ -1594,13 +1594,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required topology constraint - prefer packed domain",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -1704,13 +1704,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Preferred topology at multiple subgroup hierarchy levels - rack and zone",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/zone",
 								},
@@ -1893,13 +1893,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required and preferred topology constraints combined at different levels - rack and zone",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/zone",
 								},
@@ -2082,13 +2082,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required and preferred topology constraints with single unconstrained level",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/zone",
 								},
@@ -2313,13 +2313,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 				// Tests that when both required (rack) and preferred (spine) topology levels are specified,
 				// the scheduler respects both: all tasks stay within the required rack level, and tasks are
 				// concentrated on minimum number of spines (2 spines used for 3 tasks, not spread across 3-4 spines).
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -2460,13 +2460,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Elastic subgroups with required topology constraints",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},
@@ -2580,13 +2580,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Hierarchical Preferred Topology - PodGroup prefers Spine, SubGroups has no preference - should allocate on closest Spine nodes",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/zone",
 								},
@@ -2736,13 +2736,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Hierarchical Conflicting Preferred Topology - PodGroup prefers Spine, SubGroups prefer Rack - should allocate on closest Rack nodes",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/zone",
 								},
@@ -2902,13 +2902,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Bin Packing - allocate on domain with least free resources (most occupied)",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/zone",
 								},
@@ -3031,13 +3031,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Bin Packing - Pack Top-Most domain first",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/zone",
 								},

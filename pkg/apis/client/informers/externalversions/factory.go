@@ -29,6 +29,7 @@ import (
 
 	versioned "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	internalinterfaces "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/informers/externalversions/internalinterfaces"
+	kai "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/informers/externalversions/kai"
 	scheduling "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/informers/externalversions/scheduling"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -258,7 +259,12 @@ type SharedInformerFactory interface {
 	// client.
 	InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) cache.SharedIndexInformer
 
+	Kai() kai.Interface
 	Scheduling() scheduling.Interface
+}
+
+func (f *sharedInformerFactory) Kai() kai.Interface {
+	return kai.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Scheduling() scheduling.Interface {

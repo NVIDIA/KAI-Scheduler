@@ -48,8 +48,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
 
-	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
-	kueueinformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 )
 
 type ClusterInfo struct {
@@ -74,7 +73,6 @@ const (
 func New(
 	informerFactory informers.SharedInformerFactory,
 	kubeAiSchedulerInformerFactory kubeAiSchedulerinfo.SharedInformerFactory,
-	kueueInformerFactory kueueinformer.SharedInformerFactory,
 	usageLister *usagedb.UsageLister,
 	nodePoolParams *conf.SchedulingNodePoolParams,
 	restrictNodeScheduling bool,
@@ -101,7 +99,7 @@ func New(
 	}
 
 	return &ClusterInfo{
-		dataLister:               data_lister.New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, usageLister, nodePoolSelector),
+		dataLister:               data_lister.New(informerFactory, kubeAiSchedulerInformerFactory, usageLister, nodePoolSelector),
 		nodePoolParams:           nodePoolParams,
 		restrictNodeScheduling:   restrictNodeScheduling,
 		clusterPodAffinityInfo:   clusterPodAffinityInfo,
@@ -411,7 +409,7 @@ func (c *ClusterInfo) snapshotConfigMaps() (map[common_info.ConfigMapID]*configm
 	return result, nil
 }
 
-func (c *ClusterInfo) snapshotTopologies() ([]*kueue.Topology, error) {
+func (c *ClusterInfo) snapshotTopologies() ([]*kaiv1alpha1.Topology, error) {
 	topologies, err := c.dataLister.ListTopologies()
 	if err != nil {
 		return nil, fmt.Errorf("error listing topologies: %w", err)

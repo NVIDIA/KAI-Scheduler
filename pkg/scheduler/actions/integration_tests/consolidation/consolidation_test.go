@@ -6,6 +6,7 @@ package consolidation_test
 import (
 	"testing"
 
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
@@ -16,7 +17,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 func TestConsolidateIntegrationTest(t *testing.T) {
@@ -271,13 +271,13 @@ func getConsolidateTestsMetadata() []integration_tests_utils.TestTopologyMetadat
 						),
 					},
 				},
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "zone",
 								},
@@ -474,13 +474,13 @@ func getConsolidateTestsMetadata() []integration_tests_utils.TestTopologyMetadat
 						),
 					},
 				},
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "zone",
 								},

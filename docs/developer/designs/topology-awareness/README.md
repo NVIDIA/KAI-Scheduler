@@ -54,6 +54,7 @@ Users will be able to:
 
 Following Kueue's approach, topology will be represented as a hierarchical structure that describes the physical layout of resources in the cluster.
 We will be using Kueue Topology CRD as is or import its definition into KAI scheduler to simplify integrations and support it as a standard.
+**Note**: We introduced KAI Topology CRD with similar structure to replace Kueue Topology CRD, improving compatibility and simplifying installation.
 
 ### Topology constraint request on a job
 

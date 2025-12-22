@@ -28,7 +28,6 @@ const (
 	ConditionTypeDeployed          ConditionType = "Deployed"
 	ConditionTypeAvailable         ConditionType = "Available"
 	ConditionDependenciesFulfilled ConditionType = "DependenciesFulfilled"
-	ConditionTypeReady             ConditionType = "Ready"
 )
 
 type ConditionReason string
@@ -41,7 +40,6 @@ const (
 	DependenciesMissing        ConditionReason = "dependencies_missing"
 	PrometheusConnected        ConditionReason = "prometheus_connected"
 	PrometheusConnectionFailed ConditionReason = "prometheus_connection_failed"
-	Ready                      ConditionReason = "ready"
 )
 
 // ConfigSpec defines the desired state of Config
