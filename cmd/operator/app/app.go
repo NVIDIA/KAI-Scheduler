@@ -110,6 +110,8 @@ func (app *App) InitOperands(configOperands []operands.Operand, shardOperandsFor
 	app.shardReconciler.SetOperands(shardOperandsForShard)
 }
 
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
+
 func (app *App) Run() error {
 
 	var err error
