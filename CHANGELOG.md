@@ -11,13 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Added 
 - Add a "tumbling window" usage configuration - calculate a tumbling window size based on a start timne configuration and a duration config field.
 
-
-## [v0.10.3]
-
 ## Fixed
 - Fixed reclaim/preempt/consolidate actions for topology workloads [#748](https://github.com/NVIDIA/KAI-Scheduler/pull/748)  [itsomri](https://github.com/itsomri)
 
-## [v0.10.2] - 2025-12-09
+## [v0.10.3] - 2025-12-09
 
 ### Added
 - Added support for having the default "preemptibility" per top-owner-type read from the default configs configmap in the pod-grouper
