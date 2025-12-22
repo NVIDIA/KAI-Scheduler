@@ -47,8 +47,10 @@ type UsageParams struct {
 	WindowSize *metav1.Duration `yaml:"windowSize,omitempty" json:"windowSize,omitempty"`
 	// Window type for time-series aggregation. If not set, defaults to sliding.
 	WindowType *WindowType `yaml:"windowType,omitempty" json:"windowType,omitempty"`
-	// A cron string used to determine when to reset resource usage for all queues.
-	TumblingWindowCronString string `yaml:"tumblingWindowCronString,omitempty" json:"tumblingWindowCronString,omitempty"`
+	// The start timestamp of the tumbling window. If not set, defaults to the current time.
+	TumblingWindowStartTime *metav1.Time `yaml:"tumblingWindowStartTime,omitempty" json:"tumblingWindowStartTime,omitempty"`
+	// The cron string defining the behavior of the cron window.
+	CronString string `yaml:"cronString,omitempty" json:"cronString,omitempty"`
 	// Fetch interval of the usage. Default is 1 minute.
 	FetchInterval *metav1.Duration `yaml:"fetchInterval,omitempty" json:"fetchInterval,omitempty"`
 	// Staleness period of the usage. Default is 5 minutes.
@@ -74,7 +76,11 @@ func (p *UsageParams) DeepCopy() *UsageParams {
 		windowType := *p.WindowType
 		out.WindowType = &windowType
 	}
-	out.TumblingWindowCronString = p.TumblingWindowCronString
+	if p.TumblingWindowStartTime != nil {
+		startTime := *p.TumblingWindowStartTime
+		out.TumblingWindowStartTime = &startTime
+	}
+	out.CronString = p.CronString
 	if p.FetchInterval != nil {
 		duration := *p.FetchInterval
 		out.FetchInterval = &duration

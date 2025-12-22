@@ -6,6 +6,7 @@ package resource_info
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	"golang.org/x/exp/maps"
@@ -172,6 +173,17 @@ func (g *GpuResourceRequirement) IsFractionalRequest() bool {
 		return true
 	}
 	return g.count > 0 && g.portion < wholeGpuPortion
+}
+
+func (g *GpuResourceRequirement) GpusAsString() string {
+	var requestedGpuString string
+	if g.IsFractionalRequest() && g.GetNumOfGpuDevices() > 1 {
+		requestedGpuString = fmt.Sprintf("%d X %s", g.GetNumOfGpuDevices(),
+			strconv.FormatFloat(g.GpuFractionalPortion(), 'g', 3, 64))
+	} else {
+		requestedGpuString = strconv.FormatFloat(g.GPUs(), 'g', 3, 64)
+	}
+	return requestedGpuString
 }
 
 func getNonMigGpus(portion float64, count int64) float64 {

@@ -12,7 +12,7 @@ import (
 
 func TestFitErrors_Error(t *testing.T) {
 	type fields struct {
-		nodes map[string]*FitError
+		nodes map[string]*TasksFitError
 		err   string
 	}
 	tests := []struct {
@@ -30,7 +30,7 @@ func TestFitErrors_Error(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := &FitErrors{
+			f := &TasksFitErrors{
 				nodes: tt.fields.nodes,
 				err:   tt.fields.err,
 			}
@@ -56,7 +56,7 @@ func TestNewFitErrorInsufficientResource(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *FitError
+		want *TasksFitError
 	}{
 		{
 			name: "Not enough cpu",
@@ -70,7 +70,7 @@ func TestNewFitErrorInsufficientResource(t *testing.T) {
 				capacityGpuMemory: 0,
 				gangSchedulingJob: false,
 			},
-			want: &FitError{
+			want: &TasksFitError{
 				taskName:        "t1",
 				taskNamespace:   "n1",
 				NodeName:        "node1",
@@ -90,7 +90,7 @@ func TestNewFitErrorInsufficientResource(t *testing.T) {
 				capacityGpuMemory: 0,
 				gangSchedulingJob: false,
 			},
-			want: &FitError{
+			want: &TasksFitError{
 				taskName:        "t1",
 				taskNamespace:   "n1",
 				NodeName:        "node1",
@@ -110,7 +110,7 @@ func TestNewFitErrorInsufficientResource(t *testing.T) {
 				capacityGpuMemory: 0,
 				gangSchedulingJob: false,
 			},
-			want: &FitError{
+			want: &TasksFitError{
 				taskName:        "t1",
 				taskNamespace:   "n1",
 				NodeName:        "node1",
@@ -133,7 +133,7 @@ func TestNewFitErrorInsufficientResource(t *testing.T) {
 				capacityGpuMemory: 0,
 				gangSchedulingJob: false,
 			},
-			want: &FitError{
+			want: &TasksFitError{
 				taskName:        "t1",
 				taskNamespace:   "n1",
 				NodeName:        "node1",
@@ -156,7 +156,7 @@ func TestNewFitErrorInsufficientResource(t *testing.T) {
 				capacityGpuMemory: 1000,
 				gangSchedulingJob: false,
 			},
-			want: &FitError{
+			want: &TasksFitError{
 				taskName:        "t1",
 				taskNamespace:   "n1",
 				NodeName:        "node1",
@@ -177,7 +177,7 @@ func TestNewFitErrorInsufficientResource(t *testing.T) {
 				gangSchedulingJob: false,
 				suffix:            "Message suffix",
 			},
-			want: &FitError{
+			want: &TasksFitError{
 				taskName:        "t1",
 				taskNamespace:   "n1",
 				NodeName:        "node1",

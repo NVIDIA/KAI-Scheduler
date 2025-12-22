@@ -54,8 +54,8 @@ func (ru *ResourceUpdater) sumChildQueueResources(ctx context.Context, queue *v2
 		queue.Status.Allocated = resources.SumResources(q.Status.Allocated, queue.Status.Allocated)
 		queue.Status.AllocatedNonPreemptible = resources.SumResources(q.Status.AllocatedNonPreemptible, queue.Status.AllocatedNonPreemptible)
 		queue.Status.Requested = resources.SumResources(q.Status.Requested, queue.Status.Requested)
-	}
 
+	}
 	return nil
 }
 

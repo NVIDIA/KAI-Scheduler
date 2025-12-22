@@ -756,6 +756,13 @@ func getTopologyTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 						DeservedGPUs: 8,
 					},
 				},
+				JobExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"pending_job0": {
+						GPUsRequired:         4,
+						Status:               pod_status.Pending,
+						ExpectedErrorMessage: "\nUnable to schedule podgroup.\n<rack1>: node-group rack1 can allocate only 3 of 4 required pods.\n<rack2>: node-group rack2 can allocate only 3 of 4 required pods.\ntopology cluster-topology, requirement k8s.io/rack couldn't be satisfied for job </pending_job0>.",
+					},
+				},
 				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
 					"running_job0-0": {
 						NodeName:             "node0",
