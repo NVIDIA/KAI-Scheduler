@@ -21,3 +21,5 @@ Apply the following command to create a sample PyTorchJob with a master pod and 
 kubectl apply -f pytorch-job.yaml
 ```
 Since gang scheduling is used, all 3 pods will be scheduled together, or none will be scheduled until resources become available in the cluster. 
+
+some changes 
