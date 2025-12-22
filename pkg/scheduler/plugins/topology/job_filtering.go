@@ -46,23 +46,24 @@ func (t *topologyPlugin) subSetNodesFn(
 		return []node_info.NodeSet{nodeSet}, nil
 	}
 
-	nodeSetDomain, ok := t.nodeSetToDomain[topologyTree.Name][getNodeSetID(nodeSet)]
+	id, level, validNodes := lowestCommonDomainID(nodeSet, topologyTree.TopologyResource.Spec.Levels)
+	domain, ok := topologyTree.DomainsByLevel[level][id]
 	if !ok {
 		return nil, fmt.Errorf("domain not found for node set in topology %s", topologyTree.Name)
 	}
 
 	t.treeAllocatableCleanup(topologyTree)
-	calcSubTreeFreeResources(nodeSetDomain)
+	calcSubTreeFreeResources(domain)
 	if useRepresentorPodsAccounting(tasks) {
-		if err := t.calcTreeAllocatable(tasks, nodeSetDomain); err != nil {
+		if err := t.calcTreeAllocatable(tasks, domain); err != nil {
 			return nil, err
 		}
 	}
 
 	tasksResources, tasksCount := getTasksAllocationMetadata(tasks)
 
-	if err := checkJobDomainFit(job, subGroup, tasksResources, tasksCount, nodeSetDomain); err != nil {
-		if nodeSetDomain.ID == rootDomainId {
+	if err := checkJobDomainFit(job, subGroup, tasksResources, tasksCount, domain); err != nil {
+		if domain.ID == rootDomainId {
 			job.AddSimpleJobFitError(
 				podgroup_info.PodSchedulingErrors,
 				getNoTopologyMatchError(job, subGroup, topologyTree, "not enough resources in the cluster to allocate the job").Error())
@@ -71,7 +72,7 @@ func (t *topologyPlugin) subSetNodesFn(
 			job.AddSimpleJobFitError(
 				podgroup_info.PodSchedulingErrors,
 				getNoTopologyMatchError(job, subGroup, topologyTree,
-					fmt.Sprintf("not enough resources in %s to allocate the job", string(nodeSetDomain.ID))).Error())
+					fmt.Sprintf("not enough resources in %s to allocate the job", string(domain.ID))).Error())
 		}
 		return []node_info.NodeSet{}, nil
 	}
@@ -83,9 +84,9 @@ func (t *topologyPlugin) subSetNodesFn(
 	if maxDepthLevel == "" {
 		maxDepthLevel = requiredLevel
 	}
-	sortTreeFromRoot(tasks, nodeSetDomain, maxDepthLevel)
+	sortTreeFromRoot(tasks, domain, maxDepthLevel)
 	if preferredLevel != "" {
-		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(nodeSetDomain, preferredLevel)
+		t.subGroupNodeScores[subGroup.GetName()] = calculateNodeScores(domain, preferredLevel)
 	}
 
 	jobAllocatableDomains, err := t.getJobAllocatableDomains(job, subGroup, podSets, tasksResources, tasksCount, topologyTree)
@@ -99,6 +100,9 @@ func (t *topologyPlugin) subSetNodesFn(
 	for _, jobAllocatableDomain := range jobAllocatableDomains {
 		var domainNodeSet node_info.NodeSet
 		for _, node := range jobAllocatableDomain.Nodes {
+			if _, ok := validNodes[node.Name]; !ok {
+				continue
+			}
 			domainNodeSet = append(domainNodeSet, node)
 		}
 		domainNodeSets = append(domainNodeSets, domainNodeSet)
