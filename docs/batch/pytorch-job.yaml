@@ -7,6 +7,7 @@ metadata:
   name: "pytorch-dist-mnist-nccl"
   labels:
     kai.scheduler/queue: default-queue
+    dummy: dummy
 spec:
   pytorchReplicaSpecs:
     Master:
@@ -37,3 +38,4 @@ spec:
               resources:
                 limits:
                   nvidia.com/gpu: "1"
+                  
