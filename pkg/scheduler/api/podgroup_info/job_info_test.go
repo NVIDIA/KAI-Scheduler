@@ -1327,6 +1327,45 @@ func TestPodGroupInfo_GetSchedulingConstraintsSignature(t *testing.T) {
 			},
 			expectEqual: false,
 		},
+		{
+			// PodGroup A:                          PodGroup B:
+			// root [rack] <---                     root []
+			//   └─ podset-1 []                       └─ podset-1 [rack] <---
+			//        └─ pod-1 (pending)                   └─ pod-1 (pending)
+			// Same constraint value but at different hierarchy levels
+			name: "same topology constraint at different hierarchy levels - expects not equal",
+			podGroupA: func() *PodGroupInfo {
+				// Constraint at root level, empty at podset level
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{Topology: "topo", RequiredLevel: "rack"})
+				podSet := subgroup_info.NewPodSet("podset-1", 1, nil)
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-1",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				// Empty at root level, constraint at podset level
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+				podSet := subgroup_info.NewPodSet("podset-1", 1,
+					&topology_info.TopologyConstraintInfo{Topology: "topo", RequiredLevel: "rack"})
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-2",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: false,
+		},
 	}
 
 	for _, tt := range tests {

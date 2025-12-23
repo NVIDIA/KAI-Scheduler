@@ -6,6 +6,7 @@ package subgroup_info
 import (
 	"crypto/sha256"
 	"fmt"
+	"slices"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -165,18 +166,27 @@ func (ps *PodSet) generateSchedulingConstraintsSignature() common_info.Schedulin
 	hash := sha256.New()
 
 	// Topology Constraints
+	// Use separator between levels so that different hierarchy orderings produce different hashes.
+	// e.g., root="" + podset="x" should differ from root="x" + podset=""
 	hash.Write([]byte(ps.GetTopologyConstraint().GetSchedulingConstraintsSignature()))
 	for parent := ps.GetParent(); parent != nil; parent = parent.GetParent() {
+		hash.Write([]byte("|"))
 		hash.Write([]byte(parent.GetTopologyConstraint().GetSchedulingConstraintsSignature()))
 	}
 
 	// Pods
+	podSignatures := make([]common_info.SchedulingConstraintsSignature, 0, len(ps.GetPodInfos()))
 	for _, pod := range ps.GetPodInfos() {
 		if pod_status.IsActiveAllocatedStatus(pod.Status) {
 			continue
 		}
 
-		hash.Write([]byte(pod.GetSchedulingConstraintsSignature()))
+		podSignatures = append(podSignatures, pod.GetSchedulingConstraintsSignature())
+	}
+
+	slices.Sort(podSignatures)
+	for _, signature := range podSignatures {
+		hash.Write([]byte(signature))
 	}
 
 	return common_info.SchedulingConstraintsSignature(fmt.Sprintf("%x", hash.Sum(nil)))
