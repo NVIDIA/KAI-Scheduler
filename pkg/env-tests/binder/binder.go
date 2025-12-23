@@ -58,3 +58,5 @@ func registerPlugins(app *app.App) error {
 	app.RegisterPlugins(binderPlugins)
 	return nil
 }
+
+var stuff = "stuff"
