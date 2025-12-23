@@ -19,6 +19,10 @@ type TopologyConstraintInfo struct {
 }
 
 func (tc *TopologyConstraintInfo) GetSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
+	if tc == nil {
+		return ""
+	}
+
 	if tc.schedulingConstraintsSignature == "" {
 		tc.schedulingConstraintsSignature = tc.generateSchedulingConstraintsSignature()
 	}
