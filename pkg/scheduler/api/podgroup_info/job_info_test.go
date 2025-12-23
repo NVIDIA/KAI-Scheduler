@@ -25,6 +25,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -32,6 +33,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 )
 
 func jobInfoEqual(l, r *PodGroupInfo) bool {
@@ -875,6 +877,427 @@ func TestPodGroupInfo_GetNumPendingTasks(t *testing.T) {
 			t.Errorf("GetNumPendingTasks failed. test '%s'. expected: %v, actual: %v",
 				test.name, test.expected, result)
 		}
+	}
+}
+
+func TestPodGroupInfo_GetSchedulingConstraintsSignature(t *testing.T) {
+	// Helper function to create a pending pod task
+	createPendingTask := func(uid string) *pod_info.PodInfo {
+		return pod_info.NewTaskInfo(&v1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:       "uid-" + types.UID(uid),
+				Name:      uid,
+				Namespace: "ns",
+			},
+			Status: v1.PodStatus{Phase: v1.PodPending},
+		})
+	}
+
+	// Helper function to create a running (allocated) pod task
+	createRunningTask := func(uid string) *pod_info.PodInfo {
+		return pod_info.NewTaskInfo(&v1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:       "uid-" + types.UID(uid),
+				Name:      uid,
+				Namespace: "ns",
+			},
+			Spec:   v1.PodSpec{NodeName: "node-1"},
+			Status: v1.PodStatus{Phase: v1.PodRunning},
+		})
+	}
+
+	tests := []struct {
+		name        string
+		podGroupA   func() *PodGroupInfo
+		podGroupB   func() *PodGroupInfo
+		expectEqual bool
+	}{
+		{
+			// PodGroup A:              PodGroup B:
+			// root [rack]              root [rack]
+			//   └─ pod-1 (pending)       └─ pod-1 (pending)
+			name: "flat podgroup with same topology constraint - expects equal",
+			podGroupA: func() *PodGroupInfo {
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{Topology: "topo", RequiredLevel: "rack"})
+				podSet := subgroup_info.NewPodSet(DefaultSubGroup, 1, &topology_info.TopologyConstraintInfo{})
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-1",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{Topology: "topo", RequiredLevel: "rack"})
+				podSet := subgroup_info.NewPodSet(DefaultSubGroup, 1, &topology_info.TopologyConstraintInfo{})
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-2",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: true,
+		},
+		{
+			// PodGroup A:              PodGroup B:
+			// root [rack]              root [zone] <--- DIFFERENT
+			//   └─ pod-1 (pending)       └─ pod-1 (pending)
+			name: "flat podgroup with different topology constraint - expects not equal",
+			podGroupA: func() *PodGroupInfo {
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{Topology: "topo", RequiredLevel: "rack"})
+				podSet := subgroup_info.NewPodSet(DefaultSubGroup, 1, &topology_info.TopologyConstraintInfo{})
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-1",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{Topology: "topo", RequiredLevel: "zone"}) // Different
+				podSet := subgroup_info.NewPodSet(DefaultSubGroup, 1, &topology_info.TopologyConstraintInfo{})
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-2",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: false,
+		},
+		{
+			// PodGroup A:                    PodGroup B:
+			// root []                        root []
+			//   └─ podset-1 [node]             └─ podset-1 [node]
+			//        └─ pod-1 (pending)            └─ pod-1 (pending)
+			name: "same constraints - expects equal",
+			podGroupA: func() *PodGroupInfo {
+				topologyConstraint := &topology_info.TopologyConstraintInfo{
+					Topology:      "topology",
+					RequiredLevel: "node",
+				}
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("podset-1", 1, topologyConstraint)
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-1",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				topologyConstraint := &topology_info.TopologyConstraintInfo{
+					Topology:      "topology",
+					RequiredLevel: "node",
+				}
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("podset-1", 1, topologyConstraint)
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-2",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: true,
+		},
+		{
+			// PodGroup A:                    PodGroup B:
+			// root []                        root []
+			//   └─ subgroup-alpha [node]       └─ subgroup-beta [node]
+			//        └─ pod-1 (pending)             └─ pod-1 (pending)
+			// Names differ, but constraints are identical
+			name: "different subgroup names with same constraints - expects equal",
+			podGroupA: func() *PodGroupInfo {
+				topologyConstraint := &topology_info.TopologyConstraintInfo{
+					Topology:      "topology",
+					RequiredLevel: "node",
+				}
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("subgroup-alpha", 1, topologyConstraint)
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-1",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				topologyConstraint := &topology_info.TopologyConstraintInfo{
+					Topology:      "topology",
+					RequiredLevel: "node",
+				}
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("subgroup-beta", 1, topologyConstraint)
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-2",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: true,
+		},
+		{
+			// PodGroup A:                    PodGroup B:
+			// root []                        root []
+			//   └─ podset-1 [node] <---        └─ podset-1 [rack] <--- DIFFERENT
+			//        └─ pod-1 (pending)             └─ pod-1 (pending)
+			name: "different bottom PodSet constraints - expects not equal",
+			podGroupA: func() *PodGroupInfo {
+				topologyConstraint := &topology_info.TopologyConstraintInfo{
+					Topology:      "topology",
+					RequiredLevel: "node",
+				}
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("podset-1", 1, topologyConstraint)
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-1",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				topologyConstraint := &topology_info.TopologyConstraintInfo{
+					Topology:      "topology",
+					RequiredLevel: "rack", // Different from "node"
+				}
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("podset-1", 1, topologyConstraint)
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-2",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: false,
+		},
+		{
+			// PodGroup A:                      PodGroup B:
+			// root []                          root []
+			//   └─ middle [zone] <---            └─ middle [rack] <--- DIFFERENT
+			//        └─ podset-1 []                   └─ podset-1 []
+			//             └─ pod-1 (pending)               └─ pod-1 (pending)
+			name: "different middle SubGroupSet constraints - expects not equal",
+			podGroupA: func() *PodGroupInfo {
+				// root -> middle -> podset
+				middleConstraint := &topology_info.TopologyConstraintInfo{
+					Topology:       "topology",
+					PreferredLevel: "zone",
+				}
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				middleSubGroupSet := subgroup_info.NewSubGroupSet("middle", middleConstraint)
+				podSet := subgroup_info.NewPodSet("podset-1", 1, &topology_info.TopologyConstraintInfo{})
+				middleSubGroupSet.AddPodSet(podSet)
+				rootSubGroupSet.AddSubGroup(middleSubGroupSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-1",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				// root -> middle -> podset
+				middleConstraint := &topology_info.TopologyConstraintInfo{
+					Topology:       "topology",
+					PreferredLevel: "rack", // Different from "zone"
+				}
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				middleSubGroupSet := subgroup_info.NewSubGroupSet("middle", middleConstraint)
+				podSet := subgroup_info.NewPodSet("podset-1", 1, &topology_info.TopologyConstraintInfo{})
+				middleSubGroupSet.AddPodSet(podSet)
+				rootSubGroupSet.AddSubGroup(middleSubGroupSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-2",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: false,
+		},
+		{
+			// PodGroup A:                        PodGroup B:
+			// root [node] <---                   root [rack] <--- DIFFERENT
+			//   └─ middle []                       └─ middle []
+			//        └─ podset-1 []                     └─ podset-1 []
+			//             └─ pod-1 (pending)                 └─ pod-1 (pending)
+			name: "different top SubGroupSet constraints - expects not equal",
+			podGroupA: func() *PodGroupInfo {
+				// root (with constraint) -> middle -> podset
+				rootConstraint := &topology_info.TopologyConstraintInfo{
+					Topology:      "topology",
+					RequiredLevel: "node",
+				}
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, rootConstraint)
+				middleSubGroupSet := subgroup_info.NewSubGroupSet("middle", &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("podset-1", 1, &topology_info.TopologyConstraintInfo{})
+				middleSubGroupSet.AddPodSet(podSet)
+				rootSubGroupSet.AddSubGroup(middleSubGroupSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-1",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				// root (with different constraint) -> middle -> podset
+				rootConstraint := &topology_info.TopologyConstraintInfo{
+					Topology:      "topology",
+					RequiredLevel: "rack", // Different from "node"
+				}
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, rootConstraint)
+				middleSubGroupSet := subgroup_info.NewSubGroupSet("middle", &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("podset-1", 1, &topology_info.TopologyConstraintInfo{})
+				middleSubGroupSet.AddPodSet(podSet)
+				rootSubGroupSet.AddSubGroup(middleSubGroupSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-2",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: false,
+		},
+		{
+			// PodGroup A:                      PodGroup B:
+			// root []                          root []
+			//   └─ podset-1 []                   └─ podset-1 []
+			//        ├─ pod-1 (pending)              └─ pod-1 (pending)
+			//        └─ pod-2 (pending) <--- EXTRA
+			// Extra pending pod affects signature
+			name: "extra non-allocated pod - expects not equal",
+			podGroupA: func() *PodGroupInfo {
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("podset-1", 1, &topology_info.TopologyConstraintInfo{})
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-1",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				podSet.AssignTask(createPendingTask("pod-2")) // Extra pending pod
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("podset-1", 1, &topology_info.TopologyConstraintInfo{})
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-2",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: false,
+		},
+		{
+			// PodGroup A:                        PodGroup B:
+			// root []                            root []
+			//   └─ podset-1 []                     └─ podset-1 []
+			//        ├─ pod-1 (pending)                └─ pod-1 (pending)
+			//        └─ pod-2 (running) <--- EXTRA (allocated, ignored in signature)
+			// Extra allocated pod does NOT affect signature
+			name: "extra allocated pod - expects equal",
+			podGroupA: func() *PodGroupInfo {
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("podset-1", 1, &topology_info.TopologyConstraintInfo{})
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-1",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				podSet.AssignTask(createRunningTask("pod-2")) // Extra allocated pod
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet := subgroup_info.NewPodSet("podset-1", 1, &topology_info.TopologyConstraintInfo{})
+				rootSubGroupSet.AddPodSet(podSet)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-2",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pgiA := tt.podGroupA()
+			pgiB := tt.podGroupB()
+
+			sigA := pgiA.GetSchedulingConstraintsSignature()
+			sigB := pgiB.GetSchedulingConstraintsSignature()
+
+			if tt.expectEqual && sigA != sigB {
+				t.Errorf("Expected signatures to be equal, but got sigA=%s, sigB=%s", sigA, sigB)
+			}
+			if !tt.expectEqual && sigA == sigB {
+				t.Errorf("Expected signatures to be different, but both are %s", sigA)
+			}
+		})
 	}
 }
 
