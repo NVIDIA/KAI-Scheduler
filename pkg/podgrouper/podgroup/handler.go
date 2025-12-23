@@ -53,6 +53,14 @@ func (h *Handler) ApplyToCluster(ctx context.Context, pgMetadata Metadata) error
 		return err
 	}
 
+	// Check if pod group exists and has "donotcreate" label set to "true"
+	// If both conditions are met, skip creation/update
+	if oldPodGroup.Labels != nil {
+		if donotcreate, found := oldPodGroup.Labels["donotcreate"]; found && donotcreate == "true" {
+			return nil
+		}
+	}
+
 	newPodGroup = h.ignoreFields(oldPodGroup, newPodGroup)
 
 	// If we got here then oldPodGroup exists - update if necessary
