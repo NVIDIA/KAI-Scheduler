@@ -382,7 +382,7 @@ func createServiceMonitorsForExternalPrometheus(
 
 func getStorageSpecForPrometheus(config *kaiprometheus.Prometheus) *monitoringv1.StorageSpec {
 	// Only if explicitly disabled, return nil
-	if config.PersistentStorage != nil && !*config.PersistentStorage {
+	if config.EnablePersistentStorage != nil && !*config.EnablePersistentStorage {
 		return nil
 	}
 

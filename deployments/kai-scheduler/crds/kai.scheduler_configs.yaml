@@ -6702,6 +6702,10 @@ spec:
               prometheus:
                 description: Prometheus specifies configuration for Prometheus monitoring
                 properties:
+                  enablePersistentStorage:
+                    description: EnablePersistentStorage defines whether to use persistent
+                      storage for the Prometheus instance
+                    type: boolean
                   enabled:
                     description: Enabled defines whether a Prometheus instance should
                       be deployed
@@ -6729,10 +6733,6 @@ spec:
                       When set, KAI will not deploy its own Prometheus but will configure ServiceMonitors
                       for the external instance and validate connectivity
                     type: string
-                  persistentStorage:
-                    description: PersistentStorage defines whether to use persistent
-                      storage for the Prometheus instance
-                    type: boolean
                   retentionPeriod:
                     description: RetentionPeriod defines how long to retain data (e.g.,
                       "2w", "1d", "30d")
