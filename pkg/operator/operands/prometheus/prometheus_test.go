@@ -507,7 +507,7 @@ var _ = Describe("getStorageSpecForPrometheus", func() {
 	Context("when configuring persistent storage", func() {
 		It("should return nil when persistent storage is explicitly disabled", func(ctx context.Context) {
 			config := &kaiprometheus.Prometheus{
-				PersistentStorage: ptr.To(false),
+				EnablePersistentStorage: ptr.To(false),
 			}
 
 			storageSpec := getStorageSpecForPrometheus(config)
@@ -516,8 +516,8 @@ var _ = Describe("getStorageSpecForPrometheus", func() {
 
 		It("should return storage spec with default size when persistent storage is not specified", func(ctx context.Context) {
 			config := &kaiprometheus.Prometheus{
-				PersistentStorage: nil,
-				StorageClassName:  ptr.To("standard"),
+				EnablePersistentStorage: nil,
+				StorageClassName:        ptr.To("standard"),
 			}
 
 			storageSpec := getStorageSpecForPrometheus(config)
@@ -528,9 +528,9 @@ var _ = Describe("getStorageSpecForPrometheus", func() {
 
 		It("should return storage spec when persistent storage is explicitly enabled", func(ctx context.Context) {
 			config := &kaiprometheus.Prometheus{
-				PersistentStorage: ptr.To(true),
-				StorageSize:       ptr.To("100Gi"),
-				StorageClassName:  ptr.To("fast-ssd"),
+				EnablePersistentStorage: ptr.To(true),
+				StorageSize:             ptr.To("100Gi"),
+				StorageClassName:        ptr.To("fast-ssd"),
 			}
 
 			storageSpec := getStorageSpecForPrometheus(config)
@@ -542,8 +542,8 @@ var _ = Describe("getStorageSpecForPrometheus", func() {
 
 		It("should use default storage size when custom size is not provided", func(ctx context.Context) {
 			config := &kaiprometheus.Prometheus{
-				PersistentStorage: ptr.To(true),
-				StorageClassName:  ptr.To("standard"),
+				EnablePersistentStorage: ptr.To(true),
+				StorageClassName:        ptr.To("standard"),
 			}
 
 			storageSpec := getStorageSpecForPrometheus(config)
