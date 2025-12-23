@@ -37,7 +37,13 @@ func (p *Prometheus) DesiredState(
 	p.client = runtimeClient.(client.Client)
 
 	if kaiConfig.Spec.Prometheus == nil || kaiConfig.Spec.Prometheus.Enabled == nil || !*kaiConfig.Spec.Prometheus.Enabled {
-		return []client.Object{}, nil
+		// Handle graceful deprecation of existing Prometheus instance
+		objects, err := deprecatePrometheusForKAIConfig(ctx, runtimeClient, kaiConfig)
+		if err != nil {
+			return nil, err
+		}
+		p.lastDesiredState = objects
+		return objects, nil
 	}
 
 	var objects []client.Object
