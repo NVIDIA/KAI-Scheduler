@@ -12,7 +12,28 @@ updates:
       interval: "weekly"
   # Enable version updates for Go modules
   - package-ecosystem: "gomod"
-  # Look for Go modules in the `root` directory
+    # Look for Go modules in the `root` directory
     directory: "/"
+    schedule:
+      interval: "weekly"
+  # Enable version updates for Go modules on supported version branches
+  - package-ecosystem: "gomod"
+    directory: "/"
+    target-branch: "v0.10"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "gomod"
+    directory: "/"
+    target-branch: "v0.9"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "gomod"
+    directory: "/"
+    target-branch: "v0.6"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "gomod"
+    directory: "/"
+    target-branch: "v0.4"
     schedule:
       interval: "weekly"
