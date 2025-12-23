@@ -32,9 +32,7 @@ func (tc *TopologyConstraintInfo) GetSchedulingConstraintsSignature() common_inf
 
 func (tc *TopologyConstraintInfo) generateSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
 	hash := sha256.New()
-	hash.Write([]byte(tc.Topology))
-	hash.Write([]byte(tc.RequiredLevel))
-	hash.Write([]byte(tc.PreferredLevel))
+	hash.Write([]byte(fmt.Sprintf("%s:%s:%s", tc.Topology, tc.RequiredLevel, tc.PreferredLevel)))
 
 	return common_info.SchedulingConstraintsSignature(fmt.Sprintf("%x", hash.Sum(nil)))
 }
