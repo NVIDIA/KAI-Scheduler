@@ -12,6 +12,7 @@ import (
 	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"github.com/xhit/go-str2duration/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -167,14 +168,11 @@ func deprecatePrometheusForKAIConfig(
 		return []client.Object{prometheusObj}, nil
 	}
 
+	defaultRetentionPeriod := 30 * 24 * time.Hour
 	// Use retention period from config, default to 30 days
-	retentionPeriod := 30 * 24 * time.Hour
-	if kaiConfig.Spec.Prometheus != nil && kaiConfig.Spec.Prometheus.RetentionPeriod != nil {
-		duration, err := time.ParseDuration(*kaiConfig.Spec.Prometheus.RetentionPeriod)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse retention period %q: %w", *kaiConfig.Spec.Prometheus.RetentionPeriod, err)
-		}
-		retentionPeriod = duration
+	retentionPeriod, err := getRetentionPeriodForPrometheus(prometheusObj, defaultRetentionPeriod)
+	if err != nil {
+		return []client.Object{}, fmt.Errorf("failed to get retention period for Prometheus instance: %w", err)
 	}
 
 	// Check if retention period has passed
@@ -404,4 +402,20 @@ func getStorageSpecForPrometheus(config *kaiprometheus.Prometheus) *monitoringv1
 		},
 	}
 	return storageSpec
+}
+
+func getRetentionPeriodForPrometheus(prom *monitoringv1.Prometheus, defaultRetentionPeriod time.Duration) (time.Duration, error) {
+	if prom == nil {
+		return defaultRetentionPeriod, nil
+	}
+	if string(prom.Spec.Retention) == "" {
+		return defaultRetentionPeriod, nil
+	}
+
+	duration, err := str2duration.ParseDuration(string(prom.Spec.Retention))
+	if err != nil {
+		return defaultRetentionPeriod, err
+	}
+
+	return duration, nil
 }
