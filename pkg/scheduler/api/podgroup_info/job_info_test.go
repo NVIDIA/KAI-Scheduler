@@ -1281,6 +1281,51 @@ func TestPodGroupInfo_GetSchedulingConstraintsSignature(t *testing.T) {
 			},
 			expectEqual: true,
 		},
+		{
+			// PodGroup A:                          PodGroup B:
+			// root []                              root []
+			//   ├─ podset-1 [rack]                   ├─ podset-1 [rack]
+			//   │    └─ pod-1 (pending) <---         │    (empty)
+			//   └─ podset-2 [zone]                   └─ podset-2 [zone]
+			//        (empty)                              └─ pod-1 (pending) <--- DIFFERENT PODSET
+			// Same pod in different PodSets with different topology constraints
+			name: "same pod in different podsets - expects not equal",
+			podGroupA: func() *PodGroupInfo {
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet1 := subgroup_info.NewPodSet("podset-1", 1,
+					&topology_info.TopologyConstraintInfo{Topology: "topo", RequiredLevel: "rack"})
+				podSet2 := subgroup_info.NewPodSet("podset-2", 1,
+					&topology_info.TopologyConstraintInfo{Topology: "topo", RequiredLevel: "zone"})
+				rootSubGroupSet.AddPodSet(podSet1)
+				rootSubGroupSet.AddPodSet(podSet2)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-1",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet1.AssignTask(createPendingTask("pod-1")) // Pod in podset-1
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, &topology_info.TopologyConstraintInfo{})
+				podSet1 := subgroup_info.NewPodSet("podset-1", 1,
+					&topology_info.TopologyConstraintInfo{Topology: "topo", RequiredLevel: "rack"})
+				podSet2 := subgroup_info.NewPodSet("podset-2", 1,
+					&topology_info.TopologyConstraintInfo{Topology: "topo", RequiredLevel: "zone"})
+				rootSubGroupSet.AddPodSet(podSet1)
+				rootSubGroupSet.AddPodSet(podSet2)
+
+				pgi := &PodGroupInfo{
+					UID:             "pg-2",
+					RootSubGroupSet: rootSubGroupSet,
+					PodSets:         rootSubGroupSet.GetAllPodSets(),
+				}
+				podSet2.AssignTask(createPendingTask("pod-1")) // Same pod but in podset-2
+				return pgi
+			},
+			expectEqual: false,
+		},
 	}
 
 	for _, tt := range tests {
