@@ -4,6 +4,9 @@
 package subgroup_info
 
 import (
+	"crypto/sha256"
+	"fmt"
+
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -20,6 +23,8 @@ type PodSet struct {
 	numActiveAllocatedTasks int
 	numActiveUsedTasks      int
 	numAliveTasks           int
+
+	schedulingConstraintsSignature common_info.SchedulingConstraintsSignature
 }
 
 func NewPodSet(name string, minAvailable int32, topologyConstraint *topology_info.TopologyConstraintInfo) *PodSet {
@@ -48,6 +53,7 @@ func (ps *PodSet) GetPodInfos() pod_info.PodsMap {
 }
 
 func (ps *PodSet) AssignTask(ti *pod_info.PodInfo) {
+	ps.invalidateSchedulingConstraintsSignature()
 	ps.clearOldStatus(ti)
 
 	if _, found := ps.podStatusIndex[ti.Status]; !found {
@@ -67,6 +73,10 @@ func (ps *PodSet) AssignTask(ti *pod_info.PodInfo) {
 
 	ps.podStatusMap[ti.UID] = ti.Status
 	ps.podInfos[ti.UID] = ti
+}
+
+func (ps *PodSet) invalidateSchedulingConstraintsSignature() {
+	ps.schedulingConstraintsSignature = ""
 }
 
 func (ps *PodSet) clearOldStatus(ti *pod_info.PodInfo) {
@@ -136,4 +146,42 @@ func (ps *PodSet) GetNumPendingTasks() int {
 
 func (ps *PodSet) Clone() *PodSet {
 	return NewPodSet(ps.GetName(), ps.GetMinAvailable(), ps.GetTopologyConstraint())
+}
+
+func (ps *PodSet) GetSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
+	if ps.isAllPodsActiveAllocated() {
+		// No scheduling constraints
+		return ""
+	}
+
+	if ps.schedulingConstraintsSignature == "" {
+		ps.schedulingConstraintsSignature = ps.generateSchedulingConstraintsSignature()
+	}
+
+	return ps.schedulingConstraintsSignature
+}
+
+func (ps *PodSet) generateSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
+	hash := sha256.New()
+
+	// Topology Constraints
+	hash.Write([]byte(ps.GetTopologyConstraint().GetSchedulingConstraintsSignature()))
+	for parent := ps.GetParent(); parent != nil; parent = parent.GetParent() {
+		hash.Write([]byte(parent.GetTopologyConstraint().GetSchedulingConstraintsSignature()))
+	}
+
+	// Pods
+	for _, pod := range ps.GetPodInfos() {
+		if pod_status.IsActiveAllocatedStatus(pod.Status) {
+			continue
+		}
+
+		hash.Write([]byte(pod.GetSchedulingConstraintsSignature()))
+	}
+
+	return common_info.SchedulingConstraintsSignature(fmt.Sprintf("%x", hash.Sum(nil)))
+}
+
+func (ps *PodSet) isAllPodsActiveAllocated() bool {
+	return ps.GetNumActiveAllocatedTasks() == len(ps.GetPodInfos())
 }
