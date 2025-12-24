@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.12.0] - 2025-12-24
+
 ### Added
 - Introduced native KAI Topology CRD to replace dependency on Kueue's Topology CRD, improving compatibility and simplifying installation
 - Added support for having the default "preemptibility" per top-owner-type read from the default configs configmap in the pod-grouper
