@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - Fixed confusing resource division log message [#734](https://github.com/NVIDIA/KAI-Scheduler/pull/734) [itsomri](https://github.com/itsomri)
 - Fixed a bug where the snapshot tool would not load topology objects [#731](https://github.com/NVIDIA/KAI-Scheduler/pull/731) [itsomri](https://github.com/itsomri)
+- Fixed Dynamo integration by adding Dynamo GVKs to SkipTopOwner table
 
 ### Changed
 - Renamed the previous "tumbling" option for the scheduler usage window type to "cron".
