@@ -520,28 +520,21 @@ func (pgi *PodGroupInfo) SetJobFitError(reason enginev2alpha2.UnschedulableReaso
 }
 
 func (pgi *PodGroupInfo) GetSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
-	if pgi.schedulingConstraintsSignature != "" {
-		return pgi.schedulingConstraintsSignature
+	if pgi.schedulingConstraintsSignature == "" {
+		pgi.schedulingConstraintsSignature = pgi.generateSchedulingConstraintsSignature()
 	}
 
-	key := pgi.generateSchedulingConstraintsSignature()
-
-	pgi.schedulingConstraintsSignature = key
-	return key
+	return pgi.schedulingConstraintsSignature
 }
 
 func (pgi *PodGroupInfo) generateSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
 	hash := sha256.New()
 	var signatures []common_info.SchedulingConstraintsSignature
 
-	for _, pod := range pgi.GetAllPodsMap() {
-		if pod_status.IsActiveAllocatedStatus(pod.Status) {
-			continue
-		}
-
-		key := pod.GetSchedulingConstraintsSignature()
-		signatures = append(signatures, key)
+	for _, podSet := range pgi.PodSets {
+		signatures = append(signatures, podSet.GetSchedulingConstraintsSignature())
 	}
+
 	slices.Sort(signatures)
 
 	for _, signature := range signatures {
