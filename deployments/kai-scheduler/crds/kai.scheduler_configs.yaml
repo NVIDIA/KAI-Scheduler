@@ -6702,6 +6702,10 @@ spec:
               prometheus:
                 description: Prometheus specifies configuration for Prometheus monitoring
                 properties:
+                  enablePersistentStorage:
+                    description: EnablePersistentStorage defines whether to use persistent
+                      storage for the Prometheus instance
+                    type: boolean
                   enabled:
                     description: Enabled defines whether a Prometheus instance should
                       be deployed
