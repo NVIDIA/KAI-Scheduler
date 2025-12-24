@@ -39,6 +39,10 @@ func prometheusForKAIConfig(
 	logger := log.FromContext(ctx)
 	config := kaiConfig.Spec.Prometheus
 
+	if kaiConfig.Spec.Prometheus == nil || kaiConfig.Spec.Prometheus.Enabled == nil || !*kaiConfig.Spec.Prometheus.Enabled {
+		return []client.Object{}, nil
+	}
+
 	if config.ExternalPrometheusUrl != nil && *config.ExternalPrometheusUrl != "" {
 		logger.Info("External Prometheus URL provided, skipping Prometheus CR creation", "url", *config.ExternalPrometheusUrl)
 
