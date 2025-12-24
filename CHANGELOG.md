@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix retention duration parsing for deprecated prometheus instances [#775](https://github.com/NVIDIA/KAI-Scheduler/pull/775) [itsomri](https://github.com/itsomri)
 - Fixed a bug where the scheduler would not consider topology constraints when calculating the scheduling constraints signature [#761](https://github.com/NVIDIA/KAI-Scheduler/pull/766) [gshaibi](https://github.com/gshaibi)
 - Fixed Dynamo integration by adding Dynamo GVKs to SkipTopOwner table
-- Fixed prometheus instance deprecation - ensure single instance
+- Fixed prometheus instance deprecation - ensure single instance [#780](https://github.com/NVIDIA/KAI-Scheduler/pull/780) [itsomri](https://github.com/itsomri)
 
 ## [v0.10.4] - 2025-12-23
 
