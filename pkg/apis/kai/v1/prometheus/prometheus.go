@@ -22,6 +22,10 @@ type Prometheus struct {
 	// +kubebuilder:validation:Optional
 	SampleInterval *string `json:"sampleInterval,omitempty"`
 
+	// EnablePersistentStorage defines whether to use persistent storage for the Prometheus instance
+	// +kubebuilder:validation:Optional
+	EnablePersistentStorage *bool `json:"enablePersistentStorage,omitempty"`
+
 	// StorageSize defines the size of the storage (e.g., "20Gi", "30Gi")
 	// +kubebuilder:validation:Optional
 	StorageSize *string `json:"storageSize,omitempty"`

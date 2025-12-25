@@ -5,6 +5,7 @@ package prometheus
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -87,7 +88,7 @@ var _ = Describe("Prometheus", func() {
 
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(1))
+				Expect(len(objects)).To(Equal(3))
 
 				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
 				Expect(prometheusObj).NotTo(BeNil())
@@ -503,6 +504,56 @@ var _ = Describe("prometheusForKAIConfig", func() {
 	})
 })
 
+var _ = Describe("getStorageSpecForPrometheus", func() {
+	Context("when configuring persistent storage", func() {
+		It("should return nil when persistent storage is explicitly disabled", func(ctx context.Context) {
+			config := &kaiprometheus.Prometheus{
+				EnablePersistentStorage: ptr.To(false),
+			}
+
+			storageSpec := getStorageSpecForPrometheus(config)
+			Expect(storageSpec).To(BeNil())
+		})
+
+		It("should return storage spec with default size when persistent storage is not specified", func(ctx context.Context) {
+			config := &kaiprometheus.Prometheus{
+				EnablePersistentStorage: nil,
+				StorageClassName:        ptr.To("standard"),
+			}
+
+			storageSpec := getStorageSpecForPrometheus(config)
+			Expect(storageSpec).NotTo(BeNil())
+			Expect(storageSpec.VolumeClaimTemplate.Spec.Resources.Requests.Storage().String()).To(Equal("50Gi"))
+			Expect(*storageSpec.VolumeClaimTemplate.Spec.StorageClassName).To(Equal("standard"))
+		})
+
+		It("should return storage spec when persistent storage is explicitly enabled", func(ctx context.Context) {
+			config := &kaiprometheus.Prometheus{
+				EnablePersistentStorage: ptr.To(true),
+				StorageSize:             ptr.To("100Gi"),
+				StorageClassName:        ptr.To("fast-ssd"),
+			}
+
+			storageSpec := getStorageSpecForPrometheus(config)
+			Expect(storageSpec).NotTo(BeNil())
+			Expect(storageSpec.VolumeClaimTemplate.Spec.Resources.Requests.Storage().String()).To(Equal("100Gi"))
+			Expect(*storageSpec.VolumeClaimTemplate.Spec.StorageClassName).To(Equal("fast-ssd"))
+			Expect(storageSpec.VolumeClaimTemplate.Spec.AccessModes).To(ContainElement(corev1.ReadWriteOnce))
+		})
+
+		It("should use default storage size when custom size is not provided", func(ctx context.Context) {
+			config := &kaiprometheus.Prometheus{
+				EnablePersistentStorage: ptr.To(true),
+				StorageClassName:        ptr.To("standard"),
+			}
+
+			storageSpec := getStorageSpecForPrometheus(config)
+			Expect(storageSpec).NotTo(BeNil())
+			Expect(storageSpec.VolumeClaimTemplate.Spec.Resources.Requests.Storage().String()).To(Equal("50Gi"))
+		})
+	})
+})
+
 func kaiConfigForPrometheus() *kaiv1.Config {
 	kaiConfig := &kaiv1.Config{}
 	kaiConfig.Spec.SetDefaultsWhereNeeded()
@@ -670,13 +721,96 @@ var _ = Describe("deprecatePrometheusForKAIConfig", func() {
 							deprecationTimestampKey: oldTime.Format(time.RFC3339),
 						},
 					},
+					Spec: monitoringv1.PrometheusSpec{
+						Retention: monitoringv1.Duration("invalid-duration"),
+					},
 				}
 				Expect(fakeKubeClient.Create(ctx, existingPrometheus)).To(Succeed())
 
 				objects, err := deprecatePrometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).NotTo(BeNil())
-				Expect(err.Error()).To(ContainSubstring("failed to parse retention period"))
-				Expect(objects).To(BeNil())
+				Expect(err.Error()).To(ContainSubstring("failed to get retention period"))
+				Expect(objects).To(HaveLen(0))
+			})
+		})
+
+		Context("when retention period uses Prometheus-style formats", func() {
+			It("should successfully parse duration formats not supported by standard time.ParseDuration", func(ctx context.Context) {
+				// Test various Prometheus/str2duration formats that standard time.ParseDuration doesn't support
+				// str2duration supports: d (days), w (weeks), but not y (years)
+				testCases := []struct {
+					duration string
+					// We'll test that it's parseable and deprecation works correctly
+				}{
+					{duration: "2w"},   // weeks - not supported by time.ParseDuration
+					{duration: "30d"},  // days - not supported by time.ParseDuration
+					{duration: "1w2d"}, // combined - not supported by time.ParseDuration
+					{duration: "168h"}, // hours - supported by both (for comparison)
+				}
+
+				for _, tc := range testCases {
+					By(fmt.Sprintf("testing duration format: %s", tc.duration))
+
+					// Create Prometheus with recent deprecation timestamp (retention not passed)
+					recentTime := metav1.NewTime(metav1.Now().Add(-1 * time.Hour))
+					existingPrometheus := &monitoringv1.Prometheus{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Prometheus",
+							APIVersion: "monitoring.coreos.com/v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      mainResourceName,
+							Namespace: kaiConfig.Spec.Namespace,
+							Annotations: map[string]string{
+								deprecationTimestampKey: recentTime.Format(time.RFC3339),
+							},
+						},
+						Spec: monitoringv1.PrometheusSpec{
+							// Set the retention period on the Prometheus object
+							Retention: monitoringv1.Duration(tc.duration),
+						},
+					}
+					Expect(fakeKubeClient.Create(ctx, existingPrometheus)).To(Succeed())
+
+					// Should successfully parse the Prometheus-style duration
+					objects, err := deprecatePrometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+					Expect(err).To(BeNil(), fmt.Sprintf("Expected no error for duration %s, got: %v", tc.duration, err))
+					Expect(objects).NotTo(BeNil())
+					Expect(objects).To(HaveLen(1), fmt.Sprintf("Expected 1 object for duration %s", tc.duration))
+
+					// Clean up for next iteration
+					Expect(fakeKubeClient.Delete(ctx, existingPrometheus)).To(Succeed())
+				}
+			})
+
+			It("should correctly calculate deletion time with week-based retention", func(ctx context.Context) {
+				kaiConfig.Spec.Prometheus.RetentionPeriod = ptr.To("2w") // 2 weeks
+
+				// Create Prometheus with deprecation timestamp from 3 weeks ago (should be deleted)
+				oldTime := metav1.NewTime(metav1.Now().Add(-3 * 7 * 24 * time.Hour))
+				existingPrometheus := &monitoringv1.Prometheus{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Prometheus",
+						APIVersion: "monitoring.coreos.com/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      mainResourceName,
+						Namespace: kaiConfig.Spec.Namespace,
+						Annotations: map[string]string{
+							deprecationTimestampKey: oldTime.Format(time.RFC3339),
+						},
+					},
+					Spec: monitoringv1.PrometheusSpec{
+						// Set the retention period on the Prometheus object
+						Retention: monitoringv1.Duration("2w"),
+					},
+				}
+				Expect(fakeKubeClient.Create(ctx, existingPrometheus)).To(Succeed())
+
+				// Should allow deletion as retention period (2 weeks) has passed
+				objects, err := deprecatePrometheusForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+				Expect(err).To(BeNil())
+				Expect(objects).To(BeEmpty(), "Expected empty objects slice as retention period passed")
 			})
 		})
 	})

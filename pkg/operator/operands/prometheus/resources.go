@@ -12,6 +12,7 @@ import (
 	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"github.com/xhit/go-str2duration/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiprometheus "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	v1 "k8s.io/api/core/v1"
 )
@@ -73,24 +75,7 @@ func prometheusForKAIConfig(
 
 	prometheusSpec := monitoringv1.PrometheusSpec{}
 
-	// Configure TSDB storage
-	storageSize := defaultStorageSize
-	if config.StorageSize != nil {
-		storageSize = *config.StorageSize
-	}
-	prometheusSpec.Storage = &monitoringv1.StorageSpec{
-		VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
-			Spec: v1.PersistentVolumeClaimSpec{
-				StorageClassName: config.StorageClassName,
-				AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
-				Resources: v1.VolumeResourceRequirements{
-					Requests: v1.ResourceList{
-						v1.ResourceStorage: resource.MustParse(storageSize),
-					},
-				},
-			},
-		},
-	}
+	prometheusSpec.Storage = getStorageSpecForPrometheus(config)
 
 	if config.RetentionPeriod != nil {
 		prometheusSpec.Retention = monitoringv1.Duration(*config.RetentionPeriod)
@@ -183,14 +168,11 @@ func deprecatePrometheusForKAIConfig(
 		return []client.Object{prometheusObj}, nil
 	}
 
+	defaultRetentionPeriod := 30 * 24 * time.Hour
 	// Use retention period from config, default to 30 days
-	retentionPeriod := 30 * 24 * time.Hour
-	if kaiConfig.Spec.Prometheus != nil && kaiConfig.Spec.Prometheus.RetentionPeriod != nil {
-		duration, err := time.ParseDuration(*kaiConfig.Spec.Prometheus.RetentionPeriod)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse retention period %q: %w", *kaiConfig.Spec.Prometheus.RetentionPeriod, err)
-		}
-		retentionPeriod = duration
+	retentionPeriod, err := getRetentionPeriodForPrometheus(prometheusObj, defaultRetentionPeriod)
+	if err != nil {
+		return []client.Object{}, fmt.Errorf("failed to get retention period for Prometheus instance: %w", err)
 	}
 
 	// Check if retention period has passed
@@ -394,4 +376,46 @@ func createServiceMonitorsForExternalPrometheus(
 
 	logger.Info("Successfully created ServiceMonitors for external Prometheus", "count", len(serviceMonitors))
 	return serviceMonitors, nil
+}
+
+func getStorageSpecForPrometheus(config *kaiprometheus.Prometheus) *monitoringv1.StorageSpec {
+	// Only if explicitly disabled, return nil
+	if config.EnablePersistentStorage != nil && !*config.EnablePersistentStorage {
+		return nil
+	}
+
+	storageSize := defaultStorageSize
+	if config.StorageSize != nil {
+		storageSize = *config.StorageSize
+	}
+	storageSpec := &monitoringv1.StorageSpec{
+		VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
+			Spec: v1.PersistentVolumeClaimSpec{
+				StorageClassName: config.StorageClassName,
+				AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+				Resources: v1.VolumeResourceRequirements{
+					Requests: v1.ResourceList{
+						v1.ResourceStorage: resource.MustParse(storageSize),
+					},
+				},
+			},
+		},
+	}
+	return storageSpec
+}
+
+func getRetentionPeriodForPrometheus(prom *monitoringv1.Prometheus, defaultRetentionPeriod time.Duration) (time.Duration, error) {
+	if prom == nil {
+		return defaultRetentionPeriod, nil
+	}
+	if string(prom.Spec.Retention) == "" {
+		return defaultRetentionPeriod, nil
+	}
+
+	duration, err := str2duration.ParseDuration(string(prom.Spec.Retention))
+	if err != nil {
+		return defaultRetentionPeriod, err
+	}
+
+	return duration, nil
 }
