@@ -200,6 +200,12 @@ func serviceMonitorsForKAIConfig(
 	logger := log.FromContext(ctx)
 	config := kaiConfig.Spec.Prometheus
 
+	// Check if ServiceMonitors are enabled
+	if config.ServiceMonitor != nil && config.ServiceMonitor.Enabled != nil && !*config.ServiceMonitor.Enabled {
+		logger.Info("ServiceMonitors are disabled, skipping ServiceMonitor creation")
+		return []client.Object{}, nil
+	}
+
 	// Check if ServiceMonitor CRD is available
 	hasServiceMonitorCRD, err := common.CheckPrometheusCRDsAvailable(ctx, runtimeClient, "serviceMonitor")
 	if err != nil {

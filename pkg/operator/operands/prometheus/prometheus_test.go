@@ -955,6 +955,135 @@ var _ = Describe("External Prometheus Validation", func() {
 	})
 })
 
+var _ = Describe("serviceMonitorsForKAIConfig", func() {
+	var (
+		fakeKubeClient client.Client
+		kaiConfig      *kaiv1.Config
+	)
+
+	BeforeEach(func(ctx context.Context) {
+		fakeKubeClient = createFakeClientWithScheme()
+		kaiConfig = kaiConfigForPrometheus()
+	})
+
+	Context("when ServiceMonitors are enabled by default", func() {
+		BeforeEach(func(ctx context.Context) {
+			Expect(fakeKubeClient.Create(ctx, getServiceMonitorCRD())).To(Succeed())
+		})
+
+		It("should create ServiceMonitors when Enabled is not explicitly set (nil)", func(ctx context.Context) {
+			// ServiceMonitor.Enabled is nil by default in kaiConfigForPrometheus
+			kaiConfig.Spec.Prometheus.ServiceMonitor.Enabled = nil
+
+			objects, err := serviceMonitorsForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+			Expect(err).To(BeNil())
+			Expect(len(objects)).To(BeNumerically(">", 0), "Expected ServiceMonitors to be created by default")
+
+			// Verify we have ServiceMonitor objects
+			serviceMonitor := test_utils.FindTypeInObjects[*monitoringv1.ServiceMonitor](objects)
+			Expect(serviceMonitor).NotTo(BeNil(), "Expected at least one ServiceMonitor")
+		})
+
+		It("should create ServiceMonitors when Enabled is explicitly set to true", func(ctx context.Context) {
+			kaiConfig.Spec.Prometheus.ServiceMonitor.Enabled = ptr.To(true)
+
+			objects, err := serviceMonitorsForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+			Expect(err).To(BeNil())
+			Expect(len(objects)).To(BeNumerically(">", 0), "Expected ServiceMonitors to be created when enabled")
+
+			// Verify we have ServiceMonitor objects
+			serviceMonitor := test_utils.FindTypeInObjects[*monitoringv1.ServiceMonitor](objects)
+			Expect(serviceMonitor).NotTo(BeNil(), "Expected at least one ServiceMonitor")
+		})
+
+		It("should create ServiceMonitors with correct labels", func(ctx context.Context) {
+			kaiConfig.Spec.Prometheus.ServiceMonitor.Enabled = ptr.To(true)
+
+			objects, err := serviceMonitorsForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+			Expect(err).To(BeNil())
+			Expect(len(objects)).To(BeNumerically(">", 0))
+
+			// Verify all ServiceMonitors have the correct accounting label
+			for _, obj := range objects {
+				if sm, ok := obj.(*monitoringv1.ServiceMonitor); ok {
+					Expect(sm.Labels).To(HaveKeyWithValue(serviceMonitorAccountingLabel, serviceMonitorAccountingValue))
+				}
+			}
+		})
+	})
+
+	Context("when ServiceMonitors are explicitly disabled", func() {
+		BeforeEach(func(ctx context.Context) {
+			Expect(fakeKubeClient.Create(ctx, getServiceMonitorCRD())).To(Succeed())
+		})
+
+		It("should NOT create ServiceMonitors when Enabled is set to false", func(ctx context.Context) {
+			kaiConfig.Spec.Prometheus.ServiceMonitor.Enabled = ptr.To(false)
+
+			objects, err := serviceMonitorsForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+			Expect(err).To(BeNil())
+			Expect(len(objects)).To(Equal(0), "Expected no ServiceMonitors to be created when disabled")
+		})
+
+		It("should log that ServiceMonitors are disabled", func(ctx context.Context) {
+			kaiConfig.Spec.Prometheus.ServiceMonitor.Enabled = ptr.To(false)
+
+			objects, err := serviceMonitorsForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+			Expect(err).To(BeNil())
+			Expect(objects).To(BeEmpty())
+		})
+	})
+
+	Context("when ServiceMonitor config is nil", func() {
+		BeforeEach(func(ctx context.Context) {
+			Expect(fakeKubeClient.Create(ctx, getServiceMonitorCRD())).To(Succeed())
+		})
+
+		It("should create ServiceMonitors when ServiceMonitor config is nil (default enabled)", func(ctx context.Context) {
+			kaiConfig.Spec.Prometheus.ServiceMonitor = nil
+
+			objects, err := serviceMonitorsForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+			Expect(err).To(BeNil())
+			Expect(len(objects)).To(BeNumerically(">", 0), "Expected ServiceMonitors to be created by default when config is nil")
+		})
+	})
+
+	Context("when ServiceMonitor CRD is not available", func() {
+		It("should return empty objects list even if ServiceMonitors are enabled", func(ctx context.Context) {
+			kaiConfig.Spec.Prometheus.ServiceMonitor.Enabled = ptr.To(true)
+
+			objects, err := serviceMonitorsForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+			Expect(err).To(BeNil())
+			Expect(len(objects)).To(Equal(0), "Expected no ServiceMonitors when CRD is not available")
+		})
+	})
+
+	Context("when ServiceMonitor has custom configuration", func() {
+		BeforeEach(func(ctx context.Context) {
+			Expect(fakeKubeClient.Create(ctx, getServiceMonitorCRD())).To(Succeed())
+		})
+
+		It("should apply custom interval and scrape timeout", func(ctx context.Context) {
+			kaiConfig.Spec.Prometheus.ServiceMonitor.Enabled = ptr.To(true)
+			kaiConfig.Spec.Prometheus.ServiceMonitor.Interval = ptr.To("60s")
+			kaiConfig.Spec.Prometheus.ServiceMonitor.ScrapeTimeout = ptr.To("30s")
+
+			objects, err := serviceMonitorsForKAIConfig(ctx, fakeKubeClient, kaiConfig)
+			Expect(err).To(BeNil())
+			Expect(len(objects)).To(BeNumerically(">", 0))
+
+			// Verify configuration is applied
+			for _, obj := range objects {
+				if sm, ok := obj.(*monitoringv1.ServiceMonitor); ok {
+					Expect(sm.Spec.Endpoints).To(HaveLen(1))
+					Expect(string(sm.Spec.Endpoints[0].Interval)).To(Equal("60s"))
+					Expect(string(sm.Spec.Endpoints[0].ScrapeTimeout)).To(Equal("30s"))
+				}
+			}
+		})
+	})
+})
+
 func getServiceMonitorCRD() *metav1.PartialObjectMetadata {
 	serviceMonitorCRD := &metav1.PartialObjectMetadata{
 		TypeMeta: metav1.TypeMeta{
