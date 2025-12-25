@@ -94,6 +94,13 @@ For MPI workloads:
 - Infer gang scheduling requirements from  schedulingPolicy.minAvailable, otherwise use all the replicas
 - Use "Train" priority class by default
 
+### JobSet Grouping
+For JobSet workloads:
+- Creates one PodGroup per replicatedJob
+- PodGroup name: `pg-<jobset-name>-<replicatedjob-name>-<jobset-uid>`
+- MinAvailable: `replicas * min(parallelism, completions if set)`
+- Uses default priority class from DefaultGrouper
+
 ### Pod Grouping
 For pods with no owner, a "Train"-priority PodGroup with MinMember=1 is created.
 
