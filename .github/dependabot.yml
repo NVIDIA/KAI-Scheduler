@@ -19,7 +19,7 @@ updates:
   # Enable version updates for Go modules on supported version branches
   - package-ecosystem: "gomod"
     directory: "/"
-    target-branch: "v0.10"
+    target-branch: "v0.12"
     schedule:
       interval: "weekly"
   - package-ecosystem: "gomod"
