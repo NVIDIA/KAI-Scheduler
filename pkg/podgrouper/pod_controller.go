@@ -75,7 +75,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: req.Name}, &pod)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.V(1).Info(fmt.Sprintf("Pod %s/%s not found, was probably deleted", pod.Namespace, pod.Name))
+			logger.V(1).Info(fmt.Sprintf("Pod %s/%s not found, was probably deleted", req.Namespace, req.Name))
 			return ctrl.Result{}, nil
 		}
 

@@ -4,10 +4,12 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,10 +20,38 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 )
+
+type testLogSink struct {
+	buffer *bytes.Buffer
+}
+
+func (s *testLogSink) Init(info logr.RuntimeInfo) {}
+func (s *testLogSink) Enabled(level int) bool      { return true }
+func (s *testLogSink) Info(level int, msg string, keysAndValues ...interface{}) {
+	s.buffer.WriteString(fmt.Sprintf("[%d] %s", level, msg))
+	for i := 0; i < len(keysAndValues); i += 2 {
+		if i+1 < len(keysAndValues) {
+			s.buffer.WriteString(fmt.Sprintf(" %v=%v", keysAndValues[i], keysAndValues[i+1]))
+		}
+	}
+	s.buffer.WriteString("\n")
+}
+func (s *testLogSink) Error(err error, msg string, keysAndValues ...interface{}) {
+	s.buffer.WriteString(fmt.Sprintf("ERROR %s: %v", msg, err))
+	for i := 0; i < len(keysAndValues); i += 2 {
+		if i+1 < len(keysAndValues) {
+			s.buffer.WriteString(fmt.Sprintf(" %v=%v", keysAndValues[i], keysAndValues[i+1]))
+		}
+	}
+	s.buffer.WriteString("\n")
+}
+func (s *testLogSink) WithValues(keysAndValues ...interface{}) logr.LogSink { return s }
+func (s *testLogSink) WithName(name string) logr.LogSink                      { return s }
 
 const nodePoolKey = "kai.scheduler/node-pool"
 
@@ -283,4 +313,42 @@ func TestLabelsMatch(t *testing.T) {
 			assert.Equal(t, tt.expected, result, "labelsMatch() = %v, want %v", result, tt.expected)
 		})
 	}
+}
+
+func TestReconcilePodNotFound(t *testing.T) {
+	testNamespace := "test-namespace"
+	testPodName := "test-pod"
+
+	var logBuffer bytes.Buffer
+	ctx := log.IntoContext(context.TODO(), logr.New(&testLogSink{buffer: &logBuffer}))
+	fakeClient := fake.NewClientBuilder().Build()
+
+	reconciler := PodReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme.Scheme,
+		podGrouper:      &fakePodGrouper{},
+		PodGroupHandler: nil,
+		configs: Configs{
+			SchedulerName: "kai-scheduler",
+		},
+		eventRecorder: record.NewFakeRecorder(10),
+	}
+
+	result, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: testNamespace,
+			Name:      testPodName,
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, ctrl.Result{}, result)
+
+	logOutput := logBuffer.String()
+	expectedPattern := fmt.Sprintf("Pod %s/%s not found", testNamespace, testPodName)
+	
+	assert.Contains(t, logOutput, expectedPattern,
+		"Log should contain correct namespace/name from req, got: %s", logOutput)
+	assert.NotContains(t, logOutput, "Pod / not found",
+		"Log should not contain empty namespace/name pattern")
 }
