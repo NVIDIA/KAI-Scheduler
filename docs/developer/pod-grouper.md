@@ -96,9 +96,14 @@ For MPI workloads:
 
 ### JobSet Grouping
 For JobSet workloads:
-- Creates one PodGroup per replicatedJob
-- PodGroup name: `pg-<jobset-name>-<replicatedjob-name>-<jobset-uid>`
-- MinAvailable: `replicas * min(parallelism, completions if set)`
+- When `startupPolicy.order` is "InOrder" (default):
+  - Creates one PodGroup per replicatedJob to avoid sequencing deadlocks
+  - PodGroup name: `pg-<jobset-name>-<jobset-uid>-<replicatedjob-name>`
+  - MinAvailable: `replicas * min(parallelism, completions if set)`
+- When `startupPolicy.order` is not "InOrder":
+  - Creates a single PodGroup for all replicatedJobs
+  - PodGroup name: `pg-<jobset-name>-<jobset-uid>`
+  - MinAvailable: sum of all replicatedJobs' minAvailable
 - Uses default priority class from DefaultGrouper
 
 ### Pod Grouping

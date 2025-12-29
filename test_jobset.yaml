@@ -1,0 +1,109 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+# Test Scenario 1: Single ReplicatedJob with high parallelism
+apiVersion: jobset.x-k8s.io/v1alpha2
+kind: JobSet
+metadata:
+  name: test-high-parallelism
+  namespace: default
+  labels:
+    kai.scheduler/queue: default-queue
+spec:
+  successPolicy:
+    operator: All
+  failurePolicy:
+    maxRestarts: 3
+  replicatedJobs:
+    - name: worker
+      replicas: 1
+      template:
+        spec:
+          parallelism: 8
+          completions: 8
+          template:
+            spec:
+              schedulerName: kai-scheduler
+              restartPolicy: Never
+              containers:
+                - name: worker
+                  image: ubuntu
+                  command: ["sleep", "3600"]
+                  resources:
+                    requests:
+                      nvidia.com/gpu: "1"
+---
+# Test Scenario 2: Multiple ReplicatedJobs with different parallelism
+apiVersion: jobset.x-k8s.io/v1alpha2
+kind: JobSet
+metadata:
+  name: test-multi-parallelism
+  namespace: default
+  labels:
+    kai.scheduler/queue: default-queue
+spec:
+  successPolicy:
+    operator: All
+  failurePolicy:
+    maxRestarts: 3
+  replicatedJobs:
+    - name: coordinator
+      replicas: 1
+      template:
+        spec:
+          parallelism: 2
+          completions: 2
+          template:
+            spec:
+              schedulerName: kai-scheduler
+              restartPolicy: Never
+              containers:
+                - name: coordinator
+                  image: ubuntu
+                  command: ["sleep", "3600"]
+    - name: worker
+      replicas: 2
+      template:
+        spec:
+          parallelism: 4
+          completions: 4
+          template:
+            spec:
+              schedulerName: kai-scheduler
+              restartPolicy: Never
+              containers:
+                - name: worker
+                  image: ubuntu
+                  command: ["sleep", "3600"]
+                  resources:
+                    requests:
+                      nvidia.com/gpu: "1"
+---
+# Test Scenario 3: Single replica with default parallelism (should default to 1)
+apiVersion: jobset.x-k8s.io/v1alpha2
+kind: JobSet
+metadata:
+  name: test-default-parallelism
+  namespace: default
+  labels:
+    kai.scheduler/queue: default-queue
+spec:
+  successPolicy:
+    operator: All
+  failurePolicy:
+    maxRestarts: 3
+  replicatedJobs:
+    - name: single
+      replicas: 1
+      template:
+        spec:
+          # No parallelism specified, should default to 1
+          completions: 1
+          template:
+            spec:
+              schedulerName: kai-scheduler
+              restartPolicy: Never
+              containers:
+                - name: single
+                  image: ubuntu
+                  command: ["sleep", "3600"]

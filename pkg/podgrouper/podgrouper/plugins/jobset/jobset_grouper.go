@@ -22,9 +22,15 @@ const (
 	jobSetPodGroupNamePrefix     = "pg"
 )
 
-// JobSetGrouper creates a PodGroup per replicatedJob for JobSet workloads.
-// PodGroup name: pg-<jobset-name>-<replicatedjob-name>-<jobset-uid>
-// MinAvailable: replicas * min(parallelism, completions if set) (defaults to 1).
+// JobSetGrouper creates PodGroups for JobSet workloads.
+// When startupPolicy.startupPolicyOrder is "InOrder" (default):
+//   - Creates one PodGroup per replicatedJob to avoid sequencing deadlocks
+//   - PodGroup name: pg-<jobset-name>-<jobset-uid>-<replicatedjob-name>
+//   - MinAvailable: replicas * min(parallelism, completions if set) (defaults to 1)
+// When startupPolicy.startupPolicyOrder is not "InOrder":
+//   - Creates a single PodGroup for all replicatedJobs
+//   - PodGroup name: pg-<jobset-name>-<jobset-uid>
+//   - MinAvailable: sum of all replicatedJobs' minAvailable
 type JobSetGrouper struct {
 	*defaultgrouper.DefaultGrouper
 }
@@ -63,25 +69,42 @@ func (g *JobSetGrouper) GetPodGroupMetadata(
 		return nil, fmt.Errorf("pod %s/%s missing required label %q", pod.Namespace, pod.Name, jobSetLabelReplicatedJobName)
 	}
 
-	pgMeta.Name = fmt.Sprintf(
-		"%s-%s-%s-%s",
-		jobSetPodGroupNamePrefix,
-		jobSetName,
-		replicatedJobName,
-		string(jobSetUID),
-	)
-
-	minAvailable, err := getJobSetMinAvailable(topOwner, replicatedJobName)
+	startupPolicyOrder, err := getStartupPolicyOrder(topOwner)
 	if err != nil {
 		return nil, err
 	}
-	pgMeta.MinAvailable = minAvailable
+
+	if startupPolicyOrder == "InOrder" {
+		pgMeta.Name = fmt.Sprintf(
+			"%s-%s-%s-%s",
+			jobSetPodGroupNamePrefix,
+			jobSetName,
+			string(jobSetUID),
+			replicatedJobName,
+		)
+		minAvailable, err := getJobSetMinAvailable(topOwner, replicatedJobName)
+		if err != nil {
+			return nil, err
+		}
+		pgMeta.MinAvailable = minAvailable
+	} else {
+		pgMeta.Name = fmt.Sprintf(
+			"%s-%s-%s",
+			jobSetPodGroupNamePrefix,
+			jobSetName,
+			string(jobSetUID),
+		)
+		minAvailable, err := getJobSetTotalMinAvailable(topOwner)
+		if err != nil {
+			return nil, err
+		}
+		pgMeta.MinAvailable = minAvailable
+	}
 
 	return pgMeta, nil
 }
 
-// getJobSetMinAvailable returns the minAvailable for the replicatedJob:
-// replicas * min(parallelism, completions if set). Defaults to 1 if not found or invalid.
+// getJobSetMinAvailable returns minAvailable for the replicatedJob.
 func getJobSetMinAvailable(jobSet *unstructured.Unstructured, replicatedJobName string) (int32, error) {
 	replicatedJobs, found, err := unstructured.NestedSlice(jobSet.Object, "spec", "replicatedJobs")
 	if err != nil {
@@ -123,7 +146,6 @@ func getJobSetMinAvailable(jobSet *unstructured.Unstructured, replicatedJobName 
 			parallelism = parallelism64
 		}
 
-		// If completions < parallelism, bound by completions.
 		completions64, foundCompletions, err := unstructured.NestedInt64(rjMap, "template", "spec", "completions")
 		if err != nil {
 			return 0, fmt.Errorf("failed to read template.spec.completions from JobSet %s/%s replicatedJob %s: %w",
@@ -145,4 +167,58 @@ func getJobSetMinAvailable(jobSet *unstructured.Unstructured, replicatedJobName 
 	}
 
 	return 1, nil
+}
+
+// getStartupPolicyOrder returns startupPolicy.startupPolicyOrder from JobSet spec.
+func getStartupPolicyOrder(jobSet *unstructured.Unstructured) (string, error) {
+	order, found, err := unstructured.NestedString(jobSet.Object, "spec", "startupPolicy", "startupPolicyOrder")
+	if err != nil {
+		return "", fmt.Errorf("failed to read spec.startupPolicy.startupPolicyOrder from JobSet %s/%s: %w",
+			jobSet.GetNamespace(), jobSet.GetName(), err)
+	}
+	if !found {
+		return "InOrder", nil
+	}
+	return order, nil
+}
+
+// getJobSetTotalMinAvailable calculates total minAvailable for all replicatedJobs.
+func getJobSetTotalMinAvailable(jobSet *unstructured.Unstructured) (int32, error) {
+	replicatedJobs, found, err := unstructured.NestedSlice(jobSet.Object, "spec", "replicatedJobs")
+	if err != nil {
+		return 0, fmt.Errorf("failed to read spec.replicatedJobs from JobSet %s/%s: %w",
+			jobSet.GetNamespace(), jobSet.GetName(), err)
+	}
+	if !found || len(replicatedJobs) == 0 {
+		return 1, nil
+	}
+
+	var totalMinAvailable int64 = 0
+	for _, rjRaw := range replicatedJobs {
+		rjMap, ok := rjRaw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		name, _, _ := unstructured.NestedString(rjMap, "name")
+		if name == "" {
+			continue
+		}
+
+		minAvailable, err := getJobSetMinAvailable(jobSet, name)
+		if err != nil {
+			return 0, err
+		}
+		totalMinAvailable += int64(minAvailable)
+	}
+
+	if totalMinAvailable <= 0 {
+		return 1, nil
+	}
+	if totalMinAvailable > math.MaxInt32 {
+		return 0, fmt.Errorf("total minAvailable too large (%d) for JobSet %s/%s: exceeds int32 max value",
+			totalMinAvailable, jobSet.GetNamespace(), jobSet.GetName())
+	}
+	return int32(totalMinAvailable), nil
+
 }

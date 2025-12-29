@@ -97,8 +97,8 @@ func TestGetPodGroupMetadata_Basic(t *testing.T) {
 	pgMeta, err := jobSetGrouper.GetPodGroupMetadata(jobSet, pod)
 
 	require.NoError(t, err)
-	// PodGroup name: pg-<jobset-name>-<replicatedjob-name>-<jobset-uid>
-	assert.Equal(t, "pg-my-jobset-worker-jobset-uid-123", pgMeta.Name)
+	// PodGroup name: pg-<jobset-name>-<jobset-uid>-<replicatedjob-name>
+	assert.Equal(t, "pg-my-jobset-jobset-uid-123-worker", pgMeta.Name)
 	// MinAvailable = replicas * parallelism
 	assert.Equal(t, int32(8), pgMeta.MinAvailable)
 	// DefaultGrouper fields preserved
@@ -125,21 +125,21 @@ func TestGetPodGroupMetadata_MultipleReplicatedJobs(t *testing.T) {
 
 	leaderMeta, err := jobSetGrouper.GetPodGroupMetadata(jobSet, leaderPod)
 	require.NoError(t, err)
-	assert.Equal(t, "pg-multi-role-jobset-leader-uid-456", leaderMeta.Name)
+	assert.Equal(t, "pg-multi-role-jobset-uid-456-leader", leaderMeta.Name)
 	assert.Equal(t, int32(1), leaderMeta.MinAvailable)
 
 	// Test worker pod (different replicatedJob)
 	workerPod := podWithJobSetLabels("worker-pod", "default", "worker", "1")
 	workerMeta, err := jobSetGrouper.GetPodGroupMetadata(jobSet, workerPod)
 	require.NoError(t, err)
-	assert.Equal(t, "pg-multi-role-jobset-worker-uid-456", workerMeta.Name)
+	assert.Equal(t, "pg-multi-role-jobset-uid-456-worker", workerMeta.Name)
 	assert.Equal(t, int32(24), workerMeta.MinAvailable)
 
 	// Different job-index should map to the same PodGroup (one per replicatedJob)
 	workerPod2 := podWithJobSetLabels("worker-pod-2", "default", "worker", "2")
 	workerMeta2, err := jobSetGrouper.GetPodGroupMetadata(jobSet, workerPod2)
 	require.NoError(t, err)
-	assert.Equal(t, "pg-multi-role-jobset-worker-uid-456", workerMeta2.Name)
+	assert.Equal(t, "pg-multi-role-jobset-uid-456-worker", workerMeta2.Name)
 	assert.Equal(t, workerMeta.Name, workerMeta2.Name)
 }
 
@@ -226,7 +226,7 @@ func TestGetPodGroupMetadata_ReplicatedJobNotFound(t *testing.T) {
 	pgMeta, err := jobSetGrouper.GetPodGroupMetadata(jobSet, pod)
 	require.NoError(t, err)
 	// Should still create PodGroup name, but MinAvailable defaults to 1
-	assert.Equal(t, "pg-notfound-nonexistent-uid-nf", pgMeta.Name)
+	assert.Equal(t, "pg-notfound-uid-nf-nonexistent", pgMeta.Name)
 	assert.Equal(t, int32(1), pgMeta.MinAvailable)
 }
 
@@ -309,7 +309,7 @@ func TestGetPodGroupMetadata_DefaultGrouperIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	// JobSet-specific fields
-	assert.Equal(t, "pg-integrated-worker-uid-integ", pgMeta.Name)
+	assert.Equal(t, "pg-integrated-uid-integ-worker", pgMeta.Name)
 	assert.Equal(t, int32(3), pgMeta.MinAvailable)
 
 	// DefaultGrouper fields should be preserved
@@ -341,8 +341,8 @@ func TestGetPodGroupMetadata_NameUniqueness(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, meta0.Name, meta1.Name)
-	assert.Equal(t, "pg-unique-worker-uid-unique", meta0.Name)
-	assert.Equal(t, "pg-unique-worker-uid-unique", meta1.Name)
+	assert.Equal(t, "pg-unique-uid-unique-worker", meta0.Name)
+	assert.Equal(t, "pg-unique-uid-unique-worker", meta1.Name)
 	// replicas=2, parallelism=4 => minAvailable=8
 	assert.Equal(t, int32(8), meta0.MinAvailable)
 	assert.Equal(t, int32(8), meta1.MinAvailable)
@@ -402,4 +402,79 @@ func TestGetPodGroupMetadata_CompletionsGreaterThanParallelism(t *testing.T) {
 	require.NoError(t, err)
 	// replicas=3, min(parallelism=2, completions=5)=2 => minAvailable=6
 	assert.Equal(t, int32(6), pgMeta.MinAvailable)
+}
+
+func TestGetPodGroupMetadata_StartupPolicyOrderInOrder(t *testing.T) {
+	jobSet := baseJobSet("inorder-jobset", "default", "uid-inorder", []map[string]interface{}{
+		replicatedJob("leader", 1, 1),
+		replicatedJob("worker", 2, 4),
+	})
+	jobSet.Object["spec"].(map[string]interface{})["startupPolicy"] = map[string]interface{}{
+		"startupPolicyOrder": "InOrder",
+	}
+
+	leaderPod := podWithJobSetLabels("leader-pod", "default", "leader", "0")
+	scheme := runtime.NewScheme()
+	require.NoError(t, schedulingv2.AddToScheme(scheme))
+	client := fake.NewClientBuilder().WithScheme(scheme).Build()
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client)
+	jobSetGrouper := NewJobSetGrouper(defaultGrouper)
+
+	leaderMeta, err := jobSetGrouper.GetPodGroupMetadata(jobSet, leaderPod)
+	require.NoError(t, err)
+	assert.Equal(t, "pg-inorder-jobset-uid-inorder-leader", leaderMeta.Name)
+	assert.Equal(t, int32(1), leaderMeta.MinAvailable)
+
+	workerPod := podWithJobSetLabels("worker-pod", "default", "worker", "0")
+	workerMeta, err := jobSetGrouper.GetPodGroupMetadata(jobSet, workerPod)
+	require.NoError(t, err)
+	assert.Equal(t, "pg-inorder-jobset-uid-inorder-worker", workerMeta.Name)
+	assert.Equal(t, int32(8), workerMeta.MinAvailable)
+}
+
+func TestGetPodGroupMetadata_StartupPolicyOrderNotInOrder(t *testing.T) {
+	jobSet := baseJobSet("anyorder-jobset", "default", "uid-anyorder", []map[string]interface{}{
+		replicatedJob("leader", 1, 1),
+		replicatedJob("worker", 2, 4),
+	})
+	jobSet.Object["spec"].(map[string]interface{})["startupPolicy"] = map[string]interface{}{
+		"startupPolicyOrder": "AnyOrder",
+	}
+
+	leaderPod := podWithJobSetLabels("leader-pod", "default", "leader", "0")
+	scheme := runtime.NewScheme()
+	require.NoError(t, schedulingv2.AddToScheme(scheme))
+	client := fake.NewClientBuilder().WithScheme(scheme).Build()
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client)
+	jobSetGrouper := NewJobSetGrouper(defaultGrouper)
+
+	leaderMeta, err := jobSetGrouper.GetPodGroupMetadata(jobSet, leaderPod)
+	require.NoError(t, err)
+	assert.Equal(t, "pg-anyorder-jobset-uid-anyorder", leaderMeta.Name)
+	assert.Equal(t, int32(9), leaderMeta.MinAvailable)
+
+	workerPod := podWithJobSetLabels("worker-pod", "default", "worker", "0")
+	workerMeta, err := jobSetGrouper.GetPodGroupMetadata(jobSet, workerPod)
+	require.NoError(t, err)
+	assert.Equal(t, "pg-anyorder-jobset-uid-anyorder", workerMeta.Name)
+	assert.Equal(t, leaderMeta.Name, workerMeta.Name)
+	assert.Equal(t, int32(9), workerMeta.MinAvailable)
+}
+
+func TestGetPodGroupMetadata_StartupPolicyOrderDefault(t *testing.T) {
+	jobSet := baseJobSet("default-order-jobset", "default", "uid-default", []map[string]interface{}{
+		replicatedJob("worker", 2, 4),
+	})
+
+	pod := podWithJobSetLabels("pod", "default", "worker", "0")
+	scheme := runtime.NewScheme()
+	require.NoError(t, schedulingv2.AddToScheme(scheme))
+	client := fake.NewClientBuilder().WithScheme(scheme).Build()
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client)
+	jobSetGrouper := NewJobSetGrouper(defaultGrouper)
+
+	pgMeta, err := jobSetGrouper.GetPodGroupMetadata(jobSet, pod)
+	require.NoError(t, err)
+	assert.Equal(t, "pg-default-order-jobset-uid-default-worker", pgMeta.Name)
+	assert.Equal(t, int32(8), pgMeta.MinAvailable)
 }
