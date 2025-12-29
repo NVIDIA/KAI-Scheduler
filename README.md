@@ -86,6 +86,7 @@ To start scheduling workloads with KAI Scheduler, please continue to [Quick Star
 * Support Min Run Time per workloads https://github.com/NVIDIA/KAI-Scheduler/issues/136
 * Support Max Run Time per workload (with delayed requeue)
 * Add more PriorityClasses as part of the default KAI install
+* Support JobSet https://github.com/NVIDIA/KAI-Scheduler/issues/763
 * Support LWS (LeaderWorkerSet) https://github.com/NVIDIA/KAI-Scheduler/issues/124
 * Add metrics for pod and pod-group preemptions
 * Decouple Priority and Preemption
