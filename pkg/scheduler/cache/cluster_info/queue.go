@@ -51,7 +51,7 @@ func (c *ClusterInfo) getDefaultParentQueue() *queue_info.QueueInfo {
 func (c *ClusterInfo) snapshotQueues() (map[common_info.QueueID]*queue_info.QueueInfo, error) {
 	queues, err := c.dataLister.ListQueues()
 	if err != nil {
-		err = errors.WithStack(fmt.Errorf("error listing queues: %c", err))
+		err = errors.WithStack(fmt.Errorf("error listing queues: %w", err))
 		return nil, err
 	}
 

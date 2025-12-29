@@ -24,7 +24,7 @@ import (
 func (c *ClusterInfo) snapshotCSIStorageDrivers() (map[common_info.CSIDriverID]*csidriver_info.CSIDriverInfo, error) {
 	drivers, err := c.dataLister.ListCSIDrivers()
 	if err != nil {
-		err = errors.WithStack(fmt.Errorf("error listing csidrivers: %c", err))
+		err = errors.WithStack(fmt.Errorf("error listing csidrivers: %w", err))
 		return nil, err
 	}
 
@@ -47,7 +47,7 @@ func (c *ClusterInfo) snapshotCSIStorageDrivers() (map[common_info.CSIDriverID]*
 func (c *ClusterInfo) snapshotStorageClasses() (map[common_info.StorageClassID]*storageclass_info.StorageClassInfo, error) {
 	storageClasses, err := c.dataLister.ListStorageClasses()
 	if err != nil {
-		err = errors.WithStack(fmt.Errorf("error listing storageclasses: %c", err))
+		err = errors.WithStack(fmt.Errorf("error listing storageclasses: %w", err))
 		return nil, err
 	}
 
@@ -76,7 +76,7 @@ func (c *ClusterInfo) snapshotStorageClasses() (map[common_info.StorageClassID]*
 func (c *ClusterInfo) snapshotStorageClaims() (map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo, error) {
 	storageClaims, err := c.dataLister.ListPersistentVolumeClaims()
 	if err != nil {
-		err = errors.WithStack(fmt.Errorf("error listing pvcs: %c", err))
+		err = errors.WithStack(fmt.Errorf("error listing pvcs: %w", err))
 		return nil, err
 	}
 
@@ -98,7 +98,7 @@ func (c *ClusterInfo) snapshotStorageClaims() (map[storageclaim_info.Key]*storag
 func (c *ClusterInfo) snapshotStorageCapacities() (map[common_info.StorageCapacityID]*storagecapacity_info.StorageCapacityInfo, error) {
 	capacities, err := c.dataLister.ListCSIStorageCapacities()
 	if err != nil {
-		err = errors.WithStack(fmt.Errorf("error listing storage capacities: %v", err))
+		err = errors.WithStack(fmt.Errorf("error listing storage capacities: %w", err))
 		return nil, err
 	}
 

@@ -126,25 +126,25 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 
 	snapshot.Nodes, err = c.snapshotNodes(c.clusterPodAffinityInfo)
 	if err != nil {
-		err = errors.WithStack(fmt.Errorf("error snapshotting nodes: %c", err))
+		err = errors.WithStack(fmt.Errorf("error snapshotting nodes: %w", err))
 		return nil, err
 	}
 
 	snapshot.BindRequests, snapshot.BindRequestsForDeletedNodes, err = c.snapshotBindRequests(snapshot.Nodes)
 	if err != nil {
-		err = errors.WithStack(fmt.Errorf("error snapshotting bind requests: %c", err))
+		err = errors.WithStack(fmt.Errorf("error snapshotting bind requests: %w", err))
 		return nil, err
 	}
 
 	snapshot.Pods, err = c.addTasksToNodes(allPods, existingPods, snapshot.Nodes, snapshot.BindRequests)
 	if err != nil {
-		err = errors.WithStack(fmt.Errorf("error adding tasks to nodes: %c", err))
+		err = errors.WithStack(fmt.Errorf("error adding tasks to nodes: %w", err))
 		return nil, err
 	}
 
 	queues, err := c.snapshotQueues()
 	if err != nil {
-		err = errors.WithStack(fmt.Errorf("error snapshotting queues: %c", err))
+		err = errors.WithStack(fmt.Errorf("error snapshotting queues: %w", err))
 		return nil, err
 	}
 	UpdateQueueHierarchy(queues)
@@ -152,7 +152,7 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 
 	usage, usageErr := c.snapshotQueueResourceUsage()
 	if usageErr != nil {
-		log.InfraLogger.V(2).Warnf("error snapshotting queue resource usage: %c", usageErr)
+		log.InfraLogger.V(2).Warnf("error snapshotting queue resource usage: %v", usageErr)
 	}
 	if usage == nil {
 		usage = queue_info.NewClusterUsage()
@@ -222,7 +222,7 @@ func (c *ClusterInfo) snapshotNodes(
 ) (map[string]*node_info.NodeInfo, error) {
 	nodes, err := c.dataLister.ListNodes()
 	if err != nil {
-		return nil, fmt.Errorf("error listing nodes: %c", err)
+		return nil, fmt.Errorf("error listing nodes: %w", err)
 	}
 	if c.restrictNodeScheduling {
 		nodes = filterUnmarkedNodes(nodes)
@@ -269,7 +269,7 @@ func (c *ClusterInfo) snapshotBindRequests(nodes map[string]*node_info.NodeInfo)
 	bindrequest_info.BindRequestMap, []*bindrequest_info.BindRequestInfo, error) {
 	bindRequests, err := c.dataLister.ListBindRequests()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error listing bind requests: %c", err)
+		return nil, nil, fmt.Errorf("error listing bind requests: %w", err)
 	}
 
 	result := bindrequest_info.BindRequestMap{}
@@ -300,7 +300,7 @@ func (c *ClusterInfo) snapshotPodGroups(
 
 	podGroups, err := c.dataLister.ListPodGroups()
 	if err != nil {
-		err = errors.WithStack(fmt.Errorf("error listing podgroups: %c", err))
+		err = errors.WithStack(fmt.Errorf("error listing podgroups: %w", err))
 		return nil, err
 	}
 
@@ -335,7 +335,7 @@ func (c *ClusterInfo) snapshotPodGroups(
 		for _, rawPod := range rawPods {
 			pod, ok := rawPod.(*v1.Pod)
 			if !ok {
-				log.InfraLogger.Errorf("Snapshot podGroups: Error getting pod from rawPod: %c", rawPod)
+				log.InfraLogger.Errorf("Snapshot podGroups: Error getting pod from rawPod: %v", rawPod)
 			}
 			podInfo := c.getPodInfo(pod, existingPods)
 			podGroupInfo.AddTaskInfo(podInfo)
@@ -441,7 +441,7 @@ func getDefaultPriority(dataLister data_lister.DataLister) (int32, error) {
 	defaultPriority, found := int32(constants.DefaultPodGroupPriority), false
 	priorityClasses, err := dataLister.ListPriorityClasses()
 	if err != nil {
-		err = errors.WithStack(fmt.Errorf("error listing priorityclasses: %c", err))
+		err = errors.WithStack(fmt.Errorf("error listing priorityclasses: %w", err))
 		return 0, err
 	}
 
