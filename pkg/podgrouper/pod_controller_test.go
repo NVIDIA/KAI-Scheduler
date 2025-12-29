@@ -31,7 +31,7 @@ type testLogSink struct {
 }
 
 func (s *testLogSink) Init(info logr.RuntimeInfo) {}
-func (s *testLogSink) Enabled(level int) bool      { return true }
+func (s *testLogSink) Enabled(level int) bool     { return true }
 func (s *testLogSink) Info(level int, msg string, keysAndValues ...interface{}) {
 	s.buffer.WriteString(fmt.Sprintf("[%d] %s", level, msg))
 	for i := 0; i < len(keysAndValues); i += 2 {
@@ -51,7 +51,7 @@ func (s *testLogSink) Error(err error, msg string, keysAndValues ...interface{})
 	s.buffer.WriteString("\n")
 }
 func (s *testLogSink) WithValues(keysAndValues ...interface{}) logr.LogSink { return s }
-func (s *testLogSink) WithName(name string) logr.LogSink                      { return s }
+func (s *testLogSink) WithName(name string) logr.LogSink                    { return s }
 
 const nodePoolKey = "kai.scheduler/node-pool"
 
@@ -346,7 +346,7 @@ func TestReconcilePodNotFound(t *testing.T) {
 
 	logOutput := logBuffer.String()
 	expectedPattern := fmt.Sprintf("Pod %s/%s not found", testNamespace, testPodName)
-	
+
 	assert.Contains(t, logOutput, expectedPattern,
 		"Log should contain correct namespace/name from req, got: %s", logOutput)
 	assert.NotContains(t, logOutput, "Pod / not found",
