@@ -141,7 +141,6 @@ jobs:
           config: ./hack/e2e-kind-config.yaml
 
       - name: Load docker images to kind
-        working-directory: images
         env:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
