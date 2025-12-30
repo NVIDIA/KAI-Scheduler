@@ -88,9 +88,11 @@ var _ = Describe("Prometheus", func() {
 
 				objects, err := prometheus.DesiredState(ctx, fakeKubeClient, kaiConfig)
 				Expect(err).To(BeNil())
-				Expect(len(objects)).To(Equal(3))
+				Expect(len(objects)).To(Equal(2))
 
-				prometheusObj := test_utils.FindTypeInObjects[*monitoringv1.Prometheus](objects)
+				prometheusObjs := test_utils.FindTypesInObjects[*monitoringv1.Prometheus](objects)
+				Expect(len(prometheusObjs)).To(Equal(1))
+				prometheusObj := prometheusObjs[0]
 				Expect(prometheusObj).NotTo(BeNil())
 				Expect((*prometheusObj).Annotations).To(HaveKey(deprecationTimestampKey))
 			})
