@@ -305,3 +305,1249 @@ func TestParsePodReference_MissingFields(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, err.Error(), "missing required 'name' field")
 }
+
+// Test 1: TestGetPodGroupMetadata_WithTopologyHierarchy
+func TestGetPodGroupMetadata_WithTopologyHierarchy(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraint": map[string]interface{}{
+					"packConstraint": map[string]interface{}{
+						"preferred": "rack",
+						"required":  "zone",
+					},
+				},
+				"topologyConstraintGroupConfigs": []interface{}{
+					map[string]interface{}{
+						"name":          "group1",
+						"podGroupNames": []interface{}{"pg1", "pg2"},
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "node",
+								"required":  "rack",
+							},
+						},
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name": "pg1",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "node",
+								"required":  "",
+							},
+						},
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+					map[string]interface{}{
+						"name": "pg2",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "",
+								"required":  "node",
+							},
+						},
+						"minReplicas": int64(3),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod2"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Equal(t, "rack", metadata.PreferredTopologyLevel)
+	assert.Equal(t, "zone", metadata.RequiredTopologyLevel)
+	assert.Equal(t, 3, len(metadata.SubGroups))
+
+	// Parent SubGroup
+	assert.Equal(t, "group1", metadata.SubGroups[0].Name)
+	assert.Equal(t, int32(0), metadata.SubGroups[0].MinAvailable)
+	assert.Nil(t, metadata.SubGroups[0].Parent)
+	assert.NotNil(t, metadata.SubGroups[0].TopologyConstraints)
+	assert.Equal(t, "node", metadata.SubGroups[0].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "rack", metadata.SubGroups[0].TopologyConstraints.RequiredTopologyLevel)
+
+	// Child SubGroup pg1
+	assert.Equal(t, "pg1", metadata.SubGroups[1].Name)
+	assert.Equal(t, int32(2), metadata.SubGroups[1].MinAvailable)
+	assert.NotNil(t, metadata.SubGroups[1].Parent)
+	assert.Equal(t, "group1", *metadata.SubGroups[1].Parent)
+	assert.NotNil(t, metadata.SubGroups[1].TopologyConstraints)
+	assert.Equal(t, "node", metadata.SubGroups[1].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "", metadata.SubGroups[1].TopologyConstraints.RequiredTopologyLevel)
+
+	// Child SubGroup pg2
+	assert.Equal(t, "pg2", metadata.SubGroups[2].Name)
+	assert.Equal(t, int32(3), metadata.SubGroups[2].MinAvailable)
+	assert.NotNil(t, metadata.SubGroups[2].Parent)
+	assert.Equal(t, "group1", *metadata.SubGroups[2].Parent)
+	assert.NotNil(t, metadata.SubGroups[2].TopologyConstraints)
+	assert.Equal(t, "", metadata.SubGroups[2].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "node", metadata.SubGroups[2].TopologyConstraints.RequiredTopologyLevel)
+
+	// MinAvailable is sum of children only
+	assert.Equal(t, int32(5), metadata.MinAvailable)
+}
+
+// Test 2: TestGetPodGroupMetadata_WithoutTopologyConstraintGroupConfigs
+func TestGetPodGroupMetadata_WithoutTopologyConstraintGroupConfigs(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name": "pg1",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "node",
+							},
+						},
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+					map[string]interface{}{
+						"name": "pg2",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"required": "rack",
+							},
+						},
+						"minReplicas": int64(3),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod2"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(metadata.SubGroups))
+
+	// Both SubGroups have no parent
+	assert.Equal(t, "pg1", metadata.SubGroups[0].Name)
+	assert.Nil(t, metadata.SubGroups[0].Parent)
+	assert.NotNil(t, metadata.SubGroups[0].TopologyConstraints)
+	assert.Equal(t, "node", metadata.SubGroups[0].TopologyConstraints.PreferredTopologyLevel)
+
+	assert.Equal(t, "pg2", metadata.SubGroups[1].Name)
+	assert.Nil(t, metadata.SubGroups[1].Parent)
+	assert.NotNil(t, metadata.SubGroups[1].TopologyConstraints)
+	assert.Equal(t, "rack", metadata.SubGroups[1].TopologyConstraints.RequiredTopologyLevel)
+
+	assert.Equal(t, int32(5), metadata.MinAvailable)
+}
+
+// Test 3: TestGetPodGroupMetadata_MultipleParentGroups
+func TestGetPodGroupMetadata_MultipleParentGroups(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraintGroupConfigs": []interface{}{
+					map[string]interface{}{
+						"name":          "group1",
+						"podGroupNames": []interface{}{"pg1", "pg2"},
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "rack",
+							},
+						},
+					},
+					map[string]interface{}{
+						"name":          "group2",
+						"podGroupNames": []interface{}{"pg3"},
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"required": "zone",
+							},
+						},
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(1),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+					map[string]interface{}{
+						"name":        "pg2",
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod2"},
+						},
+					},
+					map[string]interface{}{
+						"name":        "pg3",
+						"minReplicas": int64(3),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod3"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Equal(t, 5, len(metadata.SubGroups))
+
+	// Parents first
+	assert.Equal(t, "group1", metadata.SubGroups[0].Name)
+	assert.Equal(t, int32(0), metadata.SubGroups[0].MinAvailable)
+	assert.Equal(t, "group2", metadata.SubGroups[1].Name)
+	assert.Equal(t, int32(0), metadata.SubGroups[1].MinAvailable)
+
+	// Children
+	assert.Equal(t, "pg1", metadata.SubGroups[2].Name)
+	assert.Equal(t, "group1", *metadata.SubGroups[2].Parent)
+	assert.Equal(t, "pg2", metadata.SubGroups[3].Name)
+	assert.Equal(t, "group1", *metadata.SubGroups[3].Parent)
+	assert.Equal(t, "pg3", metadata.SubGroups[4].Name)
+	assert.Equal(t, "group2", *metadata.SubGroups[4].Parent)
+}
+
+// Test 4: TestGetPodGroupMetadata_MixedParenting
+func TestGetPodGroupMetadata_MixedParenting(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraintGroupConfigs": []interface{}{
+					map[string]interface{}{
+						"name":          "group1",
+						"podGroupNames": []interface{}{"pg1"},
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+					map[string]interface{}{
+						"name":        "pg2",
+						"minReplicas": int64(3),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod2"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(metadata.SubGroups))
+
+	// Parent
+	assert.Equal(t, "group1", metadata.SubGroups[0].Name)
+
+	// Children
+	assert.Equal(t, "pg1", metadata.SubGroups[1].Name)
+	assert.Equal(t, "group1", *metadata.SubGroups[1].Parent)
+	assert.Equal(t, "pg2", metadata.SubGroups[2].Name)
+	assert.Nil(t, metadata.SubGroups[2].Parent)
+}
+
+// Test 5: TestGetPodGroupMetadata_EmptyPodGroupNames
+func TestGetPodGroupMetadata_EmptyPodGroupNames(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraintGroupConfigs": []interface{}{
+					map[string]interface{}{
+						"name":          "group1",
+						"podGroupNames": []interface{}{},
+					},
+					map[string]interface{}{
+						"name":          "group2",
+						"podGroupNames": []interface{}{"pg1"},
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(metadata.SubGroups))
+
+	// Only group2 appears as parent (group1 skipped due to empty podGroupNames)
+	assert.Equal(t, "group2", metadata.SubGroups[0].Name)
+	assert.Equal(t, "pg1", metadata.SubGroups[1].Name)
+	assert.Equal(t, "group2", *metadata.SubGroups[1].Parent)
+}
+
+// Test 6: TestGetPodGroupMetadata_MissingTopologyConstraints
+func TestGetPodGroupMetadata_MissingTopologyConstraints(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraintGroupConfigs": []interface{}{
+					map[string]interface{}{
+						"name":          "group1",
+						"podGroupNames": []interface{}{"pg1"},
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.PreferredTopologyLevel)
+	assert.Equal(t, "", metadata.RequiredTopologyLevel)
+	assert.Nil(t, metadata.SubGroups[0].TopologyConstraints)
+	assert.Nil(t, metadata.SubGroups[1].TopologyConstraints)
+}
+
+// TestGetPodGroupMetadata_NilTopologyConstraintInConfig
+func TestGetPodGroupMetadata_NilTopologyConstraintInConfig(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraintGroupConfigs": []interface{}{
+					map[string]interface{}{
+						"name":               "group1",
+						"podGroupNames":      []interface{}{"pg1"},
+						"topologyConstraint": nil,
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Nil(t, metadata.SubGroups[0].TopologyConstraints)
+}
+
+// Test 16: TestGetPodGroupMetadata_NilTopologyConstraintInPodGroup
+func TestGetPodGroupMetadata_NilTopologyConstraintInPodGroup(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":               "pg1",
+						"topologyConstraint": nil,
+						"minReplicas":        int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Nil(t, metadata.SubGroups[0].TopologyConstraints)
+}
+
+// Test 17: TestGetPodGroupMetadata_InvalidTopologyConstraintGroupConfigsType
+func TestGetPodGroupMetadata_InvalidTopologyConstraintGroupConfigsType(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraintGroupConfigs": map[string]interface{}{
+					"invalid": "type",
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	_, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse 'topologyConstraintGroupConfigs' field")
+}
+
+// TestGetPodGroupMetadata_ConfigReferencesNonexistentPodGroup
+func TestGetPodGroupMetadata_ConfigReferencesNonexistentPodGroup(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraintGroupConfigs": []interface{}{
+					map[string]interface{}{
+						"name":          "group1",
+						"podGroupNames": []interface{}{"pg1", "pg2"},
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(metadata.SubGroups))
+
+	// Parent group created
+	assert.Equal(t, "group1", metadata.SubGroups[0].Name)
+
+	// Only pg1 appears (pg2 doesn't exist)
+	assert.Equal(t, "pg1", metadata.SubGroups[1].Name)
+	assert.Equal(t, "group1", *metadata.SubGroups[1].Parent)
+}
+
+// Test 1: TestGetPodGroupMetadata_PodGangPreferredOnly
+func TestGetPodGroupMetadata_PodGangPreferredOnly(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraint": map[string]interface{}{
+					"packConstraint": map[string]interface{}{
+						"preferred": "rack",
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Equal(t, "rack", metadata.PreferredTopologyLevel)
+	assert.Equal(t, "", metadata.RequiredTopologyLevel)
+	assert.Equal(t, 1, len(metadata.SubGroups))
+}
+
+// Test 2: TestGetPodGroupMetadata_PodGangRequiredOnly
+func TestGetPodGroupMetadata_PodGangRequiredOnly(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraint": map[string]interface{}{
+					"packConstraint": map[string]interface{}{
+						"required": "zone",
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.PreferredTopologyLevel)
+	assert.Equal(t, "zone", metadata.RequiredTopologyLevel)
+	assert.Equal(t, 1, len(metadata.SubGroups))
+}
+
+// Test 3: TestGetPodGroupMetadata_ParentGroupBothTopologies
+func TestGetPodGroupMetadata_ParentGroupBothTopologies(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraintGroupConfigs": []interface{}{
+					map[string]interface{}{
+						"name":          "group1",
+						"podGroupNames": []interface{}{"pg1"},
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "rack",
+								"required":  "zone",
+							},
+						},
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(metadata.SubGroups))
+
+	// Parent SubGroup
+	assert.Equal(t, "group1", metadata.SubGroups[0].Name)
+	assert.NotNil(t, metadata.SubGroups[0].TopologyConstraints)
+	assert.Equal(t, "rack", metadata.SubGroups[0].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "zone", metadata.SubGroups[0].TopologyConstraints.RequiredTopologyLevel)
+
+	// Child SubGroup
+	assert.Equal(t, "pg1", metadata.SubGroups[1].Name)
+	assert.Equal(t, "group1", *metadata.SubGroups[1].Parent)
+}
+
+// Test 4: TestGetPodGroupMetadata_PodGroupBothTopologies
+func TestGetPodGroupMetadata_PodGroupBothTopologies(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name": "pg1",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "node",
+								"required":  "rack",
+							},
+						},
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(metadata.SubGroups))
+
+	// SubGroup with both topology constraints
+	assert.Equal(t, "pg1", metadata.SubGroups[0].Name)
+	assert.NotNil(t, metadata.SubGroups[0].TopologyConstraints)
+	assert.Equal(t, "node", metadata.SubGroups[0].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "rack", metadata.SubGroups[0].TopologyConstraints.RequiredTopologyLevel)
+}
+
+// Test 5: TestGetPodGroupMetadata_ComplexHierarchyMixedTopologies
+func TestGetPodGroupMetadata_ComplexHierarchyMixedTopologies(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				// Level 1: PodGang - Both
+				"topologyConstraint": map[string]interface{}{
+					"packConstraint": map[string]interface{}{
+						"preferred": "cluster",
+						"required":  "datacenter",
+					},
+				},
+				// Level 2: Parent groups - Different variants
+				"topologyConstraintGroupConfigs": []interface{}{
+					map[string]interface{}{
+						"name":          "group1",
+						"podGroupNames": []interface{}{"pg1", "pg2"},
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "rack",
+								"required":  "zone",
+							},
+						},
+					},
+					map[string]interface{}{
+						"name":          "group2",
+						"podGroupNames": []interface{}{"pg3"},
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "node",
+							},
+						},
+					},
+				},
+				// Level 3: Child PodGroups - Different variants
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name": "pg1",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "node",
+								"required":  "rack",
+							},
+						},
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+					map[string]interface{}{
+						"name": "pg2",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"required": "node",
+							},
+						},
+						"minReplicas": int64(3),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod2"},
+						},
+					},
+					map[string]interface{}{
+						"name": "pg3",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "socket",
+							},
+						},
+						"minReplicas": int64(1),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod3"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+
+	// PodGang level: both preferred and required
+	assert.Equal(t, "cluster", metadata.PreferredTopologyLevel)
+	assert.Equal(t, "datacenter", metadata.RequiredTopologyLevel)
+
+	// Total SubGroups: 2 parents + 3 children = 5
+	assert.Equal(t, 5, len(metadata.SubGroups))
+
+	// Parents should come first
+	// Parent SubGroup group1: both preferred and required
+	assert.Equal(t, "group1", metadata.SubGroups[0].Name)
+	assert.NotNil(t, metadata.SubGroups[0].TopologyConstraints)
+	assert.Equal(t, "rack", metadata.SubGroups[0].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "zone", metadata.SubGroups[0].TopologyConstraints.RequiredTopologyLevel)
+	assert.Nil(t, metadata.SubGroups[0].Parent)
+
+	// Parent SubGroup group2: preferred-only
+	assert.Equal(t, "group2", metadata.SubGroups[1].Name)
+	assert.NotNil(t, metadata.SubGroups[1].TopologyConstraints)
+	assert.Equal(t, "node", metadata.SubGroups[1].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "", metadata.SubGroups[1].TopologyConstraints.RequiredTopologyLevel)
+	assert.Nil(t, metadata.SubGroups[1].Parent)
+
+	// Child SubGroup pg1: both, parent=group1
+	assert.Equal(t, "pg1", metadata.SubGroups[2].Name)
+	assert.NotNil(t, metadata.SubGroups[2].TopologyConstraints)
+	assert.Equal(t, "node", metadata.SubGroups[2].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "rack", metadata.SubGroups[2].TopologyConstraints.RequiredTopologyLevel)
+	assert.NotNil(t, metadata.SubGroups[2].Parent)
+	assert.Equal(t, "group1", *metadata.SubGroups[2].Parent)
+	assert.Equal(t, int32(2), metadata.SubGroups[2].MinAvailable)
+
+	// Child SubGroup pg2: required-only, parent=group1
+	assert.Equal(t, "pg2", metadata.SubGroups[3].Name)
+	assert.NotNil(t, metadata.SubGroups[3].TopologyConstraints)
+	assert.Equal(t, "", metadata.SubGroups[3].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "node", metadata.SubGroups[3].TopologyConstraints.RequiredTopologyLevel)
+	assert.NotNil(t, metadata.SubGroups[3].Parent)
+	assert.Equal(t, "group1", *metadata.SubGroups[3].Parent)
+	assert.Equal(t, int32(3), metadata.SubGroups[3].MinAvailable)
+
+	// Child SubGroup pg3: preferred-only, parent=group2
+	assert.Equal(t, "pg3", metadata.SubGroups[4].Name)
+	assert.NotNil(t, metadata.SubGroups[4].TopologyConstraints)
+	assert.Equal(t, "socket", metadata.SubGroups[4].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "", metadata.SubGroups[4].TopologyConstraints.RequiredTopologyLevel)
+	assert.NotNil(t, metadata.SubGroups[4].Parent)
+	assert.Equal(t, "group2", *metadata.SubGroups[4].Parent)
+	assert.Equal(t, int32(1), metadata.SubGroups[4].MinAvailable)
+
+	// MinAvailable = sum of children only (2+3+1 = 6)
+	assert.Equal(t, int32(6), metadata.MinAvailable)
+}
+
+// Test 6: TestGetPodGroupMetadata_MultipleParentGroupsVariantMix
+func TestGetPodGroupMetadata_MultipleParentGroupsVariantMix(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraintGroupConfigs": []interface{}{
+					map[string]interface{}{
+						"name":          "group1",
+						"podGroupNames": []interface{}{"pg1"},
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "rack",
+								"required":  "zone",
+							},
+						},
+					},
+					map[string]interface{}{
+						"name":          "group2",
+						"podGroupNames": []interface{}{"pg2"},
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "node",
+							},
+						},
+					},
+					map[string]interface{}{
+						"name":          "group3",
+						"podGroupNames": []interface{}{"pg3"},
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"required": "socket",
+							},
+						},
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(1),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+					map[string]interface{}{
+						"name":        "pg2",
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod2"},
+						},
+					},
+					map[string]interface{}{
+						"name":        "pg3",
+						"minReplicas": int64(3),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod3"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+
+	// 6 SubGroups total (3 parents + 3 children)
+	assert.Equal(t, 6, len(metadata.SubGroups))
+
+	// Parent SubGroup group1: both preferred and required
+	assert.Equal(t, "group1", metadata.SubGroups[0].Name)
+	assert.NotNil(t, metadata.SubGroups[0].TopologyConstraints)
+	assert.Equal(t, "rack", metadata.SubGroups[0].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "zone", metadata.SubGroups[0].TopologyConstraints.RequiredTopologyLevel)
+
+	// Parent SubGroup group2: preferred-only
+	assert.Equal(t, "group2", metadata.SubGroups[1].Name)
+	assert.NotNil(t, metadata.SubGroups[1].TopologyConstraints)
+	assert.Equal(t, "node", metadata.SubGroups[1].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "", metadata.SubGroups[1].TopologyConstraints.RequiredTopologyLevel)
+
+	// Parent SubGroup group3: required-only
+	assert.Equal(t, "group3", metadata.SubGroups[2].Name)
+	assert.NotNil(t, metadata.SubGroups[2].TopologyConstraints)
+	assert.Equal(t, "", metadata.SubGroups[2].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "socket", metadata.SubGroups[2].TopologyConstraints.RequiredTopologyLevel)
+
+	// Child SubGroup pg1: parent=group1
+	assert.Equal(t, "pg1", metadata.SubGroups[3].Name)
+	assert.NotNil(t, metadata.SubGroups[3].Parent)
+	assert.Equal(t, "group1", *metadata.SubGroups[3].Parent)
+	assert.Equal(t, int32(1), metadata.SubGroups[3].MinAvailable)
+
+	// Child SubGroup pg2: parent=group2
+	assert.Equal(t, "pg2", metadata.SubGroups[4].Name)
+	assert.NotNil(t, metadata.SubGroups[4].Parent)
+	assert.Equal(t, "group2", *metadata.SubGroups[4].Parent)
+	assert.Equal(t, int32(2), metadata.SubGroups[4].MinAvailable)
+
+	// Child SubGroup pg3: parent=group3
+	assert.Equal(t, "pg3", metadata.SubGroups[5].Name)
+	assert.NotNil(t, metadata.SubGroups[5].Parent)
+	assert.Equal(t, "group3", *metadata.SubGroups[5].Parent)
+	assert.Equal(t, int32(3), metadata.SubGroups[5].MinAvailable)
+
+	// MinAvailable = 1+2+3 = 6
+	assert.Equal(t, int32(6), metadata.MinAvailable)
+}
+
+// Test 7: TestGetPodGroupMetadata_MultiplePodGroupsVariantMix
+func TestGetPodGroupMetadata_MultiplePodGroupsVariantMix(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+			},
+			"spec": map[string]interface{}{
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name": "pg1",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "rack",
+								"required":  "zone",
+							},
+						},
+						"minReplicas": int64(1),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+					map[string]interface{}{
+						"name": "pg2",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "node",
+							},
+						},
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod2"},
+						},
+					},
+					map[string]interface{}{
+						"name": "pg3",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"required": "socket",
+							},
+						},
+						"minReplicas": int64(3),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod3"},
+						},
+					},
+					map[string]interface{}{
+						"name":        "pg4",
+						"minReplicas": int64(4),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod4"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+
+	// 4 SubGroups total (all children, no parents)
+	assert.Equal(t, 4, len(metadata.SubGroups))
+
+	// SubGroup pg1: both preferred and required, no parent
+	assert.Equal(t, "pg1", metadata.SubGroups[0].Name)
+	assert.NotNil(t, metadata.SubGroups[0].TopologyConstraints)
+	assert.Equal(t, "rack", metadata.SubGroups[0].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "zone", metadata.SubGroups[0].TopologyConstraints.RequiredTopologyLevel)
+	assert.Nil(t, metadata.SubGroups[0].Parent)
+	assert.Equal(t, int32(1), metadata.SubGroups[0].MinAvailable)
+
+	// SubGroup pg2: preferred-only, no parent
+	assert.Equal(t, "pg2", metadata.SubGroups[1].Name)
+	assert.NotNil(t, metadata.SubGroups[1].TopologyConstraints)
+	assert.Equal(t, "node", metadata.SubGroups[1].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "", metadata.SubGroups[1].TopologyConstraints.RequiredTopologyLevel)
+	assert.Nil(t, metadata.SubGroups[1].Parent)
+	assert.Equal(t, int32(2), metadata.SubGroups[1].MinAvailable)
+
+	// SubGroup pg3: required-only, no parent
+	assert.Equal(t, "pg3", metadata.SubGroups[2].Name)
+	assert.NotNil(t, metadata.SubGroups[2].TopologyConstraints)
+	assert.Equal(t, "", metadata.SubGroups[2].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "socket", metadata.SubGroups[2].TopologyConstraints.RequiredTopologyLevel)
+	assert.Nil(t, metadata.SubGroups[2].Parent)
+	assert.Equal(t, int32(3), metadata.SubGroups[2].MinAvailable)
+
+	// SubGroup pg4: neither (no topology constraint), no parent
+	assert.Equal(t, "pg4", metadata.SubGroups[3].Name)
+	assert.Nil(t, metadata.SubGroups[3].TopologyConstraints)
+	assert.Nil(t, metadata.SubGroups[3].Parent)
+	assert.Equal(t, int32(4), metadata.SubGroups[3].MinAvailable)
+
+	// MinAvailable = 1+2+3+4 = 10
+	assert.Equal(t, int32(10), metadata.MinAvailable)
+}

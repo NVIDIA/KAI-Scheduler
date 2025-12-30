@@ -114,11 +114,20 @@ func (h *Handler) createPodGroupForMetadata(podGroupMetadata Metadata) *scheduli
 	}
 
 	for _, subGroup := range podGroupMetadata.SubGroups {
+		var topologyConstraint *schedulingv2alpha2.TopologyConstraint
+		if subGroup.TopologyConstraints != nil {
+			topologyConstraint = &schedulingv2alpha2.TopologyConstraint{
+				PreferredTopologyLevel: subGroup.TopologyConstraints.PreferredTopologyLevel,
+				RequiredTopologyLevel:  subGroup.TopologyConstraints.RequiredTopologyLevel,
+				Topology:               subGroup.TopologyConstraints.Topology,
+			}
+		}
 		pg.Spec.SubGroups = append(pg.Spec.SubGroups,
 			schedulingv2alpha2.SubGroup{
-				Name:      subGroup.Name,
-				MinMember: subGroup.MinAvailable,
-				Parent:    subGroup.Parent,
+				Name:               subGroup.Name,
+				MinMember:          subGroup.MinAvailable,
+				Parent:             subGroup.Parent,
+				TopologyConstraint: topologyConstraint,
 			})
 	}
 

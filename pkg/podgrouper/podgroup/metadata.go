@@ -9,11 +9,18 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+type TopologyConstraintMetadata struct {
+	PreferredTopologyLevel string
+	RequiredTopologyLevel  string
+	Topology               string
+}
+
 type SubGroupMetadata struct {
-	Name           string
-	MinAvailable   int32
-	Parent         *string
-	PodsReferences []*types.NamespacedName
+	Name                string
+	MinAvailable        int32
+	Parent              *string
+	PodsReferences      []*types.NamespacedName
+	TopologyConstraints *TopologyConstraintMetadata
 }
 
 type Metadata struct {
