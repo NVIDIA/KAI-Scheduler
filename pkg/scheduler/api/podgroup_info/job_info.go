@@ -537,6 +537,10 @@ func (pgi *PodGroupInfo) GetSchedulingConstraintsSignature() common_info.Schedul
 }
 
 func (pgi *PodGroupInfo) generateSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
+	if pgi == nil || pgi.PodGroup == nil {
+		return ""
+	}
+
 	hash := sha256.New()
 
 	topologyConstraintSignature := generateTopologyConstraintsSignature(&pgi.PodGroup.Spec.TopologyConstraint)
