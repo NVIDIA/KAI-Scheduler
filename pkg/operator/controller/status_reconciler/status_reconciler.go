@@ -34,7 +34,7 @@ func New(client client.Client, deployable *deployable.DeployableOperands) *Statu
 }
 
 func (r *StatusReconciler) UpdateStartReconcileStatus(ctx context.Context, object objectWithConditions) error {
-	if err := r.reconcileCondition(ctx, object, r.getReconcilingCondition(object.GetGeneration(), true)); err != nil {
+	if err := r.reconcileCondition(ctx, object, r.getReconcilingCondition(object.GetGeneration())); err != nil {
 		return err
 	}
 
@@ -45,17 +45,10 @@ func (r *StatusReconciler) ReconcileStatus(ctx context.Context, object objectWit
 	if err := r.reconcileCondition(ctx, object, r.getDeployedCondition(ctx, object.GetGeneration())); err != nil {
 		return err
 	}
-	isAvailable, availableErr := r.deployable.IsAvailable(ctx, r.Client)
-	if err := r.reconcileCondition(ctx, object, r.getAvailableCondition(object.GetGeneration(), isAvailable, availableErr)); err != nil {
+	if err := r.reconcileCondition(ctx, object, r.getAvailableCondition(ctx, object.GetGeneration())); err != nil {
 		return err
 	}
-	if err := r.reconcileCondition(ctx, object, r.getReadyCondition(object.GetGeneration(), isAvailable)); err != nil {
-		return err
-	}
-	if err := r.reconcileCondition(ctx, object, r.getDependenciesFulfilledCondition(ctx, object)); err != nil {
-		return err
-	}
-	return r.reconcileCondition(ctx, object, r.getReconcilingCondition(object.GetGeneration(), false))
+	return r.reconcileCondition(ctx, object, r.getDependenciesFulfilledCondition(ctx, object))
 }
 
 func (r *StatusReconciler) reconcileCondition(ctx context.Context, object objectWithConditions, condition metav1.Condition) error {
@@ -119,36 +112,30 @@ func (r *StatusReconciler) getDeployedCondition(ctx context.Context, gen int64) 
 	}
 }
 
-func (r *StatusReconciler) getReconcilingCondition(gen int64, isReconciling bool) metav1.Condition {
-	status := metav1.ConditionFalse
-	message := "Reconciliation completed"
-	if isReconciling {
-		status = metav1.ConditionTrue
-		message = "Reconciliation in progress"
-	}
-
+func (r *StatusReconciler) getReconcilingCondition(gen int64) metav1.Condition {
 	return metav1.Condition{
 		Type:               string(kaiv1.ConditionTypeReconciling),
-		Status:             status,
+		Status:             metav1.ConditionTrue,
 		Reason:             string(kaiv1.Reconciled),
-		Message:            message,
+		Message:            "Reconciliation completed successfully",
 		ObservedGeneration: gen,
 		LastTransitionTime: metav1.Now(),
 	}
 }
 
-func (r *StatusReconciler) getAvailableCondition(gen int64, isAvailable bool, availableErr error) metav1.Condition {
-	if availableErr != nil {
+func (r *StatusReconciler) getAvailableCondition(ctx context.Context, gen int64) metav1.Condition {
+	available, err := r.deployable.IsAvailable(ctx, r.Client)
+	if err != nil {
 		return metav1.Condition{
 			Type:               string(kaiv1.ConditionTypeAvailable),
 			Status:             metav1.ConditionFalse,
 			Reason:             string(kaiv1.Available),
-			Message:            availableErr.Error(),
+			Message:            err.Error(),
 			ObservedGeneration: gen,
 			LastTransitionTime: metav1.Now(),
 		}
 	}
-	if isAvailable {
+	if available {
 		return metav1.Condition{
 			Type:               string(kaiv1.ConditionTypeAvailable),
 			Status:             metav1.ConditionTrue,
@@ -163,27 +150,6 @@ func (r *StatusReconciler) getAvailableCondition(gen int64, isAvailable bool, av
 		Status:             metav1.ConditionFalse,
 		Reason:             string(kaiv1.Available),
 		Message:            "System not available",
-		ObservedGeneration: gen,
-		LastTransitionTime: metav1.Now(),
-	}
-}
-
-func (r *StatusReconciler) getReadyCondition(gen int64, isReady bool) metav1.Condition {
-	if isReady {
-		return metav1.Condition{
-			Type:               string(kaiv1.ConditionTypeReady),
-			Status:             metav1.ConditionTrue,
-			Reason:             string(kaiv1.Ready),
-			Message:            "System is ready",
-			ObservedGeneration: gen,
-			LastTransitionTime: metav1.Now(),
-		}
-	}
-	return metav1.Condition{
-		Type:               string(kaiv1.ConditionTypeReady),
-		Status:             metav1.ConditionFalse,
-		Reason:             string(kaiv1.Ready),
-		Message:            "System is not ready",
 		ObservedGeneration: gen,
 		LastTransitionTime: metav1.Now(),
 	}

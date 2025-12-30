@@ -6,10 +6,10 @@ package topology
 import (
 	"testing"
 
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 )
@@ -27,7 +27,7 @@ func newNodeInfo(name string, labels map[string]string) *node_info.NodeInfo {
 }
 
 func TestIsNodePartOfTopology(t *testing.T) {
-	levels := []kueuev1alpha1.TopologyLevel{
+	levels := []kaiv1alpha1.TopologyLevel{
 		{NodeLabel: "zone"},
 		{NodeLabel: "rack"},
 	}
@@ -63,7 +63,7 @@ func TestIsNodePartOfTopology(t *testing.T) {
 }
 
 func TestLowestCommonDomainID(t *testing.T) {
-	levels := []kueuev1alpha1.TopologyLevel{
+	levels := []kaiv1alpha1.TopologyLevel{
 		{NodeLabel: "zone"},
 		{NodeLabel: "rack"},
 	}

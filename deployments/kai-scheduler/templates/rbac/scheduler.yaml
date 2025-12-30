@@ -82,7 +82,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - kueue.x-k8s.io
+  - kai.scheduler
   resources:
   - topologies
   verbs:

@@ -11,6 +11,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/operator/config"
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/controller"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands"
 
@@ -41,6 +42,7 @@ func init() {
 
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 	utilruntime.Must(kaiv1.AddToScheme(scheme))
+	utilruntime.Must(kaiv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(nvidiav1.AddToScheme(scheme))
 	utilruntime.Must(monitoringv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme

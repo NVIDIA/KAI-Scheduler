@@ -22,14 +22,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
-	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 )
 
 func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 	fakeKubeClient := fake.NewSimpleClientset()
 	fakeKubeAISchedulerClient := kubeaischedulerver.NewSimpleClientset()
-	fakeKueueClient := kueuefake.NewSimpleClientset()
 
 	testNodes := []*v1.Node{
 		{
@@ -88,12 +86,12 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 		},
 	}
 
-	testTopology := &kueuev1alpha1.Topology{
+	testTopology := &kaiv1alpha1.Topology{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-topology",
 		},
-		Spec: kueuev1alpha1.TopologySpec{
-			Levels: []kueuev1alpha1.TopologyLevel{
+		Spec: kaiv1alpha1.TopologySpec{
+			Levels: []kaiv1alpha1.TopologyLevel{
 				{
 					NodeLabel: "test-topology-label/block",
 				},
@@ -125,7 +123,6 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 	schedulerCache := cache.New(&cache.SchedulerCacheParams{
 		KubeClient:                  fakeKubeClient,
 		KAISchedulerClient:          fakeKubeAISchedulerClient,
-		KueueClient:                 fakeKueueClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      false,
@@ -146,7 +143,7 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	_, err = fakeKueueClient.KueueV1alpha1().Topologies().Create(ctx, testTopology, metav1.CreateOptions{})
+	_, err = fakeKubeAISchedulerClient.KaiV1alpha1().Topologies().Create(ctx, testTopology, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	schedulerCache.Run(ctx.Done())
@@ -179,7 +176,7 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 				Used:        resource_info.NewResource(1000, 0, 3),
 			},
 		},
-		Topologies: []*kueuev1alpha1.Topology{testTopology},
+		Topologies: []*kaiv1alpha1.Topology{testTopology},
 	}
 
 	plugin := New(nil)

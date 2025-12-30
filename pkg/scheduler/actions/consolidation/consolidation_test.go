@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"testing"
 
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	. "go.uber.org/mock/gomock"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/consolidation"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
@@ -1945,13 +1945,13 @@ func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Required topology with multiple levels - job pipelined as no available rack can be found unless consolidate",
-				Topologies: []*kueuev1alpha1.Topology{
+				Topologies: []*kaiv1alpha1.Topology{
 					{
 						ObjectMeta: v1.ObjectMeta{
 							Name: "cluster-topology",
 						},
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{
 									NodeLabel: "k8s.io/rack",
 								},

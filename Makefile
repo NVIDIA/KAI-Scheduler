@@ -18,6 +18,9 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 # SERVICE_NAMES := service1 service2 service3
 SERVICE_NAMES := podgrouper scheduler binder resourcereservation snapshot-tool scalingpod nodescaleadjuster podgroupcontroller queuecontroller fairshare-simulator admission operator time-aware-simulator
 
+# Kubernetes manifest files that require Kubernetes copyright header (space-separated)
+K8S_COPYRIGHTED_MANIFEST_FILES := deployments/kai-scheduler/crds/kai.scheduler_topologies.yaml
+
 
 lint: fmt-go vet-go lint-go
 .PHONY: lint
@@ -77,6 +80,11 @@ manifests: controller-gen kustomize ## Generate ClusterRole and CustomResourceDe
 	$(CONTROLLER_GEN) rbac:roleName=queuecontroller,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/queuecontroller/..." paths="./cmd/queuecontroller/..." output:stdout > deployments/kai-scheduler/templates/rbac/queuecontroller.yaml
 	$(CONTROLLER_GEN) rbac:roleName=kai-admission,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/admission/..." paths="./cmd/admission/..." output:stdout > deployments/kai-scheduler/templates/rbac/admission.yaml
 	$(CONTROLLER_GEN) rbac:roleName=kai-operator,headerFile="./hack/boilerplate.yaml.txt" paths="./pkg/operator/..." paths="./cmd/operator/..." output:stdout > deployments/kai-scheduler/templates/rbac/operator.yaml
+
+	# Add Kubernetes copyright to files derived from Kubernetes projects
+	@for f in $(K8S_COPYRIGHTED_MANIFEST_FILES); do \
+		cat ./hack/boilerplate.yaml.kb.txt $$f > $$f.tmp && mv $$f.tmp $$f; \
+	done
 
 	$(MAKE) gen-license
 

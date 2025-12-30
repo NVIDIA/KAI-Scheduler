@@ -20,7 +20,6 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/ptr"
-	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
 
 	kubeaischedulerfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
@@ -329,7 +328,6 @@ func TestRecordJobStatusEvent(t *testing.T) {
 
 			kubeClient = fake.NewSimpleClientset(podsAsObjects...)
 			kubeAiSchedulerClient := kubeaischedulerfake.NewSimpleClientset(podGroup)
-			kueueClient := kueuefake.NewSimpleClientset()
 
 			if tt.detailedErrors != nil {
 				detailedFitErrors = *tt.detailedErrors
@@ -338,7 +336,6 @@ func TestRecordJobStatusEvent(t *testing.T) {
 			cache := New(&SchedulerCacheParams{
 				KubeClient:                  kubeClient,
 				KAISchedulerClient:          kubeAiSchedulerClient,
-				KueueClient:                 kueueClient,
 				NodePoolParams:              &conf.SchedulingNodePoolParams{},
 				DetailedFitErrors:           detailedFitErrors,
 				FullHierarchyFairness:       true,

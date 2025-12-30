@@ -11,7 +11,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-build-and-test-required:
+    name: Check if build and test are required
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Check changed files
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          predicate-quantifier: "every"
+          filters: |
+            docs:
+              - '**/*.md'
+              - 'docs/**'
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
   validate-and-test:
+    needs: [ check-build-and-test-required ]
+    if: needs.check-build-and-test-required.outputs.code == 'true'
     name: Validate & Test
     runs-on: ubuntu-latest
     steps:
@@ -38,7 +62,8 @@ jobs:
   code-coverage-report:
     name: Code Coverage Report
     runs-on: ubuntu-latest
-    needs: validate-and-test
+    needs: [ validate-and-test, check-build-and-test-required ]
+    if: needs.check-build-and-test-required.outputs.code == 'true'
     steps:
       - uses: fgrosse/go-coverage-report@8c1d1a09864211d258937b1b1a5b849f7e4f2682
         id: coverage_reporter
@@ -66,6 +91,8 @@ jobs:
           path: pr_number.txt
 
   build:
+    needs: [ check-build-and-test-required ]
+    if: needs.check-build-and-test-required.outputs.code == 'true'
     name: Build
     runs-on: ubuntu-latest
     outputs:
@@ -120,9 +147,20 @@ jobs:
           helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
           cp charts/kai-scheduler-$PACKAGE_VERSION.tgz /mnt/images/
 
+  skip-build-and-test-message:
+    name: Skip Build and Test Message
+    needs: [ check-build-and-test-required ]
+    if: needs.check-build-and-test-required.outputs.code != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip message
+        run: |
+          echo "Skipping build and test since only documentation files (.md or docs/) were changed."
+
   e2e-tests:
     name: Run E2E Tests
-    needs: [ build ]
+    needs: [ build, check-build-and-test-required ]
+    if: needs.check-build-and-test-required.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

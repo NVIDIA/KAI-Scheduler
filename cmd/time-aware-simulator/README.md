@@ -30,7 +30,7 @@ The Time-Aware Fairness Simulator creates a Kubernetes test environment using `e
 
 - Go 1.21 or later
 - `envtest` binaries (automatically downloaded by the setup-envtest tool if not present)
-- **The binary must be executed from within the KAI Scheduler repository** - it needs access to the CRD files in `deployments/kai-scheduler/crds/` and `deployments/external-crds/`
+- **The binary must be executed from within the KAI Scheduler repository** - it needs access to the CRD files in `deployments/kai-scheduler/crds/`
 
 ## Building
 

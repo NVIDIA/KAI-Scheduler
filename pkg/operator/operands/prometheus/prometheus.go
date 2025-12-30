@@ -36,11 +36,21 @@ func (p *Prometheus) DesiredState(
 	p.namespace = kaiConfig.Spec.Namespace
 	p.client = runtimeClient.(client.Client)
 
+	var objects []client.Object
 	if kaiConfig.Spec.Prometheus == nil || kaiConfig.Spec.Prometheus.Enabled == nil || !*kaiConfig.Spec.Prometheus.Enabled {
-		return []client.Object{}, nil
+		// Handle graceful deprecation of existing Prometheus instance
+		prometheus, err := deprecatePrometheusForKAIConfig(ctx, runtimeClient, kaiConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(prometheus) == 0 {
+			return nil, nil
+		}
+
+		objects = append(objects, prometheus...)
 	}
 
-	var objects []client.Object
 	for _, resourceFunc := range []promethuesResourceForKAIConfig{
 		prometheusForKAIConfig,
 		prometheusServiceAccountForKAIConfig,

@@ -4,7 +4,7 @@
 package topology
 
 import (
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
@@ -54,7 +54,7 @@ func (t *topologyPlugin) preJobAllocationFn(_ *podgroup_info.PodGroupInfo) {
 	t.subGroupNodeScores = map[subgroupName]map[string]float64{}
 }
 
-func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topology, nodes map[string]*node_info.NodeInfo) {
+func (t *topologyPlugin) initializeTopologyTree(topologies []*kaiv1alpha1.Topology, nodes map[string]*node_info.NodeInfo) {
 	for _, topology := range topologies {
 		topologyTree := &Info{
 			Name: topology.Name,
@@ -74,7 +74,7 @@ func (t *topologyPlugin) initializeTopologyTree(topologies []*kueuev1alpha1.Topo
 	}
 }
 
-func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kueuev1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
+func (*topologyPlugin) addNodeDataToTopology(topologyTree *Info, topology *kaiv1alpha1.Topology, nodeInfo *node_info.NodeInfo) {
 	// Validate that the node is part of the topology
 	if !isNodePartOfTopology(nodeInfo, topology.Spec.Levels) {
 		return
