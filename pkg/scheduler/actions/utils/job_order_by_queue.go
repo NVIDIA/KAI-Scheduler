@@ -6,7 +6,7 @@ package utils
 import (
 	"fmt"
 
-	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
@@ -217,7 +217,7 @@ func (jobsOrder *JobsOrderByQueues) buildActiveJobOrderPriorityQueues(reverseOrd
 			jobsOrder.queueIdToQueueMetadata[queue.UID].jobsInQueue.ForEach(func(item interface{}) {
 				job := item.(*podgroup_info.PodGroupInfo)
 				job.AddSimpleJobFitError(
-					enginev2alpha2.QueueDoesNotExist,
+					v2alpha2.QueueDoesNotExist,
 					fmt.Sprintf("Queue '%s' has no parent queue", queue.Name))
 			})
 			continue
