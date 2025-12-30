@@ -25,6 +25,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
@@ -1037,5 +1038,106 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 		if got != tt.expected {
 			t.Errorf("IsStale() for case '%s' got %v, want %v", tt.name, got, tt.expected)
 		}
+	}
+}
+
+func TestPodGroupInfo_GetSchedulingConstraintsSignature(t *testing.T) {
+	// Helper function to create a pending pod task
+	createPendingTask := func(uid string) *pod_info.PodInfo {
+		return pod_info.NewTaskInfo(&v1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:       "uid-" + types.UID(uid),
+				Name:      uid,
+				Namespace: "ns",
+			},
+			Status: v1.PodStatus{Phase: v1.PodPending},
+		})
+	}
+
+	tests := []struct {
+		name        string
+		podGroupA   func() *PodGroupInfo
+		podGroupB   func() *PodGroupInfo
+		expectEqual bool
+	}{
+		{
+			// PodGroup A:              PodGroup B:
+			// root [rack]              root [rack]
+			//   └─ pod-1 (pending)       └─ pod-1 (pending)
+			name: "flat podgroup with same topology constraint - expects equal",
+			podGroupA: func() *PodGroupInfo {
+				pgi := NewPodGroupInfo("pg-1")
+				pgi.PodGroup = &v2alpha2.PodGroup{
+					Spec: v2alpha2.PodGroupSpec{
+						TopologyConstraint: v2alpha2.TopologyConstraint{Topology: "topo", RequiredTopologyLevel: "rack"},
+					},
+				}
+				rootSubGroup := NewSubGroupInfo("root", 1)
+				pgi.SubGroups["root"] = rootSubGroup
+				rootSubGroup.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				pgi := NewPodGroupInfo("pg-2")
+				pgi.PodGroup = &v2alpha2.PodGroup{
+					Spec: v2alpha2.PodGroupSpec{
+						TopologyConstraint: v2alpha2.TopologyConstraint{Topology: "topo", RequiredTopologyLevel: "rack"},
+					},
+				}
+				rootSubGroup := NewSubGroupInfo("root", 1)
+				pgi.SubGroups["root"] = rootSubGroup
+				rootSubGroup.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: true,
+		},
+		{
+			// PodGroup A:              PodGroup B:
+			// root [rack]              root [zone] <--- DIFFERENT
+			//   └─ pod-1 (pending)       └─ pod-1 (pending)
+			name: "flat podgroup with different topology constraint - expects not equal",
+			podGroupA: func() *PodGroupInfo {
+				pgi := NewPodGroupInfo("pg-1")
+				pgi.PodGroup = &v2alpha2.PodGroup{
+					Spec: v2alpha2.PodGroupSpec{
+						TopologyConstraint: v2alpha2.TopologyConstraint{Topology: "topo", RequiredTopologyLevel: "rack"},
+					},
+				}
+				rootSubGroup := NewSubGroupInfo("root", 1)
+				pgi.SubGroups["root"] = rootSubGroup
+				rootSubGroup.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			podGroupB: func() *PodGroupInfo {
+				pgi := NewPodGroupInfo("pg-2")
+				pgi.PodGroup = &v2alpha2.PodGroup{
+					Spec: v2alpha2.PodGroupSpec{
+						TopologyConstraint: v2alpha2.TopologyConstraint{Topology: "topo", RequiredTopologyLevel: "zone"},
+					},
+				}
+				rootSubGroup := NewSubGroupInfo("root", 1)
+				pgi.SubGroups["root"] = rootSubGroup
+				rootSubGroup.AssignTask(createPendingTask("pod-1"))
+				return pgi
+			},
+			expectEqual: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pgiA := tt.podGroupA()
+			pgiB := tt.podGroupB()
+
+			sigA := pgiA.GetSchedulingConstraintsSignature()
+			sigB := pgiB.GetSchedulingConstraintsSignature()
+
+			if tt.expectEqual && sigA != sigB {
+				t.Errorf("Expected signatures to be equal, but got sigA=%s, sigB=%s", sigA, sigB)
+			}
+			if !tt.expectEqual && sigA == sigB {
+				t.Errorf("Expected signatures to be different, but both are %s", sigA)
+			}
+		})
 	}
 }

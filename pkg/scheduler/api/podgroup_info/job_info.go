@@ -537,9 +537,16 @@ func (pgi *PodGroupInfo) GetSchedulingConstraintsSignature() common_info.Schedul
 }
 
 func (pgi *PodGroupInfo) generateSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
-	hash := sha256.New()
-	var signatures []common_info.SchedulingConstraintsSignature
+	if pgi == nil || pgi.PodGroup == nil {
+		return ""
+	}
 
+	hash := sha256.New()
+
+	topologyConstraintSignature := generateTopologyConstraintsSignature(&pgi.PodGroup.Spec.TopologyConstraint)
+	hash.Write([]byte(topologyConstraintSignature))
+
+	var signatures []common_info.SchedulingConstraintsSignature
 	for _, pod := range pgi.GetAllPodsMap() {
 		if pod_status.IsActiveAllocatedStatus(pod.Status) {
 			continue
@@ -568,4 +575,10 @@ func (jr *JobRequirement) Get(resourceName v1.ResourceName) float64 {
 	default:
 		return 0
 	}
+}
+
+func generateTopologyConstraintsSignature(topologyConstraint *enginev2alpha2.TopologyConstraint) common_info.SchedulingConstraintsSignature {
+	hash := sha256.New()
+	hash.Write([]byte(fmt.Sprintf("%s:%s:%s", topologyConstraint.Topology, topologyConstraint.RequiredTopologyLevel, topologyConstraint.PreferredTopologyLevel)))
+	return common_info.SchedulingConstraintsSignature(fmt.Sprintf("%x", hash.Sum(nil)))
 }
