@@ -320,10 +320,11 @@ func (c *ClusterInfo) snapshotPodGroups(
 		podGroupID := common_info.PodGroupID(podGroup.Name)
 		podGroupInfo := podgroup_info.NewPodGroupInfo(podGroupID)
 
+		queueExists := true
 		if _, found := existingQueues[common_info.QueueID(podGroup.Spec.Queue)]; !found {
-			log.InfraLogger.V(7).Infof("The Queue <%v> of podgroup <%v/%v> does not exist, ignore it.",
+			log.InfraLogger.V(7).Infof("The Queue <%v> of podgroup <%v/%v> does not exist, adding error.",
 				podGroup.Spec.Queue, podGroup.Namespace, podGroup.Name)
-			continue
+			queueExists = false
 		}
 
 		podGroupInfo.Priority = getPodGroupPriority(podGroup, defaultPriority, c.dataLister)
@@ -348,6 +349,13 @@ func (c *ClusterInfo) snapshotPodGroups(
 			podInfo := c.getPodInfo(pod, existingPods)
 			podGroupInfo.AddTaskInfo(podInfo)
 		}
+
+		if !queueExists {
+			podGroupInfo.AddSimpleJobFitError(
+				enginev2alpha2.QueueDoesNotExist,
+				fmt.Sprintf("Queue '%s' does not exist", podGroup.Spec.Queue))
+		}
+
 		result[common_info.PodGroupID(podGroup.Name)] = podGroupInfo
 	}
 

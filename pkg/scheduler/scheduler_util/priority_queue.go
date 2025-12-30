@@ -116,3 +116,11 @@ func (pq *priorityQueue) Peek() interface{} {
 
 	return pq.items[0]
 }
+
+// ForEach iterates over all items in the priority queue without modifying it.
+// The order of iteration is not guaranteed to be the priority order.
+func (q *PriorityQueue) ForEach(fn func(interface{})) {
+	for _, item := range q.queue.items {
+		fn(item)
+	}
+}
