@@ -1308,6 +1308,61 @@ func TestSnapshotPodGroups_QueueDoesNotExist_AddsJobFitError(t *testing.T) {
 	assert.Contains(t, pg.JobFitErrors[0].Messages()[0], "nonexistent-queue")
 }
 
+func TestSnapshotPodGroups_OrphanQueue_AddsJobFitError(t *testing.T) {
+	clusterInfo := newClusterInfoTests(t,
+		clusterInfoTestParams{
+			kubeObjects: []runtime.Object{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pod",
+						Namespace: testNamespace,
+						UID:       types.UID("test-pod-uid"),
+						Annotations: map[string]string{
+							commonconstants.PodGroupAnnotationForPod: "podGroup-orphan-queue",
+						},
+					},
+				},
+			},
+			kaiSchedulerObjects: []runtime.Object{
+				&enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "podGroup-orphan-queue",
+						Namespace: testNamespace,
+						UID:       "ABC",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						Queue: "orphan-queue",
+					},
+				},
+			},
+		},
+	)
+
+	// Create a queue that has a non-existent parent (orphan queue)
+	orphanQueue := &queue_info.QueueInfo{
+		UID:         "orphan-queue",
+		Name:        "orphan-queue",
+		ParentQueue: "non-existent-parent",
+	}
+	existingPods := map[common_info.PodID]*pod_info.PodInfo{}
+	podGroups, err := clusterInfo.snapshotPodGroups(
+		map[common_info.QueueID]*queue_info.QueueInfo{"orphan-queue": orphanQueue},
+		existingPods)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(podGroups), "Expected 1 podgroup")
+
+	pg, found := podGroups[common_info.PodGroupID("podGroup-orphan-queue")]
+	assert.True(t, found, "PodGroup not found")
+	assert.Equal(t, "orphan-queue", string(pg.Queue))
+
+	// Verify job fit error was added for orphan queue
+	assert.Equal(t, 1, len(pg.JobFitErrors), "Expected 1 job fit error for orphan queue")
+	assert.Equal(t, enginev2alpha2.QueueDoesNotExist, pg.JobFitErrors[0].Reason())
+	assert.Contains(t, pg.JobFitErrors[0].Messages()[0], "orphan-queue")
+	assert.Contains(t, pg.JobFitErrors[0].Messages()[0], "no parent queue")
+}
+
 func TestSnapshotQueues(t *testing.T) {
 	objs := []runtime.Object{
 		&enginev2.Queue{

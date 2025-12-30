@@ -318,25 +318,12 @@ func (c *ClusterInfo) snapshotPodGroups(
 		podGroupID := common_info.PodGroupID(podGroup.Name)
 		podGroupInfo := podgroup_info.NewPodGroupInfo(podGroupID)
 
-		queueExists := true
-		if _, found := existingQueues[common_info.QueueID(podGroup.Spec.Queue)]; !found {
-			log.InfraLogger.V(7).Infof("The Queue <%v> of podgroup <%v/%v> does not exist, adding error.",
-				podGroup.Spec.Queue, podGroup.Namespace, podGroup.Name)
-			queueExists = false
-		}
-
-		if queueExists {
-			podGroupInfo.Priority = getPodGroupPriority(podGroup, defaultPriority, c.dataLister)
-			log.InfraLogger.V(7).Infof("The priority of job <%s/%s> is <%s/%d>", podGroup.Namespace, podGroup.Name,
-				podGroup.Spec.PriorityClassName, podGroupInfo.Priority)
-
-			podGroupInfo.Preemptibility = pg.CalculatePreemptibility(podGroup.Spec.Preemptibility, podGroupInfo.Priority)
-			log.InfraLogger.V(7).Infof("The preemptibility of job <%s/%s> is <%s>", podGroup.Namespace, podGroup.Name,
-				podGroupInfo.Preemptibility)
+		if err := validatePodgroupQueue(existingQueues, podGroup); err != nil {
+			log.InfraLogger.V(7).Infof("Queue validation failed for podgroup <%s/%s>: %v",
+				podGroup.Namespace, podGroup.Name, err)
+			podGroupInfo.AddSimpleJobFitError(enginev2alpha2.QueueDoesNotExist, err.Error())
 		} else {
-			podGroupInfo.AddSimpleJobFitError(
-				enginev2alpha2.QueueDoesNotExist,
-				fmt.Sprintf("Queue '%s' does not exist", podGroup.Spec.Queue))
+			c.setPodGroupPriorityAndPreemptibility(podGroupInfo, podGroup, defaultPriority)
 		}
 
 		c.setPodGroupWithIndex(podGroup, podGroupInfo)
@@ -358,6 +345,31 @@ func (c *ClusterInfo) snapshotPodGroups(
 	}
 
 	return result, nil
+}
+
+func validatePodgroupQueue(existingQueues map[common_info.QueueID]*queue_info.QueueInfo, podGroup *enginev2alpha2.PodGroup) error {
+	queue, queueExists := existingQueues[common_info.QueueID(podGroup.Spec.Queue)]
+	if !queueExists {
+		return fmt.Errorf("Queue '%s' does not exist", podGroup.Spec.Queue)
+	}
+	if _, parentExists := existingQueues[queue.ParentQueue]; !parentExists {
+		return fmt.Errorf("Queue '%s' has no parent queue", podGroup.Spec.Queue)
+	}
+	return nil
+}
+
+func (c *ClusterInfo) setPodGroupPriorityAndPreemptibility(
+	podGroupInfo *podgroup_info.PodGroupInfo,
+	podGroup *enginev2alpha2.PodGroup,
+	defaultPriority int32,
+) {
+	podGroupInfo.Priority = getPodGroupPriority(podGroup, defaultPriority, c.dataLister)
+	log.InfraLogger.V(7).Infof("The priority of job <%s/%s> is <%s/%d>",
+		podGroup.Namespace, podGroup.Name, podGroup.Spec.PriorityClassName, podGroupInfo.Priority)
+
+	podGroupInfo.Preemptibility = pg.CalculatePreemptibility(podGroup.Spec.Preemptibility, podGroupInfo.Priority)
+	log.InfraLogger.V(7).Infof("The preemptibility of job <%s/%s> is <%s>",
+		podGroup.Namespace, podGroup.Name, podGroupInfo.Preemptibility)
 }
 
 func (c *ClusterInfo) getPodInfo(

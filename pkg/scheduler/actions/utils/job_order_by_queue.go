@@ -4,9 +4,6 @@
 package utils
 
 import (
-	"fmt"
-
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
@@ -213,13 +210,6 @@ func (jobsOrder *JobsOrderByQueues) buildActiveJobOrderPriorityQueues(reverseOrd
 		if _, found := jobsOrder.ssn.Queues[queue.ParentQueue]; !found {
 			log.InfraLogger.V(7).Warnf("Queue's department doesn't exist. Queue: <%v>, Department: <%v>",
 				queue.Name, queue.ParentQueue)
-			// Add error to all jobs in this queue since they can't be scheduled
-			jobsOrder.queueIdToQueueMetadata[queue.UID].jobsInQueue.ForEach(func(item interface{}) {
-				job := item.(*podgroup_info.PodGroupInfo)
-				job.AddSimpleJobFitError(
-					v2alpha2.QueueDoesNotExist,
-					fmt.Sprintf("Queue '%s' has no parent queue", queue.Name))
-			})
 			continue
 		}
 

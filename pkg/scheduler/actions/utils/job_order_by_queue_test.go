@@ -823,11 +823,6 @@ func TestJobsOrderByQueues_OrphanQueue_AddsJobFitError(t *testing.T) {
 	})
 	jobsOrder.InitializeWithJobs(ssn.PodGroupInfos)
 
-	// The job should have a job fit error because the queue's parent doesn't exist
-	assert.Equal(t, 1, len(job.JobFitErrors), "Expected 1 job fit error for orphan queue")
-	assert.Contains(t, string(job.JobFitErrors[0].Reason()), "QueueDoesNotExist")
-	assert.Contains(t, job.JobFitErrors[0].Messages()[0], "orphan-queue")
-
 	// The jobs order should be empty because the orphan queue's jobs are skipped
 	assert.True(t, jobsOrder.IsEmpty(), "Expected empty jobs order because orphan queue jobs are skipped from scheduling")
 }

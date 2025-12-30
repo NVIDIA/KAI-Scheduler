@@ -49,6 +49,11 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 			continue
 		}
 
+		// Skip jobs whose queue's parent queue doesn't exist
+		if _, found := jobsOrder.ssn.Queues[jobsOrder.ssn.Queues[job.Queue].ParentQueue]; !found {
+			continue
+		}
+
 		jobsOrder.addJobToQueue(job, jobsOrder.jobsOrderInitOptions.VictimQueue)
 	}
 
