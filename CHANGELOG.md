@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Fixed prometheus instance deprecation - ensure single instance [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
+
 ## [v0.12.1] - 2025-12-25
 
 ### Added
@@ -37,7 +40,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixed Dynamo integration by adding Dynamo GVKs to SkipTopOwner table
 - Keep creating service monitors for deprecated prometheus instances [#774](https://github.com/NVIDIA/KAI-Scheduler/pull/774) [itsomri](https://github.com/itsomri)
 - Fix retention duration parsing for deprecated prometheus instances [#774](https://github.com/NVIDIA/KAI-Scheduler/pull/774) [itsomri](https://github.com/itsomri)
-- Fixed prometheus instance deprecation - ensure single instance
 
 ### Changed
 - Renamed the previous "tumbling" option for the scheduler usage window type to "cron".
