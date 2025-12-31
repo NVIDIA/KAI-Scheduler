@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.12.2] - 2025-12-31
+
 ### Added
 - Fixed prometheus instance deprecation - ensure single instance [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
 - Added rule selector for resource accounting prometheus [#825](https://github.com/NVIDIA/KAI-Scheduler/pull/825) [itsomri](https://github.com/itsomri)
