@@ -8,9 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Fixed prometheus instance deprecation - ensure single instance [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
-- Added rule selector for resource accounting prometheus [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
-- Made accounting labels configurable [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
-
+- Added rule selector for resource accounting prometheus [#825](https://github.com/NVIDIA/KAI-Scheduler/pull/825) [itsomri](https://github.com/itsomri)
+- Made accounting labels configurable [#825](https://github.com/NVIDIA/KAI-Scheduler/pull/825) [itsomri](https://github.com/itsomri)
 
 ## [v0.12.1] - 2025-12-25
 
