@@ -42,10 +42,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Cache Go build cache (Docker-mounted)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build-docker-gocache
+            ~/.cache/go-build-docker-gopath
+          key: go-docker-${{ runner.os }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-docker-${{ runner.os }}-
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.4'
+          cache: true
 
       - name: Run validation
         run: make validate
@@ -110,10 +121,21 @@ jobs:
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
           echo $PACKAGE_VERSION
 
+      - name: Cache Go build cache (Docker-mounted)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build-docker-gocache
+            ~/.cache/go-build-docker-gopath
+          key: go-docker-${{ runner.os }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-docker-${{ runner.os }}-
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.4'
+          cache: true
 
       - name: Move Docker Data to /mnt
         run: |
@@ -139,7 +161,7 @@ jobs:
 
       - name: Build docker images
         run: |
-          make build DOCKER_BUILDX_ADDITIONAL_ARGS=--load VERSION=$PACKAGE_VERSION
+          make build DOCKER_BUILDX_ADDITIONAL_ARGS="--load --cache-from type=gha --cache-to type=gha,mode=max" VERSION=$PACKAGE_VERSION
           docker save $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION) | gzip > /mnt/images/docker_images.tgz
 
       - name: Build helm chart
@@ -222,9 +244,10 @@ jobs:
             --set "global.gpuSharing=true" --set "global.registry=localhost:30100" --debug --wait
       
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.22
+          go-version: '1.24.4'
+          cache: true
 
       - name: Install ginkgo
         run: |
