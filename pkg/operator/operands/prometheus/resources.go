@@ -21,16 +21,15 @@ import (
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiprometheus "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	v1 "k8s.io/api/core/v1"
 )
 
 const (
-	mainResourceName              = "prometheus"
-	serviceMonitorAccountingLabel = "accounting"
-	serviceMonitorAccountingValue = "kai"
-	defaultStorageSize            = "50Gi"
-	deprecationTimestampKey       = "kai/deprecation-timestamp"
+	mainResourceName        = "prometheus"
+	defaultStorageSize      = "50Gi"
+	deprecationTimestampKey = "kai/deprecation-timestamp"
 )
 
 func prometheusForKAIConfig(
@@ -85,10 +84,12 @@ func prometheusForKAIConfig(
 		prometheusSpec.Retention = monitoringv1.Duration(*config.RetentionPeriod)
 	}
 
+	selectorLabelKey, selectorLabelValue := getAccountingSelectorLabels(config)
+
 	if config.ServiceMonitor != nil && *config.ServiceMonitor.Enabled {
 		prometheusSpec.ServiceMonitorSelector = &metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				serviceMonitorAccountingLabel: serviceMonitorAccountingValue,
+				selectorLabelKey: selectorLabelValue,
 			},
 		}
 		prometheusSpec.ServiceMonitorNamespaceSelector = &metav1.LabelSelector{}
@@ -232,7 +233,8 @@ func serviceMonitorsForKAIConfig(
 			return nil, err
 		}
 
-		serviceMonitorObj.GetLabels()[serviceMonitorAccountingLabel] = serviceMonitorAccountingValue
+		labelKey, labelValue := getAccountingSelectorLabels(config)
+		serviceMonitorObj.GetLabels()[labelKey] = labelValue
 
 		namespaces := []string{kaiConfig.Spec.Namespace}
 		if kaiService.Namespaces != nil {
@@ -428,4 +430,20 @@ func getRetentionPeriodForPrometheus(prom *monitoringv1.Prometheus, defaultReten
 	}
 
 	return duration, nil
+}
+
+func getAccountingSelectorLabels(config *kaiprometheus.Prometheus) (string, string) {
+	labelKey := constants.DefaultAccountingLabelKey
+	labelValue := constants.DefaultAccountingLabelValue
+
+	if config != nil {
+		if config.AccountingSelectorLabelKey != nil {
+			labelKey = *config.AccountingSelectorLabelKey
+		}
+		if config.AccountingSelectorLabelValue != nil {
+			labelValue = *config.AccountingSelectorLabelValue
+		}
+	}
+
+	return labelKey, labelValue
 }

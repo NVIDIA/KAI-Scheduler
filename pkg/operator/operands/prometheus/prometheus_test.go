@@ -16,6 +16,7 @@ import (
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiprometheus "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	test_utils "github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common/test_utils"
 
@@ -1008,7 +1009,7 @@ var _ = Describe("serviceMonitorsForKAIConfig", func() {
 			// Verify all ServiceMonitors have the correct accounting label
 			for _, obj := range objects {
 				if sm, ok := obj.(*monitoringv1.ServiceMonitor); ok {
-					Expect(sm.Labels).To(HaveKeyWithValue(serviceMonitorAccountingLabel, serviceMonitorAccountingValue))
+					Expect(sm.Labels).To(HaveKeyWithValue(constants.DefaultAccountingLabelKey, constants.DefaultAccountingLabelValue))
 				}
 			}
 		})
