@@ -6,6 +6,7 @@ package prometheus
 
 import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"k8s.io/utils/ptr"
 )
 
@@ -47,6 +48,14 @@ type Prometheus struct {
 	// ExternalPrometheusPingConfig defines the configuration for external Prometheus connectivity validation, with defaults.
 	// +kubebuilder:validation:Optional
 	ExternalPrometheusHealthProbe *ExternalPrometheusHealthProbe `json:"externalPrometheusHealthProbe,omitempty"`
+
+	// AccountingLabelKey defines the label key used to match ServiceMonitors and Prometheus rules for Prometheus discovery
+	// +kubebuilder:validation:Optional
+	AccountingLabelKey *string `json:"accountingLabelKey,omitempty"`
+
+	// AccountingLabelValue defines the label value used to match ServiceMonitors and Prometheus rules for Prometheus discovery
+	// +kubebuilder:validation:Optional
+	AccountingLabelValue *string `json:"accountingLabelValue,omitempty"`
 }
 
 type ExternalPrometheusHealthProbe struct {
@@ -76,6 +85,8 @@ func (p *Prometheus) SetDefaultsWhereNeeded() {
 	p.ExternalPrometheusHealthProbe.SetDefaultsWhereNeeded()
 	p.ServiceMonitor = common.SetDefault(p.ServiceMonitor, &ServiceMonitor{})
 	p.ServiceMonitor.SetDefaultsWhereNeeded()
+	p.AccountingLabelKey = common.SetDefault(p.AccountingLabelKey, ptr.To(constants.DefaultAccountingLabelKey))
+	p.AccountingLabelValue = common.SetDefault(p.AccountingLabelValue, ptr.To(constants.DefaultAccountingLabelValue))
 }
 
 // ServiceMonitor defines ServiceMonitor configuration for KAI services

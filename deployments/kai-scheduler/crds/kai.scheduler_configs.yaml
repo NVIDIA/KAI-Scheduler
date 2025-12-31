@@ -6702,6 +6702,15 @@ spec:
               prometheus:
                 description: Prometheus specifies configuration for Prometheus monitoring
                 properties:
+                  accountingLabelKey:
+                    description: AccountingLabelKey defines the label key used to
+                      match ServiceMonitors and Prometheus rules for Prometheus discovery
+                    type: string
+                  accountingLabelValue:
+                    description: AccountingLabelValue defines the label value used
+                      to match ServiceMonitors and Prometheus rules for Prometheus
+                      discovery
+                    type: string
                   enablePersistentStorage:
                     description: EnablePersistentStorage defines whether to use persistent
                       storage for the Prometheus instance
