@@ -41,6 +41,10 @@ const (
 	StalePodgroupTimeStamp   = "kai.scheduler/stale-podgroup-timestamp"
 	LastStartTimeStamp       = "kai.scheduler/last-start-timestamp"
 
+	// UsageDB Prometheus Selector
+	DefaultAccountingLabelKey   = "accounting"
+	DefaultAccountingLabelValue = "kai"
+
 	// Labels
 	GPUGroup                 = "runai-gpu-group"
 	MultiGpuGroupLabelPrefix = GPUGroup + "/"
