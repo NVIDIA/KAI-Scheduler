@@ -444,11 +444,11 @@ func getAccountingSelectorLabels(config *kaiprometheus.Prometheus) (string, stri
 	labelValue := constants.DefaultAccountingLabelValue
 
 	if config != nil {
-		if config.AccountingSelectorLabelKey != nil {
-			labelKey = *config.AccountingSelectorLabelKey
+		if config.AccountingLabelKey != nil {
+			labelKey = *config.AccountingLabelKey
 		}
-		if config.AccountingSelectorLabelValue != nil {
-			labelValue = *config.AccountingSelectorLabelValue
+		if config.AccountingLabelValue != nil {
+			labelValue = *config.AccountingLabelValue
 		}
 	}
 

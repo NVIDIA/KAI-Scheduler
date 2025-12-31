@@ -89,13 +89,13 @@ func (in *Prometheus) DeepCopyInto(out *Prometheus) {
 		*out = new(ExternalPrometheusHealthProbe)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.AccountingSelectorLabelKey != nil {
-		in, out := &in.AccountingSelectorLabelKey, &out.AccountingSelectorLabelKey
+	if in.AccountingLabelKey != nil {
+		in, out := &in.AccountingLabelKey, &out.AccountingLabelKey
 		*out = new(string)
 		**out = **in
 	}
-	if in.AccountingSelectorLabelValue != nil {
-		in, out := &in.AccountingSelectorLabelValue, &out.AccountingSelectorLabelValue
+	if in.AccountingLabelValue != nil {
+		in, out := &in.AccountingLabelValue, &out.AccountingLabelValue
 		*out = new(string)
 		**out = **in
 	}
