@@ -274,6 +274,24 @@ func TestRecordJobStatusEvent(t *testing.T) {
 				"pod-2": {"^Node-Pool 'default': OverCapacity: job is over capacity"},
 			},
 		},
+		{
+			name: "queue does not exist error",
+			pods: map[v1.PodPhase][]common_info.PodID{
+				v1.PodPending: {"pod-1"},
+			},
+			nodeErrors:                       map[common_info.PodID]map[string]string{},
+			podErrors:                        map[common_info.PodID]error{},
+			jobErrors:                        newUnschedulabeReasons(map[string]string{string(enginev2alpha2.QueueDoesNotExist): "Queue 'nonexistent-queue' does not exist"}),
+			expectedPodgroupErrorPatterns:    []string{"Queue 'nonexistent-queue' does not exist"},
+			expectedPodgroupConditionReasons: []enginev2alpha2.UnschedulableReason{enginev2alpha2.QueueDoesNotExist},
+			expectedPodgroupEventPatterns:    []string{"Queue 'nonexistent-queue' does not exist"},
+			expectedPodErrorPatterns: map[common_info.PodID][]string{
+				"pod-1": {"Queue 'nonexistent-queue' does not exist"},
+			},
+			expectedPodEventPatterns: map[common_info.PodID][]string{
+				"pod-1": {"Queue 'nonexistent-queue' does not exist"},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var (

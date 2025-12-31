@@ -778,6 +778,55 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 	}
 }
 
+func TestJobsOrderByQueues_OrphanQueue_AddsJobFitError(t *testing.T) {
+	// Test that jobs in queues with missing parent queues get an error added
+	ssn := newPrioritySession()
+
+	// Create a queue with a parent that doesn't exist (orphan queue)
+	orphanQueue := &queue_info.QueueInfo{
+		UID:         "orphan-queue",
+		Name:        "orphan-queue",
+		ParentQueue: "missing-parent", // This parent doesn't exist
+	}
+
+	ssn.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		"orphan-queue": orphanQueue,
+		// Note: "missing-parent" is intentionally NOT in the map
+	}
+
+	job := &podgroup_info.PodGroupInfo{
+		Name:     "test-job",
+		UID:      "test-job-uid",
+		Priority: 100,
+		Queue:    "orphan-queue",
+		PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+			pod_status.Pending: {
+				"pod-1": {UID: "pod-1"},
+			},
+		},
+		PodSets: map[string]*subgroup_info.PodSet{
+			podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+				WithPodInfos(pod_info.PodsMap{
+					"pod-1": {UID: "pod-1"},
+				}),
+		},
+	}
+
+	ssn.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+		"test-job": job,
+	}
+
+	jobsOrder := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     false,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+	jobsOrder.InitializeWithJobs(ssn.PodGroupInfos)
+
+	// The jobs order should be empty because the orphan queue's jobs are skipped
+	assert.True(t, jobsOrder.IsEmpty(), "Expected empty jobs order because orphan queue jobs are skipped from scheduling")
+}
+
 func newPrioritySession() *framework.Session {
 	return &framework.Session{
 		JobOrderFns: []common_info.CompareFn{

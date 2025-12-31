@@ -1002,7 +1002,20 @@ func TestSnapshotPodGroups(t *testing.T) {
 					},
 				},
 			},
-			results: []*podgroup_info.PodGroupInfo{},
+			results: []*podgroup_info.PodGroupInfo{
+				{
+					Name:  "podGroup-0",
+					Queue: "queue-1",
+					PodSets: map[string]*subgroup_info.PodSet{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+							WithPodInfos(pod_info.PodsMap{
+								"test-pod": {
+									UID: "test-pod",
+								},
+							}),
+					},
+				},
+			},
 		},
 		"filter unassigned pod groups - no scheduling backoff": {
 			objs: []runtime.Object{
@@ -1244,6 +1257,110 @@ func TestSnapshotPodGroups(t *testing.T) {
 		}
 
 	}
+}
+
+func TestSnapshotPodGroups_QueueDoesNotExist_AddsJobFitError(t *testing.T) {
+	clusterInfo := newClusterInfoTests(t,
+		clusterInfoTestParams{
+			kubeObjects: []runtime.Object{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pod",
+						Namespace: testNamespace,
+						UID:       types.UID("test-pod-uid"),
+						Annotations: map[string]string{
+							commonconstants.PodGroupAnnotationForPod: "podGroup-missing-queue",
+						},
+					},
+				},
+			},
+			kaiSchedulerObjects: []runtime.Object{
+				&enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "podGroup-missing-queue",
+						Namespace: testNamespace,
+						UID:       "ABC",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						Queue: "nonexistent-queue",
+					},
+				},
+			},
+		},
+	)
+
+	predefinedQueue := &queue_info.QueueInfo{Name: "queue-0"}
+	existingPods := map[common_info.PodID]*pod_info.PodInfo{}
+	podGroups, err := clusterInfo.snapshotPodGroups(
+		map[common_info.QueueID]*queue_info.QueueInfo{"queue-0": predefinedQueue},
+		existingPods)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(podGroups), "Expected 1 podgroup even with missing queue")
+
+	pg, found := podGroups[common_info.PodGroupID("podGroup-missing-queue")]
+	assert.True(t, found, "PodGroup not found")
+	assert.Equal(t, "nonexistent-queue", string(pg.Queue))
+
+	// Verify job fit error was added
+	assert.Equal(t, 1, len(pg.JobFitErrors), "Expected 1 job fit error for missing queue")
+	assert.Equal(t, enginev2alpha2.QueueDoesNotExist, pg.JobFitErrors[0].Reason())
+	assert.Contains(t, pg.JobFitErrors[0].Messages()[0], "nonexistent-queue")
+}
+
+func TestSnapshotPodGroups_OrphanQueue_AddsJobFitError(t *testing.T) {
+	clusterInfo := newClusterInfoTests(t,
+		clusterInfoTestParams{
+			kubeObjects: []runtime.Object{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pod",
+						Namespace: testNamespace,
+						UID:       types.UID("test-pod-uid"),
+						Annotations: map[string]string{
+							commonconstants.PodGroupAnnotationForPod: "podGroup-orphan-queue",
+						},
+					},
+				},
+			},
+			kaiSchedulerObjects: []runtime.Object{
+				&enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "podGroup-orphan-queue",
+						Namespace: testNamespace,
+						UID:       "ABC",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						Queue: "orphan-queue",
+					},
+				},
+			},
+		},
+	)
+
+	// Create a queue that has a non-existent parent (orphan queue)
+	orphanQueue := &queue_info.QueueInfo{
+		UID:         "orphan-queue",
+		Name:        "orphan-queue",
+		ParentQueue: "non-existent-parent",
+	}
+	existingPods := map[common_info.PodID]*pod_info.PodInfo{}
+	podGroups, err := clusterInfo.snapshotPodGroups(
+		map[common_info.QueueID]*queue_info.QueueInfo{"orphan-queue": orphanQueue},
+		existingPods)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(podGroups), "Expected 1 podgroup")
+
+	pg, found := podGroups[common_info.PodGroupID("podGroup-orphan-queue")]
+	assert.True(t, found, "PodGroup not found")
+	assert.Equal(t, "orphan-queue", string(pg.Queue))
+
+	// Verify job fit error was added for orphan queue
+	assert.Equal(t, 1, len(pg.JobFitErrors), "Expected 1 job fit error for orphan queue")
+	assert.Equal(t, enginev2alpha2.QueueDoesNotExist, pg.JobFitErrors[0].Reason())
+	assert.Contains(t, pg.JobFitErrors[0].Messages()[0], "orphan-queue")
+	assert.Contains(t, pg.JobFitErrors[0].Messages()[0], "no parent queue")
 }
 
 func TestSnapshotQueues(t *testing.T) {
