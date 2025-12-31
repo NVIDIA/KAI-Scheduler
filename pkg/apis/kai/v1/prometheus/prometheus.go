@@ -51,11 +51,11 @@ type Prometheus struct {
 
 	// AccountingSelectorLabelKey defines the label key used to match ServiceMonitors and Prometheus rules for Prometheus discovery
 	// +kubebuilder:validation:Optional
-	AccountingSelectorLabelKey *string `json:"selectorLabelKey,omitempty"`
+	AccountingSelectorLabelKey *string `json:"accountingLabelKey,omitempty"`
 
 	// AccountingSelectorLabelValue defines the label value used to match ServiceMonitors and Prometheus rules for Prometheus discovery
 	// +kubebuilder:validation:Optional
-	AccountingSelectorLabelValue *string `json:"selectorLabelValue,omitempty"`
+	AccountingSelectorLabelValue *string `json:"accountingLabelValue,omitempty"`
 }
 
 type ExternalPrometheusHealthProbe struct {

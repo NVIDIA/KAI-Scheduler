@@ -42,8 +42,8 @@ const (
 	LastStartTimeStamp       = "kai.scheduler/last-start-timestamp"
 
 	// UsageDB Prometheus Selector
-	DefaultAccountingLabelKey   = "accounting"
-	DefaultAccountingLabelValue = "kai"
+	DefaultAccountingLabelKey   = "kai.scheduler/accounting"
+	DefaultAccountingLabelValue = "true"
 
 	// Labels
 	GPUGroup                 = "runai-gpu-group"
