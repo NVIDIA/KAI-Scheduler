@@ -184,6 +184,8 @@ jobs:
     needs: [ build, check-build-and-test-required ]
     if: needs.check-build-and-test-required.outputs.code == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -206,6 +208,13 @@ jobs:
         with:
           path: /mnt/images
           key:  images-${{ github.sha }}
+
+      - name: Delete restored cache
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh cache delete "images-${{ github.sha }}" --repo ${{ github.repository }}
 
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.13.0
