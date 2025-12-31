@@ -49,13 +49,13 @@ type Prometheus struct {
 	// +kubebuilder:validation:Optional
 	ExternalPrometheusHealthProbe *ExternalPrometheusHealthProbe `json:"externalPrometheusHealthProbe,omitempty"`
 
-	// AccountingSelectorLabelKey defines the label key used to match ServiceMonitors and Prometheus rules for Prometheus discovery
+	// AccountingLabelKey defines the label key used to match ServiceMonitors and Prometheus rules for Prometheus discovery
 	// +kubebuilder:validation:Optional
-	AccountingSelectorLabelKey *string `json:"accountingLabelKey,omitempty"`
+	AccountingLabelKey *string `json:"accountingLabelKey,omitempty"`
 
-	// AccountingSelectorLabelValue defines the label value used to match ServiceMonitors and Prometheus rules for Prometheus discovery
+	// AccountingLabelValue defines the label value used to match ServiceMonitors and Prometheus rules for Prometheus discovery
 	// +kubebuilder:validation:Optional
-	AccountingSelectorLabelValue *string `json:"accountingLabelValue,omitempty"`
+	AccountingLabelValue *string `json:"accountingLabelValue,omitempty"`
 }
 
 type ExternalPrometheusHealthProbe struct {
@@ -85,8 +85,8 @@ func (p *Prometheus) SetDefaultsWhereNeeded() {
 	p.ExternalPrometheusHealthProbe.SetDefaultsWhereNeeded()
 	p.ServiceMonitor = common.SetDefault(p.ServiceMonitor, &ServiceMonitor{})
 	p.ServiceMonitor.SetDefaultsWhereNeeded()
-	p.AccountingSelectorLabelKey = common.SetDefault(p.AccountingSelectorLabelKey, ptr.To(constants.DefaultAccountingLabelKey))
-	p.AccountingSelectorLabelValue = common.SetDefault(p.AccountingSelectorLabelValue, ptr.To(constants.DefaultAccountingLabelValue))
+	p.AccountingLabelKey = common.SetDefault(p.AccountingLabelKey, ptr.To(constants.DefaultAccountingLabelKey))
+	p.AccountingLabelValue = common.SetDefault(p.AccountingLabelValue, ptr.To(constants.DefaultAccountingLabelValue))
 }
 
 // ServiceMonitor defines ServiceMonitor configuration for KAI services
