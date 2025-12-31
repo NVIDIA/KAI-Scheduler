@@ -95,6 +95,13 @@ func prometheusForKAIConfig(
 		prometheusSpec.ServiceMonitorNamespaceSelector = &metav1.LabelSelector{}
 	}
 
+	prometheusSpec.RuleSelector = &metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			selectorLabelKey: selectorLabelValue,
+		},
+	}
+	prometheusSpec.RuleNamespaceSelector = &metav1.LabelSelector{}
+
 	prometheusSpec.ServiceAccountName = mainResourceName
 
 	// Remove deprecation timestamp annotation if it exists (prometheus is now enabled)
