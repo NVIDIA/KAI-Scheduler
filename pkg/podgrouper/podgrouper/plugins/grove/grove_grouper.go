@@ -91,13 +91,13 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 		return nil, fmt.Errorf("failed to get DefaultGrouper metadata for PodGang %s/%s. Err: %w",
 			pod.Namespace, podGangName, err)
 	}
-	topology := gg.getTopology(podGang, metadata)
+	topology := gg.getTopology(podGang)
 	err = gg.applyPodGangTopologyConstraints(podGang, metadata, topology)
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply topology constraints from PodGang %s/%s. Err: %w",
 			pod.Namespace, podGangName, err)
 	}
-	priorityClassName, found, err := parsePodGangPriorityClassName(podGang)
+	priorityClassName, found, err := getPriorityClassName(podGang)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get spec.priorityClassName from PodGang %s/%s. Err: %w",
 			pod.Namespace, podGangName, err)
@@ -124,18 +124,18 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 	return metadata, nil
 }
 
-func (gg *GroveGrouper) getTopology(podGang *unstructured.Unstructured, metadat *podgroup.Metadata) string {
+func (gg *GroveGrouper) getTopology(podGang *unstructured.Unstructured) string {
 	if topology, ok := podGang.GetAnnotations()["grove.io/topology-name"]; ok {
 		return topology
 	}
-	if metadat.Topology != "" {
-		return metadat.Topology
+	if topology, ok := podGang.GetAnnotations()["kai.scheduler/topology"]; ok {
+		return topology
 	}
 	return ""
 }
 
 func (gg *GroveGrouper) applyPodGangTopologyConstraints(podGang *unstructured.Unstructured, metadata *podgroup.Metadata, topology string) error {
-	podGangTopology, err := parseTopology(podGang.Object, topology, "spec", "topologyConstraint", "packConstraint")
+	podGangTopology, err := parseTopologyConstraint(podGang.Object, topology, "spec", "topologyConstraint", "packConstraint")
 	if err != nil {
 		return fmt.Errorf("failed to parse topology from PodGang, Err: %w", err)
 	}
@@ -148,8 +148,8 @@ func (gg *GroveGrouper) applyPodGangTopologyConstraints(podGang *unstructured.Un
 	return nil
 }
 
-func parseTopology(podGang map[string]interface{}, topology string, topologyFieldPath ...string) (*podgroup.TopologyConstraintMetadata, error) {
-	topologyPreferredConstraints, found, err := unstructured.NestedString(podGang, append(topologyFieldPath, "preferred")...)
+func parseTopologyConstraint(podGang map[string]interface{}, topology string, topologyFieldPath ...string) (*podgroup.TopologyConstraintMetadata, error) {
+	topologyPreferredConstraints, foundPreferred, err := unstructured.NestedString(podGang, append(topologyFieldPath, "preferred")...)
 	if err != nil {
 		return nil, err
 	}
@@ -158,12 +158,12 @@ func parseTopology(podGang map[string]interface{}, topology string, topologyFiel
 		return nil, err
 	}
 
-	if !found && !foundRequired {
+	if !foundPreferred && !foundRequired {
 		return nil, nil
 	}
 
 	topologyConstraint := &podgroup.TopologyConstraintMetadata{}
-	if found {
+	if foundPreferred {
 		topologyConstraint.PreferredTopologyLevel = topologyPreferredConstraints
 	}
 	if foundRequired {
@@ -220,15 +220,19 @@ func parseGroveSubGroup(
 		}
 		pods = append(pods, namespacedName)
 	}
-
+	topologyConstraint, err := parseTopologyConstraint(pg, topology, "topologyConstraint", "packConstraint")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse topology constraint from PodGang %s/%s. Err: %w", namespace, podGangName, err)
+	}
 	return &podgroup.SubGroupMetadata{
-		Name:           name,
-		MinAvailable:   int32(minAvailable),
-		PodsReferences: pods,
+		Name:                name,
+		MinAvailable:        int32(minAvailable),
+		PodsReferences:      pods,
+		TopologyConstraints: topologyConstraint,
 	}, nil
 }
 
-func parsePodGangPriorityClassName(podGang *unstructured.Unstructured) (string, bool, error) {
+func getPriorityClassName(podGang *unstructured.Unstructured) (string, bool, error) {
 	priorityClassName, found, err := unstructured.NestedString(podGang.Object, "spec", "priorityClassName")
 	if err != nil {
 		return "", false, fmt.Errorf("failed to get spec.priorityClassName: %w", err)
@@ -259,7 +263,7 @@ func parsePodGangParentSubGroups(
 				configIndex, namespace, podGangName)
 		}
 
-		parentSubGroup, err := parseTopologyConstraintGroupConfig(config, podGroupToParentMap, topology)
+		parentSubGroup, err := parseTopologyConstraintConstraintGroupConfig(config, podGroupToParentMap, topology)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse topologyConstraintGroupConfig[%d]: %w", configIndex, err)
 		}
@@ -309,7 +313,7 @@ func parsePodGangChildSubGroups(
 			subGroup.Parent = &parentName
 		}
 
-		topologyConstraint, err := parseTopology(pgr, topology, "topologyConstraint", "packConstraint")
+		topologyConstraint, err := parseTopologyConstraint(pgr, topology, "topologyConstraint", "packConstraint")
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to parse topology from PodGroup %s: %w", subGroup.Name, err)
 		}
@@ -323,7 +327,7 @@ func parsePodGangChildSubGroups(
 	return childSubGroups, minAvailable, nil
 }
 
-func parseTopologyConstraintGroupConfig(config map[string]interface{}, podGroupToParentMap map[string]string, topology string) (*podgroup.SubGroupMetadata, error) {
+func parseTopologyConstraintConstraintGroupConfig(config map[string]interface{}, podGroupToParentMap map[string]string, topology string) (*podgroup.SubGroupMetadata, error) {
 	name, found, err := unstructured.NestedString(config, "name")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse 'name' field. Err: %v", err)
@@ -345,7 +349,7 @@ func parseTopologyConstraintGroupConfig(config map[string]interface{}, podGroupT
 		podGroupToParentMap[pgName] = name
 	}
 
-	topologyConstraint, err := parseTopology(config, topology, "topologyConstraint", "packConstraint")
+	topologyConstraint, err := parseTopologyConstraint(config, topology, "topologyConstraint", "packConstraint")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse topology from topologyConstraintGroupConfig %s. Err: %w", name, err)
 	}

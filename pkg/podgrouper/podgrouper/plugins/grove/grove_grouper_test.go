@@ -1580,7 +1580,7 @@ func TestGetPodGroupMetadata_WithTopologyAnnotation(t *testing.T) {
 				"namespace": "test-ns",
 				"uid":       "1",
 				"annotations": map[string]interface{}{
-					"grove.io/topology": "custom-topology",
+					"grove.io/topology-name": "custom-topology",
 				},
 			},
 			"spec": map[string]interface{}{
@@ -1651,6 +1651,229 @@ func TestGetPodGroupMetadata_WithTopologyAnnotation(t *testing.T) {
 	assert.Equal(t, "pg1", metadata.SubGroups[1].Name)
 	assert.NotNil(t, metadata.SubGroups[1].TopologyConstraints)
 	assert.Equal(t, "custom-topology", metadata.SubGroups[1].TopologyConstraints.Topology)
+}
+
+// TestGetPodGroupMetadata_SpecOverridesAnnotation verifies spec constraints override annotation constraints
+func TestGetPodGroupMetadata_SpecOverridesAnnotation(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+				"annotations": map[string]interface{}{
+					"grove.io/topology-name":                     "spec-topology",
+					"kai.scheduler/topology":                     "anno-topology",
+					"kai.scheduler/topology-preferred-placement": "datacenter",
+					"kai.scheduler/topology-required-placement":  "cluster",
+				},
+			},
+			"spec": map[string]interface{}{
+				"topologyConstraint": map[string]interface{}{
+					"packConstraint": map[string]interface{}{
+						"preferred": "rack",
+						"required":  "zone",
+					},
+				},
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name":        "pg1",
+						"minReplicas": int64(1),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+
+	// Verify spec constraints override annotation constraints
+	assert.Equal(t, "rack", metadata.PreferredTopologyLevel, "spec preferred should override annotation")
+	assert.Equal(t, "zone", metadata.RequiredTopologyLevel, "spec required should override annotation")
+
+	// Verify grove.io/topology-name takes precedence over kai.scheduler/topology
+	assert.Equal(t, "spec-topology", metadata.Topology, "grove.io/topology-name should override kai.scheduler/topology")
+}
+
+// TestGetPodGroupMetadata_ThreeLevelTopologyWithLeafVerification verifies topology propagates to leaf nodes
+func TestGetPodGroupMetadata_ThreeLevelTopologyWithLeafVerification(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+				"annotations": map[string]interface{}{
+					"grove.io/topology-name": "test-topology",
+				},
+			},
+			"spec": map[string]interface{}{
+				// Level 1: PodGang constraints
+				"topologyConstraint": map[string]interface{}{
+					"packConstraint": map[string]interface{}{
+						"preferred": "datacenter",
+						"required":  "cluster",
+					},
+				},
+				// Level 2: Parent groups
+				"topologyConstraintGroupConfigs": []interface{}{
+					map[string]interface{}{
+						"name":          "group1",
+						"podGroupNames": []interface{}{"pg1", "pg2"},
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "rack",
+								"required":  "zone",
+							},
+						},
+					},
+					map[string]interface{}{
+						"name":          "group2",
+						"podGroupNames": []interface{}{"pg3"},
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "node",
+							},
+						},
+					},
+				},
+				// Level 3: Child PodGroups (leaves)
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name": "pg1",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "node",
+								"required":  "rack",
+							},
+						},
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod1"},
+						},
+					},
+					map[string]interface{}{
+						"name": "pg2",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"required": "socket",
+							},
+						},
+						"minReplicas": int64(3),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod2"},
+						},
+					},
+					map[string]interface{}{
+						"name": "pg3",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "socket",
+							},
+						},
+						"minReplicas": int64(1),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod3"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				labelKeyPodGangName: "pgs1",
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	assert.NoError(t, err)
+
+	// Level 1: Verify PodGang level topology
+	assert.Equal(t, "datacenter", metadata.PreferredTopologyLevel)
+	assert.Equal(t, "cluster", metadata.RequiredTopologyLevel)
+	assert.Equal(t, "test-topology", metadata.Topology)
+
+	// Total: 2 parents + 3 children = 5 SubGroups
+	assert.Equal(t, 5, len(metadata.SubGroups))
+
+	// Level 2: Verify Parent group1
+	assert.Equal(t, "group1", metadata.SubGroups[0].Name)
+	assert.NotNil(t, metadata.SubGroups[0].TopologyConstraints)
+	assert.Equal(t, "rack", metadata.SubGroups[0].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "zone", metadata.SubGroups[0].TopologyConstraints.RequiredTopologyLevel)
+	assert.Equal(t, "test-topology", metadata.SubGroups[0].TopologyConstraints.Topology)
+	assert.Nil(t, metadata.SubGroups[0].Parent)
+	assert.Equal(t, int32(0), metadata.SubGroups[0].MinAvailable)
+
+	// Level 2: Verify Parent group2
+	assert.Equal(t, "group2", metadata.SubGroups[1].Name)
+	assert.NotNil(t, metadata.SubGroups[1].TopologyConstraints)
+	assert.Equal(t, "node", metadata.SubGroups[1].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "", metadata.SubGroups[1].TopologyConstraints.RequiredTopologyLevel)
+	assert.Equal(t, "test-topology", metadata.SubGroups[1].TopologyConstraints.Topology)
+	assert.Nil(t, metadata.SubGroups[1].Parent)
+	assert.Equal(t, int32(0), metadata.SubGroups[1].MinAvailable)
+
+	// Level 3 (LEAF): Verify Child pg1 under group1
+	assert.Equal(t, "pg1", metadata.SubGroups[2].Name)
+	assert.NotNil(t, metadata.SubGroups[2].TopologyConstraints)
+	assert.Equal(t, "node", metadata.SubGroups[2].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "rack", metadata.SubGroups[2].TopologyConstraints.RequiredTopologyLevel)
+	assert.Equal(t, "test-topology", metadata.SubGroups[2].TopologyConstraints.Topology, "leaf pg1 should have topology")
+	assert.NotNil(t, metadata.SubGroups[2].Parent)
+	assert.Equal(t, "group1", *metadata.SubGroups[2].Parent)
+	assert.Equal(t, int32(2), metadata.SubGroups[2].MinAvailable)
+
+	// Level 3 (LEAF): Verify Child pg2 under group1
+	assert.Equal(t, "pg2", metadata.SubGroups[3].Name)
+	assert.NotNil(t, metadata.SubGroups[3].TopologyConstraints)
+	assert.Equal(t, "", metadata.SubGroups[3].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "socket", metadata.SubGroups[3].TopologyConstraints.RequiredTopologyLevel)
+	assert.Equal(t, "test-topology", metadata.SubGroups[3].TopologyConstraints.Topology, "leaf pg2 should have topology")
+	assert.NotNil(t, metadata.SubGroups[3].Parent)
+	assert.Equal(t, "group1", *metadata.SubGroups[3].Parent)
+	assert.Equal(t, int32(3), metadata.SubGroups[3].MinAvailable)
+
+	// Level 3 (LEAF): Verify Child pg3 under group2
+	assert.Equal(t, "pg3", metadata.SubGroups[4].Name)
+	assert.NotNil(t, metadata.SubGroups[4].TopologyConstraints)
+	assert.Equal(t, "socket", metadata.SubGroups[4].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "", metadata.SubGroups[4].TopologyConstraints.RequiredTopologyLevel)
+	assert.Equal(t, "test-topology", metadata.SubGroups[4].TopologyConstraints.Topology, "leaf pg3 should have topology")
+	assert.NotNil(t, metadata.SubGroups[4].Parent)
+	assert.Equal(t, "group2", *metadata.SubGroups[4].Parent)
+	assert.Equal(t, int32(1), metadata.SubGroups[4].MinAvailable)
+
+	// Verify total MinAvailable = sum of children (2+3+1 = 6)
+	assert.Equal(t, int32(6), metadata.MinAvailable)
 }
 
 // TestGetPodGroupMetadata_EmptyTopology verifies empty topology when no annotation is set
