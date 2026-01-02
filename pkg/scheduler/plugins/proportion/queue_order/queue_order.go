@@ -246,8 +246,8 @@ func calculateDominantResourceShareWithJob(
 ) float64 {
 	allocatedShare := queueAttributes.GetAllocatedShare()
 
-	initResQuantities := utils.QuantifyResource(
-		podgroup_info.GetTasksToAllocateInitResource(jobInfo, subGroupOrderFn, taskOrderFn, false))
+	jobResources := podgroup_info.GetTasksToAllocateInitResource(jobInfo, subGroupOrderFn, taskOrderFn, false)
+	initResQuantities := utils.QuantifyResource(jobResources)
 
 	for _, resource := range rs.AllResources {
 		resourceShare := queueAttributes.ResourceShare(resource)

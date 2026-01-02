@@ -54,12 +54,13 @@ type Session struct {
 	UID   types.UID
 	Cache cache.Cache
 
-	PodGroupInfos map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
-	Nodes         map[string]*node_info.NodeInfo
-	Queues        map[common_info.QueueID]*queue_info.QueueInfo
-	ResourceUsage queue_info.ClusterUsage
-	ConfigMaps    map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
-	Topologies    []*kueuev1alpha1.Topology
+	PodGroupInfos    map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
+	Nodes            map[string]*node_info.NodeInfo
+	Queues           map[common_info.QueueID]*queue_info.QueueInfo
+	ResourceUsage    queue_info.ClusterUsage
+	ConfigMaps       map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
+	Topologies       []*kueuev1alpha1.Topology
+	MinNodeGPUMemory int64
 
 	GpuOrderFns                           []api.GpuOrderFn
 	NodePreOrderFns                       []api.NodePreOrderFn
@@ -370,6 +371,7 @@ func openSession(cache cache.Cache, sessionId types.UID, schedulerParams conf.Sc
 	ssn.ResourceUsage = snapshot.QueueResourceUsage
 	ssn.ConfigMaps = snapshot.ConfigMaps
 	ssn.Topologies = snapshot.Topologies
+	ssn.MinNodeGPUMemory = snapshot.MinNodeGPUMemory
 
 	log.InfraLogger.V(2).Infof("Session %v with <%d> Jobs, <%d> Queues and <%d> Nodes",
 		ssn.UID, len(ssn.PodGroupInfos), len(ssn.Queues), len(ssn.Nodes))
