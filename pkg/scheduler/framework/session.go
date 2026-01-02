@@ -68,7 +68,7 @@ type Session struct {
 	JobOrderFns                           []common_info.CompareFn
 	SubGroupsOrderFns                     []common_info.CompareFn
 	TaskOrderFns                          []common_info.CompareFn
-	QueueOrderFns                         []CompareQueueFn
+	QueueOrderFns                         []api.CompareQueueFn
 	CanReclaimResourcesFns                []api.CanReclaimResourcesFn
 	ReclaimVictimFilterFns                []api.VictimFilterFn
 	PreemptVictimFilterFns                []api.VictimFilterFn
