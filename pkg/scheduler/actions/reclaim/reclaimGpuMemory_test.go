@@ -32,7 +32,7 @@ func TestHandleReclaimGpuMemory(t *testing.T) {
 		reclaimAction := reclaim.New()
 		reclaimAction.Execute(ssn)
 
-		// test_utils.MatchExpectedAndRealTasks(t, testNumber, testMetadata.TestTopologyBasic, ssn)
+		test_utils.MatchExpectedAndRealTasks(t, testNumber, testMetadata.TestTopologyBasic, ssn)
 	}
 }
 
@@ -426,3 +426,6 @@ func getReclaimGpuMemoryTestsMetadata() []integration_tests_utils.TestTopologyMe
 		},
 	}
 }
+
+
+

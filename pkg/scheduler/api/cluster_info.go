@@ -54,6 +54,8 @@ type ClusterInfo struct {
 	StorageClasses              map[common_info.StorageClassID]*storageclass_info.StorageClassInfo
 	ConfigMaps                  map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
 	Topologies                  []*kaiv1alpha1.Topology
+
+	MinNodeGPUMemory int64
 }
 
 func NewClusterInfo() *ClusterInfo {
