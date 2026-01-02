@@ -305,7 +305,7 @@ func TestGetQueueOrderResult(t *testing.T) {
 				}
 				return false
 			}
-			result := GetQueueOrderResult(test.lqueue, test.rqueue, test.lJobInfo, test.rJobInfo, nil, nil, taskOrderFn, resource_share.ResourceQuantities{})
+			result := GetQueueOrderResult(test.lqueue, test.rqueue, test.lJobInfo, test.rJobInfo, nil, nil, taskOrderFn, resource_share.ResourceQuantities{}, test.minNodeGPUMemory)
 			assert.Equal(t, test.expectedResult, result)
 		})
 	}

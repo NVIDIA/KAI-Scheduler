@@ -40,6 +40,7 @@ type proportionPlugin struct {
 	taskOrderFunc                 common_info.LessFn
 	reclaimablePlugin             *rec.Reclaimable
 	relcaimerSaturationMultiplier float64
+	minNodeGPUMemory              int64
 }
 
 func New(arguments map[string]string) framework.Plugin {
@@ -71,6 +72,7 @@ func (pp *proportionPlugin) Name() string {
 func (pp *proportionPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.calculateResourcesProportion(ssn)
 	pp.taskOrderFunc = ssn.TaskOrderFn
+	pp.minNodeGPUMemory = ssn.MinNodeGPUMemory
 	pp.reclaimablePlugin = rec.New(pp.relcaimerSaturationMultiplier)
 
 	capacityPolicy := cp.New(pp.queues, ssn.IsInferencePreemptible())
@@ -346,8 +348,7 @@ func (pp *proportionPlugin) deallocateHandlerFn(ssn *framework.Session) func(eve
 	}
 }
 
-// CompareQueueFn
-func (pp *proportionPlugin) queueOrder(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo) int {
+func (pp *proportionPlugin) queueOrder(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo, minNodeGPUMemory int64) int {
 	lQueueAttributes, found := pp.queues[lQ.UID]
 	if !found {
 		log.InfraLogger.Errorf("Failed to find queue: <%v>", lQ.Name)
@@ -360,7 +361,7 @@ func (pp *proportionPlugin) queueOrder(lQ, rQ *queue_info.QueueInfo, lJob, rJob 
 		return -1
 	}
 
-	return queue_order.GetQueueOrderResult(lQueueAttributes, rQueueAttributes, lJob, rJob, lVictims, rVictims, pp.taskOrderFunc, pp.totalResource)
+	return queue_order.GetQueueOrderResult(lQueueAttributes, rQueueAttributes, lJob, rJob, lVictims, rVictims, pp.taskOrderFunc, pp.totalResource, minNodeGPUMemory)
 }
 
 func (pp *proportionPlugin) getQueueDeservedResourcesFn(queue *queue_info.QueueInfo) *resource_info.ResourceRequirements {
