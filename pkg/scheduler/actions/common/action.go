@@ -94,7 +94,7 @@ func TryToVirtuallyAllocatePreemptorAndGetVictims(
 		}
 
 		resReq := podgroup_info.GetTasksToAllocateInitResource(
-			jobToAllocate, ssn.PodSetOrderFn, ssn.TaskOrderFn, false)
+			jobToAllocate, ssn.PodSetOrderFn, ssn.TaskOrderFn, false, ssn.ClusterInfo.MinNodeGPUMemory)
 		log.InfraLogger.V(6).Infof("Trying to pipeline job: <%s/%s>. resources required: %v",
 			jobToAllocate.Namespace, jobToAllocate.Name, resReq)
 

@@ -60,7 +60,7 @@ type Session struct {
 	PodSetOrderFns                        []common_info.CompareFn
 	SubGroupSetOrderFns                   []common_info.CompareFn
 	TaskOrderFns                          []common_info.CompareFn
-	QueueOrderFns                         []CompareQueueFn
+	QueueOrderFns                         []api.CompareQueueFn
 	CanReclaimResourcesFns                []api.CanReclaimResourcesFn
 	ReclaimVictimFilterFns                []api.VictimFilterFn
 	PreemptVictimFilterFns                []api.VictimFilterFn
