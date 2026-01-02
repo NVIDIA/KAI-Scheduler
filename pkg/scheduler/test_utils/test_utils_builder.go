@@ -61,10 +61,11 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 			},
 		},
 		ClusterInfo: &api.ClusterInfo{
-			Nodes:         nodesInfoMap,
-			Queues:        queueInfoMap,
-			PodGroupInfos: jobInfoMap,
-			Topologies:    topologies,
+			Nodes:            nodesInfoMap,
+			Queues:           queueInfoMap,
+			PodGroupInfos:    jobInfoMap,
+			Topologies:       topologies,
+			MinNodeGPUMemory: node_info.DefaultGpuMemory,
 		},
 	}
 	ssn.OverrideMaxNumberConsolidationPreemptees(-1)
