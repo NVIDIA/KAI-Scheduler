@@ -129,7 +129,7 @@ func TestGetPodGroupMetadata(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.Nil(t, err)
 	assert.Equal(t, int32(12), metadata.MinAvailable)
 	assert.Equal(t, 3, len(metadata.SubGroups))
@@ -184,7 +184,7 @@ func TestGetPodGroupMetadata_NestedValueErrors(t *testing.T) {
 	}
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	_, err := grouper.GetPodGroupMetadata(podGang, pod)
+	_, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get spec.podgroups from PodGang test-ns/pgs1")
 }
@@ -305,7 +305,7 @@ func TestParsePodReference_MissingFields(t *testing.T) {
 	assert.Equal(t, err.Error(), "missing required 'name' field")
 }
 
-// Test 1: TestGetPodGroupMetadata_WithTopologyHierarchy
+// TestGetPodGroupMetadata_WithTopologyHierarchy
 func TestGetPodGroupMetadata_WithTopologyHierarchy(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -379,7 +379,7 @@ func TestGetPodGroupMetadata_WithTopologyHierarchy(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, "rack", metadata.PreferredTopologyLevel)
 	assert.Equal(t, "zone", metadata.RequiredTopologyLevel)
@@ -418,7 +418,7 @@ func TestGetPodGroupMetadata_WithTopologyHierarchy(t *testing.T) {
 	assert.Equal(t, int32(5), metadata.MinAvailable)
 }
 
-// Test 2: TestGetPodGroupMetadata_WithoutTopologyConstraintGroupConfigs
+// TestGetPodGroupMetadata_WithoutTopologyConstraintGroupConfigs
 func TestGetPodGroupMetadata_WithoutTopologyConstraintGroupConfigs(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -472,7 +472,7 @@ func TestGetPodGroupMetadata_WithoutTopologyConstraintGroupConfigs(t *testing.T)
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
@@ -492,7 +492,7 @@ func TestGetPodGroupMetadata_WithoutTopologyConstraintGroupConfigs(t *testing.T)
 	assert.Equal(t, int32(5), metadata.MinAvailable)
 }
 
-// Test 3: TestGetPodGroupMetadata_MultipleParentGroups
+// TestGetPodGroupMetadata_MultipleParentGroups
 func TestGetPodGroupMetadata_MultipleParentGroups(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -563,7 +563,7 @@ func TestGetPodGroupMetadata_MultipleParentGroups(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, 5, len(metadata.SubGroups))
 
@@ -582,7 +582,7 @@ func TestGetPodGroupMetadata_MultipleParentGroups(t *testing.T) {
 	assert.Equal(t, "group2", *metadata.SubGroups[4].Parent)
 }
 
-// Test 4: TestGetPodGroupMetadata_MixedParenting
+// TestGetPodGroupMetadata_MixedParenting
 func TestGetPodGroupMetadata_MixedParenting(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -632,7 +632,7 @@ func TestGetPodGroupMetadata_MixedParenting(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(metadata.SubGroups))
 
@@ -646,7 +646,7 @@ func TestGetPodGroupMetadata_MixedParenting(t *testing.T) {
 	assert.Nil(t, metadata.SubGroups[2].Parent)
 }
 
-// Test 5: TestGetPodGroupMetadata_EmptyPodGroupNames
+// TestGetPodGroupMetadata_EmptyPodGroupNames
 func TestGetPodGroupMetadata_EmptyPodGroupNames(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -693,7 +693,7 @@ func TestGetPodGroupMetadata_EmptyPodGroupNames(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
@@ -703,7 +703,7 @@ func TestGetPodGroupMetadata_EmptyPodGroupNames(t *testing.T) {
 	assert.Equal(t, "group2", *metadata.SubGroups[1].Parent)
 }
 
-// Test 6: TestGetPodGroupMetadata_MissingTopologyConstraints
+// TestGetPodGroupMetadata_MissingTopologyConstraints
 func TestGetPodGroupMetadata_MissingTopologyConstraints(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -746,8 +746,9 @@ func TestGetPodGroupMetadata_MissingTopologyConstraints(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, "", metadata.PreferredTopologyLevel)
 	assert.Equal(t, "", metadata.RequiredTopologyLevel)
 	assert.Nil(t, metadata.SubGroups[0].TopologyConstraints)
@@ -798,12 +799,13 @@ func TestGetPodGroupMetadata_NilTopologyConstraintInConfig(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Nil(t, metadata.SubGroups[0].TopologyConstraints)
 }
 
-// Test 16: TestGetPodGroupMetadata_NilTopologyConstraintInPodGroup
+// TestGetPodGroupMetadata_NilTopologyConstraintInPodGroup
 func TestGetPodGroupMetadata_NilTopologyConstraintInPodGroup(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -841,12 +843,13 @@ func TestGetPodGroupMetadata_NilTopologyConstraintInPodGroup(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Nil(t, metadata.SubGroups[0].TopologyConstraints)
 }
 
-// Test 17: TestGetPodGroupMetadata_InvalidTopologyConstraintGroupConfigsType
+// TestGetPodGroupMetadata_InvalidTopologyConstraintGroupConfigsType
 func TestGetPodGroupMetadata_InvalidTopologyConstraintGroupConfigsType(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -886,7 +889,7 @@ func TestGetPodGroupMetadata_InvalidTopologyConstraintGroupConfigsType(t *testin
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	_, err := grouper.GetPodGroupMetadata(podGang, pod)
+	_, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse 'topologyConstraintGroupConfigs' field")
 }
@@ -934,7 +937,7 @@ func TestGetPodGroupMetadata_ConfigReferencesNonexistentPodGroup(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
@@ -946,7 +949,7 @@ func TestGetPodGroupMetadata_ConfigReferencesNonexistentPodGroup(t *testing.T) {
 	assert.Equal(t, "group1", *metadata.SubGroups[1].Parent)
 }
 
-// Test 1: TestGetPodGroupMetadata_PodGangPreferredOnly
+// TestGetPodGroupMetadata_PodGangPreferredOnly
 func TestGetPodGroupMetadata_PodGangPreferredOnly(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -988,14 +991,14 @@ func TestGetPodGroupMetadata_PodGangPreferredOnly(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, "rack", metadata.PreferredTopologyLevel)
 	assert.Equal(t, "", metadata.RequiredTopologyLevel)
 	assert.Equal(t, 1, len(metadata.SubGroups))
 }
 
-// Test 2: TestGetPodGroupMetadata_PodGangRequiredOnly
+// TestGetPodGroupMetadata_PodGangRequiredOnly
 func TestGetPodGroupMetadata_PodGangRequiredOnly(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1037,14 +1040,14 @@ func TestGetPodGroupMetadata_PodGangRequiredOnly(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, "", metadata.PreferredTopologyLevel)
 	assert.Equal(t, "zone", metadata.RequiredTopologyLevel)
 	assert.Equal(t, 1, len(metadata.SubGroups))
 }
 
-// Test 3: TestGetPodGroupMetadata_ParentGroupBothTopologies
+// TestGetPodGroupMetadata_ParentGroupBothTopologies
 func TestGetPodGroupMetadata_ParentGroupBothTopologies(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1093,7 +1096,7 @@ func TestGetPodGroupMetadata_ParentGroupBothTopologies(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
@@ -1109,7 +1112,7 @@ func TestGetPodGroupMetadata_ParentGroupBothTopologies(t *testing.T) {
 	assert.Equal(t, "group1", *metadata.SubGroups[1].Parent)
 }
 
-// Test 4: TestGetPodGroupMetadata_PodGroupBothTopologies
+// TestGetPodGroupMetadata_PodGroupBothTopologies
 func TestGetPodGroupMetadata_PodGroupBothTopologies(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1152,7 +1155,7 @@ func TestGetPodGroupMetadata_PodGroupBothTopologies(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(metadata.SubGroups))
 
@@ -1164,7 +1167,7 @@ func TestGetPodGroupMetadata_PodGroupBothTopologies(t *testing.T) {
 	assert.Equal(t, "", metadata.SubGroups[0].TopologyConstraints.Topology)
 }
 
-// Test 5: TestGetPodGroupMetadata_ComplexHierarchyMixedTopologies
+// TestGetPodGroupMetadata_ComplexHierarchyMixedTopologies
 func TestGetPodGroupMetadata_ComplexHierarchyMixedTopologies(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1261,7 +1264,7 @@ func TestGetPodGroupMetadata_ComplexHierarchyMixedTopologies(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 
 	// PodGang level: both preferred and required
@@ -1322,7 +1325,7 @@ func TestGetPodGroupMetadata_ComplexHierarchyMixedTopologies(t *testing.T) {
 	assert.Equal(t, int32(6), metadata.MinAvailable)
 }
 
-// Test 6: TestGetPodGroupMetadata_MultipleParentGroupsVariantMix
+// TestGetPodGroupMetadata_MultipleParentGroupsVariantMix
 func TestGetPodGroupMetadata_MultipleParentGroupsVariantMix(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1403,7 +1406,7 @@ func TestGetPodGroupMetadata_MultipleParentGroupsVariantMix(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 
 	// 6 SubGroups total (3 parents + 3 children)
@@ -1452,7 +1455,7 @@ func TestGetPodGroupMetadata_MultipleParentGroupsVariantMix(t *testing.T) {
 	assert.Equal(t, int32(6), metadata.MinAvailable)
 }
 
-// Test 7: TestGetPodGroupMetadata_MultiplePodGroupsVariantMix
+// TestGetPodGroupMetadata_MultiplePodGroupsVariantMix
 func TestGetPodGroupMetadata_MultiplePodGroupsVariantMix(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1526,7 +1529,7 @@ func TestGetPodGroupMetadata_MultiplePodGroupsVariantMix(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 
 	// 4 SubGroups total (all children, no parents)
@@ -1631,7 +1634,7 @@ func TestGetPodGroupMetadata_WithTopologyAnnotation(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 
 	// Verify topology annotation value is used at PodGang level
@@ -1702,7 +1705,7 @@ func TestGetPodGroupMetadata_SpecOverridesAnnotation(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 
 	// Verify spec constraints override annotation constraints
@@ -1796,6 +1799,19 @@ func TestGetPodGroupMetadata_ThreeLevelTopologyWithLeafVerification(t *testing.T
 							map[string]interface{}{"namespace": "test-ns", "name": "pod3"},
 						},
 					},
+					map[string]interface{}{
+						"name": "pg4",
+						"topologyConstraint": map[string]interface{}{
+							"packConstraint": map[string]interface{}{
+								"preferred": "rack",
+								"required":  "node",
+							},
+						},
+						"minReplicas": int64(2),
+						"podReferences": []interface{}{
+							map[string]interface{}{"namespace": "test-ns", "name": "pod4"},
+						},
+					},
 				},
 			},
 		},
@@ -1813,7 +1829,7 @@ func TestGetPodGroupMetadata_ThreeLevelTopologyWithLeafVerification(t *testing.T
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 
 	// Level 1: Verify PodGang level topology
@@ -1821,8 +1837,8 @@ func TestGetPodGroupMetadata_ThreeLevelTopologyWithLeafVerification(t *testing.T
 	assert.Equal(t, "cluster", metadata.RequiredTopologyLevel)
 	assert.Equal(t, "test-topology", metadata.Topology)
 
-	// Total: 2 parents + 3 children = 5 SubGroups
-	assert.Equal(t, 5, len(metadata.SubGroups))
+	// Total: 2 parents + 4 children = 6 SubGroups
+	assert.Equal(t, 6, len(metadata.SubGroups))
 
 	// Level 2: Verify Parent group1
 	assert.Equal(t, "group1", metadata.SubGroups[0].Name)
@@ -1872,8 +1888,22 @@ func TestGetPodGroupMetadata_ThreeLevelTopologyWithLeafVerification(t *testing.T
 	assert.Equal(t, "group2", *metadata.SubGroups[4].Parent)
 	assert.Equal(t, int32(1), metadata.SubGroups[4].MinAvailable)
 
-	// Verify total MinAvailable = sum of children (2+3+1 = 6)
-	assert.Equal(t, int32(6), metadata.MinAvailable)
+	// Verify pg4 (standalone, not part of any group)
+	assert.Equal(t, "pg4", metadata.SubGroups[5].Name)
+	assert.Equal(t, int32(2), metadata.SubGroups[5].MinAvailable)
+	assert.Nil(t, metadata.SubGroups[5].Parent)
+	assert.Equal(t, 1, len(metadata.SubGroups[5].PodsReferences))
+	assert.Equal(t, "pod4", metadata.SubGroups[5].PodsReferences[0].Name)
+
+	// Verify pg4 inherits topology annotation
+	assert.NotNil(t, metadata.SubGroups[5].TopologyConstraints)
+	assert.Equal(t, "test-topology", metadata.SubGroups[5].TopologyConstraints.Topology)
+	assert.Equal(t, "rack", metadata.SubGroups[5].TopologyConstraints.PreferredTopologyLevel)
+	assert.Equal(t, "node", metadata.SubGroups[5].TopologyConstraints.RequiredTopologyLevel)
+	assert.Nil(t, metadata.SubGroups[5].Parent)
+
+	// Verify total MinAvailable = sum of children (2+3+1+2 = 8)
+	assert.Equal(t, int32(8), metadata.MinAvailable)
 }
 
 // TestGetPodGroupMetadata_EmptyTopology verifies empty topology when no annotation is set
@@ -1923,7 +1953,7 @@ func TestGetPodGroupMetadata_EmptyTopology(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(podGang, pod)
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
 
 	// Verify topology is empty when no annotation is set
