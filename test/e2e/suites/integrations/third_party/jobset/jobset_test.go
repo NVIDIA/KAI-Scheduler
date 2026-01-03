@@ -20,12 +20,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -125,6 +127,97 @@ var _ = Describe("JobSet integration", Ordered, func() {
 			// Wait for pods and verify they all use the same PodGroup
 			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 2)
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
+		})
+	})
+
+	Context("JobSet PodGroup creation scenarios", func() {
+		It("should create PodGroup with MinMember=8 for single ReplicatedJob with high parallelism", func(ctx context.Context) {
+			testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+			jobSetName := "high-parallelism-" + utils.GenerateRandomK8sName(10)
+
+			jobSet := createJobSetWithHighParallelism(jobSetName, testNamespace, testCtx.Queues[0].Name)
+			Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
+			defer func() {
+				Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
+			}()
+
+			// Wait for pods to be created
+			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 8)
+			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
+
+			// Verify PodGroup is created with correct MinMember
+			Eventually(func(g Gomega) {
+				podGroups := &v2alpha2.PodGroupList{}
+				err := testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(testNamespace))
+				g.Expect(err).To(Succeed())
+
+				// Should have 1 PodGroup (default InOrder creates one per replicatedJob)
+				g.Expect(len(podGroups.Items)).To(Equal(1))
+				// MinMember should be replicas * parallelism = 1 * 8 = 8
+				g.Expect(podGroups.Items[0].Spec.MinMember).To(Equal(int32(8)))
+			}, time.Minute).Should(Succeed())
+		})
+
+		It("should create separate PodGroups for multiple ReplicatedJobs with different parallelism", func(ctx context.Context) {
+			testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+			jobSetName := "multi-parallelism-" + utils.GenerateRandomK8sName(10)
+
+			jobSet := createJobSetWithMultipleReplicatedJobs(jobSetName, testNamespace, testCtx.Queues[0].Name)
+			Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
+			defer func() {
+				Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
+			}()
+
+			// Wait for pods to be created (coordinator: 2 pods, worker: 8 pods)
+			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 10)
+			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
+
+			// Verify PodGroups are created separately (default InOrder)
+			Eventually(func(g Gomega) {
+				podGroups := &v2alpha2.PodGroupList{}
+				err := testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(testNamespace))
+				g.Expect(err).To(Succeed())
+
+				// Should have 2 PodGroups (one per replicatedJob)
+				g.Expect(len(podGroups.Items)).To(Equal(2))
+
+				// Find PodGroups by name pattern and verify MinMember
+				coordinatorPG := findPodGroupByName(podGroups.Items, "coordinator")
+				workerPG := findPodGroupByName(podGroups.Items, "worker")
+				g.Expect(coordinatorPG).NotTo(BeNil())
+				g.Expect(workerPG).NotTo(BeNil())
+				// Coordinator: replicas=1, parallelism=2 => MinMember=2
+				g.Expect(coordinatorPG.Spec.MinMember).To(Equal(int32(2)))
+				// Worker: replicas=2, parallelism=4 => MinMember=8
+				g.Expect(workerPG.Spec.MinMember).To(Equal(int32(8)))
+			}, time.Minute).Should(Succeed())
+		})
+
+		It("should create PodGroup with MinMember=1 for single replica with default parallelism", func(ctx context.Context) {
+			testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+			jobSetName := "default-parallelism-" + utils.GenerateRandomK8sName(10)
+
+			jobSet := createJobSetWithDefaultParallelism(jobSetName, testNamespace, testCtx.Queues[0].Name)
+			Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
+			defer func() {
+				Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
+			}()
+
+			// Wait for pods to be created
+			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 1)
+			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
+
+			// Verify PodGroup is created with correct MinMember (defaults to 1)
+			Eventually(func(g Gomega) {
+				podGroups := &v2alpha2.PodGroupList{}
+				err := testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(testNamespace))
+				g.Expect(err).To(Succeed())
+
+				// Should have 1 PodGroup
+				g.Expect(len(podGroups.Items)).To(Equal(1))
+				// MinMember should default to 1 (replicas=1, parallelism defaults to 1)
+				g.Expect(podGroups.Items[0].Spec.MinMember).To(Equal(int32(1)))
+			}, time.Minute).Should(Succeed())
 		})
 	})
 })
@@ -235,5 +328,231 @@ func waitForJobSetPods(ctx context.Context, testCtx *testcontext.TestContext, jo
 		return nil
 	}, 60*time.Second, 2*time.Second).Should(Succeed())
 	return pods
+}
+
+// createJobSetWithHighParallelism creates a JobSet with a single ReplicatedJob (parallelism=8).
+func createJobSetWithHighParallelism(name, namespace, queueName string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "jobset.x-k8s.io/v1alpha2",
+			"kind":       "JobSet",
+			"metadata": map[string]interface{}{
+				"name":      name,
+				"namespace": namespace,
+				"labels": map[string]interface{}{
+					constants.AppLabelName: "engine-e2e",
+					"kai.scheduler/queue":   queueName,
+				},
+			},
+			"spec": map[string]interface{}{
+				"successPolicy": map[string]interface{}{
+					"operator": "All",
+				},
+				"failurePolicy": map[string]interface{}{
+					"maxRestarts": int64(3),
+				},
+				"replicatedJobs": []interface{}{
+					map[string]interface{}{
+						"name":     "worker",
+						"replicas": int64(1),
+						"template": map[string]interface{}{
+							"spec": map[string]interface{}{
+								"parallelism":  ptr.To(int64(8)),
+								"completions":  ptr.To(int64(8)),
+								"backoffLimit": ptr.To(int32(0)),
+								"template": map[string]interface{}{
+									"spec": map[string]interface{}{
+										"restartPolicy": "Never",
+										"schedulerName": constant.SchedulerName,
+										"containers": []interface{}{
+											map[string]interface{}{
+												"name":  "worker",
+												"image": "ubuntu",
+												"command": []interface{}{
+													"sleep",
+													"3600",
+												},
+												"resources": map[string]interface{}{
+													"requests": map[string]interface{}{
+														"nvidia.com/gpu": "1",
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// createJobSetWithMultipleReplicatedJobs creates a JobSet with multiple ReplicatedJobs.
+func createJobSetWithMultipleReplicatedJobs(name, namespace, queueName string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "jobset.x-k8s.io/v1alpha2",
+			"kind":       "JobSet",
+			"metadata": map[string]interface{}{
+				"name":      name,
+				"namespace": namespace,
+				"labels": map[string]interface{}{
+					constants.AppLabelName: "engine-e2e",
+					"kai.scheduler/queue":   queueName,
+				},
+			},
+			"spec": map[string]interface{}{
+				"successPolicy": map[string]interface{}{
+					"operator": "All",
+				},
+				"failurePolicy": map[string]interface{}{
+					"maxRestarts": int64(3),
+				},
+				"replicatedJobs": []interface{}{
+					map[string]interface{}{
+						"name":     "coordinator",
+						"replicas": int64(1),
+						"template": map[string]interface{}{
+							"spec": map[string]interface{}{
+								"parallelism":  ptr.To(int64(2)),
+								"completions":  ptr.To(int64(2)),
+								"backoffLimit": ptr.To(int32(0)),
+								"template": map[string]interface{}{
+									"spec": map[string]interface{}{
+										"restartPolicy": "Never",
+										"schedulerName": constant.SchedulerName,
+										"containers": []interface{}{
+											map[string]interface{}{
+												"name":  "coordinator",
+												"image": "ubuntu",
+												"command": []interface{}{
+													"sleep",
+													"3600",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					map[string]interface{}{
+						"name":     "worker",
+						"replicas": int64(2),
+						"template": map[string]interface{}{
+							"spec": map[string]interface{}{
+								"parallelism":  ptr.To(int64(4)),
+								"completions":  ptr.To(int64(4)),
+								"backoffLimit": ptr.To(int32(0)),
+								"template": map[string]interface{}{
+									"spec": map[string]interface{}{
+										"restartPolicy": "Never",
+										"schedulerName": constant.SchedulerName,
+										"containers": []interface{}{
+											map[string]interface{}{
+												"name":  "worker",
+												"image": "ubuntu",
+												"command": []interface{}{
+													"sleep",
+													"3600",
+												},
+												"resources": map[string]interface{}{
+													"requests": map[string]interface{}{
+														"nvidia.com/gpu": "1",
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// createJobSetWithDefaultParallelism creates a JobSet with single replica and default parallelism.
+func createJobSetWithDefaultParallelism(name, namespace, queueName string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "jobset.x-k8s.io/v1alpha2",
+			"kind":       "JobSet",
+			"metadata": map[string]interface{}{
+				"name":      name,
+				"namespace": namespace,
+				"labels": map[string]interface{}{
+					constants.AppLabelName: "engine-e2e",
+					"kai.scheduler/queue":   queueName,
+				},
+			},
+			"spec": map[string]interface{}{
+				"successPolicy": map[string]interface{}{
+					"operator": "All",
+				},
+				"failurePolicy": map[string]interface{}{
+					"maxRestarts": int64(3),
+				},
+				"replicatedJobs": []interface{}{
+					map[string]interface{}{
+						"name":     "single",
+						"replicas": int64(1),
+						"template": map[string]interface{}{
+							"spec": map[string]interface{}{
+								// No parallelism specified, should default to 1
+								"completions":  ptr.To(int64(1)),
+								"backoffLimit": ptr.To(int32(0)),
+								"template": map[string]interface{}{
+									"spec": map[string]interface{}{
+										"restartPolicy": "Never",
+										"schedulerName": constant.SchedulerName,
+										"containers": []interface{}{
+											map[string]interface{}{
+												"name":  "single",
+												"image": "ubuntu",
+												"command": []interface{}{
+													"sleep",
+													"3600",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// findPodGroupByName finds a PodGroup by replicatedJob name suffix.
+func findPodGroupByName(podGroups []v2alpha2.PodGroup, replicatedJobName string) *v2alpha2.PodGroup {
+	for i := range podGroups {
+		if podGroups[i].Name == "" {
+			continue
+		}
+		// Extract the last part after the last dash
+		lastDashIndex := -1
+		for k := len(podGroups[i].Name) - 1; k >= 0; k-- {
+			if podGroups[i].Name[k] == '-' {
+				lastDashIndex = k
+				break
+			}
+		}
+		if lastDashIndex >= 0 && lastDashIndex < len(podGroups[i].Name)-1 {
+			lastPart := podGroups[i].Name[lastDashIndex+1:]
+			if lastPart == replicatedJobName {
+				return &podGroups[i]
+			}
+		}
+	}
+	return nil
 }
 

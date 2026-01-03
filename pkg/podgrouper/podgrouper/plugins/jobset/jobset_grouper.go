@@ -20,6 +20,8 @@ const (
 	jobSetLabelJobSetName        = "jobset.sigs.k8s.io/jobset-name"
 	jobSetLabelReplicatedJobName = "jobset.sigs.k8s.io/replicatedjob-name"
 	jobSetPodGroupNamePrefix     = "pg"
+	// startupPolicyOrderInOrder is the default startup policy order for JobSet.
+	startupPolicyOrderInOrder = "InOrder"
 )
 
 // JobSetGrouper creates PodGroups for JobSet workloads.
@@ -74,7 +76,7 @@ func (g *JobSetGrouper) GetPodGroupMetadata(
 		return nil, err
 	}
 
-	if startupPolicyOrder == "InOrder" {
+	if startupPolicyOrder == startupPolicyOrderInOrder {
 		pgMeta.Name = fmt.Sprintf(
 			"%s-%s-%s-%s",
 			jobSetPodGroupNamePrefix,
@@ -82,7 +84,7 @@ func (g *JobSetGrouper) GetPodGroupMetadata(
 			string(jobSetUID),
 			replicatedJobName,
 		)
-		minAvailable, err := getJobSetMinAvailable(topOwner, replicatedJobName)
+		minAvailable, err := getReplicatedJobMinAvailable(topOwner, replicatedJobName)
 		if err != nil {
 			return nil, err
 		}
@@ -94,7 +96,7 @@ func (g *JobSetGrouper) GetPodGroupMetadata(
 			jobSetName,
 			string(jobSetUID),
 		)
-		minAvailable, err := getJobSetTotalMinAvailable(topOwner)
+		minAvailable, err := getJobSetMinAvailable(topOwner)
 		if err != nil {
 			return nil, err
 		}
@@ -104,8 +106,50 @@ func (g *JobSetGrouper) GetPodGroupMetadata(
 	return pgMeta, nil
 }
 
-// getJobSetMinAvailable returns minAvailable for the replicatedJob.
-func getJobSetMinAvailable(jobSet *unstructured.Unstructured, replicatedJobName string) (int32, error) {
+// calculateReplicatedJobMinAvailable calculates minAvailable for a single replicatedJob.
+func calculateReplicatedJobMinAvailable(rjMap map[string]interface{}, jobSetNamespace, jobSetName, replicatedJobName string) (int32, error) {
+	replicas64, foundReplicas, err := unstructured.NestedInt64(rjMap, "replicas")
+	if err != nil {
+		return 0, fmt.Errorf("failed to read replicas from JobSet %s/%s replicatedJob %s: %w",
+			jobSetNamespace, jobSetName, replicatedJobName, err)
+	}
+	replicas := int64(1)
+	if foundReplicas && replicas64 > 0 {
+		replicas = replicas64
+	}
+
+	parallelism64, foundParallelism, err := unstructured.NestedInt64(rjMap, "template", "spec", "parallelism")
+	if err != nil {
+		return 0, fmt.Errorf("failed to read template.spec.parallelism from JobSet %s/%s replicatedJob %s: %w",
+			jobSetNamespace, jobSetName, replicatedJobName, err)
+	}
+	parallelism := int64(1)
+	if foundParallelism && parallelism64 > 0 {
+		parallelism = parallelism64
+	}
+
+	completions64, foundCompletions, err := unstructured.NestedInt64(rjMap, "template", "spec", "completions")
+	if err != nil {
+		return 0, fmt.Errorf("failed to read template.spec.completions from JobSet %s/%s replicatedJob %s: %w",
+			jobSetNamespace, jobSetName, replicatedJobName, err)
+	}
+	if foundCompletions && completions64 > 0 && completions64 < parallelism {
+		parallelism = completions64
+	}
+
+	minAvailable64 := replicas * parallelism
+	if minAvailable64 <= 0 {
+		return 1, nil
+	}
+	if minAvailable64 > math.MaxInt32 {
+		return 0, fmt.Errorf("minAvailable too large (%d) for JobSet %s/%s replicatedJob %s: exceeds int32 max value",
+			minAvailable64, jobSetNamespace, jobSetName, replicatedJobName)
+	}
+	return int32(minAvailable64), nil
+}
+
+// getReplicatedJobMinAvailable returns minAvailable for a specific replicatedJob.
+func getReplicatedJobMinAvailable(jobSet *unstructured.Unstructured, replicatedJobName string) (int32, error) {
 	replicatedJobs, found, err := unstructured.NestedSlice(jobSet.Object, "spec", "replicatedJobs")
 	if err != nil {
 		return 0, fmt.Errorf("failed to read spec.replicatedJobs from JobSet %s/%s: %w",
@@ -126,44 +170,7 @@ func getJobSetMinAvailable(jobSet *unstructured.Unstructured, replicatedJobName 
 			continue
 		}
 
-		replicas64, foundReplicas, err := unstructured.NestedInt64(rjMap, "replicas")
-		if err != nil {
-			return 0, fmt.Errorf("failed to read replicas from JobSet %s/%s replicatedJob %s: %w",
-				jobSet.GetNamespace(), jobSet.GetName(), replicatedJobName, err)
-		}
-		replicas := int64(1)
-		if foundReplicas && replicas64 > 0 {
-			replicas = replicas64
-		}
-
-		parallelism64, foundParallelism, err := unstructured.NestedInt64(rjMap, "template", "spec", "parallelism")
-		if err != nil {
-			return 0, fmt.Errorf("failed to read template.spec.parallelism from JobSet %s/%s replicatedJob %s: %w",
-				jobSet.GetNamespace(), jobSet.GetName(), replicatedJobName, err)
-		}
-		parallelism := int64(1)
-		if foundParallelism && parallelism64 > 0 {
-			parallelism = parallelism64
-		}
-
-		completions64, foundCompletions, err := unstructured.NestedInt64(rjMap, "template", "spec", "completions")
-		if err != nil {
-			return 0, fmt.Errorf("failed to read template.spec.completions from JobSet %s/%s replicatedJob %s: %w",
-				jobSet.GetNamespace(), jobSet.GetName(), replicatedJobName, err)
-		}
-		if foundCompletions && completions64 > 0 && completions64 < parallelism {
-			parallelism = completions64
-		}
-
-		minAvailable64 := replicas * parallelism
-		if minAvailable64 <= 0 {
-			return 1, nil
-		}
-		if minAvailable64 > math.MaxInt32 {
-			return 0, fmt.Errorf("minAvailable too large (%d) for JobSet %s/%s replicatedJob %s: exceeds int32 max value",
-				minAvailable64, jobSet.GetNamespace(), jobSet.GetName(), replicatedJobName)
-		}
-		return int32(minAvailable64), nil
+		return calculateReplicatedJobMinAvailable(rjMap, jobSet.GetNamespace(), jobSet.GetName(), replicatedJobName)
 	}
 
 	return 1, nil
@@ -177,13 +184,13 @@ func getStartupPolicyOrder(jobSet *unstructured.Unstructured) (string, error) {
 			jobSet.GetNamespace(), jobSet.GetName(), err)
 	}
 	if !found {
-		return "InOrder", nil
+		return startupPolicyOrderInOrder, nil
 	}
 	return order, nil
 }
 
-// getJobSetTotalMinAvailable calculates total minAvailable for all replicatedJobs.
-func getJobSetTotalMinAvailable(jobSet *unstructured.Unstructured) (int32, error) {
+// getJobSetMinAvailable calculates total minAvailable for all replicatedJobs in the JobSet.
+func getJobSetMinAvailable(jobSet *unstructured.Unstructured) (int32, error) {
 	replicatedJobs, found, err := unstructured.NestedSlice(jobSet.Object, "spec", "replicatedJobs")
 	if err != nil {
 		return 0, fmt.Errorf("failed to read spec.replicatedJobs from JobSet %s/%s: %w",
@@ -205,7 +212,7 @@ func getJobSetTotalMinAvailable(jobSet *unstructured.Unstructured) (int32, error
 			continue
 		}
 
-		minAvailable, err := getJobSetMinAvailable(jobSet, name)
+		minAvailable, err := calculateReplicatedJobMinAvailable(rjMap, jobSet.GetNamespace(), jobSet.GetName(), name)
 		if err != nil {
 			return 0, err
 		}
@@ -220,5 +227,4 @@ func getJobSetTotalMinAvailable(jobSet *unstructured.Unstructured) (int32, error
 			totalMinAvailable, jobSet.GetNamespace(), jobSet.GetName())
 	}
 	return int32(totalMinAvailable), nil
-
 }

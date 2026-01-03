@@ -410,7 +410,7 @@ func TestGetPodGroupMetadata_StartupPolicyOrderInOrder(t *testing.T) {
 		replicatedJob("worker", 2, 4),
 	})
 	jobSet.Object["spec"].(map[string]interface{})["startupPolicy"] = map[string]interface{}{
-		"startupPolicyOrder": "InOrder",
+		"startupPolicyOrder": startupPolicyOrderInOrder,
 	}
 
 	leaderPod := podWithJobSetLabels("leader-pod", "default", "leader", "0")
