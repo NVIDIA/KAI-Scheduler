@@ -28,6 +28,28 @@ func TestUsageParams_SetDefaults(t *testing.T) {
 			},
 		},
 		{
+			name: "negative half life period should be disabled",
+			input: &UsageParams{
+				HalfLifePeriod: &metav1.Duration{Duration: -3 * time.Minute},
+			},
+			expected: &UsageParams{
+				HalfLifePeriod: nil,
+				WindowSize:     &metav1.Duration{Duration: time.Hour * 24 * 7},
+				WindowType:     &[]WindowType{SlidingWindow}[0],
+			},
+		},
+		{
+			name: "zero half life period should be disabled",
+			input: &UsageParams{
+				HalfLifePeriod: &metav1.Duration{Duration: 0 * time.Minute},
+			},
+			expected: &UsageParams{
+				HalfLifePeriod: nil,
+				WindowSize:     &metav1.Duration{Duration: time.Hour * 24 * 7},
+				WindowType:     &[]WindowType{SlidingWindow}[0],
+			},
+		},
+		{
 			name: "params with half life set should preserve it",
 			input: &UsageParams{
 				HalfLifePeriod: &metav1.Duration{Duration: 30 * time.Minute},
