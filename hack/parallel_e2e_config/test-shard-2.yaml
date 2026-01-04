@@ -8,6 +8,7 @@ metadata:
 spec:
   args:
     restrict-node-scheduling: "false"
+    defaultSchedulerPeriod: "100ms"
   partitionLabelValue: test-pool-2
   placementStrategy:
     cpu: binpack

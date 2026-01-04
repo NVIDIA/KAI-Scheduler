@@ -261,6 +261,10 @@ jobs:
       - name: Install ginkgo
         run: |
           go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.4
+      
+      - name: Set shorter scheduler cycle period
+        run: |
+          kubectl patch schedulingshard default -p '{"spec":{"args":{"defaultSchedulerPeriod":"100ms"}}}' --type merge
 
       - name: Delete images from disk
         env:

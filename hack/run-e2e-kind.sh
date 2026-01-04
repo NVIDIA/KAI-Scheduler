@@ -83,6 +83,8 @@ fi
 # Allow all the pods in the fake-gpu-operator and kai-scheduler to start
 sleep 10
 
+kubectl patch schedulingshard default -p '{"spec":{"args":{"defaultSchedulerPeriod":"100ms"}}}' --type merge
+
 # Install ginkgo if it's not installed
 if [ ! -f ${GOBIN}/ginkgo ]; then
     echo "Installing ginkgo"
