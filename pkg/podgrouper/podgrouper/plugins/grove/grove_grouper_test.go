@@ -1980,9 +1980,6 @@ func TestGetPodGroupMetadata_EmptyTopology(t *testing.T) {
 				"name":      "pgs1",
 				"namespace": "test-ns",
 				"uid":       "1",
-				"annotations": map[string]interface{}{
-					"grove.io/topology-name": "test-topology",
-				},
 			},
 			"spec": map[string]interface{}{
 				"topologyConstraint": map[string]interface{}{
@@ -2020,17 +2017,6 @@ func TestGetPodGroupMetadata_EmptyTopology(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
-	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
-	assert.NoError(t, err)
-
-	// Verify topology is empty when no annotation is set
-	assert.Equal(t, "", metadata.Topology)
-
-	// Verify topology constraints still work but with empty topology field
-	assert.Equal(t, 1, len(metadata.SubGroups))
-	assert.Equal(t, "pg1", metadata.SubGroups[0].Name)
-	assert.NotNil(t, metadata.SubGroups[0].TopologyConstraints)
-	assert.Equal(t, "", metadata.SubGroups[0].TopologyConstraints.PreferredTopologyLevel)
-	assert.Equal(t, "node", metadata.SubGroups[0].TopologyConstraints.RequiredTopologyLevel)
-	assert.Equal(t, "test-topology", metadata.SubGroups[0].TopologyConstraints.Topology)
+	_, err := grouper.GetPodGroupMetadata(nil, pod)
+	assert.Error(t, err)
 }
