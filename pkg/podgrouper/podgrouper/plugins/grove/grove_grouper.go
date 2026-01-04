@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -14,9 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
-	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
 const (
@@ -39,7 +38,7 @@ func (gg *GroveGrouper) Name() string {
 	return "Grove Grouper"
 }
 
-func (gg *GroveGrouper) fetchPodGang(pod *v1.Pod, podGangName string) (*unstructured.Unstructured, error) {
+func (gg *GroveGrouper) fetchPodGang(namespace string, podGangName string) (*unstructured.Unstructured, error) {
 	podGang := &unstructured.Unstructured{}
 	podGang.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "scheduler.grove.io",
@@ -48,12 +47,12 @@ func (gg *GroveGrouper) fetchPodGang(pod *v1.Pod, podGangName string) (*unstruct
 	})
 
 	err := gg.client.Get(context.Background(), client.ObjectKey{
-		Namespace: pod.Namespace,
+		Namespace: namespace,
 		Name:      podGangName,
 	}, podGang)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get PodGang %s/%s. Err: %w",
-			pod.Namespace, podGangName, err)
+			namespace, podGangName, err)
 	}
 
 	return podGang, nil
@@ -82,7 +81,7 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 			labelKeyPodGangName, pod.Namespace, pod.Name)
 	}
 
-	podGang, err := gg.fetchPodGang(pod, podGangName)
+	podGang, err := gg.fetchPodGang(pod.Namespace, podGangName)
 	if err != nil {
 		return nil, err
 	}
@@ -161,6 +160,10 @@ func parseTopologyConstraint(podGang map[string]interface{}, topology string, to
 
 	if !foundPreferred && !foundRequired {
 		return nil, nil
+	}
+
+	if topology == "" {
+		return nil, fmt.Errorf("topology name cannot be empty when topology constraints are defined")
 	}
 
 	topologyConstraint := &podgroup.TopologyConstraintMetadata{}
@@ -298,13 +301,13 @@ func parseChildSubGroups(
 	}
 
 	for pgIndex, v := range pgSlice {
-		pgr, ok := v.(map[string]interface{})
+		podGroupSpec, ok := v.(map[string]interface{})
 		if !ok {
 			return nil, 0, fmt.Errorf("invalid structure of spec.podgroup[%v] in PodGang %s/%s",
 				pgIndex, namespace, podGangName)
 		}
 
-		subGroup, err := parseGroveSubGroup(pgr, pgIndex, namespace, podGangName, topology)
+		subGroup, err := parseGroveSubGroup(podGroupSpec, pgIndex, namespace, podGangName, topology)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to parse spec.podgroups[%d] from PodGang %s/%s. Err: %w",
 				pgIndex, namespace, podGangName, err)
@@ -314,7 +317,7 @@ func parseChildSubGroups(
 			subGroup.Parent = ptr.To(parentName)
 		}
 
-		topologyConstraint, err := parseTopologyConstraint(pgr, topology, "topologyConstraint", "packConstraint")
+		topologyConstraint, err := parseTopologyConstraint(podGroupSpec, topology, "topologyConstraint", "packConstraint")
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to parse topology from PodGroup %s: %w", subGroup.Name, err)
 		}
