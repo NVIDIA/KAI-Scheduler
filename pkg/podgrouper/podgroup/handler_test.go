@@ -9,15 +9,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 )
 
 func Test_createPodGroupForMetadata(t *testing.T) {
-	// Helper variables for pointer values
-	parentName := "parent-group"
-	trueValue := true
-
 	tests := []struct {
 		name     string
 		input    Metadata
@@ -39,7 +36,7 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 					Kind:       "Deployment",
 					Name:       "test-deployment",
 					UID:        "test-uid",
-					Controller: &trueValue,
+					Controller: ptr.To(true),
 				},
 				PreferredTopologyLevel: "rack",
 				RequiredTopologyLevel:  "zone",
@@ -57,7 +54,7 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 							Kind:       "Deployment",
 							Name:       "test-deployment",
 							UID:        "test-uid",
-							Controller: &trueValue,
+							Controller: ptr.To(true),
 						},
 					},
 				},
@@ -322,19 +319,19 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 				MinAvailable: 10,
 				SubGroups: []*SubGroupMetadata{
 					{
-						Name:         "parent-subgroup",
+						Name:         "parent-group",
 						MinAvailable: 0,
 						Parent:       nil,
 					},
 					{
 						Name:         "child-subgroup-1",
 						MinAvailable: 5,
-						Parent:       &parentName,
+						Parent:       ptr.To("parent-group"),
 					},
 					{
 						Name:         "child-subgroup-2",
 						MinAvailable: 5,
-						Parent:       &parentName,
+						Parent:       ptr.To("parent-group"),
 					},
 				},
 				Owner: metav1.OwnerReference{
@@ -361,7 +358,7 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 					MinMember: 10,
 					SubGroups: []schedulingv2alpha2.SubGroup{
 						{
-							Name:               "parent-subgroup",
+							Name:               "parent-group",
 							MinMember:          0,
 							Parent:             nil,
 							TopologyConstraint: nil,
@@ -369,13 +366,13 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 						{
 							Name:               "child-subgroup-1",
 							MinMember:          5,
-							Parent:             &parentName,
+							Parent:             ptr.To("parent-group"),
 							TopologyConstraint: nil,
 						},
 						{
 							Name:               "child-subgroup-2",
 							MinMember:          5,
-							Parent:             &parentName,
+							Parent:             ptr.To("parent-group"),
 							TopologyConstraint: nil,
 						},
 					},
@@ -566,7 +563,7 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 				MinAvailable: 20,
 				SubGroups: []*SubGroupMetadata{
 					{
-						Name:         "parent-group-1",
+						Name:         "parent-group",
 						MinAvailable: 0,
 						Parent:       nil,
 						TopologyConstraints: &TopologyConstraintMetadata{
@@ -578,7 +575,7 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 					{
 						Name:         "child-1-1",
 						MinAvailable: 5,
-						Parent:       &parentName,
+						Parent:       ptr.To("parent-group"),
 						TopologyConstraints: &TopologyConstraintMetadata{
 							PreferredTopologyLevel: "node",
 							RequiredTopologyLevel:  "rack",
@@ -588,7 +585,7 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 					{
 						Name:                "child-1-2",
 						MinAvailable:        5,
-						Parent:              &parentName,
+						Parent:              ptr.To("parent-group"),
 						TopologyConstraints: nil,
 					},
 					{
@@ -629,7 +626,7 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 					MinMember: 20,
 					SubGroups: []schedulingv2alpha2.SubGroup{
 						{
-							Name:      "parent-group-1",
+							Name:      "parent-group",
 							MinMember: 0,
 							Parent:    nil,
 							TopologyConstraint: &schedulingv2alpha2.TopologyConstraint{
@@ -641,7 +638,7 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 						{
 							Name:      "child-1-1",
 							MinMember: 5,
-							Parent:    &parentName,
+							Parent:    ptr.To("parent-group"),
 							TopologyConstraint: &schedulingv2alpha2.TopologyConstraint{
 								PreferredTopologyLevel: "node",
 								RequiredTopologyLevel:  "rack",
@@ -651,7 +648,7 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 						{
 							Name:               "child-1-2",
 							MinMember:          5,
-							Parent:             &parentName,
+							Parent:             ptr.To("parent-group"),
 							TopologyConstraint: nil,
 						},
 						{

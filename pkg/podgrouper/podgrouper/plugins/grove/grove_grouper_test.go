@@ -383,6 +383,7 @@ func TestGetPodGroupMetadata_WithTopologyHierarchy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "rack", metadata.PreferredTopologyLevel)
 	assert.Equal(t, "zone", metadata.RequiredTopologyLevel)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 3, len(metadata.SubGroups))
 
 	// Parent SubGroup
@@ -474,6 +475,7 @@ func TestGetPodGroupMetadata_WithoutTopologyConstraintGroupConfigs(t *testing.T)
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
 	// Both SubGroups have no parent
@@ -565,6 +567,7 @@ func TestGetPodGroupMetadata_MultipleParentGroups(t *testing.T) {
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 5, len(metadata.SubGroups))
 
 	// Parents first
@@ -634,6 +637,7 @@ func TestGetPodGroupMetadata_MixedParenting(t *testing.T) {
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 3, len(metadata.SubGroups))
 
 	// Parent
@@ -695,6 +699,7 @@ func TestGetPodGroupMetadata_EmptyPodGroupNames(t *testing.T) {
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
 	// Only group2 appears as parent (group1 skipped due to empty podGroupNames)
@@ -939,6 +944,7 @@ func TestGetPodGroupMetadata_ConfigReferencesNonexistentPodGroup(t *testing.T) {
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
 	// Parent group created
@@ -995,6 +1001,7 @@ func TestGetPodGroupMetadata_PodGangPreferredOnly(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "rack", metadata.PreferredTopologyLevel)
 	assert.Equal(t, "", metadata.RequiredTopologyLevel)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 1, len(metadata.SubGroups))
 }
 
@@ -1044,6 +1051,7 @@ func TestGetPodGroupMetadata_PodGangRequiredOnly(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "", metadata.PreferredTopologyLevel)
 	assert.Equal(t, "zone", metadata.RequiredTopologyLevel)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 1, len(metadata.SubGroups))
 }
 
@@ -1098,6 +1106,7 @@ func TestGetPodGroupMetadata_ParentGroupBothTopologies(t *testing.T) {
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
 	// Parent SubGroup
@@ -1157,6 +1166,7 @@ func TestGetPodGroupMetadata_PodGroupBothTopologies(t *testing.T) {
 	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
 	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
 	assert.NoError(t, err)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 1, len(metadata.SubGroups))
 
 	// SubGroup with both topology constraints
@@ -1268,6 +1278,7 @@ func TestGetPodGroupMetadata_ComplexHierarchyMixedTopologies(t *testing.T) {
 	assert.NoError(t, err)
 
 	// PodGang level: both preferred and required
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, "cluster", metadata.PreferredTopologyLevel)
 	assert.Equal(t, "datacenter", metadata.RequiredTopologyLevel)
 
@@ -1410,6 +1421,7 @@ func TestGetPodGroupMetadata_MultipleParentGroupsVariantMix(t *testing.T) {
 	assert.NoError(t, err)
 
 	// 6 SubGroups total (3 parents + 3 children)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 6, len(metadata.SubGroups))
 
 	// Parent SubGroup group1: both preferred and required
@@ -1533,6 +1545,7 @@ func TestGetPodGroupMetadata_MultiplePodGroupsVariantMix(t *testing.T) {
 	assert.NoError(t, err)
 
 	// 4 SubGroups total (all children, no parents)
+	assert.Equal(t, "", metadata.Topology)
 	assert.Equal(t, 4, len(metadata.SubGroups))
 
 	// SubGroup pg1: both preferred and required, no parent
