@@ -72,7 +72,7 @@ var _ = Describe("Consolidation", Ordered, func() {
 		testCtx.TestContextCleanup(ctx)
 	})
 
-	It("Node level consolidation", func(ctx context.Context) {
+	It("Node level consolidation", Serial, func(ctx context.Context) {
 		capacity.SkipIfInsufficientClusterTopologyResources(testCtx.KubeClientset, []capacity.ResourceList{
 			{
 				Gpu:      resource.MustParse("2"),
