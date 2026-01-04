@@ -38,26 +38,6 @@ func (gg *GroveGrouper) Name() string {
 	return "Grove Grouper"
 }
 
-func (gg *GroveGrouper) fetchPodGang(namespace string, podGangName string) (*unstructured.Unstructured, error) {
-	podGang := &unstructured.Unstructured{}
-	podGang.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "scheduler.grove.io",
-		Kind:    "PodGang",
-		Version: "v1alpha1",
-	})
-
-	err := gg.client.Get(context.Background(), client.ObjectKey{
-		Namespace: namespace,
-		Name:      podGangName,
-	}, podGang)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get PodGang %s/%s. Err: %w",
-			namespace, podGangName, err)
-	}
-
-	return podGang, nil
-}
-
 // PodCliqueSet is the top-level CR in Grove. PodGangSet is the older name and got renamed to PodCLiqueSet.
 // PodGangSet support and rbac will be eventually deprecated.
 
@@ -106,9 +86,7 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 		metadata.PriorityClassName = priorityClassName
 	}
 
-	subGroupToParentMap := make(map[string]string)
-
-	parentSubGroups, err := parseParentSubGroups(podGang, pod.Namespace, podGangName, subGroupToParentMap, topology)
+	parentSubGroups, subGroupToParentMap, err := parseParentSubGroups(podGang, pod.Namespace, podGangName, topology)
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +153,26 @@ func parseTopologyConstraint(podGang map[string]interface{}, topology string, to
 	}
 	topologyConstraint.Topology = topology
 	return topologyConstraint, nil
+}
+
+func (gg *GroveGrouper) fetchPodGang(namespace string, podGangName string) (*unstructured.Unstructured, error) {
+	podGang := &unstructured.Unstructured{}
+	podGang.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "scheduler.grove.io",
+		Kind:    "PodGang",
+		Version: "v1alpha1",
+	})
+
+	err := gg.client.Get(context.Background(), client.ObjectKey{
+		Namespace: namespace,
+		Name:      podGangName,
+	}, podGang)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get PodGang %s/%s. Err: %w",
+			namespace, podGangName, err)
+	}
+
+	return podGang, nil
 }
 
 func parseGroveSubGroup(
@@ -247,29 +245,29 @@ func getPriorityClassName(podGang *unstructured.Unstructured) (string, bool, err
 func parseParentSubGroups(
 	podGang *unstructured.Unstructured,
 	namespace, podGangName string,
-	subGroupToParentMap map[string]string,
 	topology string,
-) ([]*podgroup.SubGroupMetadata, error) {
+) ([]*podgroup.SubGroupMetadata, map[string]string, error) {
 	var parentSubGroups []*podgroup.SubGroupMetadata
+	subGroupToParentMap := make(map[string]string)
 
 	groupTopologyConfigs, found, err := unstructured.NestedSlice(podGang.Object, "spec", "topologyConstraintGroupConfigs")
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse 'topologyConstraintGroupConfigs' field. Err: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse 'topologyConstraintGroupConfigs' field. Err: %w", err)
 	}
 	if !found {
-		return parentSubGroups, nil
+		return parentSubGroups, subGroupToParentMap, nil
 	}
 
 	for configIndex, configInterface := range groupTopologyConfigs {
 		config, ok := configInterface.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("invalid structure of spec.topologyConstraintGroupConfigs[%d] in PodGang %s/%s",
+			return nil, nil, fmt.Errorf("invalid structure of spec.topologyConstraintGroupConfigs[%d] in PodGang %s/%s",
 				configIndex, namespace, podGangName)
 		}
 
 		parentSubGroup, err := parseGroupTopologyConfig(config, subGroupToParentMap, topology)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse topologyConstraintGroupConfig[%d]: %w", configIndex, err)
+			return nil, nil, fmt.Errorf("failed to parse topologyConstraintGroupConfig[%d]: %w", configIndex, err)
 		}
 
 		if parentSubGroup == nil {
@@ -279,7 +277,7 @@ func parseParentSubGroups(
 		parentSubGroups = append(parentSubGroups, parentSubGroup)
 	}
 
-	return parentSubGroups, nil
+	return parentSubGroups, subGroupToParentMap, nil
 }
 
 func parseChildSubGroups(
