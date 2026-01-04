@@ -5,16 +5,19 @@ SPDX-License-Identifier: Apache-2.0
 package context
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
 	lws "sigs.k8s.io/lws/api/leaderworkerset/v1"
 
+	"github.com/onsi/ginkgo/v2"
 	"k8s.io/api/node/v1alpha1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	ctrl "sigs.k8s.io/controller-runtime"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
@@ -22,6 +25,8 @@ import (
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	kubeAiSchedulerV2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 
 	kwokopv1beta1 "github.com/run-ai/kwok-operator/api/v1beta1"
 
@@ -77,6 +82,60 @@ func initConnectivity() error {
 			return fmt.Errorf("failed to add lws to scheme: %w", err)
 		}
 	}
+
+	// Initialize shard configuration based on Ginkgo parallel process
+	if err := initializeShardConfig(); err != nil {
+		return fmt.Errorf("failed to initialize shard config: %w", err)
+	}
+
+	return nil
+}
+
+// initializeShardConfig determines the shard configuration based on GinkgoParallelProcess()
+func initializeShardConfig() error {
+	logger := ctrl.Log.WithName("shard-init")
+	processNum := ginkgo.GinkgoParallelProcess()
+
+	shardName := ""
+	// Process 1 uses default shard (no partition labels)
+	if processNum == 1 {
+		shardName = "default"
+		logger.Info("Using default scheduler (process 1)", "shard", "default")
+	} else {
+		// Process N > 1 uses test-shard-N
+		shardName = fmt.Sprintf("test-shard-%d", processNum)
+		logger.Info("Calculating shard configuration", "processNum", processNum, "shardName", shardName)
+	}
+
+	// Fetch the SchedulingShard object from Kubernetes
+	ctx := context.Background()
+	shard := &kaiv1.SchedulingShard{}
+	if err := controllerClient.Get(ctx, runtimeClient.ObjectKey{Name: shardName}, shard); err != nil {
+		return fmt.Errorf("failed to get SchedulingShard %s: %w", shardName, err)
+	}
+
+	// Get nodePoolLabelKey from global config
+	kaiConfig := &kaiv1.Config{}
+	if err := controllerClient.Get(ctx, runtimeClient.ObjectKey{Name: constants.DefaultKAIConfigSingeltonInstanceName}, kaiConfig); err != nil {
+		return fmt.Errorf("failed to get KAI Config: %w", err)
+	}
+
+	nodePoolLabelKey := constants.DefaultNodePoolLabelKey
+	if kaiConfig.Spec.Global.NodePoolLabelKey != nil {
+		nodePoolLabelKey = *kaiConfig.Spec.Global.NodePoolLabelKey
+	}
+
+	config := &shardconfig.ShardConfig{
+		ShardName:           shardName,
+		PartitionLabelKey:   nodePoolLabelKey,
+		PartitionLabelValue: shard.Spec.PartitionLabelValue,
+	}
+	shardconfig.SetCurrentShardConfig(config)
+
+	logger.Info("Initialized shard configuration",
+		"shardName", config.ShardName,
+		"labelKey", config.PartitionLabelKey,
+		"labelValue", config.PartitionLabelValue)
 
 	return nil
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/capacity"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
@@ -177,7 +178,7 @@ var _ = Describe("Restrict node scheduling", Label(labels.Operated), Ordered, fu
 
 func setupGpuNode(textCtx *testContext.TestContext, ctx context.Context) *corev1.Node {
 	nodes, err := textCtx.KubeClientset.CoreV1().Nodes().
-		List(ctx, v1.ListOptions{LabelSelector: constants.GpuCountLabel})
+		List(ctx, v1.ListOptions{LabelSelector: fmt.Sprintf("%s,%s", constants.GpuCountLabel, shardconfig.GetShardLabelSelectorString())})
 	Expect(err).NotTo(HaveOccurred(), "Failed to list nodes")
 	nodes.Items = filterTaintedNodes(nodes.Items)
 	if len(nodes.Items) == 0 {
@@ -193,7 +194,7 @@ func setupGpuNode(textCtx *testContext.TestContext, ctx context.Context) *corev1
 
 func setupCpuNode(textCtx *testContext.TestContext, ctx context.Context, availableCPU resource.Quantity) *corev1.Node {
 	nodes, err := textCtx.KubeClientset.CoreV1().Nodes().
-		List(ctx, v1.ListOptions{LabelSelector: fmt.Sprintf("!%s", gpuWorkerLabelName)})
+		List(ctx, v1.ListOptions{LabelSelector: fmt.Sprintf("!%s,%s", gpuWorkerLabelName, shardconfig.GetShardLabelSelectorString())})
 	Expect(err).NotTo(HaveOccurred(), "Failed to list nodes")
 	nodes.Items = filterTaintedNodes(nodes.Items)
 	Expect(len(nodes.Items)).Should(BeNumerically(">", 0), "No non-gpu nodes")

@@ -23,7 +23,7 @@ func SetFullHierarchyFairness(
 	if value != nil {
 		targetValue = ptr.To(fmt.Sprint(*value))
 	}
-	if err := configurations.SetShardArg(ctx, testCtx, "default", "full-hierarchy-fairness", targetValue); err != nil {
+	if err := configurations.SetShardArg(ctx, testCtx, "full-hierarchy-fairness", targetValue); err != nil {
 		return err
 	}
 	wait.WaitForDeploymentPodsRunning(ctx, testCtx.ControllerClient, constant.SchedulerDeploymentName, constants.DefaultKAINamespace)

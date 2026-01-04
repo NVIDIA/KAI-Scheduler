@@ -6,6 +6,7 @@ package context
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/onsi/gomega"
 	"github.com/samber/lo"
@@ -20,6 +21,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/pod_group"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
@@ -88,7 +90,7 @@ func (tc *TestContext) TestContextCleanup(ctx context.Context) {
 	wait.ForNoReservationPods(ctx, tc.ControllerClient)
 
 	wait.ForRunningSystemComponentEvent(ctx, tc.ControllerClient, "binder")
-	wait.ForRunningSystemComponentEvent(ctx, tc.ControllerClient, "kai-scheduler-default")
+	wait.ForRunningSystemComponentEvent(ctx, tc.ControllerClient, getSchedulerDeploymentName())
 }
 
 func (tc *TestContext) ClusterCleanup(ctx context.Context) {
@@ -133,4 +135,13 @@ func (tc *TestContext) deleteAllQueues(ctx context.Context) {
 			metav1.DeleteOptions{})
 		tc.asserter.Expect(err).To(gomega.Succeed())
 	}
+}
+
+// getSchedulerDeploymentName returns the scheduler deployment name based on current shard
+func getSchedulerDeploymentName() string {
+	config := shardconfig.GetCurrentShardConfig()
+	if config == nil {
+		return "kai-scheduler-default"
+	}
+	return fmt.Sprintf("kai-scheduler-%s", config.ShardName)
 }

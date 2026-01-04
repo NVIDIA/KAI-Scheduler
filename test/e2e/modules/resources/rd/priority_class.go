@@ -14,6 +14,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	e2econstant "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 )
 
@@ -55,18 +56,22 @@ func DeleteAllE2EPriorityClasses(ctx context.Context, client runtimeClient.WithW
 	err := client.DeleteAllOf(
 		ctx, &schedulingv1.PriorityClass{},
 		runtimeClient.MatchingLabels{constants.AppLabelName: "engine-e2e"},
+		runtimeClient.MatchingLabelsSelector{Selector: shardconfig.GetShardLabelSelector()},
 	)
 	err = runtimeClient.IgnoreNotFound(err)
 	return err
 }
 
 func CreatePriorityClass(name string, value int) *schedulingv1.PriorityClass {
+	labels := map[string]string{
+		constants.AppLabelName: "engine-e2e",
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	return &schedulingv1.PriorityClass{
 		ObjectMeta: v12.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-			},
+			Name:   name,
+			Labels: labels,
 		},
 		Value: int32(value),
 	}

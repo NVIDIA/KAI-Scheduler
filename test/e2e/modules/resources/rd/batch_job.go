@@ -20,6 +20,7 @@ import (
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 )
 
@@ -33,6 +34,12 @@ func CreateBatchJobObject(podQueue *v2.Queue, resources v1.ResourceRequirements)
 	pod.Labels[BatchJobAppLabel] = matchLabelValue
 	pod.Spec.RestartPolicy = v1.RestartPolicyNever
 
+	labels := map[string]string{
+		constants.AppLabelName: "engine-e2e",
+		BatchJobAppLabel:       matchLabelValue,
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	return &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "batch/v1",
@@ -41,10 +48,7 @@ func CreateBatchJobObject(podQueue *v2.Queue, resources v1.ResourceRequirements)
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      utils.GenerateRandomK8sName(10),
 			Namespace: namespace,
-			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-				BatchJobAppLabel:       matchLabelValue,
-			},
+			Labels:    labels,
 		},
 		Spec: batchv1.JobSpec{
 			Template: v1.PodTemplateSpec{

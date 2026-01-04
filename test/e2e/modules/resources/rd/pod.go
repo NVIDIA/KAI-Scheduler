@@ -23,6 +23,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 )
 
@@ -129,6 +130,13 @@ func CreatePod(ctx context.Context, client *kubernetes.Clientset, pod *v1.Pod) (
 
 func CreatePodObject(podQueue *v2.Queue, resources v1.ResourceRequirements) *v1.Pod {
 	namespace := queue.GetConnectedNamespaceToQueue(podQueue)
+
+	labels := map[string]string{
+		constants.AppLabelName: "engine-e2e",
+		"kai.scheduler/queue":  podQueue.Name,
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	pod := &v1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -138,10 +146,7 @@ func CreatePodObject(podQueue *v2.Queue, resources v1.ResourceRequirements) *v1.
 			Name:        utils.GenerateRandomK8sName(10),
 			Namespace:   namespace,
 			Annotations: map[string]string{},
-			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-				"kai.scheduler/queue":  podQueue.Name,
-			},
+			Labels:      labels,
 		},
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{

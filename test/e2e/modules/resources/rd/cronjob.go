@@ -12,6 +12,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 )
 
@@ -19,6 +20,13 @@ const CronJobAppLabel = "cron-job-app-name"
 
 func CreateCronJobObject(namespace, queueName string) *batchv1.CronJob {
 	matchLabelValue := utils.GenerateRandomK8sName(10)
+
+	labels := map[string]string{
+		constants.AppLabelName: "engine-e2e",
+		CronJobAppLabel:        matchLabelValue,
+		"kai.scheduler/queue":  queueName,
+	}
+	labels = shardconfig.AddShardLabels(labels)
 
 	return &batchv1.CronJob{
 		TypeMeta: metav1.TypeMeta{
@@ -28,10 +36,7 @@ func CreateCronJobObject(namespace, queueName string) *batchv1.CronJob {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      utils.GenerateRandomK8sName(10),
 			Namespace: namespace,
-			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-				CronJobAppLabel:        matchLabelValue,
-			},
+			Labels:    labels,
 		},
 		Spec: batchv1.CronJobSpec{
 			Schedule: "* * * * *",
@@ -39,11 +44,7 @@ func CreateCronJobObject(namespace, queueName string) *batchv1.CronJob {
 				Spec: batchv1.JobSpec{
 					Template: v1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
-							Labels: map[string]string{
-								constants.AppLabelName: "engine-e2e",
-								CronJobAppLabel:        matchLabelValue,
-								"kai.scheduler/queue":  queueName,
-							},
+							Labels: labels,
 						},
 						Spec: v1.PodSpec{
 							RestartPolicy:                 v1.RestartPolicyNever,

@@ -25,7 +25,7 @@ func SetKnativeGangScheduling(ctx context.Context, testCtx *testcontext.TestCont
 	if value != nil {
 		targetValue = ptr.To(fmt.Sprint(*value))
 	}
-	if err := configurations.SetShardArg(ctx, testCtx, "default", "knative-gang-schedule", targetValue); err != nil {
+	if err := configurations.SetShardArg(ctx, testCtx, "knative-gang-schedule", targetValue); err != nil {
 		return err
 	}
 	wait.WaitForDeploymentPodsRunning(ctx, testCtx.ControllerClient, constant.SchedulerDeploymentName, constants.DefaultKAINamespace)

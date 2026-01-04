@@ -23,6 +23,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -44,7 +45,7 @@ var _ = Describe("Taint and toleration scheduling", Ordered, func() {
 			},
 		)
 
-		node, err := getNodeWithoutTaints(ctx, testCtx.KubeClientset)
+		node, err := getNodeWithoutTaints(ctx, testCtx.ControllerClient)
 		Expect(err).To(Succeed())
 		nodeName = node.Name
 		err = taintNode(ctx, testCtx.KubeClientset, nodeName)
@@ -114,12 +115,8 @@ func getPodWithRequiredNodeAffinity(queue *v2.Queue, node string) *v1.Pod {
 	return pod
 }
 
-func getNodeWithoutTaints(ctx context.Context, client kubernetes.Interface) (*v1.Node, error) {
-	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
+func getNodeWithoutTaints(ctx context.Context, client runtimeClient.Client) (*v1.Node, error) {
+	nodes := rd.ListAllShardNodes(ctx, client)
 	for _, node := range nodes.Items {
 		if len(node.Spec.Taints) == 0 {
 			return &node, nil

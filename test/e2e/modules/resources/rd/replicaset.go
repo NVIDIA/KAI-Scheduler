@@ -12,6 +12,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 )
 
@@ -20,14 +21,18 @@ const ReplicaSetAppLabel = "replicaset-app-name"
 func CreateReplicasetObject(namespace, queueName string) *v1.ReplicaSet {
 	matchLabelValue := utils.GenerateRandomK8sName(10)
 
+	labels := map[string]string{
+		constants.AppLabelName: "engine-e2e",
+		ReplicaSetAppLabel:     matchLabelValue,
+		"kai.scheduler/queue":  queueName,
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	return &v1.ReplicaSet{
 		ObjectMeta: v13.ObjectMeta{
 			Name:      utils.GenerateRandomK8sName(10),
 			Namespace: namespace,
-			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-				ReplicaSetAppLabel:     matchLabelValue,
-			},
+			Labels:    labels,
 		},
 		Spec: v1.ReplicaSetSpec{
 			Replicas: pointer.Int32(1),
@@ -39,11 +44,7 @@ func CreateReplicasetObject(namespace, queueName string) *v1.ReplicaSet {
 			},
 			Template: v12.PodTemplateSpec{
 				ObjectMeta: v13.ObjectMeta{
-					Labels: map[string]string{
-						constants.AppLabelName: "engine-e2e",
-						ReplicaSetAppLabel:     matchLabelValue,
-						"kai.scheduler/queue":  queueName,
-					},
+					Labels: labels,
 				},
 				Spec: v12.PodSpec{
 					Containers: []v12.Container{
