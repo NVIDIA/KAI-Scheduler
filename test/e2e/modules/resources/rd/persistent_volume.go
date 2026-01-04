@@ -16,9 +16,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 )
 
 func CreatePersistentVolumeObject(name string, path string) *v1.PersistentVolume {
+	labels := map[string]string{
+		constants.AppLabelName: "engine-e2e",
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	return &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -45,12 +51,15 @@ func CreatePersistentVolumeObject(name string, path string) *v1.PersistentVolume
 
 func CreatePersistentVolumeClaimObject(name string, storageClassName string,
 	quantity resource.Quantity) *v1.PersistentVolumeClaim {
+	labels := map[string]string{
+		constants.AppLabelName: "engine-e2e",
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	return &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-			},
+			Name:   name,
+			Labels: labels,
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
 			StorageClassName: ptr.To(storageClassName),
@@ -69,13 +78,16 @@ func CreatePersistentVolumeClaimObject(name string, storageClassName string,
 // CreateStorageClass creates StorageClass matching CSI driver for provisioning local PVs backed by LVM
 // documentation: https://github.com/openebs/lvm-localpv
 func CreateStorageClass(name string) *storagev1.StorageClass {
+	labels := map[string]string{
+		constants.AppLabelName: "engine-e2e",
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 	return &storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-			},
+			Name:   name,
+			Labels: labels,
 		},
 		Provisioner: "local.csi.openebs.io",
 		Parameters: map[string]string{
@@ -97,12 +109,14 @@ func DeleteAllStorageObjects(ctx context.Context, k8sClient client.Client) error
 
 func DeleteAllPersistentVolumes(ctx context.Context, k8sClient client.Client) error {
 	pv := &v1.PersistentVolume{}
-	return k8sClient.DeleteAllOf(ctx, pv, client.MatchingLabels{constants.AppLabelName: "engine-e2e"})
+	return k8sClient.DeleteAllOf(ctx, pv, client.MatchingLabels{constants.AppLabelName: "engine-e2e"},
+		client.MatchingLabelsSelector{Selector: shardconfig.GetShardLabelSelector()})
 }
 
 func DeleteAllStorageClasses(ctx context.Context, k8sClient client.Client) error {
 	storageClass := &storagev1.StorageClass{}
-	return k8sClient.DeleteAllOf(ctx, storageClass, client.MatchingLabels{constants.AppLabelName: "engine-e2e"})
+	return k8sClient.DeleteAllOf(ctx, storageClass, client.MatchingLabels{constants.AppLabelName: "engine-e2e"},
+		client.MatchingLabelsSelector{Selector: shardconfig.GetShardLabelSelector()})
 }
 
 func GetCSICapacity(ctx context.Context, k8sClient client.Client, storageclass *storagev1.StorageClass) (storageCapacity *storagev1.CSIStorageCapacity, err error) {

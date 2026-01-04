@@ -14,24 +14,28 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 )
 
 func CreateNamespaceObject(name, queueName string) *corev1.Namespace {
+	labels := map[string]string{
+		"project":              queueName,
+		"kai.scheduler/queue":  queueName,
+		constants.AppLabelName: "engine-e2e",
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"project":              queueName,
-				"kai.scheduler/queue":  queueName,
-				constants.AppLabelName: "engine-e2e",
-			},
+			Name:   name,
+			Labels: labels,
 		},
 	}
 }
 
 func GetE2ENamespaces(ctx context.Context, kubeClient *kubernetes.Clientset) (*corev1.NamespaceList, error) {
 	return kubeClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=engine-e2e", constants.AppLabelName),
+		LabelSelector: fmt.Sprintf("%s=engine-e2e,%s", constants.AppLabelName, shardconfig.GetShardLabelSelectorString()),
 	})
 }
 

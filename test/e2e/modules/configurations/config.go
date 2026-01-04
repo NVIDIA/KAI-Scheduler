@@ -11,6 +11,7 @@ import (
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 )
 
 func PatchKAIConfig(ctx context.Context, testCtx *testcontext.TestContext, update func(*kaiv1.Config)) error {
@@ -26,7 +27,12 @@ func PatchKAIConfig(ctx context.Context, testCtx *testcontext.TestContext, updat
 	)
 }
 
-func PatchSchedulingShard(ctx context.Context, testCtx *testcontext.TestContext, shardName string, update func(*kaiv1.SchedulingShard)) error {
+func PatchSchedulingShard(ctx context.Context, testCtx *testcontext.TestContext, update func(*kaiv1.SchedulingShard)) error {
+	shardName := "default"
+	if config := shardconfig.GetCurrentShardConfig(); config != nil {
+		shardName = config.ShardName
+	}
+
 	originalShard := &kaiv1.SchedulingShard{}
 	err := testCtx.ControllerClient.Get(ctx, client.ObjectKey{Name: shardName}, originalShard)
 	if err != nil {
@@ -39,9 +45,9 @@ func PatchSchedulingShard(ctx context.Context, testCtx *testcontext.TestContext,
 	)
 }
 
-func SetShardArg(ctx context.Context, testCtx *testcontext.TestContext, shardName string, argName string, value *string) error {
+func SetShardArg(ctx context.Context, testCtx *testcontext.TestContext, argName string, value *string) error {
 	return PatchSchedulingShard(
-		ctx, testCtx, shardName,
+		ctx, testCtx,
 		func(shard *kaiv1.SchedulingShard) {
 			if value == nil {
 				delete(shard.Spec.Args, argName)

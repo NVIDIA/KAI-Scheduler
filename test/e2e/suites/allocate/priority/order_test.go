@@ -30,7 +30,7 @@ const (
 	priorityClassLabelName = "priorityClassName"
 )
 
-var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered, func() {
+var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Serial, Ordered, func() {
 	var (
 		testCtx      *testcontext.TestContext
 		lowPriority  string

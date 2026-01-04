@@ -22,6 +22,7 @@ import (
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 )
 
 func LabelNode(ctx context.Context, client kubernetes.Interface, node *corev1.Node, labelName, labelValue string,
@@ -72,8 +73,7 @@ func escapeLabelName(labelName string) string {
 }
 
 func FindNodeWithNoGPU(ctx context.Context, client runtimeClient.Client) *corev1.Node {
-	allNodes := corev1.NodeList{}
-	Expect(client.List(ctx, &allNodes)).To(Succeed())
+	allNodes := ListAllShardNodes(ctx, client)
 	for _, node := range allNodes.Items {
 		if len(node.Spec.Taints) > 0 {
 			continue
@@ -87,8 +87,7 @@ func FindNodeWithNoGPU(ctx context.Context, client runtimeClient.Client) *corev1
 }
 
 func FindNodeWithEnoughGPUs(ctx context.Context, client runtimeClient.Client, numFreeGPUs int64) *corev1.Node {
-	allNodes := corev1.NodeList{}
-	Expect(client.List(ctx, &allNodes)).To(Succeed())
+	allNodes := ListAllShardNodes(ctx, client)
 	for _, node := range allNodes.Items {
 		gpusQty, found := node.Status.Allocatable[constants.GpuResource]
 		if !found {
@@ -103,9 +102,8 @@ func FindNodeWithEnoughGPUs(ctx context.Context, client runtimeClient.Client, nu
 }
 
 func FindNodesWithEnoughGPUs(ctx context.Context, client runtimeClient.Client, numFreeGPUs int64) []*corev1.Node {
-	allNodes := corev1.NodeList{}
+	allNodes := ListAllShardNodes(ctx, client)
 	var gpuNodes []*corev1.Node
-	Expect(client.List(ctx, &allNodes)).To(Succeed())
 	for index, node := range allNodes.Items {
 		gpusQty, found := node.Status.Allocatable[constants.GpuResource]
 		if !found || gpusQty.IsZero() {
@@ -120,9 +118,8 @@ func FindNodesWithEnoughGPUs(ctx context.Context, client runtimeClient.Client, n
 }
 
 func FindNodesWithExactGPUs(ctx context.Context, client runtimeClient.Client, numFreeGPUs int64) []*corev1.Node {
-	allNodes := corev1.NodeList{}
+	allNodes := ListAllShardNodes(ctx, client)
 	var gpuNodes []*corev1.Node
-	Expect(client.List(ctx, &allNodes)).To(Succeed())
 	for index, node := range allNodes.Items {
 		gpusQty, found := node.Status.Allocatable[constants.GpuResource]
 		if !found || gpusQty.IsZero() {
@@ -134,6 +131,14 @@ func FindNodesWithExactGPUs(ctx context.Context, client runtimeClient.Client, nu
 		}
 	}
 	return gpuNodes
+}
+
+func ListAllShardNodes(ctx context.Context, client runtimeClient.Client) corev1.NodeList {
+	allNodes := corev1.NodeList{}
+	Expect(client.List(ctx, &allNodes, &runtimeClient.ListOptions{
+		LabelSelector: shardconfig.GetShardLabelSelector(),
+	})).To(Succeed())
+	return allNodes
 }
 
 func GetNodeGpuDeviceMemory(ctx context.Context, client runtimeClient.Client, nodeName string) int64 {
