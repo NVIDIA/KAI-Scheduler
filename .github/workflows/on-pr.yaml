@@ -275,7 +275,7 @@ jobs:
 
       - name: Run parallel e2e tests
         run: |
-          ginkgo -r --keep-going --randomize-all --randomize-suites --procs=2 --trace -vv --label-filter '!autoscale && !scale' ./test/e2e/suites
+          ginkgo -r --keep-going --randomize-all --randomize-suites --procs=3 --trace -vv --label-filter '!autoscale && !scale' ./test/e2e/suites
 
       - name: Uninstall KAI-scheduler
         run: |

@@ -27,8 +27,17 @@ if [ -z "$NODES_TO_LABEL" ]; then
   exit 1
 fi
 
-echo "Labeling nodes: $NODES_TO_LABEL for scheduling shard test-pool-2"
-kubectl label nodes $NODES_TO_LABEL kai.scheduler/node-pool=test-pool-2 --overwrite
+POOL_2_NODES=$(echo "$ALL_WORKER_NODES" | head -n 1 | tr '\n' ' ')
+POOL_3_NODES=$(echo "$ALL_WORKER_NODES" | tail -n +2 | head -n 1 | tr '\n' ' ')
+
+echo "Labeling nodes: $POOL_2_NODES for scheduling shard test-pool-2"
+kubectl label nodes $POOL_2_NODES kai.scheduler/node-pool=test-pool-2 --overwrite
 
 echo "Create the scheduling shard test-shard-2.yaml"
 kubectl apply -f ${REPO_ROOT}/hack/parallel_e2e_config/test-shard-2.yaml
+
+echo "Labeling nodes: $POOL_3_NODES for scheduling shard test-pool-3"
+kubectl label nodes $POOL_3_NODES kai.scheduler/node-pool=test-pool-3 --overwrite
+
+echo "Create the scheduling shard test-shard-3.yaml"
+kubectl apply -f ${REPO_ROOT}/hack/parallel_e2e_config/test-shard-3.yaml

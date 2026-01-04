@@ -27,7 +27,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
-var _ = Describe("preempt Distributed Jobs", Ordered, func() {
+var _ = Describe("preempt Distributed Jobs", Serial, Ordered, func() {
 	Context("Over more than one nodes", func() {
 		var (
 			testCtx      *testcontext.TestContext

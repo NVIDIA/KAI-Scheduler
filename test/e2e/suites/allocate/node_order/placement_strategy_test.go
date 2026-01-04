@@ -35,7 +35,7 @@ const (
 	gpuIndexEnvVarName = "NVIDIA_VISIBLE_DEVICES"
 )
 
-var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
+var _ = Describe("Placement strategy", Label(labels.Operated), Serial, Ordered, func() {
 	var (
 		testCtx *testcontext.TestContext
 	)
