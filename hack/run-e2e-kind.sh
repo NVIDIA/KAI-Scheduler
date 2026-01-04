@@ -77,11 +77,11 @@ if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
     cd ${REPO_ROOT}/hack
 else
     PACKAGE_VERSION=0.0.0-$(git rev-parse --short origin/main)
-    helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --version "$PACKAGE_VERSION"
+    helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --wait --version "$PACKAGE_VERSION"
 fi
 
 # Allow all the pods in the fake-gpu-operator and kai-scheduler to start
-sleep 30
+sleep 10
 
 # Install ginkgo if it's not installed
 if [ ! -f ${GOBIN}/ginkgo ]; then
@@ -89,7 +89,7 @@ if [ ! -f ${GOBIN}/ginkgo ]; then
     GOBIN=${GOBIN} go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.4
 fi
 
-#${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --label-filter '!autoscale && !scale' --trace -vv ${REPO_ROOT}/test/e2e/suites
+${GOBIN}/ginkgo -r --keep-going --randomize-all --randomize-suites --label-filter '!autoscale && !scale' --trace -vv ${REPO_ROOT}/test/e2e/suites
 
 if [ "$PRESERVE_CLUSTER" != "true" ]; then
     kind delete cluster --name $CLUSTER_NAME
