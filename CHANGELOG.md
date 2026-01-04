@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Made accounting labels configurable [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
 - Added support for Grove hierarchical topology constraints in PodGroup subgroups
 
+### Fixed
+- Fixed pod controller logging to use request namespace/name instead of empty pod object fields when pod is not found
+
 ## [v0.12.0] - 2025-12-24
 
 ### Added

@@ -113,7 +113,7 @@ func (r *BindRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		var finalError error
 		if r := recover(); r != nil {
 			finalError = fmt.Errorf("Internal Error: %v\n%s", r, string(debug.Stack()))
-			err = fmt.Errorf("Internal Error: %vs", r)
+			err = fmt.Errorf("Internal Error: %v", r)
 		}
 
 		result, err = r.UpdateStatus(ctx, bindRequest, result, err)
