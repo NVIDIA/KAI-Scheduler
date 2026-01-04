@@ -305,7 +305,6 @@ func TestParsePodReference_MissingFields(t *testing.T) {
 	assert.Equal(t, err.Error(), "missing required 'name' field")
 }
 
-// TestGetPodGroupMetadata_WithTopologyHierarchy
 func TestGetPodGroupMetadata_WithTopologyHierarchy(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -422,7 +421,6 @@ func TestGetPodGroupMetadata_WithTopologyHierarchy(t *testing.T) {
 	assert.Equal(t, int32(5), metadata.MinAvailable)
 }
 
-// TestGetPodGroupMetadata_WithoutTopologyConstraintGroupConfigs
 func TestGetPodGroupMetadata_WithoutTopologyConstraintGroupConfigs(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -500,7 +498,6 @@ func TestGetPodGroupMetadata_WithoutTopologyConstraintGroupConfigs(t *testing.T)
 	assert.Equal(t, int32(5), metadata.MinAvailable)
 }
 
-// TestGetPodGroupMetadata_MultipleParentGroups
 func TestGetPodGroupMetadata_MultipleParentGroups(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -594,7 +591,6 @@ func TestGetPodGroupMetadata_MultipleParentGroups(t *testing.T) {
 	assert.Equal(t, "group2", *metadata.SubGroups[4].Parent)
 }
 
-// TestGetPodGroupMetadata_MixedParenting
 func TestGetPodGroupMetadata_MixedParenting(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -662,7 +658,6 @@ func TestGetPodGroupMetadata_MixedParenting(t *testing.T) {
 	assert.Nil(t, metadata.SubGroups[2].Parent)
 }
 
-// TestGetPodGroupMetadata_EmptyPodGroupNames
 func TestGetPodGroupMetadata_EmptyPodGroupNames(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -723,7 +718,6 @@ func TestGetPodGroupMetadata_EmptyPodGroupNames(t *testing.T) {
 	assert.Equal(t, "group2", *metadata.SubGroups[1].Parent)
 }
 
-// TestGetPodGroupMetadata_MissingTopologyConstraints
 func TestGetPodGroupMetadata_MissingTopologyConstraints(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -778,7 +772,6 @@ func TestGetPodGroupMetadata_MissingTopologyConstraints(t *testing.T) {
 	assert.Nil(t, metadata.SubGroups[1].TopologyConstraints)
 }
 
-// TestGetPodGroupMetadata_NilTopologyConstraintInConfig
 func TestGetPodGroupMetadata_NilTopologyConstraintInConfig(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -831,7 +824,6 @@ func TestGetPodGroupMetadata_NilTopologyConstraintInConfig(t *testing.T) {
 	assert.Nil(t, metadata.SubGroups[0].TopologyConstraints)
 }
 
-// TestGetPodGroupMetadata_NilTopologyConstraintInPodGroup
 func TestGetPodGroupMetadata_NilTopologyConstraintInPodGroup(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -878,7 +870,6 @@ func TestGetPodGroupMetadata_NilTopologyConstraintInPodGroup(t *testing.T) {
 	assert.Nil(t, metadata.SubGroups[0].TopologyConstraints)
 }
 
-// TestGetPodGroupMetadata_InvalidTopologyConstraintGroupConfigsType
 func TestGetPodGroupMetadata_InvalidTopologyConstraintGroupConfigsType(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -926,7 +917,6 @@ func TestGetPodGroupMetadata_InvalidTopologyConstraintGroupConfigsType(t *testin
 	assert.Contains(t, err.Error(), "failed to parse 'topologyConstraintGroupConfigs' field")
 }
 
-// TestGetPodGroupMetadata_ConfigReferencesNonexistentPodGroup
 func TestGetPodGroupMetadata_ConfigReferencesNonexistentPodGroup(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -985,7 +975,6 @@ func TestGetPodGroupMetadata_ConfigReferencesNonexistentPodGroup(t *testing.T) {
 	assert.Equal(t, "group1", *metadata.SubGroups[1].Parent)
 }
 
-// TestGetPodGroupMetadata_PodGangPreferredOnly
 func TestGetPodGroupMetadata_PodGangPreferredOnly(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1038,7 +1027,6 @@ func TestGetPodGroupMetadata_PodGangPreferredOnly(t *testing.T) {
 	assert.Equal(t, 1, len(metadata.SubGroups))
 }
 
-// TestGetPodGroupMetadata_PodGangRequiredOnly
 func TestGetPodGroupMetadata_PodGangRequiredOnly(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1091,7 +1079,6 @@ func TestGetPodGroupMetadata_PodGangRequiredOnly(t *testing.T) {
 	assert.Equal(t, 1, len(metadata.SubGroups))
 }
 
-// TestGetPodGroupMetadata_ParentGroupBothTopologies
 func TestGetPodGroupMetadata_ParentGroupBothTopologies(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1160,7 +1147,6 @@ func TestGetPodGroupMetadata_ParentGroupBothTopologies(t *testing.T) {
 	assert.Equal(t, "group1", *metadata.SubGroups[1].Parent)
 }
 
-// TestGetPodGroupMetadata_PodGroupBothTopologies
 func TestGetPodGroupMetadata_PodGroupBothTopologies(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1219,7 +1205,6 @@ func TestGetPodGroupMetadata_PodGroupBothTopologies(t *testing.T) {
 	assert.Equal(t, "test-topology", metadata.SubGroups[0].TopologyConstraints.Topology)
 }
 
-// TestGetPodGroupMetadata_ComplexHierarchyMixedTopologies
 func TestGetPodGroupMetadata_ComplexHierarchyMixedTopologies(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1381,7 +1366,6 @@ func TestGetPodGroupMetadata_ComplexHierarchyMixedTopologies(t *testing.T) {
 	assert.Equal(t, int32(6), metadata.MinAvailable)
 }
 
-// TestGetPodGroupMetadata_MultipleParentGroupsVariantMix
 func TestGetPodGroupMetadata_MultipleParentGroupsVariantMix(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1515,7 +1499,6 @@ func TestGetPodGroupMetadata_MultipleParentGroupsVariantMix(t *testing.T) {
 	assert.Equal(t, int32(6), metadata.MinAvailable)
 }
 
-// TestGetPodGroupMetadata_MultiplePodGroupsVariantMix
 func TestGetPodGroupMetadata_MultiplePodGroupsVariantMix(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1636,7 +1619,6 @@ func TestGetPodGroupMetadata_MultiplePodGroupsVariantMix(t *testing.T) {
 	assert.Equal(t, int32(10), metadata.MinAvailable)
 }
 
-// TestGetPodGroupMetadata_WithTopologyAnnotation verifies topology annotation takes precedence
 func TestGetPodGroupMetadata_WithTopologyAnnotation(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1720,7 +1702,6 @@ func TestGetPodGroupMetadata_WithTopologyAnnotation(t *testing.T) {
 	assert.Equal(t, "custom-topology", metadata.SubGroups[1].TopologyConstraints.Topology)
 }
 
-// TestGetPodGroupMetadata_SpecOverridesAnnotation verifies spec constraints override annotation constraints
 func TestGetPodGroupMetadata_SpecOverridesAnnotation(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1780,7 +1761,6 @@ func TestGetPodGroupMetadata_SpecOverridesAnnotation(t *testing.T) {
 	assert.Equal(t, "spec-topology", metadata.Topology, "grove.io/topology-name should override kai.scheduler/topology")
 }
 
-// TestGetPodGroupMetadata_ThreeLevelTopologyWithLeafVerification verifies topology propagates to leaf nodes
 func TestGetPodGroupMetadata_ThreeLevelTopologyWithLeafVerification(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -1970,7 +1950,6 @@ func TestGetPodGroupMetadata_ThreeLevelTopologyWithLeafVerification(t *testing.T
 	assert.Equal(t, int32(8), metadata.MinAvailable)
 }
 
-// TestGetPodGroupMetadata_EmptyTopology verifies empty topology when no annotation is set
 func TestGetPodGroupMetadata_EmptyTopology(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
