@@ -19,6 +19,7 @@ import (
 	queue_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	v10 "k8s.io/api/scheduling/v1"
 	v11 "k8s.io/api/storage/v1"
 )
@@ -270,4 +271,64 @@ func (m *MockDataLister) ListTopologies() ([]*v1alpha1.Topology, error) {
 func (mr *MockDataListerMockRecorder) ListTopologies() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTopologies", reflect.TypeOf((*MockDataLister)(nil).ListTopologies))
+}
+
+// ListResourceClaims mocks base method.
+func (m *MockDataLister) ListResourceClaims() ([]*resourceapi.ResourceClaim, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListResourceClaims")
+	ret0, _ := ret[0].([]*resourceapi.ResourceClaim)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListResourceClaims indicates an expected call of ListResourceClaims.
+func (mr *MockDataListerMockRecorder) ListResourceClaims() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResourceClaims", reflect.TypeOf((*MockDataLister)(nil).ListResourceClaims))
+}
+
+// ListResourceSlices mocks base method.
+func (m *MockDataLister) ListResourceSlices() ([]*resourceapi.ResourceSlice, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListResourceSlices")
+	ret0, _ := ret[0].([]*resourceapi.ResourceSlice)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListResourceSlices indicates an expected call of ListResourceSlices.
+func (mr *MockDataListerMockRecorder) ListResourceSlices() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResourceSlices", reflect.TypeOf((*MockDataLister)(nil).ListResourceSlices))
+}
+
+// ListDeviceClasses mocks base method.
+func (m *MockDataLister) ListDeviceClasses() ([]*resourceapi.DeviceClass, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeviceClasses")
+	ret0, _ := ret[0].([]*resourceapi.DeviceClass)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeviceClasses indicates an expected call of ListDeviceClasses.
+func (mr *MockDataListerMockRecorder) ListDeviceClasses() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeviceClasses", reflect.TypeOf((*MockDataLister)(nil).ListDeviceClasses))
+}
+
+// ListResourceClaimTemplates mocks base method.
+func (m *MockDataLister) ListResourceClaimTemplates() ([]*resourceapi.ResourceClaimTemplate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListResourceClaimTemplates")
+	ret0, _ := ret[0].([]*resourceapi.ResourceClaimTemplate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListResourceClaimTemplates indicates an expected call of ListResourceClaimTemplates.
+func (mr *MockDataListerMockRecorder) ListResourceClaimTemplates() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResourceClaimTemplates", reflect.TypeOf((*MockDataLister)(nil).ListResourceClaimTemplates))
 }

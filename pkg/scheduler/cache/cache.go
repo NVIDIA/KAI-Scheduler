@@ -45,6 +45,7 @@ import (
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	featuregates "github.com/NVIDIA/KAI-scheduler/pkg/common/feature_gates"
+	k8s_utils "github.com/NVIDIA/KAI-scheduler/pkg/common/k8s_utils"
 	draversionawareclient "github.com/NVIDIA/KAI-scheduler/pkg/common/resources/dra_version_aware_client"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
@@ -166,8 +167,9 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 			&schedulerCacheParams.UsageDBParams.WaitTimeout.Duration)
 	}
 
+	draEnabled := k8s_utils.GetK8sFeatures().EnableDynamicResourceAllocation
 	clusterInfo, err := cluster_info.New(sc.informerFactory, sc.kubeAiSchedulerInformerFactory, sc.usageLister, sc.schedulingNodePoolParams,
-		sc.restrictNodeScheduling, &sc.K8sClusterPodAffinityInfo, sc.scheduleCSIStorage, sc.fullHierarchyFairness, sc.StatusUpdater)
+		sc.restrictNodeScheduling, &sc.K8sClusterPodAffinityInfo, sc.scheduleCSIStorage, sc.fullHierarchyFairness, sc.StatusUpdater, draEnabled)
 
 	if err != nil {
 		log.InfraLogger.Errorf("Failed to create cluster info object: %v", err)

@@ -36,11 +36,15 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/configmap_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/deviceclass_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_affinity"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resourceclaim_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resourceclaimtemplate_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resourceslice_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info/data_lister"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/status_updater"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
@@ -61,6 +65,7 @@ type ClusterInfo struct {
 	nodePoolSelector         labels.Selector
 	fairnessLevelType        FairnessLevelType
 	collectUsageData         bool
+	draEnabled               bool
 }
 
 type FairnessLevelType string
@@ -80,6 +85,7 @@ func New(
 	includeCSIStorageObjects bool,
 	fullHierarchyFairness bool,
 	podGroupSync status_updater.PodGroupsSync,
+	draEnabled bool,
 ) (*ClusterInfo, error) {
 	indexers := cache.Indexers{
 		podByPodGroupIndexerName: podByPodGroupIndexer,
@@ -108,6 +114,7 @@ func New(
 		fairnessLevelType:        fairnessLevelType,
 		podGroupSync:             podGroupSync,
 		collectUsageData:         usageLister != nil,
+		draEnabled:               draEnabled,
 	}, nil
 }
 
@@ -204,6 +211,32 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 		linkStorageObjects(snapshot.StorageClaims, snapshot.StorageCapacities, existingPods, snapshot.Nodes)
 	} else {
 		log.InfraLogger.V(7).Infof("Advanced CSI scheduling not enabled - not snapshotting CSI storage objects")
+	}
+
+	if c.draEnabled {
+		log.InfraLogger.V(7).Infof("DRA enabled - snapshotting DRA resources")
+
+		snapshot.ResourceClaims, err = c.snapshotResourceClaims()
+		if err != nil {
+			log.InfraLogger.V(2).Warnf("error snapshotting resource claims: %v", err)
+		}
+
+		snapshot.ResourceSlices, err = c.snapshotResourceSlices()
+		if err != nil {
+			log.InfraLogger.V(2).Warnf("error snapshotting resource slices: %v", err)
+		}
+
+		snapshot.DeviceClasses, err = c.snapshotDeviceClasses()
+		if err != nil {
+			log.InfraLogger.V(2).Warnf("error snapshotting device classes: %v", err)
+		}
+
+		snapshot.ResourceClaimTemplates, err = c.snapshotResourceClaimTemplates()
+		if err != nil {
+			log.InfraLogger.V(2).Warnf("error snapshotting resource claim templates: %v", err)
+		}
+	} else {
+		log.InfraLogger.V(7).Infof("DRA not enabled - not snapshotting DRA resources")
 	}
 
 	for _, pg := range snapshot.PodGroupInfos {
@@ -435,6 +468,66 @@ func (c *ClusterInfo) snapshotTopologies() ([]*kaiv1alpha1.Topology, error) {
 		return nil, fmt.Errorf("error listing topologies: %w", err)
 	}
 	return topologies, nil
+}
+
+func (c *ClusterInfo) snapshotResourceClaims() (map[common_info.ResourceClaimID]*resourceclaim_info.ResourceClaimInfo, error) {
+	resourceClaims, err := c.dataLister.ListResourceClaims()
+	if err != nil {
+		return nil, fmt.Errorf("error listing resource claims: %w", err)
+	}
+
+	result := map[common_info.ResourceClaimID]*resourceclaim_info.ResourceClaimInfo{}
+	for _, claim := range resourceClaims {
+		claimInfo := resourceclaim_info.NewResourceClaimInfo(claim)
+		result[claimInfo.UID] = claimInfo
+	}
+
+	return result, nil
+}
+
+func (c *ClusterInfo) snapshotResourceSlices() (map[common_info.ResourceSliceID]*resourceslice_info.ResourceSliceInfo, error) {
+	resourceSlices, err := c.dataLister.ListResourceSlices()
+	if err != nil {
+		return nil, fmt.Errorf("error listing resource slices: %w", err)
+	}
+
+	result := map[common_info.ResourceSliceID]*resourceslice_info.ResourceSliceInfo{}
+	for _, slice := range resourceSlices {
+		sliceInfo := resourceslice_info.NewResourceSliceInfo(slice)
+		result[sliceInfo.UID] = sliceInfo
+	}
+
+	return result, nil
+}
+
+func (c *ClusterInfo) snapshotDeviceClasses() (map[common_info.DeviceClassID]*deviceclass_info.DeviceClassInfo, error) {
+	deviceClasses, err := c.dataLister.ListDeviceClasses()
+	if err != nil {
+		return nil, fmt.Errorf("error listing device classes: %w", err)
+	}
+
+	result := map[common_info.DeviceClassID]*deviceclass_info.DeviceClassInfo{}
+	for _, deviceClass := range deviceClasses {
+		deviceClassInfo := deviceclass_info.NewDeviceClassInfo(deviceClass)
+		result[deviceClassInfo.UID] = deviceClassInfo
+	}
+
+	return result, nil
+}
+
+func (c *ClusterInfo) snapshotResourceClaimTemplates() (map[common_info.ResourceClaimTemplateID]*resourceclaimtemplate_info.ResourceClaimTemplateInfo, error) {
+	resourceClaimTemplates, err := c.dataLister.ListResourceClaimTemplates()
+	if err != nil {
+		return nil, fmt.Errorf("error listing resource claim templates: %w", err)
+	}
+
+	result := map[common_info.ResourceClaimTemplateID]*resourceclaimtemplate_info.ResourceClaimTemplateInfo{}
+	for _, template := range resourceClaimTemplates {
+		templateInfo := resourceclaimtemplate_info.NewResourceClaimTemplateInfo(template)
+		result[templateInfo.UID] = templateInfo
+	}
+
+	return result, nil
 }
 
 func getDefaultPriority(dataLister data_lister.DataLister) (int32, error) {

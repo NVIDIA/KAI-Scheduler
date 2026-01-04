@@ -30,9 +30,13 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/configmap_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/csidriver_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/deviceclass_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resourceclaim_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resourceclaimtemplate_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resourceslice_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storagecapacity_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclass_info"
@@ -54,21 +58,29 @@ type ClusterInfo struct {
 	StorageClasses              map[common_info.StorageClassID]*storageclass_info.StorageClassInfo
 	ConfigMaps                  map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
 	Topologies                  []*kaiv1alpha1.Topology
+	ResourceClaims              map[common_info.ResourceClaimID]*resourceclaim_info.ResourceClaimInfo
+	ResourceSlices              map[common_info.ResourceSliceID]*resourceslice_info.ResourceSliceInfo
+	DeviceClasses               map[common_info.DeviceClassID]*deviceclass_info.DeviceClassInfo
+	ResourceClaimTemplates      map[common_info.ResourceClaimTemplateID]*resourceclaimtemplate_info.ResourceClaimTemplateInfo
 }
 
 func NewClusterInfo() *ClusterInfo {
 	return &ClusterInfo{
-		Pods:               []*v1.Pod{},
-		Nodes:              make(map[string]*node_info.NodeInfo),
-		BindRequests:       make(bindrequest_info.BindRequestMap),
-		PodGroupInfos:      make(map[common_info.PodGroupID]*podgroup_info.PodGroupInfo),
-		Queues:             make(map[common_info.QueueID]*queue_info.QueueInfo),
-		QueueResourceUsage: *queue_info.NewClusterUsage(),
-		Departments:        make(map[common_info.QueueID]*queue_info.QueueInfo),
-		StorageClaims:      make(map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo),
-		StorageCapacities:  make(map[common_info.StorageCapacityID]*storagecapacity_info.StorageCapacityInfo),
-		ConfigMaps:         make(map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo),
-		Topologies:         []*kaiv1alpha1.Topology{},
+		Pods:                   []*v1.Pod{},
+		Nodes:                  make(map[string]*node_info.NodeInfo),
+		BindRequests:           make(bindrequest_info.BindRequestMap),
+		PodGroupInfos:          make(map[common_info.PodGroupID]*podgroup_info.PodGroupInfo),
+		Queues:                 make(map[common_info.QueueID]*queue_info.QueueInfo),
+		QueueResourceUsage:     *queue_info.NewClusterUsage(),
+		Departments:            make(map[common_info.QueueID]*queue_info.QueueInfo),
+		StorageClaims:          make(map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo),
+		StorageCapacities:      make(map[common_info.StorageCapacityID]*storagecapacity_info.StorageCapacityInfo),
+		ConfigMaps:             make(map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo),
+		Topologies:             []*kaiv1alpha1.Topology{},
+		ResourceClaims:         make(map[common_info.ResourceClaimID]*resourceclaim_info.ResourceClaimInfo),
+		ResourceSlices:         make(map[common_info.ResourceSliceID]*resourceslice_info.ResourceSliceInfo),
+		DeviceClasses:          make(map[common_info.DeviceClassID]*deviceclass_info.DeviceClassInfo),
+		ResourceClaimTemplates: make(map[common_info.ResourceClaimTemplateID]*resourceclaimtemplate_info.ResourceClaimTemplateInfo),
 	}
 }
 
