@@ -8,11 +8,13 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	listv1 "k8s.io/client-go/listers/core/v1"
+	resourcev1 "k8s.io/client-go/listers/resource/v1"
 	schedv1 "k8s.io/client-go/listers/scheduling/v1"
 	v12 "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
@@ -50,6 +52,11 @@ type k8sLister struct {
 
 	kaiTopologyLister kaiv1alpha1Listers.TopologyLister
 
+	resourceClaimLister         resourcev1.ResourceClaimLister
+	resourceSliceLister         resourcev1.ResourceSliceLister
+	deviceClassLister           resourcev1.DeviceClassLister
+	resourceClaimTemplateLister resourcev1.ResourceClaimTemplateLister
+
 	partitionSelector labels.Selector
 }
 
@@ -79,6 +86,11 @@ func New(
 
 		bindRequestLister: kubeAiSchedulerInformerFactory.Scheduling().V1alpha2().BindRequests().Lister(),
 		kaiTopologyLister: kubeAiSchedulerInformerFactory.Kai().V1alpha1().Topologies().Lister(),
+
+		resourceClaimLister:         informerFactory.Resource().V1().ResourceClaims().Lister(),
+		resourceSliceLister:         informerFactory.Resource().V1().ResourceSlices().Lister(),
+		deviceClassLister:           informerFactory.Resource().V1().DeviceClasses().Lister(),
+		resourceClaimTemplateLister: informerFactory.Resource().V1().ResourceClaimTemplates().Lister(),
 
 		partitionSelector: partitionSelector,
 	}
@@ -170,4 +182,28 @@ func (k *k8sLister) ListConfigMaps() ([]*v1.ConfigMap, error) {
 
 func (k *k8sLister) ListTopologies() ([]*kaiv1alpha1.Topology, error) {
 	return k.kaiTopologyLister.List(labels.Everything())
+}
+
+// +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceclaims,verbs=get;list;watch
+
+func (k *k8sLister) ListResourceClaims() ([]*resourceapi.ResourceClaim, error) {
+	return k.resourceClaimLister.List(labels.Everything())
+}
+
+// +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceslices,verbs=get;list;watch
+
+func (k *k8sLister) ListResourceSlices() ([]*resourceapi.ResourceSlice, error) {
+	return k.resourceSliceLister.List(labels.Everything())
+}
+
+// +kubebuilder:rbac:groups="resource.k8s.io",resources=deviceclasses,verbs=get;list;watch
+
+func (k *k8sLister) ListDeviceClasses() ([]*resourceapi.DeviceClass, error) {
+	return k.deviceClassLister.List(labels.Everything())
+}
+
+// +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceclaimtemplates,verbs=get;list;watch
+
+func (k *k8sLister) ListResourceClaimTemplates() ([]*resourceapi.ResourceClaimTemplate, error) {
+	return k.resourceClaimTemplateLister.List(labels.Everything())
 }

@@ -25,6 +25,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
+	resourceapi "k8s.io/api/resource/v1"
 
 	kubeAiSchedulerClient "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	kubeAiSchedulerClientFake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
@@ -2269,7 +2270,7 @@ func TestNewClusterInfoErrorPartitionSelector(t *testing.T) {
 		NodePoolLabelKey:   "@!A",
 		NodePoolLabelValue: "!@#",
 	}
-	_, err := New(informerFactory, kubeAiSchedulerInformerFactory, nil, params, false, clusterPodAffinityInfo, false, true, nil)
+	_, err := New(informerFactory, kubeAiSchedulerInformerFactory, nil, params, false, clusterPodAffinityInfo, false, true, nil, false)
 
 	assert.NotNil(t, err)
 }
@@ -2300,7 +2301,7 @@ func TestNewClusterInfoAddIndexerFails(t *testing.T) {
 	clusterPodAffinityInfo.EXPECT().AddNode(gomock.Any(), gomock.Any()).AnyTimes()
 
 	_, err = New(informerFactory, kubeAiSchedulerInformerFactory, nil, nil, false,
-		clusterPodAffinityInfo, false, true, nil)
+		clusterPodAffinityInfo, false, true, nil, false)
 	assert.NotNil(t, err, "Expected error for conflicting indexers")
 }
 
@@ -2338,7 +2339,7 @@ func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects []r
 	usageLister := usagedb.NewUsageLister(&fakeUsageClient, ptr.To(10*time.Microsecond), ptr.To(10*time.Second), ptr.To(10*time.Second))
 
 	clusterInfo, _ := New(informerFactory, kubeAiSchedulerInformerFactory, usageLister, nodePoolParams, false,
-		clusterPodAffinityInfo, true, fullHierarchyFairness, nil)
+		clusterPodAffinityInfo, true, fullHierarchyFairness, nil, false)
 
 	stopCh := context.Background().Done()
 	informerFactory.Start(stopCh)
@@ -2430,4 +2431,296 @@ func newPodOnNode(pod *corev1.Pod, nodeName string) *corev1.Pod {
 	newPod.Spec.NodeName = nodeName
 	newPod.Name = fmt.Sprintf("%s-%s", pod.Name, nodeName)
 	return newPod
+}
+
+func newClusterInfoTestsWithDRA(t *testing.T, testParams clusterInfoTestParams, draEnabled bool) *ClusterInfo {
+	nodePoolParams := &conf.SchedulingNodePoolParams{
+		NodePoolLabelKey:   nodePoolNameLabel,
+		NodePoolLabelValue: "",
+	}
+	kubeFakeClient, kubeAiSchedulerFakeClient := newFakeClients(testParams.kubeObjects, testParams.kaiSchedulerObjects)
+	informerFactory := informers.NewSharedInformerFactory(kubeFakeClient, 0)
+	kubeAiSchedulerInformerFactory := kubeAiSchedulerInfo.NewSharedInformerFactory(kubeAiSchedulerFakeClient, 0)
+
+	controller := gomock.NewController(t)
+	clusterPodAffinityInfo := pod_affinity.NewMockClusterPodAffinityInfo(controller)
+	clusterPodAffinityInfo.EXPECT().UpdateNodeAffinity(gomock.Any()).AnyTimes()
+	clusterPodAffinityInfo.EXPECT().AddNode(gomock.Any(), gomock.Any()).AnyTimes()
+
+	fakeUsageClient := fakeusage.FakeClient{}
+	fakeUsageClient.SetResourceUsage(testParams.clusterUsage, testParams.clusterUsageErr)
+	usageLister := usagedb.NewUsageLister(&fakeUsageClient, ptr.To(10*time.Microsecond), ptr.To(10*time.Second), ptr.To(10*time.Second))
+
+	clusterInfo, _ := New(informerFactory, kubeAiSchedulerInformerFactory, usageLister, nodePoolParams, false,
+		clusterPodAffinityInfo, true, true, nil, draEnabled)
+
+	stopCh := context.Background().Done()
+	informerFactory.Start(stopCh)
+	informerFactory.WaitForCacheSync(stopCh)
+	kubeAiSchedulerInformerFactory.Start(stopCh)
+	kubeAiSchedulerInformerFactory.WaitForCacheSync(stopCh)
+	usageLister.Start(stopCh)
+	usageLister.WaitForCacheSync(stopCh)
+
+	return clusterInfo
+}
+
+func TestSnapshotDRAResources_Enabled(t *testing.T) {
+	kubeObjects := []runtime.Object{
+		&resourceapi.ResourceClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "resource-claim-1",
+				Namespace: "default",
+				UID:       types.UID("claim-uid-1"),
+			},
+			Spec: resourceapi.ResourceClaimSpec{
+				Devices: resourceapi.DeviceClaim{
+					Requests: []resourceapi.DeviceRequest{
+						{
+							Exactly: &resourceapi.ExactDeviceRequest{
+								DeviceClassName: "nvidia.com/gpu",
+								AllocationMode:  resourceapi.DeviceAllocationModeExactCount,
+								Count:           1,
+							},
+						},
+					},
+				},
+			},
+		},
+		&resourceapi.ResourceClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "resource-claim-2",
+				Namespace: "test-ns",
+				UID:       types.UID("claim-uid-2"),
+			},
+			Spec: resourceapi.ResourceClaimSpec{
+				Devices: resourceapi.DeviceClaim{
+					Requests: []resourceapi.DeviceRequest{
+						{
+							Exactly: &resourceapi.ExactDeviceRequest{
+								DeviceClassName: "nvidia.com/gpu",
+								AllocationMode:  resourceapi.DeviceAllocationModeExactCount,
+								Count:           2,
+							},
+						},
+					},
+				},
+			},
+		},
+		&resourceapi.ResourceSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "resource-slice-1",
+				UID:  types.UID("slice-uid-1"),
+			},
+			Spec: resourceapi.ResourceSliceSpec{
+				Driver: "nvidia.com/gpu",
+				Devices: []resourceapi.Device{
+					{
+						Name: "gpu-0",
+					},
+				},
+			},
+		},
+		&resourceapi.DeviceClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "device-class-1",
+				UID:  types.UID("device-class-uid-1"),
+			},
+		},
+		&resourceapi.ResourceClaimTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "resource-claim-template-1",
+				Namespace: "default",
+				UID:       types.UID("template-uid-1"),
+			},
+			Spec: resourceapi.ResourceClaimTemplateSpec{
+				Spec: resourceapi.ResourceClaimSpec{
+					Devices: resourceapi.DeviceClaim{
+						Requests: []resourceapi.DeviceRequest{
+							{
+								Exactly: &resourceapi.ExactDeviceRequest{
+									DeviceClassName: "nvidia.com/gpu",
+									AllocationMode:  resourceapi.DeviceAllocationModeExactCount,
+									Count:           1,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	kaiSchedulerObjects := []runtime.Object{
+		&enginev2.Queue{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: enginev2.QueueSpec{
+				Resources: &enginev2.QueueResources{},
+			},
+		},
+	}
+
+	clusterInfo := newClusterInfoTestsWithDRA(t, clusterInfoTestParams{
+		kubeObjects:         kubeObjects,
+		kaiSchedulerObjects: kaiSchedulerObjects,
+	}, true)
+
+	snapshot, err := clusterInfo.Snapshot()
+	assert.Nil(t, err)
+	assert.NotNil(t, snapshot)
+
+	// Verify ResourceClaims are snapshot
+	assert.Equal(t, 2, len(snapshot.ResourceClaims))
+	assert.NotNil(t, snapshot.ResourceClaims[common_info.ResourceClaimID("default/resource-claim-1")])
+	assert.NotNil(t, snapshot.ResourceClaims[common_info.ResourceClaimID("test-ns/resource-claim-2")])
+	assert.Equal(t, "resource-claim-1", snapshot.ResourceClaims[common_info.ResourceClaimID("default/resource-claim-1")].Name)
+	assert.Equal(t, "default", snapshot.ResourceClaims[common_info.ResourceClaimID("default/resource-claim-1")].Namespace)
+
+	// Verify ResourceSlices are snapshot
+	assert.Equal(t, 1, len(snapshot.ResourceSlices))
+	assert.NotNil(t, snapshot.ResourceSlices[common_info.ResourceSliceID("slice-uid-1")])
+	assert.Equal(t, "resource-slice-1", snapshot.ResourceSlices[common_info.ResourceSliceID("slice-uid-1")].Name)
+
+	// Verify DeviceClasses are snapshot
+	assert.Equal(t, 1, len(snapshot.DeviceClasses))
+	assert.NotNil(t, snapshot.DeviceClasses[common_info.DeviceClassID("device-class-uid-1")])
+	assert.Equal(t, "device-class-1", snapshot.DeviceClasses[common_info.DeviceClassID("device-class-uid-1")].Name)
+
+	// Verify ResourceClaimTemplates are snapshot
+	assert.Equal(t, 1, len(snapshot.ResourceClaimTemplates))
+	assert.NotNil(t, snapshot.ResourceClaimTemplates[common_info.ResourceClaimTemplateID("default/resource-claim-template-1")])
+	assert.Equal(t, "resource-claim-template-1", snapshot.ResourceClaimTemplates[common_info.ResourceClaimTemplateID("default/resource-claim-template-1")].Name)
+	assert.Equal(t, "default", snapshot.ResourceClaimTemplates[common_info.ResourceClaimTemplateID("default/resource-claim-template-1")].Namespace)
+}
+
+func TestSnapshotDRAResources_Disabled(t *testing.T) {
+	kubeObjects := []runtime.Object{
+		&resourceapi.ResourceClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "resource-claim-1",
+				Namespace: "default",
+			},
+		},
+		&resourceapi.ResourceSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "resource-slice-1",
+			},
+		},
+		&resourceapi.DeviceClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "device-class-1",
+			},
+		},
+		&resourceapi.ResourceClaimTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "resource-claim-template-1",
+				Namespace: "default",
+			},
+		},
+	}
+
+	kaiSchedulerObjects := []runtime.Object{
+		&enginev2.Queue{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: enginev2.QueueSpec{
+				Resources: &enginev2.QueueResources{},
+			},
+		},
+	}
+
+	clusterInfo := newClusterInfoTestsWithDRA(t, clusterInfoTestParams{
+		kubeObjects:         kubeObjects,
+		kaiSchedulerObjects: kaiSchedulerObjects,
+	}, false)
+
+	snapshot, err := clusterInfo.Snapshot()
+	assert.Nil(t, err)
+	assert.NotNil(t, snapshot)
+
+	// Verify DRA resource maps are initialized but empty (backwards compatibility)
+	assert.NotNil(t, snapshot.ResourceClaims)
+	assert.Equal(t, 0, len(snapshot.ResourceClaims))
+	assert.NotNil(t, snapshot.ResourceSlices)
+	assert.Equal(t, 0, len(snapshot.ResourceSlices))
+	assert.NotNil(t, snapshot.DeviceClasses)
+	assert.Equal(t, 0, len(snapshot.DeviceClasses))
+	assert.NotNil(t, snapshot.ResourceClaimTemplates)
+	assert.Equal(t, 0, len(snapshot.ResourceClaimTemplates))
+}
+
+func TestSnapshotDRAResources_EmptyWhenNoResources(t *testing.T) {
+	kaiSchedulerObjects := []runtime.Object{
+		&enginev2.Queue{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: enginev2.QueueSpec{
+				Resources: &enginev2.QueueResources{},
+			},
+		},
+	}
+
+	clusterInfo := newClusterInfoTestsWithDRA(t, clusterInfoTestParams{
+		kubeObjects:         []runtime.Object{},
+		kaiSchedulerObjects: kaiSchedulerObjects,
+	}, true)
+
+	snapshot, err := clusterInfo.Snapshot()
+	assert.Nil(t, err)
+	assert.NotNil(t, snapshot)
+
+	// Verify DRA resource maps are initialized but empty when no resources exist
+	assert.NotNil(t, snapshot.ResourceClaims)
+	assert.Equal(t, 0, len(snapshot.ResourceClaims))
+	assert.NotNil(t, snapshot.ResourceSlices)
+	assert.Equal(t, 0, len(snapshot.ResourceSlices))
+	assert.NotNil(t, snapshot.DeviceClasses)
+	assert.Equal(t, 0, len(snapshot.DeviceClasses))
+	assert.NotNil(t, snapshot.ResourceClaimTemplates)
+	assert.Equal(t, 0, len(snapshot.ResourceClaimTemplates))
+}
+
+func TestSnapshotDRAResources_ErrorHandling(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dl := data_lister.NewMockDataLister(ctrl)
+	clusterInfo := newClusterInfoTestsWithDRA(t, clusterInfoTestParams{
+		kubeObjects:         []runtime.Object{},
+		kaiSchedulerObjects: []runtime.Object{},
+	}, true)
+
+	// Mock errors for DRA resource listing
+	dl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil).AnyTimes()
+	dl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil).AnyTimes()
+	dl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil).AnyTimes()
+	dl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil).AnyTimes()
+	dl.EXPECT().ListPodGroups().Return([]*enginev2alpha2.PodGroup{}, nil).AnyTimes()
+	dl.EXPECT().ListConfigMaps().Return([]*corev1.ConfigMap{}, nil).AnyTimes()
+	dl.EXPECT().ListTopologies().Return([]*kaiv1alpha1.Topology{}, nil).AnyTimes()
+	dl.EXPECT().ListResourceUsage().Return(queue_info.NewClusterUsage(), nil).AnyTimes()
+
+	// Simulate error listing ResourceClaims
+	dl.EXPECT().ListResourceClaims().Return(nil, fmt.Errorf("error listing resource claims"))
+	dl.EXPECT().ListResourceSlices().Return([]*resourceapi.ResourceSlice{}, nil)
+	dl.EXPECT().ListDeviceClasses().Return([]*resourceapi.DeviceClass{}, nil)
+	dl.EXPECT().ListResourceClaimTemplates().Return([]*resourceapi.ResourceClaimTemplate{}, nil)
+
+	clusterInfo.dataLister = dl
+	snapshot, err := clusterInfo.Snapshot()
+
+	// Snapshot should still succeed even if DRA resource listing fails
+	// (errors are logged but don't fail the entire snapshot)
+	assert.Nil(t, err)
+	assert.NotNil(t, snapshot)
+	// ResourceClaims map should be empty due to error
+	assert.Equal(t, 0, len(snapshot.ResourceClaims))
+	// Other DRA resources should still be snapshot
+	assert.NotNil(t, snapshot.ResourceSlices)
+	assert.NotNil(t, snapshot.DeviceClasses)
+	assert.NotNil(t, snapshot.ResourceClaimTemplates)
 }

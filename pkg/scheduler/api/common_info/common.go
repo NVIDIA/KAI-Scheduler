@@ -19,4 +19,12 @@ type CSIDriverID types.UID
 
 type ConfigMapID types.UID
 
+type ResourceClaimID types.UID
+
+type ResourceSliceID types.UID
+
+type DeviceClassID types.UID
+
+type ResourceClaimTemplateID types.UID
+
 type SchedulingConstraintsSignature string
