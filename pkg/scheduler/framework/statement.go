@@ -62,14 +62,14 @@ func (s *Statement) Rollback(cp Checkpoint) error {
 func (s *Statement) Evict(reclaimeeTask *pod_info.PodInfo, message string,
 	evictionMetadata eviction_info.EvictionMetadata) error {
 	// Update status in session
-	job, jobFound := s.ssn.PodGroupInfos[reclaimeeTask.Job]
+	job, jobFound := s.ssn.ClusterInfo.PodGroupInfos[reclaimeeTask.Job]
 	if !jobFound {
 		log.InfraLogger.Errorf("Failed to find Job <%s> in session <%s>",
 			reclaimeeTask.Job, s.sessionID)
 		return fmt.Errorf("failed to find job <%s> in session", reclaimeeTask.Job)
 	}
 
-	node, nodeFound := s.ssn.Nodes[reclaimeeTask.NodeName]
+	node, nodeFound := s.ssn.ClusterInfo.Nodes[reclaimeeTask.NodeName]
 	if !nodeFound {
 		log.InfraLogger.Errorf("Failed to find node: %v", reclaimeeTask.NodeName)
 		return fmt.Errorf("node doesn't exist in sesssion: <%s>", reclaimeeTask.NodeName)
@@ -119,7 +119,7 @@ func (s *Statement) Evict(reclaimeeTask *pod_info.PodInfo, message string,
 }
 
 func (s *Statement) commitEvict(reclaimee *pod_info.PodInfo, evictOp evictOperation) error {
-	reclaimeePodGroup, found := s.ssn.PodGroupInfos[reclaimee.Job]
+	reclaimeePodGroup, found := s.ssn.ClusterInfo.PodGroupInfos[reclaimee.Job]
 	if !found {
 		return fmt.Errorf("could not reclaim pod <%v/%v> because could not find its podGroup <%v>",
 			reclaimee.Namespace, reclaimee.Name, reclaimee.Job)
@@ -146,7 +146,7 @@ func (s *Statement) unevict(
 	reclaimee *pod_info.PodInfo, previousStatus pod_status.PodStatus, node *node_info.NodeInfo,
 	previousGpuGroups []string, previousIsVirtualStatus bool) error {
 	// Update status in session
-	job, found := s.ssn.PodGroupInfos[reclaimee.Job]
+	job, found := s.ssn.ClusterInfo.PodGroupInfos[reclaimee.Job]
 	if found {
 		if err := job.UpdateTaskStatus(reclaimee, previousStatus); err != nil {
 			log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
@@ -187,8 +187,8 @@ func (s *Statement) unevict(
 
 func (s *Statement) Pipeline(task *pod_info.PodInfo, hostname string, updateTaskIfExistsOnNode bool) error {
 	// Only update status in session
-	job, foundJob := s.ssn.PodGroupInfos[task.Job]
-	node, foundNode := s.ssn.Nodes[hostname]
+	job, foundJob := s.ssn.ClusterInfo.PodGroupInfos[task.Job]
+	node, foundNode := s.ssn.ClusterInfo.Nodes[hostname]
 	if !foundNode || !foundJob {
 		log.InfraLogger.Errorf("Failed to find Node <%s> or job: <%s> in Session <%s> index when binding.",
 			hostname, task.Job, s.sessionID)
@@ -280,10 +280,10 @@ func (s *Statement) Pipeline(task *pod_info.PodInfo, hostname string, updateTask
 }
 
 func (s *Statement) Allocate(task *pod_info.PodInfo, hostname string) error {
-	node := s.ssn.Nodes[hostname]
+	node := s.ssn.ClusterInfo.Nodes[hostname]
 
 	// Only update status in session
-	job, found := s.ssn.PodGroupInfos[task.Job]
+	job, found := s.ssn.ClusterInfo.PodGroupInfos[task.Job]
 	if found {
 		if err := job.UpdateTaskStatus(task, pod_status.Allocated); err != nil {
 			log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
@@ -298,7 +298,7 @@ func (s *Statement) Allocate(task *pod_info.PodInfo, hostname string) error {
 
 	task.NodeName = hostname
 
-	if node, found := s.ssn.Nodes[hostname]; found {
+	if node, found := s.ssn.ClusterInfo.Nodes[hostname]; found {
 		if err := node.AddTask(task); err != nil {
 			log.InfraLogger.Errorf("Failed to add task <%v/%v> to node <%v> in Session <%v>: %v",
 				task.Namespace, task.Name, hostname, s.sessionID, err)
@@ -344,7 +344,7 @@ func (s *Statement) Allocate(task *pod_info.PodInfo, hostname string) error {
 
 func (s *Statement) commitAllocate(task *pod_info.PodInfo) error {
 	hostname := task.NodeName
-	node, found := s.ssn.Nodes[hostname]
+	node, found := s.ssn.ClusterInfo.Nodes[hostname]
 	if !found {
 		log.InfraLogger.Errorf("Failed to find node: %v", hostname)
 		return fmt.Errorf("node doesn't exist on cluster")
@@ -376,7 +376,7 @@ func (s *Statement) commitAllocate(task *pod_info.PodInfo) error {
 // unallocate the pod for task
 func (s *Statement) unallocate(task *pod_info.PodInfo, previousNodeName string, previousIsVirtualStatus bool) error {
 	// Update status in session
-	job, found := s.ssn.PodGroupInfos[task.Job]
+	job, found := s.ssn.ClusterInfo.PodGroupInfos[task.Job]
 	if found {
 		if err := job.UpdateTaskStatus(task, pod_status.Pending); err != nil {
 			log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
@@ -387,7 +387,7 @@ func (s *Statement) unallocate(task *pod_info.PodInfo, previousNodeName string, 
 			task.Job, s.sessionID)
 	}
 
-	if node, found := s.ssn.Nodes[task.NodeName]; found {
+	if node, found := s.ssn.ClusterInfo.Nodes[task.NodeName]; found {
 		log.InfraLogger.V(6).Infof("Remove Task <%v> from node <%v>", task.Name, task.NodeName)
 		err := node.RemoveTask(task)
 		if err != nil {
@@ -419,7 +419,7 @@ func (s *Statement) unpipeline(
 	task *pod_info.PodInfo, previousNode string, previousStatus pod_status.PodStatus, previousGpuGroups []string,
 	previousIsVirtualStatus bool) error {
 	// Only update status in session
-	job, found := s.ssn.PodGroupInfos[task.Job]
+	job, found := s.ssn.ClusterInfo.PodGroupInfos[task.Job]
 	if found {
 		statusToRevertTo := previousStatus
 		if err := job.UpdateTaskStatus(task, statusToRevertTo); err != nil {
@@ -436,7 +436,7 @@ func (s *Statement) unpipeline(
 	task.GPUGroups = previousGpuGroups
 	task.IsVirtualStatus = previousIsVirtualStatus
 
-	if node, found := s.ssn.Nodes[hostname]; found {
+	if node, found := s.ssn.ClusterInfo.Nodes[hostname]; found {
 		if err := node.RemoveTask(task); err != nil {
 			log.InfraLogger.Errorf("Failed to unpipeline task <%v/%v> from node <%v> in Session <%v>: %v",
 				task.Namespace, task.Name, hostname, s.sessionID, err)

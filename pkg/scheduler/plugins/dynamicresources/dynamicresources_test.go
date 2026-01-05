@@ -372,7 +372,7 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 
 			time.Sleep(1 * time.Millisecond)
 
-			for _, job := range ssn.PodGroupInfos {
+			for _, job := range ssn.ClusterInfo.PodGroupInfos {
 				for _, task := range job.GetAllPodsMap() {
 					if task.Status == pod_status.Pending {
 						err := ssn.PrePredicateFn(task, job)

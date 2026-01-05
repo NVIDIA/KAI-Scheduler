@@ -22,6 +22,7 @@ import (
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/scenario"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/utils"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_affinity"
@@ -43,7 +44,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 		BeforeEach(func() {
 			ssn, _ = initializeSession(0, 0)
 			submitQueue := createQueue("team-a")
-			ssn.Queues[submitQueue.UID] = submitQueue
+			ssn.ClusterInfo.Queues[submitQueue.UID] = submitQueue
 			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending, []v1.ResourceRequirements{})
 			recordedVictimsJobs := []*podgroup_info.PodGroupInfo{}
 			victimsQueue := utils.GetVictimsQueue(ssn, nil)
@@ -63,7 +64,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 		BeforeEach(func() {
 			ssn, _ = initializeSession(0, 0)
 			submitQueue := createQueue("team-a")
-			ssn.Queues[submitQueue.UID] = submitQueue
+			ssn.ClusterInfo.Queues[submitQueue.UID] = submitQueue
 			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
 			recordedVictimsJobs := []*podgroup_info.PodGroupInfo{}
 			victimsQueue := utils.GetVictimsQueue(ssn, nil)
@@ -79,7 +80,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 		BeforeEach(func() {
 			ssn, _ = initializeSession(2, 2)
 			submitQueue := createQueue("team-a")
-			ssn.Queues[submitQueue.UID] = submitQueue
+			ssn.ClusterInfo.Queues[submitQueue.UID] = submitQueue
 			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
 		})
 
@@ -104,7 +105,7 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 		})
 
 		It("returns scenario with all tasks in single groups when minAvailable is amount of pods", func() {
-			for _, podGroupInfo := range ssn.PodGroupInfos {
+			for _, podGroupInfo := range ssn.ClusterInfo.PodGroupInfos {
 				podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].SetMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.GetAllPodsMap()))
 			}
@@ -130,19 +131,19 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 	Context("with recorded victims", func() {
 		It("returns scenarios that have the same recorded victims", func() {
 			ssn, _ = initializeSession(3, 2)
-			for _, podGroupInfo := range ssn.PodGroupInfos {
+			for _, podGroupInfo := range ssn.ClusterInfo.PodGroupInfos {
 				podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].SetMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.GetAllPodsMap()))
 			}
 			submitQueue := createQueue("team-a")
-			ssn.Queues[submitQueue.UID] = submitQueue
+			ssn.ClusterInfo.Queues[submitQueue.UID] = submitQueue
 			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
 
 			var recordedVictimsJobs []*podgroup_info.PodGroupInfo
 			recordedVictimIndexes := []int{0, 2}
 			podGroupIndex := 0
 
-			for _, podGroupInfo := range ssn.PodGroupInfos {
+			for _, podGroupInfo := range ssn.ClusterInfo.PodGroupInfos {
 				if slices.Contains(recordedVictimIndexes, podGroupIndex) {
 					recordedVictimsJobs = append(recordedVictimsJobs, podGroupInfo)
 				}
@@ -164,19 +165,19 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 
 		It("returns scenarios that have correct number of potential victims", func() {
 			ssn, _ = initializeSession(3, 2)
-			for _, podGroupInfo := range ssn.PodGroupInfos {
+			for _, podGroupInfo := range ssn.ClusterInfo.PodGroupInfos {
 				podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].SetMinAvailable(int32(len(podGroupInfo.GetAllPodsMap())))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(len(podGroupInfo.GetAllPodsMap()))
 			}
 			submitQueue := createQueue("team-a")
-			ssn.Queues[submitQueue.UID] = submitQueue
+			ssn.ClusterInfo.Queues[submitQueue.UID] = submitQueue
 			reclaimerJob, _ = createJobWithTasks(1, 1, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
 
 			var recordedVictimsJobs []*podgroup_info.PodGroupInfo
 			recordedVictimIndexes := []int{0, 2}
 			podGroupIndex := 0
 
-			for _, podGroupInfo := range ssn.PodGroupInfos {
+			for _, podGroupInfo := range ssn.ClusterInfo.PodGroupInfos {
 				if slices.Contains(recordedVictimIndexes, podGroupIndex) {
 					recordedVictimsJobs = append(recordedVictimsJobs, podGroupInfo)
 				}
@@ -203,18 +204,18 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			// run 1 job with 3 tasks, set minAvailable to 1 for elastic
 			ssn, _ = initializeSession(1, 3)
 			minAvailable := 1
-			for _, podGroupInfo := range ssn.PodGroupInfos {
+			for _, podGroupInfo := range ssn.ClusterInfo.PodGroupInfos {
 				podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].SetMinAvailable(int32(minAvailable))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(minAvailable)
 			}
 			submitQueue := createQueue("team-a")
-			ssn.Queues[submitQueue.UID] = submitQueue
+			ssn.ClusterInfo.Queues[submitQueue.UID] = submitQueue
 			reclaimerJob, _ = createJobWithTasks(1, 2, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
 
 			var recordedVictimsJobs []*podgroup_info.PodGroupInfo
 
 			// Only the first pod group with the last task is recordedVictimJobs
-			for _, podGroupInfo := range ssn.PodGroupInfos {
+			for _, podGroupInfo := range ssn.ClusterInfo.PodGroupInfos {
 				var partialTasks []*pod_info.PodInfo
 				for _, podInfo := range podGroupInfo.GetAllPodsMap() {
 					// use last pod as recorded victim as sorting will be reversed
@@ -244,18 +245,18 @@ var _ = Describe("PodAccumulatedScenarioBuilder", func() {
 			// run 1 job with 4 tasks, set minAvailable to 2 for elastic
 			ssn, _ = initializeSession(1, 4)
 			minAvailable := 2
-			for _, podGroupInfo := range ssn.PodGroupInfos {
+			for _, podGroupInfo := range ssn.ClusterInfo.PodGroupInfos {
 				podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].SetMinAvailable(int32(minAvailable))
 				podGroupInfo.PodGroup.Spec.MinMember = int32(minAvailable)
 			}
 			submitQueue := createQueue("team-a")
-			ssn.Queues[submitQueue.UID] = submitQueue
+			ssn.ClusterInfo.Queues[submitQueue.UID] = submitQueue
 			reclaimerJob, _ = createJobWithTasks(1, 2, "team-a", v1.PodPending, []v1.ResourceRequirements{requireOneGPU()})
 
 			var recordedVictimsJobs []*podgroup_info.PodGroupInfo
 
 			// Only the first pod group with the last task is recordedVictimJobs
-			for _, podGroupInfo := range ssn.PodGroupInfos {
+			for _, podGroupInfo := range ssn.ClusterInfo.PodGroupInfos {
 				var partialTasks []*pod_info.PodInfo
 				for _, podInfo := range podGroupInfo.GetAllPodsMap() {
 					// use last pod as recorded victim as sorting will be reversed
@@ -324,10 +325,12 @@ func initializeSession(jobsCount, tasksPerJob int) (*framework.Session, []*pod_i
 	}
 
 	ssn := &framework.Session{
-		PodGroupInfos: podgroup_infos,
-		Queues:        queuesMap,
-		Nodes: map[string]*node_info.NodeInfo{
-			node.Name: node,
+		ClusterInfo: &api.ClusterInfo{
+			PodGroupInfos: podgroup_infos,
+			Queues:        queuesMap,
+			Nodes: map[string]*node_info.NodeInfo{
+				node.Name: node,
+			},
 		},
 	}
 	return ssn, tasks

@@ -70,7 +70,7 @@ func (drap *draPlugin) OnSessionOpen(ssn *framework.Session) {
 }
 
 func (drap *draPlugin) assumePendingClaims(ssn *framework.Session) {
-	for _, podGroup := range ssn.PodGroupInfos {
+	for _, podGroup := range ssn.ClusterInfo.PodGroupInfos {
 		for _, pod := range podGroup.GetAllPodsMap() {
 			if pod.BindRequest == nil {
 				continue
@@ -157,7 +157,7 @@ func (drap *draPlugin) allocateHandlerFn(ssn *framework.Session) func(event *fra
 	return func(event *framework.Event) {
 		pod := event.Task.Pod
 		nodeName := event.Task.NodeName
-		node := ssn.Nodes[nodeName].Node
+		node := ssn.ClusterInfo.Nodes[nodeName].Node
 
 		for _, podClaim := range pod.Spec.ResourceClaims {
 			// TODO: support resource claim template

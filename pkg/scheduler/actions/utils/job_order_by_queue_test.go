@@ -11,6 +11,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -35,7 +36,7 @@ const (
 func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 	ssn := newPrioritySession()
 
-	ssn.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
 		testQueue: {
 			UID:         testQueue,
 			ParentQueue: testDepartment,
@@ -45,7 +46,7 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 			ChildQueues: []common_info.QueueID{testQueue},
 		},
 	}
-	ssn.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+	ssn.ClusterInfo.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 		"0": {
 			Name:     "p150",
 			Priority: 150,
@@ -125,7 +126,7 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 		FilterUnready:     true,
 		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
 	})
-	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
 
 	expectedJobsOrder := []string{"p255", "p200", "p160", "p150"}
 	actualJobsOrder := []string{}
@@ -311,8 +312,8 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ssn := newPrioritySession()
-			ssn.Queues = tt.queues
-			ssn.PodGroupInfos = tt.initJobs
+			ssn.ClusterInfo.Queues = tt.queues
+			ssn.ClusterInfo.PodGroupInfos = tt.initJobs
 			proportion.New(map[string]string{}).OnSessionOpen(ssn)
 
 			activeDepartments := scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
@@ -635,7 +636,7 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ssn := newPrioritySession()
-			ssn.Queues = tt.fields.Queues
+			ssn.ClusterInfo.Queues = tt.fields.Queues
 			activeDepartments := scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
 				if tt.fields.jobsOrderInitOptions.VictimQueue {
 					return !ssn.JobOrderFn(l, r)
@@ -749,7 +750,7 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ssn := newPrioritySession()
-			ssn.Queues = tt.fields.Queues
+			ssn.ClusterInfo.Queues = tt.fields.Queues
 			activeDepartments := scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
 				if tt.fields.jobsOrderInitOptions.VictimQueue {
 					return !ssn.JobOrderFn(l, r)
@@ -789,7 +790,7 @@ func TestJobsOrderByQueues_OrphanQueue_AddsJobFitError(t *testing.T) {
 		ParentQueue: "missing-parent", // This parent doesn't exist
 	}
 
-	ssn.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
 		"orphan-queue": orphanQueue,
 		// Note: "missing-parent" is intentionally NOT in the map
 	}
@@ -812,7 +813,7 @@ func TestJobsOrderByQueues_OrphanQueue_AddsJobFitError(t *testing.T) {
 		},
 	}
 
-	ssn.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+	ssn.ClusterInfo.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 		"test-job": job,
 	}
 
@@ -821,7 +822,7 @@ func TestJobsOrderByQueues_OrphanQueue_AddsJobFitError(t *testing.T) {
 		FilterUnready:     false,
 		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
 	})
-	jobsOrder.InitializeWithJobs(ssn.PodGroupInfos)
+	jobsOrder.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
 
 	// The jobs order should be empty because the orphan queue's jobs are skipped
 	assert.True(t, jobsOrder.IsEmpty(), "Expected empty jobs order because orphan queue jobs are skipped from scheduling")
@@ -829,6 +830,7 @@ func TestJobsOrderByQueues_OrphanQueue_AddsJobFitError(t *testing.T) {
 
 func newPrioritySession() *framework.Session {
 	return &framework.Session{
+		ClusterInfo: &api.ClusterInfo{},
 		JobOrderFns: []common_info.CompareFn{
 			priority.JobOrderFn,
 			elastic.JobOrderFn,

@@ -155,7 +155,7 @@ func (s *byPodSolver) updateFeasibleNodes(ssn *framework.Session, victimTasks []
 		if !found {
 			newFeasibleNodes[potentialVictimTasks.NodeName] = true
 		}
-		s.feasibleNodes[potentialVictimTasks.NodeName] = ssn.Nodes[potentialVictimTasks.NodeName]
+		s.feasibleNodes[potentialVictimTasks.NodeName] = ssn.ClusterInfo.Nodes[potentialVictimTasks.NodeName]
 	}
 	return newFeasibleNodes
 }

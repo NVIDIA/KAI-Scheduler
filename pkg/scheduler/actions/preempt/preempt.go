@@ -52,7 +52,7 @@ func (alloc *preemptAction) Execute(ssn *framework.Session) {
 		FilterUnready:     true,
 		MaxJobsQueueDepth: ssn.GetJobsDepth(framework.Preempt),
 	})
-	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
 
 	log.InfraLogger.V(2).Infof("There are <%d> PodGroupInfos and <%d> Queues in total for scheduling",
 		jobsOrderByQueues.Len(), ssn.CountLeafQueues())
@@ -99,7 +99,7 @@ func (alloc *preemptAction) Execute(ssn *framework.Session) {
 func attemptToPreemptForPreemptor(
 	ssn *framework.Session, preemptor *podgroup_info.PodGroupInfo,
 ) (bool, *framework.Statement, []string) {
-	resReq := podgroup_info.GetTasksToAllocateInitResource(preemptor, ssn.PodSetOrderFn, ssn.TaskOrderFn, false)
+	resReq := podgroup_info.GetTasksToAllocateInitResource(preemptor, ssn.PodSetOrderFn, ssn.TaskOrderFn, false, ssn.ClusterInfo.MinNodeGPUMemory)
 	log.InfraLogger.V(3).Infof(
 		"Attempting to preempt for job: <%v/%v>, priority: <%v>, queue: <%v>, resources: <%v>",
 		preemptor.Namespace, preemptor.Name, preemptor.Priority, preemptor.Queue, resReq)
@@ -111,7 +111,7 @@ func attemptToPreemptForPreemptor(
 		return false, nil, nil
 	}
 
-	feasibleNodes := common.FeasibleNodesForJob(maps.Values(ssn.Nodes), preemptor)
+	feasibleNodes := common.FeasibleNodesForJob(maps.Values(ssn.ClusterInfo.Nodes), preemptor)
 	solver := solvers.NewJobsSolver(
 		feasibleNodes,
 		ssn.PreemptScenarioValidator,

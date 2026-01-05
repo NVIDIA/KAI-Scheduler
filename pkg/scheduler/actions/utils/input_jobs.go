@@ -45,12 +45,13 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 		}
 
 		// Skip jobs whose queue doesn't exist
-		if _, found := jobsOrder.ssn.Queues[job.Queue]; !found {
+		queues := jobsOrder.ssn.ClusterInfo.Queues
+		if _, found := queues[job.Queue]; !found {
 			continue
 		}
 
 		// Skip jobs whose queue's parent queue doesn't exist
-		if _, found := jobsOrder.ssn.Queues[jobsOrder.ssn.Queues[job.Queue].ParentQueue]; !found {
+		if _, found := queues[queues[job.Queue].ParentQueue]; !found {
 			continue
 		}
 
