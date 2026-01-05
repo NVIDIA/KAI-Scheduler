@@ -12,7 +12,10 @@ A tiny side-project that visualizes GPU allocation in a KAI-Scheduler cluster as
 1) Port-forward the scheduler HTTP endpoint that has the snapshot plugin enabled.
 
 2) Run:
-- `go run ./cmd/gpu-tetris --snapshot-url http://localhost:8080/get-snapshot --listen :8099`
+- `cd cmd/gpu-tetris && go run . --snapshot-url http://localhost:8080/get-snapshot --listen :8099`
+
+Alternative (from repo root):
+- `go -C cmd/gpu-tetris run . --snapshot-url http://localhost:8080/get-snapshot --listen :8099`
 
 3) Open:
 - `http://localhost:8099/`
