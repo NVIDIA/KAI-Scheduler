@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>K8s GPU Tetris</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="title">K8s GPU Tetris</div>
+    <div class="meta" id="meta">Loading…</div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="section-title">Create Pod</div>
+      <form id="createPod" class="form">
+        <label class="label">Namespace
+          <input class="input" name="namespace" placeholder="default" />
+        </label>
+        <label class="label">Name
+          <input class="input" name="name" placeholder="(auto)" />
+        </label>
+        <label class="label">Queue
+          <input class="input" name="queue" placeholder="default-queue" />
+        </label>
+        <label class="label">Mode
+          <select class="input" name="mode">
+            <option value="whole">Whole GPU</option>
+            <option value="fraction">GPU Fraction</option>
+            <option value="memory">GPU Memory (MiB)</option>
+          </select>
+        </label>
+        <label class="label">GPU Count
+          <input class="input" name="gpuCount" type="number" min="1" value="1" />
+        </label>
+        <label class="label">GPU Fraction
+          <input class="input" name="gpuFraction" type="number" min="0.01" max="0.99" step="0.01" value="0.5" />
+        </label>
+        <label class="label">Fraction #Devices
+          <input class="input" name="fractionNumDevices" type="number" min="1" value="1" />
+        </label>
+        <label class="label">GPU Memory (MiB)
+          <input class="input" name="gpuMemoryMiB" type="number" min="1" value="2000" />
+        </label>
+        <label class="label">Image
+          <input class="input" name="image" placeholder="busybox:1.36" />
+        </label>
+        <button class="button" type="submit">Create</button>
+        <div class="form-status" id="createPodStatus"></div>
+      </form>
+
+      <div class="section-title">Topology</div>
+      <div id="topology"></div>
+    </aside>
+
+    <main class="main">
+      <div class="section-title">Nodes</div>
+      <div id="nodes"></div>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #111; }
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ddd;
+}
+.title { font-weight: 700; }
+.meta { font-size: 12px; color: #555; }
+
+.layout { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 48px); }
+
+.sidebar {
+  border-right: 1px solid #ddd;
+  padding: 12px 12px;
+  overflow: auto;
+}
+.main { padding: 12px 16px; overflow: auto; }
+
+.section-title { font-size: 12px; font-weight: 700; color: #333; margin-bottom: 8px; text-transform: uppercase; }
+
+.form { margin-bottom: 14px; }
+.label { display: block; font-size: 12px; color: #333; margin: 8px 0; }
+.input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+.button {
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #bbb;
+  background: #f3f3f3;
+  cursor: pointer;
+}
+.button:hover { background: #ededed; }
+.form-status { margin-top: 8px; font-size: 12px; color: #555; }
+
+.tree { list-style: none; padding-left: 12px; margin: 0; }
+.tree-item { margin: 4px 0; }
+.tree-button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.tree-button:hover { border-color: #ddd; background: #f7f7f7; }
+.tree-button.active { border-color: #bbb; background: #efefef; }
+
+.node {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.node-title { font-weight: 700; margin-bottom: 8px; }
+
+.board { display: flex; gap: 6px; align-items: flex-end; }
+.col {
+  position: relative;
+  width: 34px;
+  height: 180px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fafafa;
+  overflow: hidden;
+}
+.block {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid rgba(0,0,0,0.15);
+}
+.block-label {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  font-size: 9px;
+  color: rgba(0,0,0,0.75);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
