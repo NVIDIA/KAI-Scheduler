@@ -85,6 +85,17 @@ async function deleteTetrisPods() {
   return JSON.parse(text);
 }
 
+async function createTopology(payload) {
+  const resp = await fetch('/api/topology', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const text = await resp.text();
+  if (!resp.ok) throw new Error(text || resp.statusText);
+  return JSON.parse(text);
+}
+
 function setupCreatePodForm() {
   const form = document.getElementById('createPod');
   const status = document.getElementById('createPodStatus');
@@ -131,6 +142,45 @@ function setupCreatePodForm() {
     try {
       const res = await createPod(payload);
       status.textContent = `Created ${res.namespace}/${res.name}. Waiting for scheduling…`;
+      await refresh();
+    } catch (err) {
+      status.textContent = `Error: ${err.message}`;
+    }
+  });
+}
+
+function setupCreateTopologyForm() {
+  const form = document.getElementById('createTopology');
+  const status = document.getElementById('createTopologyStatus');
+  if (!form || !status) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    status.textContent = 'Creating topology…';
+
+    const fd = new FormData(form);
+    const name = String(fd.get('name') || '').trim();
+    const levelsRaw = String(fd.get('levels') || '');
+    const levels = levelsRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+    const assignmentsRaw = String(fd.get('assignments') || '');
+    const assignments = [];
+    for (const line of assignmentsRaw.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const parts = trimmed.split(/\s+/);
+      const node = parts[0];
+      const values = parts.slice(1);
+      assignments.push({ node, values });
+    }
+
+    try {
+      const res = await createTopology({ name, levels, assignments });
+      if (res.errors && res.errors.length) {
+        status.textContent = `Created ${res.topologyName}. Patched ${res.patchedNodes}. Errors: ${res.errors.length}`;
+      } else {
+        status.textContent = `Created ${res.topologyName}. Patched ${res.patchedNodes} node(s).`;
+      }
       await refresh();
     } catch (err) {
       status.textContent = `Error: ${err.message}`;
@@ -257,4 +307,5 @@ async function refresh() {
 
 refresh();
 setupCreatePodForm();
+setupCreateTopologyForm();
 setInterval(refresh, 5000);

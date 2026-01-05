@@ -99,6 +99,7 @@ func main() {
 	})
 	mux.HandleFunc("/viz.json", srv.handleViz)
 	mux.HandleFunc("/api/pods", srv.handleCreatePod)
+	mux.HandleFunc("/api/topology", srv.handleTopology)
 
 	uiSub, err := fs.Sub(uiFS, "ui")
 	if err != nil {

@@ -59,6 +59,21 @@
 
       <div class="section-title">Topology</div>
       <div id="topology"></div>
+
+      <div class="section-title">Create Topology</div>
+      <form id="createTopology" class="form">
+        <label class="label">Topology Name
+          <input class="input" name="name" placeholder="gpu-tetris-topology" />
+        </label>
+        <label class="label">Levels (node label keys)
+          <input class="input" name="levels" placeholder="topology.kubernetes.io/zone,kubernetes.io/hostname" />
+        </label>
+        <label class="label">Node assignments (one per line)
+          <textarea class="input" name="assignments" rows="6" placeholder="node-a zone-a node-a\nnode-b zone-b node-b"></textarea>
+        </label>
+        <button class="button" type="submit">Create + Assign</button>
+        <div class="form-status" id="createTopologyStatus"></div>
+      </form>
     </aside>
 
     <main class="main">
