@@ -13,6 +13,9 @@ func (p *UsageParams) SetDefaults() {
 	if p.HalfLifePeriod == nil {
 		// noop: disabled by default
 	}
+	if p.HalfLifePeriod != nil && p.HalfLifePeriod.Duration <= 0 {
+		p.HalfLifePeriod = nil
+	}
 	if p.WindowSize == nil {
 		p.WindowSize = &metav1.Duration{Duration: time.Hour * 24 * 7}
 	}
