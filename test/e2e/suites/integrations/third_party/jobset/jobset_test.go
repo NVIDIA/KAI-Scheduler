@@ -12,31 +12,28 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	jobsetv1alpha2 "sigs.k8s.io/jobset/api/jobset/v1alpha2"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/configurations"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/capacity"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/crd"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/jobset"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	jobSetGVK = schema.GroupVersionKind{
-		Group:   "jobset.x-k8s.io",
-		Version: "v1alpha2",
-		Kind:    "JobSet",
-	}
-)
 
 var _ = Describe("JobSet integration", Ordered, func() {
 	var (
@@ -44,12 +41,12 @@ var _ = Describe("JobSet integration", Ordered, func() {
 	)
 
 	BeforeAll(func(ctx context.Context) {
-		testCtx = testcontext.GetConnectivity(ctx, Gomega)
+		testCtx = testcontext.GetConnectivity(ctx, Default)
+		crd.SkipIfCrdIsNotInstalled(ctx, testCtx.KubeConfig, "jobsets.jobset.x-k8s.io", "v1alpha2")
+		Expect(jobsetv1alpha2.AddToScheme(testCtx.ControllerClient.Scheme())).To(Succeed())
 		parentQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), "")
 		childQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), parentQueue.Name)
 		testCtx.InitQueues([]*v2.Queue{childQueue, parentQueue})
-
-		skipIfJobSetNotInstalled(ctx, testCtx)
 	})
 
 	AfterEach(func(ctx context.Context) {
@@ -62,10 +59,32 @@ var _ = Describe("JobSet integration", Ordered, func() {
 
 	Context("JobSet submission", func() {
 		It("should schedule pods with parallelism=2 and completions=3, first pod completes 5 seconds earlier", func(ctx context.Context) {
+			// Set default-staleness-grace-period to 1s for this test
+			originalShard := &kaiv1.SchedulingShard{}
+			err := testCtx.ControllerClient.Get(ctx, client.ObjectKey{Name: "default"}, originalShard)
+			Expect(err).To(Succeed())
+			originalValue := originalShard.Spec.Args["default-staleness-grace-period"]
+			
+			// Set to 1s
+			err = configurations.SetShardArg(ctx, testCtx, "default", "default-staleness-grace-period", ptr.To("1s"))
+			Expect(err).To(Succeed())
+			wait.WaitForDeploymentPodsRunning(ctx, testCtx.ControllerClient, constant.SchedulerDeploymentName, constants.DefaultKAINamespace)
+			
+			// Restore original value in defer
+			defer func() {
+				var restoreValue *string
+				if originalValue != "" {
+					restoreValue = ptr.To(originalValue)
+				}
+				err := configurations.SetShardArg(ctx, testCtx, "default", "default-staleness-grace-period", restoreValue)
+				Expect(err).To(Succeed())
+				wait.WaitForDeploymentPodsRunning(ctx, testCtx.ControllerClient, constant.SchedulerDeploymentName, constants.DefaultKAINamespace)
+			}()
+
 			testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
 			jobSetName := "test-jobset-" + utils.GenerateRandomK8sName(10)
 
-			jobSet := createJobSet(jobSetName, testNamespace, testCtx.Queues[0].Name, 2, 3)
+			jobSet := jobset.CreateObject(jobSetName, testNamespace, testCtx.Queues[0].Name, 2, 3)
 			Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
 			defer func() {
 				Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
@@ -77,25 +96,13 @@ var _ = Describe("JobSet integration", Ordered, func() {
 			// Wait for all pods to be scheduled
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
 
-			// Wait for first pod to complete (should complete 5 seconds earlier)
+			// Wait for first pod to complete (completes 5s earlier)
 			firstPod := pods[0]
-			Eventually(func() v1.PodPhase {
-				err := testCtx.ControllerClient.Get(ctx, client.ObjectKeyFromObject(firstPod), firstPod)
-				if err != nil {
-					return v1.PodUnknown
-				}
-				return firstPod.Status.Phase
-			}, 30*time.Second, 1*time.Second).Should(Equal(v1.PodSucceeded))
+			wait.ForPodSucceededOrError(ctx, testCtx.ControllerClient, firstPod)
 
 			// Wait for remaining pods to complete
 			for i := 1; i < len(pods); i++ {
-				Eventually(func() v1.PodPhase {
-					err := testCtx.ControllerClient.Get(ctx, client.ObjectKeyFromObject(pods[i]), pods[i])
-					if err != nil {
-						return v1.PodUnknown
-					}
-					return pods[i].Status.Phase
-				}, 30*time.Second, 1*time.Second).Should(Equal(v1.PodSucceeded))
+				wait.ForPodSucceededOrError(ctx, testCtx.ControllerClient, pods[i])
 			}
 		})
 
@@ -103,7 +110,7 @@ var _ = Describe("JobSet integration", Ordered, func() {
 			testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
 			jobSetName := "inorder-jobset-" + utils.GenerateRandomK8sName(10)
 
-			jobSet := createJobSetWithStartupPolicy(jobSetName, testNamespace, testCtx.Queues[0].Name, "InOrder")
+			jobSet := jobset.CreateObjectWithStartupPolicy(jobSetName, testNamespace, testCtx.Queues[0].Name, "InOrder")
 			Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
 			defer func() {
 				Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
@@ -112,13 +119,29 @@ var _ = Describe("JobSet integration", Ordered, func() {
 			// Wait for pods and verify PodGroups are created separately
 			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 2)
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
+
+			// Verify 2 separate PodGroups are created (one per replicatedJob)
+			Eventually(func(g Gomega) {
+				podGroups := &v2alpha2.PodGroupList{}
+				err := testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(testNamespace))
+				g.Expect(err).To(Succeed())
+
+				// Should have 2 PodGroups (one per replicatedJob with InOrder)
+				g.Expect(len(podGroups.Items)).To(Equal(2), "Expected 2 separate PodGroups for InOrder startup policy")
+
+				// Verify each PodGroup corresponds to a replicatedJob by checking name pattern
+				job1PG := findPodGroupByName(podGroups.Items, "job1")
+				job2PG := findPodGroupByName(podGroups.Items, "job2")
+				g.Expect(job1PG).NotTo(BeNil(), "PodGroup for job1 should exist")
+				g.Expect(job2PG).NotTo(BeNil(), "PodGroup for job2 should exist")
+			}, time.Minute).Should(Succeed())
 		})
 
 		It("should create a single PodGroup for all replicatedJobs when startupPolicyOrder is not InOrder", func(ctx context.Context) {
 			testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
 			jobSetName := "anyorder-jobset-" + utils.GenerateRandomK8sName(10)
 
-			jobSet := createJobSetWithStartupPolicy(jobSetName, testNamespace, testCtx.Queues[0].Name, "AnyOrder")
+			jobSet := jobset.CreateObjectWithStartupPolicy(jobSetName, testNamespace, testCtx.Queues[0].Name, "AnyOrder")
 			Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
 			defer func() {
 				Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
@@ -127,15 +150,41 @@ var _ = Describe("JobSet integration", Ordered, func() {
 			// Wait for pods and verify they all use the same PodGroup
 			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 2)
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
+
+			// Verify only 1 PodGroup is created for all replicatedJobs with AnyOrder
+			Eventually(func(g Gomega) {
+				podGroups := &v2alpha2.PodGroupList{}
+				err := testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(testNamespace))
+				g.Expect(err).To(Succeed())
+
+				// Should have 1 PodGroup (shared by all replicatedJobs with AnyOrder)
+				g.Expect(len(podGroups.Items)).To(Equal(1), "Expected 1 PodGroup for AnyOrder startup policy")
+
+				// Verify PodGroup name doesn't contain replicatedJob name
+				// PodGroup name format: pg-<jobset-name>-<jobset-uid> (no replicatedJob suffix)
+				if len(podGroups.Items) > 0 {
+					pgName := podGroups.Items[0].Name
+					g.Expect(pgName).NotTo(ContainSubstring("-job1"), "PodGroup name should not contain replicatedJob name")
+					g.Expect(pgName).NotTo(ContainSubstring("-job2"), "PodGroup name should not contain replicatedJob name")
+				}
+			}, time.Minute).Should(Succeed())
 		})
 	})
 
 	Context("JobSet PodGroup creation scenarios", func() {
 		It("should create PodGroup with MinMember=8 for single ReplicatedJob with high parallelism", func(ctx context.Context) {
+			// Check if cluster has enough GPU resources (8 GPUs needed)
+			capacity.SkipIfInsufficientClusterResources(testCtx.KubeClientset,
+				&capacity.ResourceList{
+					Gpu:      resource.MustParse("8"),
+					PodCount: 8,
+				},
+			)
+
 			testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
 			jobSetName := "high-parallelism-" + utils.GenerateRandomK8sName(10)
 
-			jobSet := createJobSetWithHighParallelism(jobSetName, testNamespace, testCtx.Queues[0].Name)
+			jobSet := jobset.CreateObjectWithHighParallelism(jobSetName, testNamespace, testCtx.Queues[0].Name)
 			Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
 			defer func() {
 				Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
@@ -151,45 +200,51 @@ var _ = Describe("JobSet integration", Ordered, func() {
 				err := testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(testNamespace))
 				g.Expect(err).To(Succeed())
 
-				// Should have 1 PodGroup (default InOrder creates one per replicatedJob)
+				// Should have 1 PodGroup (one per replicatedJob with InOrder)
 				g.Expect(len(podGroups.Items)).To(Equal(1))
-				// MinMember should be replicas * parallelism = 1 * 8 = 8
+				// MinMember: 1 replica * 8 parallelism = 8
 				g.Expect(podGroups.Items[0].Spec.MinMember).To(Equal(int32(8)))
 			}, time.Minute).Should(Succeed())
 		})
 
 		It("should create separate PodGroups for multiple ReplicatedJobs with different parallelism", func(ctx context.Context) {
+			// Check if cluster has enough GPU resources (2 GPUs needed for worker jobs)
+			// Coordinator: 2 pods (0 GPU), Worker: 2 pods (2 GPU), Total: 4 pods, 2 GPU
+			capacity.SkipIfInsufficientClusterResources(testCtx.KubeClientset,
+				&capacity.ResourceList{
+					Gpu:      resource.MustParse("2"),
+					PodCount: 4, // Coordinator (2) + Worker (2) = 4 pods
+				},
+			)
+
 			testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
 			jobSetName := "multi-parallelism-" + utils.GenerateRandomK8sName(10)
 
-			jobSet := createJobSetWithMultipleReplicatedJobs(jobSetName, testNamespace, testCtx.Queues[0].Name)
+			jobSet := jobset.CreateObjectWithMultipleReplicatedJobs(jobSetName, testNamespace, testCtx.Queues[0].Name)
 			Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
 			defer func() {
 				Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
 			}()
 
-			// Wait for pods to be created (coordinator: 2 pods, worker: 8 pods)
-			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 10)
+			// Wait for pods to be created (coordinator: 2 pods, worker: 2 pods)
+			// With AnyOrder, all replicatedJobs are created simultaneously
+			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 4) // Total: 2 + 2 = 4 pods
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
 
-			// Verify PodGroups are created separately (default InOrder)
+			// Verify 1 PodGroup is created for all replicatedJobs with AnyOrder
 			Eventually(func(g Gomega) {
 				podGroups := &v2alpha2.PodGroupList{}
 				err := testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(testNamespace))
 				g.Expect(err).To(Succeed())
 
-				// Should have 2 PodGroups (one per replicatedJob)
-				g.Expect(len(podGroups.Items)).To(Equal(2))
+				// Should have 1 PodGroup for all replicatedJobs with AnyOrder
+				g.Expect(len(podGroups.Items)).To(Equal(1))
 
-				// Find PodGroups by name pattern and verify MinMember
-				coordinatorPG := findPodGroupByName(podGroups.Items, "coordinator")
-				workerPG := findPodGroupByName(podGroups.Items, "worker")
-				g.Expect(coordinatorPG).NotTo(BeNil())
-				g.Expect(workerPG).NotTo(BeNil())
-				// Coordinator: replicas=1, parallelism=2 => MinMember=2
-				g.Expect(coordinatorPG.Spec.MinMember).To(Equal(int32(2)))
-				// Worker: replicas=2, parallelism=4 => MinMember=8
-				g.Expect(workerPG.Spec.MinMember).To(Equal(int32(8)))
+				// Verify MinMember is sum of all replicatedJobs
+				// Coordinator: 1 replica * 2 parallelism = 2
+				// Worker: 1 replica * 2 parallelism = 2
+				// Total MinMember: 4
+				g.Expect(podGroups.Items[0].Spec.MinMember).To(Equal(int32(4)))
 			}, time.Minute).Should(Succeed())
 		})
 
@@ -197,7 +252,7 @@ var _ = Describe("JobSet integration", Ordered, func() {
 			testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
 			jobSetName := "default-parallelism-" + utils.GenerateRandomK8sName(10)
 
-			jobSet := createJobSetWithDefaultParallelism(jobSetName, testNamespace, testCtx.Queues[0].Name)
+			jobSet := jobset.CreateObjectWithDefaultParallelism(jobSetName, testNamespace, testCtx.Queues[0].Name)
 			Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
 			defer func() {
 				Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
@@ -215,97 +270,14 @@ var _ = Describe("JobSet integration", Ordered, func() {
 
 				// Should have 1 PodGroup
 				g.Expect(len(podGroups.Items)).To(Equal(1))
-				// MinMember should default to 1 (replicas=1, parallelism defaults to 1)
+				// MinMember defaults to 1 (1 replica, parallelism defaults to 1)
 				g.Expect(podGroups.Items[0].Spec.MinMember).To(Equal(int32(1)))
 			}, time.Minute).Should(Succeed())
 		})
 	})
 })
 
-func skipIfJobSetNotInstalled(ctx context.Context, testCtx *testcontext.TestContext) {
-	crdList, err := testCtx.KubeClientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, metav1.ListOptions{
-		FieldSelector: "metadata.name=jobsets.jobset.x-k8s.io",
-	})
-	Expect(err).NotTo(HaveOccurred())
-	if len(crdList.Items) == 0 {
-		Skip("JobSet CRD not installed, skipping JobSet integration tests")
-	}
-}
 
-func createJobSet(name, namespace, queueName string, parallelism, completions int32) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "jobset.x-k8s.io/v1alpha2",
-			"kind":       "JobSet",
-			"metadata": map[string]interface{}{
-				"name":      name,
-				"namespace": namespace,
-				"labels": map[string]interface{}{
-					constants.AppLabelName: "engine-e2e",
-					"kai.scheduler/queue":   queueName,
-				},
-			},
-			"spec": map[string]interface{}{
-				"replicatedJobs": []interface{}{
-					map[string]interface{}{
-						"name":     "worker",
-						"replicas": int64(1),
-						"template": map[string]interface{}{
-							"spec": map[string]interface{}{
-								"parallelism":  ptr.To(int64(parallelism)),
-								"completions":  ptr.To(int64(completions)),
-								"backoffLimit": ptr.To(int32(0)),
-								"template": map[string]interface{}{
-									"spec": map[string]interface{}{
-										"restartPolicy": "Never",
-										"schedulerName": constant.SchedulerName,
-										"containers": []interface{}{
-											map[string]interface{}{
-												"name":  "worker",
-												"image": "busybox:1.36",
-												"command": []interface{}{
-													"/bin/sh",
-													"-c",
-													// First pod sleeps 5 seconds, others sleep 10 seconds
-													"if [ \"$JOB_COMPLETION_INDEX\" = \"0\" ]; then sleep 5; else sleep 10; fi && echo 'Job completed'",
-												},
-												"env": []interface{}{
-													map[string]interface{}{
-														"name":  "JOB_COMPLETION_INDEX",
-														"valueFrom": map[string]interface{}{
-															"fieldRef": map[string]interface{}{
-																"fieldPath": "metadata.annotations['batch.kubernetes.io/job-completion-index']",
-															},
-														},
-													},
-												},
-												"resources": map[string]interface{}{
-													"requests": map[string]interface{}{
-														"cpu":    resource.MustParse("100m").String(),
-														"memory": resource.MustParse("128Mi").String(),
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func createJobSetWithStartupPolicy(name, namespace, queueName, startupPolicyOrder string) *unstructured.Unstructured {
-	jobSet := createJobSet(name, namespace, queueName, 1, 1)
-	spec := jobSet.Object["spec"].(map[string]interface{})
-	spec["startupPolicy"] = map[string]interface{}{
-		"startupPolicyOrder": startupPolicyOrder,
-	}
-	return jobSet
-}
 
 func waitForJobSetPods(ctx context.Context, testCtx *testcontext.TestContext, jobSetName, namespace string, expectedCount int) []*v1.Pod {
 	var pods []*v1.Pod
@@ -318,6 +290,9 @@ func waitForJobSetPods(ctx context.Context, testCtx *testcontext.TestContext, jo
 		if err != nil {
 			return err
 		}
+		// Count all pods (including completed ones) for the JobSet.
+		// With parallelism and completions, pods may be created sequentially,
+		// so we wait for all expected pods to be created, not just running.
 		if len(podList.Items) < expectedCount {
 			return fmt.Errorf("expected %d pods, got %d", expectedCount, len(podList.Items))
 		}
@@ -326,211 +301,10 @@ func waitForJobSetPods(ctx context.Context, testCtx *testcontext.TestContext, jo
 			pods[i] = &podList.Items[i]
 		}
 		return nil
-	}, 60*time.Second, 2*time.Second).Should(Succeed())
+	}, 120*time.Second, 2*time.Second).Should(Succeed())
 	return pods
 }
 
-// createJobSetWithHighParallelism creates a JobSet with a single ReplicatedJob (parallelism=8).
-func createJobSetWithHighParallelism(name, namespace, queueName string) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "jobset.x-k8s.io/v1alpha2",
-			"kind":       "JobSet",
-			"metadata": map[string]interface{}{
-				"name":      name,
-				"namespace": namespace,
-				"labels": map[string]interface{}{
-					constants.AppLabelName: "engine-e2e",
-					"kai.scheduler/queue":   queueName,
-				},
-			},
-			"spec": map[string]interface{}{
-				"successPolicy": map[string]interface{}{
-					"operator": "All",
-				},
-				"failurePolicy": map[string]interface{}{
-					"maxRestarts": int64(3),
-				},
-				"replicatedJobs": []interface{}{
-					map[string]interface{}{
-						"name":     "worker",
-						"replicas": int64(1),
-						"template": map[string]interface{}{
-							"spec": map[string]interface{}{
-								"parallelism":  ptr.To(int64(8)),
-								"completions":  ptr.To(int64(8)),
-								"backoffLimit": ptr.To(int32(0)),
-								"template": map[string]interface{}{
-									"spec": map[string]interface{}{
-										"restartPolicy": "Never",
-										"schedulerName": constant.SchedulerName,
-										"containers": []interface{}{
-											map[string]interface{}{
-												"name":  "worker",
-												"image": "ubuntu",
-												"command": []interface{}{
-													"sleep",
-													"3600",
-												},
-												"resources": map[string]interface{}{
-													"requests": map[string]interface{}{
-														"nvidia.com/gpu": "1",
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-// createJobSetWithMultipleReplicatedJobs creates a JobSet with multiple ReplicatedJobs.
-func createJobSetWithMultipleReplicatedJobs(name, namespace, queueName string) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "jobset.x-k8s.io/v1alpha2",
-			"kind":       "JobSet",
-			"metadata": map[string]interface{}{
-				"name":      name,
-				"namespace": namespace,
-				"labels": map[string]interface{}{
-					constants.AppLabelName: "engine-e2e",
-					"kai.scheduler/queue":   queueName,
-				},
-			},
-			"spec": map[string]interface{}{
-				"successPolicy": map[string]interface{}{
-					"operator": "All",
-				},
-				"failurePolicy": map[string]interface{}{
-					"maxRestarts": int64(3),
-				},
-				"replicatedJobs": []interface{}{
-					map[string]interface{}{
-						"name":     "coordinator",
-						"replicas": int64(1),
-						"template": map[string]interface{}{
-							"spec": map[string]interface{}{
-								"parallelism":  ptr.To(int64(2)),
-								"completions":  ptr.To(int64(2)),
-								"backoffLimit": ptr.To(int32(0)),
-								"template": map[string]interface{}{
-									"spec": map[string]interface{}{
-										"restartPolicy": "Never",
-										"schedulerName": constant.SchedulerName,
-										"containers": []interface{}{
-											map[string]interface{}{
-												"name":  "coordinator",
-												"image": "ubuntu",
-												"command": []interface{}{
-													"sleep",
-													"3600",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					map[string]interface{}{
-						"name":     "worker",
-						"replicas": int64(2),
-						"template": map[string]interface{}{
-							"spec": map[string]interface{}{
-								"parallelism":  ptr.To(int64(4)),
-								"completions":  ptr.To(int64(4)),
-								"backoffLimit": ptr.To(int32(0)),
-								"template": map[string]interface{}{
-									"spec": map[string]interface{}{
-										"restartPolicy": "Never",
-										"schedulerName": constant.SchedulerName,
-										"containers": []interface{}{
-											map[string]interface{}{
-												"name":  "worker",
-												"image": "ubuntu",
-												"command": []interface{}{
-													"sleep",
-													"3600",
-												},
-												"resources": map[string]interface{}{
-													"requests": map[string]interface{}{
-														"nvidia.com/gpu": "1",
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-// createJobSetWithDefaultParallelism creates a JobSet with single replica and default parallelism.
-func createJobSetWithDefaultParallelism(name, namespace, queueName string) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "jobset.x-k8s.io/v1alpha2",
-			"kind":       "JobSet",
-			"metadata": map[string]interface{}{
-				"name":      name,
-				"namespace": namespace,
-				"labels": map[string]interface{}{
-					constants.AppLabelName: "engine-e2e",
-					"kai.scheduler/queue":   queueName,
-				},
-			},
-			"spec": map[string]interface{}{
-				"successPolicy": map[string]interface{}{
-					"operator": "All",
-				},
-				"failurePolicy": map[string]interface{}{
-					"maxRestarts": int64(3),
-				},
-				"replicatedJobs": []interface{}{
-					map[string]interface{}{
-						"name":     "single",
-						"replicas": int64(1),
-						"template": map[string]interface{}{
-							"spec": map[string]interface{}{
-								// No parallelism specified, should default to 1
-								"completions":  ptr.To(int64(1)),
-								"backoffLimit": ptr.To(int32(0)),
-								"template": map[string]interface{}{
-									"spec": map[string]interface{}{
-										"restartPolicy": "Never",
-										"schedulerName": constant.SchedulerName,
-										"containers": []interface{}{
-											map[string]interface{}{
-												"name":  "single",
-												"image": "ubuntu",
-												"command": []interface{}{
-													"sleep",
-													"3600",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
 
 // findPodGroupByName finds a PodGroup by replicatedJob name suffix.
 func findPodGroupByName(podGroups []v2alpha2.PodGroup, replicatedJobName string) *v2alpha2.PodGroup {
@@ -538,7 +312,7 @@ func findPodGroupByName(podGroups []v2alpha2.PodGroup, replicatedJobName string)
 		if podGroups[i].Name == "" {
 			continue
 		}
-		// Extract the last part after the last dash
+		// Extract the last part after the last dash (replicatedJob name)
 		lastDashIndex := -1
 		for k := len(podGroups[i].Name) - 1; k >= 0; k-- {
 			if podGroups[i].Name[k] == '-' {

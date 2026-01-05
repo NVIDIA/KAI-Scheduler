@@ -68,7 +68,8 @@ require (
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	knative.dev/pkg v0.0.0-20250117084104-c43477f0052b
 	knative.dev/serving v0.44.0
-	sigs.k8s.io/controller-runtime v0.21.0
+	sigs.k8s.io/controller-runtime v0.22.1
+	sigs.k8s.io/jobset v0.10.1
 	sigs.k8s.io/karpenter v1.2.0
 	sigs.k8s.io/lws v0.7.0
 	sigs.k8s.io/yaml v1.6.0

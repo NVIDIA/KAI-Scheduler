@@ -62,6 +62,7 @@ if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then
     ${REPO_ROOT}/hack/third_party_integrations/deploy_kubeflow.sh
     ${REPO_ROOT}/hack/third_party_integrations/deploy_knative.sh
     ${REPO_ROOT}/hack/third_party_integrations/deploy_lws.sh
+    ${REPO_ROOT}/hack/third_party_integrations/deploy_jobset.sh
 fi
 
 if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
