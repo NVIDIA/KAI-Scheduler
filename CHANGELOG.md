@@ -6,8 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.12.3] - 2026-01-05
+
 ### Fixed
-- Made accounting labels configurable [#832](https://github.com/NVIDIA/KAI-Scheduler/pull/832) [itsomri](https://github.com/itsomri)
+- Interpret negative or zero half-life value as disabled [#832](https://github.com/NVIDIA/KAI-Scheduler/pull/832) [itsomri](https://github.com/itsomri)
 
 ## [v0.12.2] - 2025-12-31
 
