@@ -398,16 +398,17 @@ func (*topologyPlugin) calculateRelevantDomainLevels(
 
 	var relevantLevels []DomainLevel
 	for _, level := range levels {
-		if level == requiredPlacement {
-			foundRequiredLevel = true
-			relevantLevels = append(relevantLevels, level)
-			break
-		}
 		if level == preferredPlacement {
 			foundPreferredLevel = true
 		}
-		if foundPreferredLevel {
+		if level == requiredPlacement {
+			foundRequiredLevel = true
+		}
+		if foundPreferredLevel || foundRequiredLevel {
 			relevantLevels = append(relevantLevels, level)
+		}
+		if foundRequiredLevel {
+			break
 		}
 	}
 
