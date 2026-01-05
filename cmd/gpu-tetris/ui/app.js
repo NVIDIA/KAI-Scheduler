@@ -299,7 +299,7 @@ function domainById(root, id) {
 
 function renderNodes(viz) {
   const container = document.getElementById('nodes');
-  container.innerHTML = '';
+  if (!container) return;
 
   const domain = domainById(viz.topology, state.selectedDomainId) || viz.topology;
   const allowed = new Set(domain.nodeNames);
@@ -312,46 +312,121 @@ function renderNodes(viz) {
   }
 
   const nodes = viz.nodes.filter(n => allowed.has(n.name));
+
+  // Track which node cards should remain.
+  const keepNodes = new Set(nodes.map(n => n.name));
+
+  // Remove node cards that are no longer visible.
+  for (const child of Array.from(container.children)) {
+    const nodeName = child.getAttribute && child.getAttribute('data-node');
+    if (nodeName && !keepNodes.has(nodeName)) {
+      child.remove();
+    }
+  }
+
+  // Ensure a stable ordering matching the current nodes list.
+  const desiredOrder = nodes.map(n => n.name);
+  for (const nodeName of desiredOrder) {
+    const existing = container.querySelector(`.node[data-node="${CSS.escape(nodeName)}"]`);
+    if (existing) continue;
+    const nodeEl = el('div', { class: 'node', 'data-node': nodeName }, [
+      el('div', { class: 'node-title' }, ['']),
+      el('div', { class: 'board' })
+    ]);
+    container.appendChild(nodeEl);
+  }
+  // Reorder DOM to match desired order.
+  for (const nodeName of desiredOrder) {
+    const nodeEl = container.querySelector(`.node[data-node="${CSS.escape(nodeName)}"]`);
+    if (nodeEl) container.appendChild(nodeEl);
+  }
+
   for (const node of nodes) {
+    const nodeEl = container.querySelector(`.node[data-node="${CSS.escape(node.name)}"]`);
+    if (!nodeEl) continue;
+    const titleEl = nodeEl.querySelector('.node-title');
+    if (titleEl) titleEl.textContent = `${node.name} — ${node.gpuCount} GPU(s)`;
+
+    const board = nodeEl.querySelector('.board');
+    if (!board) continue;
+
+    // If GPU count changed, rebuild columns.
+    const existingCols = Array.from(board.querySelectorAll('.col'));
+    if (existingCols.length !== node.gpuCount) {
+      board.innerHTML = '';
+      for (let gi = 0; gi < node.gpuCount; gi++) {
+        board.appendChild(el('div', { class: 'col', title: `GPU ${gi}`, 'data-gpu': String(gi) }));
+      }
+    }
+
     const nodeBlocks = (blocksByNode.get(node.name) || []).slice();
-    // Group blocks by GPU index and stack.
     const byGpu = Array.from({ length: node.gpuCount }, () => []);
     for (const b of nodeBlocks) {
       const idx = Math.max(0, Math.min(node.gpuCount - 1, b.gpuIndex));
       byGpu[idx].push(b);
     }
 
-    const board = el('div', { class: 'board' });
     for (let gi = 0; gi < node.gpuCount; gi++) {
-      const col = el('div', { class: 'col', title: `GPU ${gi}` });
+      const col = board.querySelector(`.col[data-gpu="${gi}"]`) || board.querySelectorAll('.col')[gi];
+      if (!col) continue;
 
+      const desired = [];
       let offset = 0;
       for (const b of byGpu[gi]) {
         const h = Math.max(0.05, Math.min(1, b.height));
         const px = Math.round(h * 180);
-        const block = el('div', {
-          class: 'block',
-          style: `bottom:${offset}px;height:${px}px;background:${hashColor(b.colorKey)};`,
+        desired.push({
+          id: b.id,
+          pod: b.pod,
+          namespace: b.namespace,
+          colorKey: b.colorKey,
+          heightPx: px,
+          bottomPx: offset,
           title: `${b.namespace}/${b.pod} (gpu ${gi}, ${b.height.toFixed(2)} gpu)`
         });
-        block.appendChild(el('div', { class: 'block-label' }, [b.pod]));
-        col.appendChild(block);
         offset += px;
         if (offset >= 180) break;
       }
 
-      board.appendChild(col);
+      const existingById = new Map();
+      for (const blk of Array.from(col.querySelectorAll('.block[data-id]'))) {
+        existingById.set(blk.getAttribute('data-id'), blk);
+      }
+
+      const keep = new Set(desired.map(d => d.id));
+      for (const [id, blk] of existingById.entries()) {
+        if (!keep.has(id)) {
+          blk.classList.add('block-exit');
+          setTimeout(() => blk.remove(), 220);
+        }
+      }
+
+      for (const d of desired) {
+        let blk = existingById.get(d.id);
+        if (!blk) {
+          blk = el('div', {
+            class: 'block block-enter',
+            'data-id': d.id,
+          });
+          blk.appendChild(el('div', { class: 'block-label' }, [d.pod]));
+          col.appendChild(blk);
+          // Ensure the entry animation triggers.
+          requestAnimationFrame(() => blk.classList.remove('block-enter'));
+        } else {
+          const label = blk.querySelector('.block-label');
+          if (label) label.textContent = d.pod;
+        }
+
+        blk.title = d.title;
+        blk.style.bottom = `${d.bottomPx}px`;
+        blk.style.height = `${d.heightPx}px`;
+        blk.style.background = hashColor(d.colorKey);
+      }
     }
-
-    const nodeEl = el('div', { class: 'node' }, [
-      el('div', { class: 'node-title' }, [`${node.name} — ${node.gpuCount} GPU(s)`]),
-      board
-    ]);
-
-    container.appendChild(nodeEl);
   }
 
   if (nodes.length === 0) {
+    container.innerHTML = '';
     container.appendChild(el('div', {}, ['No GPU nodes in this topology domain.']));
   }
 }
