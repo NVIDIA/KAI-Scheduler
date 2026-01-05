@@ -426,6 +426,3 @@ func getReclaimGpuMemoryTestsMetadata() []integration_tests_utils.TestTopologyMe
 		},
 	}
 }
-
-
-
