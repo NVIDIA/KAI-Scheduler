@@ -312,10 +312,9 @@ func TestUsageParams_ZeroValues(t *testing.T) {
 
 	params.SetDefaults()
 
-	// Zero values should be preserved, not replaced with defaults
-	require.NotNil(t, params.HalfLifePeriod)
-	assert.Equal(t, time.Duration(0), params.HalfLifePeriod.Duration)
+	require.Nil(t, params.HalfLifePeriod)
 
+	// Zero values should be preserved, not replaced with defaults
 	require.NotNil(t, params.WindowSize)
 	assert.Equal(t, time.Duration(0), params.WindowSize.Duration)
 
