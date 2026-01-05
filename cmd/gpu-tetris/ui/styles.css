@@ -1,5 +1,11 @@
 * { box-sizing: border-box; }
-body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #111; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #111;
+  line-height: 1.35;
+  background: #fff;
+}
 
 .header {
   display: flex;
@@ -7,6 +13,7 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #111
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid #ddd;
+  background: linear-gradient(180deg, #fff, #fafafa);
 }
 .title { font-weight: 700; }
 .meta { font-size: 12px; color: #555; }
@@ -17,37 +24,73 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #111
   border-right: 1px solid #ddd;
   padding: 12px 12px;
   overflow: auto;
+  background: #fbfbfb;
 }
 .main { padding: 12px 16px; overflow: auto; }
 
 .section-title { font-size: 12px; font-weight: 700; color: #333; margin-bottom: 8px; text-transform: uppercase; }
 
 .form { margin-bottom: 14px; }
-.label { display: block; font-size: 12px; color: #333; margin: 8px 0; }
+.label { display: block; font-size: 12px; color: #333; margin: 10px 0; }
 .input {
   width: 100%;
   padding: 6px 8px;
   font-size: 13px;
   border: 1px solid #ccc;
   border-radius: 8px;
+  background: #fff;
 }
+.input:focus {
+  outline: none;
+  border-color: #aaa;
+  background: #fff;
+}
+.input:disabled {
+  background: #f6f6f6;
+  color: #666;
+}
+textarea.input { resize: vertical; }
+
+.help {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #666;
+}
+
 .button {
   width: 100%;
   margin-top: 6px;
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid #bbb;
-  background: #f3f3f3;
+  background: linear-gradient(180deg, #f8f8f8, #f1f1f1);
   cursor: pointer;
 }
-.button:hover { background: #ededed; }
+.button:hover { background: linear-gradient(180deg, #f5f5f5, #ececec); }
+.button:active { background: linear-gradient(180deg, #eee, #e6e6e6); }
+.button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
 .form-status { margin-top: 8px; font-size: 12px; color: #555; }
+
+.status-details {
+  margin-top: 6px;
+  padding-left: 16px;
+  color: #555;
+}
+.status-details li { margin: 2px 0; }
 
 #deleteTetrisPods { margin-top: 10px; }
 
 .pending { display: grid; gap: 8px; margin-bottom: 14px; }
 .pending-empty { font-size: 12px; color: #666; }
 .pending-item { border: 1px solid #ddd; border-radius: 8px; padding: 8px; background: #fff; }
+.pending-item {
+  display: grid;
+  gap: 2px;
+  border-left-width: 4px;
+}
 .pending-title { font-size: 12px; font-weight: 600; color: #111; }
 .pending-sub { font-size: 12px; color: #555; margin-top: 2px; line-height: 1.3; }
 
@@ -62,15 +105,27 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #111
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .tree-button:hover { border-color: #ddd; background: #f7f7f7; }
 .tree-button.active { border-color: #bbb; background: #efefef; }
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.18);
+  flex: 0 0 auto;
+}
 
 .node {
   border: 1px solid #ddd;
   border-radius: 10px;
   padding: 10px;
   margin-bottom: 10px;
+  background: #fff;
 }
 .node-title { font-weight: 700; margin-bottom: 8px; }
 
@@ -100,4 +155,9 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #111
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { border-right: none; border-bottom: 1px solid #ddd; }
 }

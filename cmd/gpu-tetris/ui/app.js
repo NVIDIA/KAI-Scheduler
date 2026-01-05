@@ -57,7 +57,10 @@ function renderPending(viz) {
     if (p.queue) subtitleParts.push(`queue: ${p.queue}`);
     if (p.reason) subtitleParts.push(p.reason);
 
-    root.appendChild(el('div', { class: 'pending-item', title }, [
+    const accentKey = String(p.queue || title);
+    const accent = hashColor(accentKey);
+
+    root.appendChild(el('div', { class: 'pending-item', title, style: `border-left-color:${accent};` }, [
       el('div', { class: 'pending-title' }, [title]),
       el('div', { class: 'pending-sub' }, [subtitleParts.join(' • ')])
     ]));
@@ -85,6 +88,57 @@ async function deleteTetrisPods() {
   return JSON.parse(text);
 }
 
+function setBusy(btn, busy) {
+  if (!btn) return;
+  btn.disabled = !!busy;
+}
+
+function setStatus(elm, message, details) {
+  if (!elm) return;
+  elm.innerHTML = '';
+  elm.appendChild(document.createTextNode(message || ''));
+  if (details && details.length) {
+    const ul = document.createElement('ul');
+    ul.className = 'status-details';
+    for (const d of details.slice(0, 6)) {
+      const li = document.createElement('li');
+      li.textContent = String(d);
+      ul.appendChild(li);
+    }
+    if (details.length > 6) {
+      const li = document.createElement('li');
+      li.textContent = `…and ${details.length - 6} more`;
+      ul.appendChild(li);
+    }
+    elm.appendChild(ul);
+  }
+}
+
+function setupCreatePodModeUI(form) {
+  if (!form) return;
+  const modeEl = form.querySelector('select[name="mode"]');
+  if (!modeEl) return;
+
+  function showField(name, show) {
+    const input = form.querySelector(`[name="${name}"]`);
+    if (!input) return;
+    const label = input.closest('label') || input.parentElement;
+    if (label) label.style.display = show ? '' : 'none';
+    input.disabled = !show;
+  }
+
+  function apply() {
+    const mode = String(modeEl.value || 'whole');
+    showField('gpuCount', mode === 'whole');
+    showField('gpuFraction', mode === 'fraction');
+    showField('fractionNumDevices', mode === 'fraction');
+    showField('gpuMemoryMiB', mode === 'memory');
+  }
+
+  modeEl.addEventListener('change', apply);
+  apply();
+}
+
 async function createTopology(payload) {
   const resp = await fetch('/api/topology', {
     method: 'POST',
@@ -101,28 +155,36 @@ function setupCreatePodForm() {
   const status = document.getElementById('createPodStatus');
   if (!form || !status) return;
 
+  setupCreatePodModeUI(form);
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+
   const deleteBtn = document.getElementById('deleteTetrisPods');
   const deleteStatus = document.getElementById('deleteTetrisPodsStatus');
   if (deleteBtn && deleteStatus) {
     deleteBtn.addEventListener('click', async () => {
-      deleteStatus.textContent = 'Deleting…';
+      setBusy(deleteBtn, true);
+      setStatus(deleteStatus, 'Deleting…');
       try {
         const res = await deleteTetrisPods();
         if (res.errors && res.errors.length) {
-          deleteStatus.textContent = `Deleted ${res.deleted}. Errors: ${res.errors.length}`;
+          setStatus(deleteStatus, `Deleted ${res.deleted}. Errors: ${res.errors.length}`, res.errors);
         } else {
-          deleteStatus.textContent = `Deleted ${res.deleted} pod(s).`;
+          setStatus(deleteStatus, `Deleted ${res.deleted} pod(s).`);
         }
         await refresh();
       } catch (err) {
-        deleteStatus.textContent = `Error: ${err.message}`;
+        setStatus(deleteStatus, `Error: ${err.message}`);
+      } finally {
+        setBusy(deleteBtn, false);
       }
     });
   }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    status.textContent = 'Creating…';
+    setBusy(submitBtn, true);
+    setStatus(status, 'Creating…');
 
     const fd = new FormData(form);
     const mode = String(fd.get('mode') || 'whole');
@@ -141,10 +203,12 @@ function setupCreatePodForm() {
 
     try {
       const res = await createPod(payload);
-      status.textContent = `Created ${res.namespace}/${res.name}. Waiting for scheduling…`;
+      setStatus(status, `Created ${res.namespace}/${res.name}. Waiting for scheduling…`);
       await refresh();
     } catch (err) {
-      status.textContent = `Error: ${err.message}`;
+      setStatus(status, `Error: ${err.message}`);
+    } finally {
+      setBusy(submitBtn, false);
     }
   });
 }
@@ -154,9 +218,12 @@ function setupCreateTopologyForm() {
   const status = document.getElementById('createTopologyStatus');
   if (!form || !status) return;
 
+  const submitBtn = form.querySelector('button[type="submit"]');
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    status.textContent = 'Creating topology…';
+    setBusy(submitBtn, true);
+    setStatus(status, 'Creating topology…');
 
     const fd = new FormData(form);
     const name = String(fd.get('name') || '').trim();
@@ -177,13 +244,15 @@ function setupCreateTopologyForm() {
     try {
       const res = await createTopology({ name, levels, assignments });
       if (res.errors && res.errors.length) {
-        status.textContent = `Created ${res.topologyName}. Patched ${res.patchedNodes}. Errors: ${res.errors.length}`;
+        setStatus(status, `Created ${res.topologyName}. Patched ${res.patchedNodes}. Errors: ${res.errors.length}`, res.errors);
       } else {
-        status.textContent = `Created ${res.topologyName}. Patched ${res.patchedNodes} node(s).`;
+        setStatus(status, `Created ${res.topologyName}. Patched ${res.patchedNodes} node(s).`);
       }
       await refresh();
     } catch (err) {
-      status.textContent = `Error: ${err.message}`;
+      setStatus(status, `Error: ${err.message}`);
+    } finally {
+      setBusy(submitBtn, false);
     }
   });
 }
@@ -193,6 +262,7 @@ function renderTopology(viz) {
   root.innerHTML = '';
 
   function renderNode(n) {
+    const dot = el('span', { class: 'dot', style: `background:${hashColor(n.id)};` });
     const btn = el('button', {
       class: `tree-button ${state.selectedDomainId === n.id ? 'active' : ''}`,
       onclick: () => {
@@ -201,7 +271,7 @@ function renderTopology(viz) {
         renderNodes(viz);
       },
       title: `${n.nodeNames.length} node(s)`
-    }, [`${n.name} (${n.nodeNames.length})`]);
+    }, [dot, `${n.name} (${n.nodeNames.length})`]);
 
     const item = el('li', { class: 'tree-item' }, [btn]);
 
