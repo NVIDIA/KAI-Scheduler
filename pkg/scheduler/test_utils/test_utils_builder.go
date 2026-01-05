@@ -55,8 +55,8 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 				},
 			},
 		},
-		Queues:        queueInfoMap,
-		PodGroupInfos: jobInfoMap,
+		Queues:           queueInfoMap,
+		PodGroupInfos:    jobInfoMap,
 		MinNodeGPUMemory: node_info.DefaultGpuMemory,
 	}
 	ssn.OverrideInferencePreemptible(isInferencePreemptible)

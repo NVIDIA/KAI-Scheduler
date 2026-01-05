@@ -17,7 +17,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
-
 func (ssn *Session) AddGPUOrderFn(gof api.GpuOrderFn) {
 	ssn.GpuOrderFns = append(ssn.GpuOrderFns, gof)
 }

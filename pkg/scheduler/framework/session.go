@@ -37,10 +37,10 @@ type Session struct {
 	UID   types.UID
 	Cache cache.Cache
 
-	PodGroupInfos map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
-	Nodes         map[string]*node_info.NodeInfo
-	Queues        map[common_info.QueueID]*queue_info.QueueInfo
-	ConfigMaps    map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
+	PodGroupInfos    map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
+	Nodes            map[string]*node_info.NodeInfo
+	Queues           map[common_info.QueueID]*queue_info.QueueInfo
+	ConfigMaps       map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
 	MinNodeGPUMemory int64
 
 	GpuOrderFns                           []api.GpuOrderFn
