@@ -13,6 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const tetrisCreatedLabelKey = "gpu-tetris.runai.com/created"
+const tetrisCreatedLabelValue = "true"
+
 type CreatePodRequest struct {
 	Namespace string `json:"namespace"`
 	Name      string `json:"name"`
@@ -33,8 +36,14 @@ type CreatePodResponse struct {
 }
 
 func (s *server) handleCreatePod(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
+	switch r.Method {
+	case http.MethodPost:
+		// handled below
+	case http.MethodDelete:
+		s.handleDeleteTetrisPods(w, r)
+		return
+	default:
+		w.Header().Set("Allow", strings.Join([]string{http.MethodPost, http.MethodDelete}, ", "))
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -72,18 +81,22 @@ func (s *server) handleCreatePod(w http.ResponseWriter, r *http.Request) {
 		mode = "whole"
 	}
 
+	zero := int64(0)
+
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 			Labels: map[string]string{
 				"kai.scheduler/queue": queue,
+				tetrisCreatedLabelKey: tetrisCreatedLabelValue,
 			},
 			Annotations: map[string]string{},
 		},
 		Spec: v1.PodSpec{
-			SchedulerName: s.cfg.schedulerName,
-			RestartPolicy: v1.RestartPolicyNever,
+			SchedulerName:                 s.cfg.schedulerName,
+			RestartPolicy:                 v1.RestartPolicyNever,
+			TerminationGracePeriodSeconds: &zero,
 			Containers: []v1.Container{
 				{
 					Name:    "workload",
@@ -141,4 +154,36 @@ func (s *server) handleCreatePod(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(CreatePodResponse{Namespace: created.Namespace, Name: created.Name})
+}
+
+type DeleteTetrisPodsResponse struct {
+	Deleted int      `json:"deleted"`
+	Errors  []string `json:"errors,omitempty"`
+}
+
+func (s *server) handleDeleteTetrisPods(w http.ResponseWriter, r *http.Request) {
+	selector := fmt.Sprintf("%s=%s", tetrisCreatedLabelKey, tetrisCreatedLabelValue)
+	list, err := s.kube.CoreV1().Pods("").List(r.Context(), metav1.ListOptions{LabelSelector: selector})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+
+	zero := int64(0)
+	policy := metav1.DeletePropagationBackground
+	deleteOpts := metav1.DeleteOptions{GracePeriodSeconds: &zero, PropagationPolicy: &policy}
+
+	resp := DeleteTetrisPodsResponse{Deleted: 0, Errors: nil}
+	for i := range list.Items {
+		p := &list.Items[i]
+		err := s.kube.CoreV1().Pods(p.Namespace).Delete(r.Context(), p.Name, deleteOpts)
+		if err != nil {
+			resp.Errors = append(resp.Errors, fmt.Sprintf("%s/%s: %v", p.Namespace, p.Name, err))
+			continue
+		}
+		resp.Deleted++
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
 }

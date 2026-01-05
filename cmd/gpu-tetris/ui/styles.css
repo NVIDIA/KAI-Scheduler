@@ -43,6 +43,8 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #111
 .button:hover { background: #ededed; }
 .form-status { margin-top: 8px; font-size: 12px; color: #555; }
 
+#deleteTetrisPods { margin-top: 10px; }
+
 .pending { display: grid; gap: 8px; margin-bottom: 14px; }
 .pending-empty { font-size: 12px; color: #666; }
 .pending-item { border: 1px solid #ddd; border-radius: 8px; padding: 8px; background: #fff; }

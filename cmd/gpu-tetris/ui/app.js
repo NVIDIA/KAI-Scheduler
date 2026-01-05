@@ -75,10 +75,39 @@ async function createPod(payload) {
   return JSON.parse(text);
 }
 
+async function deleteTetrisPods() {
+  const resp = await fetch('/api/pods', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const text = await resp.text();
+  if (!resp.ok) throw new Error(text || resp.statusText);
+  return JSON.parse(text);
+}
+
 function setupCreatePodForm() {
   const form = document.getElementById('createPod');
   const status = document.getElementById('createPodStatus');
   if (!form || !status) return;
+
+  const deleteBtn = document.getElementById('deleteTetrisPods');
+  const deleteStatus = document.getElementById('deleteTetrisPodsStatus');
+  if (deleteBtn && deleteStatus) {
+    deleteBtn.addEventListener('click', async () => {
+      deleteStatus.textContent = 'Deleting…';
+      try {
+        const res = await deleteTetrisPods();
+        if (res.errors && res.errors.length) {
+          deleteStatus.textContent = `Deleted ${res.deleted}. Errors: ${res.errors.length}`;
+        } else {
+          deleteStatus.textContent = `Deleted ${res.deleted} pod(s).`;
+        }
+        await refresh();
+      } catch (err) {
+        deleteStatus.textContent = `Error: ${err.message}`;
+      }
+    });
+  }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
