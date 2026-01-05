@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Fixed GPU memory pods Fair Share and Queue Order calculations
+
 ## [v0.12.3] - 2026-01-05
 
 ### Fixed

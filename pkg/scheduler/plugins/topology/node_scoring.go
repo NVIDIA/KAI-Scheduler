@@ -68,7 +68,7 @@ func getLevelDomains(root *DomainInfo, level DomainLevel) []*DomainInfo {
 }
 
 func (t *topologyPlugin) getTaskSubGroupInfo(task *pod_info.PodInfo) (*subgroup_info.SubGroupInfo, error) {
-	job := t.session.PodGroupInfos[task.Job]
+	job := t.session.ClusterInfo.PodGroupInfos[task.Job]
 	if job == nil {
 		return nil, fmt.Errorf("job %s not found for task %s/%s", task.Job, task.Namespace, task.Name)
 	}

@@ -15,6 +15,7 @@ import (
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/scenario"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_affinity"
@@ -598,9 +599,9 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 
 				return args{
 					scenario: scenario.NewByNodeScenario(&framework.Session{
-						PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+						ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 							"pv1pg": podgroup_info.NewPodGroupInfo("pv1pg"),
-						}},
+						}}},
 						nil,
 						podgroup_info.NewPodGroupInfo("pendingPg1", pod_info.NewTaskInfo(&v1.Pod{
 							ObjectMeta: metav1.ObjectMeta{
@@ -685,9 +686,9 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 
 				return args{
 					scenario: scenario.NewByNodeScenario(&framework.Session{
-						PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+						ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 							"pv1pg": podgroup_info.NewPodGroupInfo("pv1pg"),
-						}},
+						}}},
 						nil,
 						podgroup_info.NewPodGroupInfo("pendingPg1", pod_info.NewTaskInfo(&v1.Pod{
 							ObjectMeta: metav1.ObjectMeta{
@@ -769,9 +770,9 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 
 				return args{
 					scenario: scenario.NewByNodeScenario(&framework.Session{
-						PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+						ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 							"rv1pg": podgroup_info.NewPodGroupInfo("rv1pg"),
-						}},
+						}}},
 						nil,
 						podgroup_info.NewPodGroupInfo("pendingPg1", pod_info.NewTaskInfo(&v1.Pod{
 							ObjectMeta: metav1.ObjectMeta{
@@ -816,9 +817,9 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 			},
 			args: args{
 				scenario: scenario.NewByNodeScenario(&framework.Session{
-					PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+					ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 						"rv1pg": podgroup_info.NewPodGroupInfo("rv1pg"),
-					}},
+					}}},
 					nil,
 					podgroup_info.NewPodGroupInfo("pendingPg1", pod_info.NewTaskInfo(&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -883,9 +884,9 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 			},
 			args: args{
 				scenario: scenario.NewByNodeScenario(&framework.Session{
-					PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+					ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 						"rv1pg": podgroup_info.NewPodGroupInfo("rv1pg"),
-					}},
+					}}},
 					nil,
 					podgroup_info.NewPodGroupInfo("pendingPg1", pod_info.NewTaskInfo(&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -1092,10 +1093,10 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 
 				return args{
 					scenario: scenario.NewByNodeScenario(&framework.Session{
-						PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+						ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 							"rv1pg": podgroup_info.NewPodGroupInfo("rv1pg"),
 							"pv1pg": podgroup_info.NewPodGroupInfo("pv1pg"),
-						}},
+						}}},
 						nil,
 						podgroup_info.NewPodGroupInfo("pendingPg1",
 							pod_info.NewTaskInfo(&v1.Pod{
@@ -1244,10 +1245,10 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 
 				return args{
 					scenario: scenario.NewByNodeScenario(&framework.Session{
-						PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+						ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 							"rv1pg": podgroup_info.NewPodGroupInfo("rv1pg"),
 							"pv1pg": podgroup_info.NewPodGroupInfo("pv1pg"),
-						}},
+						}}},
 						nil,
 						podgroup_info.NewPodGroupInfo("pendingPg1",
 							pod_info.NewTaskInfo(&v1.Pod{
@@ -1367,9 +1368,9 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 
 				return args{
 					scenario: scenario.NewByNodeScenario(&framework.Session{
-						PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+						ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 							"potential_victims": podgroup_info.NewPodGroupInfo("potential_victims"),
-						}},
+						}}},
 						nil,
 						podgroup_info.NewPodGroupInfo("pendingPodGroup",
 							pod_info.NewTaskInfo(&v1.Pod{

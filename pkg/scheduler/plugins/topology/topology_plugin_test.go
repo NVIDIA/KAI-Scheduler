@@ -11,6 +11,7 @@ import (
 
 	kubeaischedulerver "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
@@ -153,30 +154,32 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 		Config:          schedulerConfig,
 		SchedulerParams: schedulerParams,
 		Cache:           schedulerCache,
-		Nodes: map[string]*node_info.NodeInfo{
-			testNodes[0].Name: {
-				Node:        testNodes[0],
-				Allocatable: resource_info.ResourceFromResourceList(testNodes[0].Status.Allocatable),
-				Idle:        resource_info.NewResource(500, 0, 0),
-				Releasing:   resource_info.NewResource(0, 0, 0),
-				Used:        resource_info.NewResource(500, 0, 1),
+		ClusterInfo: &api.ClusterInfo{
+			Nodes: map[string]*node_info.NodeInfo{
+				testNodes[0].Name: {
+					Node:        testNodes[0],
+					Allocatable: resource_info.ResourceFromResourceList(testNodes[0].Status.Allocatable),
+					Idle:        resource_info.NewResource(500, 0, 0),
+					Releasing:   resource_info.NewResource(0, 0, 0),
+					Used:        resource_info.NewResource(500, 0, 1),
+				},
+				testNodes[1].Name: {
+					Node:        testNodes[1],
+					Allocatable: resource_info.ResourceFromResourceList(testNodes[1].Status.Allocatable),
+					Idle:        resource_info.NewResource(500, 0, 0),
+					Releasing:   resource_info.NewResource(0, 0, 0),
+					Used:        resource_info.NewResource(500, 0, 0),
+				},
+				testNodes[2].Name: {
+					Node:        testNodes[2],
+					Allocatable: resource_info.ResourceFromResourceList(testNodes[2].Status.Allocatable),
+					Idle:        resource_info.NewResource(0, 0, 0),
+					Releasing:   resource_info.NewResource(0, 0, 0),
+					Used:        resource_info.NewResource(1000, 0, 3),
+				},
 			},
-			testNodes[1].Name: {
-				Node:        testNodes[1],
-				Allocatable: resource_info.ResourceFromResourceList(testNodes[1].Status.Allocatable),
-				Idle:        resource_info.NewResource(500, 0, 0),
-				Releasing:   resource_info.NewResource(0, 0, 0),
-				Used:        resource_info.NewResource(500, 0, 0),
-			},
-			testNodes[2].Name: {
-				Node:        testNodes[2],
-				Allocatable: resource_info.ResourceFromResourceList(testNodes[2].Status.Allocatable),
-				Idle:        resource_info.NewResource(0, 0, 0),
-				Releasing:   resource_info.NewResource(0, 0, 0),
-				Used:        resource_info.NewResource(1000, 0, 3),
-			},
+			Topologies: []*kaiv1alpha1.Topology{testTopology},
 		},
-		Topologies: []*kaiv1alpha1.Topology{testTopology},
 	}
 
 	plugin := New(nil)
