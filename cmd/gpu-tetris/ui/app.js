@@ -39,6 +39,31 @@ function renderMeta(viz) {
   meta.textContent = `Generated: ${viz.generatedAt}`;
 }
 
+function renderPending(viz) {
+  const root = document.getElementById('pending');
+  if (!root) return;
+  root.innerHTML = '';
+
+  const pending = (viz.pending || []).slice();
+  if (pending.length === 0) {
+    root.appendChild(el('div', { class: 'pending-empty' }, ['No pending GPU pods.']));
+    return;
+  }
+
+  for (const p of pending) {
+    const title = `${p.namespace}/${p.pod}`;
+    const subtitleParts = [];
+    if (p.request) subtitleParts.push(p.request);
+    if (p.queue) subtitleParts.push(`queue: ${p.queue}`);
+    if (p.reason) subtitleParts.push(p.reason);
+
+    root.appendChild(el('div', { class: 'pending-item', title }, [
+      el('div', { class: 'pending-title' }, [title]),
+      el('div', { class: 'pending-sub' }, [subtitleParts.join(' • ')])
+    ]));
+  }
+}
+
 async function createPod(payload) {
   const resp = await fetch('/api/pods', {
     method: 'POST',
@@ -194,6 +219,7 @@ async function refresh() {
     }
 
     renderTopology(viz);
+    renderPending(viz);
     renderNodes(viz);
   } catch (e) {
     document.getElementById('meta').textContent = `Error: ${e.message}`;

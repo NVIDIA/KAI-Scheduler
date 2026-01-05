@@ -17,10 +17,21 @@ import (
 )
 
 type Viz struct {
-	GeneratedAt string     `json:"generatedAt"`
-	Topology    DomainNode `json:"topology"`
-	Nodes       []NodeViz  `json:"nodes"`
-	Blocks      []BlockViz `json:"blocks"`
+	GeneratedAt string          `json:"generatedAt"`
+	Topology    DomainNode      `json:"topology"`
+	Nodes       []NodeViz       `json:"nodes"`
+	Blocks      []BlockViz      `json:"blocks"`
+	Pending     []PendingPodViz `json:"pending"`
+}
+
+type PendingPodViz struct {
+	ID        string `json:"id"`
+	Pod       string `json:"pod"`
+	Namespace string `json:"namespace"`
+	Queue     string `json:"queue"`
+	Request   string `json:"request"`
+	CreatedAt string `json:"createdAt"`
+	Reason    string `json:"reason"`
 }
 
 type DomainNode struct {
@@ -67,13 +78,115 @@ func BuildViz(snap *snapshotplugin.Snapshot) (*Viz, error) {
 
 	topoRoot := buildTopologyRoot(snap.RawObjects.Topologies, snap.RawObjects.Nodes, nodeGPUCounts)
 	blocks := buildBlocks(snap.RawObjects.BindRequests, nodeGPUCounts)
+	pending := buildPendingPods(snap.RawObjects.Pods)
 
 	return &Viz{
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
 		Topology:    topoRoot,
 		Nodes:       nodes,
 		Blocks:      blocks,
+		Pending:     pending,
 	}, nil
+}
+
+func buildPendingPods(pods []*v1.Pod) []PendingPodViz {
+	pending := make([]PendingPodViz, 0)
+	for _, p := range pods {
+		if p == nil {
+			continue
+		}
+		if p.Spec.NodeName != "" {
+			continue
+		}
+		if p.Status.Phase != v1.PodPending {
+			continue
+		}
+		req := podGPURequestSummary(p)
+		if req == "" {
+			continue
+		}
+		queue := ""
+		if p.Labels != nil {
+			queue = p.Labels["kai.scheduler/queue"]
+		}
+		reason := podPendingReason(p)
+		createdAt := ""
+		if !p.CreationTimestamp.IsZero() {
+			createdAt = p.CreationTimestamp.Time.UTC().Format(time.RFC3339)
+		}
+		pending = append(pending, PendingPodViz{
+			ID:        fmt.Sprintf("%s/%s", p.Namespace, p.Name),
+			Pod:       p.Name,
+			Namespace: p.Namespace,
+			Queue:     queue,
+			Request:   req,
+			CreatedAt: createdAt,
+			Reason:    reason,
+		})
+	}
+	sort.Slice(pending, func(i, j int) bool {
+		if pending[i].CreatedAt == "" {
+			return false
+		}
+		if pending[j].CreatedAt == "" {
+			return true
+		}
+		return pending[i].CreatedAt < pending[j].CreatedAt
+	})
+	return pending
+}
+
+func podGPURequestSummary(p *v1.Pod) string {
+	whole := int64(0)
+	for _, c := range p.Spec.Containers {
+		if q, ok := c.Resources.Requests[v1.ResourceName("nvidia.com/gpu")]; ok {
+			whole += q.Value()
+			continue
+		}
+		if q, ok := c.Resources.Limits[v1.ResourceName("nvidia.com/gpu")]; ok {
+			whole += q.Value()
+		}
+	}
+	if whole > 0 {
+		return fmt.Sprintf("%dgpu", whole)
+	}
+
+	ann := p.Annotations
+	if ann == nil {
+		return ""
+	}
+	if fracStr, ok := ann["gpu-fraction"]; ok {
+		frac, err := strconv.ParseFloat(fracStr, 64)
+		if err == nil && frac > 0 {
+			if devStr, ok := ann["gpu-fraction-num-devices"]; ok {
+				if dev, err := strconv.Atoi(devStr); err == nil && dev > 1 {
+					return fmt.Sprintf("%.2fgpu × %d", frac, dev)
+				}
+			}
+			return fmt.Sprintf("%.2fgpu", frac)
+		}
+	}
+	if memStr, ok := ann["gpu-memory"]; ok {
+		if mem, err := strconv.Atoi(memStr); err == nil && mem > 0 {
+			return fmt.Sprintf("%dMiB", mem)
+		}
+	}
+	return ""
+}
+
+func podPendingReason(p *v1.Pod) string {
+	for _, c := range p.Status.Conditions {
+		if c.Type != v1.PodScheduled {
+			continue
+		}
+		if c.Status == v1.ConditionFalse {
+			if c.Reason != "" {
+				return c.Reason
+			}
+			return c.Message
+		}
+	}
+	return ""
 }
 
 func getNodeGPUCount(n *v1.Node) int {

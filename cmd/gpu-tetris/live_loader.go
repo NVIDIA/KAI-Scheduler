@@ -39,6 +39,15 @@ func LoadLiveSnapshot(ctx context.Context, kube kubernetes.Interface, kai kaisch
 		topologies = append(topologies, &topoList.Items[i])
 	}
 
+	podList, err := kube.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list pods: %w", err)
+	}
+	pods := make([]*corev1.Pod, 0, len(podList.Items))
+	for i := range podList.Items {
+		pods = append(pods, &podList.Items[i])
+	}
+
 	// BindRequests are namespaced; list them across all namespaces.
 	nsList, err := kube.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -58,7 +67,7 @@ func LoadLiveSnapshot(ctx context.Context, kube kubernetes.Interface, kai kaisch
 	}
 
 	raw := &snapshotplugin.RawKubernetesObjects{
-		Pods:                   []*corev1.Pod{},
+		Pods:                   pods,
 		Nodes:                  nodes,
 		Queues:                 nil,
 		PodGroups:              nil,

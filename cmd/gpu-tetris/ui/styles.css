@@ -43,6 +43,12 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #111
 .button:hover { background: #ededed; }
 .form-status { margin-top: 8px; font-size: 12px; color: #555; }
 
+.pending { display: grid; gap: 8px; margin-bottom: 14px; }
+.pending-empty { font-size: 12px; color: #666; }
+.pending-item { border: 1px solid #ddd; border-radius: 8px; padding: 8px; background: #fff; }
+.pending-title { font-size: 12px; font-weight: 600; color: #111; }
+.pending-sub { font-size: 12px; color: #555; margin-top: 2px; line-height: 1.3; }
+
 .tree { list-style: none; padding-left: 12px; margin: 0; }
 .tree-item { margin: 4px 0; }
 .tree-button {
