@@ -56,22 +56,14 @@ func (c *ClusterInfo) snapshotQueues() (map[common_info.QueueID]*queue_info.Queu
 	}
 
 	result := map[common_info.QueueID]*queue_info.QueueInfo{}
-	if c.fairnessLevelType == FullFairness {
-		for _, queue := range queues {
-			queueInfo := queue_info.NewQueueInfo(queue)
-			result[queueInfo.UID] = queueInfo
+	defaultParentQueue := c.getDefaultParentQueue()
+	result[defaultParentQueue.UID] = defaultParentQueue
+	for _, queue := range queues {
+		if len(queue.Spec.ParentQueue) == 0 || c.fairnessLevelType == ProjectLevelFairness {
+			queue.Spec.ParentQueue = defaultQueueName
 		}
-	} else if c.fairnessLevelType == ProjectLevelFairness {
-		defaultParentQueue := c.getDefaultParentQueue()
-		result[defaultParentQueue.UID] = defaultParentQueue
-
-		for _, queue := range queues {
-			if len(queue.Spec.ParentQueue) > 0 {
-				queue.Spec.ParentQueue = defaultQueueName
-				queueInfo := queue_info.NewQueueInfo(queue)
-				result[queueInfo.UID] = queueInfo
-			}
-		}
+		queueInfo := queue_info.NewQueueInfo(queue)
+		result[queueInfo.UID] = queueInfo
 	}
 
 	return result, nil
