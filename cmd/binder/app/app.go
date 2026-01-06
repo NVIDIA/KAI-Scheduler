@@ -148,15 +148,7 @@ func (app *App) RegisterPlugins(plugins *plugins.BinderPlugins) {
 
 func (app *App) Run(ctx context.Context) error {
 	var err error
-	go func() {
-		app.manager.GetCache().WaitForCacheSync(context.Background())
-		setupLog.Info("syncing resource reservation")
-		err := app.rrs.Sync(context.Background())
-		if err != nil {
-			setupLog.Error(err, "unable to sync resource reservation")
-			panic(err)
-		}
-	}()
+	app.startResourceReservationSync(ctx)
 
 	if err = (&controllers.PodReconciler{
 		Client:              app.manager.GetClient(),
@@ -188,6 +180,40 @@ func (app *App) Run(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (app *App) startResourceReservationSync(ctx context.Context) {
+	if app.Options.ResourceReservationSyncPeriodSeconds <= 0 {
+		setupLog.Info("resource reservation periodic sync is disabled")
+		return
+	}
+
+	syncPeriod := time.Duration(app.Options.ResourceReservationSyncPeriodSeconds) * time.Second
+	go func() {
+		app.manager.GetCache().WaitForCacheSync(ctx)
+
+		setupLog.Info("syncing resource reservation")
+		if err := app.rrs.Sync(ctx); err != nil {
+			setupLog.Error(err, "unable to sync resource reservation")
+			panic(err)
+		}
+
+		ticker := time.NewTicker(syncPeriod)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				setupLog.Info("stopping resource reservation periodic sync")
+				return
+			case <-ticker.C:
+				setupLog.Info("syncing resource reservation")
+				if err := app.rrs.Sync(ctx); err != nil {
+					setupLog.Error(err, "unable to sync resource reservation")
+				}
+			}
+		}
+	}()
 }
 
 func createIndexesForResourceReservation(mgr manager.Manager) error {
