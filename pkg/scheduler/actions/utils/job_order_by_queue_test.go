@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	testDepartment = "d1"
-	testQueue      = "q1"
-	testPod        = "p1"
+	testParentQueue = "pq1"
+	testQueue       = "q1"
+	testPod         = "p1"
 )
 
 func TestNumericalPriorityWithinSameQueue(t *testing.T) {
@@ -38,10 +38,10 @@ func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 	ssn.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
 		testQueue: {
 			UID:         testQueue,
-			ParentQueue: testDepartment,
+			ParentQueue: testParentQueue,
 		},
-		testDepartment: {
-			UID:         testDepartment,
+		testParentQueue: {
+			UID:         testParentQueue,
 			ChildQueues: []common_info.QueueID{testQueue},
 		},
 	}
@@ -140,22 +140,22 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 	now := metav1.Time{Time: time.Now()}
 	nowMinus1 := metav1.Time{Time: time.Now().Add(-time.Second)}
 	tests := []struct {
-		name                 string
-		jobsOrderInitOptions JobsOrderInitOptions
-		queues               map[common_info.QueueID]*queue_info.QueueInfo
-		initJobs             map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
-		expectedJobNames     []string
+		name             string
+		options          JobsOrderInitOptions
+		queues           map[common_info.QueueID]*queue_info.QueueInfo
+		initJobs         map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
+		expectedJobNames []string
 	}{
 		{
 			name: "single podgroup insert - empty queue",
-			jobsOrderInitOptions: JobsOrderInitOptions{
+			options: JobsOrderInitOptions{
 				VictimQueue:       true,
 				FilterNonPending:  false,
 				FilterUnready:     true,
 				MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
 			},
 			queues: map[common_info.QueueID]*queue_info.QueueInfo{
-				"q1": {ParentQueue: "d1", UID: "q1", CreationTimestamp: now,
+				"q1": {ParentQueue: "pq1", UID: "q1", CreationTimestamp: now,
 					Resources: queue_info.QueueQuota{
 						GPU: queue_info.ResourceQuota{
 							Quota:           1,
@@ -174,7 +174,7 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 						},
 					},
 				},
-				"q2": {ParentQueue: "d1", UID: "q2", CreationTimestamp: nowMinus1,
+				"q2": {ParentQueue: "pq1", UID: "q2", CreationTimestamp: nowMinus1,
 					Resources: queue_info.QueueQuota{
 						GPU: queue_info.ResourceQuota{
 							Quota:           1,
@@ -193,7 +193,7 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 						},
 					},
 				},
-				"d1": {UID: "d1", CreationTimestamp: now},
+				"pq1": {UID: "pq1", CreationTimestamp: now},
 			},
 			initJobs: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 				"q1j1": {
@@ -315,18 +315,7 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 			ssn.PodGroupInfos = tt.initJobs
 			proportion.New(map[string]string{}).OnSessionOpen(ssn)
 
-			activeDepartments := scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
-				return !ssn.JobOrderFn(l, r)
-			}, scheduler_util.QueueCapacityInfinite)
-
-			jobsOrder := &JobsOrderByQueues{
-				activeDepartments:                activeDepartments,
-				queueIdToQueueMetadata:           map[common_info.QueueID]*jobsQueueMetadata{},
-				departmentIdToDepartmentMetadata: map[common_info.QueueID]*departmentMetadata{},
-				ssn:                              ssn,
-				jobsOrderInitOptions:             tt.jobsOrderInitOptions,
-				queuePopsMap:                     map[common_info.QueueID][]*podgroup_info.PodGroupInfo{},
-			}
+			jobsOrder := NewJobsOrderByQueues(ssn, tt.options)
 			jobsOrder.InitializeWithJobs(tt.initJobs)
 
 			for _, expectedJobName := range tt.expectedJobNames {
@@ -339,9 +328,9 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 
 func TestJobsOrderByQueues_PushJob(t *testing.T) {
 	type fields struct {
-		jobsOrderInitOptions JobsOrderInitOptions
-		Queues               map[common_info.QueueID]*queue_info.QueueInfo
-		InsertedJob          map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
+		options     JobsOrderInitOptions
+		Queues      map[common_info.QueueID]*queue_info.QueueInfo
+		InsertedJob map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
 	}
 	type args struct {
 		job *podgroup_info.PodGroupInfo
@@ -358,15 +347,15 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 		{
 			name: "single podgroup insert - empty queue",
 			fields: fields{
-				jobsOrderInitOptions: JobsOrderInitOptions{
+				options: JobsOrderInitOptions{
 					VictimQueue:       false,
 					FilterNonPending:  true,
 					FilterUnready:     true,
 					MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
 				},
 				Queues: map[common_info.QueueID]*queue_info.QueueInfo{
-					"q1": {ParentQueue: "d1", UID: "q1"},
-					"d1": {UID: "d1"},
+					"q1":  {ParentQueue: "pq1", UID: "q1"},
+					"pq1": {UID: "pq1"},
 				},
 				InsertedJob: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{},
 			},
@@ -420,15 +409,15 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 		{
 			name: "single podgroup insert - one in queue. On pop comes second",
 			fields: fields{
-				jobsOrderInitOptions: JobsOrderInitOptions{
+				options: JobsOrderInitOptions{
 					VictimQueue:       false,
 					FilterNonPending:  true,
 					FilterUnready:     true,
 					MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
 				},
 				Queues: map[common_info.QueueID]*queue_info.QueueInfo{
-					"q1": {ParentQueue: "d1", UID: "q1"},
-					"d1": {UID: "d1"},
+					"q1":  {ParentQueue: "pq1", UID: "q1"},
+					"pq1": {UID: "pq1"},
 				},
 				InsertedJob: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 					"p140": {
@@ -527,15 +516,15 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 		{
 			name: "single podgroup insert - one in queue. On pop comes first",
 			fields: fields{
-				jobsOrderInitOptions: JobsOrderInitOptions{
+				options: JobsOrderInitOptions{
 					VictimQueue:       false,
 					FilterNonPending:  true,
 					FilterUnready:     true,
 					MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
 				},
 				Queues: map[common_info.QueueID]*queue_info.QueueInfo{
-					"q1": {ParentQueue: "d1", UID: "q1"},
-					"d1": {UID: "d1"},
+					"q1":  {ParentQueue: "pq1", UID: "q1"},
+					"pq1": {UID: "pq1"},
 				},
 				InsertedJob: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 					"p140": {
@@ -636,21 +625,8 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ssn := newPrioritySession()
 			ssn.Queues = tt.fields.Queues
-			activeDepartments := scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
-				if tt.fields.jobsOrderInitOptions.VictimQueue {
-					return !ssn.JobOrderFn(l, r)
-				}
-				return ssn.JobOrderFn(l, r)
-			}, scheduler_util.QueueCapacityInfinite)
 
-			jobsOrder := &JobsOrderByQueues{
-				activeDepartments:                activeDepartments,
-				queueIdToQueueMetadata:           map[common_info.QueueID]*jobsQueueMetadata{},
-				departmentIdToDepartmentMetadata: map[common_info.QueueID]*departmentMetadata{},
-				ssn:                              ssn,
-				jobsOrderInitOptions:             tt.fields.jobsOrderInitOptions,
-				queuePopsMap:                     map[common_info.QueueID][]*podgroup_info.PodGroupInfo{},
-			}
+			jobsOrder := NewJobsOrderByQueues(ssn, tt.fields.options)
 			jobsOrder.InitializeWithJobs(tt.fields.InsertedJob)
 			jobsOrder.PushJob(tt.args.job)
 
@@ -666,11 +642,9 @@ func TestJobsOrderByQueues_PushJob(t *testing.T) {
 
 func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 	type fields struct {
-		queueIdToQueueMetadata           map[common_info.QueueID]*jobsQueueMetadata
-		departmentIdToDepartmentMetadata map[common_info.QueueID]*departmentMetadata
-		jobsOrderInitOptions             JobsOrderInitOptions
-		Queues                           map[common_info.QueueID]*queue_info.QueueInfo
-		InsertedJob                      map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
+		options     JobsOrderInitOptions
+		Queues      map[common_info.QueueID]*queue_info.QueueInfo
+		InsertedJob map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
 	}
 	type expected struct {
 		expectedJobsList []*podgroup_info.PodGroupInfo
@@ -683,17 +657,15 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 		{
 			name: "single job - pop and insert",
 			fields: fields{
-				queueIdToQueueMetadata:           map[common_info.QueueID]*jobsQueueMetadata{},
-				departmentIdToDepartmentMetadata: map[common_info.QueueID]*departmentMetadata{},
-				jobsOrderInitOptions: JobsOrderInitOptions{
+				options: JobsOrderInitOptions{
 					VictimQueue:       false,
 					FilterNonPending:  true,
 					FilterUnready:     true,
 					MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
 				},
 				Queues: map[common_info.QueueID]*queue_info.QueueInfo{
-					"q1": {ParentQueue: "d1", UID: "q1"},
-					"d1": {UID: "d1"},
+					"q1":  {ParentQueue: "pq1", UID: "q1"},
+					"pq1": {UID: "pq1"},
 				},
 				InsertedJob: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 					"p140": {
@@ -750,21 +722,8 @@ func TestJobsOrderByQueues_RequeueJob(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ssn := newPrioritySession()
 			ssn.Queues = tt.fields.Queues
-			activeDepartments := scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
-				if tt.fields.jobsOrderInitOptions.VictimQueue {
-					return !ssn.JobOrderFn(l, r)
-				}
-				return ssn.JobOrderFn(l, r)
-			}, scheduler_util.QueueCapacityInfinite)
 
-			jobsOrder := &JobsOrderByQueues{
-				activeDepartments:                activeDepartments,
-				queueIdToQueueMetadata:           tt.fields.queueIdToQueueMetadata,
-				departmentIdToDepartmentMetadata: tt.fields.departmentIdToDepartmentMetadata,
-				ssn:                              ssn,
-				jobsOrderInitOptions:             tt.fields.jobsOrderInitOptions,
-				queuePopsMap:                     map[common_info.QueueID][]*podgroup_info.PodGroupInfo{},
-			}
+			jobsOrder := NewJobsOrderByQueues(ssn, tt.fields.options)
 			jobsOrder.InitializeWithJobs(tt.fields.InsertedJob)
 
 			jobToRequeue := jobsOrder.PopNextJob()

@@ -21,15 +21,15 @@ type JobsOrderInitOptions struct {
 func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 	jobsToOrder map[common_info.PodGroupID]*podgroup_info.PodGroupInfo) {
 	for _, job := range jobsToOrder {
-		if jobsOrder.jobsOrderInitOptions.FilterUnready && !job.IsReadyForScheduling() {
+		if jobsOrder.options.FilterUnready && !job.IsReadyForScheduling() {
 			continue
 		}
 
-		if jobsOrder.jobsOrderInitOptions.FilterNonPending && len(job.PodStatusIndex[pod_status.Pending]) == 0 {
+		if jobsOrder.options.FilterNonPending && len(job.PodStatusIndex[pod_status.Pending]) == 0 {
 			continue
 		}
 
-		if jobsOrder.jobsOrderInitOptions.FilterNonPreemptible && !job.IsPreemptibleJob() {
+		if jobsOrder.options.FilterNonPreemptible && !job.IsPreemptibleJob() {
 			continue
 		}
 
@@ -40,7 +40,7 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 				break
 			}
 		}
-		if jobsOrder.jobsOrderInitOptions.FilterNonActiveAllocated && !isJobActive {
+		if jobsOrder.options.FilterNonActiveAllocated && !isJobActive {
 			continue
 		}
 
@@ -54,8 +54,8 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 			continue
 		}
 
-		jobsOrder.addJobToQueue(job, jobsOrder.jobsOrderInitOptions.VictimQueue)
+		jobsOrder.addJobToQueue(job, jobsOrder.options.VictimQueue)
 	}
 
-	jobsOrder.buildActiveJobOrderPriorityQueues(jobsOrder.jobsOrderInitOptions.VictimQueue)
+	jobsOrder.buildActiveQueues(jobsOrder.options.VictimQueue)
 }
