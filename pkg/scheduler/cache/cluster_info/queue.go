@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	defaultQueueName = "default"
+	defaultQueueName = "__default__"
 )
 
 func (c *ClusterInfo) getDefaultParentQueue() *queue_info.QueueInfo {
