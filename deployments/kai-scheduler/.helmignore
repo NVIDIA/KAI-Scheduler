@@ -36,3 +36,5 @@ stable-index/*
 .github/
 tests/*
 
+# Go source files (used for embedding CRDs in Go binaries)
+*.go
