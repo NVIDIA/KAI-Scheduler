@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Topology", Ordered, func() {
+var _ = Describe("Topology", Serial, Ordered, func() {
 	var (
 		testCtx          *testcontext.TestContext
 		gpuNodesNames    []string

@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/samber/lo"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -71,7 +72,7 @@ var _ = Describe("Consolidation", Ordered, func() {
 		testCtx.TestContextCleanup(ctx)
 	})
 
-	It("Node level consolidation", func(ctx context.Context) {
+	It("Node level consolidation", Serial, func(ctx context.Context) {
 		capacity.SkipIfInsufficientClusterTopologyResources(testCtx.KubeClientset, []capacity.ResourceList{
 			{
 				Gpu:      resource.MustParse("2"),
@@ -91,8 +92,14 @@ var _ = Describe("Consolidation", Ordered, func() {
 			},
 		}
 
+		targetNodes := rd.ListAllShardNodes(ctx, testCtx.ControllerClient)
+		targetNodesNames := lo.Map(targetNodes.Items, func(item v1.Node, _ int) string {
+			return item.Name
+		})
+
 		fillerJobs, _, err := fillers.FillAllNodesWithJobs(
 			ctx, testCtx, testQueue, requirements, nil, nil, priorityClass,
+			targetNodesNames...,
 		)
 		Expect(err).To(Succeed())
 		Expect(len(fillerJobs)).Should(BeNumerically(">", 0))

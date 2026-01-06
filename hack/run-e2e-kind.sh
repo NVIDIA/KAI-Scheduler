@@ -77,11 +77,11 @@ if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
     cd ${REPO_ROOT}/hack
 else
     PACKAGE_VERSION=0.0.0-$(git rev-parse --short origin/main)
-    helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --version "$PACKAGE_VERSION"
+    helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --wait --version "$PACKAGE_VERSION"
 fi
 
 # Allow all the pods in the fake-gpu-operator and kai-scheduler to start
-sleep 30
+sleep 10
 
 # Install ginkgo if it's not installed
 if [ ! -f ${GOBIN}/ginkgo ]; then

@@ -268,10 +268,14 @@ jobs:
         run: |
           docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
           sudo rm -rf /mnt/images
-
-      - name: Run e2e tests
+      
+      - name: Set second shard for parallel testing
         run: |
-          ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv --label-filter '!autoscale && !scale' ./test/e2e/suites
+          ./hack/parallel_e2e_config/set_parallel_testing_shards.sh
+
+      - name: Run parallel e2e tests
+        run: |
+          ginkgo -r --keep-going --randomize-all --randomize-suites --procs=3 --trace -vv --label-filter '!autoscale && !scale' ./test/e2e/suites
 
       - name: Uninstall KAI-scheduler
         run: |

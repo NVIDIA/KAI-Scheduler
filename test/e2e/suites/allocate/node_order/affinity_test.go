@@ -104,7 +104,7 @@ var _ = Describe("Affinity", Ordered, func() {
 			Expect(testedPod.Spec.NodeName).To(Equal(pod.Spec.NodeName))
 		})
 
-		It("schedules the new pod NOT with matching labels pod anti-affinity", func(ctx context.Context) {
+		It("schedules the new pod NOT with matching labels pod anti-affinity", Serial, func(ctx context.Context) {
 			testedPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 			testedPod.Name = "pod-with-anti-affinity-" + pod.Name
 			testedPod.Spec.Affinity = &v1.Affinity{

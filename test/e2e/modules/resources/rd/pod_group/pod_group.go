@@ -20,6 +20,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 )
 
 const (
@@ -27,6 +28,11 @@ const (
 )
 
 func Create(namespace, name, queue string) *v2alpha2.PodGroup {
+	labels := map[string]string{
+		constants.AppLabelName: "engine-e2e",
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	podGroup := &v2alpha2.PodGroup{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "scheduling.run.ai/v2alpha2",
@@ -36,9 +42,7 @@ func Create(namespace, name, queue string) *v2alpha2.PodGroup {
 			Name:        name,
 			Namespace:   namespace,
 			Annotations: map[string]string{},
-			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-			},
+			Labels:      labels,
 		},
 		Spec: v2alpha2.PodGroupSpec{
 			MinMember: 1,

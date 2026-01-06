@@ -28,7 +28,7 @@ func SetPlacementStrategy(
 	ctx context.Context, testCtx *testContext.TestContext, strategy string,
 ) error {
 	if err := configurations.PatchSchedulingShard(
-		ctx, testCtx, "default",
+		ctx, testCtx,
 		func(shard *kaiv1.SchedulingShard) {
 			shard.Spec.PlacementStrategy.CPU = ptr.To(strategy)
 			shard.Spec.PlacementStrategy.GPU = ptr.To(strategy)

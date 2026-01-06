@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/samber/lo"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,7 +27,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
-var _ = Describe("preempt Distributed Jobs", Ordered, func() {
+var _ = Describe("preempt Distributed Jobs", Serial, Ordered, func() {
 	Context("Over more than one nodes", func() {
 		var (
 			testCtx      *testcontext.TestContext
@@ -80,8 +81,14 @@ var _ = Describe("preempt Distributed Jobs", Ordered, func() {
 				},
 			}
 
+			targetNodes := rd.ListAllShardNodes(ctx, testCtx.ControllerClient)
+			targetNodesNames := lo.Map(targetNodes.Items, func(item v1.Node, _ int) string {
+				return item.Name
+			})
+
 			_, fillerPods, err := fillers.FillAllNodesWithJobs(
 				ctx, testCtx, testQueue, resources, nil, nil, lowPriority,
+				targetNodesNames...,
 			)
 			Expect(err).To(Succeed())
 			nodesNamesMap := map[string]bool{}

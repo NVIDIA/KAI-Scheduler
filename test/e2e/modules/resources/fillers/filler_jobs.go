@@ -96,20 +96,27 @@ func createFillerJob(ctx context.Context, testCtx *testcontext.TestContext, test
 }
 
 func setTargetNodeAffinity(targetNodes []string, job *batchv1.Job) {
-	var nodeSelectorRequirements []v1.NodeSelectorRequirement
-	for _, nodeName := range targetNodes {
-		nodeSelectorRequirements = append(nodeSelectorRequirements, v1.NodeSelectorRequirement{
+	var nodeSelectorRequirement v1.NodeSelectorRequirement
+	if len(targetNodes) == 1 {
+		nodeSelectorRequirement = v1.NodeSelectorRequirement{
 			Key:      constant.NodeNamePodLabelName,
 			Operator: v1.NodeSelectorOpIn,
-			Values:   []string{nodeName},
-		})
+			Values:   []string{targetNodes[0]},
+		}
+	} else {
+		nodeSelectorRequirement = v1.NodeSelectorRequirement{
+			Key:      constant.NodeNamePodLabelName,
+			Operator: v1.NodeSelectorOpIn,
+			Values:   targetNodes,
+		}
 	}
 	job.Spec.Template.Spec.Affinity = &v1.Affinity{
 		NodeAffinity: &v1.NodeAffinity{
 			RequiredDuringSchedulingIgnoredDuringExecution: &v1.NodeSelector{
 				NodeSelectorTerms: []v1.NodeSelectorTerm{
 					{
-						MatchExpressions: nodeSelectorRequirements,
+						MatchExpressions: []v1.NodeSelectorRequirement{
+							nodeSelectorRequirement},
 					},
 				},
 			},
