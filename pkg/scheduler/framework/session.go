@@ -37,17 +37,18 @@ type Session struct {
 	UID   types.UID
 	Cache cache.Cache
 
-	PodGroupInfos map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
-	Nodes         map[string]*node_info.NodeInfo
-	Queues        map[common_info.QueueID]*queue_info.QueueInfo
-	ConfigMaps    map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
+	PodGroupInfos    map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
+	Nodes            map[string]*node_info.NodeInfo
+	Queues           map[common_info.QueueID]*queue_info.QueueInfo
+	ConfigMaps       map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
+	MinNodeGPUMemory int64
 
 	GpuOrderFns                           []api.GpuOrderFn
 	NodePreOrderFns                       []api.NodePreOrderFn
 	NodeOrderFns                          []api.NodeOrderFn
 	TaskOrderFns                          []common_info.CompareFn
 	JobOrderFns                           []common_info.CompareFn
-	QueueOrderFns                         []CompareQueueFn
+	QueueOrderFns                         []api.CompareQueueFn
 	CanReclaimResourcesFns                []api.CanReclaimResourcesFn
 	ReclaimVictimFilterFns                []api.VictimFilterFn
 	PreemptVictimFilterFns                []api.VictimFilterFn
@@ -350,6 +351,7 @@ func openSession(cache cache.Cache, sessionId types.UID, schedulerParams conf.Sc
 	ssn.Nodes = snapshot.Nodes
 	ssn.Queues = snapshot.Queues
 	ssn.ConfigMaps = snapshot.ConfigMaps
+	ssn.MinNodeGPUMemory = snapshot.MinNodeGPUMemory
 
 	log.InfraLogger.V(2).Infof("Session %v with <%d> Jobs, <%d> Queues and <%d> Nodes",
 		ssn.UID, len(ssn.PodGroupInfos), len(ssn.Queues), len(ssn.Nodes))
