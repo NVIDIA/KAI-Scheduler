@@ -33,8 +33,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
-type CompareQueueFn func(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo) int
-
 func (ssn *Session) AddGPUOrderFn(gof api.GpuOrderFn) {
 	ssn.GpuOrderFns = append(ssn.GpuOrderFns, gof)
 }
@@ -67,7 +65,7 @@ func (ssn *Session) AddSubGroupsOrderFn(sgof common_info.CompareFn) {
 	ssn.SubGroupsOrderFns = append(ssn.SubGroupsOrderFns, sgof)
 }
 
-func (ssn *Session) AddQueueOrderFn(qof CompareQueueFn) {
+func (ssn *Session) AddQueueOrderFn(qof api.CompareQueueFn) {
 	ssn.QueueOrderFns = append(ssn.QueueOrderFns, qof)
 }
 
@@ -259,9 +257,12 @@ func (ssn *Session) SubGroupOrderFn(l, r interface{}) bool {
 	return lSubGroup.GetName() < rSubGroup.GetName()
 }
 
-func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo, lVictims, rVictims []*podgroup_info.PodGroupInfo) bool {
+func (ssn *Session) QueueOrderFn(lQ, rQ *queue_info.QueueInfo, lJob, rJob *podgroup_info.PodGroupInfo,
+	lVictims, rVictims []*podgroup_info.PodGroupInfo,
+) bool {
+	minNodeGPUMemory := ssn.MinNodeGPUMemory
 	for _, qof := range ssn.QueueOrderFns {
-		if j := qof(lQ, rQ, lJob, rJob, lVictims, rVictims); j != 0 {
+		if j := qof(lQ, rQ, lJob, rJob, lVictims, rVictims, minNodeGPUMemory); j != 0 {
 			return j < 0
 		}
 	}

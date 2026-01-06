@@ -57,9 +57,10 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 				},
 			},
 		},
-		Queues:        queueInfoMap,
-		PodGroupInfos: jobInfoMap,
-		Topologies:    topologies,
+		Queues:           queueInfoMap,
+		PodGroupInfos:    jobInfoMap,
+		Topologies:       topologies,
+		MinNodeGPUMemory: node_info.DefaultGpuMemory,
 	}
 	ssn.OverrideMaxNumberConsolidationPreemptees(-1)
 	ssn.OverrideAllowConsolidatingReclaim(true)

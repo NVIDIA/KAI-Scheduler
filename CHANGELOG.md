@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Fixed a bug where the scheduler would not consider topology constraints when calculating the scheduling constraints signature [#761](https://github.com/NVIDIA/KAI-Scheduler/pull/766) [gshaibi](https://github.com/gshaibi)
+- GPU Memory pods are not reclaimed or consolidated correctly
+- Fixed GPU memory pods Fair Share and Queue Order calculations
 
 ## [v0.9.9] - 20250-12-08
 

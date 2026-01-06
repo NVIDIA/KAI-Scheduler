@@ -231,7 +231,7 @@ func Test_GetTasksToAllocateRequestedGPUs(t *testing.T) {
 func Test_GetTasksToAllocateInitResource(t *testing.T) {
 	pg := NewPodGroupInfo("ri")
 	// Nil case
-	res := GetTasksToAllocateInitResource(nil, subGroupOrderFn, tasksOrderFn, true)
+	res := GetTasksToAllocateInitResource(nil, subGroupOrderFn, tasksOrderFn, true, 0)
 	if !res.IsEmpty() {
 		t.Error("empty resource expected for nil pg")
 	}
@@ -240,13 +240,13 @@ func Test_GetTasksToAllocateInitResource(t *testing.T) {
 	task := simpleTask("p", "", pod_status.Pending)
 	task.ResReq = resource_info.NewResourceRequirements(0, 5000, 0)
 	pg.AddTaskInfo(task)
-	resource := GetTasksToAllocateInitResource(pg, subGroupOrderFn, tasksOrderFn, true)
+	resource := GetTasksToAllocateInitResource(pg, subGroupOrderFn, tasksOrderFn, true, 0)
 	cpu := resource.BaseResource.Get(v1.ResourceCPU)
 	if cpu != 5000 {
 		t.Fatalf("want cpu=5, got %v", cpu)
 	}
 	// Memoization/second call should return r
-	newResource := GetTasksToAllocateInitResource(pg, subGroupOrderFn, tasksOrderFn, true)
+	newResource := GetTasksToAllocateInitResource(pg, subGroupOrderFn, tasksOrderFn, true, 0)
 	if newResource != resource {
 		t.Error("cached resource pointer mismatch")
 	}
