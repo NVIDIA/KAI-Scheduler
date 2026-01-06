@@ -5,7 +5,6 @@ package env_tests
 
 import (
 	"fmt"
-	"path/filepath"
 
 	resourceapi "k8s.io/api/resource/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -14,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
+	"github.com/NVIDIA/KAI-scheduler/deployments/kai-scheduler/crds"
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	kaiv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
@@ -28,15 +28,21 @@ func SetupEnvTest(crdDirectoryPaths []string) (*rest.Config, client.Client, *env
 		testEnv    *envtest.Environment
 	)
 
-	if crdDirectoryPaths == nil {
-		crdDirectoryPaths = []string{
-			filepath.Join("..", "..", "deployments", "kai-scheduler", "crds"),
-		}
-	}
-
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     crdDirectoryPaths,
 		ErrorIfCRDPathMissing: true,
+	}
+
+	// Use embedded CRDs if no paths provided - this makes the binary self-contained
+	if crdDirectoryPaths == nil {
+		embeddedCRDs, err := crds.LoadEmbeddedCRDs()
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to load embedded CRDs: %w", err)
+		}
+		testEnv = &envtest.Environment{
+			CRDs:                  embeddedCRDs,
+			ErrorIfCRDPathMissing: false,
+		}
 	}
 
 	testEnv.ControlPlane.GetAPIServer().Configure().Append("feature-gates", "DynamicResourceAllocation=true")
