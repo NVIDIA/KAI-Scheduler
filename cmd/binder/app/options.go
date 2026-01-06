@@ -17,6 +17,7 @@ type Options struct {
 	ResourceReservationPodImage          string
 	ResourceReservationAppLabel          string
 	ResourceReservationAllocationTimeout int
+	ResourceReservationSyncPeriodSeconds int
 	ResourceReservationPodResourcesJSON  string
 	ScalingPodNamespace                  string
 	QPS                                  float64
@@ -58,6 +59,9 @@ func InitOptions(fs *pflag.FlagSet) *Options {
 	fs.IntVar(&options.ResourceReservationAllocationTimeout,
 		"resource-reservation-allocation-timeout", 40,
 		"Resource reservation allocation timeout in seconds")
+	fs.IntVar(&options.ResourceReservationSyncPeriodSeconds,
+		"resource-reservation-sync-period", 60,
+		"Resource reservation sync period in seconds. Set to 0 to disable periodic sync.")
 	fs.StringVar(&options.ResourceReservationPodResourcesJSON,
 		"resource-reservation-pod-resources", "",
 		"JSON-serialized ResourceRequirements for GPU reservation pods (optional, empty means not set)")
