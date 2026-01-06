@@ -1,0 +1,15 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: kai.scheduler/v1
+kind: SchedulingShard
+metadata:
+  name: test-shard-2
+spec:
+  args:
+    restrict-node-scheduling: "false"
+    defaultSchedulerPeriod: "100ms"
+  partitionLabelValue: test-pool-2
+  placementStrategy:
+    cpu: binpack
+    gpu: binpack

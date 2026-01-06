@@ -16,6 +16,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait/watcher"
 )
 
@@ -145,7 +146,9 @@ func ForPodsToBeDeleted(ctx context.Context, client runtimeClient.WithWatch, lis
 }
 
 func ForNoE2EPods(ctx context.Context, client runtimeClient.WithWatch) {
-	ForPodsToBeDeleted(ctx, client, runtimeClient.MatchingLabels{constants.AppLabelName: "engine-e2e"})
+	labels := map[string]string{constants.AppLabelName: "engine-e2e"}
+	labels = shardconfig.AddShardLabels(labels)
+	ForPodsToBeDeleted(ctx, client, runtimeClient.MatchingLabels(labels))
 }
 
 func ForNoReservationPods(ctx context.Context, client runtimeClient.WithWatch) {

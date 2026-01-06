@@ -13,6 +13,7 @@ import (
 	kaiClient "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 )
 
 func Create(kaiClientset *kaiClient.Clientset, ctx context.Context, queue *v2.Queue,
@@ -38,21 +39,26 @@ func Delete(kaiClientset *kaiClient.Clientset, ctx context.Context, name string,
 }
 
 func GetAllQueues(kaiClientset *kaiClient.Clientset, ctx context.Context) (*v2.QueueList, error) {
-	return kaiClientset.SchedulingV2().Queues("").List(ctx, metav1.ListOptions{})
+	return kaiClientset.SchedulingV2().Queues("").List(ctx, metav1.ListOptions{
+		LabelSelector: shardconfig.GetShardLabelSelectorString(),
+	})
 }
 
 func CreateQueueObject(name string, parentQueueName string) *v2.Queue {
+	labels := map[string]string{
+		"project":              name,
+		constants.AppLabelName: "engine-e2e",
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	queue := &v2.Queue{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "scheduling.run.ai/v2",
 			Kind:       "Queue",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"project":              name,
-				constants.AppLabelName: "engine-e2e",
-			},
+			Name:   name,
+			Labels: labels,
 		},
 		Spec: v2.QueueSpec{
 			ParentQueue: parentQueueName,
@@ -80,17 +86,20 @@ func CreateQueueObject(name string, parentQueueName string) *v2.Queue {
 
 func CreateQueueObjectWithGpuResource(name string, gpuResource v2.QueueResource,
 	parentQueueName string) *v2.Queue {
+	labels := map[string]string{
+		"project":              name,
+		constants.AppLabelName: "engine-e2e",
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	queue := &v2.Queue{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "scheduling.run.ai/v2",
 			Kind:       "Queue",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"project":              name,
-				constants.AppLabelName: "engine-e2e",
-			},
+			Name:   name,
+			Labels: labels,
 		},
 		Spec: v2.QueueSpec{
 			ParentQueue: parentQueueName,

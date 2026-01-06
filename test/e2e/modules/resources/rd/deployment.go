@@ -12,6 +12,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/shardconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 )
 
@@ -20,14 +21,18 @@ const DeploymentAppLabel = "deployment-app-name"
 func CreateDeploymentObject(namespace, queueName string) *appsv1.Deployment {
 	matchLabelValue := utils.GenerateRandomK8sName(10)
 
+	labels := map[string]string{
+		constants.AppLabelName: "engine-e2e",
+		DeploymentAppLabel:     matchLabelValue,
+		"kai.scheduler/queue":  queueName,
+	}
+	labels = shardconfig.AddShardLabels(labels)
+
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      utils.GenerateRandomK8sName(10),
 			Namespace: namespace,
-			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-				DeploymentAppLabel:     matchLabelValue,
-			},
+			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(1)),
@@ -39,11 +44,7 @@ func CreateDeploymentObject(namespace, queueName string) *appsv1.Deployment {
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						constants.AppLabelName: "engine-e2e",
-						DeploymentAppLabel:     matchLabelValue,
-						"kai.scheduler/queue":  queueName,
-					},
+					Labels: labels,
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{

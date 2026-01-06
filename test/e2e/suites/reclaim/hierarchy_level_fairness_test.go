@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/samber/lo"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -110,8 +111,14 @@ var _ = Describe("Hierarchy level fairness", Ordered, func() {
 				},
 			}
 
+			targetNodes := rd.ListAllShardNodes(ctx, testCtx.ControllerClient)
+			targetNodesNames := lo.Map(targetNodes.Items, func(item v1.Node, _ int) string {
+				return item.Name
+			})
+
 			_, _, err := fillers.FillAllNodesWithJobs(
 				ctx, testCtx, reclaimeeQueue, resources, nil, nil, lowPriority,
+				targetNodesNames...,
 			)
 			Expect(err).To(Succeed())
 			namespace := queue.GetConnectedNamespaceToQueue(reclaimeeQueue)
