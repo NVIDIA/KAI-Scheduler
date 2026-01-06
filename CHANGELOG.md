@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixed GPU memory pods Fair Share and Queue Order calculations
 - Interpret negative or zero half-life value as disabled [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
 
+### Changed
+- Removed the constraint that prohibited direct nesting of subgroups alongside podsets within the same subgroupset.
+
 ## [v0.12.0] - 2025-12-24
 
 ### Added
