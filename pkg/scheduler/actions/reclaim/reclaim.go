@@ -122,7 +122,7 @@ func buildReclaimerInfo(ssn *framework.Session, reclaimerJob *podgroup_info.PodG
 		Queue:         reclaimerJob.Queue,
 		IsPreemptable: reclaimerJob.IsPreemptibleJob(ssn.IsInferencePreemptible()),
 		RequiredResources: podgroup_info.GetTasksToAllocateInitResource(
-			reclaimerJob, ssn.TaskOrderFn, false),
+			reclaimerJob, ssn.TaskOrderFn, false, ssn.MinNodeGPUMemory),
 	}
 }
 
