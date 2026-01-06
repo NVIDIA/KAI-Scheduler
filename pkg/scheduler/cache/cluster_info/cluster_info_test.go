@@ -1425,7 +1425,7 @@ func TestSnapshotQueues(t *testing.T) {
 	assert.Equal(t, common_info.QueueID("department0"), snapshot.Queues["department0"].UID)
 	assert.Equal(t, "queue0", snapshot.Queues["queue0"].Name)
 	assert.Equal(t, "department-zero", snapshot.Queues["department0"].Name)
-	// Orphan queues (queues without a parent) are adopted by the synthetic "default" root queue
+	// Parentless queues (queues without a parent) are adopted by the synthetic "default" root queue
 	assert.Equal(t, common_info.QueueID(defaultQueueName), snapshot.Queues["department0"].ParentQueue)
 	assert.Equal(t, common_info.QueueID("department0"), snapshot.Queues["queue0"].ParentQueue)
 	assert.Equal(t, []common_info.QueueID{"queue0"}, snapshot.Queues["department0"].ChildQueues)
