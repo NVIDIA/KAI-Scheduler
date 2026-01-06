@@ -109,7 +109,7 @@ func TestSnapshot(t *testing.T) {
 				},
 			},
 			expectedNodes:        1,
-			expectedQueues:       2,
+			expectedQueues:       3, // my-department, my-queue, and synthetic "default" root
 			expectedBindRequests: 1,
 		},
 		"SingleFromEach2": {
@@ -139,7 +139,7 @@ func TestSnapshot(t *testing.T) {
 				},
 			},
 			expectedNodes:  1,
-			expectedQueues: 2,
+			expectedQueues: 3, // my-department, my-queue, and synthetic "default" root
 		},
 	}
 
@@ -1418,15 +1418,21 @@ func TestSnapshotQueues(t *testing.T) {
 	)
 	snapshot, err := clusterInfo.Snapshot()
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(snapshot.Queues))
+	// Expecting 3 queues: default (synthetic root), department0, and queue0
+	// department0-a is filtered out by nodepool label
+	assert.Equal(t, 3, len(snapshot.Queues))
 	assert.Equal(t, common_info.QueueID("queue0"), snapshot.Queues["queue0"].UID)
 	assert.Equal(t, common_info.QueueID("department0"), snapshot.Queues["department0"].UID)
 	assert.Equal(t, "queue0", snapshot.Queues["queue0"].Name)
 	assert.Equal(t, "department-zero", snapshot.Queues["department0"].Name)
-	assert.Equal(t, common_info.QueueID(""), snapshot.Queues["department0"].ParentQueue)
+	// Orphan queues (queues without a parent) are adopted by the synthetic "default" root queue
+	assert.Equal(t, common_info.QueueID(defaultQueueName), snapshot.Queues["department0"].ParentQueue)
 	assert.Equal(t, common_info.QueueID("department0"), snapshot.Queues["queue0"].ParentQueue)
 	assert.Equal(t, []common_info.QueueID{"queue0"}, snapshot.Queues["department0"].ChildQueues)
 	assert.Equal(t, []common_info.QueueID{}, snapshot.Queues["queue0"].ChildQueues)
+	// Verify the default root queue exists and has department0 as a child
+	assert.Equal(t, common_info.QueueID(defaultQueueName), snapshot.Queues[defaultQueueName].UID)
+	assert.ElementsMatch(t, []common_info.QueueID{"department0"}, snapshot.Queues[defaultQueueName].ChildQueues)
 }
 
 func TestSnapshotFlatHierarchy(t *testing.T) {
@@ -1486,14 +1492,16 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 
 	snapshot, err := clusterInfo.Snapshot()
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(snapshot.Queues))
+	// In ProjectLevelFairness mode, all queues are flattened under the synthetic "default" root:
+	// default, department0, department1, queue0, queue1
+	assert.Equal(t, 5, len(snapshot.Queues))
 
 	defaultParentQueueId := common_info.QueueID(defaultQueueName)
-	parentQueue, found := snapshot.Queues[defaultParentQueueId]
+	defaultQueue, found := snapshot.Queues[defaultParentQueueId]
 	assert.True(t, found)
-	assert.Equal(t, parentQueue.Name, defaultQueueName)
-	assert.Equal(t, parentQueue.UID, defaultParentQueueId)
-	assert.Equal(t, parentQueue.Resources, queue_info.QueueQuota{
+	assert.Equal(t, defaultQueue.Name, defaultQueueName)
+	assert.Equal(t, defaultQueue.UID, defaultParentQueueId)
+	assert.Equal(t, defaultQueue.Resources, queue_info.QueueQuota{
 		GPU: queue_info.ResourceQuota{
 			Quota:           -1,
 			OverQuotaWeight: 1,
@@ -1510,6 +1518,16 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 			Limit:           -1,
 		},
 	})
+
+	// In flat hierarchy mode, all queues should have "default" as their parent
+	snapshotDept0, found := snapshot.Queues[common_info.QueueID(parentQueue0.Name)]
+	assert.True(t, found)
+	assert.Equal(t, snapshotDept0.ParentQueue, defaultParentQueueId)
+
+	snapshotDept1, found := snapshot.Queues[common_info.QueueID(parentQueue1.Name)]
+	assert.True(t, found)
+	assert.Equal(t, snapshotDept1.ParentQueue, defaultParentQueueId)
+
 	snapshotQueue0, found := snapshot.Queues[common_info.QueueID(queue0.Name)]
 	assert.True(t, found)
 	assert.Equal(t, snapshotQueue0.ParentQueue, defaultParentQueueId)
@@ -1517,6 +1535,9 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 	snapshotQueue1, found := snapshot.Queues[common_info.QueueID(queue1.Name)]
 	assert.True(t, found)
 	assert.Equal(t, snapshotQueue1.ParentQueue, defaultParentQueueId)
+
+	// Default queue should have all 4 user queues as children
+	assert.ElementsMatch(t, []common_info.QueueID{"department0", "department1", "queue0", "queue1"}, defaultQueue.ChildQueues)
 }
 
 func TestGetPodGroupPriority(t *testing.T) {
