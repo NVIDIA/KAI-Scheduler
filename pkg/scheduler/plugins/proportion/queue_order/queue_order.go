@@ -100,7 +100,7 @@ func prioritizeUnderUtilized(lQueue *rs.QueueAttributes, rQueue *rs.QueueAttribu
 
 func prioritizeUnderQuotaWithJob(lQueue, rQueue *rs.QueueAttributes,
 	lJobInfo, rJobInfo *podgroup_info.PodGroupInfo,
-	taskOrderFn common_info.LessFn) int {
+	taskOrderFn common_info.LessFn, minNodeGPUMemory int64) int {
 
 	lAllocatedWithJob := lQueue.GetAllocatedShare()
 	lJobRequirements := utils.QuantifyResource(
