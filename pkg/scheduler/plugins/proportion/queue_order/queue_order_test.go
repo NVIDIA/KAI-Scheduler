@@ -32,7 +32,6 @@ func createGpuMemoryTask(name string, numDevices int64, gpuMemory int64) *pod_in
 	task := &pod_info.PodInfo{
 		Name:                name,
 		Status:              pod_status.Pending,
-		SubGroupName:        podgroup_info.DefaultSubGroup,
 		ResourceRequestType: pod_info.RequestTypeGpuMemory,
 		ResReq: &resource_info.ResourceRequirements{
 			GpuResourceRequirement: *resource_info.NewGpuResourceRequirementWithMultiFraction(numDevices, 0, gpuMemory),
@@ -43,7 +42,6 @@ func createGpuMemoryTask(name string, numDevices int64, gpuMemory int64) *pod_in
 
 func createPodGroupWithGpuMemoryTask(name string, numDevices int64, gpuMemory int64) *podgroup_info.PodGroupInfo {
 	pg := podgroup_info.NewPodGroupInfo(common_info.PodGroupID(name))
-	pg.GetSubGroups()[podgroup_info.DefaultSubGroup].SetMinAvailable(1)
 	task := createGpuMemoryTask("task-"+name, numDevices, gpuMemory)
 	pg.AddTaskInfo(task)
 	return pg
