@@ -250,6 +250,22 @@ rules:
   - patch
   - update
 - apiGroups:
+  - nvidia.com
+  resources:
+  - dynamographdeployments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nvidia.com
+  resources:
+  - dynamographdeployments/finalizers
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
   - ray.io
   resources:
   - rayclusters

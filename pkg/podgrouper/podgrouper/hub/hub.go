@@ -11,6 +11,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/cronjobs"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/deployment"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/dynamo"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/grouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/grove"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/job"
@@ -113,6 +114,7 @@ func NewDefaultPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 
 	groveGrouper := grove.NewGroveGrouper(kubeClient, defaultGrouper)
 
+	dynamoGrouper := dynamo.NewDynamoGrouper(kubeClient, defaultGrouper)
 	table := map[metav1.GroupVersionKind]grouper.Grouper{
 		{
 			Group:   "apps",
@@ -283,12 +285,7 @@ func NewDefaultPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Group:   "nvidia.com",
 			Version: "v1alpha1",
 			Kind:    "DynamoGraphDeployment",
-		}: groveGrouper,
-		{
-			Group:   "nvidia.com",
-			Version: "v1alpha1",
-			Kind:    "DynamoComponentDeployment",
-		}: groveGrouper,
+		}: dynamoGrouper,
 	}
 
 	skipTopOwnerGrouper := skiptopowner.NewSkipTopOwnerGrouper(kubeClient, defaultGrouper, table)
