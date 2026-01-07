@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	v1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
-	gomock "go.uber.org/mock/gomock"
+	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -17,7 +17,6 @@ import (
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
-	isgomock struct{}
 }
 
 // MockInterfaceMockRecorder is the mock recorder for MockInterface.
@@ -46,7 +45,7 @@ func (m *MockInterface) Bind(ctx context.Context, task *v1.Pod, host *v1.Node, b
 }
 
 // Bind indicates an expected call of Bind.
-func (mr *MockInterfaceMockRecorder) Bind(ctx, task, host, bindRequest any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Bind(ctx, task, host, bindRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bind", reflect.TypeOf((*MockInterface)(nil).Bind), ctx, task, host, bindRequest)
 }
@@ -60,7 +59,7 @@ func (m *MockInterface) Rollback(ctx context.Context, task *v1.Pod, host *v1.Nod
 }
 
 // Rollback indicates an expected call of Rollback.
-func (mr *MockInterfaceMockRecorder) Rollback(ctx, task, host, bindRequest any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Rollback(ctx, task, host, bindRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rollback", reflect.TypeOf((*MockInterface)(nil).Rollback), ctx, task, host, bindRequest)
 }
