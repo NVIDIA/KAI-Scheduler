@@ -172,6 +172,22 @@ rules:
   - patch
   - update
 - apiGroups:
+  - jobset.x-k8s.io
+  resources:
+  - jobsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - jobset.x-k8s.io
+  resources:
+  - jobsets/finalizers
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
   - kubeflow.org
   resources:
   - jaxjobs
