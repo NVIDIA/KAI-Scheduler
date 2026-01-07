@@ -13,10 +13,12 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+
+	"github.com/samber/lo"
 )
 
 const (
-	defaultQueueName = "default"
+	defaultQueueName = "__default__"
 )
 
 func (c *ClusterInfo) getDefaultParentQueue() *queue_info.QueueInfo {
@@ -55,23 +57,31 @@ func (c *ClusterInfo) snapshotQueues() (map[common_info.QueueID]*queue_info.Queu
 		return nil, err
 	}
 
-	result := map[common_info.QueueID]*queue_info.QueueInfo{}
-	if c.fairnessLevelType == FullFairness {
-		for _, queue := range queues {
-			queueInfo := queue_info.NewQueueInfo(queue)
-			result[queueInfo.UID] = queueInfo
+	for _, queue := range queues {
+		// Adopt parentless queues (no parent specified) under the default root queue.
+		// In ProjectLevelFairness mode, flatten all queues under the default root.
+		if len(queue.Spec.ParentQueue) == 0 || c.fairnessLevelType == ProjectLevelFairness {
+			queue.Spec.ParentQueue = defaultQueueName
 		}
-	} else if c.fairnessLevelType == ProjectLevelFairness {
-		defaultParentQueue := c.getDefaultParentQueue()
-		result[defaultParentQueue.UID] = defaultParentQueue
+	}
 
-		for _, queue := range queues {
-			if len(queue.Spec.ParentQueue) > 0 {
-				queue.Spec.ParentQueue = defaultQueueName
-				queueInfo := queue_info.NewQueueInfo(queue)
-				result[queueInfo.UID] = queueInfo
-			}
+	queuesByName := lo.SliceToMap(queues, func(queue *enginev2.Queue) (string, *enginev2.Queue) {
+		return queue.Name, queue
+	})
+	// Detach queues from their grandparents to enforce 2-level hierarchy limit
+	// TODO: Remove this restriction when n-level hierarchy support is added
+	for _, queue := range queues {
+		if queue.Spec.ParentQueue != "" && queuesByName[queue.Spec.ParentQueue] != nil {
+			queuesByName[queue.Spec.ParentQueue].Spec.ParentQueue = ""
 		}
+	}
+
+	result := map[common_info.QueueID]*queue_info.QueueInfo{}
+	defaultParentQueue := c.getDefaultParentQueue()
+	result[defaultParentQueue.UID] = defaultParentQueue
+	for _, queue := range queues {
+		queueInfo := queue_info.NewQueueInfo(queue)
+		result[queueInfo.UID] = queueInfo
 	}
 
 	return result, nil
@@ -102,6 +112,8 @@ func updateQueueChildren(queues map[common_info.QueueID]*queue_info.QueueInfo) {
 	}
 }
 
+// cleanQueueOrphans removes queues that reference a non-existent parent queue
+// (parentless queues are not considered orphans)
 func cleanQueueOrphans(queues map[common_info.QueueID]*queue_info.QueueInfo) {
 	for queueId, queue := range queues {
 		if queue.ParentQueue != "" {
