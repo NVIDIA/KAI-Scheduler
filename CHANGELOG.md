@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.6.16] - 2026-01-07
+
 ### Fixed
 - Fixed a bug where the scheduler would not re-try updating podgroup status after failure
 - GPU Memory pods are not reclaimed or consolidated correctly
