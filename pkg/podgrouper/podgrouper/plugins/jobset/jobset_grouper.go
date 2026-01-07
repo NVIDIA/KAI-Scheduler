@@ -29,6 +29,7 @@ const (
 //   - Creates one PodGroup per replicatedJob to avoid sequencing deadlocks
 //   - PodGroup name: pg-<jobset-name>-<jobset-uid>-<replicatedjob-name>
 //   - MinAvailable: replicas * min(parallelism, completions if set) (defaults to 1)
+//
 // When startupPolicy.startupPolicyOrder is not "InOrder":
 //   - Creates a single PodGroup for all replicatedJobs
 //   - PodGroup name: pg-<jobset-name>-<jobset-uid>

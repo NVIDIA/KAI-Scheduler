@@ -18,4 +18,3 @@ func TestJobSetIntegration(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "JobSet integration suite")
 }
-

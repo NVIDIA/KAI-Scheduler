@@ -96,6 +96,13 @@ func ForPodSucceededOrError(ctx context.Context, client runtimeClient.WithWatch,
 	}
 }
 
+func ForPodSucceeded(ctx context.Context, client runtimeClient.WithWatch, pod *v1.Pod) {
+	pw := watcher.NewPodsWatcher(client, podEventCheck(rd.IsPodSucceeded), pod.Namespace, []*v1.Pod{pod}, 1)
+	if !watcher.ForEvent(ctx, client, pw) {
+		Fail(fmt.Sprintf("Failed to wait for pod %s/%s to finish (success or error)", pod.Namespace, pod.Name))
+	}
+}
+
 func ForAtLeastOnePodCreation(ctx context.Context, client runtimeClient.WithWatch, selector metav1.LabelSelector) {
 	ForAtLeastNPodCreation(ctx, client, selector, 1)
 }

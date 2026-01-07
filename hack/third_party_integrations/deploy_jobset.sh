@@ -3,5 +3,5 @@
 # SPDX-License-Identifier: Apache-2.0
 set -e
 
-kubectl apply --server-side -k "github.com/kubernetes-sigs/jobset.git/config/default?ref=v0.2.0"
+kubectl apply --server-side -f https://github.com/kubernetes-sigs/jobset/releases/download/v0.10.1/manifests.yaml
 

@@ -4,26 +4,26 @@
 package jobset
 
 import (
-	jobsetv1alpha2 "sigs.k8s.io/jobset/api/jobset/v1alpha2"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	jobsetv1alpha2 "sigs.k8s.io/jobset/api/jobset/v1alpha2"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 )
 
-// CreateObject creates a JobSet with a single replicatedJob
-func CreateObject(name, namespace, queueName string, parallelism, completions int32) *jobsetv1alpha2.JobSet {
+// CreateUnequalCompletionJobSetObject creates a JobSet with a single replicatedJob
+func CreateUnequalCompletionJobSetObject(name, namespace, queueName string, parallelism, completions int32) *jobsetv1alpha2.JobSet {
 	return &jobsetv1alpha2.JobSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
 				constants.AppLabelName: "engine-e2e",
-				"kai.scheduler/queue":   queueName,
+				"kai.scheduler/queue":  queueName,
 			},
 		},
 		Spec: jobsetv1alpha2.JobSetSpec{
@@ -86,7 +86,7 @@ func CreateObjectWithStartupPolicy(name, namespace, queueName, startupPolicyOrde
 			Namespace: namespace,
 			Labels: map[string]string{
 				constants.AppLabelName: "engine-e2e",
-				"kai.scheduler/queue":   queueName,
+				"kai.scheduler/queue":  queueName,
 			},
 		},
 		Spec: jobsetv1alpha2.JobSetSpec{
@@ -176,7 +176,7 @@ func CreateObjectWithHighParallelism(name, namespace, queueName string) *jobsetv
 			Namespace: namespace,
 			Labels: map[string]string{
 				constants.AppLabelName: "engine-e2e",
-				"kai.scheduler/queue":   queueName,
+				"kai.scheduler/queue":  queueName,
 			},
 		},
 		Spec: jobsetv1alpha2.JobSetSpec{
@@ -235,7 +235,7 @@ func CreateObjectWithMultipleReplicatedJobs(name, namespace, queueName string) *
 			Namespace: namespace,
 			Labels: map[string]string{
 				constants.AppLabelName: "engine-e2e",
-				"kai.scheduler/queue":   queueName,
+				"kai.scheduler/queue":  queueName,
 			},
 		},
 		Spec: jobsetv1alpha2.JobSetSpec{
@@ -324,7 +324,7 @@ func CreateObjectWithDefaultParallelism(name, namespace, queueName string) *jobs
 			Namespace: namespace,
 			Labels: map[string]string{
 				constants.AppLabelName: "engine-e2e",
-				"kai.scheduler/queue":   queueName,
+				"kai.scheduler/queue":  queueName,
 			},
 		},
 		Spec: jobsetv1alpha2.JobSetSpec{
@@ -366,4 +366,3 @@ func CreateObjectWithDefaultParallelism(name, namespace, queueName string) *jobs
 		},
 	}
 }
-

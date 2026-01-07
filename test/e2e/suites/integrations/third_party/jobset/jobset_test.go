@@ -19,9 +19,7 @@ import (
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
-	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/configurations"
-	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/configurations/feature_flags"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/capacity"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/crd"
@@ -29,11 +27,18 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	jobSetCrdName         = "jobsets.jobset.x-k8s.io"
+	jobSetCrdVersion      = "v1alpha2"
+	jobSetLabelJobSetName = "jobset.sigs.k8s.io/jobset-name"
+
+	startupPolicyOrderInOrder = "InOrder"
+)
 
 var _ = Describe("JobSet integration", Ordered, func() {
 	var (
@@ -42,7 +47,7 @@ var _ = Describe("JobSet integration", Ordered, func() {
 
 	BeforeAll(func(ctx context.Context) {
 		testCtx = testcontext.GetConnectivity(ctx, Default)
-		crd.SkipIfCrdIsNotInstalled(ctx, testCtx.KubeConfig, "jobsets.jobset.x-k8s.io", "v1alpha2")
+		crd.SkipIfCrdIsNotInstalled(ctx, testCtx.KubeConfig, jobSetCrdName, jobSetCrdVersion)
 		Expect(jobsetv1alpha2.AddToScheme(testCtx.ControllerClient.Scheme())).To(Succeed())
 		parentQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), "")
 		childQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), parentQueue.Name)
@@ -58,83 +63,67 @@ var _ = Describe("JobSet integration", Ordered, func() {
 	})
 
 	Context("JobSet submission", func() {
-		It("should schedule pods with parallelism=2 and completions=3, first pod completes 5 seconds earlier", func(ctx context.Context) {
-			// Set default-staleness-grace-period to 1s for this test
-			originalShard := &kaiv1.SchedulingShard{}
-			err := testCtx.ControllerClient.Get(ctx, client.ObjectKey{Name: "default"}, originalShard)
-			Expect(err).To(Succeed())
-			originalValue := originalShard.Spec.Args["default-staleness-grace-period"]
-			
-			// Set to 1s
-			err = configurations.SetShardArg(ctx, testCtx, "default", "default-staleness-grace-period", ptr.To("1s"))
-			Expect(err).To(Succeed())
-			wait.WaitForDeploymentPodsRunning(ctx, testCtx.ControllerClient, constant.SchedulerDeploymentName, constants.DefaultKAINamespace)
-			
-			// Restore original value in defer
-			defer func() {
-				var restoreValue *string
-				if originalValue != "" {
-					restoreValue = ptr.To(originalValue)
-				}
-				err := configurations.SetShardArg(ctx, testCtx, "default", "default-staleness-grace-period", restoreValue)
+
+		Context("tests with different parallelism and completions values", func() {
+			BeforeAll(func(ctx context.Context) {
+				err := feature_flags.SetDefaultStalenessGracePeriod(ctx, testCtx, ptr.To("1s"))
 				Expect(err).To(Succeed())
-				wait.WaitForDeploymentPodsRunning(ctx, testCtx.ControllerClient, constant.SchedulerDeploymentName, constants.DefaultKAINamespace)
-			}()
+			})
 
-			testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
-			jobSetName := "test-jobset-" + utils.GenerateRandomK8sName(10)
+			It("should schedule pods with parallelism=2 and completions=3, first pod completes 5 seconds earlier", func(ctx context.Context) {
+				testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+				jobSetName := "test-jobset-" + utils.GenerateRandomK8sName(10)
 
-			jobSet := jobset.CreateObject(jobSetName, testNamespace, testCtx.Queues[0].Name, 2, 3)
-			Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
-			defer func() {
-				Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
-			}()
+				jobSet := jobset.CreateUnequalCompletionJobSetObject(jobSetName, testNamespace, testCtx.Queues[0].Name, 2, 3)
+				Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
+				defer func() {
+					Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
+				}()
 
-			// Wait for pods to be created
-			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 3)
+				// Wait for pods to be created
+				pods, err := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 3)
+				Expect(err).To(Succeed())
 
-			// Wait for all pods to be scheduled
-			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
+				// Wait for all pods to be scheduled
+				wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
 
-			// Wait for first pod to complete (completes 5s earlier)
-			firstPod := pods[0]
-			wait.ForPodSucceededOrError(ctx, testCtx.ControllerClient, firstPod)
+				// Wait for first pod to complete successfully (completes 5s earlier)
+				firstPod := pods[0]
+				wait.ForPodSucceeded(ctx, testCtx.ControllerClient, firstPod)
 
-			// Wait for remaining pods to complete
-			for i := 1; i < len(pods); i++ {
-				wait.ForPodSucceededOrError(ctx, testCtx.ControllerClient, pods[i])
-			}
+				// Wait for remaining pods to complete successfully (see that they are not evicted by stale gang eviction)
+				for i := 1; i < len(pods); i++ {
+					wait.ForPodSucceeded(ctx, testCtx.ControllerClient, pods[i])
+				}
+			})
+
+			AfterAll(func(ctx context.Context) {
+				err := feature_flags.SetDefaultStalenessGracePeriod(ctx, testCtx, nil)
+				Expect(err).To(Succeed())
+			})
 		})
 
 		It("should create separate PodGroups per replicatedJob when startupPolicyOrder is InOrder", func(ctx context.Context) {
 			testNamespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
 			jobSetName := "inorder-jobset-" + utils.GenerateRandomK8sName(10)
 
-			jobSet := jobset.CreateObjectWithStartupPolicy(jobSetName, testNamespace, testCtx.Queues[0].Name, "InOrder")
+			jobSet := jobset.CreateObjectWithStartupPolicy(jobSetName, testNamespace, testCtx.Queues[0].Name, startupPolicyOrderInOrder)
 			Expect(testCtx.ControllerClient.Create(ctx, jobSet)).To(Succeed())
 			defer func() {
 				Expect(testCtx.ControllerClient.Delete(ctx, jobSet)).To(Succeed())
 			}()
 
 			// Wait for pods and verify PodGroups are created separately
-			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 2)
+			pods, err := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 2)
+			Expect(err).To(Succeed())
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
 
 			// Verify 2 separate PodGroups are created (one per replicatedJob)
-			Eventually(func(g Gomega) {
-				podGroups := &v2alpha2.PodGroupList{}
-				err := testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(testNamespace))
-				g.Expect(err).To(Succeed())
+			job1PG := calcJobSetPodGroupName(jobSetName, string(jobSet.UID), ptr.To("job1"), startupPolicyOrderInOrder)
+			job2PG := calcJobSetPodGroupName(jobSetName, string(jobSet.UID), ptr.To("job2"), startupPolicyOrderInOrder)
 
-				// Should have 2 PodGroups (one per replicatedJob with InOrder)
-				g.Expect(len(podGroups.Items)).To(Equal(2), "Expected 2 separate PodGroups for InOrder startup policy")
-
-				// Verify each PodGroup corresponds to a replicatedJob by checking name pattern
-				job1PG := findPodGroupByName(podGroups.Items, "job1")
-				job2PG := findPodGroupByName(podGroups.Items, "job2")
-				g.Expect(job1PG).NotTo(BeNil(), "PodGroup for job1 should exist")
-				g.Expect(job2PG).NotTo(BeNil(), "PodGroup for job2 should exist")
-			}, time.Minute).Should(Succeed())
+			wait.WaitForPodGroupToExist(ctx, testCtx.ControllerClient, testNamespace, job1PG)
+			wait.WaitForPodGroupToExist(ctx, testCtx.ControllerClient, testNamespace, job2PG)
 		})
 
 		It("should create a single PodGroup for all replicatedJobs when startupPolicyOrder is not InOrder", func(ctx context.Context) {
@@ -148,7 +137,8 @@ var _ = Describe("JobSet integration", Ordered, func() {
 			}()
 
 			// Wait for pods and verify they all use the same PodGroup
-			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 2)
+			pods, err := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 2)
+			Expect(err).To(Succeed())
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
 
 			// Verify only 1 PodGroup is created for all replicatedJobs with AnyOrder
@@ -191,20 +181,18 @@ var _ = Describe("JobSet integration", Ordered, func() {
 			}()
 
 			// Wait for pods to be created
-			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 8)
+			pods, err := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 8)
+			Expect(err).To(Succeed())
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
 
 			// Verify PodGroup is created with correct MinMember
-			Eventually(func(g Gomega) {
-				podGroups := &v2alpha2.PodGroupList{}
-				err := testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(testNamespace))
-				g.Expect(err).To(Succeed())
+			pgName := calcJobSetPodGroupName(jobSetName, string(jobSet.UID), nil, string(jobSet.Spec.StartupPolicy.StartupPolicyOrder))
+			wait.WaitForPodGroupToExist(ctx, testCtx.ControllerClient, testNamespace, pgName)
 
-				// Should have 1 PodGroup (one per replicatedJob with InOrder)
-				g.Expect(len(podGroups.Items)).To(Equal(1))
-				// MinMember: 1 replica * 8 parallelism = 8
-				g.Expect(podGroups.Items[0].Spec.MinMember).To(Equal(int32(8)))
-			}, time.Minute).Should(Succeed())
+			podGroup := &v2alpha2.PodGroup{}
+			err = testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKey{Namespace: testNamespace, Name: pgName}, podGroup)
+			Expect(err).To(Succeed())
+			Expect(podGroup.Spec.MinMember).To(Equal(int32(8)))
 		})
 
 		It("should create separate PodGroups for multiple ReplicatedJobs with different parallelism", func(ctx context.Context) {
@@ -228,24 +216,19 @@ var _ = Describe("JobSet integration", Ordered, func() {
 
 			// Wait for pods to be created (coordinator: 2 pods, worker: 2 pods)
 			// With AnyOrder, all replicatedJobs are created simultaneously
-			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 4) // Total: 2 + 2 = 4 pods
+			pods, err := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 4) // Total: 2 + 2 = 4 pods
+			Expect(err).To(Succeed())
+			Expect(len(pods)).To(Equal(4))
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
 
 			// Verify 1 PodGroup is created for all replicatedJobs with AnyOrder
-			Eventually(func(g Gomega) {
-				podGroups := &v2alpha2.PodGroupList{}
-				err := testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(testNamespace))
-				g.Expect(err).To(Succeed())
+			pgName := calcJobSetPodGroupName(jobSetName, string(jobSet.UID), nil, string(jobSet.Spec.StartupPolicy.StartupPolicyOrder))
+			wait.WaitForPodGroupToExist(ctx, testCtx.ControllerClient, testNamespace, pgName)
 
-				// Should have 1 PodGroup for all replicatedJobs with AnyOrder
-				g.Expect(len(podGroups.Items)).To(Equal(1))
-
-				// Verify MinMember is sum of all replicatedJobs
-				// Coordinator: 1 replica * 2 parallelism = 2
-				// Worker: 1 replica * 2 parallelism = 2
-				// Total MinMember: 4
-				g.Expect(podGroups.Items[0].Spec.MinMember).To(Equal(int32(4)))
-			}, time.Minute).Should(Succeed())
+			podGroup := &v2alpha2.PodGroup{}
+			err = testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKey{Namespace: testNamespace, Name: pgName}, podGroup)
+			Expect(err).To(Succeed())
+			Expect(podGroup.Spec.MinMember).To(Equal(int32(4)))
 		})
 
 		It("should create PodGroup with MinMember=1 for single replica with default parallelism", func(ctx context.Context) {
@@ -259,74 +242,60 @@ var _ = Describe("JobSet integration", Ordered, func() {
 			}()
 
 			// Wait for pods to be created
-			pods := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 1)
+			pods, err := waitForJobSetPods(ctx, testCtx, jobSetName, testNamespace, 1)
+			Expect(err).To(Succeed())
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, testNamespace, pods)
 
 			// Verify PodGroup is created with correct MinMember (defaults to 1)
-			Eventually(func(g Gomega) {
-				podGroups := &v2alpha2.PodGroupList{}
-				err := testCtx.ControllerClient.List(ctx, podGroups, runtimeClient.InNamespace(testNamespace))
-				g.Expect(err).To(Succeed())
+			pgName := calcJobSetPodGroupName(jobSetName, string(jobSet.UID), nil, string(jobSet.Spec.StartupPolicy.StartupPolicyOrder))
+			wait.WaitForPodGroupToExist(ctx, testCtx.ControllerClient, testNamespace, pgName)
 
-				// Should have 1 PodGroup
-				g.Expect(len(podGroups.Items)).To(Equal(1))
-				// MinMember defaults to 1 (1 replica, parallelism defaults to 1)
-				g.Expect(podGroups.Items[0].Spec.MinMember).To(Equal(int32(1)))
-			}, time.Minute).Should(Succeed())
+			podGroup := &v2alpha2.PodGroup{}
+			err = testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKey{Namespace: testNamespace, Name: pgName}, podGroup)
+			Expect(err).To(Succeed())
+			Expect(podGroup.Spec.MinMember).To(Equal(int32(1)))
 		})
 	})
 })
 
-
-
-func waitForJobSetPods(ctx context.Context, testCtx *testcontext.TestContext, jobSetName, namespace string, expectedCount int) []*v1.Pod {
+func waitForJobSetPods(ctx context.Context, testCtx *testcontext.TestContext, jobSetName, namespace string, expectedCount int) ([]*v1.Pod, error) {
 	var pods []*v1.Pod
-	Eventually(func() error {
-		podList := &v1.PodList{}
-		err := testCtx.ControllerClient.List(ctx, podList, client.InNamespace(namespace),
-			client.MatchingLabels{
-				"jobset.sigs.k8s.io/jobset-name": jobSetName,
-			})
-		if err != nil {
-			return err
-		}
-		// Count all pods (including completed ones) for the JobSet.
-		// With parallelism and completions, pods may be created sequentially,
-		// so we wait for all expected pods to be created, not just running.
-		if len(podList.Items) < expectedCount {
-			return fmt.Errorf("expected %d pods, got %d", expectedCount, len(podList.Items))
-		}
-		pods = make([]*v1.Pod, len(podList.Items))
-		for i := range podList.Items {
-			pods[i] = &podList.Items[i]
-		}
-		return nil
-	}, 120*time.Second, 2*time.Second).Should(Succeed())
-	return pods
-}
+	wait.ForAtLeastNPodCreation(ctx, testCtx.ControllerClient, metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			jobSetLabelJobSetName: jobSetName,
+		},
+	}, expectedCount)
 
-
-// findPodGroupByName finds a PodGroup by replicatedJob name suffix.
-func findPodGroupByName(podGroups []v2alpha2.PodGroup, replicatedJobName string) *v2alpha2.PodGroup {
-	for i := range podGroups {
-		if podGroups[i].Name == "" {
-			continue
-		}
-		// Extract the last part after the last dash (replicatedJob name)
-		lastDashIndex := -1
-		for k := len(podGroups[i].Name) - 1; k >= 0; k-- {
-			if podGroups[i].Name[k] == '-' {
-				lastDashIndex = k
-				break
-			}
-		}
-		if lastDashIndex >= 0 && lastDashIndex < len(podGroups[i].Name)-1 {
-			lastPart := podGroups[i].Name[lastDashIndex+1:]
-			if lastPart == replicatedJobName {
-				return &podGroups[i]
-			}
-		}
+	podList := &v1.PodList{}
+	err := testCtx.ControllerClient.List(ctx, podList, client.InNamespace(namespace),
+		client.MatchingLabels{
+			jobSetLabelJobSetName: jobSetName,
+		})
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	for i := range podList.Items {
+		pods = append(pods, &podList.Items[i])
+	}
+
+	return pods, nil
 }
 
+func calcJobSetPodGroupName(jobSetName string, jobSetUID string, replicatedJobName *string, startupPolicyOrder string) string {
+	if startupPolicyOrder == startupPolicyOrderInOrder {
+		return fmt.Sprintf(
+			"%s-%s-%s-%s",
+			"pg",
+			jobSetName,
+			string(jobSetUID),
+			*replicatedJobName,
+		)
+	} else {
+		return fmt.Sprintf(
+			"%s-%s-%s",
+			"pg",
+			jobSetName,
+			string(jobSetUID),
+		)
+	}
+}
