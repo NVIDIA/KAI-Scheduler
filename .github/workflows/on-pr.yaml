@@ -161,6 +161,7 @@ jobs:
 
       - name: Build docker images
         run: |
+          make builder
           make build -j DOCKER_BUILDX_ADDITIONAL_ARGS="--load --cache-from type=gha --cache-to type=gha,mode=max" VERSION=$PACKAGE_VERSION
           docker save $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION) | gzip > /mnt/images/docker_images.tgz
 
