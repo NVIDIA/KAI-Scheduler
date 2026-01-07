@@ -57,9 +57,6 @@ func (c *ClusterInfo) snapshotQueues() (map[common_info.QueueID]*queue_info.Queu
 		return nil, err
 	}
 
-	result := map[common_info.QueueID]*queue_info.QueueInfo{}
-	defaultParentQueue := c.getDefaultParentQueue()
-	result[defaultParentQueue.UID] = defaultParentQueue
 	for _, queue := range queues {
 		// Adopt parentless queues (no parent specified) under the default root queue.
 		// In ProjectLevelFairness mode, flatten all queues under the default root.
@@ -79,6 +76,9 @@ func (c *ClusterInfo) snapshotQueues() (map[common_info.QueueID]*queue_info.Queu
 		}
 	}
 
+	result := map[common_info.QueueID]*queue_info.QueueInfo{}
+	defaultParentQueue := c.getDefaultParentQueue()
+	result[defaultParentQueue.UID] = defaultParentQueue
 	for _, queue := range queues {
 		queueInfo := queue_info.NewQueueInfo(queue)
 		result[queueInfo.UID] = queueInfo
