@@ -37,6 +37,7 @@ test: test-chart envtest-docker-go
 build: $(SERVICE_NAMES)
 	$(MAKE) docker-build-crd-upgrader
 
+.PHONY: $(SERVICE_NAMES)
 $(SERVICE_NAMES):
 	$(MAKE) build-go SERVICE_NAME=$@
 	$(MAKE) docker-build-generic SERVICE_NAME=$@
