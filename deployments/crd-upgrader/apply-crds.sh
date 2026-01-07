@@ -7,7 +7,7 @@ migrate_queues_from_v2alpha2() {
     if kubectl get crd queues.scheduling.run.ai -o jsonpath='{.status.storedVersions}' | grep -q 'v2alpha2'; then
       echo "Migrating queues from v2alpha2"
       kubectl get queues.scheduling.run.ai --all-namespaces -o json | kubectl replace -f -
-      kubectl patch crd queues.scheduling.run.ai -p '{"status":{"storedVersions":[]}}' --subresource=status
+      kubectl patch crd queues.scheduling.run.ai --type=json -p '[{"op": "remove", "path": "/status/storedVersions", "value": ["v2alpha2"]}]' --subresource=status
       echo "Queues migrated from v2alpha2"
     fi
   fi
