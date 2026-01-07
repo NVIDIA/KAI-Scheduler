@@ -6,10 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.4.17] - 2026-01-07
+
 ### Fixed
 - Fixed a bug where the scheduler would not re-try updating podgroup status after failure
 - GPU Memory pods are not reclaimed or consolidated correctly
 - Fixed GPU memory pods Fair Share and Queue Order calculations
+
+## [v0.4.13-16] - ???
 
 ### Fixed
 - kai-scheduler will not ignore pod spec.overhead field
