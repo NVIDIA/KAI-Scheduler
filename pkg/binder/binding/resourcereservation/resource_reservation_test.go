@@ -90,6 +90,127 @@ var _ = Describe("ResourceReservationService", func() {
 			Status: runningStatus,
 		}
 	)
+	Context("cleanupOldGpuGroupIfNeeded", func() {
+		const (
+			oldGpuGroup = "old-gpu-group"
+			newGpuGroup = "new-gpu-group"
+		)
+		It("should cleanup old GPU group reservation when pod has different label", func() {
+			// Create a pod with an old GPU group label
+			fractionPod := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "team-a",
+					Name:      "fraction-pod",
+					Labels: map[string]string{
+						constants.GPUGroup: oldGpuGroup,
+					},
+				},
+			}
+			// Create an old reservation pod for the old GPU group
+			oldReservationPod := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "old-reservation",
+					Namespace: resourceReservationNameSpace,
+					Labels: map[string]string{
+						constants.GPUGroup: oldGpuGroup,
+					},
+				},
+				Spec: v1.PodSpec{
+					NodeName: nodeName,
+				},
+				Status: v1.PodStatus{
+					Phase: v1.PodRunning,
+				},
+			}
+			podsInCluster := []runtime.Object{fractionPod, oldReservationPod}
+			clientWithObjs := fake.NewClientBuilder().WithRuntimeObjects(podsInCluster...).
+				WithIndex(&v1.Pod{}, "spec.nodeName", nodeNameIndexer).Build()
+			rsc := initializeTestService(clientWithObjs)
+
+			// Call cleanup with new GPU group - should remove old label and delete reservation pod
+			err := rsc.cleanupOldGpuGroupIfNeeded(context.TODO(), fractionPod, newGpuGroup)
+			Expect(err).To(BeNil())
+
+			// Verify old reservation pod was deleted
+			pods := &v1.PodList{}
+			err = clientWithObjs.List(context.Background(), pods,
+				runtimeClient.InNamespace(resourceReservationNameSpace),
+			)
+			Expect(err).To(Succeed())
+			Expect(len(pods.Items)).To(Equal(0))
+
+			// Verify fraction pod no longer has the old GPU group label
+			updatedPod := &v1.Pod{}
+			err = clientWithObjs.Get(context.Background(), runtimeClient.ObjectKey{
+				Namespace: fractionPod.Namespace,
+				Name:      fractionPod.Name,
+			}, updatedPod)
+			Expect(err).To(Succeed())
+			_, hasOldLabel := updatedPod.Labels[constants.GPUGroup]
+			Expect(hasOldLabel).To(BeFalse())
+		})
+
+		It("should not cleanup when pod has same GPU group", func() {
+			// Create a pod with the same GPU group label as the new one
+			fractionPod := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "team-a",
+					Name:      "fraction-pod",
+					Labels: map[string]string{
+						constants.GPUGroup: newGpuGroup,
+					},
+				},
+			}
+			// Create a reservation pod for that GPU group
+			reservationPod := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "reservation",
+					Namespace: resourceReservationNameSpace,
+					Labels: map[string]string{
+						constants.GPUGroup: newGpuGroup,
+					},
+				},
+				Spec: v1.PodSpec{
+					NodeName: nodeName,
+				},
+				Status: v1.PodStatus{
+					Phase: v1.PodRunning,
+				},
+			}
+			podsInCluster := []runtime.Object{fractionPod, reservationPod}
+			clientWithObjs := fake.NewClientBuilder().WithRuntimeObjects(podsInCluster...).
+				WithIndex(&v1.Pod{}, "spec.nodeName", nodeNameIndexer).Build()
+			rsc := initializeTestService(clientWithObjs)
+
+			// Call cleanup with same GPU group - should not delete anything
+			err := rsc.cleanupOldGpuGroupIfNeeded(context.TODO(), fractionPod, newGpuGroup)
+			Expect(err).To(BeNil())
+
+			// Verify reservation pod still exists
+			pods := &v1.PodList{}
+			err = clientWithObjs.List(context.Background(), pods,
+				runtimeClient.InNamespace(resourceReservationNameSpace),
+			)
+			Expect(err).To(Succeed())
+			Expect(len(pods.Items)).To(Equal(1))
+		})
+
+		It("should do nothing when pod has no GPU group label", func() {
+			fractionPod := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "team-a",
+					Name:      "fraction-pod",
+				},
+			}
+			podsInCluster := []runtime.Object{fractionPod}
+			clientWithObjs := fake.NewClientBuilder().WithRuntimeObjects(podsInCluster...).Build()
+			rsc := initializeTestService(clientWithObjs)
+
+			err := rsc.cleanupOldGpuGroupIfNeeded(context.TODO(), fractionPod, newGpuGroup)
+			Expect(err).To(BeNil())
+		})
+	})
+
 	Context("ReserveGpuDevice", func() {
 		for testName, testData := range map[string]struct {
 			reservationPod        *v1.Pod

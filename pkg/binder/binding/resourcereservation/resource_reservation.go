@@ -206,10 +206,20 @@ func (rsc *service) syncForPods(ctx context.Context, pods []*v1.Pod, gpuGroupToS
 }
 
 func (rsc *service) ReserveGpuDevice(ctx context.Context, pod *v1.Pod, nodeName string, gpuGroup string) (string, error) {
+	logger := log.FromContext(ctx)
+
+	// Clean up any old GPU group reservations from previous bind attempts.
+	// This can happen when the scheduler updates a BindRequest with a new GPU group after a failed bind attempt.
+	// The pod may still have the old GPU group label, causing the old reservation pod to be orphaned.
+	if err := rsc.cleanupOldGpuGroupIfNeeded(ctx, pod, gpuGroup); err != nil {
+		logger.Error(err, "Failed to cleanup old GPU group reservation",
+			"namespace", pod.Namespace, "name", pod.Name)
+		// Continue with the new GPU group reservation even if cleanup fails
+	}
+
 	rsc.gpuGroupMutex.LockMutexForGroup(gpuGroup)
 	defer rsc.gpuGroupMutex.ReleaseMutex(gpuGroup)
 
-	logger := log.FromContext(ctx)
 	gpuIndex, err := rsc.acquireGPUIndexByGroup(ctx, nodeName, gpuGroup)
 	if err != nil {
 		return unknownGpuIndicator, err
@@ -227,6 +237,42 @@ func (rsc *service) ReserveGpuDevice(ctx context.Context, pod *v1.Pod, nodeName 
 	}
 
 	return gpuIndex, nil
+}
+
+// cleanupOldGpuGroupIfNeeded checks if the pod has an existing GPU group label that differs
+// from the new GPU group being reserved. If so, it removes the old label and syncs the old
+// GPU group to clean up any orphaned reservation pods.
+func (rsc *service) cleanupOldGpuGroupIfNeeded(ctx context.Context, pod *v1.Pod, newGpuGroup string) error {
+	logger := log.FromContext(ctx)
+
+	existingGpuGroups := resources.GetGpuGroups(pod)
+	if len(existingGpuGroups) == 0 {
+		return nil
+	}
+
+	for _, oldGpuGroup := range existingGpuGroups {
+		if oldGpuGroup == newGpuGroup {
+			// The pod already has this GPU group, no cleanup needed
+			continue
+		}
+
+		logger.Info("Pod has old GPU group label from previous bind attempt, cleaning up",
+			"namespace", pod.Namespace, "name", pod.Name,
+			"oldGpuGroup", oldGpuGroup, "newGpuGroup", newGpuGroup)
+
+		// Remove the old GPU group label from the pod
+		if err := rsc.RemovePodGpuGroupConnection(ctx, pod, oldGpuGroup); err != nil {
+			return fmt.Errorf("failed to remove old GPU group label from pod: %w", err)
+		}
+
+		// Sync the old GPU group to clean up orphaned reservation pods.
+		// Now that no fraction pods have this GPU group label, the reservation pod will be deleted.
+		if err := rsc.SyncForGpuGroup(ctx, oldGpuGroup); err != nil {
+			return fmt.Errorf("failed to sync old GPU group after removing label: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (rsc *service) updatePodGPUGroup(
