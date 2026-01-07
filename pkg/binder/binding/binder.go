@@ -90,6 +90,32 @@ func (b *Binder) Bind(ctx context.Context, pod *v1.Pod, node *v1.Node, bindReque
 	return nil
 }
 
+func (b *Binder) Rollback(ctx context.Context, pod *v1.Pod, node *v1.Node, bindRequest *v1alpha2.BindRequest) error {
+	logger := log.FromContext(ctx)
+
+	if !common.IsSharedGPUAllocation(bindRequest) {
+		return nil
+	}
+
+	logger.Info("Rolling back GPU reservation for failed bind attempt",
+		"pod", pod.Name, "namespace", pod.Namespace, "node", node.Name)
+
+	for _, gpuGroup := range bindRequest.Spec.SelectedGPUGroups {
+		if err := b.resourceReservationService.RemovePodGpuGroupConnection(ctx, pod, gpuGroup); err != nil {
+			logger.Error(err, "Failed to remove GPU group label from pod during rollback",
+				"gpuGroup", gpuGroup)
+		}
+	}
+
+	if err := b.resourceReservationService.SyncForNode(ctx, bindRequest.Spec.SelectedNode); err != nil {
+		logger.Error(err, "Failed to sync reservation pods during rollback",
+			"node", bindRequest.Spec.SelectedNode)
+		return err
+	}
+
+	return nil
+}
+
 func (b *Binder) reserveGPUs(ctx context.Context, pod *v1.Pod, bindRequest *v1alpha2.BindRequest) ([]string, error) {
 	if len(bindRequest.Spec.SelectedGPUGroups) == 0 {
 		// Old bindingRequest bad conversion. delete the binding request.
