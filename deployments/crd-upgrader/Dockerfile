@@ -11,7 +11,6 @@ FROM nvcr.io/nvidia/distroless/go:v3.2.1
 
 COPY --from=builder --chmod=0755 kubectl /usr/bin/kubectl
 COPY --chmod=0644 deployments/kai-scheduler/crds /internal-crds
-COPY --chmod=0644 deployments/external-crds /external-crds
 COPY --chmod=0644 NOTICE .
 COPY --chmod=0755 deployments/crd-upgrader/apply-crds.sh /apply-crds.sh
 
