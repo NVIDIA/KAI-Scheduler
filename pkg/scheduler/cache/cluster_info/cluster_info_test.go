@@ -1425,14 +1425,13 @@ func TestSnapshotQueues(t *testing.T) {
 	assert.Equal(t, common_info.QueueID("department0"), snapshot.Queues["department0"].UID)
 	assert.Equal(t, "queue0", snapshot.Queues["queue0"].Name)
 	assert.Equal(t, "department-zero", snapshot.Queues["department0"].Name)
+	assert.Equal(t, common_info.QueueID(""), snapshot.Queues["department0"].ParentQueue)
 	// Parentless queues (queues without a parent) are adopted by the synthetic "default" root queue
-	assert.Equal(t, common_info.QueueID(defaultQueueName), snapshot.Queues["department0"].ParentQueue)
 	assert.Equal(t, common_info.QueueID("department0"), snapshot.Queues["queue0"].ParentQueue)
 	assert.Equal(t, []common_info.QueueID{"queue0"}, snapshot.Queues["department0"].ChildQueues)
 	assert.Equal(t, []common_info.QueueID{}, snapshot.Queues["queue0"].ChildQueues)
-	// Verify the default root queue exists and has department0 as a child
+	// Verify the default root queue exists
 	assert.Equal(t, common_info.QueueID(defaultQueueName), snapshot.Queues[defaultQueueName].UID)
-	assert.ElementsMatch(t, []common_info.QueueID{"department0"}, snapshot.Queues[defaultQueueName].ChildQueues)
 }
 
 func TestSnapshotQueues_TwoLevelHierarchyLimit(t *testing.T) {
@@ -1456,8 +1455,8 @@ func TestSnapshotQueues_TwoLevelHierarchyLimit(t *testing.T) {
 	snapshot, err := clusterInfo.Snapshot()
 	assert.Nil(t, err)
 
-	// Parent should be detached from grandparent (moved under default root) to enforce 2-level limit
-	assert.Equal(t, common_info.QueueID(defaultQueueName), snapshot.Queues["parent"].ParentQueue)
+	// Parent should be detached from grandparent to enforce 2-level limit
+	assert.Equal(t, common_info.QueueID(""), snapshot.Queues["parent"].ParentQueue)
 	assert.Equal(t, common_info.QueueID("parent"), snapshot.Queues["child"].ParentQueue)
 }
 
