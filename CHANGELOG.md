@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- Added support for orphan queues by adopting them under a synthetic default root queue [#845](https://github.com/NVIDIA/KAI-Scheduler/pull/845) [gshaibi](https://github.com/gshaibi)
+- Added support for parentless queues by adopting them under a synthetic default root queue [#845](https://github.com/NVIDIA/KAI-Scheduler/pull/845) [gshaibi](https://github.com/gshaibi)
 - Added the option to disable prometheus service monitor creation [#810](https://github.com/NVIDIA/KAI-Scheduler/pull/810) [itsomri](https://github.com/itsomri)
 - Fixed prometheus instance deprecation - ensure single instance [#779](https://github.com/NVIDIA/KAI-Scheduler/pull/779) [itsomri](https://github.com/itsomri)
 - Added clear error messages for jobs referencing missing or orphan queues, reporting via events and conditions [#820](https://github.com/NVIDIA/KAI-Scheduler/pull/820) [gshaibi](https://github.com/gshaibi)
