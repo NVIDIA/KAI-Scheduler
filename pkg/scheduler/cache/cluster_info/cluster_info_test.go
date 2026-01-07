@@ -1435,6 +1435,32 @@ func TestSnapshotQueues(t *testing.T) {
 	assert.ElementsMatch(t, []common_info.QueueID{"department0"}, snapshot.Queues[defaultQueueName].ChildQueues)
 }
 
+func TestSnapshotQueues_TwoLevelHierarchyLimit(t *testing.T) {
+	// Create 3-level hierarchy: grandparent -> parent -> child
+	objs := []runtime.Object{
+		&enginev2.Queue{
+			ObjectMeta: metav1.ObjectMeta{Name: "grandparent"},
+			Spec:       enginev2.QueueSpec{},
+		},
+		&enginev2.Queue{
+			ObjectMeta: metav1.ObjectMeta{Name: "parent"},
+			Spec:       enginev2.QueueSpec{ParentQueue: "grandparent"},
+		},
+		&enginev2.Queue{
+			ObjectMeta: metav1.ObjectMeta{Name: "child"},
+			Spec:       enginev2.QueueSpec{ParentQueue: "parent"},
+		},
+	}
+
+	clusterInfo := newClusterInfoTests(t, clusterInfoTestParams{kaiSchedulerObjects: objs})
+	snapshot, err := clusterInfo.Snapshot()
+	assert.Nil(t, err)
+
+	// Parent should be detached from grandparent (moved under default root) to enforce 2-level limit
+	assert.Equal(t, common_info.QueueID(defaultQueueName), snapshot.Queues["parent"].ParentQueue)
+	assert.Equal(t, common_info.QueueID("parent"), snapshot.Queues["child"].ParentQueue)
+}
+
 func TestSnapshotFlatHierarchy(t *testing.T) {
 	parentQueue0 := &enginev2.Queue{
 		ObjectMeta: metav1.ObjectMeta{
