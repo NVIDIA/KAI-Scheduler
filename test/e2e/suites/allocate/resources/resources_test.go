@@ -6,7 +6,6 @@ package resources
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -160,9 +159,7 @@ var _ = Describe("Schedule pod with resource request", Ordered, func() {
 				}
 				time.Sleep(2 * time.Second)
 			}
-			if n < numGPUs {
-				panic(fmt.Sprintf("Expected %d allocated pods, got %d", numGPUs, n))
-			}
+			Expect(n).To(BeNumerically(">=", numGPUs), "Expected %d allocated pods, got %d", numGPUs, n)
 
 			var allocatedPods []*v1.Pod
 			gpuGroupsMap := make(map[string][]*v1.Pod)
