@@ -13,6 +13,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+
+	"github.com/samber/lo"
 )
 
 const (
@@ -64,6 +66,20 @@ func (c *ClusterInfo) snapshotQueues() (map[common_info.QueueID]*queue_info.Queu
 		if len(queue.Spec.ParentQueue) == 0 || c.fairnessLevelType == ProjectLevelFairness {
 			queue.Spec.ParentQueue = defaultQueueName
 		}
+	}
+
+	queuesByName := lo.SliceToMap(queues, func(queue *enginev2.Queue) (string, *enginev2.Queue) {
+		return queue.Name, queue
+	})
+	// Detach queues from their grandparents to enforce 2-level hierarchy limit
+	// TODO: Remove this restriction when n-level hierarchy support is added
+	for _, queue := range queues {
+		if queue.Spec.ParentQueue != "" && queuesByName[queue.Spec.ParentQueue] != nil {
+			queuesByName[queue.Spec.ParentQueue].Spec.ParentQueue = ""
+		}
+	}
+
+	for _, queue := range queues {
 		queueInfo := queue_info.NewQueueInfo(queue)
 		result[queueInfo.UID] = queueInfo
 	}
