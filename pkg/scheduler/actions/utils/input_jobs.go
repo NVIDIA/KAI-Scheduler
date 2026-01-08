@@ -57,7 +57,7 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 		}
 
 		// Skip jobs whose queue is not a leaf queue
-		if !jobsOrder.ssn.Queues[job.Queue].IsLeafQueue() {
+		if !jobsOrder.ssn.ClusterInfo.Queues[job.Queue].IsLeafQueue() {
 			continue
 		}
 
