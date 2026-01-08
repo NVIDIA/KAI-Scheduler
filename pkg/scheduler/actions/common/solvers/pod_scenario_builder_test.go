@@ -30,7 +30,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
 var _ = Describe("PodAccumulatedScenarioBuilder", func() {
@@ -429,10 +428,6 @@ func requireOneGPU() v1.ResourceRequirements {
 }
 
 func TestScenarioSolvers(t *testing.T) {
-	verbosity := 7
-	if err := log.InitLoggers(verbosity); err != nil {
-		fmt.Printf("Failed to initialize loggers: %v", err)
-	}
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Scenario Solvers Suite")
 }
