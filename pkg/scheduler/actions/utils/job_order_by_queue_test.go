@@ -791,7 +791,7 @@ func TestThreeLevelQueueHierarchy(t *testing.T) {
 	// Test 3-level hierarchy: root -> department -> team -> jobs
 	ssn := newPrioritySession()
 
-	ssn.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
 		// Root level (no parent)
 		"root": {
 			UID:         "root",
@@ -830,7 +830,7 @@ func TestThreeLevelQueueHierarchy(t *testing.T) {
 		},
 	}
 
-	ssn.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+	ssn.ClusterInfo.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 		"job1": {
 			Name:     "job1-team1-p100",
 			Priority: 100,
@@ -886,7 +886,7 @@ func TestThreeLevelQueueHierarchy(t *testing.T) {
 		FilterUnready:     true,
 		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
 	})
-	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
 
 	// Order is determined by:
 	// 1. Each queue's best job determines queue priority
@@ -913,7 +913,7 @@ func TestFourLevelQueueHierarchy(t *testing.T) {
 	// Test 4-level hierarchy: org -> division -> department -> team -> jobs
 	ssn := newPrioritySession()
 
-	ssn.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
 		// Level 0 - Organization (root)
 		"org": {
 			UID:         "org",
@@ -940,7 +940,7 @@ func TestFourLevelQueueHierarchy(t *testing.T) {
 		},
 	}
 
-	ssn.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+	ssn.ClusterInfo.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 		"job1": {
 			Name:     "deep-job",
 			Priority: 100,
@@ -960,7 +960,7 @@ func TestFourLevelQueueHierarchy(t *testing.T) {
 		FilterUnready:     true,
 		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
 	})
-	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
 
 	// Should be able to pop the deeply nested job
 	assert.False(t, jobsOrderByQueues.IsEmpty())
@@ -997,7 +997,7 @@ func TestVictimQueue_TwoQueuesWithRunningJobs(t *testing.T) {
 	ssn := newPrioritySession()
 
 	// Setup similar to initializeSession(2, 2)
-	ssn.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
 		"default": {
 			UID:         "default",
 			Name:        "default",
@@ -1016,7 +1016,7 @@ func TestVictimQueue_TwoQueuesWithRunningJobs(t *testing.T) {
 	}
 
 	// Jobs with Running status (like in initializeSession)
-	ssn.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+	ssn.ClusterInfo.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 		"job0": {
 			UID:      "job0",
 			Name:     "job0",
@@ -1050,7 +1050,7 @@ func TestVictimQueue_TwoQueuesWithRunningJobs(t *testing.T) {
 		VictimQueue:       true,
 		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
 	})
-	victimsQueue.InitializeWithJobs(ssn.PodGroupInfos)
+	victimsQueue.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
 
 	// Should have 2 jobs
 	assert.Equal(t, 2, victimsQueue.Len())
