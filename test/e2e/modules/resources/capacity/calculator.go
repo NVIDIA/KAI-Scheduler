@@ -63,6 +63,19 @@ func GetNodesAllocatableResources(clientset kubernetes.Interface) (map[string]*R
 	return perNodeResources, nil
 }
 
+func GetClusterAllocatableResources(clientset kubernetes.Interface) (*ResourceList, error) {
+	perNodeResources, err := GetNodesAllocatableResources(clientset)
+	if err != nil {
+		return nil, err
+	}
+
+	rl := initEmptyResourcesList()
+	for _, nodeResources := range perNodeResources {
+		rl.Add(nodeResources)
+	}
+	return rl, nil
+}
+
 func getPodsAndNodes(clientset kubernetes.Interface) (
 	*corev1.PodList, *corev1.NodeList, error) {
 	nodeList, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})

@@ -163,7 +163,7 @@ func (r *BindRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		logger.Error(err, "Failed to bind pod to node", "pod", pod.Name, "namespace", pod.Namespace,
 			"node", node.Name)
-		// Rollback any partial state from the failed bind attempt (e.g., GPU reservation labels)
+
 		if rollbackErr := r.binder.Rollback(ctx, pod, node, bindRequest); rollbackErr != nil {
 			logger.Error(rollbackErr, "Failed to rollback after bind failure", "pod", pod.Name,
 				"namespace", pod.Namespace)
