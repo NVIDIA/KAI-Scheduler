@@ -1040,6 +1040,533 @@ func TestSingleLevelQueueHierarchy(t *testing.T) {
 	assert.True(t, jobsOrderByQueues.IsEmpty())
 }
 
+// TestTwoLevelQueueHierarchy tests the standard 2-level queue hierarchy (root -> leaf queues).
+// This is the most common configuration where a root queue directly contains leaf queues.
+// Verifies that jobs are ordered by priority across sibling leaf queues.
+func TestTwoLevelQueueHierarchy(t *testing.T) {
+	ssn := newPrioritySession()
+
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		"root": {
+			UID:         "root",
+			Name:        "root",
+			ParentQueue: "",
+			ChildQueues: []common_info.QueueID{"leaf1", "leaf2"},
+		},
+		"leaf1": {
+			UID:         "leaf1",
+			Name:        "leaf1",
+			ParentQueue: "root",
+		},
+		"leaf2": {
+			UID:         "leaf2",
+			Name:        "leaf2",
+			ParentQueue: "root",
+		},
+	}
+
+	ssn.ClusterInfo.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+		"job1": {
+			Name:     "job1-leaf1-p100",
+			Priority: 100,
+			Queue:    "leaf1",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+		"job2": {
+			Name:     "job2-leaf2-p200",
+			Priority: 200,
+			Queue:    "leaf2",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+	}
+
+	jobsOrderByQueues := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     true,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
+
+	// Queue ordering is determined by QueueOrderFn, which defaults to alphabetical by UID
+	// when no fairness-based ordering is configured. Within a queue, jobs are ordered by priority.
+	assert.False(t, jobsOrderByQueues.IsEmpty())
+	job1 := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job1-leaf1-p100", job1.Name) // leaf1 comes before leaf2 alphabetically
+
+	job2 := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job2-leaf2-p200", job2.Name)
+
+	assert.True(t, jobsOrderByQueues.IsEmpty())
+}
+
+// TestMixedDepthHierarchy tests a hierarchy where different branches have different depths.
+// This validates that the tree traversal works correctly when some leaf queues are at
+// different levels in the tree (e.g., root->leaf1 at depth 1, root->dept->team at depth 2).
+func TestMixedDepthHierarchy(t *testing.T) {
+	ssn := newPrioritySession()
+
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		"root": {
+			UID:         "root",
+			Name:        "root",
+			ParentQueue: "",
+			ChildQueues: []common_info.QueueID{"leaf1", "dept"},
+		},
+		"leaf1": {
+			UID:         "leaf1",
+			Name:        "leaf1",
+			ParentQueue: "root",
+			// This is a leaf at depth 1
+		},
+		"dept": {
+			UID:         "dept",
+			Name:        "dept",
+			ParentQueue: "root",
+			ChildQueues: []common_info.QueueID{"team"},
+		},
+		"team": {
+			UID:         "team",
+			Name:        "team",
+			ParentQueue: "dept",
+			// This is a leaf at depth 2
+		},
+	}
+
+	ssn.ClusterInfo.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+		"job1": {
+			Name:     "job1-shallow-p150",
+			Priority: 150,
+			Queue:    "leaf1", // Shallow leaf
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+		"job2": {
+			Name:     "job2-deep-p200",
+			Priority: 200,
+			Queue:    "team", // Deep leaf
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+	}
+
+	jobsOrderByQueues := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     true,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
+
+	// Both jobs should be accessible regardless of depth
+	assert.Equal(t, 2, jobsOrderByQueues.Len())
+
+	// Higher priority job from deep leaf should come first
+	job1 := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job2-deep-p200", job1.Name)
+
+	job2 := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job1-shallow-p150", job2.Name)
+
+	assert.True(t, jobsOrderByQueues.IsEmpty())
+}
+
+// TestMultipleRootQueues tests multiple independent queue trees (multiple root queues).
+// Each root queue represents a separate hierarchy, and jobs from all trees should be
+// considered for scheduling based on their priority.
+func TestMultipleRootQueues(t *testing.T) {
+	ssn := newPrioritySession()
+
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		"root1": {
+			UID:         "root1",
+			Name:        "root1",
+			ParentQueue: "",
+			ChildQueues: []common_info.QueueID{"leaf1"},
+		},
+		"leaf1": {
+			UID:         "leaf1",
+			Name:        "leaf1",
+			ParentQueue: "root1",
+		},
+		"root2": {
+			UID:         "root2",
+			Name:        "root2",
+			ParentQueue: "",
+			ChildQueues: []common_info.QueueID{"leaf2"},
+		},
+		"leaf2": {
+			UID:         "leaf2",
+			Name:        "leaf2",
+			ParentQueue: "root2",
+		},
+	}
+
+	ssn.ClusterInfo.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+		"job1": {
+			Name:     "job1-root1-p100",
+			Priority: 100,
+			Queue:    "leaf1",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+		"job2": {
+			Name:     "job2-root2-p200",
+			Priority: 200,
+			Queue:    "leaf2",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+	}
+
+	jobsOrderByQueues := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     true,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
+
+	// Jobs from different root trees should both be accessible
+	// Queue ordering defaults to alphabetical by UID (root1 before root2)
+	assert.Equal(t, 2, jobsOrderByQueues.Len())
+
+	job1 := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job1-root1-p100", job1.Name) // root1/leaf1 comes before root2/leaf2
+
+	job2 := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job2-root2-p200", job2.Name)
+
+	assert.True(t, jobsOrderByQueues.IsEmpty())
+}
+
+// TestPushJobBuildsNLevelTree tests that PushJob correctly builds the tree dynamically
+// for an n-level hierarchy. When a job is pushed to a leaf queue, the entire ancestor
+// chain should be constructed automatically.
+func TestPushJobBuildsNLevelTree(t *testing.T) {
+	ssn := newPrioritySession()
+
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		"root": {
+			UID:         "root",
+			Name:        "root",
+			ParentQueue: "",
+			ChildQueues: []common_info.QueueID{"dept"},
+		},
+		"dept": {
+			UID:         "dept",
+			Name:        "dept",
+			ParentQueue: "root",
+			ChildQueues: []common_info.QueueID{"team"},
+		},
+		"team": {
+			UID:         "team",
+			Name:        "team",
+			ParentQueue: "dept",
+		},
+	}
+
+	jobsOrderByQueues := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     true,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+
+	// Start with empty queue
+	assert.True(t, jobsOrderByQueues.IsEmpty())
+
+	// Push first job - should build entire ancestor chain (team -> dept -> root)
+	job1 := &podgroup_info.PodGroupInfo{
+		Name:     "job1-p100",
+		Priority: 100,
+		Queue:    "team",
+		PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+			pod_status.Pending: {testPod: {}},
+		},
+		PodSets: map[string]*subgroup_info.PodSet{
+			podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+				WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+		},
+	}
+	jobsOrderByQueues.PushJob(job1)
+
+	assert.False(t, jobsOrderByQueues.IsEmpty())
+	assert.Equal(t, 1, jobsOrderByQueues.Len())
+
+	// Push second job with higher priority - should reuse existing tree
+	job2 := &podgroup_info.PodGroupInfo{
+		Name:     "job2-p200",
+		Priority: 200,
+		Queue:    "team",
+		PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+			pod_status.Pending: {testPod: {}},
+		},
+		PodSets: map[string]*subgroup_info.PodSet{
+			podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+				WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+		},
+	}
+	jobsOrderByQueues.PushJob(job2)
+
+	assert.Equal(t, 2, jobsOrderByQueues.Len())
+
+	// Higher priority job should come first
+	poppedJob := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job2-p200", poppedJob.Name)
+
+	poppedJob = jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job1-p100", poppedJob.Name)
+
+	assert.True(t, jobsOrderByQueues.IsEmpty())
+}
+
+// TestMultipleSingleLevelRootQueues tests multiple independent single-level queues.
+// Each queue is both a root and a leaf (no parent, no children), representing
+// completely independent scheduling domains.
+func TestMultipleSingleLevelRootQueues(t *testing.T) {
+	ssn := newPrioritySession()
+
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		"queue-a": {
+			UID:         "queue-a",
+			Name:        "queue-a",
+			ParentQueue: "",
+		},
+		"queue-b": {
+			UID:         "queue-b",
+			Name:        "queue-b",
+			ParentQueue: "",
+		},
+		"queue-c": {
+			UID:         "queue-c",
+			Name:        "queue-c",
+			ParentQueue: "",
+		},
+	}
+
+	ssn.ClusterInfo.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+		"job-a": {
+			Name:     "job-a-p100",
+			Priority: 100,
+			Queue:    "queue-a",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+		"job-b": {
+			Name:     "job-b-p300",
+			Priority: 300,
+			Queue:    "queue-b",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+		"job-c": {
+			Name:     "job-c-p200",
+			Priority: 200,
+			Queue:    "queue-c",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+	}
+
+	jobsOrderByQueues := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     true,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
+
+	assert.Equal(t, 3, jobsOrderByQueues.Len())
+
+	// Queue ordering defaults to alphabetical by UID (queue-a < queue-b < queue-c)
+	// Each queue has one job, so jobs are ordered by their queue's UID
+	job1 := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job-a-p100", job1.Name) // queue-a first
+
+	job2 := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job-b-p300", job2.Name) // queue-b second
+
+	job3 := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job-c-p200", job3.Name) // queue-c third
+
+	assert.True(t, jobsOrderByQueues.IsEmpty())
+}
+
+// TestTreeCleanupAfterAllJobsPopped tests that the tree is properly cleaned up
+// when all jobs from a subtree are popped. When a leaf queue becomes empty,
+// it should be removed, and if that causes its parent to become empty, the
+// parent should also be removed (recursively up the tree).
+func TestTreeCleanupAfterAllJobsPopped(t *testing.T) {
+	ssn := newPrioritySession()
+
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		"root": {
+			UID:         "root",
+			Name:        "root",
+			ParentQueue: "",
+			ChildQueues: []common_info.QueueID{"dept1", "dept2"},
+		},
+		"dept1": {
+			UID:         "dept1",
+			Name:        "dept1",
+			ParentQueue: "root",
+			ChildQueues: []common_info.QueueID{"team1"},
+		},
+		"dept2": {
+			UID:         "dept2",
+			Name:        "dept2",
+			ParentQueue: "root",
+			ChildQueues: []common_info.QueueID{"team2"},
+		},
+		"team1": {
+			UID:         "team1",
+			Name:        "team1",
+			ParentQueue: "dept1",
+		},
+		"team2": {
+			UID:         "team2",
+			Name:        "team2",
+			ParentQueue: "dept2",
+		},
+	}
+
+	ssn.ClusterInfo.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+		"job1": {
+			Name:     "job1-team1",
+			Priority: 200,
+			Queue:    "team1",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+		"job2": {
+			Name:     "job2-team2",
+			Priority: 100,
+			Queue:    "team2",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+	}
+
+	jobsOrderByQueues := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     true,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
+
+	assert.Equal(t, 2, jobsOrderByQueues.Len())
+
+	// Pop first job - dept1/team1 subtree should be cleaned up
+	job1 := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job1-team1", job1.Name)
+	assert.Equal(t, 1, jobsOrderByQueues.Len())
+	assert.False(t, jobsOrderByQueues.IsEmpty())
+
+	// Pop second job - entire tree should be cleaned up
+	job2 := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "job2-team2", job2.Name)
+	assert.Equal(t, 0, jobsOrderByQueues.Len())
+	assert.True(t, jobsOrderByQueues.IsEmpty())
+}
+
+// TestPushJobToSingleLevelQueue tests PushJob with a single-level queue hierarchy
+// (root queue that is also a leaf). This ensures dynamic tree building works
+// correctly for the simplest case.
+func TestPushJobToSingleLevelQueue(t *testing.T) {
+	ssn := newPrioritySession()
+
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		"default": {
+			UID:         "default",
+			Name:        "default",
+			ParentQueue: "",
+		},
+	}
+
+	jobsOrderByQueues := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     true,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+
+	assert.True(t, jobsOrderByQueues.IsEmpty())
+
+	// Push a job to the single-level queue
+	job1 := &podgroup_info.PodGroupInfo{
+		Name:     "pushed-job",
+		Priority: 100,
+		Queue:    "default",
+		PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+			pod_status.Pending: {testPod: {}},
+		},
+		PodSets: map[string]*subgroup_info.PodSet{
+			podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+				WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+		},
+	}
+	jobsOrderByQueues.PushJob(job1)
+
+	assert.False(t, jobsOrderByQueues.IsEmpty())
+	assert.Equal(t, 1, jobsOrderByQueues.Len())
+
+	poppedJob := jobsOrderByQueues.PopNextJob()
+	assert.Equal(t, "pushed-job", poppedJob.Name)
+	assert.True(t, jobsOrderByQueues.IsEmpty())
+}
+
 func newPrioritySession() *framework.Session {
 	return &framework.Session{
 		ClusterInfo: &api.ClusterInfo{},
