@@ -91,6 +91,11 @@ func (jo *JobsOrderByQueues) PopNextJob() *podgroup_info.PodGroupInfo {
 func (jo *JobsOrderByQueues) PushJob(job *podgroup_info.PodGroupInfo) {
 	leafQueueInfo := jo.ssn.Queues[job.Queue]
 
+	if !leafQueueInfo.IsLeafQueue() {
+		log.InfraLogger.V(7).Warnf("PushJob: job <%v> is targeting a non-leaf queue <%v>", job.Name, leafQueueInfo.Name)
+		return
+	}
+
 	// Check if leaf node already exists
 	leafNode, found := jo.queueNodes[job.Queue]
 	needsLinking := !found

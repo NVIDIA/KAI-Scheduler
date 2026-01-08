@@ -54,6 +54,11 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 			continue
 		}
 
+		// Skip jobs whose queue is not a leaf queue
+		if !jobsOrder.ssn.Queues[job.Queue].IsLeafQueue() {
+			continue
+		}
+
 		jobsOrder.addJobToQueue(job, jobsOrder.options.VictimQueue)
 	}
 
