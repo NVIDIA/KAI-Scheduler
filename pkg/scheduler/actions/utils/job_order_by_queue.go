@@ -92,10 +92,9 @@ func (jo *JobsOrderByQueues) PushJob(job *podgroup_info.PodGroupInfo) {
 	leafQueueInfo := jo.ssn.Queues[job.Queue]
 
 	// Check if leaf node already exists and is linked
-	leafNode := jo.queueNodes[job.Queue]
-	needsLinking := leafNode == nil
+	leafNode, needsLinking := jo.queueNodes[job.Queue]
 
-	if leafNode == nil {
+	if needsLinking {
 		leafNode = jo.createLeafNode(leafQueueInfo, nil)
 		jo.queueNodes[job.Queue] = leafNode
 	}
@@ -133,6 +132,7 @@ func (jo *JobsOrderByQueues) ensureRootNodesInitialized() {
 func (jo *JobsOrderByQueues) ensureAncestorChainForPush(childNode *queueNode, childQueue *queue_info.QueueInfo) {
 	if jo.isRootQueue(childQueue) {
 		// Child is at root level - add to rootNodes if not already linked
+		// GuyTodo: Why the double check?
 		if childNode.parent == nil {
 			jo.ensureRootNodesInitialized()
 			jo.rootNodes.Push(childNode)
@@ -149,6 +149,7 @@ func (jo *JobsOrderByQueues) ensureAncestorChainForPush(childNode *queueNode, ch
 
 	// Get or create parent node
 	parentNode := jo.queueNodes[parentQueueInfo.UID]
+	parentNodeIsNew := parentNode == nil
 	if parentNode == nil {
 		parentNode = jo.createNonLeafNode(parentQueueInfo, nil)
 		jo.queueNodes[parentQueueInfo.UID] = parentNode
@@ -160,8 +161,11 @@ func (jo *JobsOrderByQueues) ensureAncestorChainForPush(childNode *queueNode, ch
 		parentNode.children.Push(childNode)
 	}
 
-	// Recurse up the ancestor chain
-	jo.ensureAncestorChainForPush(parentNode, parentQueueInfo)
+	// Only recurse up the ancestor chain if we created a new parent node.
+	// If the parent already existed, it's already linked to its ancestors.
+	if parentNodeIsNew {
+		jo.ensureAncestorChainForPush(parentNode, parentQueueInfo)
+	}
 }
 
 // traverseToLeaf recursively traverses from a priority queue of nodes down to the best leaf node.
