@@ -63,5 +63,5 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 		jobsOrder.addJobToQueue(job)
 	}
 
-	jobsOrder.buildActiveQueues(jobsOrder.options.VictimQueue)
+	jobsOrder.buildActiveQueues()
 }

@@ -124,6 +124,50 @@ func (jo *JobsOrderByQueues) isRootQueue(queue *queue_info.QueueInfo) bool {
 	return queue.ParentQueue == ""
 }
 
+// GuyReviewed
+// addJobToQueue adds a job to its leaf queue, creating the queue node if needed.
+func (jo *JobsOrderByQueues) addJobToQueue(job *podgroup_info.PodGroupInfo) {
+	if _, found := jo.queueNodes[job.Queue]; !found {
+		leafQueue := jo.ssn.Queues[job.Queue]
+		jo.queueNodes[job.Queue] = jo.createLeafNode(leafQueue)
+	}
+	jo.queueNodes[job.Queue].children.Push(job)
+}
+
+// GuyReviewed
+// buildActiveQueues builds the queue hierarchy from leaf nodes up to root nodes.
+// Supports n-level hierarchies by walking up the entire ancestor chain.
+func (jo *JobsOrderByQueues) buildActiveQueues() {
+	// Build ancestor chains for all leaf nodes that have jobs
+	for _, leafNode := range jo.queueNodes {
+		if !leafNode.isLeaf || leafNode.children.Len() == 0 {
+			continue
+		}
+
+		// Walk up the ancestor chain, creating nodes as needed
+		jo.ensureAncestorChain(leafNode, leafNode.queue, jo.options.VictimQueue)
+	}
+
+	// Build root nodes priority queue from nodes with no parent
+	log.InfraLogger.V(7).Infof("Building root nodes priority queue, reverseOrder=<%v>", jo.options.VictimQueue)
+	jo.rootNodes = scheduler_util.NewPriorityQueue(
+		jo.buildNodeOrderFn(jo.options.VictimQueue),
+		scheduler_util.QueueCapacityInfinite)
+
+	rootNodeCount := 0
+	for _, node := range jo.queueNodes {
+		// Only non-leaf nodes with no parent are root nodes
+		// (leaf nodes should always be linked to a parent after ensureAncestorChain)
+		if node.parent == nil && !node.isLeaf {
+			log.InfraLogger.V(7).Infof("Active root queue <%s> with %d children", node.queue.UID, node.children.Len())
+			jo.rootNodes.Push(node)
+			rootNodeCount++
+		}
+	}
+	log.InfraLogger.V(7).Infof("buildActiveQueues: added %d root nodes, total root nodes: %d, total queueNodes: %d",
+		rootNodeCount, jo.rootNodes.Len(), len(jo.queueNodes))
+}
+
 // ensureRootNodesInitialized ensures the rootNodes priority queue is initialized.
 func (jo *JobsOrderByQueues) ensureRootNodesInitialized() {
 	if jo.rootNodes == nil {
@@ -158,7 +202,7 @@ func (jo *JobsOrderByQueues) ensureAncestorChainForPush(childNode *queueNode, ch
 	parentNode := jo.queueNodes[parentQueueInfo.UID]
 	parentNodeIsNew := parentNode == nil
 	if parentNode == nil {
-		parentNode = jo.createNonLeafNode(parentQueueInfo, nil)
+		parentNode = jo.createNonLeafNode(parentQueueInfo)
 		jo.queueNodes[parentQueueInfo.UID] = parentNode
 	}
 
@@ -175,6 +219,7 @@ func (jo *JobsOrderByQueues) ensureAncestorChainForPush(childNode *queueNode, ch
 	}
 }
 
+// GuyReviewed
 // traverseToLeaf recursively traverses from a priority queue of nodes down to the best leaf node.
 func (jo *JobsOrderByQueues) traverseToLeaf(pq *scheduler_util.PriorityQueue) *queueNode {
 	node := jo.getNextNode(pq)
@@ -190,6 +235,7 @@ func (jo *JobsOrderByQueues) traverseToLeaf(pq *scheduler_util.PriorityQueue) *q
 	return jo.traverseToLeaf(node.children)
 }
 
+// GuyReviewed
 // getNextNode retrieves the next node from a priority queue, handling reordering as needed.
 func (jo *JobsOrderByQueues) getNextNode(pq *scheduler_util.PriorityQueue) *queueNode {
 	if pq.Empty() {
@@ -213,6 +259,7 @@ func (jo *JobsOrderByQueues) getNextNode(pq *scheduler_util.PriorityQueue) *queu
 	return node
 }
 
+// GuyReviewed
 // handlePopFromNode handles cleanup after popping a job from a leaf node.
 // If the node becomes empty, it's removed from its parent. Otherwise, ancestors are marked for reorder.
 func (jo *JobsOrderByQueues) handlePopFromNode(node *queueNode) {
@@ -222,10 +269,8 @@ func (jo *JobsOrderByQueues) handlePopFromNode(node *queueNode) {
 		delete(jo.queueNodes, node.queue.UID)
 
 		// If parent is now empty, recursively clean up
-		if node.parent != nil && node.parent.children.Len() == 0 {
+		if node.parent != nil {
 			jo.handlePopFromNode(node.parent)
-		} else if node.parent != nil {
-			jo.markAncestorsForReorder(node.parent)
 		}
 		return
 	}
@@ -233,7 +278,9 @@ func (jo *JobsOrderByQueues) handlePopFromNode(node *queueNode) {
 	jo.markAncestorsForReorder(node)
 }
 
+// GuyReviewed
 // removeNodeFromParent removes a node from its parent's children priority queue.
+// this assumes the node requested for removal is at the top of its parent's priority queue.
 func (jo *JobsOrderByQueues) removeNodeFromParent(node *queueNode) {
 	if node.parent != nil {
 		node.parent.children.Pop()
@@ -242,6 +289,7 @@ func (jo *JobsOrderByQueues) removeNodeFromParent(node *queueNode) {
 	}
 }
 
+// GuyReviewed
 // markAncestorsForReorder marks all ancestors of a node (including itself) as needing reorder.
 func (jo *JobsOrderByQueues) markAncestorsForReorder(node *queueNode) {
 	for current := node; current != nil; current = current.parent {
@@ -249,6 +297,7 @@ func (jo *JobsOrderByQueues) markAncestorsForReorder(node *queueNode) {
 	}
 }
 
+// GuyReviewed
 // createLeafNode creates a new leaf node that will contain jobs.
 func (jo *JobsOrderByQueues) createLeafNode(queue *queue_info.QueueInfo) *queueNode {
 	return &queueNode{
@@ -263,60 +312,17 @@ func (jo *JobsOrderByQueues) createLeafNode(queue *queue_info.QueueInfo) *queueN
 	}
 }
 
+// GuyReviewed
 // createNonLeafNode creates a new non-leaf node that will contain child queue nodes.
-func (jo *JobsOrderByQueues) createNonLeafNode(queue *queue_info.QueueInfo, parent *queueNode) *queueNode {
+func (jo *JobsOrderByQueues) createNonLeafNode(queue *queue_info.QueueInfo) *queueNode {
 	return &queueNode{
 		queue: queue,
 		children: scheduler_util.NewPriorityQueue(
 			jo.buildNodeOrderFn(jo.options.VictimQueue),
 			scheduler_util.QueueCapacityInfinite,
 		),
-		parent: parent,
 		isLeaf: false,
 	}
-}
-
-// addJobToQueue adds a job to its leaf queue, creating the queue node if needed.
-func (jo *JobsOrderByQueues) addJobToQueue(job *podgroup_info.PodGroupInfo) {
-	if _, found := jo.queueNodes[job.Queue]; !found {
-		leafQueue := jo.ssn.Queues[job.Queue]
-		jo.queueNodes[job.Queue] = jo.createLeafNode(leafQueue)
-	}
-	jo.queueNodes[job.Queue].children.Push(job)
-}
-
-// buildActiveQueues builds the queue hierarchy from leaf nodes up to root nodes.
-// Supports n-level hierarchies by walking up the entire ancestor chain.
-func (jo *JobsOrderByQueues) buildActiveQueues(reverseOrder bool) {
-	// Build ancestor chains for all leaf nodes that have jobs
-	for _, queue := range jo.ssn.Queues {
-		leafNode, found := jo.queueNodes[queue.UID]
-		if !found || !leafNode.isLeaf || leafNode.children.Len() == 0 {
-			log.InfraLogger.V(7).Infof("Skipping queue <%s> because no jobs in it", queue.Name)
-			continue
-		}
-
-		// Walk up the ancestor chain, creating nodes as needed
-		jo.ensureAncestorChain(leafNode, queue, reverseOrder)
-	}
-
-	// Build root nodes priority queue from nodes with no parent
-	log.InfraLogger.V(7).Infof("Building root nodes priority queue, reverseOrder=<%v>", reverseOrder)
-	jo.rootNodes = scheduler_util.NewPriorityQueue(
-		jo.buildNodeOrderFn(reverseOrder),
-		scheduler_util.QueueCapacityInfinite)
-
-	rootNodeCount := 0
-	for _, node := range jo.queueNodes {
-		// Only non-leaf nodes with no parent are root nodes
-		// (leaf nodes should always be linked to a parent after ensureAncestorChain)
-		if node.parent == nil && !node.isLeaf {
-			log.InfraLogger.V(7).Infof("Active root queue <%s> with %d children", node.queue.UID, node.children.Len())
-			jo.rootNodes.Push(node)
-			rootNodeCount++
-		}
-	}
-	log.InfraLogger.V(7).Infof("buildActiveQueues: added %d root nodes, total queueNodes: %d", rootNodeCount, len(jo.queueNodes))
 }
 
 // ensureAncestorChain creates all ancestor nodes for a leaf node up to the root.
@@ -338,14 +344,7 @@ func (jo *JobsOrderByQueues) ensureAncestorChain(childNode *queueNode, childQueu
 	parentNode, parentNodeExists := jo.queueNodes[parentQueueInfo.UID]
 	if !parentNodeExists {
 		log.InfraLogger.V(7).Infof("Adding ancestor queue <%s>", parentQueueInfo.Name)
-		parentNode = &queueNode{
-			queue: parentQueueInfo,
-			children: scheduler_util.NewPriorityQueue(
-				jo.buildNodeOrderFn(reverseOrder),
-				scheduler_util.QueueCapacityInfinite,
-			),
-			isLeaf: false,
-		}
+		parentNode = jo.createNonLeafNode(parentQueueInfo)
 		jo.queueNodes[parentQueueInfo.UID] = parentNode
 	}
 
@@ -356,10 +355,8 @@ func (jo *JobsOrderByQueues) ensureAncestorChain(childNode *queueNode, childQueu
 		log.InfraLogger.V(7).Infof("Linked queue <%v> to parent <%v>", childQueue.Name, parentQueueInfo.Name)
 	}
 
-	// Recurse up if parent is not root
-	if !jo.isRootQueue(parentQueueInfo) {
-		jo.ensureAncestorChain(parentNode, parentQueueInfo, reverseOrder)
-	}
+	// Recurse up
+	jo.ensureAncestorChain(parentNode, parentQueueInfo, reverseOrder)
 }
 
 // buildNodeOrderFn creates a comparison function for ordering queue nodes.
@@ -399,9 +396,7 @@ func (jo *JobsOrderByQueues) getBestJobFromNode(node *queueNode) (*podgroup_info
 	}
 
 	// For non-leaf nodes, get the best child and recurse
-	bestChild := node.children.Pop().(*queueNode)
-	defer node.children.Push(bestChild)
-
+	bestChild := node.children.Peek().(*queueNode)
 	return jo.getBestJobFromNode(bestChild)
 }
 
@@ -419,22 +414,17 @@ func (jo *JobsOrderByQueues) extractJobsForComparison(
 		return nil, jo.getVictimsForQueue(queueID, node)
 	}
 
-	pending := node.children.Pop().(*podgroup_info.PodGroupInfo)
-	node.children.Push(pending)
+	pending := node.children.Peek().(*podgroup_info.PodGroupInfo)
 	return pending, nil
 }
 
 // getVictimsForQueue returns all popped jobs plus the next job in queue for victim ordering.
 func (jo *JobsOrderByQueues) getVictimsForQueue(queueID common_info.QueueID, node *queueNode) []*podgroup_info.PodGroupInfo {
-	var victims []*podgroup_info.PodGroupInfo
-	if poppedJobs := jo.poppedJobsByQueue[queueID]; len(poppedJobs) > 0 {
-		victims = append(victims, poppedJobs...)
-	}
+	victims := jo.poppedJobsByQueue[queueID]
 	if node.children.Empty() {
 		log.InfraLogger.V(7).Warnf("getVictimsForQueue: node %v has no children", node.queue.Name)
 		return victims
 	}
-	nextJob := node.children.Pop().(*podgroup_info.PodGroupInfo)
-	node.children.Push(nextJob)
+	nextJob := node.children.Peek().(*podgroup_info.PodGroupInfo)
 	return append(victims, nextJob)
 }
