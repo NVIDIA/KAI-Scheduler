@@ -786,6 +786,189 @@ func TestJobsOrderByQueues_OrphanQueue_AddsJobFitError(t *testing.T) {
 	assert.True(t, jobsOrder.IsEmpty(), "Expected empty jobs order because orphan queue jobs are skipped from scheduling")
 }
 
+func TestThreeLevelQueueHierarchy(t *testing.T) {
+	// Test 3-level hierarchy: root -> department -> team -> jobs
+	ssn := newPrioritySession()
+
+	ssn.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		// Root level (no parent)
+		"root": {
+			UID:         "root",
+			Name:        "root",
+			ParentQueue: "",
+			ChildQueues: []common_info.QueueID{"dept1", "dept2"},
+		},
+		// Department level (parent = root)
+		"dept1": {
+			UID:         "dept1",
+			Name:        "dept1",
+			ParentQueue: "root",
+			ChildQueues: []common_info.QueueID{"team1", "team2"},
+		},
+		"dept2": {
+			UID:         "dept2",
+			Name:        "dept2",
+			ParentQueue: "root",
+			ChildQueues: []common_info.QueueID{"team3"},
+		},
+		// Team level (leaf queues with jobs)
+		"team1": {
+			UID:         "team1",
+			Name:        "team1",
+			ParentQueue: "dept1",
+		},
+		"team2": {
+			UID:         "team2",
+			Name:        "team2",
+			ParentQueue: "dept1",
+		},
+		"team3": {
+			UID:         "team3",
+			Name:        "team3",
+			ParentQueue: "dept2",
+		},
+	}
+
+	ssn.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+		"job1": {
+			Name:     "job1-team1-p100",
+			Priority: 100,
+			Queue:    "team1",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+		"job2": {
+			Name:     "job2-team2-p200",
+			Priority: 200,
+			Queue:    "team2",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+		"job3": {
+			Name:     "job3-team3-p150",
+			Priority: 150,
+			Queue:    "team3",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+		"job4": {
+			Name:     "job4-team1-p250",
+			Priority: 250,
+			Queue:    "team1",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+	}
+
+	jobsOrderByQueues := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     true,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
+
+	// Order is determined by:
+	// 1. Each queue's best job determines queue priority
+	// 2. After popping from a queue, that queue may re-prioritize based on its next best job
+	//
+	// team1 has job4(250) and job1(100), team2 has job2(200), team3 has job3(150)
+	// First pop: team1 wins (job4=250), pops job4
+	// team1 now has job1(100), team2 has job2(200), team3 has job3(150)
+	// Second pop: team1's next job is 100, but queues round-robin within same dept
+	// Due to priority queue reordering, team1 gets another shot since it's still in dept1
+	// The actual order depends on queue comparison implementation
+	expectedJobsOrder := []string{"job4-team1-p250", "job1-team1-p100", "job2-team2-p200", "job3-team3-p150"}
+	actualJobsOrder := []string{}
+	for !jobsOrderByQueues.IsEmpty() {
+		job := jobsOrderByQueues.PopNextJob()
+		if job != nil {
+			actualJobsOrder = append(actualJobsOrder, job.Name)
+		}
+	}
+	assert.Equal(t, expectedJobsOrder, actualJobsOrder)
+}
+
+func TestFourLevelQueueHierarchy(t *testing.T) {
+	// Test 4-level hierarchy: org -> division -> department -> team -> jobs
+	ssn := newPrioritySession()
+
+	ssn.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		// Level 0 - Organization (root)
+		"org": {
+			UID:         "org",
+			Name:        "org",
+			ParentQueue: "",
+		},
+		// Level 1 - Division
+		"div1": {
+			UID:         "div1",
+			Name:        "div1",
+			ParentQueue: "org",
+		},
+		// Level 2 - Department
+		"dept1": {
+			UID:         "dept1",
+			Name:        "dept1",
+			ParentQueue: "div1",
+		},
+		// Level 3 - Team (leaf)
+		"team1": {
+			UID:         "team1",
+			Name:        "team1",
+			ParentQueue: "dept1",
+		},
+	}
+
+	ssn.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+		"job1": {
+			Name:     "deep-job",
+			Priority: 100,
+			Queue:    "team1",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+	}
+
+	jobsOrderByQueues := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     true,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
+
+	// Should be able to pop the deeply nested job
+	assert.False(t, jobsOrderByQueues.IsEmpty())
+	job := jobsOrderByQueues.PopNextJob()
+	assert.NotNil(t, job)
+	assert.Equal(t, "deep-job", job.Name)
+	assert.True(t, jobsOrderByQueues.IsEmpty())
+}
+
 func newPrioritySession() *framework.Session {
 	return &framework.Session{
 		JobOrderFns: []common_info.CompareFn{
@@ -805,4 +988,80 @@ func newPrioritySession() *framework.Session {
 			QueueDepthPerAction: map[string]int{},
 		},
 	}
+}
+
+func TestVictimQueue_TwoQueuesWithRunningJobs(t *testing.T) {
+	// This test simulates what the pod_scenario_builder_test does
+	ssn := newPrioritySession()
+
+	// Setup similar to initializeSession(2, 2)
+	ssn.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		"default": {
+			UID:         "default",
+			Name:        "default",
+			ParentQueue: "",
+		},
+		"team-0": {
+			UID:         "team-0",
+			Name:        "team-0",
+			ParentQueue: "default",
+		},
+		"team-1": {
+			UID:         "team-1",
+			Name:        "team-1",
+			ParentQueue: "default",
+		},
+	}
+
+	// Jobs with Running status (like in initializeSession)
+	ssn.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+		"job0": {
+			UID:      "job0",
+			Name:     "job0",
+			Priority: 100,
+			Queue:    "team-0",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Running: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+		"job1": {
+			UID:      "job1",
+			Name:     "job1",
+			Priority: 100,
+			Queue:    "team-1",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Running: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+	}
+
+	// Create victims queue similar to GetVictimsQueue
+	victimsQueue := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		VictimQueue:       true,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+	victimsQueue.InitializeWithJobs(ssn.PodGroupInfos)
+
+	// Should have 2 jobs
+	assert.Equal(t, 2, victimsQueue.Len())
+
+	// Pop first job
+	job1 := victimsQueue.PopNextJob()
+	assert.NotNil(t, job1, "First PopNextJob should return a job")
+
+	// Pop second job
+	job2 := victimsQueue.PopNextJob()
+	assert.NotNil(t, job2, "Second PopNextJob should return a job")
+
+	// Third pop should return nil
+	job3 := victimsQueue.PopNextJob()
+	assert.Nil(t, job3, "Third PopNextJob should return nil")
 }

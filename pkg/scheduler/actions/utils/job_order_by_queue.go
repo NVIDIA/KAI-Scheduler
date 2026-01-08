@@ -64,9 +64,13 @@ func (jo *JobsOrderByQueues) PopNextJob() *podgroup_info.PodGroupInfo {
 		return nil
 	}
 
+	log.InfraLogger.V(7).Infof("PopNextJob: rootNodes.Len()=%d, queueNodes count=%d",
+		jo.rootNodes.Len(), len(jo.queueNodes))
+
 	// Traverse down the tree to find the best leaf node
 	leafNode := jo.traverseToLeaf(jo.rootNodes)
 	if leafNode == nil {
+		log.InfraLogger.V(7).Warnf("PopNextJob: traverseToLeaf returned nil")
 		return nil
 	}
 
@@ -86,30 +90,78 @@ func (jo *JobsOrderByQueues) PopNextJob() *podgroup_info.PodGroupInfo {
 
 func (jo *JobsOrderByQueues) PushJob(job *podgroup_info.PodGroupInfo) {
 	leafQueueInfo := jo.ssn.Queues[job.Queue]
-	parentQueueInfo := jo.ssn.Queues[leafQueueInfo.ParentQueue]
 
-	// Ensure parent node exists
+	// Check if leaf node already exists and is linked
+	leafNode := jo.queueNodes[job.Queue]
+	needsLinking := leafNode == nil
+
+	if leafNode == nil {
+		leafNode = jo.createLeafNode(leafQueueInfo, nil)
+		jo.queueNodes[job.Queue] = leafNode
+	}
+
+	// Push job first (before linking) so ordering comparisons have valid data
+	leafNode.children.Push(job)
+
+	// Only link the tree if this is a new node
+	if needsLinking {
+		jo.ensureAncestorChainForPush(leafNode, leafQueueInfo)
+	}
+
+	// Mark ancestors for reordering
+	jo.markAncestorsForReorder(leafNode)
+
+	log.InfraLogger.V(7).Infof("Pushed job: %v for queue %v", job.Name, leafQueueInfo.Name)
+}
+
+// isRootQueue returns true if the queue has no parent (is at the root level).
+func (jo *JobsOrderByQueues) isRootQueue(queue *queue_info.QueueInfo) bool {
+	return queue.ParentQueue == ""
+}
+
+// ensureRootNodesInitialized ensures the rootNodes priority queue is initialized.
+func (jo *JobsOrderByQueues) ensureRootNodesInitialized() {
+	if jo.rootNodes == nil {
+		jo.rootNodes = scheduler_util.NewPriorityQueue(
+			jo.buildNodeOrderFn(jo.options.VictimQueue),
+			scheduler_util.QueueCapacityInfinite)
+	}
+}
+
+// ensureAncestorChainForPush creates all ancestor nodes for a node up to the root.
+// Used by PushJob to build the tree dynamically.
+func (jo *JobsOrderByQueues) ensureAncestorChainForPush(childNode *queueNode, childQueue *queue_info.QueueInfo) {
+	if jo.isRootQueue(childQueue) {
+		// Child is at root level - add to rootNodes if not already linked
+		if childNode.parent == nil {
+			jo.ensureRootNodesInitialized()
+			jo.rootNodes.Push(childNode)
+		}
+		return
+	}
+
+	parentQueueInfo, parentExists := jo.ssn.Queues[childQueue.ParentQueue]
+	if !parentExists {
+		log.InfraLogger.V(7).Warnf("Queue's parent doesn't exist. Queue: <%v>, Parent: <%v>",
+			childQueue.Name, childQueue.ParentQueue)
+		return
+	}
+
+	// Get or create parent node
 	parentNode := jo.queueNodes[parentQueueInfo.UID]
 	if parentNode == nil {
 		parentNode = jo.createNonLeafNode(parentQueueInfo, nil)
 		jo.queueNodes[parentQueueInfo.UID] = parentNode
-		jo.rootNodes.Push(parentNode)
 	}
 
-	// Ensure leaf node exists
-	leafNode := jo.queueNodes[job.Queue]
-	if leafNode == nil {
-		leafNode = jo.createLeafNode(leafQueueInfo, parentNode)
-		jo.queueNodes[job.Queue] = leafNode
-		parentNode.children.Push(leafNode)
+	// Link child to parent if not already linked
+	if childNode.parent == nil {
+		childNode.parent = parentNode
+		parentNode.children.Push(childNode)
 	}
 
-	// Push job and mark ancestors for reordering
-	leafNode.children.Push(job)
-	jo.markAncestorsForReorder(leafNode)
-
-	log.InfraLogger.V(7).Infof("Pushed job: %v for queue %v, parent queue %v",
-		job.Name, leafQueueInfo.Name, parentQueueInfo.Name)
+	// Recurse up the ancestor chain
+	jo.ensureAncestorChainForPush(parentNode, parentQueueInfo)
 }
 
 // traverseToLeaf recursively traverses from a priority queue of nodes down to the best leaf node.
@@ -234,10 +286,9 @@ func (jo *JobsOrderByQueues) addJobToQueue(job *podgroup_info.PodGroupInfo, reve
 }
 
 // buildActiveQueues builds the queue hierarchy from leaf nodes up to root nodes.
+// Supports n-level hierarchies by walking up the entire ancestor chain.
 func (jo *JobsOrderByQueues) buildActiveQueues(reverseOrder bool) {
-	// First pass: create parent nodes for all leaf nodes that have jobs
-	parentNodes := map[common_info.QueueID]*queueNode{}
-
+	// Build ancestor chains for all leaf nodes that have jobs
 	for _, queue := range jo.ssn.Queues {
 		leafNode, found := jo.queueNodes[queue.UID]
 		if !found || !leafNode.isLeaf || leafNode.children.Len() == 0 {
@@ -245,44 +296,69 @@ func (jo *JobsOrderByQueues) buildActiveQueues(reverseOrder bool) {
 			continue
 		}
 
-		parentQueueInfo, parentExists := jo.ssn.Queues[queue.ParentQueue]
-		if !parentExists {
-			log.InfraLogger.V(7).Warnf("Queue's parent doesn't exist. Queue: <%v>, Parent: <%v>",
-				queue.Name, queue.ParentQueue)
-			continue
-		}
-
-		parentNode, parentNodeExists := parentNodes[queue.ParentQueue]
-		if !parentNodeExists {
-			log.InfraLogger.V(7).Infof("Adding parent queue <%s>", queue.ParentQueue)
-			parentNode = &queueNode{
-				queue: parentQueueInfo,
-				children: scheduler_util.NewPriorityQueue(
-					jo.buildNodeOrderFn(reverseOrder),
-					scheduler_util.QueueCapacityInfinite,
-				),
-				isLeaf: false,
-			}
-			parentNodes[queue.ParentQueue] = parentNode
-			jo.queueNodes[queue.ParentQueue] = parentNode
-		}
-
-		// Link leaf to parent
-		leafNode.parent = parentNode
-		parentNode.children.Push(leafNode)
-		log.InfraLogger.V(7).Infof("Added leaf queue to parent: parent=<%v>, leaf=<%v>, jobs=<%v>, reverseOrder=<%v>",
-			queue.ParentQueue, queue.Name, leafNode.children.Len(), reverseOrder)
+		// Walk up the ancestor chain, creating nodes as needed
+		jo.ensureAncestorChain(leafNode, queue, reverseOrder)
 	}
 
-	// Build root nodes priority queue
+	// Build root nodes priority queue from nodes with no parent
 	log.InfraLogger.V(7).Infof("Building root nodes priority queue, reverseOrder=<%v>", reverseOrder)
 	jo.rootNodes = scheduler_util.NewPriorityQueue(
 		jo.buildNodeOrderFn(reverseOrder),
 		scheduler_util.QueueCapacityInfinite)
 
-	for parentQueueID, parentNode := range parentNodes {
-		log.InfraLogger.V(7).Infof("Active root queue <%s>", parentQueueID)
-		jo.rootNodes.Push(parentNode)
+	rootNodeCount := 0
+	for _, node := range jo.queueNodes {
+		// Only non-leaf nodes with no parent are root nodes
+		// (leaf nodes should always be linked to a parent after ensureAncestorChain)
+		if node.parent == nil && !node.isLeaf {
+			log.InfraLogger.V(7).Infof("Active root queue <%s> with %d children", node.queue.UID, node.children.Len())
+			jo.rootNodes.Push(node)
+			rootNodeCount++
+		}
+	}
+	log.InfraLogger.V(7).Infof("buildActiveQueues: added %d root nodes, total queueNodes: %d", rootNodeCount, len(jo.queueNodes))
+}
+
+// ensureAncestorChain creates all ancestor nodes for a leaf node up to the root.
+// Used by buildActiveQueues during initialization.
+func (jo *JobsOrderByQueues) ensureAncestorChain(childNode *queueNode, childQueue *queue_info.QueueInfo, reverseOrder bool) {
+	if jo.isRootQueue(childQueue) {
+		// This node is at root level, no parent to create
+		return
+	}
+
+	parentQueueInfo, parentExists := jo.ssn.Queues[childQueue.ParentQueue]
+	if !parentExists {
+		log.InfraLogger.V(7).Warnf("Queue's parent doesn't exist. Queue: <%v>, Parent: <%v>",
+			childQueue.Name, childQueue.ParentQueue)
+		return
+	}
+
+	// Get or create parent node
+	parentNode, parentNodeExists := jo.queueNodes[parentQueueInfo.UID]
+	if !parentNodeExists {
+		log.InfraLogger.V(7).Infof("Adding ancestor queue <%s>", parentQueueInfo.Name)
+		parentNode = &queueNode{
+			queue: parentQueueInfo,
+			children: scheduler_util.NewPriorityQueue(
+				jo.buildNodeOrderFn(reverseOrder),
+				scheduler_util.QueueCapacityInfinite,
+			),
+			isLeaf: false,
+		}
+		jo.queueNodes[parentQueueInfo.UID] = parentNode
+	}
+
+	// Link child to parent if not already linked
+	if childNode.parent == nil {
+		childNode.parent = parentNode
+		parentNode.children.Push(childNode)
+		log.InfraLogger.V(7).Infof("Linked queue <%v> to parent <%v>", childQueue.Name, parentQueueInfo.Name)
+	}
+
+	// Recurse up if parent is not root
+	if !jo.isRootQueue(parentQueueInfo) {
+		jo.ensureAncestorChain(parentNode, parentQueueInfo, reverseOrder)
 	}
 }
 
@@ -334,6 +410,11 @@ func (jo *JobsOrderByQueues) extractJobsForComparison(
 	queueID common_info.QueueID,
 	node *queueNode,
 ) (*podgroup_info.PodGroupInfo, []*podgroup_info.PodGroupInfo) {
+	if node.children.Empty() {
+		log.InfraLogger.V(7).Warnf("extractJobsForComparison: node %v has no children", node.queue.Name)
+		return nil, nil
+	}
+
 	if jo.options.VictimQueue {
 		return nil, jo.getVictimsForQueue(queueID, node)
 	}
@@ -348,6 +429,10 @@ func (jo *JobsOrderByQueues) getVictimsForQueue(queueID common_info.QueueID, nod
 	var victims []*podgroup_info.PodGroupInfo
 	if poppedJobs := jo.poppedJobsByQueue[queueID]; len(poppedJobs) > 0 {
 		victims = append(victims, poppedJobs...)
+	}
+	if node.children.Empty() {
+		log.InfraLogger.V(7).Warnf("getVictimsForQueue: node %v has no children", node.queue.Name)
+		return victims
 	}
 	nextJob := node.children.Pop().(*podgroup_info.PodGroupInfo)
 	node.children.Push(nextJob)
