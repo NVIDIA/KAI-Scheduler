@@ -7,13 +7,13 @@ package resources
 import (
 	"context"
 	"sync"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -92,16 +92,9 @@ var _ = Describe("Schedule pod with resource request", Ordered, func() {
 		})
 
 		It("Fraction GPU request - fill all the GPUs", Label(labels.ReservationPod), func(ctx context.Context) {
-			numGPUs := 0
-			var nodes v1.NodeList
-			Expect(testCtx.ControllerClient.List(ctx, &nodes)).To(Succeed())
-			for _, node := range nodes.Items {
-				q := node.Status.Capacity[constants.GpuResource]
-				if q.Value() > 0 {
-					numGPUs += int(q.Value())
-				}
-			}
-			Expect(numGPUs).To(BeNumerically(">", 0), "No GPUs found in cluster")
+			resources, err := capacity.GetClusterAllocatableResources(testCtx.KubeClientset)
+			Expect(err).NotTo(HaveOccurred())
+			numGPUs := int(resources.Gpu.Value())
 
 			numPods := numGPUs * 2
 			pods := make([]*v1.Pod, numPods)
@@ -127,8 +120,11 @@ var _ = Describe("Schedule pod with resource request", Ordered, func() {
 				Expect(err).NotTo(HaveOccurred(), "Failed to create pod")
 			}
 
-			wait.ForAtLeastNPodsScheduled(ctx, testCtx.ControllerClient, testCtx.Queues[0].Namespace, pods, numGPUs)
 			wait.ForAtLeastNPodCreation(ctx, testCtx.ControllerClient, metav1.LabelSelector{
+				MatchLabels: map[string]string{constants.AppLabelName: "engine-e2e"},
+			}, numPods)
+
+			labelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 				MatchLabels: map[string]string{constants.AppLabelName: "engine-e2e"},
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
@@ -136,46 +132,48 @@ var _ = Describe("Schedule pod with resource request", Ordered, func() {
 						Operator: metav1.LabelSelectorOpExists,
 					},
 				},
-			}, numGPUs)
-
-			time.Sleep(3 * time.Second)
-
-			var allPods v1.PodList
-			n := 0
-			for range 5 {
-				Expect(testCtx.ControllerClient.List(ctx, &allPods,
-					runtimeClient.InNamespace(testCtx.Queues[0].Namespace),
-					runtimeClient.MatchingLabels{constants.AppLabelName: "engine-e2e"},
-				)).To(Succeed(), "Failed to list pods")
-				n = 0
-				for _, pod := range allPods.Items {
+			})
+			wait.ForPodsWithCondition(ctx, testCtx.ControllerClient, func(event watch.Event) bool {
+				podList, ok := event.Object.(*v1.PodList)
+				if !ok {
+					return false
+				}
+				scheduledWithGpuGroup := 0
+				for _, pod := range podList.Items {
 					if !rd.IsPodScheduled(&pod) {
 						continue
 					}
-					n++
+					if _, ok := pod.Labels[constants.GPUGroup]; !ok {
+						continue
+					}
+					scheduledWithGpuGroup++
 				}
-				if n == numGPUs {
-					break
-				}
-				time.Sleep(2 * time.Second)
-			}
-			Expect(n).To(BeNumerically(">=", numGPUs), "Expected %d allocated pods, got %d", numGPUs, n)
+				return scheduledWithGpuGroup == numGPUs
+			}, runtimeClient.InNamespace(testCtx.Queues[0].Namespace),
+				runtimeClient.MatchingLabelsSelector{Selector: labelSelector})
+
+			var allPods v1.PodList
+			Expect(testCtx.ControllerClient.List(ctx, &allPods,
+				runtimeClient.InNamespace(testCtx.Queues[0].Namespace),
+				runtimeClient.MatchingLabelsSelector{Selector: labelSelector},
+			)).To(Succeed(), "Failed to list pods")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(allPods.Items)).To(BeNumerically("==", numGPUs), "Expected exactly %d allocated pods, got %d", numGPUs, len(allPods.Items))
 
 			var allocatedPods []*v1.Pod
-			gpuGroupsMap := make(map[string][]*v1.Pod)
 			var configMaps v1.ConfigMapList
 			Expect(testCtx.ControllerClient.List(ctx, &configMaps,
 				runtimeClient.InNamespace(testCtx.Queues[0].Namespace),
 			)).To(Succeed(), "Failed to list config maps")
-			cmByIndex := make(map[string][]*v1.ConfigMap)
+
+			gpuGroupsMap := make(map[string][]*v1.Pod)
+			cmByGPUIndex := make(map[string][]*v1.ConfigMap)
 			for _, pod := range allPods.Items {
-				if !rd.IsPodScheduled(&pod) {
-					continue
-				}
+				Expect(rd.IsPodScheduled(&pod)).To(BeTrue(), "Expected pod to be scheduled", pod.Name, pod.Labels, pod.Status.Conditions)
 				allocatedPods = append(allocatedPods, &pod)
 
 				group, ok := pod.Labels[constants.GPUGroup]
-				Expect(ok).To(BeTrue(), "GPU group label not found")
+				Expect(ok).To(BeTrue(), "Expected GPU group label to be found on pod %s", pod.Name)
 				gpuGroupsMap[group] = append(gpuGroupsMap[group], &pod)
 
 				cmName := pod.Annotations[constants.GpuSharingConfigMapAnnotation]
@@ -184,18 +182,18 @@ var _ = Describe("Schedule pod with resource request", Ordered, func() {
 						continue
 					}
 					index := cm.Data[constants.NvidiaVisibleDevices]
-					cmByIndex[index] = append(cmByIndex[index], &cm)
+					cmByGPUIndex[index] = append(cmByGPUIndex[index], &cm)
 					break
 				}
 			}
-			Expect(len(allocatedPods)).To(BeNumerically(">=", numGPUs), "Expected at least %d allocated pods, got %d", numGPUs, len(allocatedPods))
+			Expect(len(allocatedPods)).To(BeNumerically("==", numGPUs), "Expected exactly %d allocated pods, got %d", numGPUs, len(allocatedPods))
 
 			for group, pods := range gpuGroupsMap {
 				Expect(len(pods)).To(Equal(1), "Expected one pod per group, got %d for group %s", len(pods), group)
 			}
 
-			for index, cm := range cmByIndex {
-				Expect(len(cm)).To(Equal(1), "Expected one config map per index, got %d for index %s", len(cm), index)
+			for index, cm := range cmByGPUIndex {
+				Expect(len(cm)).To(Equal(1), "Expected one config map per gpu index, got %d for index %s", len(cm), index)
 			}
 		})
 

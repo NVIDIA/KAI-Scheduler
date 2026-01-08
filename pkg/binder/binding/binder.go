@@ -44,16 +44,13 @@ func (b *Binder) Bind(ctx context.Context, pod *v1.Pod, node *v1.Node, bindReque
 	logger := log.FromContext(ctx)
 	err := b.resourceReservationService.SyncForNode(ctx, bindRequest.Spec.SelectedNode)
 	if err != nil {
-		logger.Error(err, "Failed to sync reservation for node",
-			"pod", pod.Name, "namespace", pod.Namespace, "node", node.Name)
-		return err
+		return fmt.Errorf("failed to sync reservation for pod <%s/%s> on node <%s>: %w", pod.Namespace, pod.Name, bindRequest.Spec.SelectedNode, err)
 	}
+
 	var reservedGPUIds []string
 	if common.IsSharedGPUAllocation(bindRequest) {
 		reservedGPUIds, err = b.reserveGPUs(ctx, pod, bindRequest)
 		if err != nil {
-			logger.Error(err, "Failed to reserve GPUs resources for pod",
-				"namespace", pod.Namespace, "name", pod.Name)
 			return err
 		}
 	}
@@ -68,9 +65,7 @@ func (b *Binder) Bind(ctx context.Context, pod *v1.Pod, node *v1.Node, bindReque
 
 	err = b.patchResourceReceivedTypeAnnotation(ctx, pod, bindRequest)
 	if err != nil {
-		logger.Error(err, "Failed to patch pod with resource receive type",
-			"namespace", pod.Namespace, "name", pod.Name)
-		return err
+		return fmt.Errorf("failed to patch pod <%s/%s> with resource receive type annotation: %w", pod.Namespace, pod.Name, err)
 	}
 
 	logger.Info("Binding pod", "namespace", pod.Namespace, "name", pod.Name, "hostname", node.Name)
@@ -82,8 +77,7 @@ func (b *Binder) Bind(ctx context.Context, pod *v1.Pod, node *v1.Node, bindReque
 		},
 	}
 	if err = b.kubeClient.SubResource("binding").Create(ctx, pod, binding); err != nil {
-		logger.Error(err, "Failed to bind pod", "namespace", pod.Namespace, "name", pod.Name)
-		return err
+		return fmt.Errorf("failed to bind pod <%s/%s> to node <%s>: %w", pod.Namespace, pod.Name, node.Name, err)
 	}
 
 	b.plugins.PostBind(ctx, pod, node, bindRequest, bindingState)
@@ -97,23 +91,19 @@ func (b *Binder) Rollback(ctx context.Context, pod *v1.Pod, node *v1.Node, bindR
 		return nil
 	}
 
-	logger.Info("Rolling back GPU reservation for failed bind attempt",
+	logger.Info("Rolling back GPU reservation for failed bind attempt...",
 		"pod", pod.Name, "namespace", pod.Namespace, "node", node.Name)
 
-	for _, gpuGroup := range bindRequest.Spec.SelectedGPUGroups {
-		if err := b.resourceReservationService.RemovePodGpuGroupConnection(ctx, pod, gpuGroup); err != nil {
-			logger.Error(err, "Failed to remove GPU group label from pod during rollback",
-				"gpuGroup", gpuGroup)
-		}
+	var rollbackErrs []error
+	if err := b.resourceReservationService.RemovePodGpuGroupsConnection(ctx, pod); err != nil {
+		rollbackErrs = append(rollbackErrs, fmt.Errorf("failed to remove GPU group label from pod <%s/%s> during rollback: %w", pod.Namespace, pod.Name, err))
 	}
 
 	if err := b.resourceReservationService.SyncForNode(ctx, bindRequest.Spec.SelectedNode); err != nil {
-		logger.Error(err, "Failed to sync reservation pods during rollback",
-			"node", bindRequest.Spec.SelectedNode)
-		return err
+		rollbackErrs = append(rollbackErrs, fmt.Errorf("failed to sync reservation pods for node <%s> during rollback: %w", bindRequest.Spec.SelectedNode, err))
 	}
 
-	return nil
+	return errors.Join(rollbackErrs...)
 }
 
 func (b *Binder) reserveGPUs(ctx context.Context, pod *v1.Pod, bindRequest *v1alpha2.BindRequest) ([]string, error) {
@@ -123,40 +113,16 @@ func (b *Binder) reserveGPUs(ctx context.Context, pod *v1.Pod, bindRequest *v1al
 	}
 
 	var gpuIndexes []string
-	for groupListIndex, gpuGroup := range bindRequest.Spec.SelectedGPUGroups {
+	for _, gpuGroup := range bindRequest.Spec.SelectedGPUGroups {
 		gpuIndex, err := b.resourceReservationService.ReserveGpuDevice(ctx, pod, bindRequest.Spec.SelectedNode, gpuGroup)
 		if err != nil {
-			logger := log.FromContext(ctx)
-			logger.Error(err, "Failed to sync resource reservation pods",
-				"nodeName", bindRequest.Spec.SelectedNode)
+			// Cleanup will be handled by the rollback function
 
-			// Try to clean up any previously created reservation pods created before this failure
-			if groupListIndex > 0 {
-				b.cleanPreviousReservationPods(ctx, pod, groupListIndex, bindRequest)
-			}
-			return nil, err
+			return nil, fmt.Errorf("failed to reserve GPUs for pod <%s/%s> in gpu group <%s>: %w", pod.Namespace, pod.Name, gpuGroup, err)
 		}
 		gpuIndexes = append(gpuIndexes, gpuIndex)
 	}
 	return gpuIndexes, nil
-}
-
-func (b *Binder) cleanPreviousReservationPods(
-	ctx context.Context, pod *v1.Pod, failedGpuReservationIndex int, bindRequest *v1alpha2.BindRequest) {
-	logger := log.FromContext(ctx)
-	for gpuGroupToCleanIndex := range failedGpuReservationIndex {
-		gpuGroupToClean := bindRequest.Spec.SelectedGPUGroups[gpuGroupToCleanIndex]
-		cleanupErr := b.resourceReservationService.RemovePodGpuGroupConnection(ctx, pod, gpuGroupToClean)
-		if cleanupErr != nil {
-			logger.Error(cleanupErr, "Failed to remove reservation pod connection to pod under fraction binding.",
-				"nodeName", bindRequest.Spec.SelectedNode)
-		}
-	}
-	cleanupErr := b.resourceReservationService.SyncForNode(ctx, bindRequest.Spec.SelectedNode)
-	if cleanupErr != nil {
-		logger.Error(cleanupErr, "Failed to sync resource reservation pods for node.",
-			"nodeName", bindRequest.Spec.SelectedNode)
-	}
 }
 
 func (b *Binder) patchResourceReceivedTypeAnnotation(ctx context.Context, pod *v1.Pod, bindRequest *v1alpha2.BindRequest) error {
