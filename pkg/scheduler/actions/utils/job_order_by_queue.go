@@ -101,7 +101,7 @@ func (jo *JobsOrderByQueues) PushJob(job *podgroup_info.PodGroupInfo) {
 	needsLinking := !found
 
 	if needsLinking {
-		leafNode = jo.createLeafNode(leafQueueInfo, nil)
+		leafNode = jo.createLeafNode(leafQueueInfo)
 		jo.queueNodes[job.Queue] = leafNode
 	}
 
@@ -250,17 +250,15 @@ func (jo *JobsOrderByQueues) markAncestorsForReorder(node *queueNode) {
 }
 
 // createLeafNode creates a new leaf node that will contain jobs.
-func (jo *JobsOrderByQueues) createLeafNode(queue *queue_info.QueueInfo, parent *queueNode) *queueNode {
-	reverseOrder := jo.options.VictimQueue
+func (jo *JobsOrderByQueues) createLeafNode(queue *queue_info.QueueInfo) *queueNode {
 	return &queueNode{
 		queue: queue,
 		children: scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
-			if reverseOrder {
+			if jo.options.VictimQueue {
 				return !jo.ssn.JobOrderFn(l, r)
 			}
 			return jo.ssn.JobOrderFn(l, r)
 		}, jo.options.MaxJobsQueueDepth),
-		parent: parent,
 		isLeaf: true,
 	}
 }
@@ -279,19 +277,10 @@ func (jo *JobsOrderByQueues) createNonLeafNode(queue *queue_info.QueueInfo, pare
 }
 
 // addJobToQueue adds a job to its leaf queue, creating the queue node if needed.
-func (jo *JobsOrderByQueues) addJobToQueue(job *podgroup_info.PodGroupInfo, reverseOrder bool) {
+func (jo *JobsOrderByQueues) addJobToQueue(job *podgroup_info.PodGroupInfo) {
 	if _, found := jo.queueNodes[job.Queue]; !found {
 		leafQueue := jo.ssn.Queues[job.Queue]
-		jo.queueNodes[job.Queue] = &queueNode{
-			queue: leafQueue,
-			children: scheduler_util.NewPriorityQueue(func(l, r interface{}) bool {
-				if reverseOrder {
-					return !jo.ssn.JobOrderFn(l, r)
-				}
-				return jo.ssn.JobOrderFn(l, r)
-			}, jo.options.MaxJobsQueueDepth),
-			isLeaf: true,
-		}
+		jo.queueNodes[job.Queue] = jo.createLeafNode(leafQueue)
 	}
 	jo.queueNodes[job.Queue].children.Push(job)
 }

@@ -15,7 +15,8 @@ type JobsOrderInitOptions struct {
 	FilterNonPreemptible     bool
 	FilterNonActiveAllocated bool
 	VictimQueue              bool
-	MaxJobsQueueDepth        int
+	// TODO: Rename to MaxJobsPerQueue as the name is misleading.
+	MaxJobsQueueDepth int
 }
 
 func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
@@ -59,7 +60,7 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 			continue
 		}
 
-		jobsOrder.addJobToQueue(job, jobsOrder.options.VictimQueue)
+		jobsOrder.addJobToQueue(job)
 	}
 
 	jobsOrder.buildActiveQueues(jobsOrder.options.VictimQueue)
