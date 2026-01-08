@@ -124,7 +124,6 @@ func (jo *JobsOrderByQueues) isRootQueue(queue *queue_info.QueueInfo) bool {
 	return queue.ParentQueue == ""
 }
 
-// GuyReviewed
 // addJobToQueue adds a job to its leaf queue, creating the queue node if needed.
 func (jo *JobsOrderByQueues) addJobToQueue(job *podgroup_info.PodGroupInfo) {
 	if _, found := jo.queueNodes[job.Queue]; !found {
@@ -134,7 +133,6 @@ func (jo *JobsOrderByQueues) addJobToQueue(job *podgroup_info.PodGroupInfo) {
 	jo.queueNodes[job.Queue].children.Push(job)
 }
 
-// GuyReviewed
 // buildActiveQueues builds the queue hierarchy from leaf nodes up to root nodes.
 // Supports n-level hierarchies by walking up the entire ancestor chain.
 func (jo *JobsOrderByQueues) buildActiveQueues() {
@@ -219,7 +217,6 @@ func (jo *JobsOrderByQueues) ensureAncestorChainForPush(childNode *queueNode, ch
 	}
 }
 
-// GuyReviewed
 // traverseToLeaf recursively traverses from a priority queue of nodes down to the best leaf node.
 func (jo *JobsOrderByQueues) traverseToLeaf(pq *scheduler_util.PriorityQueue) *queueNode {
 	node := jo.getNextNode(pq)
@@ -235,7 +232,6 @@ func (jo *JobsOrderByQueues) traverseToLeaf(pq *scheduler_util.PriorityQueue) *q
 	return jo.traverseToLeaf(node.children)
 }
 
-// GuyReviewed
 // getNextNode retrieves the next node from a priority queue, handling reordering as needed.
 func (jo *JobsOrderByQueues) getNextNode(pq *scheduler_util.PriorityQueue) *queueNode {
 	if pq.Empty() {
@@ -259,7 +255,6 @@ func (jo *JobsOrderByQueues) getNextNode(pq *scheduler_util.PriorityQueue) *queu
 	return node
 }
 
-// GuyReviewed
 // handlePopFromNode handles cleanup after popping a job from a leaf node.
 // If the node becomes empty, it's removed from its parent. Otherwise, ancestors are marked for reorder.
 func (jo *JobsOrderByQueues) handlePopFromNode(node *queueNode) {
@@ -278,7 +273,6 @@ func (jo *JobsOrderByQueues) handlePopFromNode(node *queueNode) {
 	jo.markAncestorsForReorder(node)
 }
 
-// GuyReviewed
 // removeNodeFromParent removes a node from its parent's children priority queue.
 // this assumes the node requested for removal is at the top of its parent's priority queue.
 func (jo *JobsOrderByQueues) removeNodeFromParent(node *queueNode) {
@@ -289,7 +283,6 @@ func (jo *JobsOrderByQueues) removeNodeFromParent(node *queueNode) {
 	}
 }
 
-// GuyReviewed
 // markAncestorsForReorder marks all ancestors of a node (including itself) as needing reorder.
 func (jo *JobsOrderByQueues) markAncestorsForReorder(node *queueNode) {
 	for current := node; current != nil; current = current.parent {
@@ -297,7 +290,6 @@ func (jo *JobsOrderByQueues) markAncestorsForReorder(node *queueNode) {
 	}
 }
 
-// GuyReviewed
 // createLeafNode creates a new leaf node that will contain jobs.
 func (jo *JobsOrderByQueues) createLeafNode(queue *queue_info.QueueInfo) *queueNode {
 	return &queueNode{
@@ -312,7 +304,6 @@ func (jo *JobsOrderByQueues) createLeafNode(queue *queue_info.QueueInfo) *queueN
 	}
 }
 
-// GuyReviewed
 // createNonLeafNode creates a new non-leaf node that will contain child queue nodes.
 func (jo *JobsOrderByQueues) createNonLeafNode(queue *queue_info.QueueInfo) *queueNode {
 	return &queueNode{
