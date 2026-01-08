@@ -61,11 +61,11 @@ func RunTest(t *testing.T, testMetadata TestTopologyMetadata, testNumber int, co
 // prepare session for match by rebuilding the session while preserving the podgroup errors
 func prepareSessionForMatch(ssn *framework.Session, testMetadata TestTopologyMetadata, controller *Controller) *framework.Session {
 	jobFitErrors := make(map[string][]common_info.JobFitError)
-	for jobId, job := range ssn.PodGroupInfos {
+	for jobId, job := range ssn.ClusterInfo.PodGroupInfos {
 		jobFitErrors[string(jobId)] = job.JobFitErrors
 	}
 	ssn = test_utils.BuildSession(testMetadata.TestTopologyBasic, controller)
-	for jobId, job := range ssn.PodGroupInfos {
+	for jobId, job := range ssn.ClusterInfo.PodGroupInfos {
 		job.JobFitErrors = jobFitErrors[string(jobId)]
 	}
 	return ssn
@@ -102,7 +102,7 @@ func runSchedulerOneRound(testMetadata *TestTopologyMetadata, controller *Contro
 
 	for _, jobMetadata := range testMetadata.Jobs {
 		jobId := common_info.PodGroupID(jobMetadata.Name)
-		job := (*ssn).PodGroupInfos[jobId]
+		job := (*ssn).ClusterInfo.PodGroupInfos[jobId]
 		for taskId, taskMetadata := range jobMetadata.Tasks {
 			task := job.GetAllPodsMap()[common_info.PodID(fmt.Sprintf("%s-%d", jobId, taskId))]
 			switch task.Status {

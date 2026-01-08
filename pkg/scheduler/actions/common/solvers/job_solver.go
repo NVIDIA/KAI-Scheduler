@@ -98,7 +98,7 @@ func (s *JobSolver) solvePartialJob(ssn *framework.Session, state *solvingState,
 	}
 	// recorded victim jobs nodes
 	for _, task := range state.recordedVictimsTasks {
-		node := ssn.Nodes[task.NodeName]
+		node := ssn.ClusterInfo.Nodes[task.NodeName]
 		feasibleNodeMap[task.NodeName] = node
 	}
 

@@ -16,6 +16,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Fixed pod controller logging to use request namespace/name instead of empty pod object fields when pod is not found
+- Fixed a bug where topology constrains with equal required and preferred levels would cause preferred level not to be found.
+- Fixed GPU memory pods Fair Share and Queue Order calculations
+- Interpret negative or zero half-life value as disabled [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
+- Handle invalid CSI StorageCapacities gracefully [#817](https://github.com/NVIDIA/KAI-Scheduler/pull/817) [rich7420](https://github.com/rich7420)
+- Embed CRD definitions in binary for env-test and time-aware-simulations to allow binary portability [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
+
+### Changed
+- Removed the constraint that prohibited direct nesting of subgroups alongside podsets within the same subgroupset.
 
 ## [v0.12.0] - 2025-12-24
 

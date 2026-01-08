@@ -146,6 +146,108 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			},
 		},
 		{
+			name: "successful topology allocation - required equal preferred",
+			job: &jobs_fake.TestJobBasic{
+				Name:                "test-job",
+				RequiredCPUsPerTask: 500,
+				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{
+						Topology:       "test-topology",
+						RequiredLevel:  "rack",
+						PreferredLevel: "rack",
+					},
+				),
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{State: pod_status.Pending},
+					{State: pod_status.Pending},
+				},
+			},
+			nodes: map[string]nodes_fake.TestNodeBasic{
+				"node-1": {
+					CPUMillis:  1000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+						"rack": "rack1",
+					},
+				},
+				"node-2": {
+					CPUMillis:  400,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+						"rack": "rack2",
+					},
+				},
+			},
+			nodesToDomains: map[string]DomainID{
+				"node-1": "rack1.zone1",
+				"node-2": "rack2.zone1",
+			},
+			setupTopologyTree: func() *Info {
+				tree := &Info{
+					Name: "test-topology",
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
+								{NodeLabel: "zone"},
+								{NodeLabel: "rack"},
+							},
+						},
+					},
+					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
+						"rack": {
+							"rack1.zone1": {
+								ID:                       "rack1.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+							},
+							"rack2.zone1": {
+								ID:                       "rack2.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+							},
+						},
+						"zone": {
+							"zone1": {
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+							},
+						},
+					},
+				}
+
+				tree.DomainsByLevel[rootLevel] = map[DomainID]*DomainInfo{
+					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
+				}
+
+				// Set parent relationships
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
+					tree.DomainsByLevel["rack"]["rack2.zone1"],
+				}
+
+				return tree
+			},
+			domainParent: map[DomainID]DomainID{
+				"rack1.zone1": "zone1",
+				"rack2.zone1": "zone1",
+			},
+			domainLevel: map[DomainID]DomainLevel{
+				"zone1": "zone",
+			},
+			expectedError: "",
+			expectedNodesFirstSubset: map[string]bool{
+				"node-1": true,
+			},
+		},
+		{
 			name: "no topology constraint - early return",
 			job: &jobs_fake.TestJobBasic{
 				Name:                "test-job",

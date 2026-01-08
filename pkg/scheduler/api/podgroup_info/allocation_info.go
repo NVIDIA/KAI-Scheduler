@@ -79,7 +79,7 @@ func GetTasksToAllocateRequestedGPUs(
 
 func GetTasksToAllocateInitResource(
 	podGroupInfo *PodGroupInfo, subGroupOrderFn common_info.LessFn, taskOrderFn common_info.LessFn,
-	isRealAllocation bool,
+	isRealAllocation bool, minNodeGPUMemory int64,
 ) *resource_info.Resource {
 	if podGroupInfo == nil {
 		return resource_info.EmptyResource()
@@ -92,6 +92,11 @@ func GetTasksToAllocateInitResource(
 	for _, task := range GetTasksToAllocate(podGroupInfo, subGroupOrderFn, taskOrderFn, isRealAllocation) {
 		if task.ShouldAllocate(isRealAllocation) {
 			tasksTotalRequestedResource.AddResourceRequirements(task.ResReq)
+			if task.IsMemoryRequest() && minNodeGPUMemory > 0 {
+				additionalGpuFraction := float64(task.ResReq.GpuResourceRequirement.GetNumOfGpuDevices()) *
+					(float64(task.ResReq.GpuMemory()) / float64(minNodeGPUMemory))
+				tasksTotalRequestedResource.AddGPUs(additionalGpuFraction)
+			}
 		}
 	}
 

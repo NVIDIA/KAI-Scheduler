@@ -42,7 +42,7 @@ func (t *topologyPlugin) Name() string {
 
 func (t *topologyPlugin) OnSessionOpen(ssn *framework.Session) {
 	t.session = ssn
-	t.initializeTopologyTree(ssn.Topologies, ssn.Nodes)
+	t.initializeTopologyTree(ssn.ClusterInfo.Topologies, ssn.ClusterInfo.Nodes)
 
 	ssn.AddSubsetNodesFn(t.subSetNodesFn)
 	ssn.AddNodeOrderFn(t.nodeOrderFn)

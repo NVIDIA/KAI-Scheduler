@@ -50,7 +50,7 @@ func (jp *JobOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 		FilterUnready:     true,
 		MaxJobsQueueDepth: ssn.GetJobsDepth(framework.Allocate),
 	})
-	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
 
 	for !jobsOrderByQueues.IsEmpty() {
 		job := jobsOrderByQueues.PopNextJob()

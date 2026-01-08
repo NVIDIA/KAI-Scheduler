@@ -89,7 +89,7 @@ func (jo *JobsOrderByQueues) PopNextJob() *podgroup_info.PodGroupInfo {
 }
 
 func (jo *JobsOrderByQueues) PushJob(job *podgroup_info.PodGroupInfo) {
-	leafQueueInfo := jo.ssn.Queues[job.Queue]
+	leafQueueInfo := jo.ssn.ClusterInfo.Queues[job.Queue]
 
 	if !leafQueueInfo.IsLeafQueue() {
 		log.InfraLogger.V(7).Warnf("PushJob: job <%v> is targeting a non-leaf queue <%v>", job.Name, leafQueueInfo.Name)
@@ -127,7 +127,7 @@ func (jo *JobsOrderByQueues) isRootQueue(queue *queue_info.QueueInfo) bool {
 // addJobToQueue adds a job to its leaf queue, creating the queue node if needed.
 func (jo *JobsOrderByQueues) addJobToQueue(job *podgroup_info.PodGroupInfo) {
 	if _, found := jo.queueNodes[job.Queue]; !found {
-		leafQueue := jo.ssn.Queues[job.Queue]
+		leafQueue := jo.ssn.ClusterInfo.Queues[job.Queue]
 		jo.queueNodes[job.Queue] = jo.createLeafNode(leafQueue)
 	}
 	jo.queueNodes[job.Queue].children.Push(job)
@@ -189,7 +189,7 @@ func (jo *JobsOrderByQueues) ensureAncestorChainForPush(childNode *queueNode, ch
 		return
 	}
 
-	parentQueueInfo, parentExists := jo.ssn.Queues[childQueue.ParentQueue]
+	parentQueueInfo, parentExists := jo.ssn.ClusterInfo.Queues[childQueue.ParentQueue]
 	if !parentExists {
 		log.InfraLogger.V(7).Warnf("Queue's parent doesn't exist. Queue: <%v>, Parent: <%v>",
 			childQueue.Name, childQueue.ParentQueue)
@@ -324,7 +324,7 @@ func (jo *JobsOrderByQueues) ensureAncestorChain(childNode *queueNode, childQueu
 		return
 	}
 
-	parentQueueInfo, parentExists := jo.ssn.Queues[childQueue.ParentQueue]
+	parentQueueInfo, parentExists := jo.ssn.ClusterInfo.Queues[childQueue.ParentQueue]
 	if !parentExists {
 		log.InfraLogger.V(7).Warnf("Queue's parent doesn't exist. Queue: <%v>, Parent: <%v>",
 			childQueue.Name, childQueue.ParentQueue)

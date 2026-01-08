@@ -44,7 +44,7 @@ func (alloc *consolidationAction) Execute(ssn *framework.Session) {
 		FilterNonPreemptible: true,
 		MaxJobsQueueDepth:    ssn.GetJobsDepth(framework.Consolidation),
 	})
-	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
 
 	log.InfraLogger.V(2).Infof("There are <%d> PodGroupInfos and <%d> Queues in total for scheduling",
 		jobsOrderByQueues.Len(), ssn.CountLeafQueues())
@@ -79,7 +79,7 @@ func (alloc *consolidationAction) Execute(ssn *framework.Session) {
 
 func attemptToConsolidateForPreemptor(
 	ssn *framework.Session, job *podgroup_info.PodGroupInfo) (bool, *framework.Statement) {
-	resReq := podgroup_info.GetTasksToAllocateInitResource(job, ssn.PodSetOrderFn, ssn.TaskOrderFn, false)
+	resReq := podgroup_info.GetTasksToAllocateInitResource(job, ssn.PodSetOrderFn, ssn.TaskOrderFn, false, ssn.ClusterInfo.MinNodeGPUMemory)
 	log.InfraLogger.V(3).Infof(
 		"Attempting to consolidate running jobs in order to make room for job: <%s/%s>, resources: <%v>",
 		job.Namespace, job.Name, resReq)
@@ -95,7 +95,7 @@ func attemptToConsolidateForPreemptor(
 
 func attemptToConsolidatePreemptor(
 	ssn *framework.Session, preemptor *podgroup_info.PodGroupInfo) (bool, *framework.Statement) {
-	feasibleNodes := common.FeasibleNodesForJob(maps.Values(ssn.Nodes), preemptor)
+	feasibleNodes := common.FeasibleNodesForJob(maps.Values(ssn.ClusterInfo.Nodes), preemptor)
 	solver := solvers.NewJobsSolver(
 		feasibleNodes,
 		allPodsReallocated,

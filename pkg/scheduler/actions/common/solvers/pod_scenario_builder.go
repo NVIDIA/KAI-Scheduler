@@ -45,7 +45,7 @@ func NewPodAccumulatedScenarioBuilder(
 	}
 
 	var scenarioFilters []accumulated_scenario_filters.Interface
-	idleGpusScenarioFilter := accumulated_scenario_filters.NewIdleGpusFilter(scenario, session.Nodes)
+	idleGpusScenarioFilter := accumulated_scenario_filters.NewIdleGpusFilter(scenario, session.ClusterInfo.Nodes)
 	if idleGpusScenarioFilter != nil {
 		scenarioFilters = append(scenarioFilters, idleGpusScenarioFilter)
 	}
