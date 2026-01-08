@@ -28,8 +28,8 @@ github.com/antlr4-go/antlr/v4 v4.13.1 h1:SqQKkuVZ+zWkMMNkjy5FZe5mr5WURWnlpmOuzYW
 github.com/antlr4-go/antlr/v4 v4.13.1/go.mod h1:GKmUxMtwp6ZgGwZSva4eWPC5mS6vUAmOABFgjdkM7Nw=
 github.com/aptible/supercronic v0.2.33 h1:tA/fda6BOBlPSxjAnnD4DqgLdIkasmmEdzgNpZbZ4bU=
 github.com/aptible/supercronic v0.2.33/go.mod h1:cLHAF1blBT8rPL9b4TDc0uOv4T1mdxisGTapLHgULUU=
-github.com/argoproj/argo-workflows/v3 v3.6.12 h1:SbCYHBkBku5vVeqw6TcneKq7IxHIRRbkXjVtTAlo8XE=
-github.com/argoproj/argo-workflows/v3 v3.6.12/go.mod h1:uITZiLxhyB6G2lnXgZGDwl/ui+j8vsR+1DURM+XKb1Q=
+github.com/argoproj/argo-workflows/v3 v3.6.14 h1:VD0JvjRd+kOD0Kzw/80nnGhNtvFzVKUvZiHEL0+lE9s=
+github.com/argoproj/argo-workflows/v3 v3.6.14/go.mod h1:J0vKmDrc6g+NB26HS0e3uyXLvU0r5SHRwnpMt+EcG/Y=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/avast/retry-go v3.0.0+incompatible h1:4SOWQ7Qs+oroOTQOYnAHqelpCO0biHSxpiH9JdtuBj0=
