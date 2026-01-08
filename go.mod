@@ -60,7 +60,7 @@ require (
 	k8s.io/kube-proxy v0.34.1
 	k8s.io/kube-scheduler v0.34.1
 	k8s.io/kubectl v0.34.1
-	k8s.io/kubernetes v1.34.1
+	k8s.io/kubernetes v1.34.2
 	k8s.io/metrics v0.34.1
 	k8s.io/mount-utils v0.34.1
 	k8s.io/pod-security-admission v0.34.1
