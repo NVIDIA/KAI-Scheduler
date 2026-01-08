@@ -91,8 +91,9 @@ func (jo *JobsOrderByQueues) PopNextJob() *podgroup_info.PodGroupInfo {
 func (jo *JobsOrderByQueues) PushJob(job *podgroup_info.PodGroupInfo) {
 	leafQueueInfo := jo.ssn.Queues[job.Queue]
 
-	// Check if leaf node already exists and is linked
-	leafNode, needsLinking := jo.queueNodes[job.Queue]
+	// Check if leaf node already exists
+	leafNode, found := jo.queueNodes[job.Queue]
+	needsLinking := !found
 
 	if needsLinking {
 		leafNode = jo.createLeafNode(leafQueueInfo, nil)
@@ -131,8 +132,9 @@ func (jo *JobsOrderByQueues) ensureRootNodesInitialized() {
 // Used by PushJob to build the tree dynamically.
 func (jo *JobsOrderByQueues) ensureAncestorChainForPush(childNode *queueNode, childQueue *queue_info.QueueInfo) {
 	if jo.isRootQueue(childQueue) {
-		// Child is at root level - add to rootNodes if not already linked
-		// GuyTodo: Why the double check?
+		// Child is at root level - add to rootNodes if not already there.
+		// The parent==nil check prevents duplicate additions: if parent is already set,
+		// this node was already added to rootNodes in a previous call.
 		if childNode.parent == nil {
 			jo.ensureRootNodesInitialized()
 			jo.rootNodes.Push(childNode)
