@@ -51,9 +51,12 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 			continue
 		}
 
-		// Skip jobs whose queue's parent queue doesn't exist
-		if _, found := queues[queues[job.Queue].ParentQueue]; !found {
-			continue
+		// Skip jobs whose queue's parent queue doesn't exist (unless it's a root queue)
+		parentQueue := queues[job.Queue].ParentQueue
+		if parentQueue != "" {
+			if _, found := queues[parentQueue]; !found {
+				continue
+			}
 		}
 
 		// Skip jobs whose queue is not a leaf queue

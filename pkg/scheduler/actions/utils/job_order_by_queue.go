@@ -154,10 +154,10 @@ func (jo *JobsOrderByQueues) buildActiveQueues() {
 
 	rootNodeCount := 0
 	for _, node := range jo.queueNodes {
-		// Only non-leaf nodes with no parent are root nodes
-		// (leaf nodes should always be linked to a parent after ensureAncestorChain)
-		if node.parent == nil && !node.isLeaf {
-			log.InfraLogger.V(7).Infof("Active root queue <%s> with %d children", node.queue.UID, node.children.Len())
+		// Root nodes are nodes with no parent (includes both leaf and non-leaf queues)
+		// This supports single-level hierarchies where root queues are also leaf queues
+		if node.parent == nil {
+			log.InfraLogger.V(7).Infof("Active root queue <%s> with %d children (isLeaf=%v)", node.queue.UID, node.children.Len(), node.isLeaf)
 			jo.rootNodes.Push(node)
 			rootNodeCount++
 		}

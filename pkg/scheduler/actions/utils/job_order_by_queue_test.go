@@ -970,6 +970,76 @@ func TestFourLevelQueueHierarchy(t *testing.T) {
 	assert.True(t, jobsOrderByQueues.IsEmpty())
 }
 
+func TestSingleLevelQueueHierarchy(t *testing.T) {
+	// Test single-level hierarchy: a root queue that is also a leaf queue (no parent, no children)
+	// Jobs are assigned directly to the root queue
+	ssn := newPrioritySession()
+
+	ssn.ClusterInfo.Queues = map[common_info.QueueID]*queue_info.QueueInfo{
+		// Single queue that is both root and leaf
+		"default": {
+			UID:         "default",
+			Name:        "default",
+			ParentQueue: "", // No parent - this is a root queue
+			// No ChildQueues - this is also a leaf queue
+		},
+	}
+
+	ssn.ClusterInfo.PodGroupInfos = map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+		"job1": {
+			Name:     "job1-default-p100",
+			Priority: 100,
+			Queue:    "default",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+		"job2": {
+			Name:     "job2-default-p200",
+			Priority: 200,
+			Queue:    "default",
+			PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
+				pod_status.Pending: {testPod: {}},
+			},
+			PodSets: map[string]*subgroup_info.PodSet{
+				podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 0, nil).
+					WithPodInfos(pod_info.PodsMap{testPod: {UID: testPod}}),
+			},
+		},
+	}
+
+	jobsOrderByQueues := NewJobsOrderByQueues(ssn, JobsOrderInitOptions{
+		FilterNonPending:  true,
+		FilterUnready:     true,
+		MaxJobsQueueDepth: scheduler_util.QueueCapacityInfinite,
+	})
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
+
+	// Should be able to pop jobs from the single-level queue
+	if !assert.False(t, jobsOrderByQueues.IsEmpty(), "Expected jobs in single-level hierarchy") {
+		return // Single-level hierarchy not yet supported - test fails here
+	}
+
+	// Jobs should be ordered by priority (higher priority first)
+	job1 := jobsOrderByQueues.PopNextJob()
+	if !assert.NotNil(t, job1) {
+		return
+	}
+	assert.Equal(t, "job2-default-p200", job1.Name, "Higher priority job should come first")
+
+	job2 := jobsOrderByQueues.PopNextJob()
+	if !assert.NotNil(t, job2) {
+		return
+	}
+	assert.Equal(t, "job1-default-p100", job2.Name, "Lower priority job should come second")
+
+	assert.True(t, jobsOrderByQueues.IsEmpty())
+}
+
 func newPrioritySession() *framework.Session {
 	return &framework.Session{
 		ClusterInfo: &api.ClusterInfo{},
