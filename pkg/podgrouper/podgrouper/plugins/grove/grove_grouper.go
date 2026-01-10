@@ -6,8 +6,11 @@ package grove
 import (
 	"context"
 	"fmt"
+	"maps"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,14 +56,13 @@ func (gg *GroveGrouper) Name() string {
 // +kubebuilder:rbac:groups=scheduler.grove.io,resources=podgangs/finalizers,verbs=patch;update;create
 
 func (gg *GroveGrouper) GetPodGroupMetadata(
-	_ *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
+	topOwner *unstructured.Unstructured, pod *v1.Pod, topownersmetadata ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {
 	podGangName, ok := pod.Labels[labelKeyPodGangName]
 	if !ok {
 		return nil, fmt.Errorf("label for podgang name (key: %s) not found in pod %s/%s",
 			labelKeyPodGangName, pod.Namespace, pod.Name)
 	}
-
 	podGang, err := gg.fetchPodGang(pod.Namespace, podGangName)
 	if err != nil {
 		return nil, err
@@ -84,6 +86,23 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 	}
 	if found {
 		metadata.PriorityClassName = priorityClassName
+	}
+
+	if topOwner != nil {
+		topOwnerLabels := topOwner.GetLabels()
+		if topOwnerLabels != nil {
+			maps.Copy(metadata.Labels, topOwnerLabels)
+		}
+		topOwnerAnnotations := topOwner.GetAnnotations()
+		if topOwnerAnnotations != nil {
+			maps.Copy(metadata.Annotations, topOwnerAnnotations)
+		}
+	}
+
+	metadata, err = gg.parseMetadataFromTopOwner(metadata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get metadata from top owner %s/%s. Err: %w",
+			pod.Namespace, podGangName, err)
 	}
 
 	parentSubGroups, subGroupToParentMap, err := parseParentSubGroups(podGang, pod.Namespace, podGangName, topology)
@@ -240,6 +259,20 @@ func getPriorityClassName(podGang *unstructured.Unstructured) (string, bool, err
 		return "", false, fmt.Errorf("failed to get spec.priorityClassName: %w", err)
 	}
 	return priorityClassName, found, nil
+}
+
+func (gg *GroveGrouper) parseMetadataFromTopOwner(metadata *podgroup.Metadata) (*podgroup.Metadata, error) {
+	if priorityClassName, ok := metadata.Labels[constants.PriorityLabelKey]; ok {
+		metadata.PriorityClassName = priorityClassName
+	}
+	if preemptibility, ok := metadata.Labels[constants.PreemptibilityLabelKey]; ok {
+		preemptibility, err := v2alpha2.ParsePreemptibility(preemptibility)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse preemptibility from top owner %s/%s. Err: %w", metadata.Namespace, metadata.Name, err)
+		}
+		metadata.Preemptibility = preemptibility
+	}
+	return metadata, nil
 }
 
 func parseParentSubGroups(

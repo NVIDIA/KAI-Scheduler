@@ -17,4 +17,8 @@ const (
 	DefaultPrioritiesConfigMapTypesKey = "types"
 
 	DefaultQueueName = "default-queue"
+
+	TopologyKey                   = "kai.scheduler/topology"
+	TopologyRequiredPlacementKey  = "kai.scheduler/topology-required-placement"
+	TopologyPreferredPlacementKey = "kai.scheduler/topology-preferred-placement"
 )
