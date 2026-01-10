@@ -68,6 +68,23 @@ spec:
         {{- toYaml .Values.binder.resourceReservationPodResources | nindent 8 }}
       {{- end }}
 
+  podGrouper:
+    service:
+      enabled: true
+      image:
+        name: {{ .Values.podgrouper.image.name }}
+        repository: {{ .Values.global.registry }}
+        tag: {{ .Values.podgrouper.image.tag | default .Values.global.tag | default .Chart.AppVersion }}
+        pullPolicy: {{ .Values.podgrouper.image.pullPolicy | default .Values.global.imagePullPolicy }}
+      {{- if .Values.podgrouper.resources }}
+      resources:
+        {{- toYaml .Values.podgrouper.resources | nindent 8 }}
+      {{- end }}
+      {{- if .Values.podgrouper.affinity }}
+      affinity:
+        {{- toYaml .Values.podgrouper.affinity | nindent 8 }}
+      {{- end }}
+
   podGroupController:
     service:
       enabled: true
