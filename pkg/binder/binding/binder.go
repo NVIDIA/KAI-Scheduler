@@ -16,12 +16,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
-	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
-
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/plugins/state"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 var InvalidCrdWarning = errors.New("invalid binding request")
@@ -87,20 +86,25 @@ func (b *Binder) Bind(ctx context.Context, pod *v1.Pod, node *v1.Node, bindReque
 func (b *Binder) Rollback(ctx context.Context, pod *v1.Pod, node *v1.Node, bindRequest *v1alpha2.BindRequest) error {
 	logger := log.FromContext(ctx)
 
-	if !common.IsSharedGPUAllocation(bindRequest) {
-		return nil
-	}
-
-	logger.Info("Rolling back GPU reservation for failed bind attempt...",
+	logger.Info("Rolling back for failed bind attempt...",
 		"pod", pod.Name, "namespace", pod.Namespace, "node", node.Name)
 
 	var rollbackErrs []error
-	if err := b.resourceReservationService.RemovePodGpuGroupsConnection(ctx, pod); err != nil {
-		rollbackErrs = append(rollbackErrs, fmt.Errorf("failed to remove GPU group label from pod <%s/%s> during rollback: %w", pod.Namespace, pod.Name, err))
+
+	// Rollback plugins (K8sPlugins, GPUSharing, etc.)
+	if err := b.plugins.Rollback(ctx, pod, node, bindRequest, nil); err != nil {
+		rollbackErrs = append(rollbackErrs, fmt.Errorf("failed to rollback plugins for pod <%s/%s>: %w", pod.Namespace, pod.Name, err))
 	}
 
-	if err := b.resourceReservationService.SyncForNode(ctx, bindRequest.Spec.SelectedNode); err != nil {
-		rollbackErrs = append(rollbackErrs, fmt.Errorf("failed to sync reservation pods for node <%s> during rollback: %w", bindRequest.Spec.SelectedNode, err))
+	// GPU reservation cleanup only applies to shared GPU allocations
+	if common.IsSharedGPUAllocation(bindRequest) {
+		if err := b.resourceReservationService.RemovePodGpuGroupsConnection(ctx, pod); err != nil {
+			rollbackErrs = append(rollbackErrs, fmt.Errorf("failed to remove GPU group label from pod <%s/%s> during rollback: %w", pod.Namespace, pod.Name, err))
+		}
+
+		if err := b.resourceReservationService.SyncForNode(ctx, bindRequest.Spec.SelectedNode); err != nil {
+			rollbackErrs = append(rollbackErrs, fmt.Errorf("failed to sync reservation pods for node <%s> during rollback: %w", bindRequest.Spec.SelectedNode, err))
+		}
 	}
 
 	return errors.Join(rollbackErrs...)

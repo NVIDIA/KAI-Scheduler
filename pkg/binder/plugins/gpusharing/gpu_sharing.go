@@ -11,6 +11,7 @@ import (
 	"golang.org/x/exp/slices"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common/gpusharingconfigmap"
@@ -100,4 +101,59 @@ func (p *GPUSharing) createDirectEnvMapIfMissing(ctx context.Context, pod *v1.Po
 func (p *GPUSharing) PostBind(
 	context.Context, *v1.Pod, *v1.Node, *v1alpha2.BindRequest, *state.BindingState,
 ) {
+}
+
+func (p *GPUSharing) Rollback(
+	ctx context.Context, pod *v1.Pod, _ *v1.Node, bindRequest *v1alpha2.BindRequest, _ *state.BindingState,
+) error {
+	logger := log.FromContext(ctx)
+
+	if !common.IsSharedGPUAllocation(bindRequest) {
+		return nil
+	}
+
+	containerRef, err := common.GetFractionContainerRef(pod)
+	if err != nil {
+		logger.V(1).Info("Rollback: could not get fraction container ref, nothing to rollback",
+			"namespace", pod.Namespace, "name", pod.Name, "error", err)
+		return nil
+	}
+
+	// Delete capabilities ConfigMap
+	capabilitiesConfigMapName, err := gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
+	if err != nil {
+		// Annotation not set means PreBind never created the configmap
+		logger.V(1).Info("Rollback: could not extract capabilities configmap name, nothing to rollback",
+			"namespace", pod.Namespace, "name", pod.Name, "error", err)
+		return nil
+	}
+
+	if err := p.deleteConfigMap(ctx, pod.Namespace, capabilitiesConfigMapName); err != nil {
+		return fmt.Errorf("failed to delete capabilities configmap %s/%s during rollback: %w",
+			pod.Namespace, capabilitiesConfigMapName, err)
+	}
+	logger.V(1).Info("Rollback: deleted capabilities configmap",
+		"namespace", pod.Namespace, "name", pod.Name, "configmap", capabilitiesConfigMapName)
+
+	// Delete direct env vars ConfigMap
+	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
+	if err != nil {
+		return fmt.Errorf("failed to extract direct env vars configmap name during rollback: %w", err)
+	}
+
+	if err := p.deleteConfigMap(ctx, pod.Namespace, directEnvVarsMapName); err != nil {
+		return fmt.Errorf("failed to delete direct env vars configmap %s/%s during rollback: %w",
+			pod.Namespace, directEnvVarsMapName, err)
+	}
+	logger.V(1).Info("Rollback: deleted direct env vars configmap",
+		"namespace", pod.Namespace, "name", pod.Name, "configmap", directEnvVarsMapName)
+
+	return nil
+}
+
+func (p *GPUSharing) deleteConfigMap(ctx context.Context, namespace, name string) error {
+	cm := &v1.ConfigMap{}
+	cm.Name = name
+	cm.Namespace = namespace
+	return client.IgnoreNotFound(p.kubeClient.Delete(ctx, cm))
 }
