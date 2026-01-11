@@ -65,7 +65,7 @@ type DeviceRequest struct {
 	Count int
 }
 
-func CreateResourceClaim(name, namespace string, requests ...DeviceRequest) *resourceapi.ResourceClaim {
+func CreateResourceClaim(name, namespace, queueName string, requests ...DeviceRequest) *resourceapi.ResourceClaim {
 	resourceClaim := resourceapi.ResourceClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

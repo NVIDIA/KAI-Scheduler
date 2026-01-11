@@ -412,7 +412,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 
 		It("Should create a bind request for the pod with DeviceAllocationModeAll resource claim", func(ctx context.Context) {
 			resourceClaim := dynamicresource.CreateResourceClaim(
-				"test-resource-claim", testNamespace.Name,
+				"test-resource-claim", testNamespace.Name, testQueue.Name,
 				dynamicresource.DeviceRequest{Class: deviceClassName, Count: -1},
 			)
 			err := ctrlClient.Create(ctx, resourceClaim)
@@ -448,6 +448,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 				resourceClaim := dynamicresource.CreateResourceClaim(
 					fmt.Sprintf("test-resource-claim-%d", i),
 					testNamespace.Name,
+					testQueue.Name,
 					dynamicresource.DeviceRequest{
 						Class: deviceClassName,
 						Count: 1,
