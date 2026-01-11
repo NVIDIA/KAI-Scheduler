@@ -6,6 +6,7 @@ package dynamicresource
 import (
 	"fmt"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/xyproto/randomstring"
 	corev1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
@@ -70,6 +71,9 @@ func CreateResourceClaim(name, namespace, queueName string, requests ...DeviceRe
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				constants.DefaultQueueLabel: queueName,
+			},
 		},
 		Spec: resourceapi.ResourceClaimSpec{
 			Devices: resourceapi.DeviceClaim{
