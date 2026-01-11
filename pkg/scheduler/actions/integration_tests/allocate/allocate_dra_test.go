@@ -13,6 +13,7 @@ import (
 	featuregate "k8s.io/component-base/featuregate/testing"
 	"k8s.io/kubernetes/pkg/features"
 
+	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/constants"
@@ -73,7 +74,7 @@ func TestDRAAllocation(t *testing.T) {
 			SchedulingDuration: 1 * time.Millisecond,
 		},
 		{
-			Name: "Simple pod with simple resource claim",
+			Name: "Simple pod with simple resource claim with correct queue label",
 			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
 					{
@@ -105,6 +106,9 @@ func TestDRAAllocation(t *testing.T) {
 							Namespace:       "test",
 							DeviceClassName: "nvidia.com/gpu",
 							Count:           1,
+							Labels: map[string]string{
+								commonconstants.DefaultQueueLabel: "queue1",
+							},
 						},
 					},
 				},
@@ -166,6 +170,9 @@ func TestDRAAllocation(t *testing.T) {
 							Namespace:       "test",
 							DeviceClassName: "nvidia.com/gpu",
 							Count:           2,
+							Labels: map[string]string{
+								commonconstants.DefaultQueueLabel: "queue1",
+							},
 						},
 					},
 				},
@@ -237,6 +244,9 @@ func TestDRAAllocation(t *testing.T) {
 							Namespace:       "test",
 							DeviceClassName: "nvidia.com/gpu",
 							Count:           1,
+							Labels: map[string]string{
+								commonconstants.DefaultQueueLabel: "queue1",
+							},
 						},
 					},
 				},
@@ -320,12 +330,18 @@ func TestDRAAllocation(t *testing.T) {
 							Namespace:       "test",
 							DeviceClassName: "nvidia.com/gpu",
 							Count:           1,
+							Labels: map[string]string{
+								commonconstants.DefaultQueueLabel: "queue1",
+							},
 						},
 						{
 							Name:            "claim-1",
 							Namespace:       "test",
 							DeviceClassName: "nvidia.com/gpu",
 							Count:           1,
+							Labels: map[string]string{
+								commonconstants.DefaultQueueLabel: "queue1",
+							},
 						},
 					},
 				},
@@ -396,7 +412,10 @@ func TestDRAAllocation(t *testing.T) {
 							Namespace:       "test",
 							DeviceClassName: "nvidia.com/gpu",
 							Count:           1,
-							ReservedFor:     dra_fake.RandomReservedForReferences(resourceapi.ResourceClaimReservedForMaxSize - 2),
+							Labels: map[string]string{
+								commonconstants.DefaultQueueLabel: "queue1",
+							},
+							ReservedFor: dra_fake.RandomReservedForReferences(resourceapi.ResourceClaimReservedForMaxSize - 2),
 						},
 					},
 				},
@@ -466,7 +485,10 @@ func TestDRAAllocation(t *testing.T) {
 							Namespace:       "test",
 							DeviceClassName: "nvidia.com/gpu",
 							Count:           1,
-							ReservedFor:     dra_fake.RandomReservedForReferences(resourceapi.ResourceClaimReservedForMaxSize - 2),
+							Labels: map[string]string{
+								commonconstants.DefaultQueueLabel: "queue1",
+							},
+							ReservedFor: dra_fake.RandomReservedForReferences(resourceapi.ResourceClaimReservedForMaxSize - 2),
 						},
 					},
 				},
@@ -525,7 +547,130 @@ func TestDRAAllocation(t *testing.T) {
 							Namespace:       "test",
 							DeviceClassName: "nvidia.com/gpu",
 							Count:           1,
-							ReservedFor:     dra_fake.RandomReservedForReferences(resourceapi.ResourceClaimReservedForMaxSize),
+							Labels: map[string]string{
+								commonconstants.DefaultQueueLabel: "queue1",
+							},
+							ReservedFor: dra_fake.RandomReservedForReferences(resourceapi.ResourceClaimReservedForMaxSize),
+						},
+					},
+				},
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node0": {},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:         "queue1",
+						DeservedGPUs: 1,
+					},
+				},
+				JobExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"pending_job0": {
+						Status: pod_status.Pending,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{},
+				},
+			},
+			RoundsUntilMatch:   2,
+			RoundsAfterMatch:   1,
+			SchedulingDuration: 1 * time.Millisecond,
+		},
+		{
+			Name: "Shared claim with no queue label - blocked from scheduling",
+			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:      "pending_job0",
+						Namespace: "test",
+						Priority:  constants.PriorityTrainNumber,
+						QueueName: "queue1",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:              pod_status.Pending,
+								ResourceClaimNames: []string{"claim-no-label"},
+							},
+						},
+					},
+				},
+				TestDRAObjects: dra_fake.TestDRAObjects{
+					DeviceClasses: []string{"nvidia.com/gpu"},
+					ResourceSlices: []*dra_fake.TestResourceSlice{
+						{
+							Name:            "node0-gpu",
+							DeviceClassName: "nvidia.com/gpu",
+							NodeName:        "node0",
+							Count:           1,
+						},
+					},
+					ResourceClaims: []*dra_fake.TestResourceClaim{
+						{
+							Name:            "claim-no-label",
+							Namespace:       "test",
+							DeviceClassName: "nvidia.com/gpu",
+							Count:           1,
+							// No Labels - should be blocked
+						},
+					},
+				},
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node0": {},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:         "queue1",
+						DeservedGPUs: 1,
+					},
+				},
+				JobExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"pending_job0": {
+						Status: pod_status.Pending,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{},
+				},
+			},
+			RoundsUntilMatch:   2,
+			RoundsAfterMatch:   1,
+			SchedulingDuration: 1 * time.Millisecond,
+		},
+		{
+			Name: "Shared claim with wrong queue label - blocked from scheduling",
+			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:      "pending_job0",
+						Namespace: "test",
+						Priority:  constants.PriorityTrainNumber,
+						QueueName: "queue1",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:              pod_status.Pending,
+								ResourceClaimNames: []string{"claim-wrong-queue"},
+							},
+						},
+					},
+				},
+				TestDRAObjects: dra_fake.TestDRAObjects{
+					DeviceClasses: []string{"nvidia.com/gpu"},
+					ResourceSlices: []*dra_fake.TestResourceSlice{
+						{
+							Name:            "node0-gpu",
+							DeviceClassName: "nvidia.com/gpu",
+							NodeName:        "node0",
+							Count:           1,
+						},
+					},
+					ResourceClaims: []*dra_fake.TestResourceClaim{
+						{
+							Name:            "claim-wrong-queue",
+							Namespace:       "test",
+							DeviceClassName: "nvidia.com/gpu",
+							Count:           1,
+							Labels: map[string]string{
+								commonconstants.DefaultQueueLabel: "different-queue",
+							},
 						},
 					},
 				},

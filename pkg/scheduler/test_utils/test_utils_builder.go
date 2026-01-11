@@ -372,6 +372,7 @@ func getDRAObjects(testMetadata TestTopologyBasic) []runtime.Object {
 				Name:            resourceClaim.Name,
 				Namespace:       resourceClaim.Namespace,
 				ResourceVersion: "0",
+				Labels:          resourceClaim.Labels,
 			},
 			Spec: resourceapi.ResourceClaimSpec{
 				Devices: resourceapi.DeviceClaim{
