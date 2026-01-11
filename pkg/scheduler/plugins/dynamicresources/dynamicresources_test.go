@@ -15,6 +15,7 @@ import (
 	featuregate "k8s.io/component-base/featuregate/testing"
 	"k8s.io/kubernetes/pkg/features"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/dra_fake"
@@ -55,7 +56,7 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 			},
 		},
 		{
-			name:    "Dynamic Resource Allocation is enabled - with claims",
+			name:    "Dynamic Resource Allocation is enabled - with shared claims with correct queue label",
 			enabled: true,
 			topology: test_utils.TestTopologyBasic{
 				Jobs: []*jobs_fake.TestJobBasic{
@@ -94,12 +95,18 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 							Namespace:       "test",
 							DeviceClassName: "nvidia.com/gpu",
 							Count:           1,
+							Labels: map[string]string{
+								constants.DefaultQueueLabel: "q-1",
+							},
 						},
 						{
 							Name:            "claim-1",
 							Namespace:       "test",
 							DeviceClassName: "nvidia.com/gpu",
 							Count:           1,
+							Labels: map[string]string{
+								constants.DefaultQueueLabel: "q-1",
+							},
 						},
 					},
 				},
@@ -354,12 +361,142 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 							Namespace:       "test",
 							DeviceClassName: "nvidia.com/gpu",
 							Count:           1,
-							ReservedFor:     dra_fake.RandomReservedForReferences(resourceapi.ResourceClaimReservedForMaxSize),
+							Labels: map[string]string{
+								constants.DefaultQueueLabel: "q-1",
+							},
+							ReservedFor: dra_fake.RandomReservedForReferences(resourceapi.ResourceClaimReservedForMaxSize),
 						},
 					},
 				},
 			},
 			err: "resource claim test/claim-0 has reached its maximum number of consumers (256)",
+		},
+		{
+			name:    "Shared claim with no queue label - blocked",
+			enabled: true,
+			topology: test_utils.TestTopologyBasic{
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:      "job-1",
+						Namespace: "test",
+						QueueName: "q-1",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								Name:               "job-1-0",
+								State:              pod_status.Pending,
+								ResourceClaimNames: []string{"claim-no-label"},
+							},
+						},
+					},
+				},
+				TestDRAObjects: dra_fake.TestDRAObjects{
+					DeviceClasses: []string{"nvidia.com/gpu"},
+					ResourceSlices: []*dra_fake.TestResourceSlice{
+						{
+							Name:            "node0-gpu",
+							DeviceClassName: "nvidia.com/gpu",
+							NodeName:        "node0",
+							Count:           1,
+						},
+					},
+					ResourceClaims: []*dra_fake.TestResourceClaim{
+						{
+							Name:            "claim-no-label",
+							Namespace:       "test",
+							DeviceClassName: "nvidia.com/gpu",
+							Count:           1,
+							// No Labels - should fail
+						},
+					},
+				},
+			},
+			err: "pod test/job-1-0 cannot be scheduled: DRA claim claim-no-label is a potentially shared claim but does not have a queue label (kai.scheduler/queue)",
+		},
+		{
+			name:    "Shared claim with wrong queue label - blocked",
+			enabled: true,
+			topology: test_utils.TestTopologyBasic{
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:      "job-1",
+						Namespace: "test",
+						QueueName: "q-1",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								Name:               "job-1-0",
+								State:              pod_status.Pending,
+								ResourceClaimNames: []string{"claim-wrong-queue"},
+							},
+						},
+					},
+				},
+				TestDRAObjects: dra_fake.TestDRAObjects{
+					DeviceClasses: []string{"nvidia.com/gpu"},
+					ResourceSlices: []*dra_fake.TestResourceSlice{
+						{
+							Name:            "node0-gpu",
+							DeviceClassName: "nvidia.com/gpu",
+							NodeName:        "node0",
+							Count:           1,
+						},
+					},
+					ResourceClaims: []*dra_fake.TestResourceClaim{
+						{
+							Name:            "claim-wrong-queue",
+							Namespace:       "test",
+							DeviceClassName: "nvidia.com/gpu",
+							Count:           1,
+							Labels: map[string]string{
+								constants.DefaultQueueLabel: "different-queue",
+							},
+						},
+					},
+				},
+			},
+			err: "pod test/job-1-0 cannot be scheduled: DRA claim claim-wrong-queue is a potentially shared claim with wrong queue label (expected queue: q-1, claim queue label: different-queue)",
+		},
+		{
+			name:    "Template claim without queue label - allowed",
+			enabled: true,
+			topology: test_utils.TestTopologyBasic{
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:      "job-1",
+						Namespace: "test",
+						QueueName: "q-1",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								Name:  "job-1-0",
+								State: pod_status.Pending,
+								ResourceClaimTemplates: map[string]string{
+									"template-0": "claim-from-template",
+								},
+							},
+						},
+					},
+				},
+				TestDRAObjects: dra_fake.TestDRAObjects{
+					DeviceClasses: []string{"nvidia.com/gpu"},
+					ResourceSlices: []*dra_fake.TestResourceSlice{
+						{
+							Name:            "node0-gpu",
+							DeviceClassName: "nvidia.com/gpu",
+							NodeName:        "node0",
+							Count:           1,
+						},
+					},
+					ResourceClaims: []*dra_fake.TestResourceClaim{
+						{
+							Name:            "claim-from-template",
+							Namespace:       "test",
+							DeviceClassName: "nvidia.com/gpu",
+							Count:           1,
+							// No Labels - but template claims should pass
+						},
+					},
+				},
+			},
+			// No error expected - template claims skip queue label validation
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
