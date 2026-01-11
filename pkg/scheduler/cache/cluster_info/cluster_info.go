@@ -24,6 +24,7 @@ import (
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -136,7 +137,12 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 		return nil, err
 	}
 
-	snapshot.Pods, err = c.addTasksToNodes(allPods, existingPods, snapshot.Nodes, snapshot.BindRequests)
+	draResourceClaims, err := c.dataLister.ListDRAResourceClaims()
+	if err != nil {
+		return nil, fmt.Errorf("error listing DRA resource claims: %w", err)
+	}
+
+	snapshot.Pods, err = c.addTasksToNodes(allPods, existingPods, snapshot.Nodes, snapshot.BindRequests, draResourceClaims)
 	if err != nil {
 		err = errors.WithStack(fmt.Errorf("error adding tasks to nodes: %w", err))
 		return nil, err
@@ -244,10 +250,10 @@ func (c *ClusterInfo) snapshotNodes(
 }
 
 func (c *ClusterInfo) addTasksToNodes(allPods []*v1.Pod, existingPodsMap map[common_info.PodID]*pod_info.PodInfo,
-	nodes map[string]*node_info.NodeInfo, bindRequests bindrequest_info.BindRequestMap) (
+	nodes map[string]*node_info.NodeInfo, bindRequests bindrequest_info.BindRequestMap, draResourceClaims []*resourceapi.ResourceClaim) (
 	[]*v1.Pod, error) {
 
-	nodePodInfosMap, nodeReservationPodInfosMap, err := c.getNodeToPodInfosMap(allPods, bindRequests)
+	nodePodInfosMap, nodeReservationPodInfosMap, err := c.getNodeToPodInfosMap(allPods, bindRequests, draResourceClaims)
 	if err != nil {
 		return nil, err
 	}
@@ -396,7 +402,8 @@ func (c *ClusterInfo) setPodGroupWithIndex(podGroup *enginev2alpha2.PodGroup, po
 	podGroupInfo.SetPodGroup(podGroup)
 }
 
-func (c *ClusterInfo) getNodeToPodInfosMap(allPods []*v1.Pod, bindRequests bindrequest_info.BindRequestMap) (
+func (c *ClusterInfo) getNodeToPodInfosMap(allPods []*v1.Pod,
+	bindRequests bindrequest_info.BindRequestMap, draResourceClaims []*resourceapi.ResourceClaim) (
 	map[string][]*pod_info.PodInfo, map[string][]*pod_info.PodInfo, error) {
 	nodePodInfosMap := map[string][]*pod_info.PodInfo{}
 	nodeReservationPodInfosMap := map[string][]*pod_info.PodInfo{}

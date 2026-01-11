@@ -7,11 +7,13 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	listv1 "k8s.io/client-go/listers/core/v1"
+	resourcev1 "k8s.io/client-go/listers/resource/v1"
 	schedv1 "k8s.io/client-go/listers/scheduling/v1"
 	v12 "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
@@ -40,10 +42,11 @@ type k8sLister struct {
 	cmLister       listv1.ConfigMapLister
 	usageLister    *usagedb.UsageLister
 
-	pvcLister             listv1.PersistentVolumeClaimLister
-	storageCapacityLister v12.CSIStorageCapacityLister
-	storageClassLister    v12.StorageClassLister
-	csiDriverLister       v12.CSIDriverLister
+	pvcLister              listv1.PersistentVolumeClaimLister
+	storageCapacityLister  v12.CSIStorageCapacityLister
+	storageClassLister     v12.StorageClassLister
+	csiDriverLister        v12.CSIDriverLister
+	draResourceClaimLister resourcev1.ResourceClaimLister
 
 	bindRequestLister scheudlinglistv1alpha2.BindRequestLister
 
@@ -71,10 +74,11 @@ func New(
 		cmLister:       informerFactory.Core().V1().ConfigMaps().Lister(),
 		usageLister:    usageLister,
 
-		pvcLister:             informerFactory.Core().V1().PersistentVolumeClaims().Lister(),
-		storageCapacityLister: informerFactory.Storage().V1().CSIStorageCapacities().Lister(),
-		storageClassLister:    informerFactory.Storage().V1().StorageClasses().Lister(),
-		csiDriverLister:       informerFactory.Storage().V1().CSIDrivers().Lister(),
+		pvcLister:              informerFactory.Core().V1().PersistentVolumeClaims().Lister(),
+		storageCapacityLister:  informerFactory.Storage().V1().CSIStorageCapacities().Lister(),
+		storageClassLister:     informerFactory.Storage().V1().StorageClasses().Lister(),
+		csiDriverLister:        informerFactory.Storage().V1().CSIDrivers().Lister(),
+		draResourceClaimLister: informerFactory.Resource().V1().ResourceClaims().Lister(),
 
 		bindRequestLister: kubeAiSchedulerInformerFactory.Scheduling().V1alpha2().BindRequests().Lister(),
 		kaiTopologyLister: kubeAiSchedulerInformerFactory.Kai().V1alpha1().Topologies().Lister(),
@@ -169,4 +173,10 @@ func (k *k8sLister) ListConfigMaps() ([]*v1.ConfigMap, error) {
 
 func (k *k8sLister) ListTopologies() ([]*kaiv1alpha1.Topology, error) {
 	return k.kaiTopologyLister.List(labels.Everything())
+}
+
+// +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceclaims,verbs=get;list;watch
+
+func (k *k8sLister) ListDRAResourceClaims() ([]*resourceapi.ResourceClaim, error) {
+	return k.draResourceClaimLister.List(labels.Everything())
 }

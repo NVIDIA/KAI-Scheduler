@@ -13,6 +13,7 @@ import (
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	resourceapi "k8s.io/api/resource/v1"
 )
 
 type DataLister interface {
@@ -31,4 +32,5 @@ type DataLister interface {
 	ListConfigMaps() ([]*v1.ConfigMap, error)
 	ListTopologies() ([]*kaiv1alpha1.Topology, error)
 	ListResourceUsage() (*queue_info.ClusterUsage, error)
+	ListDRAResourceClaims() ([]*resourceapi.ResourceClaim, error)
 }

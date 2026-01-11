@@ -63,6 +63,14 @@ func GetTasksToAllocateRequestedGPUs(
 		tasksTotalRequestedGPUs += task.ResReq.GPUs()
 		tasksTotalRequestedGpuMemory += task.ResReq.GpuMemory()
 
+		for _, draGpuCount := range task.ResReq.GpuResourceRequirement.DraGpuCounts() {
+			tasksTotalRequestedGPUs += float64(draGpuCount)
+			// Currently, we do not support DRA gpu memory requests.
+			// DRA gpu requests that have memory constraints (e.g. 2 gpus, each with at least 32GB) are supported by adding the device count (e.g. 2) to the total requested GPUs.
+			// This is calculated in the same way that whole gpus are added to the total requested GPUs.
+			tasksTotalRequestedGpuMemory += 0
+		}
+
 		for migResource, quant := range task.ResReq.MigResources() {
 			gpuPortion, mem, err := resources.ExtractGpuAndMemoryFromMigResourceName(migResource.String())
 			if err != nil {

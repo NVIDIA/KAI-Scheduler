@@ -141,7 +141,7 @@ func (r *ResourceRequirements) LessEqualResource(rr *Resource) bool {
 func (r *ResourceRequirements) String() string {
 	return fmt.Sprintf(
 		"GPU: %s, CPU: %s (cores), memory: %s (GB)",
-		HumanizeResource(r.GetSumGPUs(), 1),
+		HumanizeResource(r.GetGpusQuota(), 1),
 		HumanizeResource(r.milliCpu, MilliCPUToCores),
 		HumanizeResource(r.memory, MemoryToGB),
 	)

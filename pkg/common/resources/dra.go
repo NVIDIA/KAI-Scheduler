@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
@@ -73,15 +72,11 @@ func RemoveReservedFor(claim *resourceapi.ResourceClaim, pod *v1.Pod) {
 // It loops through all ResourceClaims in the pod spec, identifies GPU claims by DeviceClassName,
 // and returns a ResourceList with GPU resources aggregated.
 func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.Client) (v1.ResourceList, error) {
-	gpuResources := v1.ResourceList{}
-
 	if len(pod.Spec.ResourceClaims) == 0 {
-		return gpuResources, nil
+		return v1.ResourceList{}, nil
 	}
 
-	// Map to group claims by DeviceClassName and count devices
-	deviceClassCounts := make(map[string]int64)
-
+	var podResourceClaims []*resourceapi.ResourceClaim
 	for _, podClaim := range pod.Spec.ResourceClaims {
 		claimName, err := GetResourceClaimName(pod, &podClaim)
 		if err != nil {
@@ -101,16 +96,27 @@ func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.
 				pod.Namespace, claimName, pod.Namespace, pod.Name, err)
 		}
 
-		gpuCount, err := countGPUDevicesFromClaim(claim)
-		if err != nil {
-			// Skip invalid claims but continue processing others
-			logger := log.FromContext(ctx)
-			logger.V(1).Error(err, "failed to count GPU devices for claim",
-				"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name),
-				"claim", claimName)
-			continue
-		}
+		podResourceClaims = append(podResourceClaims, claim)
+	}
 
+	deviceClassCounts := ExtractDRAGPUResourcesFromClaims(podResourceClaims)
+
+	// Convert aggregated counts to ResourceList mapping deviceClass name to its count
+	gpuResources := v1.ResourceList{}
+	for deviceClassName, count := range deviceClassCounts {
+		if count > 0 {
+			gpuResources[v1.ResourceName(deviceClassName)] = *resource.NewQuantity(count, resource.DecimalSI)
+		}
+	}
+	return gpuResources, nil
+}
+
+func ExtractDRAGPUResourcesFromClaims(podResourceClaims []*resourceapi.ResourceClaim) map[string]int64 {
+	// Map to group claims by DeviceClassName and count devices
+	deviceClassCounts := make(map[string]int64)
+
+	for _, claim := range podResourceClaims {
+		gpuCount := countGPUDevicesFromClaim(claim)
 		if gpuCount > 0 {
 			// Find the DeviceClassName for this claim
 			deviceClassName := getGPUDeviceClassNameFromClaim(claim)
@@ -120,14 +126,7 @@ func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.
 		}
 	}
 
-	// Convert aggregated counts to ResourceList mapping deviceClass name to its count
-	for deviceClassName, count := range deviceClassCounts {
-		if count > 0 {
-			gpuResources[v1.ResourceName(deviceClassName)] = *resource.NewQuantity(count, resource.DecimalSI)
-		}
-	}
-
-	return gpuResources, nil
+	return deviceClassCounts
 }
 
 func IsGpuResourceClaim(claim *resourceapi.ResourceClaim) bool {
@@ -164,7 +163,7 @@ func getGPUDeviceClassNameFromClaim(claim *resourceapi.ResourceClaim) string {
 
 // countGPUDevicesFromClaim counts GPU devices from a ResourceClaim.
 // Returns the total count of GPU devices requested by this claim.
-func countGPUDevicesFromClaim(claim *resourceapi.ResourceClaim) (int64, error) {
+func countGPUDevicesFromClaim(claim *resourceapi.ResourceClaim) int64 {
 	totalCount := int64(0)
 
 	for _, request := range claim.Spec.Devices.Requests {
@@ -195,5 +194,5 @@ func countGPUDevicesFromClaim(claim *resourceapi.ResourceClaim) (int64, error) {
 		}
 	}
 
-	return totalCount, nil
+	return totalCount
 }

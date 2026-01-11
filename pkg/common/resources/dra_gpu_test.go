@@ -58,8 +58,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				count, err := countGPUDevicesFromClaim(claim)
-				Expect(err).NotTo(HaveOccurred())
+				count := countGPUDevicesFromClaim(claim)
 				Expect(count).To(Equal(int64(2)))
 			})
 
@@ -80,8 +79,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				count, err := countGPUDevicesFromClaim(claim)
-				Expect(err).NotTo(HaveOccurred())
+				count := countGPUDevicesFromClaim(claim)
 				Expect(count).To(Equal(int64(1)))
 			})
 
@@ -101,8 +99,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				count, err := countGPUDevicesFromClaim(claim)
-				Expect(err).NotTo(HaveOccurred())
+				count := countGPUDevicesFromClaim(claim)
 				Expect(count).To(Equal(int64(1))) // Conservative estimate for "All" mode
 			})
 
@@ -130,8 +127,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				count, err := countGPUDevicesFromClaim(claim)
-				Expect(err).NotTo(HaveOccurred())
+				count := countGPUDevicesFromClaim(claim)
 				Expect(count).To(Equal(int64(5)))
 			})
 
@@ -159,8 +155,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				count, err := countGPUDevicesFromClaim(claim)
-				Expect(err).NotTo(HaveOccurred())
+				count := countGPUDevicesFromClaim(claim)
 				Expect(count).To(Equal(int64(2))) // Only GPU devices counted
 			})
 		})
@@ -175,8 +170,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				count, err := countGPUDevicesFromClaim(claim)
-				Expect(err).NotTo(HaveOccurred())
+				count := countGPUDevicesFromClaim(claim)
 				Expect(count).To(Equal(int64(0)))
 			})
 
@@ -193,8 +187,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				count, err := countGPUDevicesFromClaim(claim)
-				Expect(err).NotTo(HaveOccurred())
+				count := countGPUDevicesFromClaim(claim)
 				Expect(count).To(Equal(int64(0)))
 			})
 
@@ -215,8 +208,7 @@ var _ = Describe("DRA GPU Extraction", func() {
 					},
 				}
 
-				count, err := countGPUDevicesFromClaim(claim)
-				Expect(err).NotTo(HaveOccurred())
+				count := countGPUDevicesFromClaim(claim)
 				Expect(count).To(Equal(int64(0))) // Unknown mode skipped
 			})
 		})

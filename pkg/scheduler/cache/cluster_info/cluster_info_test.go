@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	v12 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -471,7 +472,7 @@ func TestSnapshotNodes(t *testing.T) {
 			if err != nil {
 				assert.FailNow(t, fmt.Sprintf("SnapshotNode got error in test %s", t.Name()), err)
 			}
-			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil)
+			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil, nil)
 
 			assert.Equal(t, len(test.resultNodes), len(nodes))
 			assert.Equal(t, test.resultPodsLen, len(pods))
@@ -2105,6 +2106,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
+				mdl.EXPECT().ListDRAResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 			},
 		},
 		"listQueues": {
@@ -2113,6 +2115,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
+				mdl.EXPECT().ListDRAResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 			},
 		},
 		"listPodGroups": {
@@ -2124,6 +2127,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
 				mdl.EXPECT().ListPriorityClasses().Return([]*v12.PriorityClass{}, nil)
 				mdl.EXPECT().ListPodGroups().Return(nil, fmt.Errorf(successErrorMsg))
+				mdl.EXPECT().ListDRAResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 			},
 		},
 		"defaultPriorityClass": {
@@ -2134,6 +2138,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
 				mdl.EXPECT().ListPriorityClasses().Return(nil, fmt.Errorf(successErrorMsg))
+				mdl.EXPECT().ListDRAResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 			},
 		},
 		"getPriorityClassByNameAndPodByPodGroup": {
@@ -2171,6 +2176,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				}, nil)
 				mdl.EXPECT().GetPriorityClassByName(gomock.Any()).Return(nil, fmt.Errorf(successErrorMsg))
 				mdl.EXPECT().ListPodByIndex(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf(successErrorMsg))
+				mdl.EXPECT().ListDRAResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 			},
 		},
 		"ListBindRequests": {

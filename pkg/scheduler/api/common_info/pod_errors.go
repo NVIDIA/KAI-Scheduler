@@ -92,7 +92,7 @@ func NewFitErrorInsufficientResource(
 		if requestedGPUs > availableGPUs {
 			detailedMessages = append(detailedMessages, k8s_internal.NewInsufficientResourceError(
 				"GPUs",
-				resourceRequested.GpusAsString(),
+				resourceRequested.ExtendedResourceGpusAsString(),
 				strconv.FormatFloat(usedResource.GPUs(), 'g', 3, 64),
 				strconv.FormatFloat(capacityResource.GPUs(), 'g', 3, 64),
 				gangSchedulingJob))

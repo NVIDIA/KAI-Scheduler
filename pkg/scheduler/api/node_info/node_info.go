@@ -689,7 +689,7 @@ func (ni *NodeInfo) GetMigStrategy() MigStrategy {
 func (ni *NodeInfo) GetRequiredInitQuota(pi *pod_info.PodInfo) *podgroup_info.JobRequirement {
 	quota := podgroup_info.JobRequirement{}
 	if len(pi.ResReq.MigResources()) != 0 {
-		quota.GPU = pi.ResReq.GetSumGPUs()
+		quota.GPU = pi.ResReq.GetGpusQuota()
 	} else {
 		quota.GPU = ni.getGpuMemoryFractionalOnNode(ni.GetResourceGpuMemory(pi.ResReq))
 	}
