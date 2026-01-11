@@ -6,7 +6,6 @@ package skiptopowner
 import (
 	"context"
 	"fmt"
-	"maps"
 
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -60,16 +59,39 @@ func (sk *skipTopOwnerGrouper) GetPodGroupMetadata(
 		return nil, fmt.Errorf("failed to get last owner: %w", err)
 	}
 
-	err = sk.propagateLabelsDownChain(skippedOwner, otherOwners...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to propagate labels down chain: %w", err)
-	}
-
+	// propagate labels down chain
 	if lastOwner.GetLabels() == nil {
 		lastOwner.SetLabels(skippedOwner.GetLabels())
 	} else {
-		maps.Copy(lastOwner.GetLabels(), skippedOwner.GetLabels())
+		for k, v := range skippedOwner.GetLabels() {
+			if _, exists := lastOwner.GetLabels()[k]; exists {
+				continue
+			}
+			labels := lastOwner.GetLabels()
+			if labels == nil {
+				labels = make(map[string]string)
+			}
+			labels[k] = v
+			lastOwner.SetLabels(labels)
+		}
 	}
+	// propagate annotations down chain
+	if lastOwner.GetAnnotations() == nil {
+		lastOwner.SetAnnotations(skippedOwner.GetAnnotations())
+	} else {
+		for k, v := range skippedOwner.GetAnnotations() {
+			if _, exists := lastOwner.GetAnnotations()[k]; exists {
+				continue
+			}
+			annotations := lastOwner.GetAnnotations()
+			if annotations == nil {
+				annotations = make(map[string]string)
+			}
+			annotations[k] = v
+			lastOwner.SetAnnotations(annotations)
+		}
+	}
+
 	return sk.getSupportedTypePGMetadata(lastOwner, pod, otherOwners[:len(otherOwners)-1]...)
 }
 
@@ -92,83 +114,4 @@ func (sk *skipTopOwnerGrouper) getObjectInstance(objectRef *metav1.PartialObject
 	}
 	err := sk.client.Get(context.Background(), key, topOwnerInstance)
 	return topOwnerInstance, err
-}
-
-// propagateLabelsDownChain propagates scheduling metadata from parent owners to children
-// this merges the metadata, copying over if there are no conflicts
-// The changes are made in memory only and are not persisted to the cluster
-func (sk *skipTopOwnerGrouper) propagateLabelsDownChain(
-	skippedOwner *unstructured.Unstructured, otherOwners ...*metav1.PartialObjectMetadata) error {
-
-	for _, owner := range otherOwners {
-		logger.V(1).Info("Owner", "namespace", owner.GetNamespace(), "name", owner.GetName(), "kind", owner.GroupVersionKind().Kind)
-	}
-	labels := skippedOwner.GetLabels()
-	annotations := skippedOwner.GetAnnotations()
-	if len(otherOwners) <= 1 {
-		return nil
-	}
-	for _, ownerPartial := range otherOwners[:len(otherOwners)-1] {
-		// Fetch the full resource object to update it
-		owner, err := sk.getObjectInstance(ownerPartial)
-		if err != nil {
-			logger.V(1).Error(err, "Failed to get owner instance for label propagation", "owner", ownerPartial.GetName())
-			continue
-		}
-
-		ownerLabels := owner.GetLabels()
-		ownerAnnotations := owner.GetAnnotations()
-		needsUpdate := false
-		var newLabels map[string]string
-		var newAnnotations map[string]string
-
-		for key, val := range labels {
-			// Skip if owner already has this label
-			if ownerLabels != nil {
-				if _, exists := ownerLabels[key]; exists {
-					continue
-				}
-			}
-			// Propagate this label if it has a value
-			if val != "" {
-				if newLabels == nil {
-					if ownerLabels != nil {
-						newLabels = maps.Clone(ownerLabels)
-					} else {
-						newLabels = make(map[string]string)
-					}
-				}
-				newLabels[key] = val
-				needsUpdate = true
-			}
-		}
-
-		for key, val := range annotations {
-			// Skip if owner already has this annotation
-			if ownerAnnotations != nil {
-				if _, exists := ownerAnnotations[key]; exists {
-					continue
-				}
-			}
-			// Propagate this annotation if it has a value
-			if val != "" {
-				if newAnnotations == nil {
-					if ownerAnnotations != nil {
-						newAnnotations = maps.Clone(ownerAnnotations)
-					} else {
-						newAnnotations = make(map[string]string)
-					}
-				}
-				newAnnotations[key] = val
-				needsUpdate = true
-			}
-		}
-
-		// Patch the resource if we need to update labels
-		if needsUpdate {
-			owner.SetLabels(newLabels)
-			owner.SetAnnotations(newAnnotations)
-		}
-	}
-	return nil
 }

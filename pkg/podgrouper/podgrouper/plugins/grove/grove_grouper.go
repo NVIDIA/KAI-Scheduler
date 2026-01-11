@@ -18,7 +18,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+var logger = log.FromContext(context.Background()).WithName("podgrouper").WithName("grove")
 
 const (
 	labelKeyPodGangName = "grove.io/podgang"
@@ -123,7 +126,7 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 
 	metadata.SubGroups = append(parentSubGroups, childSubGroups...)
 	metadata.MinAvailable = minAvailable
-
+	logger.V(1).Info("GroveGrouper metadata", "metadata", metadata)
 	return metadata, nil
 }
 
@@ -277,6 +280,22 @@ func (gg *GroveGrouper) parseMetadataFromTopOwner(metadata *podgroup.Metadata) (
 			return nil, fmt.Errorf("failed to parse preemptibility from top owner %s/%s. Err: %w", metadata.Namespace, metadata.Name, err)
 		}
 		metadata.Preemptibility = preemptibility
+	}
+
+	// get Topology data from annotations similar to applyTopologyConstraints
+	topologyConstraint := podgroup.TopologyConstraintMetadata{
+		PreferredTopologyLevel: metadata.Annotations[constants.TopologyPreferredPlacementKey],
+		RequiredTopologyLevel:  metadata.Annotations[constants.TopologyRequiredPlacementKey],
+		Topology:               metadata.Annotations[constants.TopologyKey],
+	}
+	if metadata.PreferredTopologyLevel == "" {
+		metadata.PreferredTopologyLevel = topologyConstraint.PreferredTopologyLevel
+	}
+	if metadata.RequiredTopologyLevel == "" {
+		metadata.RequiredTopologyLevel = topologyConstraint.RequiredTopologyLevel
+	}
+	if metadata.Topology == "" {
+		metadata.Topology = topologyConstraint.Topology
 	}
 	return metadata, nil
 }
