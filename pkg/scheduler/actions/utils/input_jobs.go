@@ -15,21 +15,22 @@ type JobsOrderInitOptions struct {
 	FilterNonPreemptible     bool
 	FilterNonActiveAllocated bool
 	VictimQueue              bool
-	MaxJobsQueueDepth        int
+	// TODO: Rename to MaxJobsPerQueue as the name is misleading.
+	MaxJobsQueueDepth int
 }
 
 func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 	jobsToOrder map[common_info.PodGroupID]*podgroup_info.PodGroupInfo) {
 	for _, job := range jobsToOrder {
-		if jobsOrder.jobsOrderInitOptions.FilterUnready && !job.IsReadyForScheduling() {
+		if jobsOrder.options.FilterUnready && !job.IsReadyForScheduling() {
 			continue
 		}
 
-		if jobsOrder.jobsOrderInitOptions.FilterNonPending && len(job.PodStatusIndex[pod_status.Pending]) == 0 {
+		if jobsOrder.options.FilterNonPending && len(job.PodStatusIndex[pod_status.Pending]) == 0 {
 			continue
 		}
 
-		if jobsOrder.jobsOrderInitOptions.FilterNonPreemptible && !job.IsPreemptibleJob() {
+		if jobsOrder.options.FilterNonPreemptible && !job.IsPreemptibleJob() {
 			continue
 		}
 
@@ -40,7 +41,7 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 				break
 			}
 		}
-		if jobsOrder.jobsOrderInitOptions.FilterNonActiveAllocated && !isJobActive {
+		if jobsOrder.options.FilterNonActiveAllocated && !isJobActive {
 			continue
 		}
 
@@ -50,13 +51,21 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 			continue
 		}
 
-		// Skip jobs whose queue's parent queue doesn't exist
-		if _, found := queues[queues[job.Queue].ParentQueue]; !found {
+		// Skip jobs whose queue's parent queue doesn't exist (unless it's a root queue)
+		parentQueue := queues[job.Queue].ParentQueue
+		if parentQueue != "" {
+			if _, found := queues[parentQueue]; !found {
+				continue
+			}
+		}
+
+		// Skip jobs whose queue is not a leaf queue
+		if !jobsOrder.ssn.ClusterInfo.Queues[job.Queue].IsLeafQueue() {
 			continue
 		}
 
-		jobsOrder.addJobToQueue(job, jobsOrder.jobsOrderInitOptions.VictimQueue)
+		jobsOrder.addJobToQueue(job)
 	}
 
-	jobsOrder.buildActiveJobOrderPriorityQueues(jobsOrder.jobsOrderInitOptions.VictimQueue)
+	jobsOrder.buildActiveQueues()
 }

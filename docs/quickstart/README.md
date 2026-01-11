@@ -3,11 +3,11 @@
 ## Scheduling queues
 A queue is an object which represents a job queue in the cluster. Queues are an essential scheduling primitive, and can reflect different scheduling guarantees, such as resource quota and priority. 
 Queues are typically assigned to different consumers in the cluster (users, groups, or initiatives). A workload must belong to a queue in order to be scheduled.
-KAI Scheduler operates with two levels of hierarchical scheduling queue system.
+KAI Scheduler supports multi-level hierarchical scheduling queues.
 
 ### Default Queue on Fresh Install
 
-After installing KAI Scheduler, a **two-level queue hierarchy** is automatically created:
+After installing KAI Scheduler, a default queue hierarchy is automatically created:
 * `default-parent-queue` – Top-level (parent) queue. By default, this queue has no reserved resource quotas, allowing governance of resource distribution for its leaf queues.
 * `default-queue` – Leaf (child) queue under the `default-parent-queue` top-level queue. Workloads should reference this queue.
 
