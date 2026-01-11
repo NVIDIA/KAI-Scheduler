@@ -5,6 +5,7 @@ package gpusharing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -112,6 +113,8 @@ func (p *GPUSharing) Rollback(
 		return nil
 	}
 
+	var errs []error
+
 	containerRef, err := common.GetFractionContainerRef(pod)
 	if err != nil {
 		logger.V(1).Info("Rollback: could not get fraction container ref, nothing to rollback",
@@ -119,36 +122,32 @@ func (p *GPUSharing) Rollback(
 		return nil
 	}
 
-	// Delete capabilities ConfigMap
+	var configMapNames []string
 	capabilitiesConfigMapName, err := gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
 	if err != nil {
-		// Annotation not set means PreBind never created the configmap
-		logger.V(1).Info("Rollback: could not extract capabilities configmap name, nothing to rollback",
+		logger.V(1).Info("could not extract capabilities configmap name",
 			"namespace", pod.Namespace, "name", pod.Name, "error", err)
-		return nil
+	} else if capabilitiesConfigMapName != "" {
+		configMapNames = append(configMapNames, capabilitiesConfigMapName)
 	}
 
-	if err := p.deleteConfigMap(ctx, pod.Namespace, capabilitiesConfigMapName); err != nil {
-		return fmt.Errorf("failed to delete capabilities configmap %s/%s during rollback: %w",
-			pod.Namespace, capabilitiesConfigMapName, err)
-	}
-	logger.V(1).Info("Rollback: deleted capabilities configmap",
-		"namespace", pod.Namespace, "name", pod.Name, "configmap", capabilitiesConfigMapName)
-
-	// Delete direct env vars ConfigMap
 	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
 	if err != nil {
-		return fmt.Errorf("failed to extract direct env vars configmap name during rollback: %w", err)
+		logger.V(1).Info("could not extract direct env vars configmap name",
+			"namespace", pod.Namespace, "name", pod.Name, "error", err)
+	} else if directEnvVarsMapName != "" {
+		configMapNames = append(configMapNames, directEnvVarsMapName)
 	}
 
-	if err := p.deleteConfigMap(ctx, pod.Namespace, directEnvVarsMapName); err != nil {
-		return fmt.Errorf("failed to delete direct env vars configmap %s/%s during rollback: %w",
-			pod.Namespace, directEnvVarsMapName, err)
+	for _, configMapName := range configMapNames {
+		if err = p.deleteConfigMap(ctx, pod.Namespace, configMapName); err != nil {
+			errs = append(errs, fmt.Errorf("failed to delete configmap %s/%s during rollback: %w",
+				pod.Namespace, configMapName, err))
+		}
+		logger.V(1).Info("deleted configmap", "namespace", pod.Namespace, "name", pod.Name, "configmap", configMapName)
 	}
-	logger.V(1).Info("Rollback: deleted direct env vars configmap",
-		"namespace", pod.Namespace, "name", pod.Name, "configmap", directEnvVarsMapName)
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (p *GPUSharing) deleteConfigMap(ctx context.Context, namespace, name string) error {
