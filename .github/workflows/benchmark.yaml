@@ -43,11 +43,7 @@ jobs:
           echo "KUBEBUILDER_ASSETS=$(bin/setup-envtest use 1.34.0 -p path --bin-dir bin)" >> $GITHUB_ENV
 
       - name: Run benchmarks on PR branch
-        run: |
-          echo "Running benchmarks on PR branch..."
-          go test -bench=. -benchmem -count=6 -run=^$$ ./pkg/scheduler/actions/... 2>&1 | tee pr-bench.txt
-          echo "PR benchmark results:"
-          cat pr-bench.txt
+        run: make benchmark BENCH_OUTPUT=pr-bench.txt
 
       - name: Checkout main branch
         run: |
@@ -55,11 +51,7 @@ jobs:
           git checkout origin/main
 
       - name: Run benchmarks on main branch
-        run: |
-          echo "Running benchmarks on main branch..."
-          go test -bench=. -benchmem -count=6 -run=^$$ ./pkg/scheduler/actions/... 2>&1 | tee main-bench.txt
-          echo "Main benchmark results:"
-          cat main-bench.txt
+        run: make benchmark BENCH_OUTPUT=main-bench.txt
 
       - name: Checkout PR branch (restore)
         run: git checkout ${{ github.head_ref || github.sha }}

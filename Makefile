@@ -116,6 +116,7 @@ $(KUSTOMIZE): $(LOCALBIN)
 
 # Benchmark targets
 BENCHSTAT ?= $(LOCALBIN)/benchstat
+BENCH_OUTPUT ?= benchmark-results.txt
 
 .PHONY: benchstat
 benchstat: $(BENCHSTAT)
@@ -123,10 +124,10 @@ $(BENCHSTAT): $(LOCALBIN)
 	test -s $(LOCALBIN)/benchstat || GOBIN=$(LOCALBIN) go install golang.org/x/perf/cmd/benchstat@latest
 
 .PHONY: benchmark
-benchmark: envtest ## Run benchmarks and output results
+benchmark: envtest ## Run benchmarks and output results (use BENCH_OUTPUT=file.txt to customize output)
 	@echo "Running benchmarks..."
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(LOCALBIN))" \
-	go test -bench=. -benchmem -count=6 -run=^$$ ./pkg/scheduler/actions/... | tee benchmark-results.txt
+	go test -bench=. -benchmem -count=6 -run=^$$ ./pkg/scheduler/actions/... | tee $(BENCH_OUTPUT)
 
 .PHONY: benchmark-docker
 benchmark-docker: builder gocache ## Run benchmarks in Docker
