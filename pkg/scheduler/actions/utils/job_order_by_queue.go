@@ -199,7 +199,7 @@ func (jo *JobsOrderByQueues) ensureAncestorChainForPush(childNode *queueNode, ch
 	// Get or create parent node
 	parentNode := jo.queueNodes[parentQueueInfo.UID]
 	parentNodeIsNew := parentNode == nil
-	if parentNode == nil {
+	if parentNodeIsNew {
 		parentNode = jo.createNonLeafNode(parentQueueInfo)
 		jo.queueNodes[parentQueueInfo.UID] = parentNode
 	}
