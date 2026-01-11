@@ -6,7 +6,6 @@ package grove
 import (
 	"context"
 	"fmt"
-	"maps"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
@@ -56,7 +55,7 @@ func (gg *GroveGrouper) Name() string {
 // +kubebuilder:rbac:groups=scheduler.grove.io,resources=podgangs/finalizers,verbs=patch;update;create
 
 func (gg *GroveGrouper) GetPodGroupMetadata(
-	topOwner *unstructured.Unstructured, pod *v1.Pod, topownersmetadata ...*metav1.PartialObjectMetadata,
+	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {
 	podGangName, ok := pod.Labels[labelKeyPodGangName]
 	if !ok {
@@ -88,14 +87,21 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 		metadata.PriorityClassName = priorityClassName
 	}
 
+	// Grove can be invoked through Dynamo. However, metadata does not propagate from Dynamo to Grove. We use metadata propagation from PodCLiqueSet to PodGang for
+	// Podgroup creation.
+	// Dynamo Grove Ownership tree: DynamoGraphDeployment(DGD) -> PodCLiqueSet -> PodClique && PodGang. PodClique -> Pod
 	if topOwner != nil {
 		topOwnerLabels := topOwner.GetLabels()
-		if topOwnerLabels != nil {
-			maps.Copy(metadata.Labels, topOwnerLabels)
+		for k, v := range topOwnerLabels {
+			if _, exists := metadata.Labels[k]; !exists {
+				metadata.Labels[k] = v
+			}
 		}
 		topOwnerAnnotations := topOwner.GetAnnotations()
-		if topOwnerAnnotations != nil {
-			maps.Copy(metadata.Annotations, topOwnerAnnotations)
+		for k, v := range topOwnerAnnotations {
+			if _, exists := metadata.Annotations[k]; !exists {
+				metadata.Annotations[k] = v
+			}
 		}
 	}
 
