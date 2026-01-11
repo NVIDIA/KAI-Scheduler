@@ -12,6 +12,7 @@ import (
 
 	"golang.org/x/exp/slices"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,7 +31,7 @@ type Interface interface {
 	SyncForNode(ctx context.Context, nodeName string) error
 	SyncForGpuGroup(ctx context.Context, gpuGroup string) error
 	ReserveGpuDevice(ctx context.Context, pod *v1.Pod, nodeName string, gpuGroup string) (string, error)
-	RemovePodGpuGroupConnection(ctx context.Context, pod *v1.Pod, gpuGroup string) error
+	RemovePodGpuGroupsConnection(ctx context.Context, pod *v1.Pod) error
 }
 
 const (
@@ -206,10 +207,11 @@ func (rsc *service) syncForPods(ctx context.Context, pods []*v1.Pod, gpuGroupToS
 }
 
 func (rsc *service) ReserveGpuDevice(ctx context.Context, pod *v1.Pod, nodeName string, gpuGroup string) (string, error) {
+	logger := log.FromContext(ctx)
+
 	rsc.gpuGroupMutex.LockMutexForGroup(gpuGroup)
 	defer rsc.gpuGroupMutex.ReleaseMutex(gpuGroup)
 
-	logger := log.FromContext(ctx)
 	gpuIndex, err := rsc.acquireGPUIndexByGroup(ctx, nodeName, gpuGroup)
 	if err != nil {
 		return unknownGpuIndicator, err
@@ -260,24 +262,11 @@ func (rsc *service) updatePodGPUGroup(
 	return nil
 }
 
-func (rsc *service) RemovePodGpuGroupConnection(ctx context.Context, pod *v1.Pod, gpuGroup string) error {
-	isMultiFractionalPod, err := resources.IsMultiFraction(pod)
-	if err != nil {
-		return fmt.Errorf("failed to generate a patch for pod gpu-group removal. %w", err)
-	}
-
-	var patch []map[string]string
-	key := constants.GPUGroup
-	if isMultiFractionalPod {
-		multiGpuGroupLabelKey, _ := resources.GetMultiFractionGpuGroupLabel(gpuGroup)
-		key = strings.Replace(multiGpuGroupLabelKey, "/", "~1", -1)
-	}
-
-	// Create a JSON patch to remove the label
-	patch = []map[string]string{
+func (rsc *service) RemovePodGpuGroupsConnection(ctx context.Context, pod *v1.Pod) error {
+	patch := []map[string]string{
 		{
 			"op":   "remove",
-			"path": fmt.Sprintf("/metadata/labels/%s", key),
+			"path": fmt.Sprintf("/metadata/labels/%s", constants.GPUGroup),
 		},
 	}
 
@@ -373,9 +362,12 @@ func (rsc *service) deleteReservationPod(ctx context.Context, pod *v1.Pod) error
 		client.GracePeriodSeconds(0),
 	)
 	if err != nil {
-		logger.Error(err, "Failed to delete reservation pod", "name", pod.Name)
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete reservation pod: %w", err)
+		}
+		logger.Info("Reservation pod not found, skipping deletion", "name", pod.Name)
 	}
-	return client.IgnoreNotFound(err)
+	return nil
 }
 
 func (rsc *service) createGPUReservationPod(ctx context.Context, nodeName, gpuGroup string) (*v1.Pod, error) {

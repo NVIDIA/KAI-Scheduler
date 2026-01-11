@@ -90,6 +90,7 @@ var _ = Describe("ResourceReservationService", func() {
 			Status: runningStatus,
 		}
 	)
+
 	Context("ReserveGpuDevice", func() {
 		for testName, testData := range map[string]struct {
 			reservationPod        *v1.Pod
