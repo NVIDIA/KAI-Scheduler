@@ -1097,22 +1097,6 @@ func getServiceMonitorCRD() *apiextensionsv1.CustomResourceDefinition {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "servicemonitors.monitoring.coreos.com",
 		},
-		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
-			Group: "monitoring.coreos.com",
-			Names: apiextensionsv1.CustomResourceDefinitionNames{
-				Plural:   "servicemonitors",
-				Singular: "servicemonitor",
-				Kind:     "ServiceMonitor",
-			},
-			Scope: apiextensionsv1.NamespaceScoped,
-			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
-				{
-					Name:    "v1",
-					Served:  true,
-					Storage: true,
-				},
-			},
-		},
 	}
 	return serviceMonitorCRD
 }
@@ -1125,22 +1109,6 @@ func getPrometheusCRD() *apiextensionsv1.CustomResourceDefinition {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "prometheuses.monitoring.coreos.com",
-		},
-		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
-			Group: "monitoring.coreos.com",
-			Names: apiextensionsv1.CustomResourceDefinitionNames{
-				Plural:   "prometheuses",
-				Singular: "prometheus",
-				Kind:     "Prometheus",
-			},
-			Scope: apiextensionsv1.NamespaceScoped,
-			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
-				{
-					Name:    "v1",
-					Served:  true,
-					Storage: true,
-				},
-			},
 		},
 	}
 	return prometheusCRD
