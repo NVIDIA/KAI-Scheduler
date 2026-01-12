@@ -43,6 +43,7 @@ func createFakeClientWithScheme() client.Client {
 	Expect(corev1.AddToScheme(testScheme)).To(Succeed())
 	Expect(rbacv1.AddToScheme(testScheme)).To(Succeed())
 	Expect(apiextensionsv1.AddToScheme(testScheme)).To(Succeed())
+	Expect(metav1.AddMetaToScheme(testScheme)).To(Succeed())
 
 	return fake.NewClientBuilder().WithScheme(testScheme).Build()
 }
@@ -1087,8 +1088,8 @@ var _ = Describe("serviceMonitorsForKAIConfig", func() {
 	})
 })
 
-func getServiceMonitorCRD() *metav1.PartialObjectMetadata {
-	serviceMonitorCRD := &metav1.PartialObjectMetadata{
+func getServiceMonitorCRD() *apiextensionsv1.CustomResourceDefinition {
+	serviceMonitorCRD := &apiextensionsv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
 			APIVersion: "apiextensions.k8s.io/v1",
@@ -1096,18 +1097,50 @@ func getServiceMonitorCRD() *metav1.PartialObjectMetadata {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "servicemonitors.monitoring.coreos.com",
 		},
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+			Group: "monitoring.coreos.com",
+			Names: apiextensionsv1.CustomResourceDefinitionNames{
+				Plural:   "servicemonitors",
+				Singular: "servicemonitor",
+				Kind:     "ServiceMonitor",
+			},
+			Scope: apiextensionsv1.NamespaceScoped,
+			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1",
+					Served:  true,
+					Storage: true,
+				},
+			},
+		},
 	}
 	return serviceMonitorCRD
 }
 
-func getPrometheusCRD() *metav1.PartialObjectMetadata {
-	prometheusCRD := &metav1.PartialObjectMetadata{
+func getPrometheusCRD() *apiextensionsv1.CustomResourceDefinition {
+	prometheusCRD := &apiextensionsv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "prometheuses.monitoring.coreos.com",
+		},
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+			Group: "monitoring.coreos.com",
+			Names: apiextensionsv1.CustomResourceDefinitionNames{
+				Plural:   "prometheuses",
+				Singular: "prometheus",
+				Kind:     "Prometheus",
+			},
+			Scope: apiextensionsv1.NamespaceScoped,
+			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1",
+					Served:  true,
+					Storage: true,
+				},
+			},
 		},
 	}
 	return prometheusCRD
