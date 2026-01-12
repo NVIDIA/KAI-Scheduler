@@ -82,6 +82,7 @@ var _ = Describe("SkipTopOwnerGrouper", func() {
 					},
 				}
 				Expect(client.Create(context.TODO(), pod)).To(Succeed())
+				pod.TypeMeta = metav1.TypeMeta{Kind: examplePod.Kind, APIVersion: examplePod.APIVersion} // https://github.com/kubernetes-sigs/controller-runtime/commit/685f27bb500fe40ede53379da1675cfa71387a94
 
 				metadata, err := plugin.GetPodGroupMetadata(podObj, pod, lastOwnerPartial)
 
@@ -154,6 +155,9 @@ var _ = Describe("SkipTopOwnerGrouper", func() {
 				Expect(client.Create(context.TODO(), deployment)).To(Succeed())
 				Expect(client.Create(context.TODO(), replicaSet)).To(Succeed())
 				Expect(client.Create(context.TODO(), pod)).To(Succeed())
+				pod.TypeMeta = metav1.TypeMeta{Kind: examplePod.Kind, APIVersion: examplePod.APIVersion} // https://github.com/kubernetes-sigs/controller-runtime/commit/685f27bb500fe40ede53379da1675cfa71387a94
+				replicaSet.TypeMeta = metav1.TypeMeta{APIVersion: "apps/v1", Kind: "ReplicaSet"}         // https://github.com/kubernetes-sigs/controller-runtime/commit/685f27bb500fe40ede53379da1675cfa71387a94
+				deployment.TypeMeta = metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"}         // https://github.com/kubernetes-sigs/controller-runtime/commit/685f27bb500fe40ede53379da1675cfa71387a94
 			})
 
 			It("uses the second last owner when there are multiple", func() {

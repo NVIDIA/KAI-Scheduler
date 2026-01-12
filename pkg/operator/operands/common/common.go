@@ -47,14 +47,15 @@ func AllControllersAvailable(
 	errorMessages := []string{}
 
 	for _, obj := range objects {
+		objKind := obj.GetObjectKind().GroupVersionKind().Kind
 		err := readerClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 		if err != nil {
 			errorMessages = append(errorMessages, err.Error())
 			continue
 		}
 
-		if slices.Contains(controllerTypes, obj.GetObjectKind().GroupVersionKind().Kind) {
-			available, err := isControllerAvailable(obj)
+		if slices.Contains(controllerTypes, objKind) {
+			available, err := isControllerAvailable(obj, objKind)
 			if err != nil {
 				errorMessages = append(errorMessages, err.Error())
 				continue
@@ -168,8 +169,8 @@ func PtrFrom[T any](v T) *T {
 	return &v
 }
 
-func isControllerAvailable(obj client.Object) (bool, error) {
-	switch obj.GetObjectKind().GroupVersionKind().Kind {
+func isControllerAvailable(obj client.Object, objKind string) (bool, error) {
+	switch objKind {
 	case "Deployment":
 		deployment, ok := obj.(*appsv1.Deployment)
 		if !ok {
