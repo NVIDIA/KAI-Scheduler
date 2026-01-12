@@ -58,6 +58,11 @@ func (dg *DefaultGrouper) Name() string {
 }
 
 func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, allOwners ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
+	if len(allOwners) == 0 {
+		// If the allOwners list is empty, set the top owner as the only owner.
+		// This supports the podJob case, where we consider the actual pod as the "topOwner", although it's not an actual owner.
+		allOwners = []*metav1.PartialObjectMetadata{unstructuredToPartialObjectMetadata(topOwner)}
+	}
 	priorityClassName, defaults := dg.calcPriorityClassWithDefaults(allOwners, pod, constants.TrainPriorityClass)
 	preemptibility := dg.calcPodGroupPreemptibilityWithDefaults(allOwners, pod, defaults)
 
@@ -241,7 +246,7 @@ func (dg *DefaultGrouper) calcPodGroupPreemptibilityWithDefaults(
 	}
 
 	// If no explicit preemptibility found, try defaults from ConfigMap for each owner
-	if defaults == nil || len(defaults) == 0 {
+	if len(defaults) == 0 {
 		var err error
 		defaults, err = dg.getDefaultConfigsPerTypeMapping()
 		if err != nil {
@@ -387,4 +392,19 @@ func selectDefaultsForKind(defaults map[string]workloadTypePriorityConfig, group
 		return defaultConfig, true
 	}
 	return workloadTypePriorityConfig{}, false
+}
+
+func unstructuredToPartialObjectMetadata(topOwner *unstructured.Unstructured) *metav1.PartialObjectMetadata {
+	return &metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: topOwner.GetAPIVersion(),
+			Kind:       topOwner.GetKind(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        topOwner.GetName(),
+			Namespace:   topOwner.GetNamespace(),
+			Labels:      topOwner.GetLabels(),
+			Annotations: topOwner.GetAnnotations(),
+		},
+	}
 }
