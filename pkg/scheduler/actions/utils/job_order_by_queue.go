@@ -124,48 +124,6 @@ func (jo *JobsOrderByQueues) isRootQueue(queue *queue_info.QueueInfo) bool {
 	return queue.ParentQueue == ""
 }
 
-// addJobToQueue adds a job to its leaf queue, creating the queue node if needed.
-func (jo *JobsOrderByQueues) addJobToQueue(job *podgroup_info.PodGroupInfo) {
-	if _, found := jo.queueNodes[job.Queue]; !found {
-		leafQueue := jo.ssn.ClusterInfo.Queues[job.Queue]
-		jo.queueNodes[job.Queue] = jo.createLeafNode(leafQueue)
-	}
-	jo.queueNodes[job.Queue].children.Push(job)
-}
-
-// buildActiveQueues builds the queue hierarchy from leaf nodes up to root nodes.
-// Supports n-level hierarchies by walking up the entire ancestor chain.
-func (jo *JobsOrderByQueues) buildActiveQueues() {
-	// Build ancestor chains for all leaf nodes that have jobs
-	for _, leafNode := range jo.queueNodes {
-		if !leafNode.isLeaf || leafNode.children.Len() == 0 {
-			continue
-		}
-
-		// Walk up the ancestor chain, creating nodes as needed
-		jo.ensureAncestorChain(leafNode, leafNode.queue, jo.options.VictimQueue)
-	}
-
-	// Build root nodes priority queue from nodes with no parent
-	log.InfraLogger.V(7).Infof("Building root nodes priority queue, reverseOrder=<%v>", jo.options.VictimQueue)
-	jo.rootNodes = scheduler_util.NewPriorityQueue(
-		jo.buildNodeOrderFn(jo.options.VictimQueue),
-		scheduler_util.QueueCapacityInfinite)
-
-	rootNodeCount := 0
-	for _, node := range jo.queueNodes {
-		// Root nodes are nodes with no parent (includes both leaf and non-leaf queues)
-		// This supports single-level hierarchies where root queues are also leaf queues
-		if node.parent == nil {
-			log.InfraLogger.V(7).Infof("Active root queue <%s> with %d children (isLeaf=%v)", node.queue.UID, node.children.Len(), node.isLeaf)
-			jo.rootNodes.Push(node)
-			rootNodeCount++
-		}
-	}
-	log.InfraLogger.V(7).Infof("buildActiveQueues: added %d root nodes, total root nodes: %d, total queueNodes: %d",
-		rootNodeCount, jo.rootNodes.Len(), len(jo.queueNodes))
-}
-
 // ensureRootNodesInitialized ensures the rootNodes priority queue is initialized.
 func (jo *JobsOrderByQueues) ensureRootNodesInitialized() {
 	if jo.rootNodes == nil {
@@ -315,40 +273,6 @@ func (jo *JobsOrderByQueues) createNonLeafNode(queue *queue_info.QueueInfo) *que
 		),
 		isLeaf: false,
 	}
-}
-
-// ensureAncestorChain creates all ancestor nodes for a leaf node up to the root.
-// Used by buildActiveQueues during initialization.
-func (jo *JobsOrderByQueues) ensureAncestorChain(childNode *queueNode, childQueue *queue_info.QueueInfo, reverseOrder bool) {
-	if jo.isRootQueue(childQueue) {
-		// This node is at root level, no parent to create
-		return
-	}
-
-	parentQueueInfo, parentExists := jo.ssn.ClusterInfo.Queues[childQueue.ParentQueue]
-	if !parentExists {
-		log.InfraLogger.V(7).Warnf("Queue's parent doesn't exist. Queue: <%v>, Parent: <%v>",
-			childQueue.Name, childQueue.ParentQueue)
-		return
-	}
-
-	// Get or create parent node
-	parentNode, parentNodeExists := jo.queueNodes[parentQueueInfo.UID]
-	if !parentNodeExists {
-		log.InfraLogger.V(7).Infof("Adding ancestor queue <%s>", parentQueueInfo.Name)
-		parentNode = jo.createNonLeafNode(parentQueueInfo)
-		jo.queueNodes[parentQueueInfo.UID] = parentNode
-	}
-
-	// Link child to parent if not already linked
-	if childNode.parent == nil {
-		childNode.parent = parentNode
-		parentNode.children.Push(childNode)
-		log.InfraLogger.V(7).Infof("Linked queue <%v> to parent <%v>", childQueue.Name, parentQueueInfo.Name)
-	}
-
-	// Recurse up
-	jo.ensureAncestorChain(parentNode, parentQueueInfo, reverseOrder)
 }
 
 // buildNodeOrderFn creates a comparison function for ordering queue nodes.

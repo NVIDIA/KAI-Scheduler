@@ -63,8 +63,6 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 			continue
 		}
 
-		jobsOrder.addJobToQueue(job)
+		jobsOrder.PushJob(job)
 	}
-
-	jobsOrder.buildActiveQueues()
 }
