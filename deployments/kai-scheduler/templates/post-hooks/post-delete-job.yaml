@@ -16,6 +16,10 @@ spec:
     spec:
       serviceAccountName: {{ .Values.postCleanup.serviceAccountName }}
       restartPolicy: Never
+      {{- if .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml .Values.global.tolerations | nindent 8 }}
+      {{- end }}
       containers:
         - name: deleter
           image: "{{ .Values.global.registry }}/{{ .Values.postCleanup.image.name }}:{{ .Values.postCleanup.image.tag | default .Values.global.tag | default .Chart.AppVersion }}"

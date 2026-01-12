@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixed confusing resource division log message [#733](https://github.com/NVIDIA/KAI-Scheduler/pull/733) [itsomri](https://github.com/itsomri)
 - Made post-delete-cleanup resources configurable [#737](https://github.com/NVIDIA/KAI-Scheduler/pull/737) [dttung2905](https://github.com/dttung2905)
 - GPU Memory pods are not reclaimed or consolidated correctly
-
+- Fix helm uninstall does not remove webhooks
 ## [v0.10.2] - 2025-11-24
 
 ### Fixed
