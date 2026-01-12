@@ -263,11 +263,14 @@ func (rsc *service) updatePodGPUGroup(
 }
 
 func (rsc *service) RemovePodGpuGroupsConnection(ctx context.Context, pod *v1.Pod) error {
-	patch := []map[string]string{
-		{
-			"op":   "remove",
-			"path": fmt.Sprintf("/metadata/labels/%s", constants.GPUGroup),
-		},
+	var patch []map[string]string
+	for labelKey := range pod.Labels {
+		if labelKey == constants.GPUGroup || strings.HasPrefix(labelKey, constants.MultiGpuGroupLabelPrefix) {
+			patch = append(patch, map[string]string{
+				"op":   "remove",
+				"path": fmt.Sprintf("/metadata/labels/%s", escapeJSONPointer(labelKey)),
+			})
+		}
 	}
 
 	patchBytes, err := json.Marshal(patch)
@@ -279,6 +282,14 @@ func (rsc *service) RemovePodGpuGroupsConnection(ctx context.Context, pod *v1.Po
 		return err
 	}
 	return nil
+}
+
+// escapeJSONPointer escapes a string for use in a JSON Pointer path (RFC 6901).
+// ~ must be escaped as ~0, and / must be escaped as ~1.
+func escapeJSONPointer(s string) string {
+	s = strings.ReplaceAll(s, "~", "~0")
+	s = strings.ReplaceAll(s, "/", "~1")
+	return s
 }
 
 func (rsc *service) acquireGPUIndexByGroup(ctx context.Context, nodeName, gpuGroup string) (string, error) {
