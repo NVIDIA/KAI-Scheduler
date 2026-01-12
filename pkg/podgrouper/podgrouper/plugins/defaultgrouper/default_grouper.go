@@ -192,7 +192,7 @@ func (dg *DefaultGrouper) calcPriorityClassWithDefaults(allOwners []*metav1.Part
 			return priorityClassName, nil
 		}
 		if priorityClassName != "" {
-			logger.V(1).Info("priorityClassName from pod or owner labels is not valid, falling back to default",
+			logger.V(1).Info("priorityClassName from pod or owner labels is not valid",
 				"priorityClassName", priorityClassName, "owner", owner.GetName(), "pod", pod.GetName())
 		}
 	}
