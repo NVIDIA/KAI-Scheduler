@@ -130,6 +130,15 @@ func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.
 	return gpuResources, nil
 }
 
+func IsGpuResourceClaim(claim *resourceapi.ResourceClaim) bool {
+	for _, request := range claim.Spec.Devices.Requests {
+		if request.Exactly != nil && isGPUDeviceClass(request.Exactly.DeviceClassName) {
+			return true
+		}
+	}
+	return false
+}
+
 // isGPUDeviceClass checks if a DeviceClassName represents a GPU.
 // Checks for "nvidia.com/gpu" and also accepts any device class name containing "gpu"
 // (case-insensitive) to support custom GPU device classes like "gpu.example.com".

@@ -410,7 +410,7 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 					},
 				},
 			},
-			err: "pod test/job-1-0 cannot be scheduled: DRA claim claim-no-label is a potentially shared claim but does not have a queue label (kai.scheduler/queue)",
+			err: "pod test/job-1-0 cannot be scheduled: DRA claim claim-no-label is a shared GPU claim but does not have a queue label (kai.scheduler/queue)",
 		},
 		{
 			name:    "Shared claim with wrong queue label - blocked",
@@ -453,7 +453,7 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 					},
 				},
 			},
-			err: "pod test/job-1-0 cannot be scheduled: DRA claim claim-wrong-queue is a potentially shared claim with wrong queue label (expected queue: q-1, claim queue label: different-queue)",
+			err: "pod test/job-1-0 cannot be scheduled: DRA claim claim-wrong-queue is a shared GPU claim with wrong queue label (expected queue: q-1, claim queue label: different-queue)",
 		},
 		{
 			name:    "Template claim without queue label - allowed",
@@ -497,6 +497,47 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 				},
 			},
 			// No error expected - template claims skip queue label validation
+		},
+		{
+			name:    "Non-GPU shared claim without queue label - allowed",
+			enabled: true,
+			topology: test_utils.TestTopologyBasic{
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:      "job-1",
+						Namespace: "test",
+						QueueName: "q-1",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								Name:               "job-1-0",
+								State:              pod_status.Pending,
+								ResourceClaimNames: []string{"non-gpu-claim"},
+							},
+						},
+					},
+				},
+				TestDRAObjects: dra_fake.TestDRAObjects{
+					DeviceClasses: []string{"network.example.com"},
+					ResourceSlices: []*dra_fake.TestResourceSlice{
+						{
+							Name:            "node0-network",
+							DeviceClassName: "network.example.com",
+							NodeName:        "node0",
+							Count:           1,
+						},
+					},
+					ResourceClaims: []*dra_fake.TestResourceClaim{
+						{
+							Name:            "non-gpu-claim",
+							Namespace:       "test",
+							DeviceClassName: "network.example.com",
+							Count:           1,
+							// No Labels - but non-GPU claims should pass
+						},
+					},
+				},
+			},
+			// No error expected - non-GPU claims skip queue label validation
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

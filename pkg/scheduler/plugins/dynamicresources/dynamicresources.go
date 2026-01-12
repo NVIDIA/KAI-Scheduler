@@ -148,7 +148,7 @@ func (drap *draPlugin) preFilter(task *pod_info.PodInfo, job *podgroup_info.PodG
 				pod.Namespace, claimName, resourceapi.ResourceClaimReservedForMaxSize)
 		}
 
-		if err := drap.validateSharedClaimQueueLabel(job, &podClaim, claim); err != nil {
+		if err := drap.validateSharedGpuClaimQueueLabel(job, &podClaim, claim); err != nil {
 			return fmt.Errorf("pod %s/%s cannot be scheduled: %v", task.Namespace, task.Name, err)
 		}
 	}
@@ -156,10 +156,10 @@ func (drap *draPlugin) preFilter(task *pod_info.PodInfo, job *podgroup_info.PodG
 	return nil
 }
 
-// validateSharedClaimQueueLabel validates that shared DRA claims (non-template claims) have the correct queue label.
+// validateSharedGpuClaimQueueLabel validates that shared GPU DRA claims (non-template claims) have the correct queue label.
 // Template claims are created per-pod and don't need queue validation.
-// Shared claims can be used by multiple pods and must have the correct queue label to be scheduled.
-func (drap *draPlugin) validateSharedClaimQueueLabel(
+// Shared GPU claims can be used by multiple pods and must have the correct queue label to be scheduled.
+func (drap *draPlugin) validateSharedGpuClaimQueueLabel(
 	job *podgroup_info.PodGroupInfo,
 	podClaim *v1.PodResourceClaim,
 	claim *resourceapi.ResourceClaim,
@@ -168,16 +168,20 @@ func (drap *draPlugin) validateSharedClaimQueueLabel(
 		return nil
 	}
 
+	if !resources.IsGpuResourceClaim(claim) {
+		return nil
+	}
+
 	expectedQueue := string(job.Queue)
 	claimQueueLabel := claim.Labels[constants.DefaultQueueLabel]
 
 	if claimQueueLabel == "" {
-		return fmt.Errorf("DRA claim %s is a potentially shared claim but does not have a queue label (%s)",
+		return fmt.Errorf("DRA claim %s is a shared GPU claim but does not have a queue label (%s)",
 			claim.Name, constants.DefaultQueueLabel)
 	}
 
 	if claimQueueLabel != expectedQueue {
-		return fmt.Errorf("DRA claim %s is a potentially shared claim with wrong queue label (expected queue: %s, claim queue label: %s)",
+		return fmt.Errorf("DRA claim %s is a shared GPU claim with wrong queue label (expected queue: %s, claim queue label: %s)",
 			claim.Name, expectedQueue, claimQueueLabel)
 	}
 
