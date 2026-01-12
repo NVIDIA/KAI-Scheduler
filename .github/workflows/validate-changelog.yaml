@@ -9,6 +9,8 @@ on:
     branches:
       - main
       - 'v*.*'
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   validate-changelog:

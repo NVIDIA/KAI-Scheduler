@@ -6,6 +6,8 @@ name: Validate PR Title
 on:
   pull_request:
     types: [opened, edited, reopened]
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   validate-pr-title:
