@@ -16,6 +16,7 @@ import (
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/capacity"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
@@ -69,6 +70,11 @@ func createGPUPod(ctx context.Context, queueObj *v2.Queue, gpus int) *v1.Pod {
 	return pod
 }
 
+// Time Aware Fairness tests verify that:
+//  1. When prometheus.enabled=true in KAI Config, the operator creates a Prometheus instance
+//  2. When a SchedulingShard has usageDBConfig.clientType=prometheus without a connectionString,
+//     the operator auto-resolves the URL to the managed prometheus-operated service
+//  3. The scheduler correctly uses historical usage data for fair scheduling decisions
 var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, func() {
 	BeforeAll(func(ctx context.Context) {
 		// Ensure we have at least 1 GPU for the test
@@ -86,6 +92,8 @@ var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, 
 
 	It("should schedule fairly based on historical usage", func(ctx context.Context) {
 		By("Creating a department and two queues with equal weight")
+		// Get a fresh test context with the current context to avoid stale context from BeforeSuite
+		testCtx = testcontext.GetConnectivity(ctx, Default)
 		// Both queues have equal quota (0) and equal weight (1)
 		// This means they should share resources 50/50 based on fairness
 		parentQueue, queueA, queueB := createQueuesWithEqualWeight(1, 0)

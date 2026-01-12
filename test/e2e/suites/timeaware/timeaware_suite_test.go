@@ -22,15 +22,15 @@ import (
 )
 
 const (
-	defaultShardName     = "default"
-	prometheusReadyTimeout = 2 * time.Minute
+	defaultShardName        = "default"
+	prometheusReadyTimeout  = 2 * time.Minute
 	schedulerRestartTimeout = 30 * time.Second
 )
 
 var (
-	testCtx                  *testcontext.TestContext
-	originalKAIConfig        *kaiv1.Config
-	originalSchedulingShard  *kaiv1.SchedulingShard
+	testCtx                 *testcontext.TestContext
+	originalKAIConfig       *kaiv1.Config
+	originalSchedulingShard *kaiv1.SchedulingShard
 )
 
 func TestTimeAware(t *testing.T) {
@@ -53,15 +53,18 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	err = testCtx.ControllerClient.Get(ctx, client.ObjectKey{Name: defaultShardName}, originalSchedulingShard)
 	Expect(err).NotTo(HaveOccurred(), "Failed to get original SchedulingShard")
 
-	By("Enabling time-aware fairness with managed Prometheus")
+	By("Enabling time-aware fairness: setting prometheus.enabled=true in KAI Config and usageDBConfig in shard")
+	// This does two things:
+	// 1. Sets prometheus.enabled=true in KAI Config -> operator creates Prometheus instance
+	// 2. Sets usageDBConfig.clientType=prometheus (no URL) -> operator auto-resolves URL
 	config := configurations.DefaultTimeAwareConfig()
 	err = configurations.EnableTimeAwareFairness(ctx, testCtx, defaultShardName, config)
 	Expect(err).NotTo(HaveOccurred(), "Failed to enable time-aware fairness")
 
-	By("Waiting for Prometheus to be ready")
+	By("Waiting for Prometheus pod to be ready (operator should have created it)")
 	wait.ForPrometheusReady(ctx, testCtx.ControllerClient, prometheusReadyTimeout)
 
-	By("Waiting for scheduler to restart with new configuration")
+	By("Waiting for scheduler to restart with new configuration (including auto-resolved prometheus URL)")
 	wait.ForRolloutRestartDeployment(ctx, testCtx.ControllerClient, "kai-scheduler", "kai-scheduler-default")
 })
 

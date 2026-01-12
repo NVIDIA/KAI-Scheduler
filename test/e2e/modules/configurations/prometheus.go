@@ -7,8 +7,8 @@ import (
 	"context"
 	"time"
 
-	"k8s.io/utils/ptr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiprometheus "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/prometheus"
@@ -44,14 +44,22 @@ func DefaultTimeAwareConfig() TimeAwareConfig {
 	}
 }
 
-// EnableTimeAwareFairness configures KAI for time-aware fairness testing
-// It enables prometheus and configures the scheduling shard with usageDBConfig
+// EnableTimeAwareFairness configures KAI for time-aware fairness testing.
+//
+// This function does two things:
+//  1. Enables Prometheus in KAI Config (prometheus.enabled=true) - this triggers
+//     the operator to create a Prometheus instance in the kai-scheduler namespace
+//  2. Configures the SchedulingShard with usageDBConfig.clientType=prometheus but
+//     NO connectionString - this tests that the operator correctly auto-resolves
+//     the URL to the managed prometheus-operated service
 func EnableTimeAwareFairness(ctx context.Context, testCtx *testcontext.TestContext, shardName string, config TimeAwareConfig) error {
-	// Enable prometheus in KAI config
+	// Step 1: Enable prometheus in KAI config
+	// This explicitly tells the operator to create a Prometheus instance
 	err := PatchKAIConfig(ctx, testCtx, func(kaiConfig *kaiv1.Config) {
 		if kaiConfig.Spec.Prometheus == nil {
 			kaiConfig.Spec.Prometheus = &kaiprometheus.Prometheus{}
 		}
+		// Explicitly enable prometheus - the operator will create the Prometheus CR
 		kaiConfig.Spec.Prometheus.Enabled = ptr.To(config.PrometheusEnabled)
 		if kaiConfig.Spec.Prometheus.ServiceMonitor == nil {
 			kaiConfig.Spec.Prometheus.ServiceMonitor = &kaiprometheus.ServiceMonitor{}
@@ -63,7 +71,9 @@ func EnableTimeAwareFairness(ctx context.Context, testCtx *testcontext.TestConte
 		return err
 	}
 
-	// Configure shard with usageDBConfig (no connectionString - should auto-resolve)
+	// Step 2: Configure shard with usageDBConfig
+	// We intentionally omit connectionString - the operator should auto-resolve it to
+	// http://prometheus-operated.<namespace>.svc.cluster.local:9090
 	return PatchSchedulingShard(ctx, testCtx, shardName, func(shard *kaiv1.SchedulingShard) {
 		windowType := usagedbapi.SlidingWindow
 		shard.Spec.UsageDBConfig = &usagedbapi.UsageDBConfig{
