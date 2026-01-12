@@ -41,13 +41,14 @@ type TestTopologyBasic struct {
 	Name string
 	Jobs []*jobs_fake.TestJobBasic
 
-	Nodes                  map[string]nodes_fake.TestNodeBasic
-	Queues                 []TestQueueBasic
-	Departments            []TestDepartmentBasic
-	JobExpectedResults     map[string]TestExpectedResultBasic
-	TaskExpectedResults    map[string]TestExpectedResultBasic
-	ExpectedNodesResources map[string]TestExpectedNodesResources
-	Mocks                  *TestMock
+	Nodes                    map[string]nodes_fake.TestNodeBasic
+	Queues                   []TestQueueBasic
+	Departments              []TestDepartmentBasic
+	DisableDefaultDepartment bool // When true, allows n-level queue hierarchies using only the Queues field
+	JobExpectedResults       map[string]TestExpectedResultBasic
+	TaskExpectedResults      map[string]TestExpectedResultBasic
+	ExpectedNodesResources   map[string]TestExpectedNodesResources
+	Mocks                    *TestMock
 
 	dra_fake.TestDRAObjects
 	Topologies []*kaiv1alpha1.Topology
