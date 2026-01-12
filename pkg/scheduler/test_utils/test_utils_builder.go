@@ -156,6 +156,10 @@ func addDefaultDepartmentIfNeeded(testMetadata *TestTopologyBasic) {
 		return
 	}
 
+	if testMetadata.DisableDefaultDepartment {
+		return
+	}
+
 	for index := range testMetadata.Queues {
 		testMetadata.Queues[index].ParentQueue = "default"
 	}
