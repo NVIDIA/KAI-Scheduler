@@ -247,6 +247,7 @@ func (jo *JobsOrderByQueues) getNextNode(pq *scheduler_util.PriorityQueue) *queu
 	}
 
 	if node.children.Empty() {
+		// This should never happen as we prune empty nodes from the tree on handlePopFromNode.
 		log.InfraLogger.V(7).Warnf("Queue node <%v> is active but has no children", node.queue.Name)
 		return nil
 	}
