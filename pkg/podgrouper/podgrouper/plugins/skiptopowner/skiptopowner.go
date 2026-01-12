@@ -7,8 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -19,8 +17,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/grouper"
 )
-
-var logger = log.FromContext(context.Background()).WithName("podgrouper").WithName("skiptopowner")
 
 type skipTopOwnerGrouper struct {
 	client        client.Client
@@ -60,6 +56,12 @@ func (sk *skipTopOwnerGrouper) GetPodGroupMetadata(
 	}
 
 	// propagate labels down chain
+	sk.propagateMetadataDownChain(lastOwner, skippedOwner)
+
+	return sk.getSupportedTypePGMetadata(lastOwner, pod, otherOwners[:len(otherOwners)-1]...)
+}
+
+func (*skipTopOwnerGrouper) propagateMetadataDownChain(lastOwner *unstructured.Unstructured, skippedOwner *unstructured.Unstructured) {
 	if lastOwner.GetLabels() == nil {
 		lastOwner.SetLabels(skippedOwner.GetLabels())
 	} else {
@@ -91,8 +93,6 @@ func (sk *skipTopOwnerGrouper) GetPodGroupMetadata(
 			lastOwner.SetAnnotations(annotations)
 		}
 	}
-
-	return sk.getSupportedTypePGMetadata(lastOwner, pod, otherOwners[:len(otherOwners)-1]...)
 }
 
 func (sk *skipTopOwnerGrouper) getSupportedTypePGMetadata(

@@ -228,7 +228,7 @@ func (dg *DefaultGrouper) calcPodGroupPreemptibilityWithDefaults(
 			if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibilityStr); err == nil {
 				return preemptibility
 			} else {
-				logger.Error(err, "Invalid preemptibility label found on owner", "owner", owner.GetName())
+				logger.Error(err, "Invalid preemptibility label found on owner", "owner", owner.GetName(), "preemptibility", preemptibilityStr)
 			}
 		}
 	}

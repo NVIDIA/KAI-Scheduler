@@ -4,16 +4,11 @@
 package skiptopowner
 
 import (
-	"context"
-	"maps"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
@@ -21,18 +16,17 @@ import (
 	grouperplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/grouper"
 )
 
-func TestPropagateLabelsDownChain(t *testing.T) {
+func TestPropagateMetadataDownChain(t *testing.T) {
 	tests := []struct {
-		name           string
-		skippedOwner   *unstructured.Unstructured
-		lastOwner      *unstructured.Unstructured
-		pod            *v1.Pod
-		otherOwners    []*metav1.PartialObjectMetadata
-		expectedResult string
-		description    string
+		name                string
+		skippedOwner        *unstructured.Unstructured
+		lastOwner           *unstructured.Unstructured
+		expectedLabels      map[string]string
+		expectedAnnotations map[string]string
+		description         string
 	}{
 		{
-			name: "propagate from skippedOwner to lastOwner and pod",
+			name: "propagate labels from skippedOwner to lastOwner",
 			skippedOwner: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -40,39 +34,6 @@ func TestPropagateLabelsDownChain(t *testing.T) {
 						"namespace": "test",
 						"labels": map[string]interface{}{
 							constants.PriorityLabelKey: "high-priority",
-						},
-					},
-				},
-			},
-			lastOwner: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"name":      "middle-owner",
-						"namespace": "test",
-						"labels":    map[string]interface{}{},
-					},
-				},
-			},
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-pod",
-					Namespace: "test",
-					Labels:    map[string]string{},
-				},
-			},
-			otherOwners:    []*metav1.PartialObjectMetadata{},
-			expectedResult: "high-priority",
-			description:    "priorityClassName should be propagated from top owner to middle owner and pod",
-		},
-		{
-			name: "propagate through multiple owners",
-			skippedOwner: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"name":      "top-owner",
-						"namespace": "test",
-						"labels": map[string]interface{}{
-							constants.PriorityLabelKey: "medium-priority",
 						},
 					},
 				},
@@ -86,34 +47,42 @@ func TestPropagateLabelsDownChain(t *testing.T) {
 					},
 				},
 			},
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-pod",
-					Namespace: "test",
-					Labels:    map[string]string{},
-				},
+			expectedLabels: map[string]string{
+				constants.PriorityLabelKey: "high-priority",
 			},
-			otherOwners: []*metav1.PartialObjectMetadata{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "middle-owner",
-						Namespace: "test",
-						Labels:    map[string]string{},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "last-owner",
-						Namespace: "test",
-						Labels:    map[string]string{},
-					},
-				},
-			},
-			expectedResult: "medium-priority",
-			description:    "priorityClassName should propagate through all owners in the chain",
+			expectedAnnotations: nil,
+			description:         "labels should be propagated from skippedOwner to lastOwner",
 		},
 		{
-			name: "do not override existing label",
+			name: "propagate annotations from skippedOwner to lastOwner",
+			skippedOwner: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "top-owner",
+						"namespace": "test",
+						"annotations": map[string]interface{}{
+							"test-annotation": "test-value",
+						},
+					},
+				},
+			},
+			lastOwner: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":        "last-owner",
+						"namespace":   "test",
+						"annotations": map[string]interface{}{},
+					},
+				},
+			},
+			expectedLabels: nil,
+			expectedAnnotations: map[string]string{
+				"test-annotation": "test-value",
+			},
+			description: "annotations should be propagated from skippedOwner to lastOwner",
+		},
+		{
+			name: "do not override existing labels",
 			skippedOwner: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -128,7 +97,7 @@ func TestPropagateLabelsDownChain(t *testing.T) {
 			lastOwner: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
-						"name":      "middle-owner",
+						"name":      "last-owner",
 						"namespace": "test",
 						"labels": map[string]interface{}{
 							constants.PriorityLabelKey: "low-priority",
@@ -136,190 +105,133 @@ func TestPropagateLabelsDownChain(t *testing.T) {
 					},
 				},
 			},
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-pod",
-					Namespace: "test",
-					Labels:    map[string]string{},
-				},
+			expectedLabels: map[string]string{
+				constants.PriorityLabelKey: "low-priority",
 			},
-			otherOwners:    []*metav1.PartialObjectMetadata{},
-			expectedResult: "low-priority",
-			description:    "existing priorityClassName on child should not be overridden",
+			expectedAnnotations: nil,
+			description:         "existing labels on lastOwner should not be overridden",
 		},
 		{
-			name: "no priorityClassName in chain",
+			name: "do not override existing annotations",
 			skippedOwner: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"name":      "top-owner",
 						"namespace": "test",
-						"labels":    map[string]interface{}{},
+						"annotations": map[string]interface{}{
+							"test-annotation": "skipped-value",
+						},
 					},
 				},
 			},
 			lastOwner: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
-						"name":      "middle-owner",
+						"name":      "last-owner",
 						"namespace": "test",
-						"labels":    map[string]interface{}{},
+						"annotations": map[string]interface{}{
+							"test-annotation": "existing-value",
+						},
 					},
 				},
 			},
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-pod",
-					Namespace: "test",
-					Labels:    map[string]string{},
+			expectedLabels: nil,
+			expectedAnnotations: map[string]string{
+				"test-annotation": "existing-value",
+			},
+			description: "existing annotations on lastOwner should not be overridden",
+		},
+		{
+			name: "no labels or annotations in skippedOwner",
+			skippedOwner: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "top-owner",
+						"namespace": "test",
+					},
 				},
 			},
-			otherOwners:    []*metav1.PartialObjectMetadata{},
-			expectedResult: "",
-			description:    "no propagation should occur if no priorityClassName exists in chain",
+			lastOwner: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "last-owner",
+						"namespace": "test",
+					},
+				},
+			},
+			expectedLabels:      nil,
+			expectedAnnotations: nil,
+			description:         "no propagation should occur if skippedOwner has no labels or annotations",
+		},
+		{
+			name: "propagate both labels and annotations",
+			skippedOwner: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "top-owner",
+						"namespace": "test",
+						"labels": map[string]interface{}{
+							constants.PriorityLabelKey: "high-priority",
+							"extra-label":              "extra-value",
+						},
+						"annotations": map[string]interface{}{
+							"annotation-1": "value-1",
+						},
+					},
+				},
+			},
+			lastOwner: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "last-owner",
+						"namespace": "test",
+						"labels": map[string]interface{}{
+							"existing-label": "existing-value",
+						},
+						"annotations": map[string]interface{}{},
+					},
+				},
+			},
+			expectedLabels: map[string]string{
+				constants.PriorityLabelKey: "high-priority",
+				"extra-label":              "extra-value",
+				"existing-label":           "existing-value",
+			},
+			expectedAnnotations: map[string]string{
+				"annotation-1": "value-1",
+			},
+			description: "both labels and annotations should be propagated without overriding existing ones",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a new client for each test to avoid state pollution
 			testClient := fake.NewClientBuilder().Build()
 			testDefaultGrouper := defaultgrouper.NewDefaultGrouper("queue", "nodepool", testClient)
 			testGrouper := NewSkipTopOwnerGrouper(testClient, testDefaultGrouper, map[metav1.GroupVersionKind]grouperplugin.Grouper{})
 
+			// Deep copy to avoid modifying test data
+			lastOwner := tt.lastOwner.DeepCopy()
 			skippedOwner := tt.skippedOwner.DeepCopy()
-			skippedOwner.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   "test",
-				Version: "v1",
-				Kind:    "TopOwner",
-			})
-			// Ensure labels are properly set using SetLabels
-			if labels, found := tt.skippedOwner.Object["metadata"].(map[string]interface{})["labels"]; found {
-				if labelsMap, ok := labels.(map[string]interface{}); ok {
-					stringLabels := make(map[string]string)
-					for k, v := range labelsMap {
-						if strVal, ok := v.(string); ok {
-							stringLabels[k] = strVal
-						}
-					}
-					skippedOwner.SetLabels(stringLabels)
-				}
+
+			testGrouper.propagateMetadataDownChain(lastOwner, skippedOwner)
+
+			// Verify labels
+			if tt.expectedLabels != nil {
+				assert.Equal(t, tt.expectedLabels, lastOwner.GetLabels(), tt.description+" (labels)")
+			} else {
+				// If no expected labels, lastOwner should have nil or empty labels
+				labels := lastOwner.GetLabels()
+				assert.True(t, labels == nil || len(labels) == 0, tt.description+" (labels should be empty)")
 			}
 
-			// Create copies of otherOwners for the test and populate the client with them
-			testOtherOwners := make([]*metav1.PartialObjectMetadata, len(tt.otherOwners))
-			for i, owner := range tt.otherOwners {
-				testOtherOwners[i] = owner.DeepCopy()
-				// Set GVK for the owner
-				testOtherOwners[i].SetGroupVersionKind(schema.GroupVersionKind{
-					Group:   "test",
-					Version: "v1",
-					Kind:    "Owner",
-				})
-				// Ensure labels are properly set using SetLabels if they exist in the original
-				if owner.GetLabels() != nil {
-					testOtherOwners[i].SetLabels(maps.Clone(owner.GetLabels()))
-				}
-
-				// Create full unstructured object and add to client
-				ownerObj := &unstructured.Unstructured{}
-				ownerObj.SetGroupVersionKind(testOtherOwners[i].GroupVersionKind())
-				ownerObj.SetName(testOtherOwners[i].GetName())
-				ownerObj.SetNamespace(testOtherOwners[i].GetNamespace())
-				if testOtherOwners[i].GetLabels() != nil {
-					ownerObj.SetLabels(maps.Clone(testOtherOwners[i].GetLabels()))
-				}
-				if err := testClient.Create(context.Background(), ownerObj); err != nil {
-					t.Fatalf("Failed to create owner object: %v", err)
-				}
-			}
-
-			// Also add lastOwner to client if it's not in otherOwners
-			if len(tt.otherOwners) == 0 {
-				lastOwnerObj := tt.lastOwner.DeepCopy()
-				lastOwnerObj.SetGroupVersionKind(schema.GroupVersionKind{
-					Group:   "test",
-					Version: "v1",
-					Kind:    "Owner",
-				})
-				if labels, found := tt.lastOwner.Object["metadata"].(map[string]interface{})["labels"]; found {
-					if labelsMap, ok := labels.(map[string]interface{}); ok {
-						stringLabels := make(map[string]string)
-						for k, v := range labelsMap {
-							if strVal, ok := v.(string); ok {
-								stringLabels[k] = strVal
-							}
-						}
-						lastOwnerObj.SetLabels(stringLabels)
-					}
-				}
-				if err := testClient.Create(context.Background(), lastOwnerObj); err != nil {
-					t.Fatalf("Failed to create lastOwner object: %v", err)
-				}
-			}
-
-			testGrouper.propagateLabelsDownChain(skippedOwner, testOtherOwners...)
-
-			// Verify propagation to otherOwners
-			// The function propagates to otherOwners[:len(otherOwners)-1], so check those
-			propagationTargets := testOtherOwners
-			if len(testOtherOwners) > 1 {
-				propagationTargets = testOtherOwners[:len(testOtherOwners)-1]
-			}
-
-			if tt.expectedResult != "" && len(propagationTargets) > 0 {
-				// Since propagateLabelsDownChain modifies objects in memory but doesn't persist them,
-				// we verify the propagation logic by simulating what the function does:
-				// 1. Fetch the object from client (which doesn't have the propagated label)
-				// 2. Apply the same propagation logic the function uses
-				// 3. Verify the result matches expected
-				firstOwnerPartial := propagationTargets[0]
-				firstOwnerObj := &unstructured.Unstructured{}
-				firstOwnerObj.SetGroupVersionKind(firstOwnerPartial.GroupVersionKind())
-				key := types.NamespacedName{
-					Namespace: firstOwnerPartial.GetNamespace(),
-					Name:      firstOwnerPartial.GetName(),
-				}
-				if err := testClient.Get(context.Background(), key, firstOwnerObj); err != nil {
-					t.Fatalf("Failed to get owner object: %v", err)
-				}
-
-				// Simulate the propagation logic: if the object doesn't have the label,
-				// it should receive it from skippedOwner (which is what the function does in memory)
-				skippedOwnerLabel := skippedOwner.GetLabels()[constants.PriorityLabelKey]
-				ownerLabels := firstOwnerObj.GetLabels()
-
-				var expectedLabelValue string
-				if ownerLabels != nil {
-					if existingLabel, exists := ownerLabels[constants.PriorityLabelKey]; exists {
-						// Object already has a label, it should not be overridden
-						expectedLabelValue = existingLabel
-					} else {
-						// Object doesn't have the label, it should receive it from skippedOwner
-						expectedLabelValue = skippedOwnerLabel
-					}
-				} else {
-					// Object has no labels, it should receive the label from skippedOwner
-					expectedLabelValue = skippedOwnerLabel
-				}
-
-				assert.Equal(t, tt.expectedResult, expectedLabelValue, tt.description)
-			} else if len(propagationTargets) > 0 {
-				// Verify no propagation should occur - the object should not have the label
-				firstOwnerPartial := propagationTargets[0]
-				firstOwnerObj := &unstructured.Unstructured{}
-				firstOwnerObj.SetGroupVersionKind(firstOwnerPartial.GroupVersionKind())
-				key := types.NamespacedName{
-					Namespace: firstOwnerPartial.GetNamespace(),
-					Name:      firstOwnerPartial.GetName(),
-				}
-				if err := testClient.Get(context.Background(), key, firstOwnerObj); err == nil {
-					ownerLabels := firstOwnerObj.GetLabels()
-					if ownerLabels != nil {
-						_, found := ownerLabels[constants.PriorityLabelKey]
-						assert.False(t, found, "priorityClassName should not be set when not present in chain")
-					}
-				}
+			// Verify annotations
+			if tt.expectedAnnotations != nil {
+				assert.Equal(t, tt.expectedAnnotations, lastOwner.GetAnnotations(), tt.description+" (annotations)")
+			} else {
+				// If no expected annotations, lastOwner should have nil or empty annotations
+				annotations := lastOwner.GetAnnotations()
+				assert.True(t, annotations == nil || len(annotations) == 0, tt.description+" (annotations should be empty)")
 			}
 		})
 	}
