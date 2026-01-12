@@ -91,12 +91,10 @@ func (b *Binder) Rollback(ctx context.Context, pod *v1.Pod, node *v1.Node, bindR
 
 	var rollbackErrs []error
 
-	// Rollback plugins (K8sPlugins, GPUSharing, etc.)
 	if err := b.plugins.Rollback(ctx, pod, node, bindRequest, nil); err != nil {
 		rollbackErrs = append(rollbackErrs, fmt.Errorf("failed to rollback plugins for pod <%s/%s>: %w", pod.Namespace, pod.Name, err))
 	}
 
-	// GPU reservation cleanup only applies to shared GPU allocations
 	if common.IsSharedGPUAllocation(bindRequest) {
 		if err := b.resourceReservationService.RemovePodGpuGroupsConnection(ctx, pod); err != nil {
 			rollbackErrs = append(rollbackErrs, fmt.Errorf("failed to remove GPU group label from pod <%s/%s> during rollback: %w", pod.Namespace, pod.Name, err))
