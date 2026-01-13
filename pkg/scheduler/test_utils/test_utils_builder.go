@@ -9,6 +9,7 @@ import (
 	"time"
 
 	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
 	. "go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v2"
@@ -66,6 +67,9 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 			PodGroupInfos:    jobInfoMap,
 			Topologies:       topologies,
 			MinNodeGPUMemory: node_info.DefaultGpuMemory,
+		},
+		SchedulerParams: conf.SchedulerParams{
+			QueueLabelKey: constants.DefaultQueueLabel,
 		},
 	}
 	ssn.OverrideMaxNumberConsolidationPreemptees(-1)
