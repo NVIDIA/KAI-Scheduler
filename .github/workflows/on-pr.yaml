@@ -246,6 +246,16 @@ jobs:
         run: |
           helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
               --version 0.0.62 --values ./hack/fake-gpu-operator-values.yaml --wait
+      
+      - name: Deploy Prometheus Operator
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
+          helm repo update prometheus-community
+          helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace \
+          --set "alertmanager.enabled=false" \
+          --set "grafana.enabled=false" \
+          --set "prometheus.enabled=false" \
+          --wait
 
       - name: install KAI-scheduler
         env:

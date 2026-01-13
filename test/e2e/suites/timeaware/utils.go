@@ -6,12 +6,9 @@ import (
 	"fmt"
 	"strconv"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	e2econstant "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
-	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
-	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 )
 
 const (
@@ -78,17 +75,4 @@ func maxFloat64(values []float64) float64 {
 		}
 	}
 	return max
-}
-
-func createLowerPriorityClass(ctx context.Context, kubeClient kubernetes.Interface) (string, error) {
-	name := utils.GenerateRandomK8sName(10)
-	_, err := kubeClient.SchedulingV1().PriorityClasses().Create(
-		ctx,
-		rd.CreatePriorityClass(name, e2econstant.NonPreemptiblePriorityThreshold-1),
-		metav1.CreateOptions{},
-	)
-	if err != nil {
-		return "", err
-	}
-	return name, nil
 }
