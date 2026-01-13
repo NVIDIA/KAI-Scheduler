@@ -354,12 +354,9 @@ func (c *ClusterInfo) snapshotPodGroups(
 }
 
 func validatePodgroupQueue(existingQueues map[common_info.QueueID]*queue_info.QueueInfo, podGroup *enginev2alpha2.PodGroup) error {
-	queue, queueExists := existingQueues[common_info.QueueID(podGroup.Spec.Queue)]
+	_, queueExists := existingQueues[common_info.QueueID(podGroup.Spec.Queue)]
 	if !queueExists {
 		return fmt.Errorf("Queue '%s' does not exist", podGroup.Spec.Queue)
-	}
-	if _, parentExists := existingQueues[queue.ParentQueue]; !parentExists {
-		return fmt.Errorf("Queue '%s' has no parent queue", podGroup.Spec.Queue)
 	}
 	return nil
 }
