@@ -120,7 +120,7 @@ var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, 
 			queueB,
 			1,
 			nil,
-			"",
+			v2alpha2.Preemptible,
 			resources,
 		)
 		podB := queueBPods[0]

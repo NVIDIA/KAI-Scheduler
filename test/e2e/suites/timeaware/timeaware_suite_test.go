@@ -55,6 +55,8 @@ var _ = BeforeSuite(func(ctx context.Context) {
 
 	By("Enabling time-aware fairness")
 	config := defaultTimeAwareConfig()
+	// // GuyDebug: For false positive tests, we set KValue to 0
+	// config.KValue = 0
 	err = configureTimeAwareFairness(ctx, testCtx, defaultShardName, config)
 	Expect(err).NotTo(HaveOccurred(), "Failed to enable time-aware fairness")
 	DeferCleanup(func(ctx context.Context) {
