@@ -1,0 +1,94 @@
+package timeaware
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+
+	e2econstant "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
+)
+
+const (
+	prometheusOperatedServiceName = "prometheus-operated"
+)
+
+type promQueryResponse struct {
+	Status string `json:"status"`
+	Data   struct {
+		ResultType string `json:"resultType"`
+		Result     []struct {
+			Metric map[string]string `json:"metric"`
+			Value  []any             `json:"value"`
+		} `json:"result"`
+	} `json:"data"`
+}
+
+func queryPrometheusInstant(ctx context.Context, kubeClient kubernetes.Interface, query string) ([]float64, error) {
+	params := map[string]string{"query": query}
+
+	raw, err := kubeClient.
+		CoreV1().
+		Services(e2econstant.SystemPodsNamespace).
+		ProxyGet("http", prometheusOperatedServiceName, "9090", "/api/v1/query", params).
+		DoRaw(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := promQueryResponse{}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, err
+	}
+	if resp.Status != "success" {
+		return nil, fmt.Errorf("prometheus query status=%s", resp.Status)
+	}
+
+	values := make([]float64, 0, len(resp.Data.Result))
+	for _, r := range resp.Data.Result {
+		if len(r.Value) < 2 {
+			continue
+		}
+		valueStr, ok := r.Value[1].(string)
+		if !ok {
+			continue
+		}
+		v, err := strconv.ParseFloat(valueStr, 64)
+		if err != nil {
+			continue
+		}
+		values = append(values, v)
+	}
+	return values, nil
+}
+
+func maxFloat64(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	max := values[0]
+	for _, v := range values[1:] {
+		if v > max {
+			max = v
+		}
+	}
+	return max
+}
+
+func createLowerPriorityClass(ctx context.Context, kubeClient kubernetes.Interface) (string, error) {
+	name := utils.GenerateRandomK8sName(10)
+	_, err := kubeClient.SchedulingV1().PriorityClasses().Create(
+		ctx,
+		rd.CreatePriorityClass(name, e2econstant.NonPreemptiblePriorityThreshold-1),
+		metav1.CreateOptions{},
+	)
+	if err != nil {
+		return "", err
+	}
+	return name, nil
+}
