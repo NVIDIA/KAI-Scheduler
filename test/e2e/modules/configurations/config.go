@@ -39,24 +39,6 @@ func PatchSchedulingShard(ctx context.Context, testCtx *testcontext.TestContext,
 	)
 }
 
-func UpdateKAIConfigSpec(ctx context.Context, testCtx *testcontext.TestContext, spec kaiv1.ConfigSpec) error {
-	current := &kaiv1.Config{}
-	if err := testCtx.ControllerClient.Get(ctx, client.ObjectKey{Name: constants.DefaultKAIConfigSingeltonInstanceName}, current); err != nil {
-		return err
-	}
-	current.Spec = spec
-	return testCtx.ControllerClient.Update(ctx, current)
-}
-
-func UpdateSchedulingShardSpec(ctx context.Context, testCtx *testcontext.TestContext, shardName string, spec kaiv1.SchedulingShardSpec) error {
-	current := &kaiv1.SchedulingShard{}
-	if err := testCtx.ControllerClient.Get(ctx, client.ObjectKey{Name: shardName}, current); err != nil {
-		return err
-	}
-	current.Spec = spec
-	return testCtx.ControllerClient.Update(ctx, current)
-}
-
 func SetShardArg(ctx context.Context, testCtx *testcontext.TestContext, shardName string, argName string, value *string) error {
 	return PatchSchedulingShard(
 		ctx, testCtx, shardName,

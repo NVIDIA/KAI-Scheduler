@@ -59,12 +59,16 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	Expect(err).NotTo(HaveOccurred(), "Failed to enable time-aware fairness")
 	DeferCleanup(func(ctx context.Context) {
 		By("Restoring original SchedulingShard configuration")
-		if err := configurations.UpdateSchedulingShardSpec(ctx, testCtx, defaultShardName, originalSchedulingShard.Spec); err != nil {
+		if err := configurations.PatchSchedulingShard(ctx, testCtx, defaultShardName, func(shard *kaiv1.SchedulingShard) {
+			shard.Spec = originalSchedulingShard.Spec
+		}); err != nil {
 			GinkgoWriter.Printf("Warning: Failed to restore original SchedulingShard: %v\n", err)
 		}
 
 		By("Restoring original KAI config")
-		if err := configurations.UpdateKAIConfigSpec(ctx, testCtx, originalKAIConfig.Spec); err != nil {
+		if err := configurations.PatchKAIConfig(ctx, testCtx, func(config *kaiv1.Config) {
+			config.Spec = originalKAIConfig.Spec
+		}); err != nil {
 			GinkgoWriter.Printf("Warning: Failed to restore original KAI config: %v\n", err)
 		}
 	})
