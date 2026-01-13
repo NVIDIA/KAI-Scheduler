@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/capacity"
@@ -61,14 +62,7 @@ var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, 
 		queueA, queueB := createQueuesForTimeAwareFairness()
 		testCtx.InitQueues([]*v2.Queue{queueA, queueB})
 
-		By("Creating a lower priority class for filler jobs")
-		lowPriority, err := createLowerPriorityClass(ctx, testCtx.KubeClientset)
-		Expect(err).To(Succeed())
-
 		By("Filling ALL cluster GPUs with queue-a pod-group pods to ensure resource contention")
-		// Time-aware fairness usage data is derived from Prometheus metric kai_queue_allocated_gpus,
-		// which is based on Queue.Status.Allocated. QueueController computes allocations from PodGroups,
-		// so the test must create PodGroups (not standalone pods/jobs).
 		idleByNode, err := capacity.GetNodesIdleResources(testCtx.KubeClientset)
 		Expect(err).To(Succeed())
 		idleGPUs := int64(0)
@@ -85,7 +79,6 @@ var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, 
 				constants.GpuResource: resource.MustParse("1"),
 			},
 		}
-		// GuyContinue
 		_, queueAPods := pod_group.CreateWithPods(
 			ctx,
 			testCtx.KubeClientset,
@@ -93,8 +86,8 @@ var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, 
 			utils.GenerateRandomK8sName(10),
 			queueA,
 			int(idleGPUs),
-			&lowPriority,
-			"",
+			nil,
+			v2alpha2.Preemptible,
 			resources,
 		)
 		namespace := queue.GetConnectedNamespaceToQueue(queueA)
@@ -173,7 +166,7 @@ func createQueuesForTimeAwareFairness() (*v2.Queue, *v2.Queue) {
 	queueAName := utils.GenerateRandomK8sName(10)
 	queueA := queue.CreateQueueObjectWithGpuResource(queueAName,
 		v2.QueueResource{
-			Quota:           0,     // No guaranteed quota - all resources are over-quota
+			Quota:           0,
 			OverQuotaWeight: 10000, // VERY HIGH weight - gets ~99.99% base fair share
 			Limit:           -1,
 		}, "")
@@ -181,7 +174,7 @@ func createQueuesForTimeAwareFairness() (*v2.Queue, *v2.Queue) {
 	queueBName := utils.GenerateRandomK8sName(10)
 	queueB := queue.CreateQueueObjectWithGpuResource(queueBName,
 		v2.QueueResource{
-			Quota:           0, // No guaranteed quota
+			Quota:           0,
 			OverQuotaWeight: 1, // LOW weight - gets ~0.01% base fair share
 			Limit:           -1,
 		}, "")
