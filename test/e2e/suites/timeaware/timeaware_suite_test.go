@@ -84,4 +84,10 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	By("Waiting for scheduler to restart with new configuration (including auto-resolved prometheus URL)")
 	err = wait.ForRolloutRestartDeployment(ctx, testCtx.ControllerClient, e2econstant.SystemPodsNamespace, e2econstant.SchedulerDeploymentName)
 	Expect(err).NotTo(HaveOccurred(), "Failed waiting for scheduler rollout restart")
+
+	By("Waiting for KAI config status to be healthy (operator reconciled)")
+	wait.ForKAIConfigStatusOK(ctx, testCtx.ControllerClient)
+
+	By("Waiting for SchedulingShard status to be healthy (operator reconciled)")
+	wait.ForSchedulingShardStatusOK(ctx, testCtx.ControllerClient, defaultShardName)
 })
