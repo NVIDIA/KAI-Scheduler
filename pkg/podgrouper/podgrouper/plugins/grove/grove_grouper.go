@@ -14,7 +14,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
@@ -53,7 +55,7 @@ func (gg *GroveGrouper) Name() string {
 // +kubebuilder:rbac:groups=scheduler.grove.io,resources=podgangs/finalizers,verbs=patch;update;create
 
 func (gg *GroveGrouper) GetPodGroupMetadata(
-	_ *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
+	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {
 	podGangName, ok := pod.Labels[labelKeyPodGangName]
 	if !ok {
@@ -92,6 +94,29 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 		metadata.PriorityClassName = priorityClassName
 	}
 
+	// Grove can be invoked through Dynamo. However, metadata does not propagate from Dynamo to Grove. We use metadata propagation from PodCLiqueSet to PodGang for
+	// Podgroup creation.
+	// Dynamo Grove Ownership tree: DynamoGraphDeployment(DGD) -> PodCLiqueSet -> PodClique && PodGang. PodClique -> Pod
+	if topOwner != nil {
+		topOwnerLabels := topOwner.GetLabels()
+		for k, v := range topOwnerLabels {
+			if _, exists := metadata.Labels[k]; !exists {
+				metadata.Labels[k] = v
+			}
+		}
+		topOwnerAnnotations := topOwner.GetAnnotations()
+		for k, v := range topOwnerAnnotations {
+			if _, exists := metadata.Annotations[k]; !exists {
+				metadata.Annotations[k] = v
+			}
+		}
+	}
+
+	metadata, err = gg.parseMetadataFromTopOwner(metadata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get metadata from top owner %s/%s. Err: %w",
+			pod.Namespace, podGangName, err)
+	}
 	var minAvailable int32
 	pgSlice, found, err := unstructured.NestedSlice(podGang.Object, "spec", "podgroups")
 	if err != nil {
@@ -190,4 +215,34 @@ func parsePodReference(podRef map[string]interface{}) (*types.NamespacedName, er
 	}
 
 	return &types.NamespacedName{Namespace: podNamespace, Name: podName}, nil
+}
+
+func (gg *GroveGrouper) parseMetadataFromTopOwner(metadata *podgroup.Metadata) (*podgroup.Metadata, error) {
+	if priorityClassName, ok := metadata.Labels[constants.PriorityLabelKey]; ok {
+		metadata.PriorityClassName = priorityClassName
+	}
+	if preemptibility, ok := metadata.Labels[constants.PreemptibilityLabelKey]; ok {
+		preemptibility, err := v2alpha2.ParsePreemptibility(preemptibility)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse preemptibility from top owner %s/%s. Err: %w", metadata.Namespace, metadata.Name, err)
+		}
+		metadata.Preemptibility = preemptibility
+	}
+
+	// get Topology data from annotations similar to applyTopologyConstraints
+	topologyConstraint := v2alpha2.TopologyConstraint{
+		PreferredTopologyLevel: metadata.Annotations[constants.TopologyPreferredPlacementKey],
+		RequiredTopologyLevel:  metadata.Annotations[constants.TopologyRequiredPlacementKey],
+		Topology:               metadata.Annotations[constants.TopologyKey],
+	}
+	if metadata.PreferredTopologyLevel == "" {
+		metadata.PreferredTopologyLevel = topologyConstraint.PreferredTopologyLevel
+	}
+	if metadata.RequiredTopologyLevel == "" {
+		metadata.RequiredTopologyLevel = topologyConstraint.RequiredTopologyLevel
+	}
+	if metadata.Topology == "" {
+		metadata.Topology = topologyConstraint.Topology
+	}
+	return metadata, nil
 }
