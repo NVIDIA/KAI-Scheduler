@@ -35,7 +35,7 @@ const (
 	prometheusUsageTimeout = 2 * time.Minute
 	// Time to wait for fairness to kick in (includes usage fetch interval)
 	fairnessTimeout = 2 * time.Minute
-	// Name of the service created by the Prometheus Operator for the managed Prometheus instance
+
 	prometheusOperatedServiceName = "prometheus-operated"
 )
 
