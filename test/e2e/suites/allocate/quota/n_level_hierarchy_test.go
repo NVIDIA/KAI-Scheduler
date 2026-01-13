@@ -11,11 +11,14 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/capacity"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/pod_group"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
@@ -57,6 +60,15 @@ var _ = Describe("N-Level Queue Hierarchy", Ordered, func() {
 			pod, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
 			Expect(err).To(Succeed())
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
+
+			updatedPod, err := testCtx.KubeClientset.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
+			Expect(err).To(Succeed())
+
+			podGroup, err := testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(updatedPod.Namespace).Get(ctx, updatedPod.Annotations[pod_group.PodGroupNameAnnotation], metav1.GetOptions{})
+			Expect(err).To(Succeed())
+			for _, condition := range podGroup.Status.SchedulingConditions {
+				Expect(condition.Type).NotTo(Equal(v2alpha2.UnschedulableOnNodePool), "PodGroup should not have UnschedulableOnNodePool schedulingCondition")
+			}
 		})
 	})
 

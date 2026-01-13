@@ -76,7 +76,7 @@ jobs:
     name: Code Coverage Report
     runs-on: ubuntu-latest
     needs: [ validate-and-test, check-build-and-test-required ]
-    if: needs.check-build-and-test-required.outputs.code == 'true'
+    if: github.event_name != 'merge_group' && needs.check-build-and-test-required.outputs.code == 'true'
     steps:
       - uses: fgrosse/go-coverage-report@8c1d1a09864211d258937b1b1a5b849f7e4f2682
         id: coverage_reporter

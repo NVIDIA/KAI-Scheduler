@@ -57,9 +57,14 @@ func (dg *DefaultGrouper) Name() string {
 	return "Default Grouper"
 }
 
-func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
-	priorityClassName, defaults := dg.calcPriorityClassWithDefaults(topOwner, pod, constants.TrainPriorityClass)
-	preemptibility := dg.calcPodGroupPreemptibilityWithDefaults(topOwner, pod, defaults)
+func (dg *DefaultGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured, pod *v1.Pod, allOwners ...*metav1.PartialObjectMetadata) (*podgroup.Metadata, error) {
+	if len(allOwners) == 0 {
+		// If the allOwners list is empty, set the top owner as the only owner.
+		// This supports the podJob case, where we consider the actual pod as the "topOwner", although it's not an actual owner.
+		allOwners = []*metav1.PartialObjectMetadata{unstructuredToPartialObjectMetadata(topOwner)}
+	}
+	priorityClassName, defaults := dg.calcPriorityClassWithDefaults(allOwners, pod, constants.TrainPriorityClass)
+	preemptibility := dg.calcPodGroupPreemptibilityWithDefaults(allOwners, pod, defaults)
 
 	podGroupMetadata := podgroup.Metadata{
 		Owner: metav1.OwnerReference{
@@ -162,53 +167,77 @@ func (dg *DefaultGrouper) calculateQueueName(topOwner *unstructured.Unstructured
 
 func (dg *DefaultGrouper) CalcPodGroupPriorityClass(topOwner *unstructured.Unstructured, pod *v1.Pod,
 	defaultPriorityClassForJob string) string {
-	priorityClassName, _ := dg.calcPriorityClassWithDefaults(topOwner, pod, defaultPriorityClassForJob)
+	// Convert topOwner to PartialObjectMetadata for compatibility
+	ownerPartial := &metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: topOwner.GetAPIVersion(),
+			Kind:       topOwner.GetKind(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      topOwner.GetName(),
+			Namespace: topOwner.GetNamespace(),
+			Labels:    topOwner.GetLabels(),
+		},
+	}
+	priorityClassName, _ := dg.calcPriorityClassWithDefaults([]*metav1.PartialObjectMetadata{ownerPartial}, pod, defaultPriorityClassForJob)
 	return priorityClassName
 }
 
 // calcPriorityClassWithDefaults - resolves priority class using:
-// 1) explicit labels (top owner/pod), if valid
+// 1) explicit labels (owners/pod), if valid
 // 2) defaults from ConfigMap (returned to allow reuse by caller)
 // 3) final fallback to defaultPriorityClassForJob
 // Returns the resolved priority class name and the defaults mapping used (if any).
-func (dg *DefaultGrouper) calcPriorityClassWithDefaults(topOwner *unstructured.Unstructured, pod *v1.Pod,
+func (dg *DefaultGrouper) calcPriorityClassWithDefaults(allOwners []*metav1.PartialObjectMetadata, pod *v1.Pod,
 	defaultPriorityClassForJob string) (string, map[string]workloadTypePriorityConfig) {
-	priorityClassName := dg.calcPodGroupPriorityClass(topOwner, pod)
-	if dg.validatePriorityClassExists(priorityClassName) {
-		return priorityClassName, nil
-	}
-	if priorityClassName != "" {
-		logger.V(1).Info("priorityClassName from pod or owner labels is not valid, falling back to default",
-			"priorityClassName", priorityClassName, "topOwner", topOwner.GetName(), "pod", pod.GetName())
+	// First, try to get priority class from explicit labels (owners/pod)
+	for _, owner := range allOwners {
+		priorityClassName := dg.calcPodGroupPriorityClass(owner, pod)
+		if dg.validatePriorityClassExists(priorityClassName) {
+			return priorityClassName, nil
+		}
+		if priorityClassName != "" {
+			logger.V(1).Info("priorityClassName from pod or owner labels is not valid",
+				"priorityClassName", priorityClassName, "owner", owner.GetName(), "pod", pod.GetName())
+		}
 	}
 
-	groupKind := topOwner.GroupVersionKind().GroupKind()
+	// If no explicit priority class found, try defaults from ConfigMap for each owner
 	defaultConfigs, err := dg.getDefaultConfigsPerTypeMapping()
-	if err == nil {
-		priorityClassName = dg.getDefaultPriorityClassNameForKind(&groupKind, defaultConfigs)
+	if err != nil {
+		logger.Error(err, "Unable to get default values mapping for priority class", "pod", pod.GetName())
+		return defaultPriorityClassForJob, nil
+	}
+
+	// Loop through owners to find a default priority class
+	for _, owner := range allOwners {
+		groupKind := owner.GroupVersionKind().GroupKind()
+		priorityClassName := dg.getDefaultPriorityClassNameForKind(&groupKind, defaultConfigs)
 		if dg.validatePriorityClassExists(priorityClassName) {
 			return priorityClassName, defaultConfigs
 		}
-	} else {
-		logger.Error(err, "Unable to get default values mapping for priority class", "topOwner", topOwner.GetName(), "pod", pod.GetName())
 	}
 
-	logger.V(1).Info("No default priority class found for group kind, using default fallback",
-		"groupKind", groupKind.String(), "defaultFallback", defaultPriorityClassForJob)
+	logger.V(1).Info("No default priority class found for any owner, using default fallback",
+		"defaultFallback", defaultPriorityClassForJob)
 	return defaultPriorityClassForJob, defaultConfigs
 }
 
 func (dg *DefaultGrouper) calcPodGroupPreemptibilityWithDefaults(
-	topOwner *unstructured.Unstructured,
+	allOwners []*metav1.PartialObjectMetadata,
 	pod *v1.Pod,
 	defaults map[string]workloadTypePriorityConfig) v2alpha2.Preemptibility {
-	if preemptibilityStr, found := topOwner.GetLabels()[constants.PreemptibilityLabelKey]; found {
-		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibilityStr); err == nil {
-			return preemptibility
-		} else {
-			logger.Error(err, "Invalid preemptibility label found on top owner", "topOwner", topOwner.GetName())
+	// First, try to get preemptibility from explicit labels (owners/pod)
+	for _, owner := range allOwners {
+		if preemptibilityStr, found := owner.GetLabels()[constants.PreemptibilityLabelKey]; found {
+			if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibilityStr); err == nil {
+				return preemptibility
+			} else {
+				logger.Error(err, "Invalid preemptibility label found on owner", "owner", owner.GetName(), "preemptibility", preemptibilityStr)
+			}
 		}
-	} else if preemptibilityStr, found = pod.GetLabels()[constants.PreemptibilityLabelKey]; found {
+	}
+	if preemptibilityStr, found := pod.GetLabels()[constants.PreemptibilityLabelKey]; found {
 		if preemptibility, err := v2alpha2.ParsePreemptibility(preemptibilityStr); err == nil {
 			return preemptibility
 		} else {
@@ -216,31 +245,35 @@ func (dg *DefaultGrouper) calcPodGroupPreemptibilityWithDefaults(
 		}
 	}
 
-	if defaults == nil || len(defaults) == 0 {
+	// If no explicit preemptibility found, try defaults from ConfigMap for each owner
+	if len(defaults) == 0 {
 		var err error
 		defaults, err = dg.getDefaultConfigsPerTypeMapping()
 		if err != nil {
-			logger.Error(err, "Unable to get default values mapping for preemptibility", "topOwner", topOwner.GetName(), "pod", pod.GetName())
+			logger.Error(err, "Unable to get default values mapping for preemptibility", "pod", pod.GetName())
 			return ""
 		}
 	}
 
-	groupKind := topOwner.GroupVersionKind().GroupKind()
-	defaultConfig, found := selectDefaultsForKind(defaults, &groupKind)
-	if found && defaultConfig.Preemptibility != "" {
-		if preemptibility, err := v2alpha2.ParsePreemptibility(strings.ToLower(defaultConfig.Preemptibility)); err == nil {
-			return preemptibility
-		} else {
-			logger.Error(err, "Invalid preemptibility found in defaults configmap")
+	// Loop through owners to find a default preemptibility
+	for _, owner := range allOwners {
+		groupKind := owner.GroupVersionKind().GroupKind()
+		defaultConfig, found := selectDefaultsForKind(defaults, &groupKind)
+		if found && defaultConfig.Preemptibility != "" {
+			if preemptibility, err := v2alpha2.ParsePreemptibility(strings.ToLower(defaultConfig.Preemptibility)); err == nil {
+				return preemptibility
+			} else {
+				logger.Error(err, "Invalid preemptibility found in defaults configmap")
+			}
 		}
 	}
 
-	logger.V(1).Info("No valid preemptibility label or default found", "topOwner", topOwner.GetName(), "pod", pod.GetName())
+	logger.V(1).Info("No valid preemptibility label or default found", "pod", pod.GetName())
 	return ""
 }
 
-func (dg *DefaultGrouper) calcPodGroupPriorityClass(topOwner *unstructured.Unstructured, pod *v1.Pod) string {
-	if priorityClassName, found := topOwner.GetLabels()[constants.PriorityLabelKey]; found {
+func (dg *DefaultGrouper) calcPodGroupPriorityClass(owner *metav1.PartialObjectMetadata, pod *v1.Pod) string {
+	if priorityClassName, found := owner.GetLabels()[constants.PriorityLabelKey]; found {
 		return priorityClassName
 	} else if priorityClassName, found = pod.GetLabels()[constants.PriorityLabelKey]; found {
 		return priorityClassName
@@ -359,4 +392,19 @@ func selectDefaultsForKind(defaults map[string]workloadTypePriorityConfig, group
 		return defaultConfig, true
 	}
 	return workloadTypePriorityConfig{}, false
+}
+
+func unstructuredToPartialObjectMetadata(topOwner *unstructured.Unstructured) *metav1.PartialObjectMetadata {
+	return &metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: topOwner.GetAPIVersion(),
+			Kind:       topOwner.GetKind(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        topOwner.GetName(),
+			Namespace:   topOwner.GetNamespace(),
+			Labels:      topOwner.GetLabels(),
+			Annotations: topOwner.GetAnnotations(),
+		},
+	}
 }

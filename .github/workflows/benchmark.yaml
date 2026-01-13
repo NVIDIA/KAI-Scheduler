@@ -80,8 +80,8 @@ jobs:
           
           echo "" >> benchmark-report.md
           echo "### Legend" >> benchmark-report.md
-          echo "- 📈 **Negative delta** = Performance improvement (faster)" >> benchmark-report.md
-          echo "- 📉 **Positive delta** = Performance regression (slower)" >> benchmark-report.md
+          echo "- 📉 **Negative delta** = Performance improvement (faster)" >> benchmark-report.md
+          echo "- 📈 **Positive delta** = Performance regression (slower)" >> benchmark-report.md
           echo "- **p-value** < 0.05 indicates statistically significant change" >> benchmark-report.md
           echo "" >> benchmark-report.md
           echo "<details>" >> benchmark-report.md
