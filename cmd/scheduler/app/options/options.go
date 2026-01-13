@@ -74,6 +74,7 @@ type ServerOption struct {
 	CPUWorkerNodeLabelKey             string
 	GPUWorkerNodeLabelKey             string
 	MIGWorkerNodeLabelKey             string
+	QueueLabelKey                     string
 	Namspace                          string
 
 	QPS   int
@@ -95,6 +96,7 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.ResourceReservationAppLabel, "resource-reservation-app-label", constants.DefaultResourceReservationName, "App label value of resource reservation pods")
 	fs.BoolVar(&s.RestrictSchedulingNodes, "restrict-node-scheduling", false, "kai-scheduler will allocate jobs only to restricted nodes")
 	fs.StringVar(&s.NodePoolLabelKey, "nodepool-label-key", constants.DefaultNodePoolLabelKey, "The label key by which to filter scheduling nodepool")
+	fs.StringVar(&s.QueueLabelKey, "queue-label-key", constants.DefaultQueueLabel, "The label key for the queue")
 	fs.StringVar(&s.NodePoolLabelValue, "partition-label-value", "", "The label value by which to filter scheduling partition")
 	fs.StringVar(&s.SchedulerConf, "scheduler-conf", "", "The absolute path of scheduler configuration file")
 	fs.DurationVar(&s.SchedulePeriod, "schedule-period", defaultSchedulerPeriod, "The period between each scheduling cycle")

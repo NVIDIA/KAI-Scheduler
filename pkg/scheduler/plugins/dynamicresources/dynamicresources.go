@@ -30,9 +30,10 @@ const (
 )
 
 type draPlugin struct {
-	enabled  bool
-	manager  k8sframework.SharedDRAManager
-	celCache *cel.Cache
+	enabled       bool
+	manager       k8sframework.SharedDRAManager
+	celCache      *cel.Cache
+	queueLabelKey string
 }
 
 // +kubebuilder:rbac:groups="resource.k8s.io",resources=deviceclasses;resourceslices;resourceclaims,verbs=get;list;watch
@@ -59,6 +60,8 @@ func (drap *draPlugin) OnSessionOpen(ssn *framework.Session) {
 	fwork := ssn.InternalK8sPlugins().FrameworkHandle
 
 	drap.manager = fwork.SharedDRAManager()
+
+	drap.queueLabelKey = ssn.SchedulerParams.QueueLabelKey
 
 	ssn.AddEventHandler(&framework.EventHandler{
 		AllocateFunc:   drap.allocateHandlerFn(ssn),
@@ -173,7 +176,7 @@ func (drap *draPlugin) validateSharedGpuClaimQueueLabel(
 	}
 
 	expectedQueue := string(job.Queue)
-	claimQueueLabel := claim.Labels[constants.DefaultQueueLabel]
+	claimQueueLabel := claim.Labels[drap.queueLabelKey]
 
 	if claimQueueLabel == "" {
 		return fmt.Errorf("DRA claim %s is a shared GPU claim but does not have a queue label (%s)",
