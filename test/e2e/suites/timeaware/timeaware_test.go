@@ -61,7 +61,7 @@ var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, 
 		queueA, queueB := createQueuesForTimeAwareFairness()
 		testCtx.InitQueues([]*v2.Queue{queueA, queueB})
 
-		By("Creating a guaranteed-lower priority class for filler jobs")
+		By("Creating a lower priority class for filler jobs")
 		lowPriority, err := createLowerPriorityClass(ctx, testCtx.KubeClientset)
 		Expect(err).To(Succeed())
 
@@ -94,6 +94,7 @@ var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, 
 			queueA,
 			int(idleGPUs),
 			&lowPriority,
+			"",
 			resources,
 		)
 		namespace := queue.GetConnectedNamespaceToQueue(queueA)
@@ -126,6 +127,7 @@ var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, 
 			queueB,
 			1,
 			nil,
+			"",
 			resources,
 		)
 		podB := queueBPods[0]
