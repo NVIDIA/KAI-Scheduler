@@ -38,6 +38,7 @@ func Create(namespace, name, queue string) *v2alpha2.PodGroup {
 			Annotations: map[string]string{},
 			Labels: map[string]string{
 				constants.AppLabelName: "engine-e2e",
+				constants.DefaultQueueLabel: queue,
 			},
 		},
 		Spec: v2alpha2.PodGroupSpec{
@@ -45,7 +46,7 @@ func Create(namespace, name, queue string) *v2alpha2.PodGroup {
 			Queue:     queue,
 		},
 	}
-	return &*podGroup
+	return podGroup
 }
 
 func DeleteAllInNamespace(

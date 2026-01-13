@@ -6,6 +6,7 @@ package timeaware
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -53,6 +54,26 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	err = testCtx.ControllerClient.Get(ctx, client.ObjectKey{Name: defaultShardName}, originalSchedulingShard)
 	Expect(err).NotTo(HaveOccurred(), "Failed to get original SchedulingShard")
 
+	// SKIP_TIME_AWARE=true can be used to verify this test is not a false positive
+	// When set, we EXPLICITLY DISABLE time-aware fairness (set kValue=0)
+	// and the test should FAIL because reclaim won't happen
+	if os.Getenv("SKIP_TIME_AWARE") == "true" {
+		By("SKIP_TIME_AWARE=true: Explicitly disabling time-aware fairness (kValue=0) - test should FAIL")
+		// We still enable Prometheus but set kValue=0 to disable time-aware effect
+		config := configurations.DefaultTimeAwareConfig()
+		config.KValue = 0 // Disable time-aware fairness effect
+		err = configurations.EnableTimeAwareFairness(ctx, testCtx, defaultShardName, config)
+		Expect(err).NotTo(HaveOccurred(), "Failed to configure scheduler")
+
+		By("Waiting for Prometheus pod to be ready")
+		wait.ForPrometheusReady(ctx, testCtx.ControllerClient, prometheusReadyTimeout)
+
+		By("Waiting for scheduler to restart with kValue=0")
+		err = wait.ForRolloutRestartDeployment(ctx, testCtx.ControllerClient, "kai-scheduler", "kai-scheduler-default")
+		Expect(err).NotTo(HaveOccurred(), "Failed waiting for scheduler rollout restart")
+		return
+	}
+
 	By("Enabling time-aware fairness: setting prometheus.enabled=true in KAI Config and usageDBConfig in shard")
 	// This does two things:
 	// 1. Sets prometheus.enabled=true in KAI Config -> operator creates Prometheus instance
@@ -65,7 +86,8 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	wait.ForPrometheusReady(ctx, testCtx.ControllerClient, prometheusReadyTimeout)
 
 	By("Waiting for scheduler to restart with new configuration (including auto-resolved prometheus URL)")
-	wait.ForRolloutRestartDeployment(ctx, testCtx.ControllerClient, "kai-scheduler", "kai-scheduler-default")
+	err = wait.ForRolloutRestartDeployment(ctx, testCtx.ControllerClient, "kai-scheduler", "kai-scheduler-default")
+	Expect(err).NotTo(HaveOccurred(), "Failed waiting for scheduler rollout restart")
 })
 
 var _ = AfterSuite(func(ctx context.Context) {

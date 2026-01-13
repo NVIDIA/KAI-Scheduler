@@ -22,6 +22,8 @@ type TimeAwareConfig struct {
 	PrometheusEnabled bool
 	// ServiceMonitorInterval is the scrape interval for ServiceMonitors (e.g., "5s")
 	ServiceMonitorInterval string
+	// ScrapeTimeout is the scrape timeout for ServiceMonitors (e.g., "10s")
+	ScrapeTimeout string
 	// WindowSize is the time window for fairness calculation
 	WindowSize time.Duration
 	// HalfLifePeriod is the decay period for historical usage
@@ -37,10 +39,17 @@ func DefaultTimeAwareConfig() TimeAwareConfig {
 	return TimeAwareConfig{
 		PrometheusEnabled:      true,
 		ServiceMonitorInterval: "5s",
+		ScrapeTimeout:          "4s",
 		WindowSize:             30 * time.Second,
 		HalfLifePeriod:         15 * time.Second,
 		FetchInterval:          5 * time.Second,
-		KValue:                 1.0,
+		// kValue of 10000 makes time-aware fairness extremely aggressive:
+		// shareWeight = nWeight + kValue*(nWeight - nUsage)
+		// With weight ratio 10000:1 and queue-a usage=1.0:
+		// Queue-a: 0.9999 + 10000*(0.9999 - 1.0) = 0.9999 - 0.1 = 0.8999 → shifts to ~47%
+		// Queue-b: 0.0001 + 10000*(0.0001 - 0) = 0.0001 + 1.0 = 1.0001 → shifts to ~53%
+		// Result: Time-aware shifts fair share dramatically, enabling reclaim
+		KValue: 10000.0,
 	}
 }
 
@@ -66,6 +75,7 @@ func EnableTimeAwareFairness(ctx context.Context, testCtx *testcontext.TestConte
 		}
 		kaiConfig.Spec.Prometheus.ServiceMonitor.Enabled = ptr.To(true)
 		kaiConfig.Spec.Prometheus.ServiceMonitor.Interval = ptr.To(config.ServiceMonitorInterval)
+		kaiConfig.Spec.Prometheus.ServiceMonitor.ScrapeTimeout = ptr.To(config.ScrapeTimeout)
 	})
 	if err != nil {
 		return err
