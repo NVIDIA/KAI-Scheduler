@@ -10,12 +10,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/configmap_info"
-)
-
-const (
-	nvidiaVisibleDevices = "NVIDIA_VISIBLE_DEVICES"
 )
 
 func TestIsPreFilterRequired(t *testing.T) {
@@ -501,7 +498,7 @@ func TestPreFilter(t *testing.T) {
 						{
 							Env: []v1.EnvVar{
 								{
-									Name: nvidiaVisibleDevices,
+									Name: constants.NvidiaVisibleDevices,
 									ValueFrom: &v1.EnvVarSource{
 										ConfigMapKeyRef: &v1.ConfigMapKeySelector{
 											LocalObjectReference: v1.LocalObjectReference{
@@ -571,7 +568,7 @@ func TestPreFilter(t *testing.T) {
 						{
 							Env: []v1.EnvVar{
 								{
-									Name: nvidiaVisibleDevices,
+									Name: constants.NvidiaVisibleDevices,
 									ValueFrom: &v1.EnvVarSource{
 										ConfigMapKeyRef: &v1.ConfigMapKeySelector{
 											LocalObjectReference: v1.LocalObjectReference{

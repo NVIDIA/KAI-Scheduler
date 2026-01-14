@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Fixed rollback for failed bind attempts [#878](https://github.com/NVIDIA/KAI-Scheduler/pull/878) [itsomri](https://github.com/itsomri)
+
 ## [v0.9.11] - 2026-01-07
 
 ### Fixed
