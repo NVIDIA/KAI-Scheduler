@@ -281,6 +281,16 @@ jobs:
           docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
           sudo rm -rf /mnt/images
 
+      # Setup tmate session for debugging, blocking the workflow until the session is closed
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v5
+        with:
+          session-name: kai-scheduler-e2e-tests
+          session-timeout: 1h
+          session-timeout-action: terminate
+          session-timeout-action-message: "Session timed out"
+          session-timeout-action-message-type: "error"
+
       - name: Run e2e tests
         run: |
           ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv --label-filter '!autoscale && !scale' ./test/e2e/suites
