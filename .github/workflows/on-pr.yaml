@@ -283,13 +283,7 @@ jobs:
 
       # Setup tmate session for debugging, blocking the workflow until the session is closed
       - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v5
-        with:
-          session-name: kai-scheduler-e2e-tests
-          session-timeout: 1h
-          session-timeout-action: terminate
-          session-timeout-action-message: "Session timed out"
-          session-timeout-action-message-type: "error"
+        uses: mxschmitt/action-tmate@v3
 
       - name: Run e2e tests
         run: |
