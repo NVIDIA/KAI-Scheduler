@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	defaultKAIConfigStatusTimeout = 5 * time.Minute
+	defaultKAIConfigStatusTimeout = 2 * time.Minute
 	defaultStatusPollInterval     = 5 * time.Second
 )
 

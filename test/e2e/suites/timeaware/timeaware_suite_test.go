@@ -85,8 +85,9 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	err = wait.ForRolloutRestartDeployment(ctx, testCtx.ControllerClient, e2econstant.SystemPodsNamespace, e2econstant.SchedulerDeploymentName)
 	Expect(err).NotTo(HaveOccurred(), "Failed waiting for scheduler rollout restart")
 
-	By("Waiting for KAI config status to be healthy (operator reconciled)")
-	wait.ForKAIConfigStatusOK(ctx, testCtx.ControllerClient)
+	// TODO: Uncomment this when KAI operator triggers reconciliation on Prometheus changes properly (https://github.com/NVIDIA/KAI-Scheduler/issues/877)
+	// By("Waiting for KAI config status to be healthy (operator reconciled)")
+	// wait.ForKAIConfigStatusOK(ctx, testCtx.ControllerClient)
 
 	By("Waiting for SchedulingShard status to be healthy (operator reconciled)")
 	wait.ForSchedulingShardStatusOK(ctx, testCtx.ControllerClient, defaultShardName)
