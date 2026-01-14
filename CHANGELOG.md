@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.12.6] - 2026-01-14
+
 ### Fixed
 - Fixed rollback for failed bind attempts [#864](https://github.com/NVIDIA/KAI-Scheduler/pull/864) [itsomri](https://github.com/itsomri)
 
@@ -14,7 +16,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - Added labels and annotations propagation from topOwner in SkipTopOwner grouper [#861](https://github.com/NVIDIA/KAI-Scheduler/pull/861) [SiorMeir](https://github.com/siormeir)
-
 
 ## [v0.12.4] - 2026-01-07
 
