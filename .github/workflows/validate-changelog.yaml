@@ -23,12 +23,12 @@ jobs:
         run: echo "Changelog was already validated before entering merge queue"
 
       - uses: actions/checkout@v4
-        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-changelog')
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-changelog') && !contains(github.event.pull_request.labels.*.name, 'dependencies')
         with:
           fetch-depth: 0
 
       - name: Check CHANGELOG.md updated
-        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-changelog')
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-changelog') && !contains(github.event.pull_request.labels.*.name, 'dependencies')
         run: |
           if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q '^CHANGELOG.md$'; then
             echo "CHANGELOG.md has been updated."
