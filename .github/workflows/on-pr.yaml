@@ -281,10 +281,6 @@ jobs:
           docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
           sudo rm -rf /mnt/images
 
-      # Setup tmate session for debugging, blocking the workflow until the session is closed
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-
       - name: Run e2e tests
         run: |
           ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv --label-filter '!autoscale && !scale' ./test/e2e/suites
