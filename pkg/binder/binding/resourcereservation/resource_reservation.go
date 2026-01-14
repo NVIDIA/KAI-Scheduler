@@ -14,6 +14,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -448,14 +449,39 @@ func (rsc *service) waitForGPUReservationPodAllocation(
 	timeout := time.After(rsc.allocationTimeout)
 	for {
 		select {
+		case <-ctx.Done():
+			logger.Error(ctx.Err(),
+				"Context done while waiting for GPU reservation pod to be allocated",
+				"nodeName", nodeName, "name", gpuReservationPodName)
+			return unknownGpuIndicator
 		case <-timeout:
 			logger.Error(fmt.Errorf("timeout"),
 				"Reached timeout while waiting for GPU reservation pod to be allocated",
 				"nodeName", nodeName, "name", gpuReservationPodName)
 			return unknownGpuIndicator
-		case event := <-watcher.ResultChan():
-			pod := event.Object.(*v1.Pod)
-			if pod.Annotations[gpuIndexAnnotationName] != "" {
+		case event, ok := <-watcher.ResultChan():
+			if !ok {
+				logger.Error(nil,
+					"GPU reservation pod watch channel closed while waiting for allocation",
+					"nodeName", nodeName, "name", gpuReservationPodName)
+				return unknownGpuIndicator
+			}
+
+			if event.Type == watch.Error {
+				logger.Error(fmt.Errorf("watch error"),
+					"Error event received while waiting for GPU reservation pod allocation",
+					"nodeName", nodeName, "name", gpuReservationPodName, "event", fmt.Sprintf("%v", event.Object))
+				return unknownGpuIndicator
+			}
+
+			pod, ok := event.Object.(*v1.Pod)
+			if !ok || pod == nil {
+				logger.Error(fmt.Errorf("unexpected watch event object type"),
+					"Unexpected watch event object while waiting for GPU reservation pod allocation",
+					"nodeName", nodeName, "name", gpuReservationPodName, "eventType", event.Type, "object", fmt.Sprintf("%T", event.Object))
+				continue
+			}
+			if pod.Annotations != nil && pod.Annotations[gpuIndexAnnotationName] != "" {
 				return pod.Annotations[gpuIndexAnnotationName]
 			}
 		}

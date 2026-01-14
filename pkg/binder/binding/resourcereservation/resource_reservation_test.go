@@ -271,6 +271,15 @@ var _ = Describe("ResourceReservationService", func() {
 				expectedGPUIndex:      unknownGpuIndicator,
 				expectedErrorContains: "failed waiting for GPU reservation pod to allocate",
 			},
+			"watch channel closed": {
+				clientInterceptFuncs: interceptor.Funcs{
+					Watch: func(ctx context.Context, client runtimeClient.WithWatch, obj runtimeClient.ObjectList, opts ...runtimeClient.ListOption) (watch.Interface, error) {
+						return exampleMockWatchPodClosed(), nil
+					},
+				},
+				expectedGPUIndex:      unknownGpuIndicator,
+				expectedErrorContains: "failed waiting for GPU reservation pod to allocate",
+			},
 			"failed to update gpu group": {
 				clientInterceptFuncs: interceptor.Funcs{
 					Watch: func(ctx context.Context, client runtimeClient.WithWatch, obj runtimeClient.ObjectList, opts ...runtimeClient.ListOption) (watch.Interface, error) {
@@ -1136,4 +1145,25 @@ func exampleMockWatchPod(gpuIndex string, delay time.Duration) watch.Interface {
 			},
 		},
 	}
+}
+
+// FakeWatchPodClosed simulates a watch that closes its channel immediately
+type FakeWatchPodClosed struct {
+	channel chan watch.Event
+}
+
+func (w *FakeWatchPodClosed) Stop() {
+	// No-op
+}
+
+func (w *FakeWatchPodClosed) ResultChan() <-chan watch.Event {
+	if w.channel == nil {
+		w.channel = make(chan watch.Event)
+		close(w.channel) // Close immediately to simulate channel close
+	}
+	return w.channel
+}
+
+func exampleMockWatchPodClosed() watch.Interface {
+	return &FakeWatchPodClosed{}
 }
