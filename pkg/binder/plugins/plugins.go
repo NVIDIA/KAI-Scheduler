@@ -5,6 +5,7 @@ package plugins
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
@@ -48,4 +49,18 @@ func (bp *BinderPlugins) PostBind(ctx context.Context, pod *v1.Pod, host *v1.Nod
 	for _, p := range bp.plugins {
 		p.PostBind(ctx, pod, host, bindRequest, state)
 	}
+}
+
+func (bp *BinderPlugins) Rollback(ctx context.Context, pod *v1.Pod, host *v1.Node, bindRequest *v1alpha2.BindRequest,
+	state *state.BindingState) error {
+	logger := log.FromContext(ctx)
+	var rollbackErrs []error
+	for _, p := range bp.plugins {
+		if err := p.Rollback(ctx, pod, host, bindRequest, state); err != nil {
+			logger.Error(err, "Rollback plugin failed for pod",
+				"plugin", p.Name(), "namespace", pod.Namespace, "name", pod.Name)
+			rollbackErrs = append(rollbackErrs, fmt.Errorf("plugin %s failed in Rollback: %w", p.Name(), err))
+		}
+	}
+	return errors.Join(rollbackErrs...)
 }

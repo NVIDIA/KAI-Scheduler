@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
 	rrmock "github.com/NVIDIA/KAI-scheduler/pkg/binder/binding/resourcereservation/mock"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common"
@@ -45,7 +46,7 @@ var happyFlowObjectsBc = []runtime.Object{
 			Containers: []v1.Container{{
 				Env: []v1.EnvVar{
 					{
-						Name: common.NvidiaVisibleDevices,
+						Name: constants.NvidiaVisibleDevices,
 						ValueFrom: &v1.EnvVarSource{
 							ConfigMapKeyRef: &v1.ConfigMapKeySelector{
 								LocalObjectReference: v1.LocalObjectReference{
@@ -216,7 +217,7 @@ var _ = Describe("FractionBinder", func() {
 				if err := fakeClient.Get(context.TODO(), client.ObjectKeyFromObject(configMap), configMap); err != nil {
 					Fail(fmt.Sprintf("Failed to read configmap: %v", err))
 				} else {
-					Expect(configMap.Data[common.NvidiaVisibleDevices]).To(Equal(testData.gpuIndexByGroupIndex))
+					Expect(configMap.Data[constants.NvidiaVisibleDevices]).To(Equal(testData.gpuIndexByGroupIndex))
 					Expect(configMap.Data[common.NumOfGpusEnvVarBC]).To(Equal("0.5"))
 					Expect(configMap.Data[common.GPUPortion]).To(Equal("0.5"))
 				}
