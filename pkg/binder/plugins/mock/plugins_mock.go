@@ -82,3 +82,17 @@ func (mr *MockPluginMockRecorder) PreBind(ctx, pod, node, bindRequest, state any
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreBind", reflect.TypeOf((*MockPlugin)(nil).PreBind), ctx, pod, node, bindRequest, state)
 }
+
+// Rollback mocks base method.
+func (m *MockPlugin) Rollback(ctx context.Context, pod *v1.Pod, node *v1.Node, bindRequest *v1alpha2.BindRequest, state *state.BindingState) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rollback", ctx, pod, node, bindRequest, state)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Rollback indicates an expected call of Rollback.
+func (mr *MockPluginMockRecorder) Rollback(ctx, pod, node, bindRequest, state any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rollback", reflect.TypeOf((*MockPlugin)(nil).Rollback), ctx, pod, node, bindRequest, state)
+}
