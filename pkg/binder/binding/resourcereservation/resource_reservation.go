@@ -475,12 +475,6 @@ func (rsc *service) waitForGPUReservationPodAllocation(
 			}
 
 			pod, ok := event.Object.(*v1.Pod)
-			if !ok || pod == nil {
-				logger.Error(fmt.Errorf("unexpected watch event object type"),
-					"Unexpected watch event object while waiting for GPU reservation pod allocation",
-					"nodeName", nodeName, "name", gpuReservationPodName, "eventType", event.Type, "object", fmt.Sprintf("%T", event.Object))
-				continue
-			}
 			if pod.Annotations != nil && pod.Annotations[gpuIndexAnnotationName] != "" {
 				return pod.Annotations[gpuIndexAnnotationName]
 			}
