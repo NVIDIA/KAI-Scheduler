@@ -21,6 +21,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/samber/lo"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,7 +108,7 @@ var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, 
 			values, qErr := queryPrometheusInstant(ctx, testCtx.KubeClientset, fmt.Sprintf("kai_queue_allocated_gpus{queue_name=\"%s\"}", queueA.Name))
 			g.Expect(qErr).NotTo(HaveOccurred())
 			g.Expect(values).NotTo(BeEmpty(), "Expected Prometheus to return at least one sample for queue-a")
-			g.Expect(maxFloat64(values)).To(BeNumerically(">=", float64(idleGPUs)), "Expected queue-a to be allocating all idle GPUs")
+			g.Expect(lo.Max(values)).To(BeNumerically(">=", float64(idleGPUs)), "Expected queue-a to be allocating all idle GPUs")
 		}, prometheusUsageTimeout, 5*time.Second).Should(Succeed())
 
 		By("Submitting a competing job from queue-b (requires reclaim to schedule)")

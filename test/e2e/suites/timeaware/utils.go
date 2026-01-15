@@ -66,16 +66,3 @@ func queryPrometheusInstant(ctx context.Context, kubeClient kubernetes.Interface
 	}
 	return values, nil
 }
-
-func maxFloat64(values []float64) float64 {
-	if len(values) == 0 {
-		return 0
-	}
-	max := values[0]
-	for _, v := range values[1:] {
-		if v > max {
-			max = v
-		}
-	}
-	return max
-}
