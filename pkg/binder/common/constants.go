@@ -4,7 +4,6 @@
 package common
 
 const (
-	NvidiaVisibleDevices = "NVIDIA_VISIBLE_DEVICES"
 	GPUPortion           = "GPU_PORTION"
 	ReceivedTypeFraction = "Fraction"
 	ReceivedTypeRegular  = "Regular"
