@@ -33,6 +33,9 @@ func TestNewQueueInfo(t *testing.T) {
 					Resources:   nil,
 					Priority:    nil,
 				},
+				Status: enginev2.QueueStatus{
+					ChildQueues: []string{},
+				},
 			},
 			expected: QueueInfo{
 				UID:               "queue",
@@ -56,6 +59,9 @@ func TestNewQueueInfo(t *testing.T) {
 					Resources:   nil,
 					Priority:    nil,
 				},
+				Status: enginev2.QueueStatus{
+					ChildQueues: []string{},
+				},
 			},
 			expected: QueueInfo{
 				UID:               "queue",
@@ -78,6 +84,9 @@ func TestNewQueueInfo(t *testing.T) {
 					ParentQueue: "",
 					Resources:   nil,
 					Priority:    pointer.Int(6),
+				},
+				Status: enginev2.QueueStatus{
+					ChildQueues: []string{},
 				},
 			},
 			expected: QueueInfo{
@@ -103,6 +112,9 @@ func TestNewQueueInfo(t *testing.T) {
 					PreemptMinRuntime: &metav1.Duration{Duration: 10 * time.Minute},
 					ReclaimMinRuntime: &metav1.Duration{Duration: 10 * time.Minute},
 				},
+				Status: enginev2.QueueStatus{
+					ChildQueues: []string{},
+				},
 			},
 			expected: QueueInfo{
 				UID:               "queue",
@@ -127,6 +139,9 @@ func TestNewQueueInfo(t *testing.T) {
 					ParentQueue: "daddy",
 					Resources:   nil,
 					Priority:    nil,
+				},
+				Status: enginev2.QueueStatus{
+					ChildQueues: []string{},
 				},
 			},
 			expected: QueueInfo{
@@ -167,6 +182,9 @@ func TestNewQueueInfo(t *testing.T) {
 					},
 					Priority: nil,
 				},
+				Status: enginev2.QueueStatus{
+					ChildQueues: []string{},
+				},
 			},
 			expected: QueueInfo{
 				UID:         "queue",
@@ -194,12 +212,145 @@ func TestNewQueueInfo(t *testing.T) {
 				CreationTimestamp: metav1.Time{},
 			},
 		},
+		{
+			name: "queue with child queues in status",
+			queue: &enginev2.Queue{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "parent-queue",
+				},
+				Spec: enginev2.QueueSpec{
+					DisplayName: "",
+					ParentQueue: "",
+					Resources:   nil,
+					Priority:    nil,
+				},
+				Status: enginev2.QueueStatus{
+					ChildQueues: []string{"child1", "child2", "child3"},
+				},
+			},
+			expected: QueueInfo{
+				UID:               "parent-queue",
+				Name:              "parent-queue",
+				ParentQueue:       "",
+				ChildQueues:       []common_info.QueueID{"child1", "child2", "child3"},
+				Resources:         QueueQuota{},
+				Priority:          100,
+				CreationTimestamp: metav1.Time{},
+			},
+		},
+		{
+			name: "queue with empty child queues in status",
+			queue: &enginev2.Queue{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "leaf-queue",
+				},
+				Spec: enginev2.QueueSpec{
+					DisplayName: "",
+					ParentQueue: "parent",
+					Resources:   nil,
+					Priority:    nil,
+				},
+				Status: enginev2.QueueStatus{
+					ChildQueues: []string{},
+				},
+			},
+			expected: QueueInfo{
+				UID:               "leaf-queue",
+				Name:              "leaf-queue",
+				ParentQueue:       "parent",
+				ChildQueues:       []common_info.QueueID{},
+				Resources:         QueueQuota{},
+				Priority:          100,
+				CreationTimestamp: metav1.Time{},
+			},
+		},
+		{
+			name: "queue with nil child queues in status (backward compatibility)",
+			queue: &enginev2.Queue{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "queue",
+				},
+				Spec: enginev2.QueueSpec{
+					DisplayName: "",
+					ParentQueue: "",
+					Resources:   nil,
+					Priority:    nil,
+				},
+				Status: enginev2.QueueStatus{
+					ChildQueues: nil,
+				},
+			},
+			expected: QueueInfo{
+				UID:               "queue",
+				Name:              "queue",
+				ParentQueue:       "",
+				ChildQueues:       []common_info.QueueID{},
+				Resources:         QueueQuota{},
+				Priority:          100,
+				CreationTimestamp: metav1.Time{},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			queueInfo := NewQueueInfo(tt.queue)
 			assert.DeepEqual(t, tt.expected, *queueInfo)
+		})
+	}
+}
+
+func TestIsLeafQueue(t *testing.T) {
+	tests := []struct {
+		name     string
+		queue    *enginev2.Queue
+		expected bool
+	}{
+		{
+			name: "leaf queue with no children",
+			queue: &enginev2.Queue{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "leaf-queue",
+				},
+				Spec: enginev2.QueueSpec{},
+				Status: enginev2.QueueStatus{
+					ChildQueues: []string{},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "parent queue with children",
+			queue: &enginev2.Queue{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "parent-queue",
+				},
+				Spec: enginev2.QueueSpec{},
+				Status: enginev2.QueueStatus{
+					ChildQueues: []string{"child1", "child2"},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "queue with nil child queues",
+			queue: &enginev2.Queue{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "queue",
+				},
+				Spec: enginev2.QueueSpec{},
+				Status: enginev2.QueueStatus{
+					ChildQueues: nil,
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			queueInfo := NewQueueInfo(tt.queue)
+			assert.Equal(t, tt.expected, queueInfo.IsLeafQueue())
 		})
 	}
 }
