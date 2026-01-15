@@ -133,6 +133,30 @@ func (p *K8sPlugins) PostBind(ctx context.Context, pod *v1.Pod, node *v1.Node, _
 	}
 }
 
+func (p *K8sPlugins) Rollback(ctx context.Context, pod *v1.Pod, node *v1.Node, _ *v1alpha2.BindRequest,
+	_ *state.BindingState) error {
+	logger := log.FromContext(ctx)
+
+	podStateAny, found := p.states.LoadAndDelete(pod.UID)
+	if !found {
+		logger.V(1).Info("Rollback: no state found for pod, nothing to rollback",
+			"namespace", pod.Namespace, "name", pod.Name)
+		return nil
+	}
+	podState := podStateAny.(*PodState)
+
+	for _, plugin := range p.plugins {
+		if !plugin.IsRelevant(pod) || podState.skip[plugin.Name()] {
+			continue
+		}
+		plugin.UnAllocate(ctx, pod, node.Name, podState.states[plugin.Name()])
+		logger.V(1).Info("Rollback: UnAllocated resources for plugin",
+			"plugin", plugin.Name(), "namespace", pod.Namespace, "name", pod.Name)
+	}
+
+	return nil
+}
+
 func (p *K8sPlugins) bindPluginWrapper(
 	ctx context.Context, plugin common.K8sPlugin, pod *v1.Pod, node *v1.Node, request *v1alpha2.BindRequest, podState *PodState,
 ) (error, ksf.CycleState) {
