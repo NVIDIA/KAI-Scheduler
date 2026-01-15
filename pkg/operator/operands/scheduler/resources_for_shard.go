@@ -309,6 +309,7 @@ func buildArgsList(
 		fmt.Sprintf("--%s=%s", "nodepool-label-key", *kaiConfig.Spec.Global.NodePoolLabelKey),
 		fmt.Sprintf("--%s=%s", "partition-label-value", shard.Spec.PartitionLabelValue),
 		fmt.Sprintf("--%s=%s", "resource-reservation-app-label", *kaiConfig.Spec.Binder.ResourceReservation.AppLabel),
+		fmt.Sprintf("--%s=%s", "queue-label-key", *kaiConfig.Spec.Global.QueueLabelKey),
 	}
 
 	if kaiConfig.Spec.Scheduler.SchedulerService.Port != nil {

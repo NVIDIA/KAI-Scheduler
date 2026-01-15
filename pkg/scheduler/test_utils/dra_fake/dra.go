@@ -71,6 +71,12 @@ type TestResourceClaim struct {
 
 	Namespace string
 
+	// Labels are the labels to apply to the ResourceClaim.
+	// This is useful for testing shared claims that require queue labels.
+	//
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
 	// DeviceClassName references a specific DeviceClass, which can define
 	// additional configuration and selectors to be inherited by this
 	// request.

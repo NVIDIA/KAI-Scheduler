@@ -96,11 +96,22 @@ func ForPodSucceededOrError(ctx context.Context, client runtimeClient.WithWatch,
 	}
 }
 
+func ForPodSucceeded(ctx context.Context, client runtimeClient.WithWatch, pod *v1.Pod) {
+	pw := watcher.NewPodsWatcher(client, podEventCheck(rd.IsPodSucceeded), pod.Namespace, []*v1.Pod{pod}, 1)
+	if !watcher.ForEvent(ctx, client, pw) {
+		Fail(fmt.Sprintf("Failed to wait for pod %s/%s to finish (success or error)", pod.Namespace, pod.Name))
+	}
+}
+
 func ForAtLeastOnePodCreation(ctx context.Context, client runtimeClient.WithWatch, selector metav1.LabelSelector) {
 	ForAtLeastNPodCreation(ctx, client, selector, 1)
 }
 
 func ForAtLeastNPodCreation(ctx context.Context, client runtimeClient.WithWatch, selector metav1.LabelSelector, n int) {
+	labelSelector, err := metav1.LabelSelectorAsSelector(&selector)
+	if err != nil {
+		Fail(fmt.Sprintf("Failed to convert label selector: %v", err))
+	}
 	condition := func(event watch.Event) bool {
 		podsListObj, ok := event.Object.(*v1.PodList)
 		if !ok {
@@ -108,7 +119,7 @@ func ForAtLeastNPodCreation(ctx context.Context, client runtimeClient.WithWatch,
 		}
 		return len(podsListObj.Items) >= n
 	}
-	pw := watcher.NewGenericWatcher[v1.PodList](client, condition, runtimeClient.MatchingLabels(selector.MatchLabels))
+	pw := watcher.NewGenericWatcher[v1.PodList](client, condition, runtimeClient.MatchingLabelsSelector{Selector: labelSelector})
 	if !watcher.ForEvent(ctx, client, pw) {
 		Fail(fmt.Sprintf("Failed to watch for %d pods creation with selector <%v>", n, selector))
 	}

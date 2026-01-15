@@ -106,8 +106,11 @@ func (c *ClusterInfo) snapshotStorageCapacities() (map[common_info.StorageCapaci
 	for _, capacity := range capacities {
 		capacityInfo, err := storagecapacity_info.NewStorageCapacityInfo(capacity)
 		if err != nil {
-			// ToDo: consider handling gracefully
-			return nil, err
+			// Skip invalid capacity and continue processing others
+			log.InfraLogger.V(2).Warnf(
+				"Failed to process CSIStorageCapacity %s/%s, skipping: %v",
+				capacity.Namespace, capacity.Name, err)
+			continue
 		}
 		result[capacityInfo.UID] = capacityInfo
 	}

@@ -8,6 +8,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -50,8 +51,9 @@ func getCurrentConfigmapsState(ctx context.Context, runtimeClient client.Client,
 		return nil, err
 	}
 
+	gvk := schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"}
 	for _, configmap := range configMaps.Items {
-		result[GetKey(configmap.GroupVersionKind(), configmap.Namespace, configmap.Name)] = &configmap
+		result[GetKey(gvk, configmap.Namespace, configmap.Name)] = &configmap
 	}
 
 	return result, nil

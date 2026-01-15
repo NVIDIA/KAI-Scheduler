@@ -62,7 +62,7 @@ func (s *JobSolver) Solve(
 		if result == nil || !result.solved {
 			log.InfraLogger.V(5).Infof("No solution found for %d tasks out of %d tasks to allocate for %s",
 				len(pendingTasks), len(tasksToAllocate), pendingJob.Name)
-			continue
+			break
 		}
 
 		if !satisfactorySolution && result.statement != nil {

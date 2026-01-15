@@ -9,6 +9,7 @@ import (
 	"time"
 
 	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
 	. "go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v2"
@@ -66,6 +67,9 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 			PodGroupInfos:    jobInfoMap,
 			Topologies:       topologies,
 			MinNodeGPUMemory: node_info.DefaultGpuMemory,
+		},
+		SchedulerParams: conf.SchedulerParams{
+			QueueLabelKey: constants.DefaultQueueLabel,
 		},
 	}
 	ssn.OverrideMaxNumberConsolidationPreemptees(-1)
@@ -153,6 +157,10 @@ func BuildQueueInfoMap(testMetadata TestTopologyBasic) map[common_info.QueueID]*
 
 func addDefaultDepartmentIfNeeded(testMetadata *TestTopologyBasic) {
 	if len(testMetadata.Departments) > 0 {
+		return
+	}
+
+	if testMetadata.DisableDefaultDepartment {
 		return
 	}
 
@@ -372,6 +380,7 @@ func getDRAObjects(testMetadata TestTopologyBasic) []runtime.Object {
 				Name:            resourceClaim.Name,
 				Namespace:       resourceClaim.Namespace,
 				ResourceVersion: "0",
+				Labels:          resourceClaim.Labels,
 			},
 			Spec: resourceapi.ResourceClaimSpec{
 				Devices: resourceapi.DeviceClaim{

@@ -3,7 +3,6 @@
 
 package data_lister
 
-// GuyContinue
 import (
 	"fmt"
 
