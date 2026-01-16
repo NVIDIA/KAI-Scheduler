@@ -191,6 +191,138 @@ func TestGetLatestUsageResetTime_CronWindow(t *testing.T) {
 	}
 }
 
+func TestNewPrometheusClient_ExtraParams(t *testing.T) {
+	// Default metric values for reference
+	defaultGpuAllocationMetric := "kai_queue_allocated_gpus"
+	defaultCpuAllocationMetric := "kai_queue_allocated_cpu_cores"
+	defaultMemoryAllocationMetric := "kai_queue_allocated_memory_bytes"
+	defaultGpuCapacityMetric := "sum(kube_node_status_capacity{resource=\"nvidia_com_gpu\"})"
+	defaultCpuCapacityMetric := "sum(kube_node_status_capacity{resource=\"cpu\"})"
+	defaultMemoryCapacityMetric := "sum(kube_node_status_capacity{resource=\"memory\"})"
+
+	tests := []struct {
+		name                           string
+		extraParams                    map[string]string
+		expectedGpuAllocationMetric    string
+		expectedCpuAllocationMetric    string
+		expectedMemoryAllocationMetric string
+		expectedGpuCapacityMetric      string
+		expectedCpuCapacityMetric      string
+		expectedMemoryCapacityMetric   string
+	}{
+		{
+			name:                           "nil extra params - uses defaults",
+			extraParams:                    nil,
+			expectedGpuAllocationMetric:    defaultGpuAllocationMetric,
+			expectedCpuAllocationMetric:    defaultCpuAllocationMetric,
+			expectedMemoryAllocationMetric: defaultMemoryAllocationMetric,
+			expectedGpuCapacityMetric:      defaultGpuCapacityMetric,
+			expectedCpuCapacityMetric:      defaultCpuCapacityMetric,
+			expectedMemoryCapacityMetric:   defaultMemoryCapacityMetric,
+		},
+		{
+			name:                           "empty extra params - uses defaults",
+			extraParams:                    map[string]string{},
+			expectedGpuAllocationMetric:    defaultGpuAllocationMetric,
+			expectedCpuAllocationMetric:    defaultCpuAllocationMetric,
+			expectedMemoryAllocationMetric: defaultMemoryAllocationMetric,
+			expectedGpuCapacityMetric:      defaultGpuCapacityMetric,
+			expectedCpuCapacityMetric:      defaultCpuCapacityMetric,
+			expectedMemoryCapacityMetric:   defaultMemoryCapacityMetric,
+		},
+		{
+			name: "custom allocation metrics only",
+			extraParams: map[string]string{
+				"gpuAllocationMetric":    "custom_gpu_allocation",
+				"cpuAllocationMetric":    "custom_cpu_allocation",
+				"memoryAllocationMetric": "custom_memory_allocation",
+			},
+			expectedGpuAllocationMetric:    "custom_gpu_allocation",
+			expectedCpuAllocationMetric:    "custom_cpu_allocation",
+			expectedMemoryAllocationMetric: "custom_memory_allocation",
+			expectedGpuCapacityMetric:      defaultGpuCapacityMetric,
+			expectedCpuCapacityMetric:      defaultCpuCapacityMetric,
+			expectedMemoryCapacityMetric:   defaultMemoryCapacityMetric,
+		},
+		{
+			name: "custom capacity metrics only",
+			extraParams: map[string]string{
+				"gpuCapacityMetric":    "sum(custom_gpu_capacity)",
+				"cpuCapacityMetric":    "sum(custom_cpu_capacity)",
+				"memoryCapacityMetric": "sum(custom_memory_capacity)",
+			},
+			expectedGpuAllocationMetric:    defaultGpuAllocationMetric,
+			expectedCpuAllocationMetric:    defaultCpuAllocationMetric,
+			expectedMemoryAllocationMetric: defaultMemoryAllocationMetric,
+			expectedGpuCapacityMetric:      "sum(custom_gpu_capacity)",
+			expectedCpuCapacityMetric:      "sum(custom_cpu_capacity)",
+			expectedMemoryCapacityMetric:   "sum(custom_memory_capacity)",
+		},
+		{
+			name: "all custom metrics",
+			extraParams: map[string]string{
+				"gpuAllocationMetric":    "my_gpu_alloc",
+				"cpuAllocationMetric":    "my_cpu_alloc",
+				"memoryAllocationMetric": "my_mem_alloc",
+				"gpuCapacityMetric":      "my_gpu_cap",
+				"cpuCapacityMetric":      "my_cpu_cap",
+				"memoryCapacityMetric":   "my_mem_cap",
+			},
+			expectedGpuAllocationMetric:    "my_gpu_alloc",
+			expectedCpuAllocationMetric:    "my_cpu_alloc",
+			expectedMemoryAllocationMetric: "my_mem_alloc",
+			expectedGpuCapacityMetric:      "my_gpu_cap",
+			expectedCpuCapacityMetric:      "my_cpu_cap",
+			expectedMemoryCapacityMetric:   "my_mem_cap",
+		},
+		{
+			name: "unrelated extra params are ignored",
+			extraParams: map[string]string{
+				"someOtherParam":      "someValue",
+				"gpuAllocationMetric": "custom_gpu_with_other_params",
+			},
+			expectedGpuAllocationMetric:    "custom_gpu_with_other_params",
+			expectedCpuAllocationMetric:    defaultCpuAllocationMetric,
+			expectedMemoryAllocationMetric: defaultMemoryAllocationMetric,
+			expectedGpuCapacityMetric:      defaultGpuCapacityMetric,
+			expectedCpuCapacityMetric:      defaultCpuCapacityMetric,
+			expectedMemoryCapacityMetric:   defaultMemoryCapacityMetric,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := &api.UsageParams{
+				ExtraParams: tt.extraParams,
+			}
+			params.SetDefaults()
+
+			client, err := NewPrometheusClient("http://localhost:9090", params)
+			require.NoError(t, err)
+			require.NotNil(t, client)
+
+			promClient, ok := client.(*PrometheusClient)
+			require.True(t, ok)
+
+			// Verify allocation metrics
+			assert.Equal(t, tt.expectedGpuAllocationMetric, promClient.allocationMetricsMap["nvidia.com/gpu"],
+				"GPU allocation metric mismatch")
+			assert.Equal(t, tt.expectedCpuAllocationMetric, promClient.allocationMetricsMap["cpu"],
+				"CPU allocation metric mismatch")
+			assert.Equal(t, tt.expectedMemoryAllocationMetric, promClient.allocationMetricsMap["memory"],
+				"Memory allocation metric mismatch")
+
+			// Verify capacity metrics
+			assert.Equal(t, tt.expectedGpuCapacityMetric, promClient.capacityMetricsMap["nvidia.com/gpu"],
+				"GPU capacity metric mismatch")
+			assert.Equal(t, tt.expectedCpuCapacityMetric, promClient.capacityMetricsMap["cpu"],
+				"CPU capacity metric mismatch")
+			assert.Equal(t, tt.expectedMemoryCapacityMetric, promClient.capacityMetricsMap["memory"],
+				"Memory capacity metric mismatch")
+		})
+	}
+}
+
 func TestGetLatestUsageResetTime_TumblingWindow(t *testing.T) {
 	tests := []struct {
 		name              string

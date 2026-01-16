@@ -77,12 +77,12 @@ var _ = Describe("Priority Preemption with Elastic Jobs", Ordered, func() {
 
 		// first job with 2 pods
 		podGroup1, pods1 := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
-			"elastic-job-low-1", testQueue, 2, pointer.String(lowPriority),
+			"elastic-job-low-1", testQueue, 2, pointer.String(lowPriority), "",
 			lowPodRequirements)
 
 		// second job with 2 pods
 		podGroup2, pods2 := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
-			"elastic-job-low-2", testQueue, 2, pointer.String(lowPriority),
+			"elastic-job-low-2", testQueue, 2, pointer.String(lowPriority), "",
 			lowPodRequirements)
 
 		var preempteePods []*v1.Pod
@@ -139,7 +139,7 @@ var _ = Describe("Priority Preemption with Elastic Jobs", Ordered, func() {
 		// first job with 2 pods
 		preempteePodGroup, preempteePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset,
 			testCtx.KubeAiSchedClientset, "elastic-job-low-1", testQueue, 2,
-			pointer.String(lowPriority), lowPodRequirements)
+			pointer.String(lowPriority), "", lowPodRequirements)
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, namespace, preempteePods)
 
 		// higher priority pod

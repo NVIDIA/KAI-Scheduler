@@ -37,7 +37,8 @@ func Create(namespace, name, queue string) *v2alpha2.PodGroup {
 			Namespace:   namespace,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
+				constants.AppLabelName:      "engine-e2e",
+				constants.DefaultQueueLabel: queue,
 			},
 		},
 		Spec: v2alpha2.PodGroupSpec{
@@ -45,7 +46,7 @@ func Create(namespace, name, queue string) *v2alpha2.PodGroup {
 			Queue:     queue,
 		},
 	}
-	return &*podGroup
+	return podGroup
 }
 
 func DeleteAllInNamespace(
@@ -60,12 +61,15 @@ func DeleteAllInNamespace(
 }
 
 func CreateWithPods(ctx context.Context, client *kubernetes.Clientset, kaiClient *kaiClient.Clientset,
-	podGroupName string, q *v2.Queue, numPods int, priorityClassName *string,
+	podGroupName string, q *v2.Queue, numPods int, priorityClassName *string, preemptibility v2alpha2.Preemptibility,
 	requirements v1.ResourceRequirements) (*v2alpha2.PodGroup, []*v1.Pod) {
 	namespace := queue.GetConnectedNamespaceToQueue(q)
 	podGroup := Create(namespace, podGroupName, q.Name)
 	if priorityClassName != nil {
 		podGroup.Spec.PriorityClassName = *priorityClassName
+	}
+	if preemptibility != "" {
+		podGroup.Spec.Preemptibility = preemptibility
 	}
 	podGroup, err := kaiClient.SchedulingV2alpha2().PodGroups(namespace).Create(ctx, podGroup, metav1.CreateOptions{})
 	Expect(err).To(Succeed())

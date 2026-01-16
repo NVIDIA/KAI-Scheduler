@@ -67,12 +67,12 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 
 		// first reclaimee job
 		reclaimeePodgroup1, pods1 := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
-			"elastic-reclaimee-job-1", reclaimeeQueue, 2, nil,
+			"elastic-reclaimee-job-1", reclaimeeQueue, 2, nil, "",
 			reclaimeePodRequirements)
 
 		// second reclaimee job
 		reclaimeePodgroup2, pods2 := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
-			"elastic-reclaimee-job-2", reclaimeeQueue, 2, nil,
+			"elastic-reclaimee-job-2", reclaimeeQueue, 2, nil, "",
 			reclaimeePodRequirements)
 
 		var preempteePods []*v1.Pod
@@ -124,7 +124,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 			},
 		}
 		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
-			"elastic-reclaimee-job", reclaimeeQueue, 2, nil,
+			"elastic-reclaimee-job", reclaimeeQueue, 2, nil, "",
 			reclaimeePodRequirements)
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimeeNamespace, reclaimeePods)
 
@@ -163,7 +163,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 			},
 		}
 		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
-			"elastic-reclaimee-job", reclaimeeQueue, 2, nil,
+			"elastic-reclaimee-job", reclaimeeQueue, 2, nil, "",
 			reclaimeePodRequirements)
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimeeNamespace, reclaimeePods)
 
@@ -204,7 +204,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 			},
 		}
 		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
-			"elastic-reclaimee-job", reclaimeeQueue, 3, nil,
+			"elastic-reclaimee-job", reclaimeeQueue, 3, nil, "",
 			reclaimeePodRequirements)
 		Expect(testCtx.ControllerClient.Patch(
 			ctx, reclaimeePodGroup, client.RawPatch(types.JSONPatchType, []byte(`[{"op": "replace", "path": "/spec/minMember", "value": 2}]`)))).To(Succeed())
@@ -252,7 +252,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 			},
 		}
 		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
-			"elastic-reclaimee-job", reclaimeeQueue, 3, nil,
+			"elastic-reclaimee-job", reclaimeeQueue, 3, nil, "",
 			reclaimeePodRequirements)
 		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimeeNamespace, reclaimeePods)
 
