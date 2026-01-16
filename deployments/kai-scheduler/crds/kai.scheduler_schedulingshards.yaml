@@ -45,6 +45,16 @@ spec:
           spec:
             description: SchedulingShardSpec defines the desired state of SchedulingShard
             properties:
+              actions:
+                description: |-
+                  Actions defines the scheduler actions to run in order. If not specified, defaults to
+                  "allocate, consolidation, reclaim, preempt, stalegangeviction" (consolidation is
+                  excluded when using spread placement strategy).
+                  Available actions: allocate, consolidation, reclaim, preempt, stalegangeviction
+                  Example: ["allocate", "reclaim", "preempt"] to disable stalegangeviction and consolidation.
+                items:
+                  type: string
+                type: array
               args:
                 additionalProperties:
                   type: string
