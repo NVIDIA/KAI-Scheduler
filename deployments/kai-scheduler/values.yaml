@@ -75,6 +75,12 @@ scheduler:
     pullPolicy: IfNotPresent
     # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   placementStrategy: binpack
+  # actions defines the scheduler actions to run in order.
+  # If empty, defaults to: allocate, consolidation, reclaim, preempt, stalegangeviction
+  # (consolidation is excluded when using spread placement strategy)
+  # Available actions: allocate, consolidation, reclaim, preempt, stalegangeviction
+  # Example to disable stalegangeviction: ["allocate", "consolidation", "reclaim", "preempt"]
+  actions: []
   ports:
     metricsPort: 8080
 
