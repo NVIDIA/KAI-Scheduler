@@ -13,4 +13,3 @@ kubectl apply -f pytorch-elastic.yaml
 It will create a PytorchJob with a minimum of 1 worker, and will be able to start running as soon as there are enough resource in the cluster for the one pod.
 And, if additional resources are available, the workload will be able to add 2 additional workers.
 If resources are requested by more prioritized workload, KAI Scheduler will be able to evict only part of its pods and the workload will continue running.
-

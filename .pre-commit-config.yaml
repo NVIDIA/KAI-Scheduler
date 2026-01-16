@@ -1,0 +1,84 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+#
+# Pre-commit hooks configuration for KAI Scheduler
+#
+# Installation:
+#   1. Install pre-commit: pip install pre-commit (or brew install pre-commit)
+#   2. Install hooks: pre-commit install
+#   3. Run manually: pre-commit run --all-files
+#
+# Prerequisites:
+#   - Go 1.24.4+ installed and in PATH
+#   - goimports: go install golang.org/x/tools/cmd/goimports@latest
+#   - golangci-lint: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(.*\.md|.*\.yaml|.*\.yml)$
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-json
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: detect-private-key
+
+  # Go formatting and linting
+  - repo: local
+    hooks:
+      # Format and organize imports (includes gofmt)
+      - id: go-imports
+        name: goimports
+        entry: bash
+        args:
+          - -c
+          - 'export PATH="$(go env GOBIN 2>/dev/null || echo):$(go env GOPATH 2>/dev/null | cut -d: -f1)/bin:$HOME/go/bin:$HOME/.local/bin:$PATH" && goimports -w "$@"'
+          - --
+        language: system
+        types: [go]
+        pass_filenames: true
+
+      # Ensure go.mod and go.sum are in sync
+      - id: go-mod-tidy-check
+        name: go mod tidy check
+        entry: bash -c 'go mod tidy && git diff --exit-code go.mod go.sum'
+        language: system
+        files: (^go\.(mod|sum)$|\.go$)
+        pass_filenames: false
+
+      # Run fast linter checks
+      - id: golangci-lint
+        name: golangci-lint
+        entry: bash
+        args:
+          - -c
+          - 'export PATH="$(go env GOBIN 2>/dev/null || echo):$(go env GOPATH 2>/dev/null | cut -d: -f1)/bin:$HOME/go/bin:$HOME/.local/bin:$PATH" && golangci-lint run --fix --fast'
+        language: system
+        types: [go]
+        files: (^go\.(mod|sum)$|\.go$)
+        pass_filenames: false
+        require_serial: true
+
+# Exclude patterns
+exclude: |
+  (?x)^(
+      \.git/|
+      \.github/|
+      bin/|
+      build/.*\.mk$|
+      deployments/.*\.(yaml|yml)$|
+      hack/.*\.(yaml|yml|sh)$|
+      \.pre-commit-config\.yaml|
+      CHANGELOG\.md|
+      NOTICE|
+      pkg/.*/mock/.*\.go$
+  )$

@@ -218,6 +218,7 @@ func testPodPreferredAffinity(testData testInput, clusterAffinityInfo pod_affini
 	Expect(err).To(BeNil())
 	score, err := ssn.NodeOrderFns[len(ssn.NodeOrderFns)-1](
 		testData.task, nodeInfos[testData.nodes[0].Name])
+	Expect(err).To(BeNil())
 	Expect(score).To(Equal(testData.expectedScore))
 }
 

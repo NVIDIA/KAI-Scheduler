@@ -21,4 +21,3 @@ spec:
     - name: main-app
       image: ubuntu
       args: ["sleep", "infinity"]
-

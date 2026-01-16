@@ -39,4 +39,3 @@ spec:
       limit: -1
       overQuotaWeight: 1
       quota: 0
-

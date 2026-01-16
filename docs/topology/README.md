@@ -152,4 +152,3 @@ Within Zone A, the scheduler prioritizes racks with more available resources to 
 ## Multi-level Topology Aware Scheduling
 KAI Scheduler supports multi-level topologies, where each level can be defined with a different constraint.
 More information about it can be found in the [Multi-Level Topology Aware Scheduling](multilevel.md) section.
-

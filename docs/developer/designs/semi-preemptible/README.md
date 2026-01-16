@@ -34,4 +34,3 @@ In simulations, I would consider "possible victims" only the last `n-m` ("the ex
 - **Over-quota checks are different**: base in quota, extra can be over-quota
 - **For podgroup and queue statuses**: consider only the `min-member` resources for the non-preemptible counting. Like the scheduler, they should know the pod order to know which pods are considered "core", and which pods are "extra".
 - "Fully preemptible" representative job for solver simulations containing the "extra" pods of a semi-preemptible job.
-

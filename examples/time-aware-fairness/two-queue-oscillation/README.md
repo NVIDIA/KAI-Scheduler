@@ -131,4 +131,3 @@ spec:
 - The oscillation period depends on `windowSize`, `halfLifePeriod`, and job duration
 - If min-runtime is configured, jobs will not be preempted until they exceed it
 - Deserved quota (guaranteed resources) always takes precedence over time-aware fairness
-

@@ -46,4 +46,3 @@ if args.output:
     print(f"Plot saved to {args.output}")
 else:
     plt.show()
-

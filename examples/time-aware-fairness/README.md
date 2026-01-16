@@ -153,4 +153,3 @@ kubectl exec -n kai-scheduler deployment/kai-scheduler-default -- wget -q -O- ht
 - [Fairness Concepts](../../docs/fairness/README.md)
 - [Time-Aware Design Document](../../docs/developer/designs/time-aware-fairness/time-aware-fairness.md)
 - [Time-Aware Simulator](../../cmd/time-aware-simulator/README.md)
-

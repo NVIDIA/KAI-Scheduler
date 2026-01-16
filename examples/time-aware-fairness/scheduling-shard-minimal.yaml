@@ -25,4 +25,3 @@ spec:
   usageDBConfig:
     clientType: prometheus
     # Connection string is auto-populated from kai-config when using managed Prometheus
-

@@ -4,11 +4,12 @@
 package flags
 
 import (
+	"strings"
+	"testing"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/exp/slices"
-	"strings"
-	"testing"
 )
 
 func TestCommonFlags(t *testing.T) {

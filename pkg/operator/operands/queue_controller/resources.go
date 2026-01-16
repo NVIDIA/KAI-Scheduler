@@ -275,7 +275,7 @@ func buildArgsList(kaiConfig *kaiv1.Config) []string {
 		args = append(args, "--queue-label-to-default-metric-value", *config.QueueLabelToDefaultMetricValue)
 	}
 
-	common.AddK8sClientConfigToArgs(config.Service.K8sClientConfig, args)
+	args = common.AddK8sClientConfigToArgs(config.Service.K8sClientConfig, args)
 
 	return args
 }

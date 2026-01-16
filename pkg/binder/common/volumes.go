@@ -6,7 +6,7 @@ package common
 import (
 	"fmt"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 func SetConfigMapVolume(pod *v1.Pod, configMapName string) {

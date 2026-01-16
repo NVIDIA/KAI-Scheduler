@@ -43,4 +43,3 @@ If adopting these changes is not possible at current time, you can keep using th
 ```
 --values ./docs/migrationguides/v0.6.0/values.yaml
 ```
-

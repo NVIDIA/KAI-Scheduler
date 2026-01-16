@@ -56,4 +56,3 @@ spec:
 done
 
 echo "Topology migration completed."
-
