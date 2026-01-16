@@ -108,6 +108,10 @@ func ForAtLeastOnePodCreation(ctx context.Context, client runtimeClient.WithWatc
 }
 
 func ForAtLeastNPodCreation(ctx context.Context, client runtimeClient.WithWatch, selector metav1.LabelSelector, n int) {
+	labelSelector, err := metav1.LabelSelectorAsSelector(&selector)
+	if err != nil {
+		Fail(fmt.Sprintf("Failed to convert label selector: %v", err))
+	}
 	condition := func(event watch.Event) bool {
 		podsListObj, ok := event.Object.(*v1.PodList)
 		if !ok {
@@ -115,7 +119,7 @@ func ForAtLeastNPodCreation(ctx context.Context, client runtimeClient.WithWatch,
 		}
 		return len(podsListObj.Items) >= n
 	}
-	pw := watcher.NewGenericWatcher[v1.PodList](client, condition, runtimeClient.MatchingLabels(selector.MatchLabels))
+	pw := watcher.NewGenericWatcher[v1.PodList](client, condition, runtimeClient.MatchingLabelsSelector{Selector: labelSelector})
 	if !watcher.ForEvent(ctx, client, pw) {
 		Fail(fmt.Sprintf("Failed to watch for %d pods creation with selector <%v>", n, selector))
 	}

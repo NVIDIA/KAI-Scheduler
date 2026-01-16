@@ -24,10 +24,10 @@ const (
 
 func AddGPUSharingEnvVars(container *v1.Container, sharedGpuConfigMapName string) {
 	AddEnvVarToContainer(container, v1.EnvVar{
-		Name: NvidiaVisibleDevices,
+		Name: constants.NvidiaVisibleDevices,
 		ValueFrom: &v1.EnvVarSource{
 			ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-				Key: NvidiaVisibleDevices,
+				Key: constants.NvidiaVisibleDevices,
 				LocalObjectReference: v1.LocalObjectReference{
 					Name: sharedGpuConfigMapName,
 				},
@@ -66,7 +66,7 @@ func SetNvidiaVisibleDevices(
 ) error {
 	nvidiaVisibleDevicesDefinedInSpec := false
 	for _, envVar := range containerRef.Container.Env {
-		if envVar.Name == NvidiaVisibleDevices && envVar.ValueFrom != nil &&
+		if envVar.Name == constants.NvidiaVisibleDevices && envVar.ValueFrom != nil &&
 			envVar.ValueFrom.ConfigMapKeyRef != nil {
 			nvidiaVisibleDevicesDefinedInSpec = true
 		}
@@ -89,7 +89,7 @@ func SetNvidiaVisibleDevices(
 		if _, found := data[visibleDevicesBC]; found {
 			data[visibleDevicesBC] = visibleDevicesValue
 		}
-		data[NvidiaVisibleDevices] = visibleDevicesValue
+		data[constants.NvidiaVisibleDevices] = visibleDevicesValue
 		return nil
 	}
 	err = UpdateConfigMapEnvironmentVariable(ctx, kubeClient, pod, configMapName, updateFunc)

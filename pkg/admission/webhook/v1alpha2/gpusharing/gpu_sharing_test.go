@@ -234,7 +234,7 @@ func TestMutate(t *testing.T) {
 				// Pod should not have GPU sharing env vars
 				container := pod.Spec.Containers[0]
 				for _, env := range container.Env {
-					if env.Name == "NVIDIA_VISIBLE_DEVICES" || env.Name == "GPU_PORTION" {
+					if env.Name == constants.NvidiaVisibleDevices || env.Name == "GPU_PORTION" {
 						t.Errorf("Unexpected GPU sharing env var %s added to non-GPU-fraction pod", env.Name)
 					}
 				}
@@ -270,7 +270,7 @@ func TestMutate(t *testing.T) {
 
 				// Check that env vars were added to the container
 				container := pod.Spec.Containers[0]
-				expectedEnvVars := []string{"NVIDIA_VISIBLE_DEVICES", "RUNAI_NUM_OF_GPUS", "GPU_PORTION"}
+				expectedEnvVars := []string{constants.NvidiaVisibleDevices, "RUNAI_NUM_OF_GPUS", "GPU_PORTION"}
 				foundEnvVars := make(map[string]bool)
 				for _, env := range container.Env {
 					if contains(expectedEnvVars, env.Name) {
@@ -381,7 +381,7 @@ func TestMutate(t *testing.T) {
 				gpuContainer := pod.Spec.Containers[1]
 				foundNvidiaVar := false
 				for _, env := range gpuContainer.Env {
-					if env.Name == "NVIDIA_VISIBLE_DEVICES" {
+					if env.Name == constants.NvidiaVisibleDevices {
 						foundNvidiaVar = true
 					}
 				}
@@ -392,7 +392,7 @@ func TestMutate(t *testing.T) {
 				// Check that the sidecar doesn't have GPU env vars
 				sidecarContainer := pod.Spec.Containers[0]
 				for _, env := range sidecarContainer.Env {
-					if env.Name == "NVIDIA_VISIBLE_DEVICES" {
+					if env.Name == constants.NvidiaVisibleDevices {
 						t.Errorf("Unexpected NVIDIA_VISIBLE_DEVICES in sidecar container")
 					}
 				}
