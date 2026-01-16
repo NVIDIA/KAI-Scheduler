@@ -91,7 +91,7 @@ var _ = Describe("Namespace options", Ordered, func() {
 
 func createPodInNamespace(ctx context.Context, client *kubernetes.Clientset, pod *v1.Pod,
 	namespace string) (*v1.Pod, error) {
-	actualPod, err := rd.GetPod(ctx, client, pod.Namespace, pod.Name)
+	_, err := rd.GetPod(ctx, client, pod.Namespace, pod.Name)
 	if err == nil {
 		// pod is not expected to exist in the cluster
 		return nil, fmt.Errorf("pod %s/%s already exists in the cluster", namespace, pod.Name)

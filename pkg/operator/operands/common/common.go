@@ -204,7 +204,7 @@ func isControllerAvailable(obj client.Object, objKind string) (bool, error) {
 	return false, nil
 }
 
-func AddK8sClientConfigToArgs(k8sClientConfig *kaiv1common.K8sClientConfig, args []string) {
+func AddK8sClientConfigToArgs(k8sClientConfig *kaiv1common.K8sClientConfig, args []string) []string {
 	if k8sClientConfig != nil {
 		if k8sClientConfig.QPS != nil {
 			args = append(args, "--qps", strconv.Itoa(*k8sClientConfig.QPS))
@@ -213,6 +213,7 @@ func AddK8sClientConfigToArgs(k8sClientConfig *kaiv1common.K8sClientConfig, args
 			args = append(args, "--burst", strconv.Itoa(*k8sClientConfig.Burst))
 		}
 	}
+	return args
 }
 
 func CheckCRDsAvailable(ctx context.Context, client client.Reader, crdNames ...string) (bool, error) {

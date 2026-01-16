@@ -946,7 +946,6 @@ func TestCalcPodGroupPriorityClass_NonExistentDefaultFromConfigMap(t *testing.T)
 func TestCalcPodGroupPriorityClass_ValidPriorityClassOverridesInvalidDefault(t *testing.T) {
 	// Create only the valid priority class
 	validPriorityClass := priorityClassObj("valid-priority", 1000)
-	kubeClient := fake.NewFakeClient(validPriorityClass)
 
 	defaultsConfigmap := &v1.ConfigMap{
 		ObjectMeta: v12.ObjectMeta{
@@ -957,7 +956,7 @@ func TestCalcPodGroupPriorityClass_ValidPriorityClassOverridesInvalidDefault(t *
 			constants.DefaultPrioritiesConfigMapTypesKey: `[{"typeName":"TestKind","group":"apps","priorityName":"invalid-configmap-priority"}]`,
 		},
 	}
-	kubeClient = fake.NewFakeClient(validPriorityClass, defaultsConfigmap)
+	kubeClient := fake.NewFakeClient(validPriorityClass, defaultsConfigmap)
 
 	owner := &unstructured.Unstructured{
 		Object: map[string]interface{}{

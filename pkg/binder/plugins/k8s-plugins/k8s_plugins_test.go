@@ -93,7 +93,7 @@ var _ = Describe("k8sPlugins", func() {
 			call = plugin2.EXPECT().PreFilter(context.TODO(), pod, gomock.Any()).Return(nil, false).Times(1)
 			call = plugin2.EXPECT().Filter(context.TODO(), pod, node, gomock.Any()).Return(nil).After(call).Times(1)
 			call = plugin2.EXPECT().Allocate(context.TODO(), pod, node.Name, gomock.Any()).Return(nil).After(call).Times(1)
-			call = plugin2.EXPECT().Bind(context.TODO(), pod, gomock.Any(), gomock.Any()).Return(errors.New("failed to bind")).Times(1).After(call)
+			_ = plugin2.EXPECT().Bind(context.TODO(), pod, gomock.Any(), gomock.Any()).Return(errors.New("failed to bind")).Times(1).After(call)
 			plugin2.EXPECT().UnAllocate(context.TODO(), pod, node.Name, gomock.Any()).Times(1)
 
 			err, _ := invokePlugins(context.TODO(), pod, node, k8sPlugins)

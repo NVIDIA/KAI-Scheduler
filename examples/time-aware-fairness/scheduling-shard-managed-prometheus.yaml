@@ -71,4 +71,3 @@ spec:
       # Maximum time to wait for fresh usage data at scheduler startup
       # Default: 1m
       waitTimeout: 1m
-
