@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added support for Grove hierarchical topology constraints in PodGroup subgroups
 - Added support for n-level queue hierarchies [#858](https://github.com/NVIDIA/KAI-Scheduler/pull/858) [gshaibi](https://github.com/gshaibi)
 - Added labels and annotations propagation from topOwner in SkipTopOwner grouper [#861](https://github.com/NVIDIA/KAI-Scheduler/pull/861) [SiorMeir](https://github.com/siormeir)
+- Added scheduler name match conditions to admission webhooks to improve cluster stability
 
 ### Fixed
 - Fixed pod controller logging to use request namespace/name instead of empty pod object fields when pod is not found
