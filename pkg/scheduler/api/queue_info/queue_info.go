@@ -57,7 +57,7 @@ func NewQueueInfo(queue *enginev2.Queue) *QueueInfo {
 		UID:               common_info.QueueID(queue.Name),
 		Name:              queueName,
 		ParentQueue:       common_info.QueueID(queue.Spec.ParentQueue),
-		ChildQueues:       []common_info.QueueID{}, // ToDo: Calculate from queue status once we reflect it there
+		ChildQueues:       []common_info.QueueID{},
 		Resources:         getQueueQuota(*queue),
 		Priority:          priority,
 		CreationTimestamp: queue.CreationTimestamp,
