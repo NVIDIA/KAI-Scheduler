@@ -90,6 +90,7 @@ var _ = Describe("ResourceReservationService", func() {
 			Status: runningStatus,
 		}
 	)
+
 	Context("ReserveGpuDevice", func() {
 		for testName, testData := range map[string]struct {
 			reservationPod        *v1.Pod
@@ -266,6 +267,15 @@ var _ = Describe("ResourceReservationService", func() {
 				clientInterceptFuncs: interceptor.Funcs{
 					Watch: func(ctx context.Context, client runtimeClient.WithWatch, obj runtimeClient.ObjectList, opts ...runtimeClient.ListOption) (watch.Interface, error) {
 						return nil, fmt.Errorf("failed to watch")
+					},
+				},
+				expectedGPUIndex:      unknownGpuIndicator,
+				expectedErrorContains: "failed waiting for GPU reservation pod to allocate",
+			},
+			"watch channel closed": {
+				clientInterceptFuncs: interceptor.Funcs{
+					Watch: func(ctx context.Context, client runtimeClient.WithWatch, obj runtimeClient.ObjectList, opts ...runtimeClient.ListOption) (watch.Interface, error) {
+						return exampleMockWatchPodClosed(), nil
 					},
 				},
 				expectedGPUIndex:      unknownGpuIndicator,
@@ -943,6 +953,146 @@ var _ = Describe("ResourceReservationService", func() {
 		})
 	})
 
+	Context("RemovePodGpuGroupsConnection", func() {
+		for testName, testData := range map[string]struct {
+			pod                   *v1.Pod
+			clientInterceptFuncs  interceptor.Funcs
+			expectedLabels        map[string]string
+			expectedErrorContains string
+		}{
+			"pod with no multi-gpu-group labels": {
+				pod: &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "job-1-0-0",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"app":              "test",
+							constants.GPUGroup: gpuGroup,
+						},
+					},
+				},
+				expectedLabels: map[string]string{
+					"app": "test",
+				},
+			},
+			"pod with one multi-gpu-group label": {
+				pod: &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "job-1-0-0",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"app": "test",
+							constants.MultiGpuGroupLabelPrefix + gpuGroup: gpuGroup,
+						},
+					},
+				},
+				expectedLabels: map[string]string{
+					"app": "test",
+				},
+			},
+			"pod with multiple multi-gpu-group labels": {
+				pod: &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "job-1-0-0",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"app": "test",
+							constants.MultiGpuGroupLabelPrefix + gpuGroup:  gpuGroup,
+							constants.MultiGpuGroupLabelPrefix + gpuGroup2: gpuGroup2,
+						},
+					},
+				},
+				expectedLabels: map[string]string{
+					"app": "test",
+				},
+			},
+			"pod with mixed labels - only removes multi-gpu-group labels": {
+				pod: &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "job-1-0-0",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"app":              "test",
+							constants.GPUGroup: gpuGroup,
+							"other-label":      "value",
+							constants.MultiGpuGroupLabelPrefix + gpuGroup:  gpuGroup,
+							constants.MultiGpuGroupLabelPrefix + gpuGroup2: gpuGroup2,
+						},
+					},
+				},
+				expectedLabels: map[string]string{
+					"app":         "test",
+					"other-label": "value",
+				},
+			},
+			"pod with nil labels": {
+				pod: &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "job-1-0-0",
+						Namespace: "my-ns",
+						Labels:    nil,
+					},
+				},
+				expectedLabels: nil,
+			},
+			"pod with no gpu-group labels": {
+				pod: &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "job-1-0-0",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"app": "test",
+						},
+					},
+				},
+				expectedLabels: map[string]string{
+					"app": "test",
+				},
+			},
+			"patch fails": {
+				pod: &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "job-1-0-0",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							constants.MultiGpuGroupLabelPrefix + gpuGroup: gpuGroup,
+						},
+					},
+				},
+				clientInterceptFuncs: interceptor.Funcs{
+					Patch: func(ctx context.Context, client runtimeClient.WithWatch, obj runtimeClient.Object, patch runtimeClient.Patch, opts ...runtimeClient.PatchOption) error {
+						return fmt.Errorf("failed to patch pod")
+					},
+				},
+				expectedErrorContains: "failed to patch pod",
+			},
+		} {
+			testData := testData
+			It(testName, func() {
+				podsInCluster := []runtime.Object{testData.pod}
+				clientWithObjs := fake.NewClientBuilder().WithRuntimeObjects(podsInCluster...).Build()
+				fakeClient := interceptor.NewClient(clientWithObjs, testData.clientInterceptFuncs)
+				rsc := initializeTestService(fakeClient)
+
+				err := rsc.RemovePodGpuGroupsConnection(context.TODO(), testData.pod)
+				if testData.expectedErrorContains == "" {
+					Expect(err).To(BeNil())
+					// Fetch the pod from the fake client to verify labels were updated
+					updatedPod := &v1.Pod{}
+					err = clientWithObjs.Get(context.Background(), runtimeClient.ObjectKey{
+						Name:      testData.pod.Name,
+						Namespace: testData.pod.Namespace,
+					}, updatedPod)
+					Expect(err).To(Succeed())
+					Expect(updatedPod.Labels).To(Equal(testData.expectedLabels))
+				} else {
+					Expect(err).NotTo(BeNil())
+					Expect(err.Error()).To(ContainSubstring(testData.expectedErrorContains))
+				}
+			})
+		}
+	})
+
 	Context("createGPUReservationPod with resource configuration", func() {
 		It("should create pod with configured CPU and memory resources", func() {
 			rsc := &service{
@@ -1136,4 +1286,25 @@ func exampleMockWatchPod(gpuIndex string, delay time.Duration) watch.Interface {
 			},
 		},
 	}
+}
+
+// FakeWatchPodClosed simulates a watch that closes its channel immediately
+type FakeWatchPodClosed struct {
+	channel chan watch.Event
+}
+
+func (w *FakeWatchPodClosed) Stop() {
+	// No-op
+}
+
+func (w *FakeWatchPodClosed) ResultChan() <-chan watch.Event {
+	if w.channel == nil {
+		w.channel = make(chan watch.Event)
+		close(w.channel) // Close immediately to simulate channel close
+	}
+	return w.channel
+}
+
+func exampleMockWatchPodClosed() watch.Interface {
+	return &FakeWatchPodClosed{}
 }

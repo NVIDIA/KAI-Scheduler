@@ -124,7 +124,7 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 		return nil, fmt.Errorf("error snapshotting pods: %w", err)
 	}
 
-	snapshot.Nodes, err = c.snapshotNodes(c.clusterPodAffinityInfo)
+	snapshot.Nodes, snapshot.MinNodeGPUMemory, err = c.snapshotNodes(c.clusterPodAffinityInfo)
 	if err != nil {
 		err = errors.WithStack(fmt.Errorf("error snapshotting nodes: %w", err))
 		return nil, err
@@ -219,22 +219,28 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 
 func (c *ClusterInfo) snapshotNodes(
 	clusterPodAffinityInfo pod_affinity.ClusterPodAffinityInfo,
-) (map[string]*node_info.NodeInfo, error) {
+) (map[string]*node_info.NodeInfo, int64, error) {
 	nodes, err := c.dataLister.ListNodes()
 	if err != nil {
-		return nil, fmt.Errorf("error listing nodes: %w", err)
+		return nil, 0, fmt.Errorf("error listing nodes: %w", err)
 	}
 	if c.restrictNodeScheduling {
 		nodes = filterUnmarkedNodes(nodes)
 	}
 
+	var minGPUMemory int64 = node_info.DefaultGpuMemory
+
 	resultNodes := map[string]*node_info.NodeInfo{}
 	for _, node := range nodes {
 		podAffinityInfo := NewK8sNodePodAffinityInfo(node, clusterPodAffinityInfo)
 		resultNodes[node.Name] = node_info.NewNodeInfo(node, podAffinityInfo)
+		nodeGPUMemory := resultNodes[node.Name].MemoryOfEveryGpuOnNode
+		if nodeGPUMemory > node_info.DefaultGpuMemory {
+			minGPUMemory = min(minGPUMemory, resultNodes[node.Name].MemoryOfEveryGpuOnNode)
+		}
 	}
 
-	return resultNodes, nil
+	return resultNodes, minGPUMemory, nil
 }
 
 func (c *ClusterInfo) addTasksToNodes(allPods []*v1.Pod, existingPodsMap map[common_info.PodID]*pod_info.PodInfo,
@@ -348,12 +354,9 @@ func (c *ClusterInfo) snapshotPodGroups(
 }
 
 func validatePodgroupQueue(existingQueues map[common_info.QueueID]*queue_info.QueueInfo, podGroup *enginev2alpha2.PodGroup) error {
-	queue, queueExists := existingQueues[common_info.QueueID(podGroup.Spec.Queue)]
+	_, queueExists := existingQueues[common_info.QueueID(podGroup.Spec.Queue)]
 	if !queueExists {
 		return fmt.Errorf("Queue '%s' does not exist", podGroup.Spec.Queue)
-	}
-	if _, parentExists := existingQueues[queue.ParentQueue]; !parentExists {
-		return fmt.Errorf("Queue '%s' has no parent queue", podGroup.Spec.Queue)
 	}
 	return nil
 }

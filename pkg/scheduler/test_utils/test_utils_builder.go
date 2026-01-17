@@ -9,6 +9,7 @@ import (
 	"time"
 
 	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 
 	. "go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v2"
@@ -21,6 +22,7 @@ import (
 
 	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	_ "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
@@ -52,7 +54,6 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 	clusterPodAffinityInfo *cache.K8sClusterPodAffinityInfo,
 ) *framework.Session {
 	ssn := framework.Session{
-		Nodes: nodesInfoMap,
 		Config: &conf.SchedulerConfiguration{
 			Tiers: []conf.Tier{
 				{
@@ -60,9 +61,16 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 				},
 			},
 		},
-		Queues:        queueInfoMap,
-		PodGroupInfos: jobInfoMap,
-		Topologies:    topologies,
+		ClusterInfo: &api.ClusterInfo{
+			Nodes:            nodesInfoMap,
+			Queues:           queueInfoMap,
+			PodGroupInfos:    jobInfoMap,
+			Topologies:       topologies,
+			MinNodeGPUMemory: node_info.DefaultGpuMemory,
+		},
+		SchedulerParams: conf.SchedulerParams{
+			QueueLabelKey: constants.DefaultQueueLabel,
+		},
 	}
 	ssn.OverrideMaxNumberConsolidationPreemptees(-1)
 	ssn.OverrideAllowConsolidatingReclaim(true)
@@ -149,6 +157,10 @@ func BuildQueueInfoMap(testMetadata TestTopologyBasic) map[common_info.QueueID]*
 
 func addDefaultDepartmentIfNeeded(testMetadata *TestTopologyBasic) {
 	if len(testMetadata.Departments) > 0 {
+		return
+	}
+
+	if testMetadata.DisableDefaultDepartment {
 		return
 	}
 
@@ -368,6 +380,7 @@ func getDRAObjects(testMetadata TestTopologyBasic) []runtime.Object {
 				Name:            resourceClaim.Name,
 				Namespace:       resourceClaim.Namespace,
 				ResourceVersion: "0",
+				Labels:          resourceClaim.Labels,
 			},
 			Spec: resourceapi.ResourceClaimSpec{
 				Devices: resourceapi.DeviceClaim{

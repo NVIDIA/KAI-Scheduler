@@ -5,6 +5,7 @@ cover.out
 .DS_Store
 coverage/
 *.test
+.vscode
 launch.json
 coverage.out
 vendor/

@@ -21,15 +21,15 @@ type JobsOrderInitOptions struct {
 func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 	jobsToOrder map[common_info.PodGroupID]*podgroup_info.PodGroupInfo) {
 	for _, job := range jobsToOrder {
-		if jobsOrder.jobsOrderInitOptions.FilterUnready && !job.IsReadyForScheduling() {
+		if jobsOrder.options.FilterUnready && !job.IsReadyForScheduling() {
 			continue
 		}
 
-		if jobsOrder.jobsOrderInitOptions.FilterNonPending && len(job.PodStatusIndex[pod_status.Pending]) == 0 {
+		if jobsOrder.options.FilterNonPending && len(job.PodStatusIndex[pod_status.Pending]) == 0 {
 			continue
 		}
 
-		if jobsOrder.jobsOrderInitOptions.FilterNonPreemptible && !job.IsPreemptibleJob() {
+		if jobsOrder.options.FilterNonPreemptible && !job.IsPreemptibleJob() {
 			continue
 		}
 
@@ -40,22 +40,29 @@ func (jobsOrder *JobsOrderByQueues) InitializeWithJobs(
 				break
 			}
 		}
-		if jobsOrder.jobsOrderInitOptions.FilterNonActiveAllocated && !isJobActive {
+		if jobsOrder.options.FilterNonActiveAllocated && !isJobActive {
 			continue
 		}
 
 		// Skip jobs whose queue doesn't exist
-		if _, found := jobsOrder.ssn.Queues[job.Queue]; !found {
+		queues := jobsOrder.ssn.ClusterInfo.Queues
+		if _, found := queues[job.Queue]; !found {
 			continue
 		}
 
-		// Skip jobs whose queue's parent queue doesn't exist
-		if _, found := jobsOrder.ssn.Queues[jobsOrder.ssn.Queues[job.Queue].ParentQueue]; !found {
+		// Skip jobs whose queue's parent queue doesn't exist (unless it's a root queue)
+		parentQueue := queues[job.Queue].ParentQueue
+		if parentQueue != "" {
+			if _, found := queues[parentQueue]; !found {
+				continue
+			}
+		}
+
+		// Skip jobs whose queue is not a leaf queue
+		if !jobsOrder.ssn.ClusterInfo.Queues[job.Queue].IsLeafQueue() {
 			continue
 		}
 
-		jobsOrder.addJobToQueue(job, jobsOrder.jobsOrderInitOptions.VictimQueue)
+		jobsOrder.PushJob(job)
 	}
-
-	jobsOrder.buildActiveJobOrderPriorityQueues(jobsOrder.jobsOrderInitOptions.VictimQueue)
 }

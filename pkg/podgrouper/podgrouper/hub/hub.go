@@ -14,6 +14,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/grouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/grove"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/job"
+	jobsetplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/jobset"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/knative"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow"
 	jaxplugin "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow/jax"
@@ -112,6 +113,7 @@ func NewDefaultPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 	podJobGrouper := podjob.NewPodJobGrouper(defaultGrouper, sparkGrouper)
 
 	groveGrouper := grove.NewGroveGrouper(kubeClient, defaultGrouper)
+	jobSetGrouper := jobsetplugin.NewJobSetGrouper(defaultGrouper)
 
 	table := map[metav1.GroupVersionKind]grouper.Grouper{
 		{
@@ -270,6 +272,11 @@ func NewDefaultPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Kind:    "LeaderWorkerSet",
 		}: leader_worker_set.NewLwsGrouper(defaultGrouper),
 		{
+			Group:   "jobset.x-k8s.io",
+			Version: "v1alpha2",
+			Kind:    "JobSet",
+		}: jobSetGrouper,
+		{
 			Group:   "grove.io",
 			Version: "v1alpha1",
 			Kind:    "PodGangSet",
@@ -278,16 +285,6 @@ func NewDefaultPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Group:   "grove.io",
 			Version: "v1alpha1",
 			Kind:    "PodCliqueSet",
-		}: groveGrouper,
-		{
-			Group:   "nvidia.com",
-			Version: "v1alpha1",
-			Kind:    "DynamoGraphDeployment",
-		}: groveGrouper,
-		{
-			Group:   "nvidia.com",
-			Version: "v1alpha1",
-			Kind:    "DynamoComponentDeployment",
 		}: groveGrouper,
 	}
 
@@ -311,6 +308,13 @@ func NewDefaultPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Kind:    kind,
 		}] = skipTopOwnerGrouper
 	}
+
+	// Dynamo uses Grove Grouper and needs to propagate metadata from DynamoGraphDeployment to PodGang and PodClique.
+	table[metav1.GroupVersionKind{
+		Group:   "nvidia.com",
+		Version: "v1alpha1",
+		Kind:    "DynamoGraphDeployment",
+	}] = skipTopOwnerGrouper
 
 	return &DefaultPluginsHub{
 		defaultPlugin: defaultGrouper,

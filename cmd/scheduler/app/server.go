@@ -92,6 +92,7 @@ func BuildSchedulerParams(opt *options.ServerOption) *conf.SchedulerParams {
 		SchedulePeriod:                    opt.SchedulePeriod,
 		DetailedFitErrors:                 opt.DetailedFitErrors,
 		UpdatePodEvictionCondition:        opt.UpdatePodEvictionCondition,
+		QueueLabelKey:                     opt.QueueLabelKey,
 	}
 }
 

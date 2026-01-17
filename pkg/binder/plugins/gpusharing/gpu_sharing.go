@@ -5,12 +5,14 @@ package gpusharing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"golang.org/x/exp/slices"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common/gpusharingconfigmap"
@@ -100,4 +102,57 @@ func (p *GPUSharing) createDirectEnvMapIfMissing(ctx context.Context, pod *v1.Po
 func (p *GPUSharing) PostBind(
 	context.Context, *v1.Pod, *v1.Node, *v1alpha2.BindRequest, *state.BindingState,
 ) {
+}
+
+func (p *GPUSharing) Rollback(
+	ctx context.Context, pod *v1.Pod, _ *v1.Node, bindRequest *v1alpha2.BindRequest, _ *state.BindingState,
+) error {
+	logger := log.FromContext(ctx)
+
+	if !common.IsSharedGPUAllocation(bindRequest) {
+		return nil
+	}
+
+	var errs []error
+
+	containerRef, err := common.GetFractionContainerRef(pod)
+	if err != nil {
+		logger.V(1).Info("Rollback: could not get fraction container ref, nothing to rollback",
+			"namespace", pod.Namespace, "name", pod.Name, "error", err)
+		return nil
+	}
+
+	var configMapNames []string
+	capabilitiesConfigMapName, err := gpusharingconfigmap.ExtractCapabilitiesConfigMapName(pod, containerRef)
+	if err != nil {
+		logger.V(1).Info("could not extract capabilities configmap name",
+			"namespace", pod.Namespace, "name", pod.Name, "error", err)
+	} else if capabilitiesConfigMapName != "" {
+		configMapNames = append(configMapNames, capabilitiesConfigMapName)
+	}
+
+	directEnvVarsMapName, err := gpusharingconfigmap.ExtractDirectEnvVarsConfigMapName(pod, containerRef)
+	if err != nil {
+		logger.V(1).Info("could not extract direct env vars configmap name",
+			"namespace", pod.Namespace, "name", pod.Name, "error", err)
+	} else if directEnvVarsMapName != "" {
+		configMapNames = append(configMapNames, directEnvVarsMapName)
+	}
+
+	for _, configMapName := range configMapNames {
+		if err = p.deleteConfigMap(ctx, pod.Namespace, configMapName); err != nil {
+			errs = append(errs, fmt.Errorf("failed to delete configmap %s/%s during rollback: %w",
+				pod.Namespace, configMapName, err))
+		}
+		logger.V(1).Info("deleted configmap", "namespace", pod.Namespace, "name", pod.Name, "configmap", configMapName)
+	}
+
+	return errors.Join(errs...)
+}
+
+func (p *GPUSharing) deleteConfigMap(ctx context.Context, namespace, name string) error {
+	cm := &v1.ConfigMap{}
+	cm.Name = name
+	cm.Namespace = namespace
+	return client.IgnoreNotFound(p.kubeClient.Delete(ctx, cm))
 }

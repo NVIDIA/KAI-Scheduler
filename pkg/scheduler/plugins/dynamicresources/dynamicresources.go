@@ -15,6 +15,7 @@ import (
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/k8s_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -29,9 +30,10 @@ const (
 )
 
 type draPlugin struct {
-	enabled  bool
-	manager  k8sframework.SharedDRAManager
-	celCache *cel.Cache
+	enabled       bool
+	manager       k8sframework.SharedDRAManager
+	celCache      *cel.Cache
+	queueLabelKey string
 }
 
 // +kubebuilder:rbac:groups="resource.k8s.io",resources=deviceclasses;resourceslices;resourceclaims,verbs=get;list;watch
@@ -59,6 +61,8 @@ func (drap *draPlugin) OnSessionOpen(ssn *framework.Session) {
 
 	drap.manager = fwork.SharedDRAManager()
 
+	drap.queueLabelKey = ssn.SchedulerParams.QueueLabelKey
+
 	ssn.AddEventHandler(&framework.EventHandler{
 		AllocateFunc:   drap.allocateHandlerFn(ssn),
 		DeallocateFunc: drap.deallocateHandlerFn(ssn),
@@ -70,7 +74,7 @@ func (drap *draPlugin) OnSessionOpen(ssn *framework.Session) {
 }
 
 func (drap *draPlugin) assumePendingClaims(ssn *framework.Session) {
-	for _, podGroup := range ssn.PodGroupInfos {
+	for _, podGroup := range ssn.ClusterInfo.PodGroupInfos {
 		for _, pod := range podGroup.GetAllPodsMap() {
 			if pod.BindRequest == nil {
 				continue
@@ -119,7 +123,7 @@ func (drap *draPlugin) assumePendingClaim(claim *schedulingv1alpha2.ResourceClai
 	return drap.manager.ResourceClaims().SignalClaimPendingAllocation(updatedClaim.UID, updatedClaim)
 }
 
-func (drap *draPlugin) preFilter(task *pod_info.PodInfo, _ *podgroup_info.PodGroupInfo) error {
+func (drap *draPlugin) preFilter(task *pod_info.PodInfo, job *podgroup_info.PodGroupInfo) error {
 	pod := task.Pod
 	if !drap.enabled && len(pod.Spec.ResourceClaims) > 0 {
 		var resourceClaimNames []string
@@ -146,6 +150,42 @@ func (drap *draPlugin) preFilter(task *pod_info.PodInfo, _ *podgroup_info.PodGro
 			return fmt.Errorf("resource claim %s/%s has reached its maximum number of consumers (%d)",
 				pod.Namespace, claimName, resourceapi.ResourceClaimReservedForMaxSize)
 		}
+
+		if err := drap.validateSharedGpuClaimQueueLabel(job, &podClaim, claim); err != nil {
+			return fmt.Errorf("pod %s/%s cannot be scheduled: %v", task.Namespace, task.Name, err)
+		}
+	}
+
+	return nil
+}
+
+// validateSharedGpuClaimQueueLabel validates that shared GPU DRA claims (non-template claims) have the correct queue label.
+// Template claims are created per-pod and don't need queue validation.
+// Shared GPU claims can be used by multiple pods and must have the correct queue label to be scheduled.
+func (drap *draPlugin) validateSharedGpuClaimQueueLabel(
+	job *podgroup_info.PodGroupInfo,
+	podClaim *v1.PodResourceClaim,
+	claim *resourceapi.ResourceClaim,
+) error {
+	if podClaim.ResourceClaimTemplateName != nil {
+		return nil
+	}
+
+	if !resources.IsGpuResourceClaim(claim) {
+		return nil
+	}
+
+	expectedQueue := string(job.Queue)
+	claimQueueLabel := claim.Labels[drap.queueLabelKey]
+
+	if claimQueueLabel == "" {
+		return fmt.Errorf("DRA claim %s is a shared GPU claim but does not have a queue label (%s)",
+			claim.Name, constants.DefaultQueueLabel)
+	}
+
+	if claimQueueLabel != expectedQueue {
+		return fmt.Errorf("DRA claim %s is a shared GPU claim with wrong queue label (expected queue: %s, claim queue label: %s)",
+			claim.Name, expectedQueue, claimQueueLabel)
 	}
 
 	return nil
@@ -157,7 +197,7 @@ func (drap *draPlugin) allocateHandlerFn(ssn *framework.Session) func(event *fra
 	return func(event *framework.Event) {
 		pod := event.Task.Pod
 		nodeName := event.Task.NodeName
-		node := ssn.Nodes[nodeName].Node
+		node := ssn.ClusterInfo.Nodes[nodeName].Node
 
 		for _, podClaim := range pod.Spec.ResourceClaims {
 			// TODO: support resource claim template

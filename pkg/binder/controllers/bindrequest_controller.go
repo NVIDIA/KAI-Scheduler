@@ -163,6 +163,11 @@ func (r *BindRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		logger.Error(err, "Failed to bind pod to node", "pod", pod.Name, "namespace", pod.Namespace,
 			"node", node.Name)
+
+		if rollbackErr := r.binder.Rollback(ctx, pod, node, bindRequest); rollbackErr != nil {
+			logger.Error(rollbackErr, "Failed to rollback after bind failure", "pod", pod.Name,
+				"namespace", pod.Namespace)
+		}
 	}
 	return result, err
 }

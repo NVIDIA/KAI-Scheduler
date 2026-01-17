@@ -62,7 +62,7 @@ func (s *JobSolver) Solve(
 		if result == nil || !result.solved {
 			log.InfraLogger.V(5).Infof("No solution found for %d tasks out of %d tasks to allocate for %s",
 				len(pendingTasks), len(tasksToAllocate), pendingJob.Name)
-			continue
+			break
 		}
 
 		if !satisfactorySolution && result.statement != nil {
@@ -98,7 +98,7 @@ func (s *JobSolver) solvePartialJob(ssn *framework.Session, state *solvingState,
 	}
 	// recorded victim jobs nodes
 	for _, task := range state.recordedVictimsTasks {
-		node := ssn.Nodes[task.NodeName]
+		node := ssn.ClusterInfo.Nodes[task.NodeName]
 		feasibleNodeMap[task.NodeName] = node
 	}
 

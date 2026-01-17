@@ -76,7 +76,16 @@ func ForEventCustomTimeout(ctx context.Context, client runtimeClient.WithWatch, 
 			if eventWatcher.satisfied() {
 				return true
 			}
-		case event := <-watcher.ResultChan():
+		case event, ok := <-watcher.ResultChan():
+			if !ok {
+				eventWatcher.sync(ctx)
+				if eventWatcher.satisfied() {
+					return true
+				}
+				logger.Error(nil, "WaitForEvent watcher channel closed")
+				utils.LogClusterState(client, logger)
+				return false
+			}
 			if event.Type == watch.Error {
 				err := ignoreContextCancelled(event)
 				if err != nil {
