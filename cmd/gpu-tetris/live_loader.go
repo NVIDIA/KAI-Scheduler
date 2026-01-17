@@ -7,6 +7,7 @@ import (
 	kaischedulerclientset "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
+	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	snapshotplugin "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,10 +67,20 @@ func LoadLiveSnapshot(ctx context.Context, kube kubernetes.Interface, kai kaisch
 		}
 	}
 
+	// Queues are cluster-scoped.
+	queueList, err := kai.SchedulingV2().Queues("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list queues: %w", err)
+	}
+	queues := make([]*enginev2.Queue, 0, len(queueList.Items))
+	for i := range queueList.Items {
+		queues = append(queues, &queueList.Items[i])
+	}
+
 	raw := &snapshotplugin.RawKubernetesObjects{
 		Pods:                   pods,
 		Nodes:                  nodes,
-		Queues:                 nil,
+		Queues:                 queues,
 		PodGroups:              nil,
 		BindRequests:           bindRequests,
 		PriorityClasses:        nil,

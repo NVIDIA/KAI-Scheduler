@@ -14,41 +14,75 @@
 
   <div class="layout">
     <aside class="sidebar">
-      <div class="section-title">Create Pod</div>
-      <form id="createPod" class="form">
-        <label class="label">Namespace
-          <input class="input" name="namespace" placeholder="default" />
-        </label>
-        <label class="label">Name
-          <input class="input" name="name" placeholder="(auto)" />
-        </label>
-        <label class="label">Queue
-          <input class="input" name="queue" placeholder="default-queue" />
-        </label>
-        <label class="label">Mode
-          <select class="input" name="mode">
-            <option value="whole">Whole GPU</option>
-            <option value="fraction">GPU Fraction</option>
-            <option value="memory">GPU Memory (MiB)</option>
+      <div class="section-title">Create</div>
+      <form id="createResource" class="form">
+        <label class="label">Type
+          <select class="input" name="resourceType" id="resourceTypeSelect">
+            <option value="pod">Pod</option>
+            <option value="queue">Queue</option>
           </select>
         </label>
-        <label class="label">GPU Count
-          <input class="input" name="gpuCount" type="number" min="1" value="1" />
-        </label>
-        <label class="label">GPU Fraction
-          <input class="input" name="gpuFraction" type="number" min="0.01" max="0.99" step="0.01" value="0.5" />
-        </label>
-        <label class="label">Fraction #Devices
-          <input class="input" name="fractionNumDevices" type="number" min="1" value="1" />
-        </label>
-        <label class="label">GPU Memory (MiB)
-          <input class="input" name="gpuMemoryMiB" type="number" min="1" value="2000" />
-        </label>
-        <label class="label">Image
-          <input class="input" name="image" placeholder="busybox:1.36" />
-        </label>
+
+        <!-- Pod-specific fields -->
+        <div id="podFields">
+          <label class="label">Namespace
+            <input class="input" name="namespace" placeholder="default" />
+          </label>
+          <label class="label">Name
+            <input class="input" name="podName" placeholder="(auto)" />
+          </label>
+          <label class="label">Queue
+            <select class="input" name="queue" id="queueSelect">
+              <option value="">-- Select queue --</option>
+            </select>
+          </label>
+          <label class="label">Mode
+            <select class="input" name="mode">
+              <option value="whole">Whole GPU</option>
+              <option value="fraction">GPU Fraction</option>
+              <option value="memory">GPU Memory (MiB)</option>
+            </select>
+          </label>
+          <label class="label">GPU Count
+            <input class="input" name="gpuCount" type="number" min="1" value="1" />
+          </label>
+          <label class="label">GPU Fraction
+            <input class="input" name="gpuFraction" type="number" min="0.01" max="0.99" step="0.01" value="0.5" />
+          </label>
+          <label class="label">Fraction #Devices
+            <input class="input" name="fractionNumDevices" type="number" min="1" value="1" />
+          </label>
+          <label class="label">GPU Memory (MiB)
+            <input class="input" name="gpuMemoryMiB" type="number" min="1" value="2000" />
+          </label>
+          <label class="label">Image
+            <input class="input" name="image" placeholder="busybox:1.36" />
+          </label>
+        </div>
+
+        <!-- Queue-specific fields -->
+        <div id="queueFields" style="display: none;">
+          <label class="label">Name
+            <input class="input" name="queueName" placeholder="my-queue" />
+          </label>
+          <label class="label">Display Name
+            <input class="input" name="displayName" placeholder="(optional)" />
+          </label>
+          <label class="label">Parent Queue
+            <select class="input" name="parentQueue" id="parentQueueSelect">
+              <option value="">-- None (root queue) --</option>
+            </select>
+          </label>
+          <label class="label">Priority
+            <input class="input" name="priority" type="number" value="100" />
+          </label>
+          <label class="label">GPU Quota
+            <input class="input" name="gpuQuota" type="number" step="0.1" min="0" placeholder="(optional)" />
+          </label>
+        </div>
+
         <button class="button primary" type="submit">Create</button>
-        <div class="form-status" id="createPodStatus"></div>
+        <div class="form-status" id="createResourceStatus"></div>
 
         <button class="button danger" id="deleteTetrisPods" type="button">Delete all tetris pods</button>
         <div class="form-status" id="deleteTetrisPodsStatus"></div>
@@ -59,6 +93,9 @@
 
       <div class="section-title">Topology</div>
       <div id="topology"></div>
+
+      <div class="section-title">Queues</div>
+      <div id="queues"></div>
 
       <div class="section-title">Create Topology</div>
       <form id="createTopology" class="form">

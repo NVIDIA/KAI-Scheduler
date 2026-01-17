@@ -150,15 +150,47 @@ async function createTopology(payload) {
   return JSON.parse(text);
 }
 
-function setupCreatePodForm() {
-  const form = document.getElementById('createPod');
-  const status = document.getElementById('createPodStatus');
+async function createQueue(payload) {
+  const resp = await fetch('/api/queues', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const text = await resp.text();
+  if (!resp.ok) throw new Error(text || resp.statusText);
+  return JSON.parse(text);
+}
+
+function setupCreateResourceForm() {
+  const form = document.getElementById('createResource');
+  const status = document.getElementById('createResourceStatus');
   if (!form || !status) return;
 
+  const typeSelect = document.getElementById('resourceTypeSelect');
+  const podFields = document.getElementById('podFields');
+  const queueFields = document.getElementById('queueFields');
+
+  // Setup GPU mode UI for pod fields
   setupCreatePodModeUI(form);
+
+  // Handle type switching
+  function updateFieldsVisibility() {
+    const resourceType = typeSelect.value;
+    if (resourceType === 'pod') {
+      podFields.style.display = '';
+      queueFields.style.display = 'none';
+    } else {
+      podFields.style.display = 'none';
+      queueFields.style.display = '';
+    }
+  }
+
+  typeSelect.addEventListener('change', updateFieldsVisibility);
+  updateFieldsVisibility();
 
   const submitBtn = form.querySelector('button[type="submit"]');
 
+  // Delete tetris pods button
   const deleteBtn = document.getElementById('deleteTetrisPods');
   const deleteStatus = document.getElementById('deleteTetrisPodsStatus');
   if (deleteBtn && deleteStatus) {
@@ -184,26 +216,41 @@ function setupCreatePodForm() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     setBusy(submitBtn, true);
-    setStatus(status, 'Creating…');
 
     const fd = new FormData(form);
-    const mode = String(fd.get('mode') || 'whole');
-
-    const payload = {
-      namespace: String(fd.get('namespace') || ''),
-      name: String(fd.get('name') || ''),
-      queue: String(fd.get('queue') || ''),
-      mode,
-      gpuCount: Number(fd.get('gpuCount') || 0),
-      gpuFraction: Number(fd.get('gpuFraction') || 0),
-      fractionNumDevices: Number(fd.get('fractionNumDevices') || 0),
-      gpuMemoryMiB: Number(fd.get('gpuMemoryMiB') || 0),
-      image: String(fd.get('image') || ''),
-    };
+    const resourceType = fd.get('resourceType');
 
     try {
-      const res = await createPod(payload);
-      setStatus(status, `Created ${res.namespace}/${res.name}. Waiting for scheduling…`);
+      if (resourceType === 'pod') {
+        setStatus(status, 'Creating pod…');
+        const mode = String(fd.get('mode') || 'whole');
+        const payload = {
+          namespace: String(fd.get('namespace') || ''),
+          name: String(fd.get('podName') || ''),
+          queue: String(fd.get('queue') || ''),
+          mode,
+          gpuCount: Number(fd.get('gpuCount') || 0),
+          gpuFraction: Number(fd.get('gpuFraction') || 0),
+          fractionNumDevices: Number(fd.get('fractionNumDevices') || 0),
+          gpuMemoryMiB: Number(fd.get('gpuMemoryMiB') || 0),
+          image: String(fd.get('image') || ''),
+        };
+        const res = await createPod(payload);
+        setStatus(status, `Created pod ${res.namespace}/${res.name}. Waiting for scheduling…`);
+      } else {
+        setStatus(status, 'Creating queue…');
+        const priorityStr = fd.get('priority');
+        const gpuQuotaStr = fd.get('gpuQuota');
+        const payload = {
+          name: String(fd.get('queueName') || ''),
+          displayName: String(fd.get('displayName') || ''),
+          parentQueue: String(fd.get('parentQueue') || ''),
+          priority: priorityStr ? Number(priorityStr) : null,
+          gpuQuota: gpuQuotaStr ? Number(gpuQuotaStr) : 0,
+        };
+        const res = await createQueue(payload);
+        setStatus(status, `Created queue "${res.name}".`);
+      }
       await refresh();
     } catch (err) {
       setStatus(status, `Error: ${err.message}`);
@@ -286,6 +333,137 @@ function renderTopology(viz) {
   const ul = el('ul', { class: 'tree' });
   ul.appendChild(renderNode(viz.topology));
   root.appendChild(ul);
+}
+
+function renderQueues(viz) {
+  const root = document.getElementById('queues');
+  if (!root) return;
+  root.innerHTML = '';
+
+  const queues = viz.queues || [];
+  if (queues.length === 0) {
+    root.appendChild(el('div', { class: 'pending-empty' }, ['No queues found.']));
+    return;
+  }
+
+  function formatGpu(val) {
+    if (val === 0) return '0';
+    if (val >= 1) return val.toFixed(1);
+    return val.toFixed(2);
+  }
+
+  function renderQueueNode(q) {
+    const dot = el('span', { class: 'dot', style: `background:${hashColor(q.name)};` });
+    const allocated = formatGpu(q.allocatedGpu);
+    const requested = formatGpu(q.requestedGpu);
+    const displayName = q.displayName || q.name;
+
+    const gpuInfo = el('span', { class: 'queue-gpu-info' }, [`${allocated}/${requested} GPU`]);
+
+    const btn = el('button', {
+      class: 'tree-button',
+      title: `${displayName}\nAllocated: ${allocated} GPU\nRequested: ${requested} GPU\nPriority: ${q.priority}`
+    }, [dot, el('span', {}, [displayName]), el('span', { class: 'queue-gpu-badge' }, [`${allocated}/${requested}`])]);
+
+    const item = el('li', { class: 'tree-item' }, [btn]);
+
+    if (q.children && q.children.length) {
+      const ul = el('ul', { class: 'tree' });
+      for (const c of q.children) ul.appendChild(renderQueueNode(c));
+      item.appendChild(ul);
+    }
+    return item;
+  }
+
+  const ul = el('ul', { class: 'tree' });
+  for (const q of queues) {
+    ul.appendChild(renderQueueNode(q));
+  }
+  root.appendChild(ul);
+}
+
+function updateQueueDropdown(viz) {
+  const select = document.getElementById('queueSelect');
+  if (!select) return;
+
+  const currentValue = select.value;
+  const queues = viz.queues || [];
+
+  // Flatten queue tree with indentation to show hierarchy
+  function collectQueues(queueList, depth = 0) {
+    const result = [];
+    for (const q of queueList) {
+      const indent = '\u00A0\u00A0'.repeat(depth); // Non-breaking spaces for indentation
+      const displayName = q.displayName || q.name;
+      result.push({ name: q.name, label: indent + displayName, depth });
+      if (q.children && q.children.length > 0) {
+        result.push(...collectQueues(q.children, depth + 1));
+      }
+    }
+    return result;
+  }
+
+  const allQueues = collectQueues(queues);
+
+  // Clear existing options except the first placeholder
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+
+  // Add queue options
+  for (const q of allQueues) {
+    const opt = document.createElement('option');
+    opt.value = q.name;
+    opt.textContent = q.label;
+    select.appendChild(opt);
+  }
+
+  // Restore previous selection if it still exists
+  if (currentValue && Array.from(select.options).some(o => o.value === currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function updateParentQueueDropdown(viz) {
+  const select = document.getElementById('parentQueueSelect');
+  if (!select) return;
+
+  const currentValue = select.value;
+  const queues = viz.queues || [];
+
+  // Flatten queue tree with indentation to show hierarchy
+  function collectQueues(queueList, depth = 0) {
+    const result = [];
+    for (const q of queueList) {
+      const indent = '\u00A0\u00A0'.repeat(depth); // Non-breaking spaces for indentation
+      const displayName = q.displayName || q.name;
+      result.push({ name: q.name, label: indent + displayName, depth });
+      if (q.children && q.children.length > 0) {
+        result.push(...collectQueues(q.children, depth + 1));
+      }
+    }
+    return result;
+  }
+
+  const allQueues = collectQueues(queues);
+
+  // Clear existing options except the first placeholder
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+
+  // Add queue options
+  for (const q of allQueues) {
+    const opt = document.createElement('option');
+    opt.value = q.name;
+    opt.textContent = q.label;
+    select.appendChild(opt);
+  }
+
+  // Restore previous selection if it still exists
+  if (currentValue && Array.from(select.options).some(o => o.value === currentValue)) {
+    select.value = currentValue;
+  }
 }
 
 function domainById(root, id) {
@@ -443,6 +621,9 @@ async function refresh() {
     }
 
     renderTopology(viz);
+    renderQueues(viz);
+    updateQueueDropdown(viz);
+    updateParentQueueDropdown(viz);
     renderPending(viz);
     renderNodes(viz);
   } catch (e) {
@@ -451,6 +632,6 @@ async function refresh() {
 }
 
 refresh();
-setupCreatePodForm();
+setupCreateResourceForm();
 setupCreateTopologyForm();
 setInterval(refresh, 5000);

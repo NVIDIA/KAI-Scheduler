@@ -13,6 +13,7 @@ import (
 
 	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
+	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	snapshotplugin "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
 )
 
@@ -22,6 +23,17 @@ type Viz struct {
 	Nodes       []NodeViz       `json:"nodes"`
 	Blocks      []BlockViz      `json:"blocks"`
 	Pending     []PendingPodViz `json:"pending"`
+	Queues      []QueueViz      `json:"queues"`
+}
+
+type QueueViz struct {
+	Name         string     `json:"name"`
+	DisplayName  string     `json:"displayName"`
+	ParentQueue  string     `json:"parentQueue"`
+	Children     []QueueViz `json:"children"`
+	AllocatedGPU float64    `json:"allocatedGpu"`
+	RequestedGPU float64    `json:"requestedGpu"`
+	Priority     int        `json:"priority"`
 }
 
 type PendingPodViz struct {
@@ -79,6 +91,7 @@ func BuildViz(snap *snapshotplugin.Snapshot) (*Viz, error) {
 	topoRoot := buildTopologyRoot(snap.RawObjects.Topologies, snap.RawObjects.Nodes, nodeGPUCounts)
 	blocks := buildBlocks(snap.RawObjects.BindRequests, nodeGPUCounts)
 	pending := buildPendingPods(snap.RawObjects.Pods)
+	queues := buildQueues(snap.RawObjects.Queues)
 
 	return &Viz{
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
@@ -86,6 +99,7 @@ func BuildViz(snap *snapshotplugin.Snapshot) (*Viz, error) {
 		Nodes:       nodes,
 		Blocks:      blocks,
 		Pending:     pending,
+		Queues:      queues,
 	}, nil
 }
 
@@ -425,4 +439,94 @@ func (d *domainBuilder) finalize() {
 		child.finalize()
 		d.node.Children = append(d.node.Children, child.node)
 	}
+}
+
+func buildQueues(queues []*enginev2.Queue) []QueueViz {
+	if len(queues) == 0 {
+		return []QueueViz{}
+	}
+
+	// Build a map of queue name -> queue builder for easy lookup
+	type queueBuilder struct {
+		viz      QueueViz
+		children []*queueBuilder
+	}
+	queueMap := make(map[string]*queueBuilder)
+
+	for _, q := range queues {
+		if q == nil {
+			continue
+		}
+		priority := 100 // default priority
+		if q.Spec.Priority != nil {
+			priority = *q.Spec.Priority
+		}
+		displayName := q.Spec.DisplayName
+		if displayName == "" {
+			displayName = q.Name
+		}
+
+		qb := &queueBuilder{
+			viz: QueueViz{
+				Name:         q.Name,
+				DisplayName:  displayName,
+				ParentQueue:  q.Spec.ParentQueue,
+				Children:     []QueueViz{},
+				AllocatedGPU: extractGPUQuantity(q.Status.Allocated),
+				RequestedGPU: extractGPUQuantity(q.Status.Requested),
+				Priority:     priority,
+			},
+			children: []*queueBuilder{},
+		}
+		queueMap[q.Name] = qb
+	}
+
+	// Build parent-child relationships
+	roots := make([]*queueBuilder, 0)
+	for _, qb := range queueMap {
+		if qb.viz.ParentQueue == "" {
+			roots = append(roots, qb)
+		} else if parent, ok := queueMap[qb.viz.ParentQueue]; ok {
+			parent.children = append(parent.children, qb)
+		} else {
+			// Parent not found, treat as root
+			roots = append(roots, qb)
+		}
+	}
+
+	// Recursively build QueueViz tree from builders
+	var buildVizTree func(qb *queueBuilder) QueueViz
+	buildVizTree = func(qb *queueBuilder) QueueViz {
+		result := qb.viz
+		// Sort children by name
+		sort.Slice(qb.children, func(i, j int) bool {
+			return qb.children[i].viz.Name < qb.children[j].viz.Name
+		})
+		for _, child := range qb.children {
+			result.Children = append(result.Children, buildVizTree(child))
+		}
+		return result
+	}
+
+	// Sort roots by name
+	sort.Slice(roots, func(i, j int) bool { return roots[i].viz.Name < roots[j].viz.Name })
+
+	result := make([]QueueViz, 0, len(roots))
+	for _, r := range roots {
+		result = append(result, buildVizTree(r))
+	}
+
+	return result
+}
+
+func extractGPUQuantity(resources v1.ResourceList) float64 {
+	if resources == nil {
+		return 0
+	}
+	gpuQuantity, ok := resources[v1.ResourceName("nvidia.com/gpu")]
+	if !ok {
+		return 0
+	}
+	// GPU quantities can be fractional, so use AsApproximateFloat64
+	return gpuQuantity.AsApproximateFloat64()
 }

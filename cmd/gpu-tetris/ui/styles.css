@@ -241,6 +241,20 @@ textarea.input { resize: vertical; }
   text-overflow: ellipsis;
 }
 
+.queue-gpu-badge {
+  margin-left: auto;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.85);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+#queues { margin-bottom: 14px; }
+#queues .tree { padding-left: 8px; }
+
 @media (max-width: 980px) {
   .layout { grid-template-columns: 1fr; }
   .sidebar { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.12); }
