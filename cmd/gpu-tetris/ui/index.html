@@ -15,13 +15,12 @@
   <div class="layout">
     <aside class="sidebar">
       <div class="section-title">Create</div>
+      <div class="tabs" id="resourceTypeTabs">
+        <button type="button" class="tab active" data-type="pod">Pod</button>
+        <button type="button" class="tab" data-type="queue">Queue</button>
+      </div>
       <form id="createResource" class="form">
-        <label class="label">Type
-          <select class="input" name="resourceType" id="resourceTypeSelect">
-            <option value="pod">Pod</option>
-            <option value="queue">Queue</option>
-          </select>
-        </label>
+        <input type="hidden" name="resourceType" id="resourceTypeInput" value="pod" />
 
         <!-- Pod-specific fields -->
         <div id="podFields">

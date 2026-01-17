@@ -63,6 +63,43 @@ body {
   letter-spacing: 0.08em;
 }
 
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 0;
+}
+.tab {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.tab:hover {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.85);
+}
+.tab.active {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.95);
+  border-color: rgba(255,255,255,0.14);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: -1px;
+  position: relative;
+  z-index: 1;
+}
+
+.tabs + .form {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 .form {
   margin-bottom: 16px;
   padding: 12px;

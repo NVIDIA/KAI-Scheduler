@@ -166,16 +166,17 @@ function setupCreateResourceForm() {
   const status = document.getElementById('createResourceStatus');
   if (!form || !status) return;
 
-  const typeSelect = document.getElementById('resourceTypeSelect');
+  const typeInput = document.getElementById('resourceTypeInput');
+  const tabs = document.getElementById('resourceTypeTabs');
   const podFields = document.getElementById('podFields');
   const queueFields = document.getElementById('queueFields');
 
   // Setup GPU mode UI for pod fields
   setupCreatePodModeUI(form);
 
-  // Handle type switching
+  // Handle tab switching
   function updateFieldsVisibility() {
-    const resourceType = typeSelect.value;
+    const resourceType = typeInput.value;
     if (resourceType === 'pod') {
       podFields.style.display = '';
       queueFields.style.display = 'none';
@@ -185,7 +186,22 @@ function setupCreateResourceForm() {
     }
   }
 
-  typeSelect.addEventListener('change', updateFieldsVisibility);
+  // Tab click handlers
+  tabs.addEventListener('click', (e) => {
+    const tab = e.target.closest('.tab');
+    if (!tab) return;
+    const type = tab.dataset.type;
+    if (!type) return;
+
+    // Update active state
+    tabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    // Update hidden input
+    typeInput.value = type;
+    updateFieldsVisibility();
+  });
+
   updateFieldsVisibility();
 
   const submitBtn = form.querySelector('button[type="submit"]');
