@@ -18,8 +18,9 @@
       <div class="tabs" id="resourceTypeTabs">
         <button type="button" class="tab active" data-type="pod">Pod</button>
         <button type="button" class="tab" data-type="deployment">Dep</button>
-        <button type="button" class="tab" data-type="queue">Queue</button>
-        <button type="button" class="tab" data-type="topology">Topology</button>
+        <button type="button" class="tab" data-type="job">Job</button>
+        <button type="button" class="tab" data-type="queue">Q</button>
+        <button type="button" class="tab" data-type="topology">Topo</button>
       </div>
       <form id="createResource" class="form">
         <input type="hidden" name="resourceType" id="resourceTypeInput" value="pod" />
@@ -98,6 +99,49 @@
           </label>
           <label class="label">Image
             <input class="input" name="deploymentImage" placeholder="busybox:1.36" />
+          </label>
+        </div>
+
+        <!-- Job-specific fields -->
+        <div id="jobFields" style="display: none;">
+          <label class="label">Namespace
+            <input class="input" name="jobNamespace" placeholder="default" />
+          </label>
+          <label class="label">Name
+            <input class="input" name="jobName" placeholder="(auto)" />
+          </label>
+          <label class="label">Parallelism
+            <input class="input" name="parallelism" type="number" min="1" value="1" />
+          </label>
+          <label class="label">Completions
+            <input class="input" name="completions" type="number" min="1" value="1" />
+          </label>
+          <label class="label">Queue
+            <select class="input" name="jobQueue" id="jobQueueSelect">
+              <option value="">-- Select queue --</option>
+            </select>
+          </label>
+          <label class="label">Mode
+            <select class="input" name="jobMode">
+              <option value="whole">Whole GPU</option>
+              <option value="fraction">GPU Fraction</option>
+              <option value="memory">GPU Memory (MiB)</option>
+            </select>
+          </label>
+          <label class="label">GPU Count
+            <input class="input" name="jobGpuCount" type="number" min="1" value="1" />
+          </label>
+          <label class="label">GPU Fraction
+            <input class="input" name="jobGpuFraction" type="number" min="0.01" max="0.99" step="0.01" value="0.5" />
+          </label>
+          <label class="label">Fraction #Devices
+            <input class="input" name="jobFractionNumDevices" type="number" min="1" value="1" />
+          </label>
+          <label class="label">GPU Memory (MiB)
+            <input class="input" name="jobGpuMemoryMiB" type="number" min="1" value="2000" />
+          </label>
+          <label class="label">Image
+            <input class="input" name="jobImage" placeholder="busybox:1.36" />
           </label>
         </div>
 

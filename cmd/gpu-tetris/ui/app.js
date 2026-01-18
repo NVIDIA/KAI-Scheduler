@@ -171,6 +171,27 @@ async function deleteTetrisDeployments() {
   return JSON.parse(text);
 }
 
+async function createJob(payload) {
+  const resp = await fetch('/api/jobs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const text = await resp.text();
+  if (!resp.ok) throw new Error(text || resp.statusText);
+  return JSON.parse(text);
+}
+
+async function deleteTetrisJobs() {
+  const resp = await fetch('/api/jobs', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const text = await resp.text();
+  if (!resp.ok) throw new Error(text || resp.statusText);
+  return JSON.parse(text);
+}
+
 async function createQueue(payload) {
   const resp = await fetch('/api/queues', {
     method: 'POST',
@@ -207,6 +228,31 @@ function setupDeploymentModeUI(form) {
   apply();
 }
 
+function setupJobModeUI(form) {
+  if (!form) return;
+  const modeEl = form.querySelector('select[name="jobMode"]');
+  if (!modeEl) return;
+
+  function showField(name, show) {
+    const input = form.querySelector(`[name="${name}"]`);
+    if (!input) return;
+    const label = input.closest('label') || input.parentElement;
+    if (label) label.style.display = show ? '' : 'none';
+    input.disabled = !show;
+  }
+
+  function apply() {
+    const mode = String(modeEl.value || 'whole');
+    showField('jobGpuCount', mode === 'whole');
+    showField('jobGpuFraction', mode === 'fraction');
+    showField('jobFractionNumDevices', mode === 'fraction');
+    showField('jobGpuMemoryMiB', mode === 'memory');
+  }
+
+  modeEl.addEventListener('change', apply);
+  apply();
+}
+
 function setupCreateResourceForm() {
   const form = document.getElementById('createResource');
   const status = document.getElementById('createResourceStatus');
@@ -216,18 +262,21 @@ function setupCreateResourceForm() {
   const tabs = document.getElementById('resourceTypeTabs');
   const podFields = document.getElementById('podFields');
   const deploymentFields = document.getElementById('deploymentFields');
+  const jobFields = document.getElementById('jobFields');
   const queueFields = document.getElementById('queueFields');
   const topologyFields = document.getElementById('topologyFields');
 
-  // Setup GPU mode UI for pod and deployment fields
+  // Setup GPU mode UI for pod, deployment, and job fields
   setupCreatePodModeUI(form);
   setupDeploymentModeUI(form);
+  setupJobModeUI(form);
 
   // Handle tab switching
   function updateFieldsVisibility() {
     const resourceType = typeInput.value;
     podFields.style.display = resourceType === 'pod' ? '' : 'none';
     deploymentFields.style.display = resourceType === 'deployment' ? '' : 'none';
+    jobFields.style.display = resourceType === 'job' ? '' : 'none';
     queueFields.style.display = resourceType === 'queue' ? '' : 'none';
     topologyFields.style.display = resourceType === 'topology' ? '' : 'none';
   }
@@ -252,7 +301,7 @@ function setupCreateResourceForm() {
 
   const submitBtn = form.querySelector('button[type="submit"]');
 
-  // Delete tetris resources button (pods and deployments)
+  // Delete tetris resources button (pods, deployments, and jobs)
   const deleteBtn = document.getElementById('deleteTetrisPods');
   const deleteStatus = document.getElementById('deleteTetrisPodsStatus');
   if (deleteBtn && deleteStatus) {
@@ -260,16 +309,17 @@ function setupCreateResourceForm() {
       setBusy(deleteBtn, true);
       setStatus(deleteStatus, 'Deleting…');
       try {
-        const [podRes, depRes] = await Promise.all([
+        const [podRes, depRes, jobRes] = await Promise.all([
           deleteTetrisPods(),
-          deleteTetrisDeployments()
+          deleteTetrisDeployments(),
+          deleteTetrisJobs()
         ]);
-        const totalDeleted = (podRes.deleted || 0) + (depRes.deleted || 0);
-        const allErrors = [...(podRes.errors || []), ...(depRes.errors || [])];
+        const totalDeleted = (podRes.deleted || 0) + (depRes.deleted || 0) + (jobRes.deleted || 0);
+        const allErrors = [...(podRes.errors || []), ...(depRes.errors || []), ...(jobRes.errors || [])];
         if (allErrors.length) {
           setStatus(deleteStatus, `Deleted ${totalDeleted}. Errors: ${allErrors.length}`, allErrors);
         } else {
-          setStatus(deleteStatus, `Deleted ${podRes.deleted} pod(s), ${depRes.deleted} deployment(s).`);
+          setStatus(deleteStatus, `Deleted ${podRes.deleted} pod(s), ${depRes.deleted} deployment(s), ${jobRes.deleted} job(s).`);
         }
         await refresh();
       } catch (err) {
@@ -321,6 +371,24 @@ function setupCreateResourceForm() {
         };
         const res = await createDeployment(payload);
         setStatus(status, `Created deployment ${res.namespace}/${res.name}. Waiting for pods…`);
+      } else if (resourceType === 'job') {
+        setStatus(status, 'Creating job…');
+        const mode = String(fd.get('jobMode') || 'whole');
+        const payload = {
+          namespace: String(fd.get('jobNamespace') || ''),
+          name: String(fd.get('jobName') || ''),
+          queue: String(fd.get('jobQueue') || ''),
+          parallelism: Number(fd.get('parallelism') || 1),
+          completions: Number(fd.get('completions') || 1),
+          mode,
+          gpuCount: Number(fd.get('jobGpuCount') || 0),
+          gpuFraction: Number(fd.get('jobGpuFraction') || 0),
+          fractionNumDevices: Number(fd.get('jobFractionNumDevices') || 0),
+          gpuMemoryMiB: Number(fd.get('jobGpuMemoryMiB') || 0),
+          image: String(fd.get('jobImage') || ''),
+        };
+        const res = await createJob(payload);
+        setStatus(status, `Created job ${res.namespace}/${res.name}. Waiting for pods…`);
       } else if (resourceType === 'queue') {
         setStatus(status, 'Creating queue…');
         const priorityStr = fd.get('priority');
@@ -574,6 +642,48 @@ function updateDeploymentQueueDropdown(viz) {
   }
 }
 
+function updateJobQueueDropdown(viz) {
+  const select = document.getElementById('jobQueueSelect');
+  if (!select) return;
+
+  const currentValue = select.value;
+  const queues = viz.queues || [];
+
+  // Flatten queue tree with indentation to show hierarchy
+  function collectQueues(queueList, depth = 0) {
+    const result = [];
+    for (const q of queueList) {
+      const indent = '\u00A0\u00A0'.repeat(depth); // Non-breaking spaces for indentation
+      const displayName = q.displayName || q.name;
+      result.push({ name: q.name, label: indent + displayName, depth });
+      if (q.children && q.children.length > 0) {
+        result.push(...collectQueues(q.children, depth + 1));
+      }
+    }
+    return result;
+  }
+
+  const allQueues = collectQueues(queues);
+
+  // Clear existing options except the first placeholder
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+
+  // Add queue options
+  for (const q of allQueues) {
+    const opt = document.createElement('option');
+    opt.value = q.name;
+    opt.textContent = q.label;
+    select.appendChild(opt);
+  }
+
+  // Restore previous selection if it still exists
+  if (currentValue && Array.from(select.options).some(o => o.value === currentValue)) {
+    select.value = currentValue;
+  }
+}
+
 function domainById(root, id) {
   if (root.id === id) return root;
   for (const c of (root.children || [])) {
@@ -732,6 +842,7 @@ async function refresh() {
     renderQueues(viz);
     updateQueueDropdown(viz);
     updateDeploymentQueueDropdown(viz);
+    updateJobQueueDropdown(viz);
     updateParentQueueDropdown(viz);
     renderPending(viz);
     renderNodes(viz);
