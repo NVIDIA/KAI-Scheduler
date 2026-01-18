@@ -35,3 +35,37 @@ Useful flags:
 - `--default-queue`
 - `--default-namespace`
 - `--default-image`
+- `--metrics-url` (scheduler metrics endpoint for fairshare data)
+
+## Deploy In-Cluster (using ko)
+
+GPU Tetris can be deployed as a pod in the cluster using [ko](https://ko.build/).
+
+### Prerequisites
+
+Install ko: https://ko.build/install/
+
+### Build and Deploy
+
+```bash
+cd cmd/gpu-tetris
+
+# Set your container registry
+export KO_DOCKER_REPO=your-registry.io/kai-scheduler
+
+# Deploy (builds image, pushes to registry, applies manifests)
+ko apply -f deploy/
+```
+
+### Access the UI
+
+```bash
+kubectl port-forward svc/gpu-tetris 8099:8099 -n kai-scheduler
+# Open http://localhost:8099
+```
+
+### Delete
+
+```bash
+ko delete -f deploy/
+```

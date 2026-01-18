@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gpu-tetris
+  namespace: kai-scheduler
+  labels:
+    app: gpu-tetris
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gpu-tetris
+  template:
+    metadata:
+      labels:
+        app: gpu-tetris
+    spec:
+      serviceAccountName: gpu-tetris
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: gpu-tetris
+        image: ko://github.com/NVIDIA/KAI-scheduler/cmd/gpu-tetris
+        args:
+          - --live
+          - --listen=:8099
+          - --metrics-url=http://kai-scheduler-default.kai-scheduler.svc:8080/metrics
+        ports:
+        - containerPort: 8099
+          name: http
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8099
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi

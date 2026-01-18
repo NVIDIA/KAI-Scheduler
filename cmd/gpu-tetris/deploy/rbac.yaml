@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gpu-tetris
+  namespace: kai-scheduler
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gpu-tetris
+rules:
+- apiGroups: [""]
+  resources: [nodes, pods, namespaces]
+  verbs: [get, list, watch]
+- apiGroups: [""]
+  resources: [pods]
+  verbs: [create, delete]
+- apiGroups: [kai.scheduler]
+  resources: [topologies]
+  verbs: [get, list, watch, create, update, patch]
+- apiGroups: [scheduling.run.ai]
+  resources: [queues, bindrequests]
+  verbs: [get, list, watch]
+- apiGroups: [scheduling.run.ai]
+  resources: [queues]
+  verbs: [create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gpu-tetris
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gpu-tetris
+subjects:
+- kind: ServiceAccount
+  name: gpu-tetris
+  namespace: kai-scheduler
