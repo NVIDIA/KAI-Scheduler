@@ -34,6 +34,7 @@ type QueueViz struct {
 	AllocatedGPU float64    `json:"allocatedGpu"`
 	RequestedGPU float64    `json:"requestedGpu"`
 	FairShareGPU float64    `json:"fairShareGpu"`
+	QuotaGPU     float64    `json:"quotaGpu"`
 	Priority     int        `json:"priority"`
 }
 
@@ -492,6 +493,12 @@ func buildQueues(queues []*enginev2.Queue, fairShares map[string]float64) []Queu
 			}
 		}
 
+		// Extract GPU quota, use -1 if not set
+		quotaGPU := float64(-1)
+		if q.Spec.Resources != nil {
+			quotaGPU = q.Spec.Resources.GPU.Quota
+		}
+
 		qb := &queueBuilder{
 			viz: QueueViz{
 				Name:         q.Name,
@@ -501,6 +508,7 @@ func buildQueues(queues []*enginev2.Queue, fairShares map[string]float64) []Queu
 				AllocatedGPU: extractGPUQuantity(q.Status.Allocated),
 				RequestedGPU: extractGPUQuantity(q.Status.Requested),
 				FairShareGPU: fairShare,
+				QuotaGPU:     quotaGPU,
 				Priority:     priority,
 			},
 			children: []*queueBuilder{},

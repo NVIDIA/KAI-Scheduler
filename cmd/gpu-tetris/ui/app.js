@@ -487,16 +487,18 @@ function renderQueues(viz) {
     const dot = el('span', { class: 'dot', style: `background:${hashColor(q.name)};` });
     const allocated = formatGpu(q.allocatedGpu);
     const fairShare = formatGpu(q.fairShareGpu);
+    const quota = formatGpu(q.quotaGpu);
     const requested = formatGpu(q.requestedGpu);
     const displayName = q.displayName || q.name;
 
-    // Show allocated/fairShare/requested, use '-' if fairShare is -1 (not configured)
+    // Show allocated/fairShare/quota/requested, use '-' if value is -1 (not configured)
     const fairShareStr = q.fairShareGpu >= 0 ? fairShare : '-';
-    const badge = `${allocated}/${fairShareStr}/${requested}`;
+    const quotaStr = q.quotaGpu >= 0 ? quota : '-';
+    const badge = `${allocated}/${fairShareStr}/${quotaStr}/${requested}`;
 
     const btn = el('button', {
       class: 'tree-button',
-      title: `${displayName}\nAllocated: ${allocated} GPU\nFairShare: ${fairShareStr} GPU\nRequested: ${requested} GPU\nPriority: ${q.priority}`
+      title: `${displayName}\nAllocated: ${allocated} GPU\nFairShare: ${fairShareStr} GPU\nQuota: ${quotaStr} GPU\nRequested: ${requested} GPU\nPriority: ${q.priority}`
     }, [dot, el('span', {}, [displayName]), el('span', { class: 'queue-gpu-badge' }, [badge])]);
 
     const item = el('li', { class: 'tree-item' }, [btn]);
