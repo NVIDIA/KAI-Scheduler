@@ -28,6 +28,7 @@ type config struct {
 	snapshotFile string
 	refresh      time.Duration
 	live         bool
+	metricsURL   string
 
 	kubeconfig    string
 	schedulerName string
@@ -61,6 +62,7 @@ func main() {
 	flags.StringVar(&cfg.defaultQueue, "default-queue", "default-queue", "Default queue label value for created pods (label key kai.scheduler/queue)")
 	flags.StringVar(&cfg.defaultNS, "default-namespace", "default", "Default namespace for created pods")
 	flags.StringVar(&cfg.defaultImage, "default-image", "busybox:1.36", "Default container image for created pods")
+	flags.StringVar(&cfg.metricsURL, "metrics-url", "", "Scheduler metrics URL (e.g., http://localhost:8080/metrics) for fairshare data")
 	_ = flags.Parse(os.Args[1:])
 
 	if !cfg.live {
@@ -144,9 +146,15 @@ func (s *server) loadOnce(ctx context.Context) {
 	} else {
 		snap, err = LoadSnapshot(ctx, s.cfg.snapshotURL, s.cfg.snapshotFile)
 	}
+
+	var fairShares map[string]float64
+	if s.cfg.metricsURL != "" {
+		fairShares, _ = FetchQueueFairShares(s.cfg.metricsURL)
+	}
+
 	viz := (*Viz)(nil)
 	if err == nil {
-		viz, err = BuildViz(snap)
+		viz, err = BuildViz(snap, fairShares)
 	}
 
 	s.mu.Lock()

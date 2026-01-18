@@ -33,6 +33,7 @@ type QueueViz struct {
 	Children     []QueueViz `json:"children"`
 	AllocatedGPU float64    `json:"allocatedGpu"`
 	RequestedGPU float64    `json:"requestedGpu"`
+	FairShareGPU float64    `json:"fairShareGpu"`
 	Priority     int        `json:"priority"`
 }
 
@@ -68,7 +69,7 @@ type BlockViz struct {
 	ColorKey  string  `json:"colorKey"` // used by UI to derive color
 }
 
-func BuildViz(snap *snapshotplugin.Snapshot) (*Viz, error) {
+func BuildViz(snap *snapshotplugin.Snapshot, fairShares map[string]float64) (*Viz, error) {
 	nodes := make([]NodeViz, 0)
 	nodeGPUCounts := map[string]int{}
 	if snap == nil || snap.RawObjects == nil {
@@ -91,7 +92,7 @@ func BuildViz(snap *snapshotplugin.Snapshot) (*Viz, error) {
 	topoRoot := buildTopologyRoot(snap.RawObjects.Topologies, snap.RawObjects.Nodes, nodeGPUCounts)
 	blocks := buildBlocks(snap.RawObjects.BindRequests, snap.RawObjects.Pods, nodeGPUCounts)
 	pending := buildPendingPods(snap.RawObjects.Pods)
-	queues := buildQueues(snap.RawObjects.Queues)
+	queues := buildQueues(snap.RawObjects.Queues, fairShares)
 
 	return &Viz{
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
@@ -457,7 +458,7 @@ func (d *domainBuilder) finalize() {
 	}
 }
 
-func buildQueues(queues []*enginev2.Queue) []QueueViz {
+func buildQueues(queues []*enginev2.Queue, fairShares map[string]float64) []QueueViz {
 	if len(queues) == 0 {
 		return []QueueViz{}
 	}
@@ -482,6 +483,11 @@ func buildQueues(queues []*enginev2.Queue) []QueueViz {
 			displayName = q.Name
 		}
 
+		fairShare := float64(0)
+		if fairShares != nil {
+			fairShare = fairShares[q.Name]
+		}
+
 		qb := &queueBuilder{
 			viz: QueueViz{
 				Name:         q.Name,
@@ -490,6 +496,7 @@ func buildQueues(queues []*enginev2.Queue) []QueueViz {
 				Children:     []QueueViz{},
 				AllocatedGPU: extractGPUQuantity(q.Status.Allocated),
 				RequestedGPU: extractGPUQuantity(q.Status.Requested),
+				FairShareGPU: fairShare,
 				Priority:     priority,
 			},
 			children: []*queueBuilder{},
