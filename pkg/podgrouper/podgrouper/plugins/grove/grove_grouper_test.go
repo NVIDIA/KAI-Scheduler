@@ -268,6 +268,22 @@ func TestParseGroveSubGroup_InvalidPodReference(t *testing.T) {
 	assert.Equal(t, err.Error(), "invalid spec.podgroup[2].podReferences[0] in PodGang ns/gg")
 }
 
+func TestParseGroveSubGroup_CrossNamespaceReferenceRejected(t *testing.T) {
+	// This test verifies that cross-namespace pod references are rejected
+	// to prevent namespace isolation bypass (security vulnerability)
+	input := map[string]interface{}{
+		"name":        "sg",
+		"minReplicas": int64(1),
+		"podReferences": []interface{}{
+			map[string]interface{}{"namespace": "other-namespace", "name": "victim-pod"},
+		},
+	}
+	// PodGang is in namespace "attacker-ns" but references pod in "other-namespace"
+	_, err := parseGroveSubGroup(input, 0, "attacker-ns", "malicious-gang", "")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "cross-namespace pod reference not allowed")
+}
+
 func TestParsePodReference_Success(t *testing.T) {
 	ref := map[string]interface{}{
 		"namespace": "ns1",

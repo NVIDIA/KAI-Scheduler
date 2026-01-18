@@ -244,6 +244,11 @@ func parseGroveSubGroup(
 			return nil, fmt.Errorf("failed to parse spec.podgroups[%d].podreferences[%d] from PodGang %s/%s. Err: %w",
 				pgIndex, podIndex, namespace, podGangName, err)
 		}
+		// Validate that pod reference is in the same namespace as PodGang to prevent cross-namespace manipulation
+		if namespacedName.Namespace != namespace {
+			return nil, fmt.Errorf("cross-namespace pod reference not allowed: pod %s/%s cannot be referenced from PodGang in namespace %s",
+				namespacedName.Namespace, namespacedName.Name, namespace)
+		}
 		pods = append(pods, namespacedName)
 	}
 	topologyConstraint, err := parseTopologyConstraint(pg, topology, "topologyConstraint", "packConstraint")
