@@ -55,6 +55,7 @@ var (
 	queueMemoryUsage            *prometheus.GaugeVec
 	queueGPUUsage               *prometheus.GaugeVec
 	usageQueryLatency           *prometheus.HistogramVec
+	podGroupEvictedPodsTotal    *prometheus.CounterVec
 )
 
 func init() {
@@ -199,6 +200,13 @@ func InitMetrics(namespace string) {
 			Help:      "Usage database query latency histogram in milliseconds",
 			Buckets:   prometheus.ExponentialBuckets(5, 2, 10),
 		}, []string{})
+
+	podGroupEvictedPodsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Name:      "pod_group_evicted_pods_total",
+			Help:      "Total number of pods evicted per pod group",
+		}, []string{"name", "namespace", "nodepool", "action"})
 }
 
 // UpdateOpenSessionDuration updates latency for open session, including all plugins
@@ -293,6 +301,11 @@ func UpdateUsageQueryLatency(latency time.Duration) {
 // RegisterPreemptionAttempts records number of attempts for preemption
 func RegisterPreemptionAttempts() {
 	preemptionAttempts.Inc()
+}
+
+// RecordPodGroupEvictedPods records the number of pods evicted for a pod group
+func RecordPodGroupEvictedPods(name, namespace, nodepool, action string, count int) {
+	podGroupEvictedPodsTotal.WithLabelValues(name, namespace, nodepool, action).Add(float64(count))
 }
 
 // Duration get the time since specified start
