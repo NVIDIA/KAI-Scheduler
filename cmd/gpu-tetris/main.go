@@ -101,6 +101,7 @@ func main() {
 	})
 	mux.HandleFunc("/viz.json", srv.handleViz)
 	mux.HandleFunc("/api/pods", srv.handleCreatePod)
+	mux.HandleFunc("/api/deployments", srv.handleDeployment)
 	mux.HandleFunc("/api/queues", srv.handleQueue)
 	mux.HandleFunc("/api/topology", srv.handleTopology)
 

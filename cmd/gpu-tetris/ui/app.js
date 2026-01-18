@@ -150,6 +150,27 @@ async function createTopology(payload) {
   return JSON.parse(text);
 }
 
+async function createDeployment(payload) {
+  const resp = await fetch('/api/deployments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const text = await resp.text();
+  if (!resp.ok) throw new Error(text || resp.statusText);
+  return JSON.parse(text);
+}
+
+async function deleteTetrisDeployments() {
+  const resp = await fetch('/api/deployments', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const text = await resp.text();
+  if (!resp.ok) throw new Error(text || resp.statusText);
+  return JSON.parse(text);
+}
+
 async function createQueue(payload) {
   const resp = await fetch('/api/queues', {
     method: 'POST',
@@ -161,6 +182,31 @@ async function createQueue(payload) {
   return JSON.parse(text);
 }
 
+function setupDeploymentModeUI(form) {
+  if (!form) return;
+  const modeEl = form.querySelector('select[name="deploymentMode"]');
+  if (!modeEl) return;
+
+  function showField(name, show) {
+    const input = form.querySelector(`[name="${name}"]`);
+    if (!input) return;
+    const label = input.closest('label') || input.parentElement;
+    if (label) label.style.display = show ? '' : 'none';
+    input.disabled = !show;
+  }
+
+  function apply() {
+    const mode = String(modeEl.value || 'whole');
+    showField('deploymentGpuCount', mode === 'whole');
+    showField('deploymentGpuFraction', mode === 'fraction');
+    showField('deploymentFractionNumDevices', mode === 'fraction');
+    showField('deploymentGpuMemoryMiB', mode === 'memory');
+  }
+
+  modeEl.addEventListener('change', apply);
+  apply();
+}
+
 function setupCreateResourceForm() {
   const form = document.getElementById('createResource');
   const status = document.getElementById('createResourceStatus');
@@ -169,16 +215,19 @@ function setupCreateResourceForm() {
   const typeInput = document.getElementById('resourceTypeInput');
   const tabs = document.getElementById('resourceTypeTabs');
   const podFields = document.getElementById('podFields');
+  const deploymentFields = document.getElementById('deploymentFields');
   const queueFields = document.getElementById('queueFields');
   const topologyFields = document.getElementById('topologyFields');
 
-  // Setup GPU mode UI for pod fields
+  // Setup GPU mode UI for pod and deployment fields
   setupCreatePodModeUI(form);
+  setupDeploymentModeUI(form);
 
   // Handle tab switching
   function updateFieldsVisibility() {
     const resourceType = typeInput.value;
     podFields.style.display = resourceType === 'pod' ? '' : 'none';
+    deploymentFields.style.display = resourceType === 'deployment' ? '' : 'none';
     queueFields.style.display = resourceType === 'queue' ? '' : 'none';
     topologyFields.style.display = resourceType === 'topology' ? '' : 'none';
   }
@@ -203,7 +252,7 @@ function setupCreateResourceForm() {
 
   const submitBtn = form.querySelector('button[type="submit"]');
 
-  // Delete tetris pods button
+  // Delete tetris resources button (pods and deployments)
   const deleteBtn = document.getElementById('deleteTetrisPods');
   const deleteStatus = document.getElementById('deleteTetrisPodsStatus');
   if (deleteBtn && deleteStatus) {
@@ -211,11 +260,16 @@ function setupCreateResourceForm() {
       setBusy(deleteBtn, true);
       setStatus(deleteStatus, 'Deleting…');
       try {
-        const res = await deleteTetrisPods();
-        if (res.errors && res.errors.length) {
-          setStatus(deleteStatus, `Deleted ${res.deleted}. Errors: ${res.errors.length}`, res.errors);
+        const [podRes, depRes] = await Promise.all([
+          deleteTetrisPods(),
+          deleteTetrisDeployments()
+        ]);
+        const totalDeleted = (podRes.deleted || 0) + (depRes.deleted || 0);
+        const allErrors = [...(podRes.errors || []), ...(depRes.errors || [])];
+        if (allErrors.length) {
+          setStatus(deleteStatus, `Deleted ${totalDeleted}. Errors: ${allErrors.length}`, allErrors);
         } else {
-          setStatus(deleteStatus, `Deleted ${res.deleted} pod(s).`);
+          setStatus(deleteStatus, `Deleted ${podRes.deleted} pod(s), ${depRes.deleted} deployment(s).`);
         }
         await refresh();
       } catch (err) {
@@ -250,6 +304,23 @@ function setupCreateResourceForm() {
         };
         const res = await createPod(payload);
         setStatus(status, `Created pod ${res.namespace}/${res.name}. Waiting for scheduling…`);
+      } else if (resourceType === 'deployment') {
+        setStatus(status, 'Creating deployment…');
+        const mode = String(fd.get('deploymentMode') || 'whole');
+        const payload = {
+          namespace: String(fd.get('deploymentNamespace') || ''),
+          name: String(fd.get('deploymentName') || ''),
+          queue: String(fd.get('deploymentQueue') || ''),
+          replicas: Number(fd.get('replicas') || 1),
+          mode,
+          gpuCount: Number(fd.get('deploymentGpuCount') || 0),
+          gpuFraction: Number(fd.get('deploymentGpuFraction') || 0),
+          fractionNumDevices: Number(fd.get('deploymentFractionNumDevices') || 0),
+          gpuMemoryMiB: Number(fd.get('deploymentGpuMemoryMiB') || 0),
+          image: String(fd.get('deploymentImage') || ''),
+        };
+        const res = await createDeployment(payload);
+        setStatus(status, `Created deployment ${res.namespace}/${res.name}. Waiting for pods…`);
       } else if (resourceType === 'queue') {
         setStatus(status, 'Creating queue…');
         const priorityStr = fd.get('priority');
@@ -461,6 +532,48 @@ function updateParentQueueDropdown(viz) {
   }
 }
 
+function updateDeploymentQueueDropdown(viz) {
+  const select = document.getElementById('deploymentQueueSelect');
+  if (!select) return;
+
+  const currentValue = select.value;
+  const queues = viz.queues || [];
+
+  // Flatten queue tree with indentation to show hierarchy
+  function collectQueues(queueList, depth = 0) {
+    const result = [];
+    for (const q of queueList) {
+      const indent = '\u00A0\u00A0'.repeat(depth); // Non-breaking spaces for indentation
+      const displayName = q.displayName || q.name;
+      result.push({ name: q.name, label: indent + displayName, depth });
+      if (q.children && q.children.length > 0) {
+        result.push(...collectQueues(q.children, depth + 1));
+      }
+    }
+    return result;
+  }
+
+  const allQueues = collectQueues(queues);
+
+  // Clear existing options except the first placeholder
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+
+  // Add queue options
+  for (const q of allQueues) {
+    const opt = document.createElement('option');
+    opt.value = q.name;
+    opt.textContent = q.label;
+    select.appendChild(opt);
+  }
+
+  // Restore previous selection if it still exists
+  if (currentValue && Array.from(select.options).some(o => o.value === currentValue)) {
+    select.value = currentValue;
+  }
+}
+
 function domainById(root, id) {
   if (root.id === id) return root;
   for (const c of (root.children || [])) {
@@ -618,6 +731,7 @@ async function refresh() {
     renderTopology(viz);
     renderQueues(viz);
     updateQueueDropdown(viz);
+    updateDeploymentQueueDropdown(viz);
     updateParentQueueDropdown(viz);
     renderPending(viz);
     renderNodes(viz);

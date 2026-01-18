@@ -17,6 +17,7 @@
       <div class="section-title">Create</div>
       <div class="tabs" id="resourceTypeTabs">
         <button type="button" class="tab active" data-type="pod">Pod</button>
+        <button type="button" class="tab" data-type="deployment">Dep</button>
         <button type="button" class="tab" data-type="queue">Queue</button>
         <button type="button" class="tab" data-type="topology">Topology</button>
       </div>
@@ -60,6 +61,46 @@
           </label>
         </div>
 
+        <!-- Deployment-specific fields -->
+        <div id="deploymentFields" style="display: none;">
+          <label class="label">Namespace
+            <input class="input" name="deploymentNamespace" placeholder="default" />
+          </label>
+          <label class="label">Name
+            <input class="input" name="deploymentName" placeholder="(auto)" />
+          </label>
+          <label class="label">Replicas
+            <input class="input" name="replicas" type="number" min="1" value="1" />
+          </label>
+          <label class="label">Queue
+            <select class="input" name="deploymentQueue" id="deploymentQueueSelect">
+              <option value="">-- Select queue --</option>
+            </select>
+          </label>
+          <label class="label">Mode
+            <select class="input" name="deploymentMode">
+              <option value="whole">Whole GPU</option>
+              <option value="fraction">GPU Fraction</option>
+              <option value="memory">GPU Memory (MiB)</option>
+            </select>
+          </label>
+          <label class="label">GPU Count
+            <input class="input" name="deploymentGpuCount" type="number" min="1" value="1" />
+          </label>
+          <label class="label">GPU Fraction
+            <input class="input" name="deploymentGpuFraction" type="number" min="0.01" max="0.99" step="0.01" value="0.5" />
+          </label>
+          <label class="label">Fraction #Devices
+            <input class="input" name="deploymentFractionNumDevices" type="number" min="1" value="1" />
+          </label>
+          <label class="label">GPU Memory (MiB)
+            <input class="input" name="deploymentGpuMemoryMiB" type="number" min="1" value="2000" />
+          </label>
+          <label class="label">Image
+            <input class="input" name="deploymentImage" placeholder="busybox:1.36" />
+          </label>
+        </div>
+
         <!-- Queue-specific fields -->
         <div id="queueFields" style="display: none;">
           <label class="label">Name
@@ -97,7 +138,7 @@
         <button class="button primary" type="submit">Create</button>
         <div class="form-status" id="createResourceStatus"></div>
 
-        <button class="button danger" id="deleteTetrisPods" type="button">Delete all tetris pods</button>
+        <button class="button danger" id="deleteTetrisPods" type="button">Delete all tetris resources</button>
         <div class="form-status" id="deleteTetrisPodsStatus"></div>
       </form>
 
