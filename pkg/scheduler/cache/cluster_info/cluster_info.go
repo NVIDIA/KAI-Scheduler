@@ -32,6 +32,7 @@ import (
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -240,7 +241,32 @@ func (c *ClusterInfo) snapshotNodes(
 		}
 	}
 
+	// Populate DRA GPU counts from ResourceSlices
+	c.populateDRAGPUs(resultNodes)
+
 	return resultNodes, minGPUMemory, nil
+}
+
+// populateDRAGPUs populates DRA GPU counts for nodes from ResourceSlices.
+// This is used when GPUs are advertised via DRA instead of extended resources.
+func (c *ClusterInfo) populateDRAGPUs(nodes map[string]*node_info.NodeInfo) {
+	resourceSlices, err := c.dataLister.ListResourceSlices()
+	if err != nil {
+		log.InfraLogger.V(6).Infof("Failed to list ResourceSlices for DRA GPU counting: %v", err)
+		return
+	}
+
+	if len(resourceSlices) == 0 {
+		return
+	}
+
+	for nodeName, nodeInfo := range nodes {
+		draGPUs := resources.CountNodeGPUsFromResourceSlices(nodeName, resourceSlices)
+		if draGPUs > 0 {
+			nodeInfo.SetDRAGPUs(float64(draGPUs))
+			log.InfraLogger.V(6).Infof("Node %s has %d DRA GPUs from ResourceSlices", nodeName, draGPUs)
+		}
+	}
 }
 
 func (c *ClusterInfo) addTasksToNodes(allPods []*v1.Pod, existingPodsMap map[common_info.PodID]*pod_info.PodInfo,

@@ -79,6 +79,10 @@ type NodeInfo struct {
 
 	Allocatable *resource_info.Resource
 
+	// DRAGPUs tracks GPU capacity from DRA ResourceSlices.
+	// This is used when GPUs are advertised via DRA instead of extended resources.
+	DRAGPUs float64
+
 	AccessibleStorageCapacities map[common_info.StorageClassID][]*sc_info.StorageCapacityInfo
 
 	PodInfos               map[common_info.PodID]*pod_info.PodInfo
@@ -600,7 +604,8 @@ func (ni *NodeInfo) GetNumberOfGPUsInNode() int64 {
 	numberOfGPUs, err := ni.getNodeGpuCountLabelValue()
 	if err != nil {
 		log.InfraLogger.V(6).Infof("Node: <%v> had no annotations of nvidia.com/gpu.count", ni.Name)
-		return int64(ni.Allocatable.GPUs())
+		// Check both extended resources and DRA GPUs
+		return int64(ni.GetTotalGPUs())
 	}
 	return int64(numberOfGPUs)
 }
@@ -653,7 +658,8 @@ func (ni *NodeInfo) IsCPUOnlyNode() bool {
 	if ni.IsMIGEnabled() {
 		return false
 	}
-	return ni.Allocatable.GPUs() == 0
+	// Check both extended resources and DRA GPUs
+	return ni.Allocatable.GPUs() == 0 && ni.DRAGPUs == 0
 }
 
 func (ni *NodeInfo) IsMIGEnabled() bool {
@@ -730,4 +736,28 @@ func (ni *NodeInfo) lessEqualTaskToNodeResources(
 
 func isMigResource(rName string) bool {
 	return strings.HasPrefix(rName, migResourcePrefix)
+}
+
+// SetDRAGPUs sets the DRA-based GPU capacity for this node.
+// This should be called after the node is created, with the GPU count
+// calculated from ResourceSlices.
+func (ni *NodeInfo) SetDRAGPUs(count float64) {
+	ni.DRAGPUs = count
+	// If extended resources show 0 GPUs but DRA has GPUs, update Allocatable and Idle
+	if ni.Allocatable.GPUs() == 0 && count > 0 {
+		ni.Allocatable.SetGPUs(count)
+		ni.Idle.SetGPUs(count)
+	}
+}
+
+// GetTotalGPUs returns the total GPU count for this node,
+// considering both extended resources and DRA ResourceSlices.
+// This is useful for hybrid mode where some nodes use extended resources
+// and others use DRA.
+func (ni *NodeInfo) GetTotalGPUs() float64 {
+	extendedGPUs := ni.Allocatable.GPUs()
+	if extendedGPUs > 0 {
+		return extendedGPUs
+	}
+	return ni.DRAGPUs
 }
