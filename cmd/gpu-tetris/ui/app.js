@@ -170,6 +170,7 @@ function setupCreateResourceForm() {
   const tabs = document.getElementById('resourceTypeTabs');
   const podFields = document.getElementById('podFields');
   const queueFields = document.getElementById('queueFields');
+  const topologyFields = document.getElementById('topologyFields');
 
   // Setup GPU mode UI for pod fields
   setupCreatePodModeUI(form);
@@ -177,13 +178,9 @@ function setupCreateResourceForm() {
   // Handle tab switching
   function updateFieldsVisibility() {
     const resourceType = typeInput.value;
-    if (resourceType === 'pod') {
-      podFields.style.display = '';
-      queueFields.style.display = 'none';
-    } else {
-      podFields.style.display = 'none';
-      queueFields.style.display = '';
-    }
+    podFields.style.display = resourceType === 'pod' ? '' : 'none';
+    queueFields.style.display = resourceType === 'queue' ? '' : 'none';
+    topologyFields.style.display = resourceType === 'topology' ? '' : 'none';
   }
 
   // Tab click handlers
@@ -253,7 +250,7 @@ function setupCreateResourceForm() {
         };
         const res = await createPod(payload);
         setStatus(status, `Created pod ${res.namespace}/${res.name}. Waiting for scheduling…`);
-      } else {
+      } else if (resourceType === 'queue') {
         setStatus(status, 'Creating queue…');
         const priorityStr = fd.get('priority');
         const gpuQuotaStr = fd.get('gpuQuota');
@@ -266,50 +263,29 @@ function setupCreateResourceForm() {
         };
         const res = await createQueue(payload);
         setStatus(status, `Created queue "${res.name}".`);
-      }
-      await refresh();
-    } catch (err) {
-      setStatus(status, `Error: ${err.message}`);
-    } finally {
-      setBusy(submitBtn, false);
-    }
-  });
-}
+      } else if (resourceType === 'topology') {
+        setStatus(status, 'Creating topology…');
+        const name = String(fd.get('topologyName') || '').trim();
+        const levelsRaw = String(fd.get('levels') || '');
+        const levels = levelsRaw.split(',').map(s => s.trim()).filter(Boolean);
 
-function setupCreateTopologyForm() {
-  const form = document.getElementById('createTopology');
-  const status = document.getElementById('createTopologyStatus');
-  if (!form || !status) return;
+        const assignmentsRaw = String(fd.get('assignments') || '');
+        const assignments = [];
+        for (const line of assignmentsRaw.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          const parts = trimmed.split(/\s+/);
+          const node = parts[0];
+          const values = parts.slice(1);
+          assignments.push({ node, values });
+        }
 
-  const submitBtn = form.querySelector('button[type="submit"]');
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    setBusy(submitBtn, true);
-    setStatus(status, 'Creating topology…');
-
-    const fd = new FormData(form);
-    const name = String(fd.get('name') || '').trim();
-    const levelsRaw = String(fd.get('levels') || '');
-    const levels = levelsRaw.split(',').map(s => s.trim()).filter(Boolean);
-
-    const assignmentsRaw = String(fd.get('assignments') || '');
-    const assignments = [];
-    for (const line of assignmentsRaw.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      const parts = trimmed.split(/\s+/);
-      const node = parts[0];
-      const values = parts.slice(1);
-      assignments.push({ node, values });
-    }
-
-    try {
-      const res = await createTopology({ name, levels, assignments });
-      if (res.errors && res.errors.length) {
-        setStatus(status, `Created ${res.topologyName}. Patched ${res.patchedNodes}. Errors: ${res.errors.length}`, res.errors);
-      } else {
-        setStatus(status, `Created ${res.topologyName}. Patched ${res.patchedNodes} node(s).`);
+        const res = await createTopology({ name, levels, assignments });
+        if (res.errors && res.errors.length) {
+          setStatus(status, `Created ${res.topologyName}. Patched ${res.patchedNodes}. Errors: ${res.errors.length}`, res.errors);
+        } else {
+          setStatus(status, `Created ${res.topologyName}. Patched ${res.patchedNodes} node(s).`);
+        }
       }
       await refresh();
     } catch (err) {
@@ -649,5 +625,4 @@ async function refresh() {
 
 refresh();
 setupCreateResourceForm();
-setupCreateTopologyForm();
 setInterval(refresh, 5000);

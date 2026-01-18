@@ -89,7 +89,7 @@ func BuildViz(snap *snapshotplugin.Snapshot) (*Viz, error) {
 	sort.Slice(nodes, func(i, j int) bool { return nodes[i].Name < nodes[j].Name })
 
 	topoRoot := buildTopologyRoot(snap.RawObjects.Topologies, snap.RawObjects.Nodes, nodeGPUCounts)
-	blocks := buildBlocks(snap.RawObjects.BindRequests, nodeGPUCounts)
+	blocks := buildBlocks(snap.RawObjects.BindRequests, snap.RawObjects.Pods, nodeGPUCounts)
 	pending := buildPendingPods(snap.RawObjects.Pods)
 	queues := buildQueues(snap.RawObjects.Queues)
 
@@ -218,10 +218,21 @@ func getNodeGPUCount(n *v1.Node) int {
 	return int(v)
 }
 
-func buildBlocks(bindRequests []*schedulingv1alpha2.BindRequest, nodeGPUCounts map[string]int) []BlockViz {
+func buildBlocks(bindRequests []*schedulingv1alpha2.BindRequest, pods []*v1.Pod, nodeGPUCounts map[string]int) []BlockViz {
 	blocks := make([]BlockViz, 0)
 	if len(bindRequests) == 0 {
 		return blocks
+	}
+
+	// Build pod-to-queue lookup map
+	podQueues := make(map[string]string) // key: "namespace/podName" -> queue name
+	for _, p := range pods {
+		if p == nil || p.Labels == nil {
+			continue
+		}
+		if queue := p.Labels["kai.scheduler/queue"]; queue != "" {
+			podQueues[p.Namespace+"/"+p.Name] = queue
+		}
 	}
 
 	for _, br := range bindRequests {
@@ -256,7 +267,12 @@ func buildBlocks(bindRequests []*schedulingv1alpha2.BindRequest, nodeGPUCounts m
 		if ns == "" {
 			ns = "default"
 		}
-		colorKey := ns
+
+		// Use queue as colorKey, fallback to namespace if not found
+		colorKey := podQueues[ns+"/"+podName]
+		if colorKey == "" {
+			colorKey = ns
+		}
 
 		gpuIndexes := gpuIndexesFromGroups(br.Spec.SelectedGPUGroups, br.Spec.ReceivedGPU.Count, gpuCount, podName)
 		for i, idx := range gpuIndexes {

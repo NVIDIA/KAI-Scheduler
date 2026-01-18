@@ -18,6 +18,7 @@
       <div class="tabs" id="resourceTypeTabs">
         <button type="button" class="tab active" data-type="pod">Pod</button>
         <button type="button" class="tab" data-type="queue">Queue</button>
+        <button type="button" class="tab" data-type="topology">Topology</button>
       </div>
       <form id="createResource" class="form">
         <input type="hidden" name="resourceType" id="resourceTypeInput" value="pod" />
@@ -80,6 +81,19 @@
           </label>
         </div>
 
+        <!-- Topology-specific fields -->
+        <div id="topologyFields" style="display: none;">
+          <label class="label">Topology Name
+            <input class="input" name="topologyName" placeholder="gpu-tetris-topology" />
+          </label>
+          <label class="label">Levels (node label keys)
+            <input class="input" name="levels" placeholder="topology.kubernetes.io/zone,kubernetes.io/hostname" />
+          </label>
+          <label class="label">Node assignments (one per line)
+            <textarea class="input" name="assignments" rows="6" placeholder="node-a zone-a node-a\nnode-b zone-b node-b"></textarea>
+          </label>
+        </div>
+
         <button class="button primary" type="submit">Create</button>
         <div class="form-status" id="createResourceStatus"></div>
 
@@ -90,26 +104,11 @@
       <div class="section-title">Pending Pods</div>
       <div id="pending" class="pending"></div>
 
-      <div class="section-title">Topology</div>
-      <div id="topology"></div>
-
       <div class="section-title">Queues</div>
       <div id="queues"></div>
 
-      <div class="section-title">Create Topology</div>
-      <form id="createTopology" class="form">
-        <label class="label">Topology Name
-          <input class="input" name="name" placeholder="gpu-tetris-topology" />
-        </label>
-        <label class="label">Levels (node label keys)
-          <input class="input" name="levels" placeholder="topology.kubernetes.io/zone,kubernetes.io/hostname" />
-        </label>
-        <label class="label">Node assignments (one per line)
-          <textarea class="input" name="assignments" rows="6" placeholder="node-a zone-a node-a\nnode-b zone-b node-b"></textarea>
-        </label>
-        <button class="button primary" type="submit">Create + Assign</button>
-        <div class="form-status" id="createTopologyStatus"></div>
-      </form>
+      <div class="section-title">Topology</div>
+      <div id="topology"></div>
     </aside>
 
     <main class="main">
