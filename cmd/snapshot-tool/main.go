@@ -17,7 +17,9 @@ import (
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	featureutil "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/kubernetes/pkg/features"
 
 	kaischedulerfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
@@ -56,6 +58,11 @@ func main() {
 	snapshot, err := loadSnapshot(*filename)
 	if err != nil {
 		log.InfraLogger.Fatalf(err.Error(), err)
+	}
+
+	// Set DRA feature gate based on the snapshot
+	if err := setDRAFeatureGate(snapshot); err != nil {
+		log.InfraLogger.V(2).Warnf("Failed to set DRA feature gate: %v", err)
 	}
 
 	actions.InitDefaultActions()
@@ -251,4 +258,25 @@ func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.C
 	}
 
 	return kubeClient, kaiClient
+}
+
+// setDRAFeatureGate sets the DRA feature gate based on the snapshot.
+// This ensures that the snapshot-tool properly simulates the DRA state
+// from when the snapshot was captured.
+func setDRAFeatureGate(snap *snapshot.Snapshot) error {
+	// Determine if DRA should be enabled:
+	// 1. Use the explicit DRAEnabled flag from the snapshot if set
+	// 2. Otherwise, infer from presence of ResourceSlices (backward compatibility with old snapshots)
+	draEnabled := snap.DRAEnabled
+	if !draEnabled && snap.RawObjects != nil && len(snap.RawObjects.ResourceSlices) > 0 {
+		draEnabled = true
+		log.InfraLogger.V(3).Infof("DRA enabled based on presence of ResourceSlices in snapshot")
+	}
+
+	if draEnabled {
+		log.InfraLogger.V(3).Infof("Enabling DRA feature gate for snapshot simulation")
+	}
+
+	return featureutil.DefaultMutableFeatureGate.SetFromMap(
+		map[string]bool{string(features.DynamicResourceAllocation): draEnabled})
 }

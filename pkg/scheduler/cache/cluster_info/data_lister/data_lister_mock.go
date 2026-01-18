@@ -19,6 +19,7 @@ import (
 	queue_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
+	resourcev1 "k8s.io/api/resource/v1"
 	v10 "k8s.io/api/scheduling/v1"
 	v11 "k8s.io/api/storage/v1"
 )
@@ -270,4 +271,19 @@ func (m *MockDataLister) ListTopologies() ([]*v1alpha1.Topology, error) {
 func (mr *MockDataListerMockRecorder) ListTopologies() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTopologies", reflect.TypeOf((*MockDataLister)(nil).ListTopologies))
+}
+
+// ListResourceSlices mocks base method.
+func (m *MockDataLister) ListResourceSlices() ([]*resourcev1.ResourceSlice, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListResourceSlices")
+	ret0, _ := ret[0].([]*resourcev1.ResourceSlice)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListResourceSlices indicates an expected call of ListResourceSlices.
+func (mr *MockDataListerMockRecorder) ListResourceSlices() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResourceSlices", reflect.TypeOf((*MockDataLister)(nil).ListResourceSlices))
 }
