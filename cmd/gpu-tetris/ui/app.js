@@ -351,8 +351,8 @@ function renderQueues(viz) {
     const requested = formatGpu(q.requestedGpu);
     const displayName = q.displayName || q.name;
 
-    // Show allocated/fairShare/requested, use '-' if fairShare is 0 (not configured)
-    const fairShareStr = q.fairShareGpu > 0 ? fairShare : '-';
+    // Show allocated/fairShare/requested, use '-' if fairShare is -1 (not configured)
+    const fairShareStr = q.fairShareGpu >= 0 ? fairShare : '-';
     const badge = `${allocated}/${fairShareStr}/${requested}`;
 
     const btn = el('button', {

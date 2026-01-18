@@ -483,9 +483,13 @@ func buildQueues(queues []*enginev2.Queue, fairShares map[string]float64) []Queu
 			displayName = q.Name
 		}
 
-		fairShare := float64(0)
+		// Use -1 as sentinel for "no fairshare data available"
+		// The scheduler uses displayName for the metric queue_name label
+		fairShare := float64(-1)
 		if fairShares != nil {
-			fairShare = fairShares[q.Name]
+			if fs, ok := fairShares[displayName]; ok {
+				fairShare = fs
+			}
 		}
 
 		qb := &queueBuilder{
