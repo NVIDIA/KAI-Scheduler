@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.12.7] - 2026-01-14
+
+### Fixed
+- Added dedicated `usage-prometheus` service for scheduler Prometheus access with configurable instance name [#897](https://github.com/NVIDIA/KAI-Scheduler/pull/897) [itsomri](https://github.com/itsomri)
+
 ## [v0.12.6] - 2026-01-14
 
 ### Fixed
