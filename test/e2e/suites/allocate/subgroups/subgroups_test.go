@@ -115,6 +115,7 @@ var _ = Describe("Allocation scenario with subgroups", Ordered, func() {
 		queue, err := testCtx.KubeAiSchedClientset.SchedulingV2().Queues("").Get(ctx, testCtx.Queues[0].Name, metav1.GetOptions{})
 		Expect(err).To(Succeed())
 
+		queue.ObjectMeta.ResourceVersion = ""
 		queue.Spec.Resources.GPU.Quota = 0
 		queue.Spec.Resources.GPU.Limit = 0
 		_, err = testCtx.KubeAiSchedClientset.SchedulingV2().Queues("").Update(ctx, queue, metav1.UpdateOptions{})
@@ -131,6 +132,7 @@ var _ = Describe("Allocation scenario with subgroups", Ordered, func() {
 		queue, err = testCtx.KubeAiSchedClientset.SchedulingV2().Queues("").Get(ctx, testCtx.Queues[0].Name, metav1.GetOptions{})
 		Expect(err).To(Succeed())
 
+		queue.ObjectMeta.ResourceVersion = ""
 		queue.Spec.Resources.GPU.Quota = -1
 		queue.Spec.Resources.GPU.Limit = -1
 		queue, err = testCtx.KubeAiSchedClientset.SchedulingV2().Queues("").Update(ctx, queue, metav1.UpdateOptions{})
