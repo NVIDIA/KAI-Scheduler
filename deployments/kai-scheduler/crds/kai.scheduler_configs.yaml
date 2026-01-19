@@ -6742,6 +6742,11 @@ spec:
                       When set, KAI will not deploy its own Prometheus but will configure ServiceMonitors
                       for the external instance and validate connectivity
                     type: string
+                  instanceName:
+                    description: |-
+                      InstanceName defines the name of the Prometheus instance to be created
+                      Defaults to "prometheus" if not specified
+                    type: string
                   retentionPeriod:
                     description: RetentionPeriod defines how long to retain data (e.g.,
                       "2w", "1d", "30d")
