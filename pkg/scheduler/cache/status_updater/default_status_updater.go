@@ -116,7 +116,6 @@ func (su *defaultStatusUpdater) Evicted(
 	su.recorder.AnnotatedEventf(evictedPodGroup, evictionEventMetadata, v1.EventTypeNormal, "Evict",
 		message)
 
-	// Record eviction metric
 	nodepool := utils.GetNodePoolNameFromLabels(evictedPodGroup.Labels, su.nodePoolLabelKey)
 	metrics.RecordPodGroupEvictedPods(
 		evictedPodGroup.Name,
