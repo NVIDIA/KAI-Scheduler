@@ -8,9 +8,9 @@ The operator generates a hardcoded scheduler ConfigMap. Users cannot:
 
 ---
 
-## Option 1: Unified Plugin Configuration (Recommended)
+## Option 1: Unified Plugin Configuration (Chosen)
 
-Add structured fields to `SchedulingShardSpec` for plugin and action configuration.
+Add fields to `SchedulingShardSpec` for plugin and action configuration. Plugin arguments use unstructured `map[string]string` to match the scheduler's internal configuration format.
 
 ```yaml
 apiVersion: kai.scheduler/v1
@@ -28,7 +28,7 @@ spec:
     preemptMinRuntime: "5m"
     reclaimMinRuntime: "10m"
 
-  # NEW: Built-in plugins (merged with defaults)
+  # NEW: Plugin configuration (merged with defaults for built-in plugins)
   plugins:
     minruntime:
       enabled: false # Disable this plugin
@@ -39,22 +39,17 @@ spec:
       priority: 500 # Change ordering
       arguments:
         gpu: spread
-
-  # NEW: Custom plugins
-  additionalPlugins:
-    mycustomplugin:
+    mycustomplugin: # Custom plugins go here too
       priority: 250
       arguments:
         key: value
 
-  # NEW: Actions configuration
+  # NEW: Actions configuration (merged with defaults for built-in actions)
   actions:
     consolidation:
       enabled: false
       priority: 100
-  
-  additionalActions:
-    mycustomaction:
+    mycustomaction: # Custom actions go here too
       enabled: true
       priority: 50
 ```
@@ -64,28 +59,21 @@ spec:
 type SchedulingShardSpec struct {
 	// ... existing fields ...
 
-	// Plugins configures built-in scheduler plugins.
-	// Unspecified plugins use default settings and are enabled.
+	// Plugins configures scheduler plugins (both built-in and custom).
+	// Built-in plugins use default settings when not specified.
+	// Custom plugin names are passed through to the scheduler as-is.
 	// +kubebuilder:validation:Optional
-	Plugins *PluginsConfig `json:"plugins,omitempty"`
+	Plugins map[string]PluginConfig `json:"plugins,omitempty"`
 
-	// AdditionalPlugins configures custom/external plugins not included by default.
+	// Actions configures scheduler actions (both built-in and custom).
+	// Built-in actions use default settings when not specified.
+	// Custom action names are passed through to the scheduler as-is.
 	// +kubebuilder:validation:Optional
-	AdditionalPlugins map[string]GenericPluginConfig `json:"additionalPlugins,omitempty"`
-
-	// Actions configures built-in scheduler actions.
-	// Unspecified actions use default settings and are enabled.
-	// +kubebuilder:validation:Optional
-	Actions *ActionsConfig `json:"actions,omitempty"`
-
-	// AdditionalActions configures custom/external actions not included by default.
-	// +kubebuilder:validation:Optional
-	AdditionalActions map[string]ActionConfig `json:"additionalActions,omitempty"`
+	Actions map[string]ActionConfig `json:"actions,omitempty"`
 }
 
-// PluginConfig is a generic configuration for a scheduler plugin.
-// T is the type of plugin-specific arguments.
-type PluginConfig[T any] struct {
+// PluginConfig defines configuration for a scheduler plugin.
+type PluginConfig struct {
 	// Enabled controls whether the plugin is active. Defaults to true.
 	// +kubebuilder:validation:Optional
 	Enabled *bool `json:"enabled,omitempty"`
@@ -94,62 +82,10 @@ type PluginConfig[T any] struct {
 	// +kubebuilder:validation:Optional
 	Priority *int `json:"priority,omitempty"`
 
-	// Arguments contains the plugin-specific configuration parameters.
+	// Arguments contains plugin-specific configuration parameters.
+	// Keys and values are passed directly to the plugin.
 	// +kubebuilder:validation:Optional
-	Arguments *T `json:"arguments,omitempty"`
-}
-
-// PluginsConfig defines configuration for all built-in scheduler plugins.
-type PluginsConfig struct {
-	// +kubebuilder:validation:Optional
-	MinRuntime *PluginConfig[MinRuntimeArguments] `json:"minruntime,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Proportion *PluginConfig[ProportionArguments] `json:"proportion,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	NodePlacement *PluginConfig[NodePlacementArguments] `json:"nodeplacement,omitempty"`
-
-	// ... other built-in plugins ...
-}
-
-// MinRuntimeArguments defines arguments for the minruntime plugin.
-type MinRuntimeArguments struct {
-	// PreemptMinRuntime specifies the minimum runtime before a job can be preempted.
-	// +kubebuilder:validation:Optional
-	PreemptMinRuntime *string `json:"preemptMinRuntime,omitempty"`
-
-	// ReclaimMinRuntime specifies the minimum runtime before a job can be reclaimed.
-	// +kubebuilder:validation:Optional
-	ReclaimMinRuntime *string `json:"reclaimMinRuntime,omitempty"`
-}
-
-// ProportionArguments defines arguments for the proportion plugin.
-type ProportionArguments struct {
-	// KValue specifies the kValue for fair-share calculation. Default is 1.0.
-	// +kubebuilder:validation:Optional
-	KValue *float64 `json:"kValue,omitempty"`
-}
-
-// NodePlacementArguments defines arguments for the nodeplacement plugin.
-type NodePlacementArguments struct {
-	// GPU specifies the GPU placement strategy (binpack/spread).
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=binpack;spread
-	GPU *string `json:"gpu,omitempty"`
-
-	// CPU specifies the CPU placement strategy (binpack/spread).
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=binpack;spread
-	CPU *string `json:"cpu,omitempty"`
-}
-
-// ActionsConfig defines configuration for all built-in scheduler actions.
-type ActionsConfig struct {
-	// +kubebuilder:validation:Optional
-	Consolidation *ActionConfig `json:"consolidation,omitempty"`
-
-	// ... other built-in actions ...
+	Arguments map[string]string `json:"arguments,omitempty"`
 }
 
 // ActionConfig defines configuration for a scheduler action.
@@ -162,10 +98,6 @@ type ActionConfig struct {
 	// +kubebuilder:validation:Optional
 	Priority *int `json:"priority,omitempty"`
 }
-
-// GenericPluginConfig defines configuration for custom/external plugins
-// with untyped arguments.
-type GenericPluginConfig = PluginConfig[map[string]string]
 ```
 
 **Plugin/Action priorities** (for ordering):
@@ -175,9 +107,18 @@ The default priorities determine the default order.
 
 **Merge behavior**: Unmentioned plugins/actions use defaults. New plugins from KAI upgrades are auto-included.
 
-**Pros**: Explicit state, upgrade-safe
+**Pros**:
+- Explicit state, upgrade-safe
+- Simpler code - no per-plugin typed argument structs needed
+- Flexible - new plugin arguments can be added without CRD changes
+- Matches scheduler's internal representation (`map[string]string`)
+- Looser coupling between operator and scheduler plugins
 
-**Cons**: More complex API surface, makes our current "internal(?)" scheduler configuration public API that we must maintain.
+**Cons**:
+- Makes our current "internal(?)" scheduler configuration public API that we must maintain
+- No CRD-level validation for argument values (validation happens at scheduler startup)
+- No IDE autocomplete for plugin arguments
+- Users need external documentation to know valid argument keys/values
 
 ---
 
@@ -229,11 +170,3 @@ spec:
 ```
 
 We might want to deprecate the old fields in a backwards compatible way.
-
----
-
-## Questions for Discussion
-
-1. What specific customizations are users requesting?
-2. Should the new configuration fields be added under `advanced` section or top level?
-3. Should we deprecate `minRuntime`, `kValue` and `placementStrategy` fields?
