@@ -23,6 +23,8 @@ import (
 	"math"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/k8s_utils"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -43,6 +45,7 @@ import (
 	rs "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/resource_share"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/proportion/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/scheduler_util"
+	resourceapi "k8s.io/api/resource/v1"
 )
 
 const (
@@ -250,12 +253,43 @@ func (pp *proportionPlugin) calculateResourcesProportion(ssn *framework.Session)
 }
 
 func (pp *proportionPlugin) setTotalResources(ssn *framework.Session) {
+	gpusAsDraResourcePerNode := make(map[string][]*resourceapi.ResourceSlice)
+	if k8s_utils.GetK8sFeatures().EnableDynamicResourceAllocation {
+		var err error
+		gpusAsDraResourcePerNode, err = getGpuDraResourcesMap(ssn)
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to list DRA resource slices: %v", err)
+			return
+		}
+	}
+
 	for _, node := range ssn.ClusterInfo.Nodes {
-		pp.totalResource.Add(getNodeResources(ssn, node))
+		pp.totalResource.Add(getNodeResources(ssn, node, gpusAsDraResourcePerNode[node.Name]...))
 	}
 }
 
-func getNodeResources(ssn *framework.Session, node *node_info.NodeInfo) rs.ResourceQuantities {
+func getGpuDraResourcesMap(ssn *framework.Session) (map[string][]*resourceapi.ResourceSlice, error) {
+	resourceSlices, err := ssn.InternalK8sPlugins().FrameworkHandle.SharedDRAManager().ResourceSlices().ListWithDeviceTaintRules()
+	if err != nil {
+		return nil, err
+	}
+	gpusAsDraResourcePerNode := make(map[string][]*resourceapi.ResourceSlice)
+	for _, resourceSlice := range resourceSlices {
+		if !resources.IsGPUDeviceClass(resourceSlice.Spec.Driver) {
+			continue
+		}
+		if resourceSlice.Spec.NodeName == nil {
+			// Each gpu should belong to a single node
+			log.InfraLogger.Warningf("GPU DRA resource slice %s belongs to multiple nodes", resourceSlice.Name)
+			continue
+		}
+
+		gpusAsDraResourcePerNode[*resourceSlice.Spec.NodeName] = append(gpusAsDraResourcePerNode[*resourceSlice.Spec.NodeName], resourceSlice)
+	}
+	return gpusAsDraResourcePerNode, nil
+}
+
+func getNodeResources(ssn *framework.Session, node *node_info.NodeInfo, nodeDraGpus ...*resourceapi.ResourceSlice) rs.ResourceQuantities {
 	nodeResource := rs.EmptyResourceQuantities()
 
 	if !scheduler_util.ValidateIsNodeReady(node.Node) {
@@ -270,6 +304,10 @@ func getNodeResources(ssn *framework.Session, node *node_info.NodeInfo) rs.Resou
 		nodeResource.Add(rs.NewResourceQuantities(node.Allocatable.Cpu(), node.Allocatable.Memory(), 0))
 	} else {
 		nodeResource.Add(utils.QuantifyResource(node.Allocatable))
+	}
+
+	for _, resourceSlice := range nodeDraGpus {
+		nodeResource.Add(rs.NewResourceQuantities(0, 0, float64(len(resourceSlice.Spec.Devices))))
 	}
 
 	// Subtract resources of non-related pods

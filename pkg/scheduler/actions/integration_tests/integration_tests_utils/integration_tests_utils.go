@@ -133,6 +133,21 @@ func runSchedulerOneRound(testMetadata *TestTopologyMetadata, controller *Contro
 
 		}
 	}
+	if len(testMetadata.TestDRAObjects.ResourceClaims) > 0 {
+		draManager := (*ssn).InternalK8sPlugins().FrameworkHandle.SharedDRAManager()
+		for _, claim := range testMetadata.TestDRAObjects.ResourceClaims {
+			clusterClaim, err := draManager.ResourceClaims().Get(claim.Namespace, claim.Name)
+			if err != nil {
+				log.InfraLogger.Errorf("Failed to get resource claim %s: %v", claim.Name, err)
+				continue
+			}
+			clusterClaimStatus := clusterClaim.Status
+			if clusterClaimStatus.Allocation != nil || clusterClaimStatus.ReservedFor != nil || clusterClaimStatus.Devices != nil {
+				claim.ClaimStatus = clusterClaimStatus.DeepCopy()
+			}
+		}
+	}
+
 }
 
 func SetSchedulerActions() {

@@ -131,17 +131,17 @@ func ExtractDRAGPUResourcesFromClaims(podResourceClaims []*resourceapi.ResourceC
 
 func IsGpuResourceClaim(claim *resourceapi.ResourceClaim) bool {
 	for _, request := range claim.Spec.Devices.Requests {
-		if request.Exactly != nil && isGPUDeviceClass(request.Exactly.DeviceClassName) {
+		if request.Exactly != nil && IsGPUDeviceClass(request.Exactly.DeviceClassName) {
 			return true
 		}
 	}
 	return false
 }
 
-// isGPUDeviceClass checks if a DeviceClassName represents a GPU.
+// IsGPUDeviceClass checks if a DeviceClassName represents a GPU.
 // Checks for "nvidia.com/gpu" and also accepts any device class name containing "gpu"
 // (case-insensitive) to support custom GPU device classes like "gpu.example.com".
-func isGPUDeviceClass(deviceClassName string) bool {
+func IsGPUDeviceClass(deviceClassName string) bool {
 	if deviceClassName == constants.GpuResource {
 		return true
 	}
@@ -154,7 +154,7 @@ func isGPUDeviceClass(deviceClassName string) bool {
 // Returns empty string if no GPU device class is found.
 func getGPUDeviceClassNameFromClaim(claim *resourceapi.ResourceClaim) string {
 	for _, request := range claim.Spec.Devices.Requests {
-		if request.Exactly != nil && isGPUDeviceClass(request.Exactly.DeviceClassName) {
+		if request.Exactly != nil && IsGPUDeviceClass(request.Exactly.DeviceClassName) {
 			return request.Exactly.DeviceClassName
 		}
 	}
@@ -171,7 +171,7 @@ func countGPUDevicesFromClaim(claim *resourceapi.ResourceClaim) int64 {
 			continue
 		}
 
-		if !isGPUDeviceClass(request.Exactly.DeviceClassName) {
+		if !IsGPUDeviceClass(request.Exactly.DeviceClassName) {
 			continue
 		}
 

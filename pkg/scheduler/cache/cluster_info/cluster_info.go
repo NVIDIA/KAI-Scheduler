@@ -32,6 +32,7 @@ import (
 	kubeAiSchedulerinfo "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/informers/externalversions"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/k8s_utils"
 	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
@@ -137,9 +138,12 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 		return nil, err
 	}
 
-	draResourceClaims, err := c.dataLister.ListDRAResourceClaims()
-	if err != nil {
-		return nil, fmt.Errorf("error listing DRA resource claims: %w", err)
+	var draResourceClaims []*resourceapi.ResourceClaim
+	if k8s_utils.GetK8sFeatures().EnableDynamicResourceAllocation {
+		draResourceClaims, err = c.dataLister.ListDRAResourceClaims()
+		if err != nil {
+			return nil, fmt.Errorf("error listing DRA resource claims: %w", err)
+		}
 	}
 
 	snapshot.Pods, err = c.addTasksToNodes(allPods, existingPods, snapshot.Nodes, snapshot.BindRequests, draResourceClaims)
@@ -407,9 +411,12 @@ func (c *ClusterInfo) getNodeToPodInfosMap(allPods []*v1.Pod,
 	map[string][]*pod_info.PodInfo, map[string][]*pod_info.PodInfo, error) {
 	nodePodInfosMap := map[string][]*pod_info.PodInfo{}
 	nodeReservationPodInfosMap := map[string][]*pod_info.PodInfo{}
+	draClaimMap := resourceClaimSliceToMap(draResourceClaims)
+
 	for _, pod := range allPods {
 		podBindRequest := bindRequests.GetBindRequestForPod(pod)
-		podInfo := pod_info.NewTaskInfoWithBindRequest(pod, podBindRequest)
+		draPodClaims := getDraPodClaims(pod, draClaimMap)
+		podInfo := pod_info.NewTaskInfoWithBindRequest(pod, podBindRequest, draPodClaims...)
 
 		if pod_info.IsResourceReservationTask(podInfo.Pod) {
 			podInfos := nodeReservationPodInfosMap[podInfo.NodeName]
@@ -530,4 +537,23 @@ func (c *ClusterInfo) isPodGroupUpForScheduler(podGroup *enginev2alpha2.PodGroup
 	}
 
 	return false
+}
+
+func resourceClaimSliceToMap(draResourceClaims []*resourceapi.ResourceClaim) map[string]*resourceapi.ResourceClaim {
+	draClaimMap := map[string]*resourceapi.ResourceClaim{}
+	for _, draClaim := range draResourceClaims {
+		draClaimMap[draClaim.Name] = draClaim
+	}
+	return draClaimMap
+}
+
+func getDraPodClaims(pod *v1.Pod, draClaimMap map[string]*resourceapi.ResourceClaim) []*resourceapi.ResourceClaim {
+	draPodClaims := []*resourceapi.ResourceClaim{}
+	for _, podClaim := range pod.Spec.ResourceClaims {
+		draPodClaim, found := draClaimMap[podClaim.Name]
+		if found {
+			draPodClaims = append(draPodClaims, draPodClaim)
+		}
+	}
+	return draPodClaims
 }

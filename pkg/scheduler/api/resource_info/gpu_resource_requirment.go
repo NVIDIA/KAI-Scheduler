@@ -27,7 +27,7 @@ type GpuResourceRequirement struct {
 	count        int64
 	portion      float64
 	gpuMemory    int64
-	draGpuCounts map[v1.ResourceName]int64
+	draGpuCounts map[string]int64
 	migResources map[v1.ResourceName]int64
 }
 
@@ -36,7 +36,7 @@ func NewGpuResourceRequirement() *GpuResourceRequirement {
 		count:        0,
 		portion:      0,
 		gpuMemory:    0,
-		draGpuCounts: make(map[v1.ResourceName]int64),
+		draGpuCounts: make(map[string]int64),
 		migResources: make(map[v1.ResourceName]int64),
 	}
 }
@@ -46,7 +46,7 @@ func NewGpuResourceRequirementWithGpus(gpus float64, gpuMemory int64) *GpuResour
 		count:        0,
 		portion:      gpus,
 		gpuMemory:    gpuMemory,
-		draGpuCounts: make(map[v1.ResourceName]int64),
+		draGpuCounts: make(map[string]int64),
 		migResources: make(map[v1.ResourceName]int64),
 	}
 	if gpus >= wholeGpuPortion {
@@ -63,7 +63,7 @@ func NewGpuResourceRequirementWithMultiFraction(count int64, portion float64, gp
 		count:        count,
 		portion:      portion,
 		gpuMemory:    gpuMemory,
-		draGpuCounts: make(map[v1.ResourceName]int64),
+		draGpuCounts: make(map[string]int64),
 		migResources: make(map[v1.ResourceName]int64),
 	}
 	return gResource
@@ -74,15 +74,15 @@ func NewGpuResourceRequirementWithMig(migResources map[v1.ResourceName]int64) *G
 		count:        0,
 		portion:      0,
 		gpuMemory:    0,
-		draGpuCounts: make(map[v1.ResourceName]int64),
+		draGpuCounts: make(map[string]int64),
 		migResources: migResources,
 	}
 }
 
 func (g *GpuResourceRequirement) SetDraGpus(draGpus map[string]int64) {
-	g.draGpuCounts = make(map[v1.ResourceName]int64, len(draGpus))
+	g.draGpuCounts = make(map[string]int64, len(draGpus))
 	for deviceClassName, count := range draGpus {
-		g.draGpuCounts[v1.ResourceName(deviceClassName)] += count
+		g.draGpuCounts[deviceClassName] += count
 	}
 }
 
@@ -171,7 +171,7 @@ func (g *GpuResourceRequirement) GetGpusQuota() float64 {
 	return totalGpusQuota
 }
 
-func (g *GpuResourceRequirement) DraGpuCounts() map[v1.ResourceName]int64 {
+func (g *GpuResourceRequirement) DraGpuCounts() map[string]int64 {
 	return g.draGpuCounts
 }
 

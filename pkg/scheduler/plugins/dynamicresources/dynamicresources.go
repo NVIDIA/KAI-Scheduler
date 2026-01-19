@@ -200,7 +200,6 @@ func (drap *draPlugin) allocateHandlerFn(ssn *framework.Session) func(event *fra
 		node := ssn.ClusterInfo.Nodes[nodeName].Node
 
 		for _, podClaim := range pod.Spec.ResourceClaims {
-			// TODO: support resource claim template
 			err := drap.allocateResourceClaim(event.Task, &podClaim, node)
 			if err != nil {
 				log.InfraLogger.Errorf("Failed to allocate resource claim %s for pod %s/%s: %v", podClaim.Name, pod.Namespace, pod.Name, err)

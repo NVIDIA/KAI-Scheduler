@@ -162,7 +162,7 @@ func (pi *PodInfo) UpsertStorageClaim(claimInfo *storageclaim_info.StorageClaimI
 }
 
 func NewTaskInfo(pod *v1.Pod, draPodClaims ...*resourceapi.ResourceClaim) *PodInfo {
-	return NewTaskInfoWithBindRequest(pod, nil)
+	return NewTaskInfoWithBindRequest(pod, nil, draPodClaims...)
 }
 
 func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo, draPodClaims ...*resourceapi.ResourceClaim) *PodInfo {
@@ -195,7 +195,7 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 		ownedStorageClaims:             map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
 	}
 
-	podInfo.updatePodAdditionalFields(bindRequest)
+	podInfo.updatePodAdditionalFields(bindRequest, draPodClaims...)
 	return podInfo
 }
 

@@ -717,6 +717,9 @@ func (ni *NodeInfo) setAcceptedResources(pi *pod_info.PodInfo) {
 		pi.AcceptedResource.GpuResourceRequirement = *resource_info.NewGpuResourceRequirementWithGpus(
 			pi.ResReq.GPUs(), 0)
 	}
+
+	// TODO: improve by getting claims actual status. This approach doesn't support FirstAvailable requests.
+	pi.AcceptedResource.SetDraGpus(pi.ResReq.DraGpuCounts())
 }
 
 func (ni *NodeInfo) lessEqualTaskToNodeResources(

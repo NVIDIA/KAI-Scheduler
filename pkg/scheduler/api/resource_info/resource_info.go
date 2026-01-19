@@ -169,7 +169,7 @@ func (r *Resource) AddResourceRequirements(req *ResourceRequirements) {
 	r.BaseResource.Add(&req.BaseResource)
 	r.gpus += req.GPUs()
 	for rName, rQuant := range req.draGpuCounts {
-		r.draGpuCounts[rName] += rQuant
+		r.draGpuCounts[v1.ResourceName(rName)] += rQuant
 	}
 	for migProfile, migCount := range req.MigResources() {
 		r.BaseResource.scalarResources[migProfile] += migCount
@@ -180,7 +180,7 @@ func (r *Resource) SubResourceRequirements(req *ResourceRequirements) {
 	r.BaseResource.Sub(&req.BaseResource)
 	r.gpus -= req.GPUs()
 	for rName, rQuant := range req.draGpuCounts {
-		r.draGpuCounts[rName] -= rQuant
+		r.draGpuCounts[v1.ResourceName(rName)] -= rQuant
 	}
 	for migProfile, migCount := range req.MigResources() {
 		r.BaseResource.scalarResources[migProfile] -= migCount
