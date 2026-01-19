@@ -49,6 +49,11 @@ func (in *Prometheus) DeepCopyInto(out *Prometheus) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.InstanceName != nil {
+		in, out := &in.InstanceName, &out.InstanceName
+		*out = new(string)
+		**out = **in
+	}
 	if in.RetentionPeriod != nil {
 		in, out := &in.RetentionPeriod, &out.RetentionPeriod
 		*out = new(string)
