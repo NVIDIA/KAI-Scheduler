@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added support for Grove hierarchical topology constraints in PodGroup subgroups
 - Added support for n-level queue hierarchies [#858](https://github.com/NVIDIA/KAI-Scheduler/pull/858) [gshaibi](https://github.com/gshaibi)
 - Added labels and annotations propagation from topOwner in SkipTopOwner grouper [#861](https://github.com/NVIDIA/KAI-Scheduler/pull/861) [SiorMeir](https://github.com/siormeir)
+- Added scheduler name match conditions to admission webhooks to improve cluster stability
 
 ### Fixed
 - Fixed pod controller logging to use request namespace/name instead of empty pod object fields when pod is not found
@@ -27,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Embed CRD definitions in binary for env-test and time-aware-simulations to allow binary portability [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
 - Fixed missing `podGrouper` configuration in Helm template that prevented podgrouper values from being applied [#860](https://github.com/NVIDIA/KAI-Scheduler/pull/860)
 - Fixed rollback for failed bind attempts [#847](https://github.com/NVIDIA/KAI-Scheduler/pull/847) [itsomri](https://github.com/itsomri)
+- Fixed missing `namespace`, `serviceAccountName`, and `appLabel` fields in `resourceReservation` section of kai-config Helm template [#860](https://github.com/NVIDIA/KAI-Scheduler/pull/891) [dttung2905](https://github.com/dttung2905)
 
 ### Changed
 - Removed the constraint that prohibited direct nesting of subgroups alongside podsets within the same subgroupset.
