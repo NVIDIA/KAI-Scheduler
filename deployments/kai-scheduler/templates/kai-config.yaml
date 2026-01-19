@@ -72,6 +72,9 @@ spec:
       {{- end }}
       image:
         name: {{ .Values.binder.resourceReservationImage.name }}
+        repository: {{ .Values.global.registry }}
+        tag: {{ .Values.binder.resourceReservationImage.tag | default .Values.global.tag | default .Chart.AppVersion }}
+        pullPolicy: {{ .Values.binder.resourceReservationImage.pullPolicy | default .Values.global.imagePullPolicy }}
       {{- if .Values.binder.resourceReservationPodResources }}
       podResources:
         {{- toYaml .Values.binder.resourceReservationPodResources | nindent 8 }}
