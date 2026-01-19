@@ -243,7 +243,7 @@ func getUsageDBConfig(shard *kaiv1.SchedulingShard, kaiConfig *kaiv1.Config) (*u
 		if kaiConfig.Spec.Prometheus != nil &&
 			kaiConfig.Spec.Prometheus.Enabled != nil &&
 			*kaiConfig.Spec.Prometheus.Enabled {
-			usageDBConfig.ConnectionString = fmt.Sprintf("http://prometheus-operated.%s.svc.cluster.local:9090", kaiConfig.Spec.Namespace)
+			usageDBConfig.ConnectionString = fmt.Sprintf("http://usage-prometheus.%s.svc.cluster.local:9090", kaiConfig.Spec.Namespace)
 		} else if kaiConfig.Spec.Global != nil && kaiConfig.Spec.Global.ExternalTSDBConnection != nil && kaiConfig.Spec.Global.ExternalTSDBConnection.URL != nil {
 			usageDBConfig.ConnectionString = *kaiConfig.Spec.Global.ExternalTSDBConnection.URL
 		} else {

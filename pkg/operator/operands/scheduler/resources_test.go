@@ -814,7 +814,7 @@ func TestGetUsageDBConfig(t *testing.T) {
 			validate: func(t *testing.T, result *usagedbapi.UsageDBConfig) {
 				assert.NotNil(t, result)
 				assert.Equal(t, "prometheus", result.ClientType)
-				assert.Equal(t, "http://prometheus-operated.kai-system.svc.cluster.local:9090", result.ConnectionString)
+				assert.Equal(t, "http://usage-prometheus.kai-system.svc.cluster.local:9090", result.ConnectionString)
 			},
 		},
 		{
