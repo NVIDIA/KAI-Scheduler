@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added labels and annotations propagation from topOwner in SkipTopOwner grouper [#861](https://github.com/NVIDIA/KAI-Scheduler/pull/861) [SiorMeir](https://github.com/siormeir)
 
 ### Fixed
+- Fixed security vulnerability where PodGang could reference pods in other namespaces, preventing cross-namespace manipulation
 - Fixed pod controller logging to use request namespace/name instead of empty pod object fields when pod is not found
 - Fixed a bug where topology constrains with equal required and preferred levels would cause preferred level not to be found.
 - Fixed GPU memory pods Fair Share and Queue Order calculations
