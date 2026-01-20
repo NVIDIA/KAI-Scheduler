@@ -28,8 +28,10 @@ import (
 
 const (
 	mainResourceName        = "prometheus"
+	usagePrometheusService  = "usage-prometheus"
 	defaultStorageSize      = "50Gi"
 	deprecationTimestampKey = "kai/deprecation-timestamp"
+	prometheusPort          = 9090
 )
 
 func prometheusForKAIConfig(
@@ -38,7 +40,7 @@ func prometheusForKAIConfig(
 	logger := log.FromContext(ctx)
 	config := kaiConfig.Spec.Prometheus
 
-	if kaiConfig.Spec.Prometheus == nil || kaiConfig.Spec.Prometheus.Enabled == nil || !*kaiConfig.Spec.Prometheus.Enabled {
+	if !prometheusExplicitlyEnabled(kaiConfig) {
 		return []client.Object{}, nil
 	}
 
@@ -61,7 +63,8 @@ func prometheusForKAIConfig(
 		return []client.Object{}, nil
 	}
 
-	prometheus, err := common.ObjectForKAIConfig(ctx, runtimeClient, &monitoringv1.Prometheus{}, mainResourceName, kaiConfig.Spec.Namespace)
+	instanceName := getPrometheusInstanceName(config)
+	prometheus, err := common.ObjectForKAIConfig(ctx, runtimeClient, &monitoringv1.Prometheus{}, instanceName, kaiConfig.Spec.Namespace)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			logger.Error(err, "Failed to check for existing Prometheus instance")
@@ -76,7 +79,15 @@ func prometheusForKAIConfig(
 		return nil, fmt.Errorf("failed to cast object to Prometheus type")
 	}
 
-	prometheusSpec := monitoringv1.PrometheusSpec{}
+	prometheusSpec := monitoringv1.PrometheusSpec{
+		CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+			PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
+				Labels: map[string]string{
+					"app": instanceName,
+				},
+			},
+		},
+	}
 
 	prometheusSpec.Storage = getStorageSpecForPrometheus(config)
 
@@ -102,7 +113,7 @@ func prometheusForKAIConfig(
 	}
 	prometheusSpec.RuleNamespaceSelector = &metav1.LabelSelector{}
 
-	prometheusSpec.ServiceAccountName = mainResourceName
+	prometheusSpec.ServiceAccountName = instanceName
 
 	// Remove deprecation timestamp annotation if it exists (prometheus is now enabled)
 	annotations := prometheus.GetAnnotations()
@@ -139,9 +150,10 @@ func deprecatePrometheusForKAIConfig(
 	}
 
 	// Try to get existing Prometheus instance
+	instanceName := getPrometheusInstanceName(kaiConfig.Spec.Prometheus)
 	prometheusObj := &monitoringv1.Prometheus{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      mainResourceName,
+			Name:      instanceName,
 			Namespace: kaiConfig.Spec.Namespace,
 		},
 	}
@@ -292,7 +304,7 @@ func serviceMonitorsForKAIConfig(
 func prometheusServiceAccountForKAIConfig(
 	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
 ) ([]client.Object, error) {
-	serviceAccountName := mainResourceName
+	serviceAccountName := getPrometheusInstanceName(kaiConfig.Spec.Prometheus)
 
 	saObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.ServiceAccount{}, serviceAccountName, kaiConfig.Spec.Namespace)
 	if err != nil {
@@ -453,4 +465,65 @@ func getAccountingSelectorLabels(config *kaiprometheus.Prometheus) (string, stri
 	}
 
 	return labelKey, labelValue
+}
+
+// getPrometheusInstanceName returns the Prometheus instance name from config or the default
+func getPrometheusInstanceName(config *kaiprometheus.Prometheus) string {
+	if config != nil && config.InstanceName != nil && *config.InstanceName != "" {
+		return *config.InstanceName
+	}
+	return mainResourceName
+}
+
+func usagePrometheusServiceForKAIConfig(
+	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
+) ([]client.Object, error) {
+	config := kaiConfig.Spec.Prometheus
+
+	if config == nil || config.Enabled == nil || !*config.Enabled {
+		return []client.Object{}, nil
+	}
+
+	// Don't create service if using external Prometheus
+	if config.ExternalPrometheusUrl != nil && *config.ExternalPrometheusUrl != "" {
+		return []client.Object{}, nil
+	}
+
+	// Check if Prometheus Operator is installed
+	hasPrometheusOperator, err := common.CheckPrometheusCRDsAvailable(ctx, runtimeClient, "prometheus")
+	if err != nil {
+		return []client.Object{}, err
+	}
+
+	if !hasPrometheusOperator {
+		return []client.Object{}, nil
+	}
+
+	serviceObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &v1.Service{}, usagePrometheusService, kaiConfig.Spec.Namespace)
+	if err != nil {
+		return []client.Object{}, err
+	}
+
+	service := serviceObj.(*v1.Service)
+	service.TypeMeta = metav1.TypeMeta{
+		Kind:       "Service",
+		APIVersion: "v1",
+	}
+
+	instanceName := getPrometheusInstanceName(config)
+
+	service.Spec.Selector = map[string]string{
+		"app.kubernetes.io/instance": instanceName,
+		"app.kubernetes.io/name":     "prometheus",
+	}
+	service.Spec.Ports = []v1.ServicePort{
+		{
+			Name:     "web",
+			Port:     prometheusPort,
+			Protocol: v1.ProtocolTCP,
+		},
+	}
+	service.Spec.Type = v1.ServiceTypeClusterIP
+
+	return []client.Object{service}, nil
 }

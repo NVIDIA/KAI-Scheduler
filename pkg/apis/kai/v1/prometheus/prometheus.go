@@ -15,6 +15,11 @@ type Prometheus struct {
 	// +kubebuilder:validation:Optional
 	Enabled *bool `json:"enabled,omitempty"`
 
+	// InstanceName defines the name of the Prometheus instance to be created
+	// Defaults to "prometheus" if not specified
+	// +kubebuilder:validation:Optional
+	InstanceName *string `json:"instanceName,omitempty"`
+
 	// RetentionPeriod defines how long to retain data (e.g., "2w", "1d", "30d")
 	// +kubebuilder:validation:Optional
 	RetentionPeriod *string `json:"retentionPeriod,omitempty"`
@@ -72,11 +77,14 @@ type ExternalPrometheusHealthProbe struct {
 	MaxRetries *int `json:"maxRetries,omitempty"`
 }
 
+const DefaultInstanceName = "prometheus"
+
 func (p *Prometheus) SetDefaultsWhereNeeded() {
 	if p == nil {
 		return
 	}
 	p.Enabled = common.SetDefault(p.Enabled, ptr.To(false))
+	p.InstanceName = common.SetDefault(p.InstanceName, ptr.To(DefaultInstanceName))
 	p.RetentionPeriod = common.SetDefault(p.RetentionPeriod, ptr.To("2w"))
 	p.SampleInterval = common.SetDefault(p.SampleInterval, ptr.To("1m"))
 	p.StorageClassName = common.SetDefault(p.StorageClassName, ptr.To("standard"))
