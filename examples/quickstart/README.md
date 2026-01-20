@@ -68,4 +68,3 @@ kubectl apply -f pods/gpu-pod.yaml
 | [default-queues.yaml](default-queues.yaml) | Default parent and leaf queue configuration |
 | [pods/cpu-only-pod.yaml](pods/cpu-only-pod.yaml) | Example CPU-only pod |
 | [pods/gpu-pod.yaml](pods/gpu-pod.yaml) | Example GPU pod |
-

@@ -26,4 +26,3 @@ spec:
     - name: another-sidecar
       image: busybox
       args: ["sleep", "infinity"]
-

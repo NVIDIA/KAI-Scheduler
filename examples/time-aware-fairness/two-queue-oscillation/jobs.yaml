@@ -103,4 +103,3 @@ spec:
 #         requests:
 #           cpu: "2"
 #           memory: "8Gi"
-

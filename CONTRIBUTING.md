@@ -16,6 +16,7 @@ The main building blocks of KAI Scheduler are documented in the `docs/developer`
 - [Plugin Framework](docs/developer/plugin-framework.md) - Extensible plugin system
 - [Pod Grouper](docs/developer/pod-grouper.md) - Group scheduling functionality
 - [Binder](docs/developer/binder.md) - Binding logic
+- [Pre-commit Hooks](docs/developer/pre-commit.md) - Code quality checks before commit
 
 We recommend reviewing these documents to understand the system architecture before making significant contributions.
 
