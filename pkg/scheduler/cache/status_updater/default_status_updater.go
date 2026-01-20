@@ -120,6 +120,7 @@ func (su *defaultStatusUpdater) Evicted(
 	metrics.RecordPodGroupEvictedPods(
 		evictedPodGroup.Name,
 		evictedPodGroup.Namespace,
+		string(evictedPodGroup.UID),
 		nodepool,
 		evictionMetadata.Action,
 		evictionMetadata.EvictionGangSize,

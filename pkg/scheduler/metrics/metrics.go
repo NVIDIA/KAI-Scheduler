@@ -206,7 +206,7 @@ func InitMetrics(namespace string) {
 			Namespace: namespace,
 			Name:      "pod_group_evicted_pods_total",
 			Help:      "Total number of pods evicted per pod group",
-		}, []string{"name", "namespace", "nodepool", "action"})
+		}, []string{"podgroup", "namespace", "uid", "nodepool", "action"})
 }
 
 // UpdateOpenSessionDuration updates latency for open session, including all plugins
@@ -304,8 +304,8 @@ func RegisterPreemptionAttempts() {
 }
 
 // RecordPodGroupEvictedPods records the number of pods evicted for a pod group
-func RecordPodGroupEvictedPods(name, namespace, nodepool, action string, count int) {
-	podGroupEvictedPodsTotal.WithLabelValues(name, namespace, nodepool, action).Add(float64(count))
+func RecordPodGroupEvictedPods(name, namespace, uid, nodepool, action string, count int) {
+	podGroupEvictedPodsTotal.WithLabelValues(name, namespace, uid, nodepool, action).Add(float64(count))
 }
 
 // Duration get the time since specified start
