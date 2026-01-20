@@ -58,6 +58,15 @@ spec:
       {{- end }}
     metricsPort: {{ .Values.binder.ports.metricsPort }}
     resourceReservation:
+      {{- if .Values.global.resourceReservation.namespace }}
+      namespace: {{ .Values.global.resourceReservation.namespace }}
+      {{- end }}
+      {{- if .Values.global.resourceReservation.serviceAccount }}
+      serviceAccountName: {{ .Values.global.resourceReservation.serviceAccount }}
+      {{- end }}
+      {{- if .Values.global.resourceReservation.appLabel }}
+      appLabel: {{ .Values.global.resourceReservation.appLabel }}
+      {{- end }}
       {{- if .Values.binder.runtimeClassName }}
       runtimeClassName: {{ .Values.binder.runtimeClassName }}
       {{- end }}
