@@ -37,7 +37,7 @@ func (p *Prometheus) DesiredState(
 	p.client = runtimeClient.(client.Client)
 
 	var objects []client.Object
-	if kaiConfig.Spec.Prometheus == nil || kaiConfig.Spec.Prometheus.Enabled == nil || !*kaiConfig.Spec.Prometheus.Enabled {
+	if !prometheusExplicitlyEnabled(kaiConfig) {
 		// Handle graceful deprecation of existing Prometheus instance
 		prometheus, err := deprecatePrometheusForKAIConfig(ctx, runtimeClient, kaiConfig)
 		if err != nil {
@@ -55,6 +55,7 @@ func (p *Prometheus) DesiredState(
 		prometheusForKAIConfig,
 		prometheusServiceAccountForKAIConfig,
 		serviceMonitorsForKAIConfig,
+		usagePrometheusServiceForKAIConfig,
 	} {
 		obj, err := resourceFunc(ctx, runtimeClient, kaiConfig)
 		if err != nil {
@@ -111,7 +112,7 @@ func (b *Prometheus) Name() string {
 }
 
 func (p *Prometheus) HasMissingDependencies(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) (string, error) {
-	if kaiConfig.Spec.Prometheus == nil || kaiConfig.Spec.Prometheus.Enabled == nil || !*kaiConfig.Spec.Prometheus.Enabled {
+	if !prometheusExplicitlyEnabled(kaiConfig) {
 		return "", nil
 	}
 	if kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != nil && *kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != "" {
@@ -303,4 +304,10 @@ func pingExternalPrometheus(ctx context.Context, prometheusURL string, timeout i
 	}
 
 	return fmt.Errorf("failed to connect to external Prometheus after %d attempts: %w", maxRetries, lastErr)
+}
+
+func prometheusExplicitlyEnabled(kaiConfig *kaiv1.Config) bool {
+	return kaiConfig.Spec.Prometheus != nil &&
+		kaiConfig.Spec.Prometheus.Enabled != nil &&
+		*kaiConfig.Spec.Prometheus.Enabled
 }
