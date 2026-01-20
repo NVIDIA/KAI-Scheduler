@@ -19,8 +19,9 @@ import (
 	queue_info "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
-	v10 "k8s.io/api/scheduling/v1"
-	v11 "k8s.io/api/storage/v1"
+	v10 "k8s.io/api/resource/v1"
+	v11 "k8s.io/api/scheduling/v1"
+	v12 "k8s.io/api/storage/v1"
 )
 
 // MockDataLister is a mock of DataLister interface.
@@ -48,10 +49,10 @@ func (m *MockDataLister) EXPECT() *MockDataListerMockRecorder {
 }
 
 // GetPriorityClassByName mocks base method.
-func (m *MockDataLister) GetPriorityClassByName(name string) (*v10.PriorityClass, error) {
+func (m *MockDataLister) GetPriorityClassByName(name string) (*v11.PriorityClass, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPriorityClassByName", name)
-	ret0, _ := ret[0].(*v10.PriorityClass)
+	ret0, _ := ret[0].(*v11.PriorityClass)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -78,10 +79,10 @@ func (mr *MockDataListerMockRecorder) ListBindRequests() *gomock.Call {
 }
 
 // ListCSIDrivers mocks base method.
-func (m *MockDataLister) ListCSIDrivers() ([]*v11.CSIDriver, error) {
+func (m *MockDataLister) ListCSIDrivers() ([]*v12.CSIDriver, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListCSIDrivers")
-	ret0, _ := ret[0].([]*v11.CSIDriver)
+	ret0, _ := ret[0].([]*v12.CSIDriver)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -93,10 +94,10 @@ func (mr *MockDataListerMockRecorder) ListCSIDrivers() *gomock.Call {
 }
 
 // ListCSIStorageCapacities mocks base method.
-func (m *MockDataLister) ListCSIStorageCapacities() ([]*v11.CSIStorageCapacity, error) {
+func (m *MockDataLister) ListCSIStorageCapacities() ([]*v12.CSIStorageCapacity, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListCSIStorageCapacities")
-	ret0, _ := ret[0].([]*v11.CSIStorageCapacity)
+	ret0, _ := ret[0].([]*v12.CSIStorageCapacity)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -198,10 +199,10 @@ func (mr *MockDataListerMockRecorder) ListPods() *gomock.Call {
 }
 
 // ListPriorityClasses mocks base method.
-func (m *MockDataLister) ListPriorityClasses() ([]*v10.PriorityClass, error) {
+func (m *MockDataLister) ListPriorityClasses() ([]*v11.PriorityClass, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPriorityClasses")
-	ret0, _ := ret[0].([]*v10.PriorityClass)
+	ret0, _ := ret[0].([]*v11.PriorityClass)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -227,6 +228,21 @@ func (mr *MockDataListerMockRecorder) ListQueues() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListQueues", reflect.TypeOf((*MockDataLister)(nil).ListQueues))
 }
 
+// ListResourceSlices mocks base method.
+func (m *MockDataLister) ListResourceSlices() ([]*v10.ResourceSlice, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListResourceSlices")
+	ret0, _ := ret[0].([]*v10.ResourceSlice)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListResourceSlices indicates an expected call of ListResourceSlices.
+func (mr *MockDataListerMockRecorder) ListResourceSlices() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResourceSlices", reflect.TypeOf((*MockDataLister)(nil).ListResourceSlices))
+}
+
 // ListResourceUsage mocks base method.
 func (m *MockDataLister) ListResourceUsage() (*queue_info.ClusterUsage, error) {
 	m.ctrl.T.Helper()
@@ -243,10 +259,10 @@ func (mr *MockDataListerMockRecorder) ListResourceUsage() *gomock.Call {
 }
 
 // ListStorageClasses mocks base method.
-func (m *MockDataLister) ListStorageClasses() ([]*v11.StorageClass, error) {
+func (m *MockDataLister) ListStorageClasses() ([]*v12.StorageClass, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListStorageClasses")
-	ret0, _ := ret[0].([]*v11.StorageClass)
+	ret0, _ := ret[0].([]*v12.StorageClass)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

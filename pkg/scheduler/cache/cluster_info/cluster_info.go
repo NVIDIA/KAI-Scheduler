@@ -32,6 +32,7 @@ import (
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -240,7 +241,55 @@ func (c *ClusterInfo) snapshotNodes(
 		}
 	}
 
+	// Populate DRA GPU counts from ResourceSlices
+	c.populateDRAGPUs(resultNodes)
+
 	return resultNodes, minGPUMemory, nil
+}
+
+// populateDRAGPUs populates DRA GPU counts for nodes from ResourceSlices per resource type.
+// This is used when GPUs are advertised via DRA instead of extended resources.
+// For each resource type (e.g., "nvidia.com/gpu", "amd.com/gpu"), it checks if extended
+// resources exist for that resource. If not, it uses DRA counts from ResourceSlices.
+func (c *ClusterInfo) populateDRAGPUs(nodes map[string]*node_info.NodeInfo) {
+	resourceSlices, err := c.dataLister.ListResourceSlices()
+	if err != nil {
+		log.InfraLogger.V(6).Infof("Failed to list ResourceSlices for DRA GPU counting: %v", err)
+		return
+	}
+
+	if len(resourceSlices) == 0 {
+		return
+	}
+
+	for nodeName, nodeInfo := range nodes {
+		// Get DRA GPU counts grouped by device class (which maps to resource name)
+		draGPUsByClass := resources.CountNodeGPUsFromResourceSlicesByDeviceClass(nodeName, resourceSlices)
+
+		if len(draGPUsByClass) == 0 {
+			continue
+		}
+
+		// Convert device class names to ResourceName and build the map
+		draGPUsByResource := make(map[v1.ResourceName]float64)
+		for deviceClass, count := range draGPUsByClass {
+			if count > 0 {
+				resourceName := v1.ResourceName(deviceClass)
+				// Check if extended resources exist for this resource
+				extendedCount := nodeInfo.Allocatable.Get(resourceName)
+				if extendedCount == 0 {
+					// Only use DRA if extended resources don't exist for this resource
+					draGPUsByResource[resourceName] = float64(count)
+					log.InfraLogger.V(6).Infof("Node %s has %d DRA GPUs for resource %s from ResourceSlices",
+						nodeName, count, deviceClass)
+				}
+			}
+		}
+
+		if len(draGPUsByResource) > 0 {
+			nodeInfo.SetDRAGPUs(draGPUsByResource)
+		}
+	}
 }
 
 func (c *ClusterInfo) addTasksToNodes(allPods []*v1.Pod, existingPodsMap map[common_info.PodID]*pod_info.PodInfo,
