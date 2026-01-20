@@ -6,7 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [v0.12.7] - 2026-01-14
+## [v0.12.8] - 2026-01-20
+
+### Fixed
+
+- If a preferred topology constraint is set, do not try to find a lowest common subtree (as a part of the calculations optimizations) which is lower then the preferred level
+
+## [v0.12.7] - 2026-01-20
 
 ### Fixed
 - Added dedicated `usage-prometheus` service for scheduler Prometheus access with configurable instance name [#897](https://github.com/NVIDIA/KAI-Scheduler/pull/897) [itsomri](https://github.com/itsomri)
