@@ -101,6 +101,12 @@ admission:
   cdi: false
   gpuPodRuntimeClassName: nvidia
   affinity: {}
+  replicas: 1
+  autoscaling:
+    enabled: false # if autoscaling.enabled is true, then replicas field is ignored
+    minReplicas: 1
+    maxReplicas: 5
+    averageRequestsPerPod: 100 # based on webhook_requests_in_flight custom metric
 
 nodescaleadjuster:
   image:

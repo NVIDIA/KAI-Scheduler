@@ -155,6 +155,12 @@ spec:
       probePort: {{ .Values.admission.ports.probePort | default 8081 }}
       metricsPort: {{ .Values.admission.ports.metricsPort | default 8080 }}
     gpuPodRuntimeClassName: {{ .Values.admission.gpuPodRuntimeClassName | default "nvidia" }}
+    replicas: {{ .Values.admission.replicas | default 1 }}
+    autoscaling:
+      enabled: {{ .Values.admission.autoscaling.enabled | default false }}
+      minReplicas: {{ .Values.admission.autoscaling.minReplicas | default 1 }}
+      maxReplicas: {{ .Values.admission.autoscaling.maxReplicas | default 5 }}
+      averageRequestsPerPod: {{ .Values.admission.autoscaling.averageRequestsPerPod | default 100 }}
 
   nodeScaleAdjuster:
     service:

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -227,6 +228,129 @@ func TestDeploymentForKAIConfig(t *testing.T) {
 			for _, notExpectedArg := range tt.notExpectedArgs {
 				assert.NotContains(t, args, notExpectedArg)
 			}
+		})
+	}
+}
+
+func TestHPAForKAIConfig(t *testing.T) {
+	tests := []struct {
+		name                string
+		config              *kaiv1.Config
+		expectHPA           bool
+		expectedMinReplicas int32
+		expectedMaxReplicas int32
+		expectedTargetValue int64
+	}{
+		{
+			name: "HPA disabled - should return empty",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: constants.DefaultKAINamespace,
+					Admission: &admission.Admission{
+						Autoscaling: &admission.Autoscaling{
+							Enabled: ptr.To(false),
+						},
+					},
+				},
+			},
+			expectHPA: false,
+		},
+		{
+			name: "HPA enabled with default values",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: constants.DefaultKAINamespace,
+					Admission: &admission.Admission{
+						Autoscaling: &admission.Autoscaling{
+							Enabled:               ptr.To(true),
+							MinReplicas:           ptr.To(int32(1)),
+							MaxReplicas:           ptr.To(int32(5)),
+							AverageRequestsPerPod: ptr.To(int32(100)),
+						},
+					},
+				},
+			},
+			expectHPA:           true,
+			expectedMinReplicas: 1,
+			expectedMaxReplicas: 5,
+			expectedTargetValue: 100,
+		},
+		{
+			name: "HPA enabled with custom values",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: constants.DefaultKAINamespace,
+					Admission: &admission.Admission{
+						Autoscaling: &admission.Autoscaling{
+							Enabled:               ptr.To(true),
+							MinReplicas:           ptr.To(int32(2)),
+							MaxReplicas:           ptr.To(int32(10)),
+							AverageRequestsPerPod: ptr.To(int32(150)),
+						},
+					},
+				},
+			},
+			expectHPA:           true,
+			expectedMinReplicas: 2,
+			expectedMaxReplicas: 10,
+			expectedTargetValue: 150,
+		},
+		{
+			name: "HPA not specified - should return empty (defaults to disabled)",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: constants.DefaultKAINamespace,
+					Admission: &admission.Admission{},
+				},
+			},
+			expectHPA: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			client := fake.NewClientBuilder().Build()
+
+			tt.config.Spec.SetDefaultsWhereNeeded()
+			a := &Admission{BaseResourceName: defaultResourceName}
+
+			objects, err := a.hpaForKAIConfig(ctx, client, tt.config)
+			require.NoError(t, err)
+
+			if !tt.expectHPA {
+				assert.Len(t, objects, 0, "should return empty list when HPA is disabled")
+				return
+			}
+
+			require.Len(t, objects, 1)
+			hpa := objects[0]
+			assert.Equal(t, "admission", hpa.GetName())
+			assert.Equal(t, constants.DefaultKAINamespace, hpa.GetNamespace())
+
+			// Type assert to access HPA spec
+			hpaObj, ok := hpa.(*autoscalingv2.HorizontalPodAutoscaler)
+			require.True(t, ok, "object should be HorizontalPodAutoscaler")
+
+			// Check scale target ref
+			assert.Equal(t, "apps/v1", hpaObj.Spec.ScaleTargetRef.APIVersion)
+			assert.Equal(t, "Deployment", hpaObj.Spec.ScaleTargetRef.Kind)
+			assert.Equal(t, "admission", hpaObj.Spec.ScaleTargetRef.Name)
+
+			// Check replicas
+			assert.NotNil(t, hpaObj.Spec.MinReplicas)
+			assert.Equal(t, tt.expectedMinReplicas, *hpaObj.Spec.MinReplicas)
+			assert.Equal(t, tt.expectedMaxReplicas, hpaObj.Spec.MaxReplicas)
+
+			// Check metrics
+			require.Len(t, hpaObj.Spec.Metrics, 1)
+			metric := hpaObj.Spec.Metrics[0]
+			assert.Equal(t, autoscalingv2.PodsMetricSourceType, metric.Type)
+			require.NotNil(t, metric.Pods)
+			assert.Equal(t, "webhook_requests_in_flight", metric.Pods.Metric.Name)
+			assert.Equal(t, autoscalingv2.AverageValueMetricType, metric.Pods.Target.Type)
+			require.NotNil(t, metric.Pods.Target.AverageValue)
+			assert.Equal(t, tt.expectedTargetValue, metric.Pods.Target.AverageValue.Value())
 		})
 	}
 }

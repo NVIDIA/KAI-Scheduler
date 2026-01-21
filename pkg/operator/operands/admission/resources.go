@@ -10,7 +10,9 @@ import (
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -42,7 +44,10 @@ func (a *Admission) deploymentForKAIConfig(
 
 	deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
 	deployment.Spec.Strategy.RollingUpdate = nil
-	deployment.Spec.Replicas = config.Replicas
+	// Only set replicas if HPA is disabled; HPA manages replicas automatically
+	if config.Autoscaling == nil || !*config.Autoscaling.Enabled {
+		deployment.Spec.Replicas = config.Replicas
+	}
 	deployment.Spec.Template.Spec.Containers[0].Args = buildArgsList(kaiConfig, config)
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = []v1.VolumeMount{
 		{
@@ -137,6 +142,55 @@ func (a *Admission) serviceForKAIConfig(
 	service.Spec.Type = v1.ServiceTypeClusterIP
 
 	return []client.Object{service}, nil
+}
+
+func (a *Admission) hpaForKAIConfig(
+	ctx context.Context, runtimeClient client.Reader, kaiConfig *kaiv1.Config,
+) ([]client.Object, error) {
+	config := kaiConfig.Spec.Admission
+
+	// Return empty if autoscaling is not enabled
+	if config.Autoscaling == nil || !*config.Autoscaling.Enabled {
+		return []client.Object{}, nil
+	}
+
+	hpaObj, err := common.ObjectForKAIConfig(ctx, runtimeClient, &autoscalingv2.HorizontalPodAutoscaler{},
+		a.BaseResourceName, kaiConfig.Spec.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	hpa := hpaObj.(*autoscalingv2.HorizontalPodAutoscaler)
+	hpa.TypeMeta = metav1.TypeMeta{
+		Kind:       "HorizontalPodAutoscaler",
+		APIVersion: "autoscaling/v2",
+	}
+
+	hpa.Spec.ScaleTargetRef = autoscalingv2.CrossVersionObjectReference{
+		APIVersion: "apps/v1",
+		Kind:       "Deployment",
+		Name:       a.BaseResourceName,
+	}
+
+	hpa.Spec.MinReplicas = config.Autoscaling.MinReplicas
+	hpa.Spec.MaxReplicas = *config.Autoscaling.MaxReplicas
+
+	hpa.Spec.Metrics = []autoscalingv2.MetricSpec{
+		{
+			Type: autoscalingv2.PodsMetricSourceType,
+			Pods: &autoscalingv2.PodsMetricSource{
+				Metric: autoscalingv2.MetricIdentifier{
+					Name: "webhook_requests_in_flight",
+				},
+				Target: autoscalingv2.MetricTarget{
+					Type:         autoscalingv2.AverageValueMetricType,
+					AverageValue: resource.NewQuantity(int64(*config.Autoscaling.AverageRequestsPerPod), resource.DecimalSI),
+				},
+			},
+		},
+	}
+
+	return []client.Object{hpa}, nil
 }
 
 func buildWebhookSelectors(kaiConfig *kaiv1.Config) (namespaceSelector *metav1.LabelSelector, objectSelector *metav1.LabelSelector) {

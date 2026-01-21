@@ -26,7 +26,7 @@ import (
 var controllerTypes = []string{"Deployment", "DaemonSet"}
 
 // KAI services that should be monitored via ServiceMonitor
-// For now, we only monitor the queue controller. Add more services here if needed.
+// For now, we only monitor the queue controller and admission. Add more services here if needed.
 var KaiServicesForServiceMonitor = []struct {
 	Name     string
 	Port     string
@@ -36,6 +36,7 @@ var KaiServicesForServiceMonitor = []struct {
 	Namespaces    []string          // optional, if not provided, the service will be monitored in the namespace of the KAI config
 }{
 	{"queue-controller", "metrics", "queue-controller", nil, nil},
+	{"admission", "http-metrics", "admission", nil, nil},
 	{"kube-state-metrics", "http", "kube-state-metrics",
 		map[string]string{"app.kubernetes.io/name": "kube-state-metrics"}, []string{"monitoring", "default"}},
 }

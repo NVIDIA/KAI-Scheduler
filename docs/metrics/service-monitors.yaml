@@ -94,3 +94,21 @@ spec:
     - port: http
       interval: 30s
       bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMoitor
+metadata:
+  name: admission
+  namespace: kai-scheduler
+  labels:
+    accounting: kai-scheduler
+spec:
+  jobLabel: admission
+  namespaceSelector:
+    matchNames:
+      - kai-scheduler
+  selector:
+    matchLabels:
+      app: admission
+  endpoints:
+    - port: http-metrics

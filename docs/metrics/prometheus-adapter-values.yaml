@@ -1,0 +1,22 @@
+
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+prometheus:
+  url: http://prometheus-operated.kai-scheduler.svc.cluster.local
+  port: 9090 
+  path: ""
+
+# Define a custom rule to expose the 'controller_runtime_webhook_requests_in_flight' metric for admission service
+rules:
+  custom:
+  - seriesQuery: 'controller_runtime_webhook_requests_in_flight{service="admission"}'
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+        service: {resource: "service"}
+    name:
+      matches: "^controller_runtime_webhook_requests_in_flight"
+      as: "admission_webhook_requests_in_flight"
+    metricsQuery: 'controller_runtime_webhook_requests_in_flight{<<.LabelMatchers>>}'

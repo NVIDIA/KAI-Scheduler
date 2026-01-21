@@ -48,6 +48,10 @@ type Admission struct {
 	// set to empty string to disable
 	// +kubebuilder:validation:Optional
 	GPUPodRuntimeClassName *string `json:"gpuPodRuntimeClassName,omitempty"`
+
+	// Autoscaling defines HPA configuration for the admission controller
+	// +kubebuilder:validation:Optional
+	Autoscaling *Autoscaling `json:"autoscaling,omitempty"`
 }
 
 func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
@@ -68,6 +72,9 @@ func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
 	b.MutatingWebhookConfigurationName = common.SetDefault(b.MutatingWebhookConfigurationName, ptr.To(defaultMutatingWebhookName))
 
 	b.GPUPodRuntimeClassName = common.SetDefault(b.GPUPodRuntimeClassName, ptr.To(constants.DefaultRuntimeClassName))
+
+	b.Autoscaling = common.SetDefault(b.Autoscaling, &Autoscaling{})
+	b.Autoscaling.SetDefaultsWhereNeeded()
 }
 
 // Webhook defines configuration for the admission webhook
@@ -93,4 +100,31 @@ func (w *Webhook) SetDefaultsWhereNeeded() {
 	w.TargetPort = common.SetDefault(w.TargetPort, ptr.To(9443))
 	w.ProbePort = common.SetDefault(w.ProbePort, ptr.To(8081))
 	w.MetricsPort = common.SetDefault(w.MetricsPort, ptr.To(8080))
+}
+
+// Autoscaling defines HPA configuration for the admission controller
+type Autoscaling struct {
+	// Enabled specifies whether autoscaling is enabled
+	// +kubebuilder:validation:Optional
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// MinReplicas is the minimum number of replicas for autoscaling
+	// +kubebuilder:validation:Optional
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+
+	// MaxReplicas is the maximum number of replicas for autoscaling
+	// +kubebuilder:validation:Optional
+	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
+
+	// AverageRequestsPerPod is the target average webhook requests per pod
+	// +kubebuilder:validation:Optional
+	AverageRequestsPerPod *int32 `json:"averageRequestsPerPod,omitempty"`
+}
+
+// SetDefaultsWhereNeeded sets default fields for unset fields
+func (a *Autoscaling) SetDefaultsWhereNeeded() {
+	a.Enabled = common.SetDefault(a.Enabled, ptr.To(false))
+	a.MinReplicas = common.SetDefault(a.MinReplicas, ptr.To(int32(1)))
+	a.MaxReplicas = common.SetDefault(a.MaxReplicas, ptr.To(int32(5)))
+	a.AverageRequestsPerPod = common.SetDefault(a.AverageRequestsPerPod, ptr.To(int32(100)))
 }
