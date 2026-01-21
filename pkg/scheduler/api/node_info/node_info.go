@@ -81,7 +81,6 @@ type NodeInfo struct {
 
 	// DRAGPUsByResource tracks GPU capacity from DRA ResourceSlices per resource type.
 	// Key is the resource name (e.g., "nvidia.com/gpu", "amd.com/gpu").
-	// This is used when GPUs are advertised via DRA instead of extended resources.
 	DRAGPUsByResource map[v1.ResourceName]float64
 
 	AccessibleStorageCapacities map[common_info.StorageClassID][]*sc_info.StorageCapacityInfo
@@ -789,8 +788,7 @@ func (ni *NodeInfo) SetDRAGPUs(draGPUsByResource map[v1.ResourceName]float64) {
 	}
 }
 
-// GetTotalGPUs returns the total GPU count for this node,
-// considering both extended resources and DRA ResourceSlices per resource type.
+// GetTotalGPUs considers both extended resources and DRA ResourceSlices per resource type.
 func (ni *NodeInfo) GetTotalGPUs() float64 {
 	extendedGPUs := ni.Allocatable.GPUs()
 	if extendedGPUs > 0 {

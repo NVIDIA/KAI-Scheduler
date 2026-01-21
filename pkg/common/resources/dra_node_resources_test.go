@@ -180,7 +180,6 @@ func createResourceSlice(name, nodeName, driver string, deviceCount int) *resour
 	}
 }
 
-// createAllNodesResourceSlice creates a ResourceSlice that applies to all nodes.
 func createAllNodesResourceSlice(name, driver string, deviceCount int) *resourceapi.ResourceSlice {
 	devices := make([]resourceapi.Device, deviceCount)
 	for i := 0; i < deviceCount; i++ {

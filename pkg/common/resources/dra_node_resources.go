@@ -39,7 +39,6 @@ func isSliceForNode(slice *resourceapi.ResourceSlice, nodeName string) bool {
 	return false
 }
 
-// countDevicesInSlice counts the number of devices in a ResourceSlice.
 func countDevicesInSlice(slice *resourceapi.ResourceSlice) int64 {
 	if slice.Spec.Devices == nil {
 		return 0
@@ -55,17 +54,14 @@ func CountNodeGPUsFromResourceSlicesByDeviceClass(nodeName string, slices []*res
 			continue
 		}
 
-		// Check if this slice belongs to the target node
 		if !isSliceForNode(slice, nodeName) {
 			continue
 		}
 
-		// Check if this is a GPU device class
 		if !isGPUDeviceClass(slice.Spec.Driver) {
 			continue
 		}
 
-		// Count devices in this slice and add to the appropriate device class
 		deviceCount := countDevicesInSlice(slice)
 		if deviceCount > 0 {
 			gpusByClass[slice.Spec.Driver] += deviceCount

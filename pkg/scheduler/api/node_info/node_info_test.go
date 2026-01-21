@@ -51,7 +51,6 @@ const (
 func nodeInfoEqual(l, r *NodeInfo) bool {
 	l.PodAffinityInfo = nil
 	r.PodAffinityInfo = nil
-	// Normalize DRAGPUsByResource: treat nil and empty map as equivalent
 	if l.DRAGPUsByResource == nil {
 		l.DRAGPUsByResource = make(map[v1.ResourceName]float64)
 	}

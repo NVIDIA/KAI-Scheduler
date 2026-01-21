@@ -60,7 +60,6 @@ func main() {
 		log.InfraLogger.Fatalf(err.Error(), err)
 	}
 
-	// Set DRA feature gate based on the snapshot
 	if err := setDRAFeatureGate(snapshot); err != nil {
 		log.InfraLogger.V(2).Warnf("Failed to set DRA feature gate: %v", err)
 	}
@@ -260,9 +259,6 @@ func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.C
 	return kubeClient, kaiClient
 }
 
-// setDRAFeatureGate sets the DRA feature gate based on the snapshot.
-// This ensures that the snapshot-tool properly simulates the DRA state
-// from when the snapshot was captured.
 // DRA state is inferred from the presence of DRA-related resources
 // (ResourceSlices, ResourceClaims, or DeviceClasses) in the snapshot.
 func setDRAFeatureGate(snap *snapshot.Snapshot) error {

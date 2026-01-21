@@ -247,10 +247,8 @@ func (c *ClusterInfo) snapshotNodes(
 	return resultNodes, minGPUMemory, nil
 }
 
-// populateDRAGPUs populates DRA GPU counts for nodes from ResourceSlices per resource type.
-// This is used when GPUs are advertised via DRA instead of extended resources.
-// For each resource type (e.g., "nvidia.com/gpu", "amd.com/gpu"), it checks if extended
-// resources exist for that resource. If not, it uses DRA counts from ResourceSlices.
+// For each resource type (e.g., "nvidia.com/gpu", "amd.com/gpu"), checks if extended resources exist.
+// If not, uses DRA counts from ResourceSlices.
 func (c *ClusterInfo) populateDRAGPUs(nodes map[string]*node_info.NodeInfo) {
 	resourceSlices, err := c.dataLister.ListResourceSlices()
 	if err != nil {
@@ -263,22 +261,18 @@ func (c *ClusterInfo) populateDRAGPUs(nodes map[string]*node_info.NodeInfo) {
 	}
 
 	for nodeName, nodeInfo := range nodes {
-		// Get DRA GPU counts grouped by device class (which maps to resource name)
 		draGPUsByClass := resources.CountNodeGPUsFromResourceSlicesByDeviceClass(nodeName, resourceSlices)
 
 		if len(draGPUsByClass) == 0 {
 			continue
 		}
 
-		// Convert device class names to ResourceName and build the map
 		draGPUsByResource := make(map[v1.ResourceName]float64)
 		for deviceClass, count := range draGPUsByClass {
 			if count > 0 {
 				resourceName := v1.ResourceName(deviceClass)
-				// Check if extended resources exist for this resource
 				extendedCount := nodeInfo.Allocatable.Get(resourceName)
 				if extendedCount == 0 {
-					// Only use DRA if extended resources don't exist for this resource
 					draGPUsByResource[resourceName] = float64(count)
 					log.InfraLogger.V(6).Infof("Node %s has %d DRA GPUs for resource %s from ResourceSlices",
 						nodeName, count, deviceClass)
