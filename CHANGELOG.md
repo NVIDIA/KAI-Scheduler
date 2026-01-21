@@ -6,8 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.9.12] - 2026-01-21
+
 ### Fixed
 - Fixed rollback for failed bind attempts [#878](https://github.com/NVIDIA/KAI-Scheduler/pull/878) [itsomri](https://github.com/itsomri)
+- ClusterPolicy CDI parsing for gpu-operator > v25.10.0
 
 ## [v0.9.11] - 2026-01-07
 
