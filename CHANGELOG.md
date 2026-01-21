@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.12.9] - 2026-01-21
+
+### Fixed
+- ClusterPolicy CDI parsing for gpu-operator > v25.10.0
+
 ## [v0.12.8] - 2026-01-20
 
 ### Fixed
