@@ -15,15 +15,11 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/NVIDIA/go-nvml v0.12.4-1 h1:WKUvqshhWSNTfm47ETRhv0A0zJyr1ncCuHiXwoTrBEc=
 github.com/NVIDIA/go-nvml v0.12.4-1/go.mod h1:8Llmj+1Rr+9VGGwZuRer5N/aCjxGuR5nPb/9ebBiIEQ=
-github.com/NVIDIA/gpu-operator v1.8.3-0.20240812232433-87286e93f2c9 h1:9yw3Jkto9ZqtNwlnOzxAlKufMNplaWPRfkXhCUFHXgI=
-github.com/NVIDIA/gpu-operator v1.8.3-0.20240812232433-87286e93f2c9/go.mod h1:lOgoRYbt1dtCVGX+EhxuZgPonfcIs41BXrnIPk3fE3I=
 github.com/NVIDIA/gpu-operator v1.8.3-0.20250724212111-616690d88d86 h1:KcEKuIVSUY5XJZTzLjbpD3DRPcQTLwkX1DyzuCZHYKU=
 github.com/NVIDIA/gpu-operator v1.8.3-0.20250724212111-616690d88d86/go.mod h1:EkmCOAWVMphjgnRpbqXhpArJQrOJjbKsoHcrklnisfU=
-github.com/NVIDIA/k8s-kata-manager v0.2.0 h1:K+BFkXTOvXXj/kmbNfxFCXM+GkdOVZj2WTHQ7b2uQA0=
-github.com/NVIDIA/k8s-kata-manager v0.2.0/go.mod h1:fVUz0DLzwW9RQBE59cLNTi3LrzVwSXWIogr9y5FocPM=
+github.com/NVIDIA/k8s-kata-manager v0.2.3 h1:d5+gRFqU5el/fKMXhHUaPY7haj+dbHL4nDsO/q05LBo=
 github.com/NVIDIA/k8s-kata-manager v0.2.3/go.mod h1:xx5OUiMsHyKbyX0JjKHqAftvqS8vx00LFn/5EaMdtB4=
-github.com/NVIDIA/k8s-operator-libs v0.0.0-20240627150410-078e3039ecf7 h1:NaClubDuTKoXy4Ev4ZkmpVy3u6xdwd3I1XFJdoI1r+M=
-github.com/NVIDIA/k8s-operator-libs v0.0.0-20240627150410-078e3039ecf7/go.mod h1:d8YV6Am03Z9VS4fh6virN/ltOSasCZtAhkwMRU1X6Vs=
+github.com/NVIDIA/k8s-operator-libs v0.0.0-20250311214045-7d667fbaa7ac h1:zY0RHvLzhlZlRV8XZ30foz3cGpflVZTwMpegq+nVePA=
 github.com/NVIDIA/k8s-operator-libs v0.0.0-20250311214045-7d667fbaa7ac/go.mod h1:2d+9jpnO7PxsuFJg3Mt/SHmsauD80USc00zRMYba++E=
 github.com/Pallinder/go-randomdata v1.2.0 h1:DZ41wBchNRb/0GfsePLiSwb0PHZmT67XY00lCDlaYPg=
 github.com/Pallinder/go-randomdata v1.2.0/go.mod h1:yHmJgulpD2Nfrm0cR9tI/+oAgRqCQQixsA8HyRZfV9Y=
@@ -264,8 +260,7 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRI
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prashantv/gostub v1.1.0 h1:BTyx3RfQjRHnUWaGF9oQos79AlQ5k8WNktv7VGvVH4g=
 github.com/prashantv/gostub v1.1.0/go.mod h1:A5zLQHz7ieHGG7is6LLXLz7I8+3LZzsrV0P1IAHhP5U=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.73.2 h1:GwlGJPK6vf1UIohpc72KJVkKYlzki1UgE3xC4bWbf20=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.73.2/go.mod h1:yJ3CawR/A5qEYFEeCOUVYLTwYxmacfHQhJS+b/2QiaM=
+github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.81.0 h1:mSii7z+TihzdeULnGjLnNikgtDbeViY/wW8s3430rhE=
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.81.0/go.mod h1:YfnEQzw7tUQa0Sjiz8V6QFc6JUGE+i5wybsjc3EOKn8=
 github.com/prometheus/client_golang v1.23.2 h1:Je96obch5RDVy3FDMndoUsjAhG5Edi49h0RJWRi/o0o=
 github.com/prometheus/client_golang v1.23.2/go.mod h1:Tb1a6LWHB3/SPIzCoaDXI4I8UHKeFTEQ1YCr+0Gyqmg=
