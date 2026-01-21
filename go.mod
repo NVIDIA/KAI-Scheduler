@@ -6,7 +6,7 @@ require (
 	github.com/NVIDIA/go-nvml v0.12.4-1
 	github.com/NVIDIA/gpu-operator v1.8.3-0.20250724212111-616690d88d86
 	github.com/aptible/supercronic v0.2.33
-	github.com/argoproj/argo-workflows/v3 v3.6.14
+	github.com/argoproj/argo-workflows/v3 v3.6.17
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gin-contrib/pprof v1.5.2
 	github.com/gin-gonic/gin v1.10.0
