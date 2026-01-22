@@ -111,10 +111,7 @@ func setupControllers(backgroundCtx context.Context, cfg *rest.Config,
 	plugins.InitDefaultPlugins()
 	framework.RegisterPluginBuilder("fairnessTracker", schedulerplugins.New)
 
-	schedulerConf, err := conf_util.GetDefaultSchedulerConf()
-	if err != nil {
-		return nil, cancel, nil, fmt.Errorf("failed to get default scheduler config: %w", err)
-	}
+	schedulerConf := conf_util.GetDefaultSchedulerConfiguration()
 
 	schedulerConf.UsageDBConfig = &api.UsageDBConfig{
 		ClientType:       "fake-with-history",

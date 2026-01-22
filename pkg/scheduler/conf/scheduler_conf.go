@@ -69,20 +69,29 @@ type Tier struct {
 type PluginOption struct {
 	// The name of Plugin
 	Name string `yaml:"name" json:"name"`
+
 	// JobOrderDisabled defines whether jobOrderFn is disabled
+	// Deprecated: To disable, don't set this plugin in the config
 	JobOrderDisabled bool `yaml:"disableJobOrder,omitempty" json:"disableJobOrder,omitempty"`
 	// TaskOrderDisabled defines whether taskOrderFn is disabled
+	// Deprecated: To disable, don't set this plugin in the config
 	TaskOrderDisabled bool `yaml:"disableTaskOrder,omitempty" json:"disableTaskOrder,omitempty"`
 	// PreemptableDisabled defines whether preemptableFn is disabled
+	// Deprecated: To disable, don't set this plugin in the config
 	PreemptableDisabled bool `yaml:"disablePreemptable,omitempty" json:"disablePreemptable,omitempty"`
 	// ReclaimableDisabled defines whether reclaimableFn is disabled
+	// Deprecated: To disable, don't set this plugin in the config
 	ReclaimableDisabled bool `yaml:"disableReclaimable,omitempty" json:"disableReclaimable,omitempty"`
 	// QueueOrderDisabled defines whether queueOrderFn is disabled
+	// Deprecated: To disable, don't set this plugin in the config
 	QueueOrderDisabled bool `yaml:"disableQueueOrder,omitempty" json:"disableQueueOrder,omitempty"`
 	// PredicateDisabled defines whether predicateFn is disabled
+	// Deprecated: To disable, don't set this plugin in the config
 	PredicateDisabled bool `yaml:"disablePredicate,omitempty" json:"disablePredicate,omitempty"`
 	// NodeOrderDisabled defines whether NodeOrderFn is disabled
+	// Deprecated: To disable, don't set this plugin in the config
 	NodeOrderDisabled bool `yaml:"disableNodeOrder,omitempty" json:"disableNodeOrder,omitempty"`
+
 	// Arguments defines the different arguments that can be given to different plugins
 	Arguments map[string]string `yaml:"arguments,omitempty" json:"arguments,omitempty"`
 }

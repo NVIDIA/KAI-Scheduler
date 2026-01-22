@@ -30,42 +30,45 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
 
-/*
-defaultSchedulerConf is the default conf, unless overridden from the operator (in the scheduler configmap).
-*/
-const defaultSchedulerConf = `
-actions: "allocate, consolidation, reclaim, preempt, stalegangeviction"
-tiers:
-- plugins:
-  - name: predicates
-  - name: proportion
-  - name: priority
-  - name: elastic
-  - name: kubeflow
-  - name: ray
-  - name: nodeavailability
-  - name: gpusharingorder
-  - name: gpupack
-  - name: resourcetype
-  - name: subgrouporder
-  - name: taskorder
-  - name: nominatednode
-  - name: dynamicresources
-  - name: nodeplacement
-    arguments:
-      cpu: binpack
-      gpu: binpack
-  - name: minruntime
-  - name: topology
-`
+func GetDefaultSchedulerConfiguration() *conf.SchedulerConfiguration {
+	return &conf.SchedulerConfiguration{
+		Actions: "allocate, consolidation, reclaim, preempt, stalegangeviction",
+		Tiers: []conf.Tier{
+			{
+				Plugins: []conf.PluginOption{
+					{Name: "predicates"},
+					{Name: "proportion"},
+					{Name: "priority"},
+					{Name: "elastic"},
+					{Name: "kubeflow"},
+					{Name: "ray"},
+					{Name: "nodeavailability"},
+					{Name: "gpusharingorder"},
+					{Name: "gpupack"},
+					{Name: "resourcetype"},
+					{Name: "subgrouporder"},
+					{Name: "taskorder"},
+					{Name: "nominatednode"},
+					{Name: "dynamicresources"},
+					{
+						Name: "nodeplacement",
+						Arguments: map[string]string{
+							"cpu": "binpack",
+							"gpu": "binpack",
+						},
+					},
+					{Name: "minruntime"},
+					{Name: "topology"},
+				},
+			},
+		},
+	}
+}
 
 func ResolveConfigurationFromFile(confPath string) (*conf.SchedulerConfiguration, error) {
-	schedulerConfStr, err := readSchedulerConf(confPath)
-	if err != nil {
-		return nil, err
-	}
+	defaultConfig := GetDefaultSchedulerConfiguration()
 
-	defaultConfig, err := GetDefaultSchedulerConf()
+	schedulerConfStr, err := readSchedulerConf(confPath)
 	if err != nil {
 		return nil, err
 	}
@@ -103,10 +106,6 @@ func GetActionsFromConfig(conf *conf.SchedulerConfiguration) ([]framework.Action
 		}
 	}
 	return actions, nil
-}
-
-func GetDefaultSchedulerConf() (*conf.SchedulerConfiguration, error) {
-	return loadSchedulerConf(defaultSchedulerConf)
 }
 
 func loadSchedulerConf(confStr string) (*conf.SchedulerConfiguration, error) {

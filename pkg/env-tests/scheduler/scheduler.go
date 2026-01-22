@@ -49,10 +49,7 @@ func RunScheduler(cfg *rest.Config, schedulerConf *conf.SchedulerConfiguration, 
 	plugins.InitDefaultPlugins()
 
 	if schedulerConf == nil {
-		schedulerConf, err = conf_util.GetDefaultSchedulerConf()
-		if err != nil {
-			return err
-		}
+		schedulerConf = conf_util.GetDefaultSchedulerConfiguration()
 	}
 
 	s, err := scheduler.NewScheduler(cfg, schedulerConf, params, nil)
