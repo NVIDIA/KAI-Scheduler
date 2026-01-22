@@ -40,6 +40,9 @@ const (
 	MpsAnnotation                 = "mps"
 	StalePodgroupTimeStamp        = "kai.scheduler/stale-podgroup-timestamp"
 	LastStartTimeStamp            = "kai.scheduler/last-start-timestamp"
+	ExpectedRuntimeAnnotation     = "kai.scheduler/expected-runtime"
+	RequeueDelayAnnotation        = "kai.scheduler/requeue-delay"
+	RequeueNotBeforeAnnotation    = "kai.scheduler/requeue-not-before"
 	GpuSharingConfigMapAnnotation = "runai/shared-gpu-configmap"
 	NvidiaVisibleDevices          = "NVIDIA_VISIBLE_DEVICES"
 

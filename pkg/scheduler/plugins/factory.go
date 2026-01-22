@@ -23,6 +23,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/dynamicresources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/elastic"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/expectedruntime"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/gpupack"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/gpusharingorder"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/gpuspread"
@@ -67,6 +68,7 @@ func InitDefaultPlugins() {
 	// Plugins for Queues
 	framework.RegisterPluginBuilder("proportion", proportion.New)
 	framework.RegisterPluginBuilder("minruntime", minruntime.New)
+	framework.RegisterPluginBuilder("expectedruntime", expectedruntime.New)
 
 	// Other Plugins
 	framework.RegisterPluginBuilder("snapshot", snapshot.New)

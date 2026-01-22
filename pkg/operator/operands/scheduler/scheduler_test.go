@@ -154,6 +154,7 @@ tiers:
         - name: nominatednode
         - name: dynamicresources
         - name: minruntime
+        - name: expectedruntime
         - name: topology
         - name: snapshot
         - name: gpupack
@@ -193,6 +194,7 @@ tiers:
         - name: nominatednode
         - name: dynamicresources
         - name: minruntime
+        - name: expectedruntime
         - name: topology
         - name: snapshot
         - name: gpuspread

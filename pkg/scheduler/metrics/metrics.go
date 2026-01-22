@@ -35,27 +35,29 @@ const (
 )
 
 var (
-	currentAction               string
-	e2eSchedulingLatency        prometheus.Gauge
-	openSessionLatency          prometheus.Gauge
-	closeSessionLatency         prometheus.Gauge
-	pluginSchedulingLatency     *prometheus.GaugeVec
-	actionSchedulingLatency     *prometheus.GaugeVec
-	taskSchedulingLatency       prometheus.Histogram
-	taskBindLatency             prometheus.Histogram
-	podgroupsScheduledByAction  *prometheus.CounterVec
-	podgroupsConsideredByAction *prometheus.CounterVec
-	scenariosSimulatedByAction  *prometheus.CounterVec
-	scenariosFilteredByAction   *prometheus.CounterVec
-	preemptionAttempts          prometheus.Counter
-	queueFairShareCPU           *prometheus.GaugeVec
-	queueFairShareMemory        *prometheus.GaugeVec
-	queueFairShareGPU           *prometheus.GaugeVec
-	queueCPUUsage               *prometheus.GaugeVec
-	queueMemoryUsage            *prometheus.GaugeVec
-	queueGPUUsage               *prometheus.GaugeVec
-	usageQueryLatency           *prometheus.HistogramVec
-	podGroupEvictedPodsTotal    *prometheus.CounterVec
+	currentAction                 string
+	e2eSchedulingLatency          prometheus.Gauge
+	openSessionLatency            prometheus.Gauge
+	closeSessionLatency           prometheus.Gauge
+	pluginSchedulingLatency       *prometheus.GaugeVec
+	actionSchedulingLatency       *prometheus.GaugeVec
+	taskSchedulingLatency         prometheus.Histogram
+	taskBindLatency               prometheus.Histogram
+	podgroupsScheduledByAction    *prometheus.CounterVec
+	podgroupsConsideredByAction   *prometheus.CounterVec
+	scenariosSimulatedByAction    *prometheus.CounterVec
+	scenariosFilteredByAction     *prometheus.CounterVec
+	preemptionAttempts            prometheus.Counter
+	queueFairShareCPU             *prometheus.GaugeVec
+	queueFairShareMemory          *prometheus.GaugeVec
+	queueFairShareGPU             *prometheus.GaugeVec
+	queueCPUUsage                 *prometheus.GaugeVec
+	queueMemoryUsage              *prometheus.GaugeVec
+	queueGPUUsage                 *prometheus.GaugeVec
+	usageQueryLatency             *prometheus.HistogramVec
+	podGroupEvictedPodsTotal      *prometheus.CounterVec
+	requeueNominationsTotal       *prometheus.CounterVec
+	requeueNominationSkippedTotal *prometheus.CounterVec
 )
 
 func init() {
@@ -207,6 +209,20 @@ func InitMetrics(namespace string) {
 			Name:      "pod_group_evicted_pods_total",
 			Help:      "Total number of pods evicted per pod group",
 		}, []string{"podgroup", "namespace", "uid", "nodepool", "action"})
+
+	requeueNominationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Name:      "requeue_nominations_total",
+			Help:      "Total number of requeue nominations made by plugins",
+		}, []string{"plugin"})
+
+	requeueNominationSkippedTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Name:      "requeue_nomination_skipped_total",
+			Help:      "Total number of requeue nominations skipped by plugins",
+		}, []string{"plugin", "reason"})
 }
 
 // UpdateOpenSessionDuration updates latency for open session, including all plugins
@@ -311,4 +327,14 @@ func RecordPodGroupEvictedPods(name, namespace, uid, nodepool, action string, co
 // Duration get the time since specified start
 func Duration(start time.Time) time.Duration {
 	return time.Since(start)
+}
+
+// IncRequeueNominationsTotal increments the counter for requeue nominations by a plugin
+func IncRequeueNominationsTotal(plugin string) {
+	requeueNominationsTotal.WithLabelValues(plugin).Inc()
+}
+
+// IncRequeueNominationSkippedTotal increments the counter for skipped requeue nominations by a plugin with a reason
+func IncRequeueNominationSkippedTotal(plugin, reason string) {
+	requeueNominationSkippedTotal.WithLabelValues(plugin, reason).Inc()
 }
