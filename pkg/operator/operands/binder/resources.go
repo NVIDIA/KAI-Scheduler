@@ -7,13 +7,14 @@ import (
 	"context"
 	"fmt"
 
+	"golang.org/x/mod/semver"
+
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -187,7 +188,7 @@ func isCdiEnabled(ctx context.Context, readerClient client.Reader) (bool, error)
 	nvidiaClusterPolicy := nvidiaClusterPolicies.Items[0]
 	if nvidiaClusterPolicy.Spec.CDI.Enabled != nil && *nvidiaClusterPolicy.Spec.CDI.Enabled {
 		gpuOperatorVersion, found := nvidiaClusterPolicy.Labels[versionLabelName]
-		if found && version.CompareKubeAwareVersionStrings(gpuOperatorVersion, gpuOperatorVersionDefaultCDIDeprecated) >= 0 {
+		if found && semver.Compare(gpuOperatorVersion, gpuOperatorVersionDefaultCDIDeprecated) >= 0 {
 			return true, nil
 		}
 		if nvidiaClusterPolicy.Spec.CDI.Default != nil && *nvidiaClusterPolicy.Spec.CDI.Default {
