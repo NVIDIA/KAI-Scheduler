@@ -20,7 +20,6 @@ const (
 )
 
 func SetDRAFeatureGate(config *rest.Config) error {
-	// Create a DiscoveryClient
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
 		return err
@@ -33,14 +32,12 @@ func SetDRAFeatureGate(config *rest.Config) error {
 func IsDynamicResourcesEnabled(discoveryClient discovery.DiscoveryInterface) bool {
 	logger := log.Log.WithName("feature-gates")
 
-	// Get API server version
 	serverVersion, err := discoveryClient.ServerVersion()
 	if err != nil {
 		logger.Error(err, "Failed to get server version")
 		return false
 	}
 
-	// Check if the API server version is compatible with DRA
 	if majorVer, errMajor := strconv.Atoi(serverVersion.Major); errMajor != nil || majorVer < 1 {
 		return false
 	}
@@ -48,7 +45,6 @@ func IsDynamicResourcesEnabled(discoveryClient discovery.DiscoveryInterface) boo
 		return false
 	}
 
-	// Get supported API versions
 	serverGroups, err := discoveryClient.ServerGroups()
 	if err != nil {
 		logger.Error(err, "Failed to get server groups")
@@ -68,7 +64,6 @@ func IsDynamicResourcesEnabled(discoveryClient discovery.DiscoveryInterface) boo
 		return false
 	}
 
-	// Check if the DRA API group is supported
 	for _, groupVersion := range resourceGroup.Versions {
 		if version.CompareKubeAwareVersionStrings(groupVersion.Version, minimalSupportedVersion) >= 0 {
 			return true

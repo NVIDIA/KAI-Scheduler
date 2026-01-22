@@ -16,7 +16,9 @@ import (
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	featureutil "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/kubernetes/pkg/features"
 
 	kaischedulerfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
@@ -61,6 +63,11 @@ func main() {
 	plugins.InitDefaultPlugins()
 
 	kubeClient, kaiClient, kueueClient := loadClientsWithSnapshot(snapshot.RawObjects)
+
+	if len(snapshot.RawObjects.ResourceSlices) > 0 || len(snapshot.RawObjects.ResourceClaims) > 0 || len(snapshot.RawObjects.DeviceClasses) > 0 {
+		_ = featureutil.DefaultMutableFeatureGate.SetFromMap(
+			map[string]bool{string(features.DynamicResourceAllocation): true})
+	}
 
 	schedulerCacheParams := &cache.SchedulerCacheParams{
 		KubeClient:                  kubeClient,
@@ -227,6 +234,13 @@ func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.C
 		_, err := kubeClient.ResourceV1().DeviceClasses().Create(context.TODO(), deviceClass, v1.CreateOptions{})
 		if err != nil {
 			log.InfraLogger.Errorf("Failed to create device class: %v", err)
+		}
+	}
+
+	for _, topology := range rawObjects.Topologies {
+		_, err := kueueClient.KueueV1alpha1().Topologies().Create(context.TODO(), topology, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create topology class: %v", err)
 		}
 	}
 
