@@ -97,6 +97,78 @@ snapshot-tool --filename snapshot.zip
 snapshot-tool --filename snapshot.zip --verbosity 5
 ```
 
+## Snapshot-to-Test Tool
+
+The snapshot-to-test tool generates Go integration test code from snapshot files. This allows you to convert captured cluster snapshots into executable integration tests that can be run as part of the test suite.
+
+### Features
+
+- Converts snapshot files to Go integration test code
+- Generates `TestTopologyMetadata` structures from snapshot data
+- Automatically handles resource conversion (Pods, Nodes, Queues, PodGroups)
+- Generates proper test mocks based on pending workloads
+
+### Usage
+
+```bash
+go run ./cmd/snapshot-to-test --snapshot <snapshot-file> [options]
+```
+
+#### Arguments
+
+- `--snapshot`: Path to the snapshot ZIP file (required)
+- `--output`: Output Go test file path (default: `<snapshot-basename>_test.go`)
+- `--test-name`: Name for the generated test function (default: `TestSnapshot<snapshot-basename>`)
+- `--package`: Package name for generated test file (default: `snapshots_test`)
+
+### Examples
+
+```bash
+# Generate test file with default settings
+go run ./cmd/snapshot-to-test --snapshot snapshot.gzip
+
+# Generate test file with custom output path and test name
+go run ./cmd/snapshot-to-test \
+  --snapshot snapshot.gzip \
+  --output pkg/scheduler/actions/integration_tests/snapshots/my_test.go \
+  --test-name TestMySnapshot
+
+# Generate test file with custom package name
+go run ./cmd/snapshot-to-test \
+  --snapshot snapshot.gzip \
+  --package my_test_package
+```
+
+### Generated Test Structure
+
+The tool generates a Go test file containing:
+
+1. A test function that calls `integration_tests_utils.RunTests()`
+2. A `getTestsMetadata()` function that returns `TestTopologyMetadata` array
+3. Converted test data from the snapshot:
+   - Jobs (from PodGroups and Pods)
+   - Nodes (with GPU and CPU resources)
+   - Queues (with quota and limit settings)
+   - Mocks (automatically calculated based on pending tasks)
+
+### Workflow
+
+1. Capture a snapshot from a running cluster:
+   ```bash
+   kubectl port-forward -n kai deployment/scheduler 8081 &
+   curl "localhost:8081/get-snapshot" > snapshot.gzip
+   ```
+
+2. Generate integration test code:
+   ```bash
+   go run ./cmd/snapshot-to-test --snapshot snapshot.gzip
+   ```
+
+3. Run the generated test:
+   ```bash
+   go test ./pkg/scheduler/actions/integration_tests/snapshots/... -v -run TestSnapshot...
+   ```
+
 ## Implementation Details
 
 ### Snapshot Plugin
@@ -116,6 +188,15 @@ The snapshot tool (`cmd/snapshot-tool/main.go`) implements:
 3. Scheduler cache initialization
 4. Session management
 5. Action execution
+
+### Snapshot-to-Test Tool
+
+The snapshot-to-test tool (`cmd/snapshot-to-test/`) implements:
+
+1. Snapshot loading using `snapshotrunner.LoadSnapshot()`
+2. Conversion of Kubernetes objects to test utility structures
+3. Generation of Go test code with proper formatting
+4. Automatic mock configuration based on workload state
 
 ## Limitations
 

@@ -87,6 +87,7 @@ make validate                 # Verify generated code is up to date. Also format
 - `fairshare-simulator` - Simulate fairshare scheduling decisions
 - `time-based-fairshare-simulator` - Time-based scheduling simulation
 - `snapshot-tool` - Cluster state snapshot utilities
+- `snapshot-to-test` - Generate integration test code from snapshot files
 - `scalingpod` - Helper for scaling pod operations
 
 ## Code Style Guidelines
