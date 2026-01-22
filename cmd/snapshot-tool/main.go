@@ -65,7 +65,7 @@ func main() {
 	kubeClient, kaiClient, kueueClient := loadClientsWithSnapshot(snapshot.RawObjects)
 
 	if len(snapshot.RawObjects.ResourceSlices) > 0 || len(snapshot.RawObjects.ResourceClaims) > 0 || len(snapshot.RawObjects.DeviceClasses) > 0 {
-		featureutil.DefaultMutableFeatureGate.SetFromMap(
+		_ = featureutil.DefaultMutableFeatureGate.SetFromMap(
 			map[string]bool{string(features.DynamicResourceAllocation): true})
 	}
 
