@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/snapshotrunner"
+	"github.com/NVIDIA/KAI-scheduler/pkg/snapshotrunner"
 )
 
 // TestSnapshotsFromFiles discovers snapshot archives under

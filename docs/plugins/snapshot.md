@@ -97,26 +97,27 @@ snapshot-tool --filename snapshot.zip
 snapshot-tool --filename snapshot.zip --verbosity 5
 ```
 
-## Snapshot-to-Test Tool
+## Generating Integration Tests from Snapshots
 
-The snapshot-to-test tool generates Go integration test code from snapshot files. This allows you to convert captured cluster snapshots into executable integration tests that can be run as part of the test suite.
+The snapshot-tool can generate Go integration test code from snapshot files using the `--generate-test` flag. This allows you to convert captured cluster snapshots into executable integration tests that can be run as part of the test suite.
 
 ### Features
 
-- Converts snapshot files to Go integration test code
-- Generates `TestTopologyMetadata` structures from snapshot data
-- Automatically handles resource conversion (Pods, Nodes, Queues, PodGroups)
-- Generates proper test mocks based on pending workloads
+- Generates boilerplate Go integration test code from snapshot files
+- Provides a template structure that is easy to edit and customize
+- Includes snapshot summary information (node names, queue names, PodGroup names) as comments
+- Creates a starting point for writing integration tests based on real cluster states
 
 ### Usage
 
 ```bash
-go run ./cmd/snapshot-to-test --snapshot <snapshot-file> [options]
+snapshot-tool --filename <snapshot-file> --generate-test [options]
 ```
 
 #### Arguments
 
-- `--snapshot`: Path to the snapshot ZIP file (required)
+- `--filename`: Path to the snapshot ZIP file (required)
+- `--generate-test`: Enable test generation mode
 - `--output`: Output Go test file path (default: `<snapshot-basename>_test.go`)
 - `--test-name`: Name for the generated test function (default: `TestSnapshot<snapshot-basename>`)
 - `--package`: Package name for generated test file (default: `snapshots_test`)
@@ -125,31 +126,39 @@ go run ./cmd/snapshot-to-test --snapshot <snapshot-file> [options]
 
 ```bash
 # Generate test file with default settings
-go run ./cmd/snapshot-to-test --snapshot snapshot.gzip
+snapshot-tool --filename snapshot.gzip --generate-test
 
 # Generate test file with custom output path and test name
-go run ./cmd/snapshot-to-test \
-  --snapshot snapshot.gzip \
+snapshot-tool \
+  --filename snapshot.gzip \
+  --generate-test \
   --output pkg/scheduler/actions/integration_tests/snapshots/my_test.go \
   --test-name TestMySnapshot
 
 # Generate test file with custom package name
-go run ./cmd/snapshot-to-test \
-  --snapshot snapshot.gzip \
+snapshot-tool \
+  --filename snapshot.gzip \
+  --generate-test \
   --package my_test_package
 ```
 
 ### Generated Test Structure
 
-The tool generates a Go test file containing:
+The tool generates a boilerplate Go test file containing:
 
 1. A test function that calls `integration_tests_utils.RunTests()`
-2. A `getTestsMetadata()` function that returns `TestTopologyMetadata` array
-3. Converted test data from the snapshot:
-   - Jobs (from PodGroups and Pods)
-   - Nodes (with GPU and CPU resources)
-   - Queues (with quota and limit settings)
-   - Mocks (automatically calculated based on pending tasks)
+2. A `getTestsMetadata()` function with a template structure
+3. Summary information from the snapshot as comments:
+   - Number of nodes, pods, PodGroups, and queues
+   - Names of nodes, queues, and PodGroups found in the snapshot
+4. TODO comments and example structures for:
+   - Jobs (with example job structure)
+   - Nodes (with example node structure)
+   - Queues (with example queue structure)
+   - Mocks (commented out, ready to configure if needed)
+   - JobExpectedResults (commented out, ready to add expected outcomes)
+
+The generated file is designed to be easily editable. You should fill in the actual test data based on your requirements and the snapshot information provided in the comments.
 
 ### Workflow
 
@@ -159,12 +168,18 @@ The tool generates a Go test file containing:
    curl "localhost:8081/get-snapshot" > snapshot.gzip
    ```
 
-2. Generate integration test code:
+2. Generate integration test boilerplate:
    ```bash
-   go run ./cmd/snapshot-to-test --snapshot snapshot.gzip
+   snapshot-tool --filename snapshot.gzip --generate-test
    ```
 
-3. Run the generated test:
+3. Edit the generated test file:
+   - Review the snapshot summary comments to understand the cluster state
+   - Fill in the test data structures (Jobs, Nodes, Queues) based on your test requirements
+   - Add expected results if needed
+   - Configure mocks if required
+
+4. Run the test:
    ```bash
    go test ./pkg/scheduler/actions/integration_tests/snapshots/... -v -run TestSnapshot...
    ```
@@ -183,20 +198,28 @@ The snapshot plugin (`pkg/scheduler/plugins/snapshot/snapshot.go`) implements th
 
 The snapshot tool (`cmd/snapshot-tool/main.go`) implements:
 
-1. Snapshot loading and parsing
+1. Snapshot loading and parsing (using `pkg/snapshotrunner`)
 2. Fake client creation with snapshot data
 3. Scheduler cache initialization
 4. Session management
 5. Action execution
+6. Test generation (when `--generate-test` flag is used, using `pkg/snapshottest`)
 
-### Snapshot-to-Test Tool
+The snapshot execution logic has been extracted to `pkg/snapshotrunner/runner.go`, which provides reusable functions for loading and running snapshots. This package is located outside the scheduler package to keep the codebase organized.
 
-The snapshot-to-test tool (`cmd/snapshot-to-test/`) implements:
+### Test Generation
 
-1. Snapshot loading using `snapshotrunner.LoadSnapshot()`
-2. Conversion of Kubernetes objects to test utility structures
-3. Generation of Go test code with proper formatting
-4. Automatic mock configuration based on workload state
+The test generation functionality (`pkg/snapshottest/generator.go`) implements:
+
+1. Snapshot loading using `snapshotrunner.LoadSnapshot()` from `pkg/snapshotrunner`
+2. Extraction of summary information from the snapshot (counts and names)
+3. Generation of boilerplate Go test code with:
+   - Basic test function structure
+   - Template `getTestsMetadata()` function with TODO comments
+   - Example structures for all test components
+   - Snapshot summary information as comments
+
+The generated boilerplate is intentionally minimal and easy to edit, allowing developers to customize the test based on their specific requirements.
 
 ## Limitations
 
