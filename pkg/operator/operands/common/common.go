@@ -26,7 +26,7 @@ import (
 var controllerTypes = []string{"Deployment", "DaemonSet"}
 
 // KAI services that should be monitored via ServiceMonitor
-// For now, we only monitor the queue controller and admission. Add more services here if needed.
+// For now, we only monitor the queue controller. Add more services here if needed.
 var KaiServicesForServiceMonitor = []struct {
 	Name     string
 	Port     string
