@@ -44,7 +44,6 @@ func (a *Admission) deploymentForKAIConfig(
 
 	deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
 	deployment.Spec.Strategy.RollingUpdate = nil
-	// Only set replicas if HPA is disabled; HPA manages replicas automatically
 	if config.Autoscaling == nil || !*config.Autoscaling.Enabled {
 		deployment.Spec.Replicas = config.Replicas
 	}

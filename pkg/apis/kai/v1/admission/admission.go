@@ -15,6 +15,7 @@ const (
 	imageName                    = "admission"
 	defaultValidatingWebhookName = "validating-kai-admission"
 	defaultMutatingWebhookName   = "mutating-kai-admission"
+	defaultAverageRequestsPerPod = 100
 )
 
 type Admission struct {
@@ -126,5 +127,5 @@ func (a *Autoscaling) SetDefaultsWhereNeeded() {
 	a.Enabled = common.SetDefault(a.Enabled, ptr.To(false))
 	a.MinReplicas = common.SetDefault(a.MinReplicas, ptr.To(int32(1)))
 	a.MaxReplicas = common.SetDefault(a.MaxReplicas, ptr.To(int32(5)))
-	a.AverageRequestsPerPod = common.SetDefault(a.AverageRequestsPerPod, ptr.To(int32(100)))
+	a.AverageRequestsPerPod = common.SetDefault(a.AverageRequestsPerPod, ptr.To(int32(defaultAverageRequestsPerPod)))
 }

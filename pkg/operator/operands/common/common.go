@@ -36,7 +36,6 @@ var KaiServicesForServiceMonitor = []struct {
 	Namespaces    []string          // optional, if not provided, the service will be monitored in the namespace of the KAI config
 }{
 	{"queue-controller", "metrics", "queue-controller", nil, nil},
-	{"admission", "http-metrics", "admission", nil, nil},
 	{"kube-state-metrics", "http", "kube-state-metrics",
 		map[string]string{"app.kubernetes.io/name": "kube-state-metrics"}, []string{"monitoring", "default"}},
 }

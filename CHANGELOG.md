@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Enable HPA (HorizontalPodAutoscaling) for KAI Admission Service [#911](https://github.com/NVIDIA/KAI-Scheduler/pull/911) [faizan-exe](https://github.com/faizan-exe)
 - Added metric for tracking evicted pods in pod groups, including nodepool, eviction action, and gang size
 - Block scheduling of pods with shared (non-template) DRA GPU claims that lack a queue label or have a mismatched queue label [gshaibi](https://github.com/gshaibi)
 - Added the option to disable prometheus service monitor creation [#810](https://github.com/NVIDIA/KAI-Scheduler/pull/810) [itsomri](https://github.com/itsomri)
