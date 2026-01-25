@@ -54,6 +54,7 @@ binder:
     # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   resourceReservationImage:
     name: resourcereservation
+    pullPolicy: IfNotPresent
     # tag: ""  # Optional: Override global.tag or Chart.AppVersion
   # resourceReservationPodResources specifies CPU and memory resource requests and limits
   # for GPU reservation pods created by the binder.
