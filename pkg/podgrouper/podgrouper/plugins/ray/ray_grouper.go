@@ -20,6 +20,8 @@ const (
 	rayClusterKind = "RayCluster"
 
 	rayPriorityClassName = "ray.io/priority-class-name"
+
+	headSubGroupName = "head"
 )
 
 type RayGrouper struct {
@@ -71,11 +73,12 @@ func (rg *RayGrouper) getPodGroupMetadataInternal(
 		return nil, err
 	}
 
-	minReplicas, err := calcJobNumOfPods(rayClusterObj)
+	minReplicas, subGroups, err := calcJobNumOfPodsAndSubGroups(rayClusterObj)
 	if err != nil {
 		return nil, err
 	}
 	podGroupMetadata.MinAvailable = minReplicas
+	podGroupMetadata.SubGroups = subGroups
 
 	return podGroupMetadata, nil
 }
@@ -121,22 +124,30 @@ func (rg *RayGrouper) extractRayClusterObject(
 // These calculations are based on the way KubeRay creates volcano pod-groups
 // https://github.com/ray-project/kuberay/blob/dbcc686eabefecc3b939cd5c6e7a051f2473ad34/ray-operator/controllers/ray/batchscheduler/volcano/volcano_scheduler.go#L106
 // https://github.com/ray-project/kuberay/blob/dbcc686eabefecc3b939cd5c6e7a051f2473ad34/ray-operator/controllers/ray/batchscheduler/volcano/volcano_scheduler.go#L51
-func calcJobNumOfPods(topOwner *unstructured.Unstructured) (int32, error) {
-	minReplicas := int32(calcMinHeadReplicas(topOwner))
+func calcJobNumOfPodsAndSubGroups(topOwner *unstructured.Unstructured) (int32, []*podgroup.SubGroupMetadata, error) {
+	headMinReplicas := int32(calcMinHeadReplicas(topOwner))
+	minReplicas := headMinReplicas
+
+	subGroups := []*podgroup.SubGroupMetadata{
+		{
+			Name:         headSubGroupName,
+			MinAvailable: headMinReplicas,
+		},
+	}
 
 	workerGroupSpecs, workerSpecFound, err := unstructured.NestedSlice(topOwner.Object,
 		"spec", "workerGroupSpecs")
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	if !workerSpecFound || len(workerGroupSpecs) == 0 {
-		return minReplicas, nil
+		return minReplicas, subGroups, nil
 	}
 
 	for groupIndex, groupSpec := range workerGroupSpecs {
 		groupMinReplicas, groupDesiredReplicas, err := getReplicaCountersForWorkerGroup(groupSpec, groupIndex)
 		if err != nil {
-			return 0, err
+			return 0, nil, err
 		}
 		if groupMinReplicas == 0 && groupDesiredReplicas == 0 {
 			continue // This type of worker doesn't contribute for minReplicas
@@ -144,19 +155,36 @@ func calcJobNumOfPods(topOwner *unstructured.Unstructured) (int32, error) {
 
 		numOfHosts, err := getGroupNumOfHosts(groupSpec)
 		if err != nil {
-			return 0, err
+			return 0, nil, err
 		}
 
+		var workerGroupMinReplicas int32
 		if groupMinReplicas > 0 {
 			// if minReplicas is set, use it to calculate the min number for workload scheduling
-			minReplicas += int32(groupMinReplicas * numOfHosts)
+			workerGroupMinReplicas = int32(groupMinReplicas * numOfHosts)
 		} else {
 			// if minReplicas is not set, use the desiredReplicas field to calculate the min number for workload scheduling
-			minReplicas += int32(groupDesiredReplicas * numOfHosts)
+			workerGroupMinReplicas = int32(groupDesiredReplicas * numOfHosts)
 		}
+		minReplicas += workerGroupMinReplicas
+
+		// Get worker group name or generate one
+		workerGroupName := getWorkerGroupName(groupSpec, groupIndex)
+		subGroups = append(subGroups, &podgroup.SubGroupMetadata{
+			Name:         workerGroupName,
+			MinAvailable: workerGroupMinReplicas,
+		})
 	}
 
-	return minReplicas, nil
+	return minReplicas, subGroups, nil
+}
+
+func getWorkerGroupName(groupSpec interface{}, groupIndex int) string {
+	groupName, found, err := unstructured.NestedString(groupSpec.(map[string]interface{}), "groupName")
+	if err != nil || !found || groupName == "" {
+		return fmt.Sprintf("worker-group-%d", groupIndex)
+	}
+	return groupName
 }
 
 func getGroupNumOfHosts(groupSpec interface{}) (int64, error) {
