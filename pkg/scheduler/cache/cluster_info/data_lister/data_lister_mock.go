@@ -228,6 +228,21 @@ func (mr *MockDataListerMockRecorder) ListQueues() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListQueues", reflect.TypeOf((*MockDataLister)(nil).ListQueues))
 }
 
+// ListResourceClaims mocks base method.
+func (m *MockDataLister) ListResourceClaims() ([]*v10.ResourceClaim, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListResourceClaims")
+	ret0, _ := ret[0].([]*v10.ResourceClaim)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListResourceClaims indicates an expected call of ListResourceClaims.
+func (mr *MockDataListerMockRecorder) ListResourceClaims() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResourceClaims", reflect.TypeOf((*MockDataLister)(nil).ListResourceClaims))
+}
+
 // ListResourceSlicesByNode mocks base method.
 func (m *MockDataLister) ListResourceSlicesByNode() (map[string][]*v10.ResourceSlice, error) {
 	m.ctrl.T.Helper()

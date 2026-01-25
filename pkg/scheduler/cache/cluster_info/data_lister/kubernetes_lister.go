@@ -52,6 +52,7 @@ type k8sLister struct {
 	kaiTopologyLister kaiv1alpha1Listers.TopologyLister
 
 	resourceSliceLister resourcev1.ResourceSliceLister
+	resourceClaimLister resourcev1.ResourceClaimLister
 
 	partitionSelector labels.Selector
 }
@@ -83,6 +84,7 @@ func New(
 		bindRequestLister:   kubeAiSchedulerInformerFactory.Scheduling().V1alpha2().BindRequests().Lister(),
 		kaiTopologyLister:   kubeAiSchedulerInformerFactory.Kai().V1alpha1().Topologies().Lister(),
 		resourceSliceLister: informerFactory.Resource().V1().ResourceSlices().Lister(),
+		resourceClaimLister: informerFactory.Resource().V1().ResourceClaims().Lister(),
 
 		partitionSelector: partitionSelector,
 	}
@@ -178,8 +180,6 @@ func (k *k8sLister) ListTopologies() ([]*kaiv1alpha1.Topology, error) {
 
 // +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceslices,verbs=get;list;watch
 
-// ListResourceSlicesByNode returns ResourceSlices grouped by node name.
-// Empty string key ("") contains slices that apply to all nodes (AllNodes=true).
 func (k *k8sLister) ListResourceSlicesByNode() (map[string][]*resourceapi.ResourceSlice, error) {
 	slices, err := k.resourceSliceLister.List(labels.Everything())
 	if err != nil {
@@ -197,4 +197,10 @@ func (k *k8sLister) ListResourceSlicesByNode() (map[string][]*resourceapi.Resour
 		result[nodeName] = append(result[nodeName], slice)
 	}
 	return result, nil
+}
+
+// +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceclaims,verbs=get;list;watch
+
+func (k *k8sLister) ListResourceClaims() ([]*resourceapi.ResourceClaim, error) {
+	return k.resourceClaimLister.List(labels.Everything())
 }

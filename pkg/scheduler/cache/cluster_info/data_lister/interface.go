@@ -35,4 +35,5 @@ type DataLister interface {
 	// ListResourceSlicesByNode returns ResourceSlices grouped by node name.
 	// Empty string key ("") contains slices that apply to all nodes (AllNodes=true).
 	ListResourceSlicesByNode() (map[string][]*resourceapi.ResourceSlice, error)
+	ListResourceClaims() ([]*resourceapi.ResourceClaim, error)
 }
