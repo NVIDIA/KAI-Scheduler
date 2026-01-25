@@ -2093,7 +2093,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 						},
 					},
 				}, nil)
-				mdl.EXPECT().ListResourceSlices().Return([]*resourceapi.ResourceSlice{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{
 					{
 						ObjectMeta: metav1.ObjectMeta{
@@ -2113,7 +2113,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"listQueues": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
-				mdl.EXPECT().ListResourceSlices().Return([]*resourceapi.ResourceSlice{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
@@ -2122,7 +2122,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"listPodGroups": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
-				mdl.EXPECT().ListResourceSlices().Return([]*resourceapi.ResourceSlice{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
@@ -2134,7 +2134,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"defaultPriorityClass": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
-				mdl.EXPECT().ListResourceSlices().Return([]*resourceapi.ResourceSlice{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
@@ -2145,7 +2145,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"getPriorityClassByNameAndPodByPodGroup": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
-				mdl.EXPECT().ListResourceSlices().Return([]*resourceapi.ResourceSlice{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{
@@ -2184,7 +2184,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
-				mdl.EXPECT().ListResourceSlices().Return([]*resourceapi.ResourceSlice{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListBindRequests().Return(nil, fmt.Errorf(successErrorMsg))
 			},
 		},
@@ -2450,9 +2450,19 @@ func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			// Convert slices to map grouped by node name
+			slicesByNode := make(map[string][]*resourceapi.ResourceSlice)
+			for _, slice := range test.resourceSlices {
+				nodeName := ""
+				if slice.Spec.NodeName != nil {
+					nodeName = *slice.Spec.NodeName
+				}
+				slicesByNode[nodeName] = append(slicesByNode[nodeName], slice)
+			}
+
 			mockLister := data_lister.NewMockDataLister(ctrl)
 			mockLister.EXPECT().ListNodes().Return(test.nodes, nil)
-			mockLister.EXPECT().ListResourceSlices().Return(test.resourceSlices, nil)
+			mockLister.EXPECT().ListResourceSlicesByNode().Return(slicesByNode, nil)
 
 			clusterPodAffinityInfo := pod_affinity.NewMockClusterPodAffinityInfo(ctrl)
 			clusterPodAffinityInfo.EXPECT().UpdateNodeAffinity(gomock.Any()).AnyTimes()

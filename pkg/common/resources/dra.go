@@ -14,8 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 func GetResourceClaimName(pod *v1.Pod, podClaim *v1.PodResourceClaim) (string, error) {
@@ -132,30 +130,22 @@ func ExtractDRAGPUResources(ctx context.Context, pod *v1.Pod, kubeClient client.
 
 func IsGpuResourceClaim(claim *resourceapi.ResourceClaim) bool {
 	for _, request := range claim.Spec.Devices.Requests {
-		if request.Exactly != nil && isGPUDeviceClass(request.Exactly.DeviceClassName) {
+		if request.Exactly != nil && IsGPUDeviceClass(request.Exactly.DeviceClassName) {
 			return true
 		}
 	}
 	return false
 }
 
-// isGPUDeviceClass checks if a DeviceClassName represents a GPU.
-// Checks for "nvidia.com/gpu" and also accepts any device class name containing "gpu"
-// (case-insensitive) to support custom GPU device classes like "gpu.example.com".
-func isGPUDeviceClass(deviceClassName string) bool {
-	if deviceClassName == constants.GpuResource {
-		return true
-	}
-	// Check if device class name contains "gpu" (case-insensitive) to support custom GPU device classes
-	deviceClassNameLower := strings.ToLower(deviceClassName)
-	return strings.Contains(deviceClassNameLower, "gpu")
+func IsGPUDeviceClass(deviceClassName string) bool {
+	return strings.Contains(strings.ToLower(deviceClassName), "gpu")
 }
 
 // getGPUDeviceClassNameFromClaim extracts the GPU DeviceClassName from a ResourceClaim.
 // Returns empty string if no GPU device class is found.
 func getGPUDeviceClassNameFromClaim(claim *resourceapi.ResourceClaim) string {
 	for _, request := range claim.Spec.Devices.Requests {
-		if request.Exactly != nil && isGPUDeviceClass(request.Exactly.DeviceClassName) {
+		if request.Exactly != nil && IsGPUDeviceClass(request.Exactly.DeviceClassName) {
 			return request.Exactly.DeviceClassName
 		}
 	}
@@ -172,7 +162,7 @@ func countGPUDevicesFromClaim(claim *resourceapi.ResourceClaim) (int64, error) {
 			continue
 		}
 
-		if !isGPUDeviceClass(request.Exactly.DeviceClassName) {
+		if !IsGPUDeviceClass(request.Exactly.DeviceClassName) {
 			continue
 		}
 

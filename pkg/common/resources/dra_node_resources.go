@@ -19,7 +19,7 @@ func CountNodeGPUsFromResourceSlices(nodeName string, slices []*resourceapi.Reso
 			continue
 		}
 
-		if !isGPUDeviceClass(slice.Spec.Driver) {
+		if !IsGPUDeviceClass(slice.Spec.Driver) {
 			continue
 		}
 
@@ -33,9 +33,6 @@ func isSliceForNode(slice *resourceapi.ResourceSlice, nodeName string) bool {
 	if slice.Spec.NodeName != nil && *slice.Spec.NodeName != "" {
 		return *slice.Spec.NodeName == nodeName
 	}
-	if slice.Spec.AllNodes != nil && *slice.Spec.AllNodes {
-		return true
-	}
 	return false
 }
 
@@ -46,27 +43,58 @@ func countDevicesInSlice(slice *resourceapi.ResourceSlice) int64 {
 	return int64(len(slice.Spec.Devices))
 }
 
-func CountNodeGPUsFromResourceSlicesByDeviceClass(nodeName string, slices []*resourceapi.ResourceSlice) map[string]int64 {
-	gpusByClass := make(map[string]int64)
+// NodeGPUsByDeviceClass maps node name to device class to GPU count
+type NodeGPUsByDeviceClass map[string]map[string]int64
+
+func MapResourceSlicesToNodes(slices []*resourceapi.ResourceSlice) NodeGPUsByDeviceClass {
+	result := make(NodeGPUsByDeviceClass)
 
 	for _, slice := range slices {
 		if slice == nil {
 			continue
 		}
 
-		if !isSliceForNode(slice, nodeName) {
-			continue
-		}
-
-		if !isGPUDeviceClass(slice.Spec.Driver) {
+		if !IsGPUDeviceClass(slice.Spec.Driver) {
 			continue
 		}
 
 		deviceCount := countDevicesInSlice(slice)
-		if deviceCount > 0 {
-			gpusByClass[slice.Spec.Driver] += deviceCount
+		if deviceCount == 0 {
+			continue
+		}
+
+		nodeNames := getNodeNamesForSlice(slice)
+		for _, nodeName := range nodeNames {
+			if result[nodeName] == nil {
+				result[nodeName] = make(map[string]int64)
+			}
+			result[nodeName][slice.Spec.Driver] += deviceCount
 		}
 	}
 
-	return gpusByClass
+	return result
+}
+
+// getNodeNamesForSlice returns the node names this slice applies to.
+// For AllNodes slices, returns empty slice (caller should handle specially).
+// For node-specific slices, returns a single-element slice.
+func getNodeNamesForSlice(slice *resourceapi.ResourceSlice) []string {
+	if slice.Spec.NodeName != nil && *slice.Spec.NodeName != "" {
+		return []string{*slice.Spec.NodeName}
+	}
+	// AllNodes slices are not returned here - they need special handling
+	return nil
+}
+
+// GetAllNodesSlices returns slices that apply to all nodes
+func GetAllNodesSlices(slices []*resourceapi.ResourceSlice) []*resourceapi.ResourceSlice {
+	var allNodesSlices []*resourceapi.ResourceSlice
+	for _, slice := range slices {
+		if slice != nil && slice.Spec.AllNodes != nil && *slice.Spec.AllNodes {
+			if IsGPUDeviceClass(slice.Spec.Driver) {
+				allNodesSlices = append(allNodesSlices, slice)
+			}
+		}
+	}
+	return allNodesSlices
 }

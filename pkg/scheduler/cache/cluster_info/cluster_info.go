@@ -241,7 +241,6 @@ func (c *ClusterInfo) snapshotNodes(
 		}
 	}
 
-	// Populate DRA GPU counts from ResourceSlices
 	c.populateDRAGPUs(resultNodes)
 
 	return resultNodes, minGPUMemory, nil
@@ -250,18 +249,37 @@ func (c *ClusterInfo) snapshotNodes(
 // For each resource type (e.g., "nvidia.com/gpu", "amd.com/gpu"), checks if extended resources exist.
 // If not, uses DRA counts from ResourceSlices.
 func (c *ClusterInfo) populateDRAGPUs(nodes map[string]*node_info.NodeInfo) {
-	resourceSlices, err := c.dataLister.ListResourceSlices()
+	slicesByNode, err := c.dataLister.ListResourceSlicesByNode()
 	if err != nil {
 		log.InfraLogger.V(6).Infof("Failed to list ResourceSlices for DRA GPU counting: %v", err)
 		return
 	}
 
-	if len(resourceSlices) == 0 {
+	if len(slicesByNode) == 0 {
 		return
 	}
 
+	// Get slices that apply to all nodes (empty string key)
+	allNodesSlices := slicesByNode[""]
+
 	for nodeName, nodeInfo := range nodes {
-		draGPUsByClass := resources.CountNodeGPUsFromResourceSlicesByDeviceClass(nodeName, resourceSlices)
+		draGPUsByClass := make(map[string]int64)
+
+		// Count GPUs from node-specific slices
+		for _, slice := range slicesByNode[nodeName] {
+			if !resources.IsGPUDeviceClass(slice.Spec.Driver) {
+				continue
+			}
+			draGPUsByClass[slice.Spec.Driver] += int64(len(slice.Spec.Devices))
+		}
+
+		// Add GPUs from all-nodes slices
+		for _, slice := range allNodesSlices {
+			if !resources.IsGPUDeviceClass(slice.Spec.Driver) {
+				continue
+			}
+			draGPUsByClass[slice.Spec.Driver] += int64(len(slice.Spec.Devices))
+		}
 
 		if len(draGPUsByClass) == 0 {
 			continue

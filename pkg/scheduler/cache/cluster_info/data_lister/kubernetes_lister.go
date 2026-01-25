@@ -178,6 +178,23 @@ func (k *k8sLister) ListTopologies() ([]*kaiv1alpha1.Topology, error) {
 
 // +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceslices,verbs=get;list;watch
 
-func (k *k8sLister) ListResourceSlices() ([]*resourceapi.ResourceSlice, error) {
-	return k.resourceSliceLister.List(labels.Everything())
+// ListResourceSlicesByNode returns ResourceSlices grouped by node name.
+// Empty string key ("") contains slices that apply to all nodes (AllNodes=true).
+func (k *k8sLister) ListResourceSlicesByNode() (map[string][]*resourceapi.ResourceSlice, error) {
+	slices, err := k.resourceSliceLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string][]*resourceapi.ResourceSlice)
+	for _, slice := range slices {
+		nodeName := ""
+		if slice.Spec.AllNodes == nil || !*slice.Spec.AllNodes {
+			if slice.Spec.NodeName != nil {
+				nodeName = *slice.Spec.NodeName
+			}
+		}
+		result[nodeName] = append(result[nodeName], slice)
+	}
+	return result, nil
 }

@@ -605,7 +605,6 @@ func (ni *NodeInfo) GetNumberOfGPUsInNode() int64 {
 	numberOfGPUs, err := ni.getNodeGpuCountLabelValue()
 	if err != nil {
 		log.InfraLogger.V(6).Infof("Node: <%v> had no annotations of nvidia.com/gpu.count", ni.Name)
-		// Check both extended resources and DRA GPUs
 		return int64(ni.GetTotalGPUs())
 	}
 	return int64(numberOfGPUs)

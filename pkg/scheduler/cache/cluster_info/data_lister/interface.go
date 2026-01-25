@@ -32,5 +32,7 @@ type DataLister interface {
 	ListConfigMaps() ([]*v1.ConfigMap, error)
 	ListTopologies() ([]*kaiv1alpha1.Topology, error)
 	ListResourceUsage() (*queue_info.ClusterUsage, error)
-	ListResourceSlices() ([]*resourceapi.ResourceSlice, error)
+	// ListResourceSlicesByNode returns ResourceSlices grouped by node name.
+	// Empty string key ("") contains slices that apply to all nodes (AllNodes=true).
+	ListResourceSlicesByNode() (map[string][]*resourceapi.ResourceSlice, error)
 }
