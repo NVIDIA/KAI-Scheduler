@@ -313,20 +313,13 @@ var _ = Describe("ExpectedRuntime Plugin", func() {
 			Expect(duration).To(Equal(time.Duration(0)))
 		})
 
-		It("should return zero duration when annotation is missing", func() {
+		It("should return error when annotation is missing", func() {
 			job := createPodGroup("job1", "", "", nil, true, 0)
 			duration, err := plugin.parseExpectedRuntime(job)
 
-			// When annotation is missing, GetDuration returns defaultValue with nil error
-			// But our implementation checks for found, so it should return error
-			// Actually, looking at the code, if annotation is not found, we return early
-			// Let me check the implementation again... Actually the code uses GetDuration which
-			// returns defaultValue and nil error if key doesn't exist. But we check for found first.
-			// So if not found, we return early with the error from GetDuration("", 0).
-			// Actually, I need to fix the implementation - it should return an error when not found.
-			// But for now, let's test what it does.
-			_ = duration
-			_ = err
+			Expect(err).ToNot(BeNil())
+			Expect(err.Error()).To(ContainSubstring("expected-runtime annotation not found"))
+			Expect(duration).To(Equal(time.Duration(0)))
 		})
 	})
 

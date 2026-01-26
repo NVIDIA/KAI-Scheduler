@@ -22,7 +22,7 @@ const (
 
 type expectedruntimePlugin struct{}
 
-func New(arguments framework.PluginArguments) framework.Plugin {
+func New(_ framework.PluginArguments) framework.Plugin {
 	return &expectedruntimePlugin{}
 }
 
@@ -41,7 +41,9 @@ func (er *expectedruntimePlugin) OnSessionClose(ssn *framework.Session) {
 // nominationFn nominates running jobs as requeue candidates based on expected runtime.
 // It applies all eligibility checks and returns a list of eligible jobs.
 func (er *expectedruntimePlugin) nominationFn(clusterInfo *api.ClusterInfo) []*podgroup_info.PodGroupInfo {
-	var candidates []*podgroup_info.PodGroupInfo
+	// Pre-allocate with small capacity to reduce reallocations in large clusters
+	// Nomination rate is typically low, so small initial capacity is sufficient
+	candidates := make([]*podgroup_info.PodGroupInfo, 0, 4)
 	now := time.Now()
 
 	for _, job := range clusterInfo.PodGroupInfos {
@@ -138,7 +140,7 @@ func (er *expectedruntimePlugin) parseExpectedRuntime(job *podgroup_info.PodGrou
 }
 
 // parseRequeueNotBefore parses the requeue-not-before annotation from a job's PodGroup.
-// Returns the timestamp and an error if parsing fails. Returns nil if annotation doesn't exist.
+// Returns the timestamp and an error if parsing fails. Returns nil, nil if annotation doesn't exist.
 func (er *expectedruntimePlugin) parseRequeueNotBefore(job *podgroup_info.PodGroupInfo) (*time.Time, error) {
 	if job.PodGroup == nil || job.PodGroup.Annotations == nil {
 		return nil, nil
@@ -151,7 +153,7 @@ func (er *expectedruntimePlugin) parseRequeueNotBefore(job *podgroup_info.PodGro
 
 	timestamp, err := time.Parse(time.RFC3339, annotationValue)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse requeue-not-before timestamp %q: %w", annotationValue, err)
 	}
 
 	return &timestamp, nil
@@ -179,17 +181,8 @@ func (er *expectedruntimePlugin) isRuntimeExceeded(job *podgroup_info.PodGroupIn
 		return false
 	}
 
-	// Calculate runtime
+	// Calculate runtime (guaranteed non-negative after clock skew check)
 	runtime := now.Sub(*job.LastStartTimestamp)
-
-	// Check if runtime is negative (shouldn't happen after clock skew check, but be safe)
-	if runtime < 0 {
-		log.InfraLogger.V(4).Warnf(
-			"Requeue nomination skipped: job=%s/%s, reason=clock_skew (negative runtime)",
-			job.Namespace, job.Name)
-		metrics.IncRequeueNominationSkippedTotal(pluginName, "clock_skew")
-		return false
-	}
 
 	// Check if runtime >= expectedRuntime (use >= to avoid boundary value misses)
 	return runtime >= expectedRuntime
@@ -197,6 +190,7 @@ func (er *expectedruntimePlugin) isRuntimeExceeded(job *podgroup_info.PodGroupIn
 
 // isInCooldown checks if the job is currently in a cooldown period.
 // Returns true if requeue-not-before exists and now < not-before.
+// Returns true on parsing errors (conservative approach to prevent invalid nominations).
 func (er *expectedruntimePlugin) isInCooldown(job *podgroup_info.PodGroupInfo, now time.Time) bool {
 	notBefore, err := er.parseRequeueNotBefore(job)
 	if err != nil {
@@ -204,7 +198,7 @@ func (er *expectedruntimePlugin) isInCooldown(job *podgroup_info.PodGroupInfo, n
 			"Requeue nomination skipped: job=%s/%s, reason=invalid_not_before, error=%v",
 			job.Namespace, job.Name, err)
 		metrics.IncRequeueNominationSkippedTotal(pluginName, "invalid_not_before")
-		// Conservative: if we can't parse, skip nomination
+		// Conservative: if we can't parse, skip nomination to prevent potential issues
 		return true
 	}
 
