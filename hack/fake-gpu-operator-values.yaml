@@ -16,3 +16,6 @@ topology:
 
 environment:
   resourceReservationNamespace: kai-resource-reservation
+
+draPlugin:
+  enabled: true
