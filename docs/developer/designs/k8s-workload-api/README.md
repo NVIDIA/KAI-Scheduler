@@ -102,4 +102,5 @@ If a Pod references a Workload or PodGroup that does not exist, strict validatio
 2. Basic policy options - Unified Group or Isolated Groups?
 3. Should the KAI PodGroup owner be the Workload or the Top Owner?
 4. Should we support specific TopologyConstraints for each PodGroup? If so, should this be on Phase 2?
+5. Should we support an opt-out flag to ignore the Workload API and use the Top Owner scheduling semantics instead?
 
