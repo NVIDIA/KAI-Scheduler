@@ -18,6 +18,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/configurations"
 	e2econstant "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/crd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 	v1 "k8s.io/api/core/v1"
@@ -29,6 +30,8 @@ const (
 	prometheusPodName       = "prometheus-prometheus-0"
 	prometheusReadyTimeout  = 2 * time.Minute
 	schedulerRestartTimeout = 30 * time.Second
+	prometheusCrdName       = "prometheuses.monitoring.coreos.com"
+	prometheusCrdVersion    = "v1"
 )
 
 var testCtx *testcontext.TestContext
@@ -42,6 +45,9 @@ func TestTimeAware(t *testing.T) {
 var _ = BeforeSuite(func(ctx context.Context) {
 	By("Setting up test context")
 	testCtx = testcontext.GetConnectivity(ctx, Default)
+
+	By("Checking if Prometheus CRD is installed")
+	crd.SkipIfCrdIsNotInstalled(ctx, testCtx.KubeConfig, prometheusCrdName, prometheusCrdVersion)
 
 	By("Saving original KAI config for restoration")
 	originalKAIConfig := &kaiv1.Config{}
