@@ -261,7 +261,6 @@ func (sc *SchedulerCache) createBindRequest(podInfo *pod_info.PodInfo, nodeName 
 				},
 			},
 			Labels: map[string]string{
-				"pod-name":      podInfo.Pod.Name,
 				"selected-node": nodeName,
 			},
 		},
