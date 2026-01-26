@@ -62,12 +62,7 @@ Creates:
 ### 2. Policy Translation
 
 - **Gang Policy**: `gang.minCount` → KAI `MinMember`
-- **Basic Policy**: Two options for non-gang workloads:
-
-| Option | Description | Pros | Cons |
-|--------|-------------|------|------|
-| **A: Unified Group** (recommended) | Map entire Workload podGroup to a single KAI PodGroup with `MinMember: 1` | Scalable (1 CR per group), centralized quota | - |
-| **B: Isolated Groups** | Map each Pod to its own KAI PodGroup with `MinMember: 1` | Maximum isolation per pod | High overhead (`N` CRs for `N` pods) |
+- **Basic Policy**: Map entire Workload podGroup to a single KAI PodGroup with `MinMember: 1` (unified group approach for scalability and centralized quota management)
 
 ### 3. Metadata Calculation (Layered Approach)
 
@@ -82,7 +77,7 @@ Creates:
 | **Queue, Priority, Preemptibility** | Workload → Top Owner → Pod (fallback chain) |
 | **Topology** | Workload → Top Owner |
 | **Labels/Annotations** | Merged (Workload takes precedence) |
-| **Owner** | Workload |
+| **Owner** | Top Owner |
 
 ### 4. Error Handling & Instant Recovery
 
@@ -91,16 +86,15 @@ If a Pod references a Workload or PodGroup that does not exist, strict validatio
 *   **Pending State**: The Pod remains **Pending** and no KAI PodGroup is created. It is never scheduled as a standalone task.
 *   **Instant Recovery**: We will implement a **Watcher** on `Workload` resources. As soon as a missing Workload is created, the watcher immediately triggers reconciliation for any pending Pods referencing it, ensuring instant scheduling.
 
+### 5. Opt-Out Mechanism
+
+An opt-out flag is supported to ignore the Workload API and use Top Owner scheduling semantics instead. This allows users to explicitly bypass Workload-based grouping when needed.
+
+*   **Annotation**: `kai.scheduler/ignore-workload-api: "true"` on the Pod or Top Owner resource
+*   **Behavior**: When set, the scheduler ignores any `workloadRef` on the Pod and falls back entirely to Top Owner-based grouping
+
 ## Key Principles
 
 1. **Workload is authoritative** for scheduling semantics and config overrides
 2. **Separate Workload podGroups = separate KAI PodGroups**
 3. **Backward compatible** - falls back to top owner if Workload doesn't specify a field or pod has no `workloadRef`
-
-## Discussion Points
-1. Which should take precedence when both are present: scheduling semantics from the Top Owner or from the Workload?
-2. Basic policy options - Unified Group or Isolated Groups?
-3. Should the KAI PodGroup owner be the Workload or the Top Owner?
-4. Should we support specific TopologyConstraints for each PodGroup? If so, should this be on Phase 2?
-5. Should we support an opt-out flag to ignore the Workload API and use the Top Owner scheduling semantics instead?
-
