@@ -130,7 +130,11 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 		err = errors.WithStack(fmt.Errorf("error snapshotting nodes: %w", err))
 		return nil, err
 	}
-
+	snapshot.ResourceClaims, err = c.dataLister.ListResourceClaims()
+	if err != nil {
+		err = errors.WithStack(fmt.Errorf("error listing resource claims: %w", err))
+		return nil, err
+	}
 	snapshot.BindRequests, snapshot.BindRequestsForDeletedNodes, err = c.snapshotBindRequests(snapshot.Nodes)
 	if err != nil {
 		err = errors.WithStack(fmt.Errorf("error snapshotting bind requests: %w", err))
@@ -242,12 +246,10 @@ func (c *ClusterInfo) snapshotNodes(
 	}
 
 	c.populateDRAGPUs(resultNodes)
-
 	return resultNodes, minGPUMemory, nil
 }
 
-// For each resource type (e.g., "nvidia.com/gpu", "amd.com/gpu"), checks if extended resources exist.
-// If not, uses DRA counts from ResourceSlices.
+// populateDRAGPUs counts GPUs from DRA ResourceSlices for nodes that don't have extended resources.
 func (c *ClusterInfo) populateDRAGPUs(nodes map[string]*node_info.NodeInfo) {
 	slicesByNode, err := c.dataLister.ListResourceSlicesByNode()
 	if err != nil {
@@ -259,47 +261,20 @@ func (c *ClusterInfo) populateDRAGPUs(nodes map[string]*node_info.NodeInfo) {
 		return
 	}
 
-	// Get slices that apply to all nodes (empty string key)
-	allNodesSlices := slicesByNode[""]
-
 	for nodeName, nodeInfo := range nodes {
-		draGPUsByClass := make(map[string]int64)
+		var draGPUCount int64
 
 		// Count GPUs from node-specific slices
 		for _, slice := range slicesByNode[nodeName] {
 			if !resources.IsGPUDeviceClass(slice.Spec.Driver) {
 				continue
 			}
-			draGPUsByClass[slice.Spec.Driver] += int64(len(slice.Spec.Devices))
+			draGPUCount += int64(len(slice.Spec.Devices))
 		}
 
-		// Add GPUs from all-nodes slices
-		for _, slice := range allNodesSlices {
-			if !resources.IsGPUDeviceClass(slice.Spec.Driver) {
-				continue
-			}
-			draGPUsByClass[slice.Spec.Driver] += int64(len(slice.Spec.Devices))
-		}
-
-		if len(draGPUsByClass) == 0 {
-			continue
-		}
-
-		draGPUsByResource := make(map[v1.ResourceName]float64)
-		for deviceClass, count := range draGPUsByClass {
-			if count > 0 {
-				resourceName := v1.ResourceName(deviceClass)
-				extendedCount := nodeInfo.Allocatable.Get(resourceName)
-				if extendedCount == 0 {
-					draGPUsByResource[resourceName] = float64(count)
-					log.InfraLogger.V(6).Infof("Node %s has %d DRA GPUs for resource %s from ResourceSlices",
-						nodeName, count, deviceClass)
-				}
-			}
-		}
-
-		if len(draGPUsByResource) > 0 {
-			nodeInfo.SetDRAGPUs(draGPUsByResource)
+		if draGPUCount > 0 {
+			log.InfraLogger.V(6).Infof("Node %s has %d DRA GPUs from ResourceSlices", nodeName, draGPUCount)
+			nodeInfo.AddDRAGPUs(float64(draGPUCount))
 		}
 	}
 }

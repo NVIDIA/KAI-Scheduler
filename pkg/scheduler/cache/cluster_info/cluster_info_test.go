@@ -2106,6 +2106,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 						},
 					},
 				}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
 			},
@@ -2115,6 +2116,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
 				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
 			},
@@ -2124,6 +2126,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
 				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
@@ -2136,6 +2139,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
 				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
@@ -2147,6 +2151,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
 				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{
 					{
@@ -2185,6 +2190,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
 				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return(nil, fmt.Errorf(successErrorMsg))
 			},
 		},
@@ -2481,9 +2487,9 @@ func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
 			for nodeName, expectedGPUs := range test.expectedDRAGPUs {
 				nodeInfo, found := nodes[nodeName]
 				assert.True(t, found, "Node %s not found", nodeName)
-				// Check total GPUs (aggregated from DRAGPUsByResource)
-				actualGPUs := nodeInfo.GetTotalGPUs()
-				assert.Equal(t, expectedGPUs, actualGPUs, "DRA GPUs mismatch for node %s", nodeName)
+				// Check total GPUs (DRA GPUs are merged into Allocatable)
+				actualGPUs := nodeInfo.Allocatable.GPUs()
+				assert.Equal(t, expectedGPUs, actualGPUs, "GPUs mismatch for node %s", nodeName)
 			}
 		})
 	}

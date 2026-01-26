@@ -79,10 +79,6 @@ type NodeInfo struct {
 
 	Allocatable *resource_info.Resource
 
-	// DRAGPUsByResource tracks GPU capacity from DRA ResourceSlices per resource type.
-	// Key is the resource name (e.g., "nvidia.com/gpu", "amd.com/gpu").
-	DRAGPUsByResource map[v1.ResourceName]float64
-
 	AccessibleStorageCapacities map[common_info.StorageClassID][]*sc_info.StorageCapacityInfo
 
 	PodInfos               map[common_info.PodID]*pod_info.PodInfo
@@ -109,7 +105,6 @@ func NewNodeInfo(node *v1.Node, podAffinityInfo pod_affinity.NodePodAffinityInfo
 
 		Allocatable: resource_info.ResourceFromResourceList(node.Status.Allocatable),
 
-		DRAGPUsByResource:           make(map[v1.ResourceName]float64),
 		AccessibleStorageCapacities: map[common_info.StorageClassID][]*sc_info.StorageCapacityInfo{},
 
 		PodInfos:               make(map[common_info.PodID]*pod_info.PodInfo),
@@ -605,7 +600,7 @@ func (ni *NodeInfo) GetNumberOfGPUsInNode() int64 {
 	numberOfGPUs, err := ni.getNodeGpuCountLabelValue()
 	if err != nil {
 		log.InfraLogger.V(6).Infof("Node: <%v> had no annotations of nvidia.com/gpu.count", ni.Name)
-		return int64(ni.GetTotalGPUs())
+		return int64(ni.Allocatable.GPUs())
 	}
 	return int64(numberOfGPUs)
 }
@@ -658,18 +653,7 @@ func (ni *NodeInfo) IsCPUOnlyNode() bool {
 	if ni.IsMIGEnabled() {
 		return false
 	}
-	// Check both extended resources and DRA GPUs
-	extendedGPUs := ni.Allocatable.GPUs()
-	if extendedGPUs > 0 {
-		return false
-	}
-	// Check if any DRA GPU resources exist
-	for _, draGPUs := range ni.DRAGPUsByResource {
-		if draGPUs > 0 {
-			return false
-		}
-	}
-	return true
+	return ni.Allocatable.GPUs() <= 0
 }
 
 func (ni *NodeInfo) IsMIGEnabled() bool {
@@ -748,55 +732,13 @@ func isMigResource(rName string) bool {
 	return strings.HasPrefix(rName, migResourcePrefix)
 }
 
-// SetDRAGPUs sets the DRA-based GPU capacity for this node per resource type.
-// draGPUsByResource maps resource names (e.g., "nvidia.com/gpu") to their GPU counts from ResourceSlices.
-// This should be called after the node is created, with the GPU counts calculated from ResourceSlices.
-func (ni *NodeInfo) SetDRAGPUs(draGPUsByResource map[v1.ResourceName]float64) {
-	if draGPUsByResource == nil {
+// AddDRAGPUs adds DRA-based GPU capacity from ResourceSlices to this node's GPU pool.
+// This should be called after the node is created, with the GPU count calculated from ResourceSlices.
+func (ni *NodeInfo) AddDRAGPUs(draGPUs float64) {
+	if draGPUs <= 0 {
 		return
 	}
 
-	if ni.DRAGPUsByResource == nil {
-		ni.DRAGPUsByResource = make(map[v1.ResourceName]float64)
-	}
-
-	totalDRA := float64(0)
-
-	for resourceName, draCount := range draGPUsByResource {
-		if draCount <= 0 {
-			continue
-		}
-
-		extendedCount := ni.Allocatable.Get(resourceName)
-
-		if extendedCount > 0 {
-			// Extended resources take precedence - don't set DRA for this resource
-			continue
-		}
-
-		// Set DRA count for this resource
-		ni.DRAGPUsByResource[resourceName] = draCount
-		totalDRA += draCount
-	}
-
-	// keep backward compatibility with code that uses Allocatable.GPUs()
-	extendedGPUs := ni.Allocatable.GPUs()
-	if extendedGPUs == 0 && totalDRA > 0 {
-		ni.Allocatable.SetGPUs(totalDRA)
-		ni.Idle.SetGPUs(totalDRA)
-	}
-}
-
-// GetTotalGPUs considers both extended resources and DRA ResourceSlices per resource type.
-func (ni *NodeInfo) GetTotalGPUs() float64 {
-	extendedGPUs := ni.Allocatable.GPUs()
-	if extendedGPUs > 0 {
-		return extendedGPUs
-	}
-
-	totalDRA := float64(0)
-	for _, draGPUs := range ni.DRAGPUsByResource {
-		totalDRA += draGPUs
-	}
-	return totalDRA
+	ni.Allocatable.AddGPUs(draGPUs)
+	ni.Idle.AddGPUs(draGPUs)
 }
