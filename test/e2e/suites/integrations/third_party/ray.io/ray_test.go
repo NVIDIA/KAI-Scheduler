@@ -48,6 +48,11 @@ var _ = Describe("Ray integration", Ordered, func() {
 	})
 
 	AfterEach(func(ctx context.Context) {
+		namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+
+		Expect(testCtx.ControllerClient.DeleteAllOf(ctx, &rayv1.RayJob{}, client.InNamespace(namespace))).To(Succeed())
+		Expect(testCtx.ControllerClient.DeleteAllOf(ctx, &v1.ConfigMap{}, client.InNamespace(namespace))).To(Succeed())
+
 		testCtx.TestContextCleanup(ctx)
 	})
 
@@ -60,10 +65,6 @@ var _ = Describe("Ray integration", Ordered, func() {
 			rayJob, configMap := createExampleRayJob(testCtx.Queues[0], v1.ResourceRequirements{}, v1.ResourceRequirements{}, 1)
 			Expect(testCtx.ControllerClient.Create(ctx, configMap)).To(Succeed())
 			Expect(testCtx.ControllerClient.Create(ctx, rayJob)).To(Succeed())
-			defer func() {
-				Expect(testCtx.ControllerClient.Delete(ctx, rayJob)).To(Succeed())
-				Expect(testCtx.ControllerClient.Delete(ctx, configMap)).To(Succeed())
-			}()
 
 			rayCluster := waitForRayCluster(ctx, testCtx, rayJob)
 			rayPods := waitForRayPodsCreation(ctx, testCtx, rayCluster, 2)
@@ -90,10 +91,6 @@ var _ = Describe("Ray integration", Ordered, func() {
 				}, 3)
 			Expect(testCtx.ControllerClient.Create(ctx, configMap)).To(Succeed())
 			Expect(testCtx.ControllerClient.Create(ctx, rayJob)).To(Succeed())
-			defer func() {
-				Expect(testCtx.ControllerClient.Delete(ctx, rayJob)).To(Succeed())
-				Expect(testCtx.ControllerClient.Delete(ctx, configMap)).To(Succeed())
-			}()
 
 			rayCluster := waitForRayCluster(ctx, testCtx, rayJob)
 			rayPods := waitForRayPodsCreation(ctx, testCtx, rayCluster, 4)
@@ -106,10 +103,6 @@ var _ = Describe("Ray integration", Ordered, func() {
 			rayJob.Spec.RayClusterSpec.WorkerGroupSpecs[0].MinReplicas = ptr.To(int32(1))
 			Expect(testCtx.ControllerClient.Create(ctx, configMap)).To(Succeed())
 			Expect(testCtx.ControllerClient.Create(ctx, rayJob)).To(Succeed())
-			defer func() {
-				Expect(testCtx.ControllerClient.Delete(ctx, rayJob)).To(Succeed())
-				Expect(testCtx.ControllerClient.Delete(ctx, configMap)).To(Succeed())
-			}()
 
 			rayCluster := waitForRayCluster(ctx, testCtx, rayJob)
 			rayPods := waitForRayPodsCreation(ctx, testCtx, rayCluster, 2)
@@ -144,10 +137,6 @@ var _ = Describe("Ray integration", Ordered, func() {
 
 			Expect(testCtx.ControllerClient.Create(ctx, configMap)).To(Succeed())
 			Expect(testCtx.ControllerClient.Create(ctx, rayJob)).To(Succeed())
-			defer func() {
-				Expect(testCtx.ControllerClient.Delete(ctx, rayJob)).To(Succeed())
-				Expect(testCtx.ControllerClient.Delete(ctx, configMap)).To(Succeed())
-			}()
 
 			rayCluster := waitForRayCluster(ctx, testCtx, rayJob)
 			rayPods := waitForRayPodsCreation(ctx, testCtx, rayCluster, 2)
