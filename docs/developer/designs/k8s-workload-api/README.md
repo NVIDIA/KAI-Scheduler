@@ -96,3 +96,10 @@ If a Pod references a Workload or PodGroup that does not exist, strict validatio
 1. **Workload is authoritative** for scheduling semantics and config overrides
 2. **Separate Workload podGroups = separate KAI PodGroups**
 3. **Backward compatible** - falls back to top owner if Workload doesn't specify a field or pod has no `workloadRef`
+
+## Discussion Points
+1. Which should take precedence when both are present: scheduling semantics from the Top Owner or from the Workload?
+2. Basic policy options - Unified Group or Isolated Groups?
+3. Should the KAI PodGroup owner be the Workload or the Top Owner?
+4. Should we support specific TopologyConstraints for each PodGroup? If so, should this be on Phase 2?
+
