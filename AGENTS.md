@@ -63,7 +63,7 @@ make validate                 # Verify generated code is up to date
 
 ### Tools (`/cmd/`)
 - `fairshare-simulator` - Simulate fairshare scheduling decisions
-- `time-aware-simulator` - Time-based scheduling simulation
+- `time-based-fairshare-simulator` - Time-based scheduling simulation
 - `snapshot-tool` - Cluster state snapshot utilities
 - `scalingpod` - Helper for scaling pod operations
 

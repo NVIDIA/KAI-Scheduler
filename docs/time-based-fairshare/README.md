@@ -1,10 +1,10 @@
-# Time Aware fairness
+# Time Based Fairshare
 
-Time aware fairness is a feature in KAI-Scheduler which makes use of historical resource usage by queues for making allocation and reclaim decisions. Key features are:
+Time based fairshare is a feature in KAI-Scheduler which makes use of historical resource usage by queues for making allocation and reclaim decisions. Key features are:
 
 1. All else being equal, queues with higher past usage will get to run jobs after queues with lower usage
 2. Reclaim based on usage: queues which are starved over time will reclaim resources from queues which used a lot of resources.
-    1. Note: this does not effect in-quota allocation: deserved quota still takes precedence over time-aware fairness
+    1. Note: this does not effect in-quota allocation: deserved quota still takes precedence over time-based fairshare
 
 
 > **Prerequisites**: Familiarity with [fairness](../fairness/README.md)
@@ -38,15 +38,15 @@ The aggregated usage for each queue is then normalized to the **cluster capacity
 
 ### Effect on fair share
 
-Usually, over quota resources are assigned to each queue proportionally to it's Over Quota Weight. With time-aware fairness, queues with historical usage will get relatively less resources in over-quota. The significance of the resource usage in this calculation can be controlled with a parameter called "kValue": the bigger it is, the more impact (or weight) the historical usage has on the calculated fairshare, i.e. it will decrease the fairshare of that queue.
+Usually, over quota resources are assigned to each queue proportionally to it's Over Quota Weight. With time-based fairshare, queues with historical usage will get relatively less resources in over-quota. The significance of the resource usage in this calculation can be controlled with a parameter called "kValue": the bigger it is, the more impact (or weight) the historical usage has on the calculated fairshare, i.e. it will decrease the fairshare of that queue.
 
-Check out the [time aware simulator](../../cmd/time-aware-simulator/README.md) to understand scheduling behavior over time better.
+Check out the [time based fairshare simulator](../../cmd/time-based-fairshare-simulator/README.md) to understand scheduling behavior over time better.
 
 ### Example
 
 The following plot demonstrates the GPU allocation over time in a 16 GPU cluster, with two queues, each having 0 deserved quota and 1 Over Quota weight for GPUs, each trying to run 16-GPU, single-pod Jobs.
 
-![Time-aware fairness GPU allocation over time](./results.png)
+![Time-based fairshare GPU allocation over time](./results.png)
 
 *Time units are intentionally omitted*
 

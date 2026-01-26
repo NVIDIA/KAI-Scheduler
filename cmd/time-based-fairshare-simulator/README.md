@@ -1,11 +1,11 @@
-# Time-Aware Fairness Simulator
+# Time-Based Fairshare Simulator
 
-A standalone tool for running time-aware fairness simulations for the KAI Scheduler. This tool simulates queue allocations over time and generates allocation history data that can be analyzed to understand fairness behavior.
+A standalone tool for running time-based fairshare simulations for the KAI Scheduler. This tool simulates queue allocations over time and generates allocation history data that can be analyzed to understand fairness behavior.
 
 ## Further Reading
 
-For more information about time-aware fairness and the underlying concepts:
-- [Time-Aware Fairness Design Document](../../docs/developer/designs/time-aware-fairness/time-aware-fairness.md) - Detailed design and mathematical formulation
+For more information about time-based fairshare and the underlying concepts:
+- [Time-Based Fairshare Design Document](../../docs/developer/designs/time-based-fairshare/time-based-fairshare.md) - Detailed design and mathematical formulation
 - [Fairness Documentation](../../docs/fairness/README.md) - Overview of KAI's fair-share scheduling concepts
 
 ## Quick Start
@@ -13,10 +13,10 @@ For more information about time-aware fairness and the underlying concepts:
 ```bash
 # Build the simulator
 cd /path/to/KAI-Scheduler
-go build -o bin/time-aware-simulator ./cmd/time-aware-simulator
+go build -o bin/time-based-fairshare-simulator ./cmd/time-based-fairshare-simulator
 
 # Run with example configuration
-./bin/time-aware-simulator -input cmd/time-aware-simulator/examples/example_config.yaml
+./bin/time-based-fairshare-simulator -input cmd/time-based-fairshare-simulator/examples/example_config.yaml
 
 # Output will be written to simulation_results.csv
 # You can then analyze the results with Python, Excel, or other tools
@@ -24,7 +24,7 @@ go build -o bin/time-aware-simulator ./cmd/time-aware-simulator
 
 ## Overview
 
-The Time-Aware Fairness Simulator creates a Kubernetes test environment using `envtest`, sets up the KAI scheduler components, and simulates workload submissions to multiple queues. It tracks how resources are allocated over time and produces CSV output for analysis.
+The Time-Based Fairshare Simulator creates a Kubernetes test environment using `envtest`, sets up the KAI scheduler components, and simulates workload submissions to multiple queues. It tracks how resources are allocated over time and produces CSV output for analysis.
 
 ## Prerequisites
 
@@ -38,15 +38,15 @@ From the project root directory:
 
 ```bash
 # Option 1: Use make (recommended - builds for all platforms)
-make time-aware-simulator
+make time-based-fairshare-simulator
 
 # Option 2: Build directly with go
-go build -o bin/time-aware-simulator ./cmd/time-aware-simulator
+go build -o bin/time-based-fairshare-simulator ./cmd/time-based-fairshare-simulator
 ```
 
 The Makefile will build:
-- `bin/time-aware-simulator-amd64` - Linux AMD64 binary
-- `bin/time-aware-simulator-arm64` - Linux ARM64 binary  
+- `bin/time-based-fairshare-simulator-amd64` - Linux AMD64 binary
+- `bin/time-based-fairshare-simulator-arm64` - Linux ARM64 binary  
 - Docker image: `registry/local/kai-scheduler/time-aware-simulator:0.0.0`
 
 For local development on macOS/Windows, use the direct `go build` command which builds for your native platform.
@@ -58,7 +58,7 @@ For local development on macOS/Windows, use the direct `go build` command which 
 Run a simulation using a YAML configuration file:
 
 ```bash
-./bin/time-aware-simulator -input examples/example_config.yaml
+./bin/time-based-fairshare-simulator -input examples/example_config.yaml
 ```
 
 This will:
@@ -81,22 +81,22 @@ See `examples/example_config.yaml` for a well-commented example configuration.
 
 **Read from file, write to default output:**
 ```bash
-./bin/time-aware-simulator -input examples/simulation_config_oscillating.yaml
+./bin/time-based-fairshare-simulator -input examples/simulation_config_oscillating.yaml
 ```
 
 **Read from stdin, write to stdout:**
 ```bash
-cat examples/example_config.yaml | ./bin/time-aware-simulator -input - -output -
+cat examples/example_config.yaml | ./bin/time-based-fairshare-simulator -input - -output -
 ```
 
 **Verbose output with custom output file:**
 ```bash
-./bin/time-aware-simulator -input config.yaml -output results.csv
+./bin/time-based-fairshare-simulator -input config.yaml -output results.csv
 ```
 
 **Pipe output directly to analysis tool:**
 ```bash
-./bin/time-aware-simulator -input config.yaml -output - | python analyze.py
+./bin/time-based-fairshare-simulator -input config.yaml -output - | python analyze.py
 ```
 
 ## Configuration Format
