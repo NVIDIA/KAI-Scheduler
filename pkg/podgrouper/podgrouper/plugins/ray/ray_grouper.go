@@ -11,17 +11,20 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/ray-project/kuberay/ray-operator/controllers/ray/utils"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
+var logger = log.FromContext(context.Background())
+
 const (
 	rayClusterKind = "RayCluster"
 
 	rayPriorityClassName = "ray.io/priority-class-name"
-
-	headSubGroupName = "head"
 )
 
 type RayGrouper struct {
@@ -61,7 +64,27 @@ func (rg *RayGrouper) getPodGroupMetadataWithClusterNamePath(
 		podGroupMetadata.PriorityClassName = rayPriorityClassName
 	}
 
+	if err = assignRayPodToSubGroup(pod, podGroupMetadata); err != nil {
+		logger.V(1).Info("Failed to assign ray pod to subgroup", "pod", pod.Name, "namespace", pod.Namespace, "error", err)
+	}
+
 	return podGroupMetadata, nil
+}
+
+func assignRayPodToSubGroup(pod *v1.Pod, pgMetadata *podgroup.Metadata) error {
+	group, found := pod.Labels[utils.RayNodeGroupLabelKey]
+	if !found {
+		return fmt.Errorf("ray node group label (%s) not found on pod %s/%s", utils.RayNodeGroupLabelKey, pod.Namespace, pod.Name)
+	}
+
+	for _, subGroup := range pgMetadata.SubGroups {
+		if subGroup.Name == group {
+			subGroup.PodsReferences = append(subGroup.PodsReferences, &types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name})
+			return nil
+		}
+	}
+
+	return fmt.Errorf("subgroup %s not found in pod group metadata", group)
 }
 
 func (rg *RayGrouper) getPodGroupMetadataInternal(
@@ -125,13 +148,12 @@ func (rg *RayGrouper) extractRayClusterObject(
 // https://github.com/ray-project/kuberay/blob/dbcc686eabefecc3b939cd5c6e7a051f2473ad34/ray-operator/controllers/ray/batchscheduler/volcano/volcano_scheduler.go#L106
 // https://github.com/ray-project/kuberay/blob/dbcc686eabefecc3b939cd5c6e7a051f2473ad34/ray-operator/controllers/ray/batchscheduler/volcano/volcano_scheduler.go#L51
 func calcJobNumOfPodsAndSubGroups(topOwner *unstructured.Unstructured) (int32, []*podgroup.SubGroupMetadata, error) {
-	headMinReplicas := int32(calcMinHeadReplicas(topOwner))
-	minReplicas := headMinReplicas
+	minReplicas := int32(1)
 
 	subGroups := []*podgroup.SubGroupMetadata{
 		{
-			Name:         headSubGroupName,
-			MinAvailable: headMinReplicas,
+			Name:         utils.RayNodeHeadGroupLabelValue,
+			MinAvailable: 1,
 		},
 	}
 
@@ -150,7 +172,7 @@ func calcJobNumOfPodsAndSubGroups(topOwner *unstructured.Unstructured) (int32, [
 			return 0, nil, err
 		}
 		if groupMinReplicas == 0 && groupDesiredReplicas == 0 {
-			continue // This type of worker doesn't contribute for minReplicas
+			continue
 		}
 
 		numOfHosts, err := getGroupNumOfHosts(groupSpec)
@@ -158,13 +180,10 @@ func calcJobNumOfPodsAndSubGroups(topOwner *unstructured.Unstructured) (int32, [
 			return 0, nil, err
 		}
 
-		var workerGroupMinReplicas int32
+		workerGroupMinReplicas := int32(groupDesiredReplicas * numOfHosts)
 		if groupMinReplicas > 0 {
 			// if minReplicas is set, use it to calculate the min number for workload scheduling
 			workerGroupMinReplicas = int32(groupMinReplicas * numOfHosts)
-		} else {
-			// if minReplicas is not set, use the desiredReplicas field to calculate the min number for workload scheduling
-			workerGroupMinReplicas = int32(groupDesiredReplicas * numOfHosts)
 		}
 		minReplicas += workerGroupMinReplicas
 
@@ -233,22 +252,4 @@ func getReplicaCountersForWorkerGroup(groupSpec interface{}, groupIndex int) (
 			desiredReplicas, minReplicas, groupIndex)
 	}
 	return minReplicas, desiredReplicas, nil
-}
-
-func calcMinHeadReplicas(topOwner *unstructured.Unstructured) int64 {
-	minHeadReplicas := int64(1) // default value 1
-
-	launcherReplicas, replicasFound, replicasErr := unstructured.NestedInt64(topOwner.Object,
-		"spec", "headGroupSpec", "replicas")
-	if replicasErr == nil && replicasFound && launcherReplicas > 0 {
-		minHeadReplicas = launcherReplicas
-	}
-
-	launcherMinReplicas, minReplicasFound, err := unstructured.NestedInt64(topOwner.Object,
-		"spec", "headGroupSpec", "minReplicas")
-	if err == nil && minReplicasFound && launcherMinReplicas > 0 {
-		minHeadReplicas = launcherMinReplicas
-	}
-
-	return minHeadReplicas
 }
