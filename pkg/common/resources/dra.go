@@ -13,8 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 func GetResourceClaimName(pod *v1.Pod, podClaim *v1.PodResourceClaim) (string, error) {
@@ -138,16 +136,8 @@ func IsGpuResourceClaim(claim *resourceapi.ResourceClaim) bool {
 	return false
 }
 
-// IsGPUDeviceClass checks if a DeviceClassName represents a GPU.
-// Checks for "nvidia.com/gpu" and also accepts any device class name containing "gpu"
-// (case-insensitive) to support custom GPU device classes like "gpu.example.com".
 func IsGPUDeviceClass(deviceClassName string) bool {
-	if deviceClassName == constants.GpuResource {
-		return true
-	}
-	// Check if device class name contains "gpu" (case-insensitive) to support custom GPU device classes
-	deviceClassNameLower := strings.ToLower(deviceClassName)
-	return strings.Contains(deviceClassNameLower, "gpu")
+	return strings.Contains(strings.ToLower(deviceClassName), "gpu")
 }
 
 // getGPUDeviceClassNameFromClaim extracts the GPU DeviceClassName from a ResourceClaim.

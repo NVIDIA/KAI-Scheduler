@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added labels and annotations propagation from topOwner in SkipTopOwner grouper [#861](https://github.com/NVIDIA/KAI-Scheduler/pull/861) [SiorMeir](https://github.com/siormeir)
 - Added scheduler name match conditions to admission webhooks to improve cluster stability
 - Add Gpu Dra claims and resource slices accounting for the purpose of resource management and quota guarantees. [#900](https://github.com/NVIDIA/KAI-Scheduler/pull/900) [davidLif](https://github.com/davidLif) 
+- Added DRA resources recording to snapshot [#830](https://github.com/NVIDIA/KAI-Scheduler/pull/830)
 
 ### Fixed
 - Fixed security vulnerability where PodGang could reference pods in other namespaces, preventing cross-namespace manipulation

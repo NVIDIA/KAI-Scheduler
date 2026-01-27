@@ -34,6 +34,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/k8s_utils"
 	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -131,7 +132,11 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 		err = errors.WithStack(fmt.Errorf("error snapshotting nodes: %w", err))
 		return nil, err
 	}
-
+	snapshot.ResourceClaims, err = c.dataLister.ListResourceClaims()
+	if err != nil {
+		err = errors.WithStack(fmt.Errorf("error listing resource claims: %w", err))
+		return nil, err
+	}
 	snapshot.BindRequests, snapshot.BindRequestsForDeletedNodes, err = c.snapshotBindRequests(snapshot.Nodes)
 	if err != nil {
 		err = errors.WithStack(fmt.Errorf("error snapshotting bind requests: %w", err))
@@ -250,7 +255,38 @@ func (c *ClusterInfo) snapshotNodes(
 		}
 	}
 
+	c.populateDRAGPUs(resultNodes)
 	return resultNodes, minGPUMemory, nil
+}
+
+// populateDRAGPUs counts GPUs from DRA ResourceSlices for nodes that don't have extended resources.
+func (c *ClusterInfo) populateDRAGPUs(nodes map[string]*node_info.NodeInfo) {
+	slicesByNode, err := c.dataLister.ListResourceSlicesByNode()
+	if err != nil {
+		log.InfraLogger.V(6).Infof("Failed to list ResourceSlices for DRA GPU counting: %v", err)
+		return
+	}
+
+	if len(slicesByNode) == 0 {
+		return
+	}
+
+	for nodeName, nodeInfo := range nodes {
+		var draGPUCount int64
+
+		// Count GPUs from node-specific slices
+		for _, slice := range slicesByNode[nodeName] {
+			if !resources.IsGPUDeviceClass(slice.Spec.Driver) {
+				continue
+			}
+			draGPUCount += int64(len(slice.Spec.Devices))
+		}
+
+		if draGPUCount > 0 {
+			log.InfraLogger.V(6).Infof("Node %s has %d DRA GPUs from ResourceSlices", nodeName, draGPUCount)
+			nodeInfo.AddDRAGPUs(float64(draGPUCount))
+		}
+	}
 }
 
 func (c *ClusterInfo) addTasksToNodes(allPods []*v1.Pod, existingPodsMap map[common_info.PodID]*pod_info.PodInfo,
