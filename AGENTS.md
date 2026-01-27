@@ -18,21 +18,43 @@ make vet-go                   # Run go vet
 ```
 
 ### Testing
+#### unit and integration tests
+
+- Test files MUST ALWAYS be in the same directory as code
+- Test files names MUST ALWAYS end in `_test.go`. Example: `resolver_test.go`
+
 ```bash
 make test                     # Run all tests (unit + helm chart tests)
 
 # Run a single test file
-go test -v ./pkg/scheduler/actions/allocate/...
+ginkgo -v ./pkg/scheduler/actions/allocate
 
 # Run a specific test function
-go test -v ./pkg/scheduler/actions/allocate/... -run TestHandleAllocation
+ginkgo -v --focus "TestHandleAllocation" ./pkg/scheduler/actions/allocate
 
 # Run tests with Ginkgo (for integration tests)
-go test -v ./pkg/binder/controllers/integration_tests/... -ginkgo.focus="test name pattern"
+ginkgo -v --focus "test name pattern" ./pkg/binder/controllers/integration_tests
 
 # Run tests with envtest (requires setup-envtest)
 make envtest
 KUBEBUILDER_ASSETS="$(bin/setup-envtest use 1.34.0 -p path --bin-dir bin)" go test ./pkg/... -timeout 30m
+```
+#### E2E tests
+
+E2E tests run against a real Kubernetes using [`kind`](https://kind.sigs.k8s.io/) cluster and are located in `test/e2e/suites/`.
+
+```bash
+# Run locally with Kind (recommended for development)
+./hack/run-e2e-kind.sh                          # Full e2e suite
+./hack/run-e2e-kind.sh --preserve-cluster       # Keep cluster after tests
+./hack/run-e2e-kind.sh --local-images-build     # Build images locally
+
+# Run specific test suites (requires cluster with KAI installed)
+ginkgo -r --randomize-all ./test/e2e/suites/allocate
+ginkgo -r --randomize-all --focus "quota" ./test/e2e/suites
+
+# Run with verbose output and trace
+ginkgo -r --randomize-all --trace -vv ./test/e2e/suites/preempt
 ```
 
 ### Code Generation
@@ -41,7 +63,7 @@ make generate                 # Generate DeepCopy methods
 make manifests                # Generate CRDs and RBAC
 make clients                  # Generate client code
 make generate-mocks           # Generate mock implementations
-make validate                 # Verify generated code is up to date
+make validate                 # Verify generated code is up to date. Also format and vet codebase
 ```
 
 ## Repository Structure
@@ -141,4 +163,12 @@ PRs trigger: `make validate` → `make test` → `make build` → E2E tests
 
 ## General Rules
 - Use `git mv` when moving files to preserve history
-- Don't add obvious comments that duplicate the code
+- Don't add obvious comments that duplicate the code. 
+
+## Philosophy & Design
+
+- Documentation can be found in [`docs`](docs/) folder
+
+- Design documents for major features are in [`docs/developer/designs/`](docs/developer/designs/):
+
+- Usage Examples are in [`examples`](/examples/)
