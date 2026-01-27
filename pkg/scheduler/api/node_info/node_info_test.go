@@ -49,10 +49,120 @@ const (
 	migEnabledLabelKey = "node-role.kubernetes.io/mig-enabled"
 )
 
-func nodeInfoEqual(l, r *NodeInfo) bool {
-	l.PodAffinityInfo = nil
-	r.PodAffinityInfo = nil
-	return reflect.DeepEqual(l, r)
+func nodeInfoEqual(t *testing.T, result, expected *NodeInfo) bool {
+	expected.PodAffinityInfo = nil
+	result.PodAffinityInfo = nil
+	expected.MaxTaskNum = 0
+	result.MaxTaskNum = 0
+	expected.GpuMemorySynced = false
+	result.GpuMemorySynced = false
+
+	equal := true
+	if expected.Name != result.Name {
+		t.Logf("Name differs: expected %q, got %q", expected.Name, result.Name)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.Node, result.Node) {
+		t.Logf("Node differs: expected %v, got %v", expected.Node, result.Node)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.Idle, result.Idle) {
+		t.Logf("Idle differs: expected %v, got %v", expected.Idle, result.Idle)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.Used, result.Used) {
+		t.Logf("Used differs: expected %v, got %v", expected.Used, result.Used)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.Releasing, result.Releasing) {
+		t.Logf("Releasing differs: expected %v, got %v", expected.Releasing, result.Releasing)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.Allocatable, result.Allocatable) {
+		t.Logf("Allocatable differs: expected %v, got %v", expected.Allocatable, result.Allocatable)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.AllocatableVector, result.AllocatableVector) {
+		t.Logf("AllocatableVector differs: expected %v, got %v", expected.AllocatableVector, result.AllocatableVector)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.IdleVector, result.IdleVector) {
+		t.Logf("IdleVector differs: expected %v, got %v", expected.IdleVector, result.IdleVector)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.UsedVector, result.UsedVector) {
+		t.Logf("UsedVector differs: expected %v, got %v", expected.UsedVector, result.UsedVector)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.ReleasingVector, result.ReleasingVector) {
+		t.Logf("ReleasingVector differs: expected %v, got %v", expected.ReleasingVector, result.ReleasingVector)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.VectorMap, result.VectorMap) {
+		t.Logf("VectorMap differs: expected %v, got %v", expected.VectorMap, result.VectorMap)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.PodInfos, result.PodInfos) {
+		t.Logf("PodInfos differs: expected %d pods, got %d pods", len(expected.PodInfos), len(result.PodInfos))
+		for k, v := range expected.PodInfos {
+			if rv, ok := result.PodInfos[k]; !ok {
+				t.Logf("  PodInfos[%s]: missing in got", k)
+			} else if !reflect.DeepEqual(v, rv) {
+				t.Logf("  PodInfos[%s]: differs", k)
+			}
+		}
+		for k := range result.PodInfos {
+			if _, ok := expected.PodInfos[k]; !ok {
+				t.Logf("  PodInfos[%s]: unexpected in got", k)
+			}
+		}
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.LegacyMIGTasks, result.LegacyMIGTasks) {
+		t.Logf("LegacyMIGTasks differs: expected %v, got %v", expected.LegacyMIGTasks, result.LegacyMIGTasks)
+		equal = false
+	}
+	if expected.MemoryOfEveryGpuOnNode != result.MemoryOfEveryGpuOnNode {
+		t.Logf("MemoryOfEveryGpuOnNode differs: expected %v, got %v", expected.MemoryOfEveryGpuOnNode, result.MemoryOfEveryGpuOnNode)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.GpuSharingNodeInfo, result.GpuSharingNodeInfo) {
+		t.Logf("GpuSharingNodeInfo differs: expected %+v, got %+v", expected.GpuSharingNodeInfo, result.GpuSharingNodeInfo)
+		equal = false
+	}
+	if !reflect.DeepEqual(expected.AccessibleStorageCapacities, result.AccessibleStorageCapacities) {
+		t.Logf("AccessibleStorageCapacities differs: expected %v, got %v", expected.AccessibleStorageCapacities, result.AccessibleStorageCapacities)
+		equal = false
+	}
+	if expected.HasDRAGPUs != result.HasDRAGPUs {
+		t.Logf("HasDRAGPUs differs: expected %v, got %v", expected.HasDRAGPUs, result.HasDRAGPUs)
+		equal = false
+	}
+	return equal
+}
+
+func setNodeInfoVectors(ni *NodeInfo, vectorMap *resource_info.ResourceVectorMap) {
+	ni.VectorMap = vectorMap
+	if ni.Allocatable != nil {
+		ni.AllocatableVector = ni.Allocatable.ToVector(vectorMap)
+	}
+	if ni.Idle != nil {
+		ni.IdleVector = ni.Idle.ToVector(vectorMap)
+	}
+	if ni.Used != nil {
+		ni.UsedVector = ni.Used.ToVector(vectorMap)
+	}
+	if ni.Releasing != nil {
+		ni.ReleasingVector = ni.Releasing.ToVector(vectorMap)
+	}
+}
+
+func testVectorMapFromNode(node *v1.Node) *resource_info.ResourceVectorMap {
+	vectorMap := resource_info.NewResourceVectorMap()
+	for resourceName := range node.Status.Allocatable {
+		vectorMap.AddResource(string(resourceName))
+	}
+	return vectorMap
 }
 
 func nodeInfoEqualExplainable(l, r *NodeInfo) error {
@@ -144,19 +254,32 @@ func RunAddRemovePodsTests(t *testing.T, tests []AddRemovePodsTest) {
 			nodePodAffinityInfo.EXPECT().AddPod(Any()).Times(len(test.pods))
 			nodePodAffinityInfo.EXPECT().RemovePod(Any()).Times(len(test.rmPods))
 
-			ni := NewNodeInfo(test.node, nodePodAffinityInfo)
+			vectorMap := testVectorMapFromNode(test.node)
+			for _, pod := range append(test.pods, test.rmPods...) {
+				for _, container := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
+					vectorMap.AddResourceList(container.Resources.Requests)
+				}
+			}
+
+			ni := NewNodeInfo(test.node, nodePodAffinityInfo, vectorMap)
 
 			for _, pod := range test.pods {
-				_ = ni.AddTask(pod_info.NewTaskInfo(pod))
+				_ = ni.AddTask(pod_info.NewTaskInfo(pod, nil, vectorMap))
 			}
 
 			for _, pod := range test.rmPods {
-				pi := pod_info.NewTaskInfo(pod)
+				pi := pod_info.NewTaskInfo(pod, nil, vectorMap)
 				_ = ni.RemoveTask(pi)
 			}
 
+			setNodeInfoVectors(test.expected, vectorMap)
+			for podID, podInfo := range test.expected.PodInfos {
+				podInfo.SetVectorMap(vectorMap)
+				test.expected.PodInfos[podID] = podInfo
+			}
+
 			t.Log(test.expected.PodInfos)
-			if !nodeInfoEqual(ni, test.expected) {
+			if !nodeInfoEqual(t, test.expected, ni) {
 				t.Errorf("node info %d: \n expected %v, \n got %v \n",
 					i, test.expected, ni)
 			}
@@ -185,8 +308,8 @@ func TestNodeInfo_AddPod(t *testing.T) {
 		Releasing:   resource_info.EmptyResource(),
 		Allocatable: common_info.BuildResource("8000m", "10G"),
 		PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-			"c1/p1": pod_info.NewTaskInfo(pod1),
-			"c1/p2": pod_info.NewTaskInfo(pod2),
+			"c1/p1": pod_info.NewTaskInfo(pod1, nil, resource_info.NewResourceVectorMap()),
+			"c1/p2": pod_info.NewTaskInfo(pod2, nil, resource_info.NewResourceVectorMap()),
 		},
 		LegacyMIGTasks:              map[common_info.PodID]string{},
 		MemoryOfEveryGpuOnNode:      DefaultGpuMemory,
@@ -228,8 +351,8 @@ func TestNodeInfo_RemovePod(t *testing.T) {
 		[]metav1.OwnerReference{}, make(map[string]string), podAnnotations)
 	pod3 := common_info.BuildPod("c1", "p3", "n1", v1.PodRunning, common_info.BuildResourceList("3000m", "3G"),
 		[]metav1.OwnerReference{}, make(map[string]string), podAnnotations)
-	pod1PodInfo := pod_info.NewTaskInfo(pod1)
-	pod3PodInfo := pod_info.NewTaskInfo(pod3)
+	pod1PodInfo := pod_info.NewTaskInfo(pod1, nil, resource_info.NewResourceVectorMap())
+	pod3PodInfo := pod_info.NewTaskInfo(pod3, nil, resource_info.NewResourceVectorMap())
 
 	node1ExpectedNodeInfo := &NodeInfo{
 		Name:        "n1",
@@ -494,10 +617,19 @@ func TestAddRemovePods(t *testing.T) {
 			nodePodAffinityInfoAdded := pod_affinity.NewMockNodePodAffinityInfo(controller)
 			nodePodAffinityInfoAdded.EXPECT().AddPod(Any()).Times(len(test.podsInfoMetadata))
 
-			ni := NewNodeInfo(test.node, nodePodAffinityInfoAdded)
+			vectorMap := testVectorMapFromNode(test.node)
+			for _, podInfoMetaData := range test.podsInfoMetadata {
+				for _, container := range append(podInfoMetaData.pod.Spec.InitContainers, podInfoMetaData.pod.Spec.Containers...) {
+					vectorMap.AddResourceList(container.Resources.Requests)
+				}
+			}
+			setNodeInfoVectors(test.addedPodsNodeInfo, vectorMap)
+			setNodeInfoVectors(test.removedPodsNodeInfo, vectorMap)
+			ni := NewNodeInfo(test.node, nodePodAffinityInfoAdded, vectorMap)
+
 			var podsInfo []*pod_info.PodInfo
 			for _, podInfoMetaData := range test.podsInfoMetadata {
-				pi := pod_info.NewTaskInfo(podInfoMetaData.pod)
+				pi := pod_info.NewTaskInfo(podInfoMetaData.pod, nil, vectorMap)
 				pi.Status = podInfoMetaData.status
 				pi.GPUGroups = podInfoMetaData.gpuGroups
 				podsInfo = append(podsInfo, pi)
@@ -705,13 +837,13 @@ func runAllocatableTest(
 	nodePodAffinityInfo := pod_affinity.NewMockNodePodAffinityInfo(controller)
 	nodePodAffinityInfo.EXPECT().AddPod(Any()).Times(len(testData.podsResources))
 
-	ni := NewNodeInfo(testData.node, nodePodAffinityInfo)
+	ni := NewNodeInfo(testData.node, nodePodAffinityInfo, testVectorMapFromNode(testData.node))
 	for ind, podResouces := range testData.podsResources {
 		pod := common_info.BuildPod(
 			fmt.Sprintf("p%d", ind), "p1", "n1", v1.PodRunning, podResouces,
 			[]metav1.OwnerReference{}, make(map[string]string), map[string]string{})
 		addJobAnnotation(pod)
-		pi := pod_info.NewTaskInfo(pod)
+		pi := pod_info.NewTaskInfo(pod, nil, resource_info.NewResourceVectorMap())
 		if err := ni.AddTask(pi); err != nil {
 			t.Errorf("%s: failed to add pod %v, index: %d", testName, pi, ind)
 		}
@@ -725,7 +857,7 @@ func runAllocatableTest(
 		pod.Spec.Overhead = testData.podOverhead
 	}
 
-	task := pod_info.NewTaskInfo(pod)
+	task := pod_info.NewTaskInfo(pod, nil, resource_info.NewResourceVectorMap())
 	allocatable, fitErr := testedFunction(ni, task)
 	if allocatable != testData.expected {
 		t.Errorf("%s: is pod allocatable: expected %v, got %v", testName, testData.expected, allocatable)
@@ -837,7 +969,7 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 								},
 							},
 						},
-					},
+					}, nil, resource_info.NewResourceVectorMap(),
 				),
 				nodeNonAllocatedResources: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
@@ -883,7 +1015,7 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 								},
 							},
 						},
-					},
+					}, nil, resource_info.NewResourceVectorMap(),
 				),
 				nodeNonAllocatedResources: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
@@ -997,7 +1129,7 @@ func TestNodeInfo_GetSumOfIdleGPUs(t *testing.T) {
 			nodePodAffinity := pod_affinity.NewMockNodePodAffinityInfo(controller)
 			nodePodAffinity.EXPECT().AddPod(Any()).Times(len(tt.tasks))
 
-			ni := NewNodeInfo(node, nodePodAffinity)
+			ni := NewNodeInfo(node, nodePodAffinity, testVectorMapFromNode(node))
 			for _, task := range tt.tasks {
 				assert.Nil(t, ni.AddTask(task))
 			}
@@ -1094,7 +1226,7 @@ func TestNodeInfo_GetSumOfReleasingGPUs(t *testing.T) {
 			nodePodAffinity := pod_affinity.NewMockNodePodAffinityInfo(controller)
 			nodePodAffinity.EXPECT().AddPod(Any()).Times(len(tt.tasks))
 
-			ni := NewNodeInfo(node, nodePodAffinity)
+			ni := NewNodeInfo(node, nodePodAffinity, testVectorMapFromNode(node))
 			for _, task := range tt.tasks {
 				assert.Nil(t, ni.AddTask(task))
 			}
@@ -1144,7 +1276,7 @@ func createPod(namespace, name string, options podCreationOptions) *pod_info.Pod
 		pod.Annotations[commonconstants.GpuFraction] = numGPUsStr
 	}
 
-	task := pod_info.NewTaskInfo(pod)
+	task := pod_info.NewTaskInfo(pod, nil, resource_info.NewResourceVectorMap())
 	task.GPUGroups = []string{options.gpuGroup}
 	return task
 }
@@ -1370,10 +1502,10 @@ func TestResourceReservationPodConsumesMaxPods(t *testing.T) {
 			nodePodAffinityInfo := pod_affinity.NewMockNodePodAffinityInfo(controller)
 			nodePodAffinityInfo.EXPECT().AddPod(Any()).Times(len(tt.pods))
 
-			ni := NewNodeInfo(tt.node, nodePodAffinityInfo)
+			ni := NewNodeInfo(tt.node, nodePodAffinityInfo, resource_info.NewResourceVectorMap())
 
 			for _, pod := range tt.pods {
-				pi := pod_info.NewTaskInfo(pod)
+				pi := pod_info.NewTaskInfo(pod, nil, resource_info.NewResourceVectorMap())
 				err := ni.AddTask(pi)
 				assert.NoError(t, err, "failed to add pod")
 			}

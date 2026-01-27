@@ -46,6 +46,7 @@ import (
 	fakeschedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v1alpha2/fake"
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 )
 
@@ -138,7 +139,7 @@ var _ = Describe("Cache", func() {
 					},
 				}
 
-				taskInfo := pod_info.NewTaskInfo(pod)
+				taskInfo := pod_info.NewTaskInfo(pod, nil, resource_info.NewResourceVectorMap())
 
 				err := cache.Bind(taskInfo, "node-1", map[string]string{})
 				Expect(err).To(HaveOccurred())
