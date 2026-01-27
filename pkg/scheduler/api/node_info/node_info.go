@@ -79,6 +79,15 @@ type NodeInfo struct {
 
 	Allocatable *resource_info.Resource
 
+	// Vector representations of resource fields
+	AllocatableVector resource_info.ResourceVector
+	IdleVector        resource_info.ResourceVector
+	UsedVector        resource_info.ResourceVector
+	ReleasingVector   resource_info.ResourceVector
+
+	// Shared resource vector index map for this node
+	VectorMap *resource_info.ResourceVectorMap
+
 	AccessibleStorageCapacities map[common_info.StorageClassID][]*sc_info.StorageCapacityInfo
 
 	PodInfos               map[common_info.PodID]*pod_info.PodInfo
@@ -95,8 +104,15 @@ type NodeInfo struct {
 	GpuSharingNodeInfo
 }
 
-func NewNodeInfo(node *v1.Node, podAffinityInfo pod_affinity.NodePodAffinityInfo) *NodeInfo {
+func NewNodeInfo(node *v1.Node, podAffinityInfo pod_affinity.NodePodAffinityInfo, vectorMap *resource_info.ResourceVectorMap) *NodeInfo {
 	gpuMemory, exists := getNodeGpuMemory(node)
+
+	allocatableVector := resource_info.NewResourceVectorFromResourceList(
+		node.Status.Allocatable, vectorMap,
+	)
+	idleVector := allocatableVector.Clone()
+	usedVector := resource_info.NewResourceVector(vectorMap)
+	releasingVector := resource_info.NewResourceVector(vectorMap)
 
 	nodeInfo := &NodeInfo{
 		Name: node.Name,
@@ -107,6 +123,12 @@ func NewNodeInfo(node *v1.Node, podAffinityInfo pod_affinity.NodePodAffinityInfo
 		Used:      resource_info.EmptyResource(),
 
 		Allocatable: resource_info.ResourceFromResourceList(node.Status.Allocatable),
+
+		AllocatableVector: allocatableVector,
+		IdleVector:        idleVector,
+		UsedVector:        usedVector,
+		ReleasingVector:   releasingVector,
+		VectorMap:         vectorMap,
 
 		AccessibleStorageCapacities: map[common_info.StorageClassID][]*sc_info.StorageCapacityInfo{},
 
@@ -438,22 +460,30 @@ func (ni *NodeInfo) addTaskResources(task *pod_info.PodInfo) {
 	log.InfraLogger.V(7).Infof("Node info: %+v", ni)
 
 	resourcesToTrack := getAcceptedTaskResourceWithoutSharedGPU(task)
+	resourcesToTrackVector := resourcesToTrack.ToVector(ni.VectorMap)
 
 	if pod_info.IsResourceReservationTask(task.Pod) {
 		// Reservation pod: track all resources except GPUs
 		resourcesToTrack.SetGPUs(0)
+		gpuIdx := ni.VectorMap.GetIndex(commonconstants.GpuResource)
+		resourcesToTrackVector.Set(gpuIdx, 0)
 	}
 
 	ni.Used.Add(resourcesToTrack)
+	ni.UsedVector.Add(resourcesToTrackVector)
 
 	switch task.Status {
 	case pod_status.Releasing:
 		ni.Releasing.Add(resourcesToTrack)
+		ni.ReleasingVector.Add(resourcesToTrackVector)
 		ni.Idle.Sub(resourcesToTrack)
+		ni.IdleVector.Sub(resourcesToTrackVector)
 	case pod_status.Pipelined:
 		ni.Releasing.Sub(resourcesToTrack)
+		ni.ReleasingVector.Sub(resourcesToTrackVector)
 	default:
 		ni.Idle.Sub(resourcesToTrack)
+		ni.IdleVector.Sub(resourcesToTrackVector)
 	}
 
 	ni.addSharedTaskResources(task)
@@ -488,22 +518,30 @@ func (ni *NodeInfo) removeTaskResources(task *pod_info.PodInfo) {
 	log.InfraLogger.V(7).Infof("NodeInfo: %+v", ni)
 
 	resourcesToTrack := getAcceptedTaskResourceWithoutSharedGPU(task)
+	resourcesToTrackVector := resourcesToTrack.ToVector(ni.VectorMap)
 
 	if pod_info.IsResourceReservationTask(task.Pod) {
 		// Reservation pod: untrack all resources except GPUs
 		resourcesToTrack.SetGPUs(0)
+		gpuIdx := ni.VectorMap.GetIndex(commonconstants.GpuResource)
+		resourcesToTrackVector.Set(gpuIdx, 0)
 	}
 
 	ni.Used.Sub(resourcesToTrack)
+	ni.UsedVector.Sub(resourcesToTrackVector)
 
 	switch task.Status {
 	case pod_status.Releasing:
 		ni.Releasing.Sub(resourcesToTrack)
+		ni.ReleasingVector.Sub(resourcesToTrackVector)
 		ni.Idle.Add(resourcesToTrack)
+		ni.IdleVector.Add(resourcesToTrackVector)
 	case pod_status.Pipelined:
 		ni.Releasing.Add(resourcesToTrack)
+		ni.ReleasingVector.Add(resourcesToTrackVector)
 	default:
 		ni.Idle.Add(resourcesToTrack)
+		ni.IdleVector.Add(resourcesToTrackVector)
 	}
 
 	ni.removeSharedTaskResources(task)
@@ -752,4 +790,10 @@ func (ni *NodeInfo) AddDRAGPUs(draGPUs float64) {
 
 	ni.Allocatable.AddGPUs(draGPUs)
 	ni.Idle.AddGPUs(draGPUs)
+
+	gpuIdx := ni.VectorMap.GetIndex(commonconstants.NvidiaGpuResource)
+	if gpuIdx >= 0 {
+		ni.AllocatableVector.Set(gpuIdx, ni.AllocatableVector.Get(gpuIdx)+draGPUs)
+		ni.IdleVector.Set(gpuIdx, ni.IdleVector.Get(gpuIdx)+draGPUs)
+	}
 }

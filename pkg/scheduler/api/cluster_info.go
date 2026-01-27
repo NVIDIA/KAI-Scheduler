@@ -32,6 +32,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storagecapacity_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclass_info"
@@ -57,6 +58,9 @@ type ClusterInfo struct {
 	Topologies                  []*kaiv1alpha1.Topology
 
 	MinNodeGPUMemory int64
+
+	// Shared resource vector index map for this scheduling cycle
+	ResourceVectorMap *resource_info.ResourceVectorMap
 }
 
 func NewClusterInfo() *ClusterInfo {
