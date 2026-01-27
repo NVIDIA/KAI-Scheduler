@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/ray-project/kuberay/ray-operator/controllers/ray/utils"
 
+	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
@@ -37,6 +39,28 @@ func NewRayGrouper(client client.Client, defaultGrouper *defaultgrouper.DefaultG
 		client:         client,
 		DefaultGrouper: defaultGrouper,
 	}
+}
+
+// shouldUseSubGroups checks if the new subgrouping logic should be used.
+// Returns false only when an existing PodGroup has no SubGroups (legacy workload).
+// This ensures backwards compatibility for workloads created before subgrouping was introduced.
+// This logic will be removed in v0.14
+func (rg *RayGrouper) shouldUseSubGroups(namespace, name string) bool {
+	existingPG := &schedulingv2alpha2.PodGroup{}
+	err := rg.client.Get(context.Background(), types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}, existingPG)
+
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			logger.V(1).Info("Failed to get existing PodGroup, using new subgrouping logic",
+				"namespace", namespace, "name", name, "error", err)
+		}
+		return true
+	}
+
+	return len(existingPG.Spec.SubGroups) > 0
 }
 
 // +kubebuilder:rbac:groups=ray.io,resources=rayclusters;rayjobs;rayservices,verbs=get;list;watch
@@ -64,8 +88,11 @@ func (rg *RayGrouper) getPodGroupMetadataWithClusterNamePath(
 		podGroupMetadata.PriorityClassName = rayPriorityClassName
 	}
 
-	if err = assignRayPodToSubGroup(pod, podGroupMetadata); err != nil {
-		logger.V(1).Info("Failed to assign ray pod to subgroup", "pod", pod.Name, "namespace", pod.Namespace, "error", err)
+	// Only assign pod to subgroup if we're using subgroups
+	if len(podGroupMetadata.SubGroups) > 0 {
+		if err = assignRayPodToSubGroup(pod, podGroupMetadata); err != nil {
+			logger.V(1).Info("Failed to assign ray pod to subgroup", "pod", pod.Name, "namespace", pod.Namespace, "error", err)
+		}
 	}
 
 	return podGroupMetadata, nil
@@ -100,8 +127,11 @@ func (rg *RayGrouper) getPodGroupMetadataInternal(
 	if err != nil {
 		return nil, err
 	}
+
 	podGroupMetadata.MinAvailable = minReplicas
-	podGroupMetadata.SubGroups = subGroups
+	if rg.shouldUseSubGroups(podGroupMetadata.Namespace, podGroupMetadata.Name) {
+		podGroupMetadata.SubGroups = subGroups
+	}
 
 	return podGroupMetadata, nil
 }

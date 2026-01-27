@@ -10,9 +10,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
@@ -490,4 +492,161 @@ func TestGetPodGroupMetadata_RayCluster_SuspendedWorkers_SubGroups(t *testing.T)
 	assert.Equal(t, int32(1), podGroupMetadata.SubGroups[0].MinAvailable)
 	assert.Equal(t, "worker-group-0", podGroupMetadata.SubGroups[1].Name)
 	assert.Equal(t, int32(2), podGroupMetadata.SubGroups[1].MinAvailable)
+}
+
+// Tests for backwards compatibility with existing PodGroups
+
+func buildSchemeWithPodGroup() *runtime.Scheme {
+	s := runtime.NewScheme()
+	_ = scheme.AddToScheme(s)
+	_ = schedulingv2alpha2.AddToScheme(s)
+	return s
+}
+
+func TestGetPodGroupMetadata_BackwardsCompatibility_NoPodGroupExists(t *testing.T) {
+	// When no PodGroup exists, should use new subgroup logic
+	pod := &v1.Pod{}
+	s := buildSchemeWithPodGroup()
+
+	client := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(autoScalingRayCluster).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	grouper := NewRayClusterGrouper(rayGrouper)
+
+	podGroupMetadata, err := grouper.GetPodGroupMetadata(autoScalingRayCluster, pod)
+
+	assert.Nil(t, err)
+	assert.Equal(t, int32(4), podGroupMetadata.MinAvailable)
+	// Should have subgroups
+	assert.Equal(t, 3, len(podGroupMetadata.SubGroups))
+}
+
+func TestGetPodGroupMetadata_BackwardsCompatibility_ExistingPodGroupWithoutSubGroups(t *testing.T) {
+	// When PodGroup exists without SubGroups (legacy workload), should use flat logic
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: autoScalingRayCluster.GetNamespace(),
+		},
+	}
+	s := buildSchemeWithPodGroup()
+
+	// Calculate the expected PodGroup name using the same logic as the defaultgrouper
+	expectedPGName := "pg-" + autoScalingRayCluster.GetName() + "-" + string(autoScalingRayCluster.GetUID())
+
+	// Create an existing PodGroup without SubGroups (legacy format)
+	existingPodGroup := &schedulingv2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      expectedPGName,
+			Namespace: autoScalingRayCluster.GetNamespace(),
+		},
+		Spec: schedulingv2alpha2.PodGroupSpec{
+			MinMember: 4,
+			// No SubGroups - legacy format
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(autoScalingRayCluster, existingPodGroup).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	grouper := NewRayClusterGrouper(rayGrouper)
+
+	// Debug: check if shouldUseSubGroups returns the expected value
+	shouldUse := rayGrouper.shouldUseSubGroups(autoScalingRayCluster.GetNamespace(), expectedPGName)
+	assert.False(t, shouldUse, "shouldUseSubGroups should return false for legacy PodGroup without SubGroups")
+
+	podGroupMetadata, err := grouper.GetPodGroupMetadata(autoScalingRayCluster, pod)
+
+	assert.Nil(t, err)
+	assert.Equal(t, int32(4), podGroupMetadata.MinAvailable)
+	// Should NOT have subgroups - backwards compatibility
+	assert.Equal(t, 0, len(podGroupMetadata.SubGroups), "Expected no subgroups for legacy workload, PodGroup name: %s", expectedPGName)
+}
+
+func TestGetPodGroupMetadata_BackwardsCompatibility_ExistingPodGroupWithSubGroups(t *testing.T) {
+	// When PodGroup exists with SubGroups (already migrated), should use new logic
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: autoScalingRayCluster.GetNamespace(),
+		},
+	}
+	s := buildSchemeWithPodGroup()
+
+	// Calculate the expected PodGroup name using the same logic as the defaultgrouper
+	expectedPGName := "pg-" + autoScalingRayCluster.GetName() + "-" + string(autoScalingRayCluster.GetUID())
+
+	// Create an existing PodGroup with SubGroups (already migrated)
+	existingPodGroup := &schedulingv2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      expectedPGName,
+			Namespace: autoScalingRayCluster.GetNamespace(),
+		},
+		Spec: schedulingv2alpha2.PodGroupSpec{
+			MinMember: 4,
+			SubGroups: []schedulingv2alpha2.SubGroup{
+				{Name: "headgroup", MinMember: 1},
+				{Name: "worker-group-0", MinMember: 2},
+				{Name: "worker-group-1", MinMember: 1},
+			},
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(autoScalingRayCluster, existingPodGroup).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	grouper := NewRayClusterGrouper(rayGrouper)
+
+	podGroupMetadata, err := grouper.GetPodGroupMetadata(autoScalingRayCluster, pod)
+
+	assert.Nil(t, err)
+	assert.Equal(t, int32(4), podGroupMetadata.MinAvailable)
+	// Should have subgroups - already migrated
+	assert.Equal(t, 3, len(podGroupMetadata.SubGroups))
+}
+
+func TestShouldUseSubGroups_NoPodGroupExists(t *testing.T) {
+	s := buildSchemeWithPodGroup()
+	client := fake.NewClientBuilder().WithScheme(s).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+
+	result := rayGrouper.shouldUseSubGroups("test-ns", "non-existent-pg")
+
+	assert.True(t, result)
+}
+
+func TestShouldUseSubGroups_PodGroupExistsWithoutSubGroups(t *testing.T) {
+	s := buildSchemeWithPodGroup()
+	existingPodGroup := &schedulingv2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pg",
+			Namespace: "test-ns",
+		},
+		Spec: schedulingv2alpha2.PodGroupSpec{
+			MinMember: 2,
+		},
+	}
+	client := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(existingPodGroup).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+
+	result := rayGrouper.shouldUseSubGroups("test-ns", "test-pg")
+
+	assert.False(t, result)
+}
+
+func TestShouldUseSubGroups_PodGroupExistsWithSubGroups(t *testing.T) {
+	s := buildSchemeWithPodGroup()
+	existingPodGroup := &schedulingv2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pg",
+			Namespace: "test-ns",
+		},
+		Spec: schedulingv2alpha2.PodGroupSpec{
+			MinMember: 2,
+			SubGroups: []schedulingv2alpha2.SubGroup{
+				{Name: "headgroup", MinMember: 1},
+			},
+		},
+	}
+	client := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(existingPodGroup).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+
+	result := rayGrouper.shouldUseSubGroups("test-ns", "test-pg")
+
+	assert.True(t, result)
 }
