@@ -163,8 +163,12 @@ PRs trigger: `make validate` → `make test` → `make build` → E2E tests
 
 ## General Rules
 - Use `git mv` when moving files to preserve history
-- Don't add obvious comments that duplicate the code. 
-
+- DO NOT add obvious comments that duplicate the code.
+    - Write comments ONLY when ABSOLUTELY nessessary
+    - Keep Comments short, explicit and concise
+    - DO NOT use `I`, `we` or any other pronoun
+- When performing a major change, run `make validate` after changes
+- 
 ## Philosophy & Design
 
 - Documentation can be found in [`docs`](docs/) folder
