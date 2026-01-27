@@ -39,10 +39,7 @@ var (
 			},
 			"spec": map[string]interface{}{
 				"enableInTreeAutoscaling": true,
-				"headGroupSpec": map[string]interface{}{
-					"replicas":    int64(3),
-					"minReplicas": int64(2),
-				},
+				"headGroupSpec":           map[string]interface{}{},
 				"workerGroupSpecs": []interface{}{
 					map[string]interface{}{
 						"replicas":    int64(3),
@@ -74,9 +71,7 @@ var (
 				},
 			},
 			"spec": map[string]interface{}{
-				"headGroupSpec": map[string]interface{}{
-					"replicas": int64(3),
-				},
+				"headGroupSpec": map[string]interface{}{},
 				"workerGroupSpecs": []interface{}{
 					map[string]interface{}{
 						"replicas":    int64(3),
@@ -107,9 +102,7 @@ var (
 				},
 			},
 			"spec": map[string]interface{}{
-				"headGroupSpec": map[string]interface{}{
-					"replicas": int64(3),
-				},
+				"headGroupSpec": map[string]interface{}{},
 				"workerGroupSpecs": []interface{}{
 					map[string]interface{}{
 						"replicas":    int64(3),
@@ -141,9 +134,7 @@ var (
 				},
 			},
 			"spec": map[string]interface{}{
-				"headGroupSpec": map[string]interface{}{
-					"replicas": int64(1),
-				},
+				"headGroupSpec": map[string]interface{}{},
 				"workerGroupSpecs": []interface{}{
 					map[string]interface{}{
 						"numOfHosts":  int64(2),
@@ -152,6 +143,39 @@ var (
 					},
 					map[string]interface{}{
 						"numOfHosts":  int64(3),
+						"replicas":    int64(3),
+						"minReplicas": int64(1),
+					},
+				},
+			},
+		},
+	}
+
+	rayClusterWithNamedWorkerGroups = &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "RayCluster",
+			"apiVersion": "ray.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "test_ray_cluster",
+				"namespace": "test_namespace",
+				"uid":       "1",
+				"labels": map[string]interface{}{
+					"test_label": "test_value",
+				},
+				"annotations": map[string]interface{}{
+					"test_annotation": "test_value",
+				},
+			},
+			"spec": map[string]interface{}{
+				"headGroupSpec": map[string]interface{}{},
+				"workerGroupSpecs": []interface{}{
+					map[string]interface{}{
+						"groupName":   "gpu-workers",
+						"replicas":    int64(3),
+						"minReplicas": int64(2),
+					},
+					map[string]interface{}{
+						"groupName":   "cpu-workers",
 						"replicas":    int64(3),
 						"minReplicas": int64(1),
 					},
@@ -179,7 +203,8 @@ func TestGetPodGroupMetadata_RayCluster(t *testing.T) {
 	assert.Equal(t, 1, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
-	assert.Equal(t, int32(5), podGroupMetadata.MinAvailable)
+	// MinAvailable: 1 (head) + 2 (group0 minReplicas) + 1 (group1 minReplicas) = 4
+	assert.Equal(t, int32(4), podGroupMetadata.MinAvailable)
 }
 
 func TestGetPodGroupMetadata_RayCluster_NonAutoScaling(t *testing.T) {
@@ -200,7 +225,8 @@ func TestGetPodGroupMetadata_RayCluster_NonAutoScaling(t *testing.T) {
 	assert.Equal(t, 2, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "ray_train_priority_class", podGroupMetadata.PriorityClassName)
-	assert.Equal(t, int32(6), podGroupMetadata.MinAvailable)
+	// MinAvailable: 1 (head) + 2 (group0 minReplicas) + 1 (group1 minReplicas) = 4
+	assert.Equal(t, int32(4), podGroupMetadata.MinAvailable)
 }
 
 func TestGetPodGroupMetadata_RayCluster_SuspendedWorkers(t *testing.T) {
@@ -221,7 +247,8 @@ func TestGetPodGroupMetadata_RayCluster_SuspendedWorkers(t *testing.T) {
 	assert.Equal(t, 1, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
-	assert.Equal(t, int32(5), podGroupMetadata.MinAvailable)
+	// MinAvailable: 1 (head) + 2 (group0 minReplicas) + 0 (group1 suspended) = 3
+	assert.Equal(t, int32(3), podGroupMetadata.MinAvailable)
 }
 
 func TestGetPodGroupMetadata_RayCluster_NumOfHosts(t *testing.T) {
@@ -284,7 +311,8 @@ func TestGetPodGroupMetadata_RayJob(t *testing.T) {
 	assert.Equal(t, 1, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
-	assert.Equal(t, int32(5), podGroupMetadata.MinAvailable)
+	// MinAvailable: 1 (head) + 2 (group0 minReplicas) + 1 (group1 minReplicas) = 4
+	assert.Equal(t, int32(4), podGroupMetadata.MinAvailable)
 }
 
 func TestGetPodGroupMetadata_RayJob_v1(t *testing.T) {
@@ -329,7 +357,8 @@ func TestGetPodGroupMetadata_RayJob_v1(t *testing.T) {
 	assert.Equal(t, 1, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
-	assert.Equal(t, int32(5), podGroupMetadata.MinAvailable)
+	// MinAvailable: 1 (head) + 2 (group0 minReplicas) + 1 (group1 minReplicas) = 4
+	assert.Equal(t, int32(4), podGroupMetadata.MinAvailable)
 }
 
 func TestGetPodGroupMetadata_RayService(t *testing.T) {
@@ -391,5 +420,74 @@ func TestGetPodGroupMetadata_RayService(t *testing.T) {
 	assert.Equal(t, 1, len(podGroupMetadata.Labels))
 	assert.Equal(t, "default-queue", podGroupMetadata.Queue)
 	assert.Equal(t, "train", podGroupMetadata.PriorityClassName)
-	assert.Equal(t, int32(5), podGroupMetadata.MinAvailable)
+	// MinAvailable: 1 (head) + 2 (group0 minReplicas) + 1 (group1 minReplicas) = 4
+	assert.Equal(t, int32(4), podGroupMetadata.MinAvailable)
+}
+
+func TestGetPodGroupMetadata_RayCluster_SubGroups_Default(t *testing.T) {
+	pod := &v1.Pod{}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(autoScalingRayCluster).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	grouper := NewRayClusterGrouper(rayGrouper)
+
+	podGroupMetadata, err := grouper.GetPodGroupMetadata(autoScalingRayCluster, pod)
+
+	assert.Nil(t, err)
+	// MinAvailable: 1 (head) + 2 (group0 minReplicas) + 1 (group1 minReplicas) = 4
+	assert.Equal(t, int32(4), podGroupMetadata.MinAvailable)
+
+	// Verify subgroups: head + 2 worker groups
+	assert.Equal(t, 3, len(podGroupMetadata.SubGroups))
+	assert.Equal(t, "headgroup", podGroupMetadata.SubGroups[0].Name)
+	assert.Equal(t, int32(1), podGroupMetadata.SubGroups[0].MinAvailable)
+	assert.Equal(t, "worker-group-0", podGroupMetadata.SubGroups[1].Name)
+	assert.Equal(t, int32(2), podGroupMetadata.SubGroups[1].MinAvailable)
+	assert.Equal(t, "worker-group-1", podGroupMetadata.SubGroups[2].Name)
+	assert.Equal(t, int32(1), podGroupMetadata.SubGroups[2].MinAvailable)
+}
+
+func TestGetPodGroupMetadata_RayCluster_SubGroups_NamedWorkerGroups(t *testing.T) {
+	pod := &v1.Pod{}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayClusterWithNamedWorkerGroups).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	grouper := NewRayClusterGrouper(rayGrouper)
+
+	podGroupMetadata, err := grouper.GetPodGroupMetadata(rayClusterWithNamedWorkerGroups, pod)
+
+	assert.Nil(t, err)
+	// MinAvailable: 1 (head) + 2 (gpu-workers minReplicas) + 1 (cpu-workers minReplicas) = 4
+	assert.Equal(t, int32(4), podGroupMetadata.MinAvailable)
+
+	// Verify subgroups use custom names
+	assert.Equal(t, 3, len(podGroupMetadata.SubGroups))
+	assert.Equal(t, "headgroup", podGroupMetadata.SubGroups[0].Name)
+	assert.Equal(t, int32(1), podGroupMetadata.SubGroups[0].MinAvailable)
+	assert.Equal(t, "gpu-workers", podGroupMetadata.SubGroups[1].Name)
+	assert.Equal(t, int32(2), podGroupMetadata.SubGroups[1].MinAvailable)
+	assert.Equal(t, "cpu-workers", podGroupMetadata.SubGroups[2].Name)
+	assert.Equal(t, int32(1), podGroupMetadata.SubGroups[2].MinAvailable)
+}
+
+func TestGetPodGroupMetadata_RayCluster_SuspendedWorkers_SubGroups(t *testing.T) {
+	pod := &v1.Pod{}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(rayClusterWithSuspendedWorkers).Build()
+	rayGrouper := NewRayGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	grouper := NewRayClusterGrouper(rayGrouper)
+
+	podGroupMetadata, err := grouper.GetPodGroupMetadata(rayClusterWithSuspendedWorkers, pod)
+
+	assert.Nil(t, err)
+	// MinAvailable: 1 (head) + 2 (group0 minReplicas) + 0 (group1 suspended) = 3
+	assert.Equal(t, int32(3), podGroupMetadata.MinAvailable)
+
+	// Suspended worker group should not create a subgroup
+	// Only head + first (non-suspended) worker group
+	assert.Equal(t, 2, len(podGroupMetadata.SubGroups))
+	assert.Equal(t, "headgroup", podGroupMetadata.SubGroups[0].Name)
+	assert.Equal(t, int32(1), podGroupMetadata.SubGroups[0].MinAvailable)
+	assert.Equal(t, "worker-group-0", podGroupMetadata.SubGroups[1].Name)
+	assert.Equal(t, int32(2), podGroupMetadata.SubGroups[1].MinAvailable)
 }
