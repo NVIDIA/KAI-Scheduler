@@ -564,8 +564,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			// Setup test data
 			jobName := tt.job.Name
 			clusterPodGroups := append(tt.allocatedPodGroups, tt.job)
-			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(clusterPodGroups)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.nodes, tasksToNodeMap, nil)
+			vectorMap := resource_info.NewResourceVectorMap()
+			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(clusterPodGroups, vectorMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.nodes, tasksToNodeMap, nil, vectorMap)
 			job := jobsInfoMap[common_info.PodGroupID(jobName)]
 
 			// Setup topology tree
@@ -1386,8 +1387,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jobName := tt.job.Name
 			clusterPodGroups := append(tt.allocatedPodGroups, tt.job)
-			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(clusterPodGroups)
-			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.nodes, tasksToNodeMap, nil)
+			vectorMap := resource_info.NewResourceVectorMap()
+			jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(clusterPodGroups, vectorMap)
+			nodesInfoMap := nodes_fake.BuildNodesInfoMap(tt.nodes, tasksToNodeMap, nil, vectorMap)
 			job := jobsInfoMap[common_info.PodGroupID(jobName)]
 
 			topologyTree := tt.setupTopologyTree()

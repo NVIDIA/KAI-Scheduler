@@ -416,7 +416,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 								},
 							},
 						},
-					})),
+					}, nil, resource_info.NewResourceVectorMap())),
 					[]*pod_info.PodInfo{},
 					[]*podgroup_info.PodGroupInfo{},
 				),
@@ -453,7 +453,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 								},
 							},
 						},
-					})),
+					}, nil, resource_info.NewResourceVectorMap())),
 					[]*pod_info.PodInfo{},
 					[]*podgroup_info.PodGroupInfo{},
 				),
@@ -495,7 +495,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 								},
 							},
 						},
-					})),
+					}, nil, resource_info.NewResourceVectorMap())),
 					[]*pod_info.PodInfo{},
 					[]*podgroup_info.PodGroupInfo{},
 				),
@@ -535,7 +535,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 								},
 							},
 						},
-					})),
+					}, nil, resource_info.NewResourceVectorMap())),
 					[]*pod_info.PodInfo{},
 					[]*podgroup_info.PodGroupInfo{},
 				),
@@ -563,11 +563,13 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 				nodePodAffinityInfo.EXPECT().AddPod(gomock.Any()).AnyTimes()
 				nodePodAffinityInfo.EXPECT().RemovePod(gomock.Any()).AnyTimes()
 
-				node1 := node_info.NewNodeInfo(&v1.Node{
+				n1 := &v1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "n1",
 					},
-				}, nodePodAffinityInfo)
+				}
+				vectorMap1 := resource_info.BuildResourceVectorMap([]v1.ResourceList{n1.Status.Allocatable})
+				node1 := node_info.NewNodeInfo(n1, nodePodAffinityInfo, vectorMap1)
 
 				potentialVictim1 := pod_info.NewTaskInfo(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -593,7 +595,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 					Status: v1.PodStatus{
 						Phase: v1.PodRunning,
 					},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				node1.AddTask(potentialVictim1)
 
@@ -620,7 +622,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 									},
 								},
 							},
-						})),
+						}, nil, resource_info.NewResourceVectorMap())),
 						[]*pod_info.PodInfo{potentialVictim1},
 						[]*podgroup_info.PodGroupInfo{},
 					),
@@ -650,11 +652,13 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 				nodePodAffinityInfo.EXPECT().AddPod(gomock.Any()).AnyTimes()
 				nodePodAffinityInfo.EXPECT().RemovePod(gomock.Any()).AnyTimes()
 
-				node1 := node_info.NewNodeInfo(&v1.Node{
+				n1 := &v1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "n1",
 					},
-				}, nodePodAffinityInfo)
+				}
+				vectorMap1 := resource_info.BuildResourceVectorMap([]v1.ResourceList{n1.Status.Allocatable})
+				node1 := node_info.NewNodeInfo(n1, nodePodAffinityInfo, vectorMap1)
 
 				potentialVictim1 := pod_info.NewTaskInfo(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -680,7 +684,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 					Status: v1.PodStatus{
 						Phase: v1.PodRunning,
 					},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				node1.AddTask(potentialVictim1)
 
@@ -707,7 +711,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 									},
 								},
 							},
-						})),
+						}, nil, resource_info.NewResourceVectorMap())),
 						[]*pod_info.PodInfo{potentialVictim1},
 						[]*podgroup_info.PodGroupInfo{},
 					),
@@ -734,11 +738,13 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 				nodePodAffinityInfo.EXPECT().AddPod(gomock.Any()).AnyTimes()
 				nodePodAffinityInfo.EXPECT().RemovePod(gomock.Any()).AnyTimes()
 
-				node1 := node_info.NewNodeInfo(&v1.Node{
+				n1 := &v1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "n1",
 					},
-				}, nodePodAffinityInfo)
+				}
+				vectorMap1 := resource_info.BuildResourceVectorMap([]v1.ResourceList{n1.Status.Allocatable})
+				node1 := node_info.NewNodeInfo(n1, nodePodAffinityInfo, vectorMap1)
 
 				recordedVictim := pod_info.NewTaskInfo(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -764,7 +770,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 					Status: v1.PodStatus{
 						Phase: v1.PodRunning,
 					},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				node1.AddTask(recordedVictim)
 
@@ -791,7 +797,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 									},
 								},
 							},
-						})),
+						}, nil, resource_info.NewResourceVectorMap())),
 						[]*pod_info.PodInfo{},
 						[]*podgroup_info.PodGroupInfo{podgroup_info.NewPodGroupInfo("rv1pg", recordedVictim)},
 					),
@@ -838,7 +844,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 								},
 							},
 						},
-					})),
+					}, nil, resource_info.NewResourceVectorMap())),
 					[]*pod_info.PodInfo{},
 					[]*podgroup_info.PodGroupInfo{podgroup_info.NewPodGroupInfo("rv1pg", pod_info.NewTaskInfo(&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -861,7 +867,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 								},
 							},
 						},
-					}))},
+					}, nil, resource_info.NewResourceVectorMap()))},
 				),
 				isFirstScenario: false,
 			},
@@ -905,7 +911,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 								},
 							},
 						},
-					})),
+					}, nil, resource_info.NewResourceVectorMap())),
 					[]*pod_info.PodInfo{},
 					[]*podgroup_info.PodGroupInfo{podgroup_info.NewPodGroupInfo("rv1pg", pod_info.NewTaskInfo(&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -928,7 +934,7 @@ func TestAccumulatedIdleGpus_updateStateWithScenario(t *testing.T) {
 								},
 							},
 						},
-					}))},
+					}, nil, resource_info.NewResourceVectorMap()))},
 				),
 				isFirstScenario: false,
 			},
@@ -1030,11 +1036,13 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 				nodePodAffinityInfo.EXPECT().AddPod(gomock.Any()).AnyTimes()
 				nodePodAffinityInfo.EXPECT().RemovePod(gomock.Any()).AnyTimes()
 
-				node1 := node_info.NewNodeInfo(&v1.Node{
+				n1 := &v1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "n1",
 					},
-				}, nodePodAffinityInfo)
+				}
+				vectorMap1 := resource_info.BuildResourceVectorMap([]v1.ResourceList{n1.Status.Allocatable})
+				node1 := node_info.NewNodeInfo(n1, nodePodAffinityInfo, vectorMap1)
 
 				potentialVictim1 := pod_info.NewTaskInfo(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1060,7 +1068,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 					Status: v1.PodStatus{
 						Phase: v1.PodRunning,
 					},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				recordedVictim1 := pod_info.NewTaskInfo(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1086,7 +1094,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 					Status: v1.PodStatus{
 						Phase: v1.PodRunning,
 					},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				node1.AddTask(potentialVictim1)
 				node1.AddTask(recordedVictim1)
@@ -1116,7 +1124,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 										},
 									},
 								},
-							}),
+							}, nil, resource_info.NewResourceVectorMap()),
 							pod_info.NewTaskInfo(&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
 									UID:       "uid5",
@@ -1134,7 +1142,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 										},
 									},
 								},
-							}),
+							}, nil, resource_info.NewResourceVectorMap()),
 							pod_info.NewTaskInfo(&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
 									UID:       "uid6",
@@ -1152,7 +1160,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 										},
 									},
 								},
-							}),
+							}, nil, resource_info.NewResourceVectorMap()),
 						),
 						[]*pod_info.PodInfo{
 							potentialVictim1,
@@ -1182,11 +1190,13 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 				nodePodAffinityInfo.EXPECT().AddPod(gomock.Any()).AnyTimes()
 				nodePodAffinityInfo.EXPECT().RemovePod(gomock.Any()).AnyTimes()
 
-				node1 := node_info.NewNodeInfo(&v1.Node{
+				n1 := &v1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "n1",
 					},
-				}, nodePodAffinityInfo)
+				}
+				vectorMap1 := resource_info.BuildResourceVectorMap([]v1.ResourceList{n1.Status.Allocatable})
+				node1 := node_info.NewNodeInfo(n1, nodePodAffinityInfo, vectorMap1)
 
 				potentialVictim1 := pod_info.NewTaskInfo(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1212,7 +1222,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 					Status: v1.PodStatus{
 						Phase: v1.PodRunning,
 					},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				recordedVictim1 := pod_info.NewTaskInfo(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1238,7 +1248,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 					Status: v1.PodStatus{
 						Phase: v1.PodRunning,
 					},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				node1.AddTask(potentialVictim1)
 				node1.AddTask(recordedVictim1)
@@ -1268,7 +1278,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 										},
 									},
 								},
-							}),
+							}, nil, resource_info.NewResourceVectorMap()),
 							pod_info.NewTaskInfo(&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
 									UID:       "uid5",
@@ -1286,7 +1296,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 										},
 									},
 								},
-							}),
+							}, nil, resource_info.NewResourceVectorMap()),
 							pod_info.NewTaskInfo(&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
 									UID:       "uid6",
@@ -1304,7 +1314,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 										},
 									},
 								},
-							}),
+							}, nil, resource_info.NewResourceVectorMap()),
 						),
 						[]*pod_info.PodInfo{
 							potentialVictim1,
@@ -1334,14 +1344,16 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 				nodePodAffinityInfo.EXPECT().AddPod(gomock.Any()).AnyTimes()
 				nodePodAffinityInfo.EXPECT().RemovePod(gomock.Any()).AnyTimes()
 
-				node1 := node_info.NewNodeInfo(&v1.Node{
+				n1 := &v1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "n1",
 						Labels: map[string]string{
 							commonconstants.NvidiaGpuMemory: "100",
 						},
 					},
-				}, nodePodAffinityInfo)
+				}
+				vectorMap1 := resource_info.BuildResourceVectorMap([]v1.ResourceList{n1.Status.Allocatable})
+				node1 := node_info.NewNodeInfo(n1, nodePodAffinityInfo, vectorMap1)
 
 				potentialVictim1 := pod_info.NewTaskInfo(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1362,7 +1374,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 					Status: v1.PodStatus{
 						Phase: v1.PodRunning,
 					},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				node1.AddTask(potentialVictim1)
 
@@ -1390,7 +1402,7 @@ func TestAccumulatedIdleGpus_Filter(t *testing.T) {
 										},
 									},
 								},
-							}),
+							}, nil, resource_info.NewResourceVectorMap()),
 						),
 						[]*pod_info.PodInfo{potentialVictim1},
 						[]*podgroup_info.PodGroupInfo{},

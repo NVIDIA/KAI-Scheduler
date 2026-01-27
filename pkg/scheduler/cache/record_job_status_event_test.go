@@ -27,6 +27,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 )
 
@@ -546,7 +547,7 @@ func getPods(pods map[v1.PodPhase][]common_info.PodID) (podsInfos map[common_inf
 				},
 			}
 
-			podInfo := pod_info.NewTaskInfo(pod)
+			podInfo := pod_info.NewTaskInfo(pod, nil, resource_info.NewResourceVectorMap())
 
 			podsInfos[podInfo.UID] = podInfo
 			podsAsObjects = append(podsAsObjects, pod)
