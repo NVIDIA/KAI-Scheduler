@@ -274,7 +274,11 @@ func (c *ClusterInfo) populateDRAGPUs(nodes map[string]*node_info.NodeInfo) {
 
 		if draGPUCount > 0 {
 			log.InfraLogger.V(6).Infof("Node %s has %d DRA GPUs from ResourceSlices", nodeName, draGPUCount)
+			if nodeInfo.Allocatable.GPUs() > 0 {
+				log.InfraLogger.Warningf("Node %s has both device-plugin GPUs and DRA GPUs", nodeName)
+			}
 			nodeInfo.AddDRAGPUs(float64(draGPUCount))
+			nodeInfo.HasDRAGPUs = true
 		}
 	}
 }

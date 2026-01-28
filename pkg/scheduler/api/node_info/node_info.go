@@ -87,6 +87,9 @@ type NodeInfo struct {
 	GpuMemorySynced        bool
 	LegacyMIGTasks         map[common_info.PodID]string
 
+	// HasDRAGPUs indicates GPUs were added via DRA ResourceSlices. Temporary fix - remove when device-plugin pods are supported on DRA nodes.
+	HasDRAGPUs bool
+
 	PodAffinityInfo pod_affinity.NodePodAffinityInfo
 
 	GpuSharingNodeInfo
@@ -296,6 +299,15 @@ func (ni *NodeInfo) PredicateByNodeResourcesType(task *pod_info.PodInfo) error {
 
 	if task.IsCPUOnlyRequest() {
 		return nil
+	}
+
+	// Temporary fix: Reject device-plugin GPU requests on DRA-only nodes.
+	// Remove when device-plugin pods are supported on DRA nodes.
+	if task.ResReq.GPUs() > 0 && ni.HasDRAGPUs {
+		log.InfraLogger.V(4).Infof("Task %s/%s rejected on node %s: device-plugin GPU request on DRA-only node",
+			task.Namespace, task.Name, ni.Name)
+		return common_info.NewFitError(task.Name, task.Namespace, ni.Name,
+			"device-plugin GPU requests cannot be scheduled on DRA-only nodes")
 	}
 
 	migNode := ni.IsMIGEnabled()
