@@ -8,9 +8,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow"
 )
@@ -239,4 +241,142 @@ func getPytorchJobWithOnlyWorker() *unstructured.Unstructured {
 			},
 		},
 	}
+}
+
+func TestGetPodGroupMetadata_SubGroups_MasterAndWorker(t *testing.T) {
+	pytorchJob := getBasicPytorchJob()
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pod-master-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				ReplicaTypeLabel: string(ReplicaTypeMaster),
+			},
+		},
+	}
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 2, len(metadata.SubGroups))
+
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeMaster))
+	assert.NotNil(t, masterSubGroup)
+	assert.Equal(t, 1, len(masterSubGroup.PodsReferences))
+	assert.Equal(t, "test-pod-master-0", masterSubGroup.PodsReferences[0].Name)
+	assert.Equal(t, "test_namespace", masterSubGroup.PodsReferences[0].Namespace)
+
+	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeWorker))
+	assert.NotNil(t, workerSubGroup)
+	assert.Equal(t, 0, len(workerSubGroup.PodsReferences))
+}
+
+func TestGetPodGroupMetadata_SubGroups_WorkerPod(t *testing.T) {
+	pytorchJob := getBasicPytorchJob()
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pod-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				ReplicaTypeLabel: string(ReplicaTypeWorker),
+			},
+		},
+	}
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 2, len(metadata.SubGroups))
+
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeMaster))
+	assert.NotNil(t, masterSubGroup)
+	assert.Equal(t, 0, len(masterSubGroup.PodsReferences))
+
+	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeWorker))
+	assert.NotNil(t, workerSubGroup)
+	assert.Equal(t, 1, len(workerSubGroup.PodsReferences))
+	assert.Equal(t, "test-pod-worker-0", workerSubGroup.PodsReferences[0].Name)
+}
+
+func TestGetPodGroupMetadata_SubGroups_OnlyMaster(t *testing.T) {
+	pytorchJob := getPytorchJobWithOnlyMaster()
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pod-master-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				ReplicaTypeLabel: string(ReplicaTypeMaster),
+			},
+		},
+	}
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 1, len(metadata.SubGroups))
+
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeMaster))
+	assert.NotNil(t, masterSubGroup)
+	assert.Equal(t, 1, len(masterSubGroup.PodsReferences))
+	assert.Equal(t, "test-pod-master-0", masterSubGroup.PodsReferences[0].Name)
+}
+
+func TestGetPodGroupMetadata_SubGroups_OnlyWorker(t *testing.T) {
+	pytorchJob := getPytorchJobWithOnlyWorker()
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pod-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				ReplicaTypeLabel: string(ReplicaTypeWorker),
+			},
+		},
+	}
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 1, len(metadata.SubGroups))
+
+	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeWorker))
+	assert.NotNil(t, workerSubGroup)
+	assert.Equal(t, 1, len(workerSubGroup.PodsReferences))
+	assert.Equal(t, "test-pod-worker-0", workerSubGroup.PodsReferences[0].Name)
+}
+
+func TestGetPodGroupMetadata_SubGroups_PodWithoutReplicaTypeLabel(t *testing.T) {
+	pytorchJob := getBasicPytorchJob()
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pod-0",
+			Namespace: "test_namespace",
+		},
+	}
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 2, len(metadata.SubGroups))
+	for _, subGroup := range metadata.SubGroups {
+		assert.Equal(t, 0, len(subGroup.PodsReferences))
+	}
+}
+
+func findSubGroupByName(subGroups []*podgroup.SubGroupMetadata, name string) *podgroup.SubGroupMetadata {
+	for _, sg := range subGroups {
+		if sg.Name == name {
+			return sg
+		}
+	}
+	return nil
 }
