@@ -123,21 +123,6 @@ func (mr *MockDataListerMockRecorder) ListConfigMaps() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConfigMaps", reflect.TypeOf((*MockDataLister)(nil).ListConfigMaps))
 }
 
-// ListDRAResourceClaims mocks base method.
-func (m *MockDataLister) ListDRAResourceClaims() ([]*v10.ResourceClaim, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDRAResourceClaims")
-	ret0, _ := ret[0].([]*v10.ResourceClaim)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListDRAResourceClaims indicates an expected call of ListDRAResourceClaims.
-func (mr *MockDataListerMockRecorder) ListDRAResourceClaims() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDRAResourceClaims", reflect.TypeOf((*MockDataLister)(nil).ListDRAResourceClaims))
-}
-
 // ListNodes mocks base method.
 func (m *MockDataLister) ListNodes() ([]*v1.Node, error) {
 	m.ctrl.T.Helper()

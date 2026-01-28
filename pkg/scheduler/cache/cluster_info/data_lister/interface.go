@@ -36,5 +36,4 @@ type DataLister interface {
 	// ListResourceSlicesByNode returns ResourceSlices grouped by node name.
 	ListResourceSlicesByNode() (map[string][]*resourceapi.ResourceSlice, error)
 	ListResourceClaims() ([]*resourceapi.ResourceClaim, error)
-	ListDRAResourceClaims() ([]*resourceapi.ResourceClaim, error)
 }

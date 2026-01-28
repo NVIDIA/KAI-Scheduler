@@ -180,12 +180,6 @@ func (k *k8sLister) ListTopologies() ([]*kaiv1alpha1.Topology, error) {
 	return k.kaiTopologyLister.List(labels.Everything())
 }
 
-// +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceclaims,verbs=get;list;watch
-
-func (k *k8sLister) ListDRAResourceClaims() ([]*resourceapi.ResourceClaim, error) {
-	return k.draResourceClaimLister.List(labels.Everything())
-}
-
 // +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceslices,verbs=get;list;watch
 
 func (k *k8sLister) ListResourceSlicesByNode() (map[string][]*resourceapi.ResourceSlice, error) {

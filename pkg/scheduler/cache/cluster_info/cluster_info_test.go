@@ -2109,7 +2109,6 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
-				mdl.EXPECT().ListDRAResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 			},
 		},
 		"listQueues": {
@@ -2120,7 +2119,6 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
-				mdl.EXPECT().ListDRAResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 			},
 		},
 		"listPodGroups": {
@@ -2134,7 +2132,6 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
 				mdl.EXPECT().ListPriorityClasses().Return([]*v12.PriorityClass{}, nil)
 				mdl.EXPECT().ListPodGroups().Return(nil, fmt.Errorf(successErrorMsg))
-				mdl.EXPECT().ListDRAResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 			},
 		},
 		"defaultPriorityClass": {
@@ -2147,7 +2144,6 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
 				mdl.EXPECT().ListPriorityClasses().Return(nil, fmt.Errorf(successErrorMsg))
-				mdl.EXPECT().ListDRAResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 			},
 		},
 		"getPriorityClassByNameAndPodByPodGroup": {
@@ -2187,7 +2183,6 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 				}, nil)
 				mdl.EXPECT().GetPriorityClassByName(gomock.Any()).Return(nil, fmt.Errorf(successErrorMsg))
 				mdl.EXPECT().ListPodByIndex(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf(successErrorMsg))
-				mdl.EXPECT().ListDRAResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 			},
 		},
 		"ListBindRequests": {

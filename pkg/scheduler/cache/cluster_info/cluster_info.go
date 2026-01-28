@@ -32,7 +32,6 @@ import (
 	kubeAiSchedulerinfo "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/informers/externalversions"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
-	"github.com/NVIDIA/KAI-scheduler/pkg/common/k8s_utils"
 	pg "github.com/NVIDIA/KAI-scheduler/pkg/common/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
@@ -143,15 +142,7 @@ func (c *ClusterInfo) Snapshot() (*api.ClusterInfo, error) {
 		return nil, err
 	}
 
-	var draResourceClaims []*resourceapi.ResourceClaim
-	if k8s_utils.GetK8sFeatures().EnableDynamicResourceAllocation {
-		draResourceClaims, err = c.dataLister.ListDRAResourceClaims()
-		if err != nil {
-			return nil, fmt.Errorf("error listing DRA resource claims: %w", err)
-		}
-	}
-
-	snapshot.Pods, err = c.addTasksToNodes(allPods, existingPods, snapshot.Nodes, snapshot.BindRequests, draResourceClaims)
+	snapshot.Pods, err = c.addTasksToNodes(allPods, existingPods, snapshot.Nodes, snapshot.BindRequests, snapshot.ResourceClaims)
 	if err != nil {
 		err = errors.WithStack(fmt.Errorf("error adding tasks to nodes: %w", err))
 		return nil, err
