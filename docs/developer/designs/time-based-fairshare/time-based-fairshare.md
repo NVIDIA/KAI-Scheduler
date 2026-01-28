@@ -1,4 +1,4 @@
-# Time Aware Fairness
+# Time Based Fairshare
 <!-- toc -->
 - [Summary](#summary)
 - [Motivation](#motivation)
@@ -9,7 +9,7 @@
   - [User Stories](#user-stories)
     - [Story 1](#story-1-proportional-time-sharing-of-resources)
     - [Story 2](#story-2-burst-access-to-resources)
-    - [Story 3](#story-3-time-aware-fairness-with-guaranteed-resources)
+    - [Story 3](#story-3-time-based-fairshare-with-guaranteed-resources)
     - [Story 4](#story-4-no-over-usage-open-for-debate)
     - [Story 5](#story-5-resource-hour-budget)
   - [Notes/Constraints/Caveats](#notesconstraintscaveats)
@@ -26,11 +26,11 @@
 
 This document aims to describe how the scheduler can make use of historical resource usage by queues and users in order to achieve fairness of resource allocation over time. The mechanism of storing and serving the necessary data is out of scope for this document and will be described in a separate design doc.  
 The scheduler will consider past resource allocations when dividing over-quota resources to queues in the DRF algorithm: queues that have used more resource-hours should be penalized compared to queues that have not used resources recently. This will effect the over-quota resource division only, meaning that deserved quota and queue priority will take precedence.  
-This will be an opt-in feature: if the admin does not configure time-aware-fairness, the scheduler will behave exactly the same as before.
+This will be an opt-in feature: if the admin does not configure time-based-fairshare, the scheduler will behave exactly the same as before.
 
 ## Motivation
 
-Time-aware fairness is a desirable behavior for many use cases, as evident by the popularity of HPC systems like slurm, and by the demand for slurm-like schedulers in k8s. Implementing time-aware fairness in KAI will offer users a k8s native scheduler that can offer deserved quotas, for inference and interactive use cases, alongside an HPC-like experience for batch job queueing. See the [user stories](#user-stories) section below for detailed use cases.
+Time-based fairshare is a desirable behavior for many use cases, as evident by the popularity of HPC systems like slurm, and by the demand for slurm-like schedulers in k8s. Implementing time-based fairshare in KAI will offer users a k8s native scheduler that can offer deserved quotas, for inference and interactive use cases, alongside an HPC-like experience for batch job queueing. See the [user stories](#user-stories) section below for detailed use cases.
 
 ### Goals
 
@@ -58,22 +58,22 @@ The over-time fairness is an enhancement to the current over-quota weight mechan
 
 #### Story 1: Proportional time sharing of resources
 Assume an admin manages a cluster with X GPUs. Two users share the cluster, each wants to run an infinite series batch jobs, each requiring X GPUs allocated for an hour. The admin assigns no deserved quota and identical over-quota weight to each users' queue.  
-Under non-time-aware DRF, the fair share of GPUs for each queue will be X/2. No reclaims will occur, and the allocated job will revert to arbitrary tie-breakers in queue order, such as queue creation timestamp, resulting in one of the queues always getting access to resources, assuming an infinite backlog of jobs:
+Under non-time-based DRF, the fair share of GPUs for each queue will be X/2. No reclaims will occur, and the allocated job will revert to arbitrary tie-breakers in queue order, such as queue creation timestamp, resulting in one of the queues always getting access to resources, assuming an infinite backlog of jobs:
 
 ![fig 1: job allocation with strict DRF](strict-drf-fig-1.svg)
 
-However, a time-aware scheduling algorithm will decrease the fair share for the queue of the running job, and increase it for the starved queue, resulting in an oscillating allocation of jobs between them:
+However, a time-based fairshare algorithm will decrease the fair share for the queue of the running job, and increase it for the starved queue, resulting in an oscillating allocation of jobs between them:
 
-![fig 2: job allocation with time aware fairness](time-aware-fairness-fig-2.svg)
+![fig 2: job allocation with time based fairshare](time-based-fairshare-fig-2.svg)
 
 This, potentially coupled with min-runtime protections for added guarantees, can ensure a non-disruptive oscillation between the queues' access to resources.
 
 #### Story 2: Burst access to resources
-In a busy cluster with several queues used mainly for training job, one unprioritized queue "`Q`" has a quota of 1/10th of the cluster's resources. `Q` needs to run a job requiring 2/10th of the resources for a relatively short period. Assuming a busy cluster, using normal DRF, it's unlikely that `Q` will ever get access to enough resources in order to run the job, effectively starving it. However, using time-aware fairness, the rest of the queues' fair share will decrease as they're using resources over time, eventually resulting in `Q` having enough fair share to allocate it's job for long enough to run it. A short min-runtime period for `Q` can allow it to run it's job to completion once it gets access to the resources.
+In a busy cluster with several queues used mainly for training job, one unprioritized queue "`Q`" has a quota of 1/10th of the cluster's resources. `Q` needs to run a job requiring 2/10th of the resources for a relatively short period. Assuming a busy cluster, using normal DRF, it's unlikely that `Q` will ever get access to enough resources in order to run the job, effectively starving it. However, using time-based fairshare, the rest of the queues' fair share will decrease as they're using resources over time, eventually resulting in `Q` having enough fair share to allocate it's job for long enough to run it. A short min-runtime period for `Q` can allow it to run it's job to completion once it gets access to the resources.
 
-#### Story 3: Time aware fairness with guaranteed resources
+#### Story 3: Time based fairshare with guaranteed resources
 In a heterogeneous cluster combining interactive, critical inference, and training use cases, different users with different queues require reliable access to deserved resources, while time-sharing over-quota resources for training jobs. Admin assigns deserved quota for each queue based on the users' needs, allowing them to run inference and some interactive workloads for use cases such as data exploration and small-scale experiments with jupyter notebooks and similar tools.  
-Users can rely on guaranteed resources for non-preemptible interactive & inference workloads, while queueing train jobs. Time-aware fairness will ensure fair access to resources, roughly proportional to the weight assigned to the different queues. Interactive and inference workloads will not be interrupted due to the usage of in-quota resources & non-preemptible properties.
+Users can rely on guaranteed resources for non-preemptible interactive & inference workloads, while queueing train jobs. Time-based fairshare will ensure fair access to resources, roughly proportional to the weight assigned to the different queues. Interactive and inference workloads will not be interrupted due to the usage of in-quota resources & non-preemptible properties.
 
 #### Story 4: No over-usage (open for debate)
 In a cluster with no deserved quotas, N queues are weighted arbitrarily (W_i for i in N is queue `i`'s weight, Ẃ_i = W_i/∑W_j for i,j in N is the normalized weight). If no queue ever goes above it's relative share - should they be penalized for their usage? On one hand, it's not intuitively fair to be penalized for usage of one's relative share. On the other, this could cause any queue with a pending job that requires more than it's relative share to be starved. For example, SDRF doesn't count in-share usage as "Commitment".

@@ -16,7 +16,7 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 
 # Space seperated list of services to build by default
 # SERVICE_NAMES := service1 service2 service3
-SERVICE_NAMES := podgrouper scheduler binder resourcereservation snapshot-tool scalingpod nodescaleadjuster podgroupcontroller queuecontroller fairshare-simulator admission operator time-aware-simulator
+SERVICE_NAMES := podgrouper scheduler binder resourcereservation snapshot-tool scalingpod nodescaleadjuster podgroupcontroller queuecontroller fairshare-simulator admission operator time-based-fairshare-simulator
 
 # Kubernetes manifest files that require Kubernetes copyright header (space-separated)
 K8S_COPYRIGHTED_MANIFEST_FILES := deployments/kai-scheduler/crds/kai.scheduler_topologies.yaml
@@ -113,3 +113,28 @@ KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/k
 kustomize: $(KUSTOMIZE)
 $(KUSTOMIZE): $(LOCALBIN)
 	test -s $(LOCALBIN)/kustomize || { curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) --output install_kustomize.sh && bash install_kustomize.sh $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); rm install_kustomize.sh; }
+
+# Benchmark targets
+BENCHSTAT ?= $(LOCALBIN)/benchstat
+BENCH_OUTPUT ?= benchmark-results.txt
+
+.PHONY: benchstat
+benchstat: $(BENCHSTAT)
+$(BENCHSTAT): $(LOCALBIN)
+	test -s $(LOCALBIN)/benchstat || GOBIN=$(LOCALBIN) go install golang.org/x/perf/cmd/benchstat@latest
+
+.PHONY: benchmark
+benchmark: envtest ## Run benchmarks and output results (use BENCH_OUTPUT=file.txt to customize output)
+	@echo "Running benchmarks..."
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(LOCALBIN))" \
+	go test -bench=. -benchmem -count=6 -run=^$$ ./pkg/scheduler/actions/... | tee $(BENCH_OUTPUT)
+
+.PHONY: benchmark-docker
+benchmark-docker: builder gocache ## Run benchmarks in Docker
+	@echo "Running benchmarks in Docker..."
+	${DOCKER_GO_COMMAND} make benchmark
+
+.PHONY: benchmark-compare
+benchmark-compare: benchstat ## Compare benchmark results (requires baseline.txt and benchmark-results.txt)
+	@echo "Comparing benchmarks..."
+	$(BENCHSTAT) baseline.txt benchmark-results.txt

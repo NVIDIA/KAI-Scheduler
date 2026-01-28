@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"strconv"
 
-	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/types"
-
 	admissionv1 "k8s.io/api/admissionregistration/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -180,6 +179,18 @@ func buildWebhookSelectors(kaiConfig *kaiv1.Config) (namespaceSelector *metav1.L
 	return namespaceSelector, objectSelector
 }
 
+// buildSchedulerNameMatchConditions creates match conditions to only run webhooks for pods with the correct scheduler name
+func buildSchedulerNameMatchConditions(kaiConfig *kaiv1.Config) []admissionv1.MatchCondition {
+	var matchConditions []admissionv1.MatchCondition
+	if kaiConfig.Spec.Global != nil && kaiConfig.Spec.Global.SchedulerName != nil {
+		matchConditions = append(matchConditions, admissionv1.MatchCondition{
+			Name:       "scheduler-name-match",
+			Expression: fmt.Sprintf("object.spec.schedulerName == '%s'", *kaiConfig.Spec.Global.SchedulerName),
+		})
+	}
+	return matchConditions
+}
+
 func (a *Admission) buildWebhookClientConfig(kaiConfig *kaiv1.Config, secret *v1.Secret, webhookPath string) admissionv1.WebhookClientConfig {
 	return admissionv1.WebhookClientConfig{
 		Service: &admissionv1.ServiceReference{
@@ -210,6 +221,7 @@ func (a *Admission) mutatingWCForKAIConfig(
 
 	namespaceSelector, objectSelector := buildWebhookSelectors(kaiConfig)
 	clientConfig := a.buildWebhookClientConfig(kaiConfig, secret, "/mutate--v1-pod")
+	matchConditions := buildSchedulerNameMatchConditions(kaiConfig)
 
 	mutatingWebhookConfiguration.Webhooks = []admissionv1.MutatingWebhook{
 		{
@@ -220,6 +232,7 @@ func (a *Admission) mutatingWCForKAIConfig(
 			ObjectSelector:          objectSelector,
 			FailurePolicy:           common.PtrFrom(admissionv1.Fail),
 			ClientConfig:            clientConfig,
+			MatchConditions:         matchConditions,
 			Rules: []admissionv1.RuleWithOperations{
 				{
 					Operations: []admissionv1.OperationType{admissionv1.Create},
@@ -258,6 +271,7 @@ func (a *Admission) validatingWCForKAIConfig(
 
 	namespaceSelector, objectSelector := buildWebhookSelectors(kaiConfig)
 	clientConfig := a.buildWebhookClientConfig(kaiConfig, secret, "/validate--v1-pod")
+	matchConditions := buildSchedulerNameMatchConditions(kaiConfig)
 
 	validatingWebhookConfiguration.Webhooks = []admissionv1.ValidatingWebhook{
 		{
@@ -268,6 +282,7 @@ func (a *Admission) validatingWCForKAIConfig(
 			ObjectSelector:          objectSelector,
 			FailurePolicy:           common.PtrFrom(admissionv1.Fail),
 			ClientConfig:            clientConfig,
+			MatchConditions:         matchConditions,
 			Rules: []admissionv1.RuleWithOperations{
 				{
 					Operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update},

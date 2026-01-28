@@ -243,7 +243,7 @@ func getUsageDBConfig(shard *kaiv1.SchedulingShard, kaiConfig *kaiv1.Config) (*u
 		if kaiConfig.Spec.Prometheus != nil &&
 			kaiConfig.Spec.Prometheus.Enabled != nil &&
 			*kaiConfig.Spec.Prometheus.Enabled {
-			usageDBConfig.ConnectionString = fmt.Sprintf("http://prometheus-operated.%s.svc.cluster.local:9090", kaiConfig.Spec.Namespace)
+			usageDBConfig.ConnectionString = fmt.Sprintf("http://usage-prometheus.%s.svc.cluster.local:9090", kaiConfig.Spec.Namespace)
 		} else if kaiConfig.Spec.Global != nil && kaiConfig.Spec.Global.ExternalTSDBConnection != nil && kaiConfig.Spec.Global.ExternalTSDBConnection.URL != nil {
 			usageDBConfig.ConnectionString = *kaiConfig.Spec.Global.ExternalTSDBConnection.URL
 		} else {
@@ -309,6 +309,7 @@ func buildArgsList(
 		fmt.Sprintf("--%s=%s", "nodepool-label-key", *kaiConfig.Spec.Global.NodePoolLabelKey),
 		fmt.Sprintf("--%s=%s", "partition-label-value", shard.Spec.PartitionLabelValue),
 		fmt.Sprintf("--%s=%s", "resource-reservation-app-label", *kaiConfig.Spec.Binder.ResourceReservation.AppLabel),
+		fmt.Sprintf("--%s=%s", "queue-label-key", *kaiConfig.Spec.Global.QueueLabelKey),
 	}
 
 	if kaiConfig.Spec.Scheduler.SchedulerService.Port != nil {

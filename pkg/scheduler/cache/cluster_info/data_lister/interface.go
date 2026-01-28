@@ -5,6 +5,7 @@ package data_lister
 
 import (
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	scheduling "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 
@@ -31,4 +32,7 @@ type DataLister interface {
 	ListConfigMaps() ([]*v1.ConfigMap, error)
 	ListTopologies() ([]*kaiv1alpha1.Topology, error)
 	ListResourceUsage() (*queue_info.ClusterUsage, error)
+	// ListResourceSlicesByNode returns ResourceSlices grouped by node name.
+	ListResourceSlicesByNode() (map[string][]*resourceapi.ResourceSlice, error)
+	ListResourceClaims() ([]*resourceapi.ResourceClaim, error)
 }

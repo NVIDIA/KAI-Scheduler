@@ -12,10 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	v12 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
@@ -1308,61 +1310,6 @@ func TestSnapshotPodGroups_QueueDoesNotExist_AddsJobFitError(t *testing.T) {
 	assert.Contains(t, pg.JobFitErrors[0].Messages()[0], "nonexistent-queue")
 }
 
-func TestSnapshotPodGroups_OrphanQueue_AddsJobFitError(t *testing.T) {
-	clusterInfo := newClusterInfoTests(t,
-		clusterInfoTestParams{
-			kubeObjects: []runtime.Object{
-				&corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-pod",
-						Namespace: testNamespace,
-						UID:       types.UID("test-pod-uid"),
-						Annotations: map[string]string{
-							commonconstants.PodGroupAnnotationForPod: "podGroup-orphan-queue",
-						},
-					},
-				},
-			},
-			kaiSchedulerObjects: []runtime.Object{
-				&enginev2alpha2.PodGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "podGroup-orphan-queue",
-						Namespace: testNamespace,
-						UID:       "ABC",
-					},
-					Spec: enginev2alpha2.PodGroupSpec{
-						Queue: "orphan-queue",
-					},
-				},
-			},
-		},
-	)
-
-	// Create a queue that has a non-existent parent (orphan queue)
-	orphanQueue := &queue_info.QueueInfo{
-		UID:         "orphan-queue",
-		Name:        "orphan-queue",
-		ParentQueue: "non-existent-parent",
-	}
-	existingPods := map[common_info.PodID]*pod_info.PodInfo{}
-	podGroups, err := clusterInfo.snapshotPodGroups(
-		map[common_info.QueueID]*queue_info.QueueInfo{"orphan-queue": orphanQueue},
-		existingPods)
-
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(podGroups), "Expected 1 podgroup")
-
-	pg, found := podGroups[common_info.PodGroupID("podGroup-orphan-queue")]
-	assert.True(t, found, "PodGroup not found")
-	assert.Equal(t, "orphan-queue", string(pg.Queue))
-
-	// Verify job fit error was added for orphan queue
-	assert.Equal(t, 1, len(pg.JobFitErrors), "Expected 1 job fit error for orphan queue")
-	assert.Equal(t, enginev2alpha2.QueueDoesNotExist, pg.JobFitErrors[0].Reason())
-	assert.Contains(t, pg.JobFitErrors[0].Messages()[0], "orphan-queue")
-	assert.Contains(t, pg.JobFitErrors[0].Messages()[0], "no parent queue")
-}
-
 func TestSnapshotQueues(t *testing.T) {
 	objs := []runtime.Object{
 		&enginev2.Queue{
@@ -2146,6 +2093,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 						},
 					},
 				}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{
 					{
 						ObjectMeta: metav1.ObjectMeta{
@@ -2158,6 +2106,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 						},
 					},
 				}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
 			},
@@ -2165,7 +2114,9 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"listQueues": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
 			},
@@ -2173,7 +2124,9 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"listPodGroups": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
@@ -2184,7 +2137,9 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"defaultPriorityClass": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
@@ -2194,7 +2149,9 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"getPriorityClassByNameAndPodByPodGroup": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{
 					{
@@ -2232,6 +2189,8 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return(nil, fmt.Errorf(successErrorMsg))
 			},
 		},
@@ -2430,4 +2389,126 @@ func newPodOnNode(pod *corev1.Pod, nodeName string) *corev1.Pod {
 	newPod.Spec.NodeName = nodeName
 	newPod.Name = fmt.Sprintf("%s-%s", pod.Name, nodeName)
 	return newPod
+}
+
+func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
+	tests := map[string]struct {
+		nodes           []*corev1.Node
+		resourceSlices  []*resourceapi.ResourceSlice
+		expectedDRAGPUs map[string]float64
+	}{
+		"Single node with DRA GPUs": {
+			nodes: []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+					Status:     corev1.NodeStatus{Allocatable: corev1.ResourceList{}},
+				},
+			},
+			resourceSlices: []*resourceapi.ResourceSlice{
+				createTestResourceSlice("slice-1", "node-1", "nvidia.com/gpu", 4),
+			},
+			expectedDRAGPUs: map[string]float64{"node-1": 4},
+		},
+		"Multiple nodes with DRA GPUs": {
+			nodes: []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+					Status:     corev1.NodeStatus{Allocatable: corev1.ResourceList{}},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node-2"},
+					Status:     corev1.NodeStatus{Allocatable: corev1.ResourceList{}},
+				},
+			},
+			resourceSlices: []*resourceapi.ResourceSlice{
+				createTestResourceSlice("slice-1", "node-1", "nvidia.com/gpu", 4),
+				createTestResourceSlice("slice-2", "node-2", "nvidia.com/gpu", 8),
+			},
+			expectedDRAGPUs: map[string]float64{"node-1": 4, "node-2": 8},
+		},
+		"Node with no DRA GPUs": {
+			nodes: []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+					Status:     corev1.NodeStatus{Allocatable: corev1.ResourceList{}},
+				},
+			},
+			resourceSlices:  []*resourceapi.ResourceSlice{},
+			expectedDRAGPUs: map[string]float64{"node-1": 0},
+		},
+		"Two device classes on same node": {
+			nodes: []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+					Status:     corev1.NodeStatus{Allocatable: corev1.ResourceList{}},
+				},
+			},
+			resourceSlices: []*resourceapi.ResourceSlice{
+				createTestResourceSlice("slice-nvidia", "node-1", "nvidia.com/gpu", 4),
+				createTestResourceSlice("slice-amd", "node-1", "amd.com/gpu", 2),
+			},
+			expectedDRAGPUs: map[string]float64{"node-1": 6},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// Convert slices to map grouped by node name
+			slicesByNode := make(map[string][]*resourceapi.ResourceSlice)
+			for _, slice := range test.resourceSlices {
+				nodeName := ""
+				if slice.Spec.NodeName != nil {
+					nodeName = *slice.Spec.NodeName
+				}
+				slicesByNode[nodeName] = append(slicesByNode[nodeName], slice)
+			}
+
+			mockLister := data_lister.NewMockDataLister(ctrl)
+			mockLister.EXPECT().ListNodes().Return(test.nodes, nil)
+			mockLister.EXPECT().ListResourceSlicesByNode().Return(slicesByNode, nil)
+
+			clusterPodAffinityInfo := pod_affinity.NewMockClusterPodAffinityInfo(ctrl)
+			clusterPodAffinityInfo.EXPECT().UpdateNodeAffinity(gomock.Any()).AnyTimes()
+			clusterPodAffinityInfo.EXPECT().AddNode(gomock.Any(), gomock.Any()).AnyTimes()
+
+			ci := &ClusterInfo{
+				dataLister:             mockLister,
+				nodePoolParams:         &conf.SchedulingNodePoolParams{},
+				nodePoolSelector:       labels.Everything(),
+				clusterPodAffinityInfo: clusterPodAffinityInfo,
+			}
+
+			nodes, _, err := ci.snapshotNodes(clusterPodAffinityInfo)
+			assert.NoError(t, err)
+
+			for nodeName, expectedGPUs := range test.expectedDRAGPUs {
+				nodeInfo, found := nodes[nodeName]
+				assert.True(t, found, "Node %s not found", nodeName)
+				// Check total GPUs (DRA GPUs are merged into Allocatable)
+				actualGPUs := nodeInfo.Allocatable.GPUs()
+				assert.Equal(t, expectedGPUs, actualGPUs, "GPUs mismatch for node %s", nodeName)
+			}
+		})
+	}
+}
+
+func createTestResourceSlice(name, nodeName, driver string, deviceCount int) *resourceapi.ResourceSlice {
+	devices := make([]resourceapi.Device, deviceCount)
+	for i := 0; i < deviceCount; i++ {
+		devices[i] = resourceapi.Device{
+			Name: fmt.Sprintf("device-%d", i),
+		}
+	}
+
+	return &resourceapi.ResourceSlice{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: resourceapi.ResourceSliceSpec{
+			NodeName: ptr.To(nodeName),
+			Driver:   driver,
+			Devices:  devices,
+		},
+	}
 }

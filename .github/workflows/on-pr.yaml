@@ -5,9 +5,11 @@ name: KAI Scheduler - Pull Request
 on:
   pull_request:
     types: [opened, reopened, synchronize]
+  merge_group:
+    types: [checks_requested]
 
 concurrency:
-  group: ${{ github.head_ref || github.ref || github.run_id }}
+  group: ${{ github.event_name == 'merge_group' && github.ref || github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -74,7 +76,7 @@ jobs:
     name: Code Coverage Report
     runs-on: ubuntu-latest
     needs: [ validate-and-test, check-build-and-test-required ]
-    if: needs.check-build-and-test-required.outputs.code == 'true'
+    if: github.event_name != 'merge_group' && needs.check-build-and-test-required.outputs.code == 'true'
     steps:
       - uses: fgrosse/go-coverage-report@8c1d1a09864211d258937b1b1a5b849f7e4f2682
         id: coverage_reporter
@@ -244,6 +246,16 @@ jobs:
         run: |
           helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
               --version 0.0.62 --values ./hack/fake-gpu-operator-values.yaml --wait
+      
+      - name: Deploy Prometheus Operator
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
+          helm repo update prometheus-community
+          helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace \
+          --set "alertmanager.enabled=false" \
+          --set "grafana.enabled=false" \
+          --set "prometheus.enabled=false" \
+          --wait
 
       - name: install KAI-scheduler
         env:
@@ -277,13 +289,15 @@ jobs:
         run: |
           helm uninstall kai-scheduler -n kai-scheduler
           echo "Waiting up to 60 seconds for pods to terminate..."
+          EXCLUDED_PODS="prometheus"
           for i in {1..12}; do
-            NON_TERM=$(kubectl get pods -n kai-scheduler --no-headers 2>/dev/null | grep -v Terminating | wc -l)
+            EXCLUDE_PATTERN=$(echo "$EXCLUDED_PODS" | tr ' ' '|')
+            NON_TERM=$(kubectl get pods -n kai-scheduler --no-headers 2>/dev/null | grep -v Terminating | grep -vE "$EXCLUDE_PATTERN" | wc -l)
             if [ "$NON_TERM" -eq 0 ]; then
-              echo "Only Terminating pods remain or no pods left. Safe to proceed."
+              echo "Only Terminating pods remain or no pods left (excluding: $EXCLUDED_PODS). Safe to proceed."
               exit 0
             fi
-            echo "Found $NON_TERM non-terminating pods... waiting (attempt $i/12)"
+            echo "Found $NON_TERM non-terminating pods (excluding: $EXCLUDED_PODS)... waiting (attempt $i/12)"
             sleep 5
           done
           echo "Pods did not terminate within 60 seconds. Uninstall incomplete."

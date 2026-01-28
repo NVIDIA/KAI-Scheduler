@@ -27,6 +27,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
 )
 
@@ -114,6 +115,16 @@ func (su *defaultStatusUpdater) Evicted(
 
 	su.recorder.AnnotatedEventf(evictedPodGroup, evictionEventMetadata, v1.EventTypeNormal, "Evict",
 		message)
+
+	nodepool := utils.GetNodePoolNameFromLabels(evictedPodGroup.Labels, su.nodePoolLabelKey)
+	metrics.RecordPodGroupEvictedPods(
+		evictedPodGroup.Name,
+		evictedPodGroup.Namespace,
+		string(evictedPodGroup.UID),
+		nodepool,
+		evictionMetadata.Action,
+		evictionMetadata.EvictionGangSize,
+	)
 }
 
 // +kubebuilder:rbac:groups="",resources=pods,verbs=update;patch

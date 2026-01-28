@@ -6,7 +6,7 @@ require (
 	github.com/NVIDIA/go-nvml v0.12.4-1
 	github.com/NVIDIA/gpu-operator v1.8.3-0.20250724212111-616690d88d86
 	github.com/aptible/supercronic v0.2.33
-	github.com/argoproj/argo-workflows/v3 v3.6.12
+	github.com/argoproj/argo-workflows/v3 v3.6.17
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gin-contrib/pprof v1.5.2
 	github.com/gin-gonic/gin v1.10.0
@@ -21,7 +21,7 @@ require (
 	github.com/onsi/gomega v1.38.2
 	github.com/openshift/api v0.0.0-20250602203052-b29811a290c7
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.81.0
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.66.1
 	github.com/ray-project/kuberay/ray-operator v1.4.2
@@ -35,20 +35,21 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
+	golang.org/x/mod v0.29.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	google.golang.org/grpc v1.72.1
 	gopkg.in/h2non/gock.v1 v1.1.2
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.34.2
-	k8s.io/apiextensions-apiserver v0.34.2
-	k8s.io/apimachinery v0.34.2
-	k8s.io/apiserver v0.34.2
+	k8s.io/api v0.34.3
+	k8s.io/apiextensions-apiserver v0.34.3
+	k8s.io/apimachinery v0.34.3
+	k8s.io/apiserver v0.34.3
 	k8s.io/cli-runtime v0.34.1
-	k8s.io/client-go v0.34.2
+	k8s.io/client-go v0.34.3
 	k8s.io/cluster-bootstrap v0.34.1
-	k8s.io/component-base v0.34.2
+	k8s.io/component-base v0.34.3
 	k8s.io/component-helpers v0.34.1
 	k8s.io/cri-client v0.34.1
 	k8s.io/dynamic-resource-allocation v0.34.1
@@ -60,15 +61,16 @@ require (
 	k8s.io/kube-proxy v0.34.1
 	k8s.io/kube-scheduler v0.34.1
 	k8s.io/kubectl v0.34.1
-	k8s.io/kubernetes v1.34.1
+	k8s.io/kubernetes v1.34.2
 	k8s.io/metrics v0.34.1
 	k8s.io/mount-utils v0.34.1
 	k8s.io/pod-security-admission v0.34.1
 	k8s.io/sample-apiserver v0.34.1
-	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
+	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	knative.dev/pkg v0.0.0-20250117084104-c43477f0052b
 	knative.dev/serving v0.44.0
-	sigs.k8s.io/controller-runtime v0.21.0
+	sigs.k8s.io/controller-runtime v0.22.3
+	sigs.k8s.io/jobset v0.10.1
 	sigs.k8s.io/karpenter v1.2.0
 	sigs.k8s.io/lws v0.7.0
 	sigs.k8s.io/yaml v1.6.0
@@ -164,7 +166,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
-	go.yaml.in/yaml/v2 v2.4.2 // indirect
+	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.12.0 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
@@ -189,7 +191,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
 	k8s.io/kubelet v0.34.1 // indirect
 	knative.dev/networking v0.0.0-20250117155906-67d1c274ba6a // indirect
-	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
+	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )

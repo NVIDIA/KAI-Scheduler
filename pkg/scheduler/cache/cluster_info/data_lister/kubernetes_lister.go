@@ -3,16 +3,17 @@
 
 package data_lister
 
-// GuyContinue
 import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	listv1 "k8s.io/client-go/listers/core/v1"
+	resourcev1 "k8s.io/client-go/listers/resource/v1"
 	schedv1 "k8s.io/client-go/listers/scheduling/v1"
 	v12 "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
@@ -50,6 +51,9 @@ type k8sLister struct {
 
 	kaiTopologyLister kaiv1alpha1Listers.TopologyLister
 
+	resourceSliceLister resourcev1.ResourceSliceLister
+	resourceClaimLister resourcev1.ResourceClaimLister
+
 	partitionSelector labels.Selector
 }
 
@@ -77,8 +81,10 @@ func New(
 		storageClassLister:    informerFactory.Storage().V1().StorageClasses().Lister(),
 		csiDriverLister:       informerFactory.Storage().V1().CSIDrivers().Lister(),
 
-		bindRequestLister: kubeAiSchedulerInformerFactory.Scheduling().V1alpha2().BindRequests().Lister(),
-		kaiTopologyLister: kubeAiSchedulerInformerFactory.Kai().V1alpha1().Topologies().Lister(),
+		bindRequestLister:   kubeAiSchedulerInformerFactory.Scheduling().V1alpha2().BindRequests().Lister(),
+		kaiTopologyLister:   kubeAiSchedulerInformerFactory.Kai().V1alpha1().Topologies().Lister(),
+		resourceSliceLister: informerFactory.Resource().V1().ResourceSlices().Lister(),
+		resourceClaimLister: informerFactory.Resource().V1().ResourceClaims().Lister(),
 
 		partitionSelector: partitionSelector,
 	}
@@ -170,4 +176,31 @@ func (k *k8sLister) ListConfigMaps() ([]*v1.ConfigMap, error) {
 
 func (k *k8sLister) ListTopologies() ([]*kaiv1alpha1.Topology, error) {
 	return k.kaiTopologyLister.List(labels.Everything())
+}
+
+// +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceslices,verbs=get;list;watch
+
+func (k *k8sLister) ListResourceSlicesByNode() (map[string][]*resourceapi.ResourceSlice, error) {
+	slices, err := k.resourceSliceLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string][]*resourceapi.ResourceSlice)
+	for _, slice := range slices {
+		nodeName := ""
+		if slice.Spec.AllNodes == nil || !*slice.Spec.AllNodes {
+			if slice.Spec.NodeName != nil {
+				nodeName = *slice.Spec.NodeName
+			}
+		}
+		result[nodeName] = append(result[nodeName], slice)
+	}
+	return result, nil
+}
+
+// +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceclaims,verbs=get;list;watch
+
+func (k *k8sLister) ListResourceClaims() ([]*resourceapi.ResourceClaim, error) {
+	return k.resourceClaimLister.List(labels.Everything())
 }

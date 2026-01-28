@@ -653,7 +653,7 @@ func (ni *NodeInfo) IsCPUOnlyNode() bool {
 	if ni.IsMIGEnabled() {
 		return false
 	}
-	return ni.Allocatable.GPUs() == 0
+	return ni.Allocatable.GPUs() <= 0
 }
 
 func (ni *NodeInfo) IsMIGEnabled() bool {
@@ -730,4 +730,15 @@ func (ni *NodeInfo) lessEqualTaskToNodeResources(
 
 func isMigResource(rName string) bool {
 	return strings.HasPrefix(rName, migResourcePrefix)
+}
+
+// AddDRAGPUs adds DRA-based GPU capacity from ResourceSlices to this node's GPU pool.
+// This should be called after the node is created, with the GPU count calculated from ResourceSlices.
+func (ni *NodeInfo) AddDRAGPUs(draGPUs float64) {
+	if draGPUs <= 0 {
+		return
+	}
+
+	ni.Allocatable.AddGPUs(draGPUs)
+	ni.Idle.AddGPUs(draGPUs)
 }

@@ -1,12 +1,12 @@
-# Time-Aware Fairness Examples
+# Time-Based Fairshare Examples
 
-Time-aware fairness is a feature in KAI Scheduler that uses historical resource usage by queues for making allocation and reclaim decisions.
+Time-based fairshare is a feature in KAI Scheduler that uses historical resource usage by queues for making allocation and reclaim decisions.
 
 ## Key Features
 
 1. **Historical Usage Consideration**: All else being equal, queues with higher past usage will get to run jobs after queues with lower usage.
 2. **Usage-Based Reclaim**: Queues that are starved over time will reclaim resources from queues that used a lot of resources.
-   > Note: This does not affect in-quota allocation—deserved quota still takes precedence over time-aware fairness.
+   > Note: This does not affect in-quota allocation—deserved quota still takes precedence over time-based fairshare.
 
 ## How It Works
 
@@ -20,7 +20,7 @@ If configured, the scheduler applies an [exponential time decay](https://en.wiki
 
 | File | Description |
 |------|-------------|
-| [scheduling-shard-minimal.yaml](scheduling-shard-minimal.yaml) | Minimal configuration to enable time-aware fairness |
+| [scheduling-shard-minimal.yaml](scheduling-shard-minimal.yaml) | Minimal configuration to enable time-based fairshare |
 | [scheduling-shard-managed-prometheus.yaml](scheduling-shard-managed-prometheus.yaml) | Full configuration using KAI-managed Prometheus |
 | [scheduling-shard-external-prometheus.yaml](scheduling-shard-external-prometheus.yaml) | Configuration for using an external Prometheus instance |
 | [two-queue-oscillation/](two-queue-oscillation/) | Complete example demonstrating fair resource oscillation between two queues |
@@ -149,8 +149,8 @@ kubectl exec -n kai-scheduler deployment/kai-scheduler-default -- wget -q -O- ht
 
 ## Further Reading
 
-- [Time-Aware Fairness Documentation](../../docs/timeaware/README.md)
+- [Time-Based Fairshare Documentation](../../docs/time-based-fairshare/README.md)
 - [Fairness Concepts](../../docs/fairness/README.md)
-- [Time-Aware Design Document](../../docs/developer/designs/time-aware-fairness/time-aware-fairness.md)
-- [Time-Aware Simulator](../../cmd/time-aware-simulator/README.md)
+- [Time-Based Fairshare Design Document](../../docs/developer/designs/time-based-fairshare/time-based-fairshare.md)
+- [Time-Based Fairshare Simulator](../../cmd/time-based-fairshare-simulator/README.md)
 

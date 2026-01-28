@@ -3,20 +3,20 @@
 
 # Two-Queue Oscillation - Simulation Configuration
 #
-# This configuration file is for use with the time-aware-simulator tool.
+# This configuration file is for use with the time-based-fairshare-simulator tool.
 # It simulates the oscillation behavior between two competing queues.
 #
 # Usage:
 #   # Build the simulator (from repo root)
-#   make time-aware-simulator
+#   make time-based-fairshare-simulator
 #
 #   # Run simulation
-#   ./bin/time-aware-simulator-amd64 \
-#     -input examples/time-aware-fairness/two-queue-oscillation/simulation-config.yaml \
+#   ./bin/time-based-fairshare-simulator-amd64 \
+#     -input examples/time-based-fairshare/two-queue-oscillation/simulation-config.yaml \
 #     -output simulation_results.csv
 #
 #   # Analyze results with Python
-#   cd cmd/time-aware-simulator/examples
+#   cd cmd/time-based-fairshare-simulator/examples
 #   pip install -r requirements.txt
 #   python plot_simple.py ../../../simulation_results.csv
 

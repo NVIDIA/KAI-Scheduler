@@ -67,7 +67,7 @@ var _ = Describe("Elastic allocation basic scenarios", Ordered, func() {
 		pgName := utils.GenerateRandomK8sName(10)
 
 		podGroup, pods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset, pgName,
-			testCtx.Queues[0], 2, pointer.String(lowPriority), v1.ResourceRequirements{
+			testCtx.Queues[0], 2, pointer.String(lowPriority), "", v1.ResourceRequirements{
 				Requests: map[v1.ResourceName]resource.Quantity{
 					v1.ResourceCPU: resource.MustParse("500m"),
 				},
@@ -81,7 +81,7 @@ var _ = Describe("Elastic allocation basic scenarios", Ordered, func() {
 		pgName := utils.GenerateRandomK8sName(10)
 
 		podGroup, pods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset, pgName,
-			testCtx.Queues[0], 2, pointer.String(lowPriority), v1.ResourceRequirements{
+			testCtx.Queues[0], 2, pointer.String(lowPriority), "", v1.ResourceRequirements{
 				Requests: map[v1.ResourceName]resource.Quantity{
 					v1.ResourceCPU: resource.MustParse("200m"),
 				},
@@ -131,7 +131,7 @@ var _ = Describe("Elastic allocation basic scenarios", Ordered, func() {
 
 		lowPriorityPod := rd.CreatePodObject(testCtx.Queues[0], podRequirements)
 		podGroup, pods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset, pgJob1Name,
-			testCtx.Queues[0], 2, pointer.String(highPriority), podRequirements)
+			testCtx.Queues[0], 2, pointer.String(highPriority), "", podRequirements)
 
 		lowPriorityPod.Spec.PriorityClassName = lowPriority
 		lowPriorityPod, err := rd.CreatePod(ctx, testCtx.KubeClientset, lowPriorityPod)
