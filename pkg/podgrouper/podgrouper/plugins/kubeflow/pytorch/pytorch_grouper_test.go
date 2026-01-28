@@ -250,7 +250,7 @@ func TestGetPodGroupMetadata_SubGroups_MasterAndWorker(t *testing.T) {
 			Name:      "test-pod-master-0",
 			Namespace: "test_namespace",
 			Labels: map[string]string{
-				ReplicaTypeLabel: string(ReplicaTypeMaster),
+				ReplicaTypeLabel: "master",
 			},
 		},
 	}
@@ -280,7 +280,7 @@ func TestGetPodGroupMetadata_SubGroups_WorkerPod(t *testing.T) {
 			Name:      "test-pod-worker-0",
 			Namespace: "test_namespace",
 			Labels: map[string]string{
-				ReplicaTypeLabel: string(ReplicaTypeWorker),
+				ReplicaTypeLabel: "worker",
 			},
 		},
 	}
@@ -309,7 +309,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyMaster(t *testing.T) {
 			Name:      "test-pod-master-0",
 			Namespace: "test_namespace",
 			Labels: map[string]string{
-				ReplicaTypeLabel: string(ReplicaTypeMaster),
+				ReplicaTypeLabel: "master",
 			},
 		},
 	}
@@ -334,7 +334,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyWorker(t *testing.T) {
 			Name:      "test-pod-worker-0",
 			Namespace: "test_namespace",
 			Labels: map[string]string{
-				ReplicaTypeLabel: string(ReplicaTypeWorker),
+				ReplicaTypeLabel: "worker",
 			},
 		},
 	}

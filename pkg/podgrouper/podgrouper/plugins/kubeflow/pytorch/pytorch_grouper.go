@@ -5,6 +5,7 @@ package pytorch
 
 import (
 	"fmt"
+	"strings"
 
 	pytorchv1 "github.com/kubeflow/training-operator/pkg/apis/kubeflow.org/v1"
 	v1 "k8s.io/api/core/v1"
@@ -90,7 +91,7 @@ func (ptg *PyTorchGrouper) buildSubGroups(
 
 	for replicaType := range replicaSpecs {
 		var podReferences []*types.NamespacedName
-		if pod.Labels[ReplicaTypeLabel] == replicaType {
+		if pod.Labels[ReplicaTypeLabel] == strings.ToLower(replicaType) {
 			podReferences = append(podReferences, &types.NamespacedName{
 				Namespace: pod.Namespace,
 				Name:      pod.Name,
