@@ -126,7 +126,7 @@ func (r *ResourceRequirements) LessEqualResource(rr *Resource) bool {
 	if !r.BaseResource.LessEqual(&rr.BaseResource) {
 		return false
 	}
-	if r.GpuResourceRequirement.GPUs() > rr.GPUs() {
+	if r.GpuResourceRequirement.GPUs()+float64(r.GpuResourceRequirement.GetDraGpusCount()) > rr.GPUs() {
 		return false
 	}
 	for migProfile, migRequirementCount := range r.MigResources() {

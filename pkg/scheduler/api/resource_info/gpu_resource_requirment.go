@@ -175,6 +175,14 @@ func (g *GpuResourceRequirement) DraGpuCounts() map[string]int64 {
 	return g.draGpuCounts
 }
 
+func (g *GpuResourceRequirement) GetDraGpusCount() int64 {
+	count := int64(0)
+	for _, singleClaimCount := range g.draGpuCounts {
+		count += singleClaimCount
+	}
+	return count
+}
+
 func (g *GpuResourceRequirement) MigResources() map[v1.ResourceName]int64 {
 	return g.migResources
 }

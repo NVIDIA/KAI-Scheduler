@@ -60,6 +60,7 @@ func getAcceptedTaskResourceWithoutSharedGPU(task *pod_info.PodInfo) *resource_i
 	requestedResourceWithoutSharedGPU := resource_info.EmptyResource()
 	requestedResourceWithoutSharedGPU.BaseResource = *task.AcceptedResource.BaseResource.Clone()
 	requestedResourceWithoutSharedGPU.SetGPUs(task.AcceptedResource.GPUs())
+	requestedResourceWithoutSharedGPU.AddGPUs(float64(task.AcceptedResource.GetDraGpusCount()))
 	maps.Copy(requestedResourceWithoutSharedGPU.ScalarResources(), task.AcceptedResource.MigResources())
 	maps.Copy(requestedResourceWithoutSharedGPU.ScalarResources(), task.AcceptedResource.ScalarResources())
 	if task.IsSharedGPUAllocation() {

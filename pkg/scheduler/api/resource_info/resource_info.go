@@ -24,7 +24,6 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info/resources"
@@ -34,14 +33,12 @@ import (
 
 type Resource struct {
 	BaseResource
-	draGpuCounts map[v1.ResourceName]int64
-	gpus         float64
+	gpus float64
 }
 
 func EmptyResource() *Resource {
 	return &Resource{
 		gpus:         0,
-		draGpuCounts: make(map[v1.ResourceName]int64),
 		BaseResource: *EmptyBaseResource(),
 	}
 }
@@ -49,7 +46,6 @@ func EmptyResource() *Resource {
 func NewResource(milliCPU float64, memory float64, gpus float64) *Resource {
 	return &Resource{
 		gpus:         gpus,
-		draGpuCounts: make(map[v1.ResourceName]int64),
 		BaseResource: *NewBaseResourceWithValues(milliCPU, memory),
 	}
 }
@@ -80,19 +76,11 @@ func ResourceFromResourceList(rList v1.ResourceList) *Resource {
 func (r *Resource) Add(other *Resource) {
 	r.BaseResource.Add(&other.BaseResource)
 	r.gpus += other.gpus
-
-	for rName, rQuant := range other.draGpuCounts {
-		r.draGpuCounts[rName] += rQuant
-	}
 }
 
 func (r *Resource) Sub(other *Resource) {
 	r.BaseResource.Sub(&other.BaseResource)
 	r.gpus -= other.gpus
-
-	for rName, rQuant := range other.draGpuCounts {
-		r.draGpuCounts[rName] -= rQuant
-	}
 }
 
 func (r *Resource) Get(rn v1.ResourceName) float64 {
@@ -107,7 +95,6 @@ func (r *Resource) Get(rn v1.ResourceName) float64 {
 func (r *Resource) Clone() *Resource {
 	return &Resource{
 		gpus:         r.gpus,
-		draGpuCounts: maps.Clone(r.draGpuCounts),
 		BaseResource: *r.BaseResource.Clone(),
 	}
 }
@@ -115,11 +102,6 @@ func (r *Resource) Clone() *Resource {
 func (r *Resource) LessEqual(rr *Resource) bool {
 	if r.gpus > rr.gpus {
 		return false
-	}
-	for rrName, rrQuant := range rr.draGpuCounts {
-		if rrQuant <= r.draGpuCounts[rrName] {
-			return false
-		}
 	}
 	return r.BaseResource.LessEqual(&rr.BaseResource)
 }
@@ -131,11 +113,6 @@ func (r *Resource) SetMaxResource(rr *Resource) {
 	r.BaseResource.SetMaxResource(&rr.BaseResource)
 	if rr.gpus > r.gpus {
 		r.gpus = rr.gpus
-	}
-	for rrName, rrQuant := range rr.draGpuCounts {
-		if rrQuant > r.draGpuCounts[rrName] {
-			r.draGpuCounts[rrName] = rrQuant
-		}
 	}
 }
 
@@ -156,9 +133,6 @@ func (r *Resource) DetailedString() string {
 	for rName, rQuant := range r.scalarResources {
 		messageBuilder.WriteString(fmt.Sprintf(", %s: %v", rName, rQuant))
 	}
-	for rName, rQuant := range r.draGpuCounts {
-		messageBuilder.WriteString(fmt.Sprintf(", dra class %s: %v devices", rName, rQuant))
-	}
 	return messageBuilder.String()
 }
 
@@ -168,8 +142,8 @@ func (r *Resource) AddResourceRequirements(req *ResourceRequirements) {
 	}
 	r.BaseResource.Add(&req.BaseResource)
 	r.gpus += req.GPUs()
-	for rName, rQuant := range req.draGpuCounts {
-		r.draGpuCounts[v1.ResourceName(rName)] += rQuant
+	for _, rQuant := range req.draGpuCounts {
+		r.gpus += float64(rQuant)
 	}
 	for migProfile, migCount := range req.MigResources() {
 		r.BaseResource.scalarResources[migProfile] += migCount
@@ -179,8 +153,8 @@ func (r *Resource) AddResourceRequirements(req *ResourceRequirements) {
 func (r *Resource) SubResourceRequirements(req *ResourceRequirements) {
 	r.BaseResource.Sub(&req.BaseResource)
 	r.gpus -= req.GPUs()
-	for rName, rQuant := range req.draGpuCounts {
-		r.draGpuCounts[v1.ResourceName(rName)] -= rQuant
+	for _, rQuant := range req.draGpuCounts {
+		r.gpus -= float64(rQuant)
 	}
 	for migProfile, migCount := range req.MigResources() {
 		r.BaseResource.scalarResources[migProfile] -= migCount
@@ -197,9 +171,6 @@ func (r *Resource) ExtendedResourceGpusAsString() string {
 
 func (r *Resource) GetGpusQuota() float64 {
 	var totalGpusQuota float64
-	for _, rQuant := range r.draGpuCounts {
-		totalGpusQuota += float64(rQuant)
-	}
 	for resourceName, quant := range r.ScalarResources() {
 		if !IsMigResource(resourceName) {
 			continue
@@ -227,10 +198,6 @@ func (r *Resource) AddGPUs(addGpus float64) {
 
 func (r *Resource) SubGPUs(subGpus float64) {
 	r.gpus -= subGpus
-}
-
-func (r *Resource) DraGpuCounts() map[v1.ResourceName]int64 {
-	return r.draGpuCounts
 }
 
 func (r *Resource) MigResources() map[v1.ResourceName]int64 {
