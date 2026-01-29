@@ -214,11 +214,13 @@ func (g *GpuResourceRequirement) IsFractionalRequest() bool {
 	return g.count > 0 && g.portion < wholeGpuPortion
 }
 
-func (g *GpuResourceRequirement) ExtendedResourceGpusAsString() string {
+func (g *GpuResourceRequirement) GpusAsString() string {
 	var requestedGpuString string
 	if g.IsFractionalRequest() && g.GetNumOfGpuDevices() > 1 {
 		requestedGpuString = fmt.Sprintf("%d X %s", g.GetNumOfGpuDevices(),
 			strconv.FormatFloat(g.GpuFractionalPortion(), 'g', 3, 64))
+	} else if len(g.draGpuCounts) > 0 {
+		requestedGpuString = strconv.FormatFloat(float64(g.GetDraGpusCount()), 'g', 3, 64) + " as DRA gpu claims "
 	} else {
 		requestedGpuString = strconv.FormatFloat(g.GPUs(), 'g', 3, 64)
 	}

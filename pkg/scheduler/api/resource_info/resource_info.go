@@ -169,7 +169,7 @@ func (r *Resource) ExtendedResourceGpusAsString() string {
 	return strconv.FormatFloat(r.gpus, 'g', 3, 64)
 }
 
-func (r *Resource) GetGpusQuota() float64 {
+func (r *Resource) GetTotalGPURequest() float64 {
 	var totalGpusQuota float64
 	for resourceName, quant := range r.ScalarResources() {
 		if !IsMigResource(resourceName) {
