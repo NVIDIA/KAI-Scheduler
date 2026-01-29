@@ -54,13 +54,13 @@ kind create cluster \
 # Install the fake-gpu-operator to provide a fake GPU resources for the e2e tests
 
 if [ "$GPU_RESOURCES_AS_DRA" = "true" ]; then
-  helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.68 \
+  helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.71 \
       --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml \
       --set draPlugin.enabled=true \
       --set devicePlugin.enabled=false \
       --wait
 else
-  helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.68 \
+  helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.71 \
       --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml --wait
 fi
 

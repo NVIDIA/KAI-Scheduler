@@ -378,11 +378,18 @@ var _ = Describe("Scheduler", Ordered, func() {
 	Context("dynamic resource", Ordered, func() {
 		const (
 			deviceClassName = "gpu.nvidia.com"
-			driverName      = "nvidia"
+			driverName      = "gpu.nvidia.com"
 			deviceNum       = 8
 		)
 
 		BeforeAll(func(ctx context.Context) {
+			// Delete the test node and create a new one with no GPUs
+			Expect(ctrlClient.Delete(ctx, testNode)).To(Succeed(), "Failed to delete test node")
+			draGpuNodeConfig := utils.DefaultNodeConfig("test-node")
+			draGpuNodeConfig.GPUs = 0
+			testNode = utils.CreateNodeObject(ctx, ctrlClient, draGpuNodeConfig)
+			Expect(ctrlClient.Create(ctx, testNode)).To(Succeed(), "Failed to create test node")
+
 			deviceClass := dynamicresource.CreateDeviceClass(deviceClassName)
 			Expect(ctrlClient.Create(ctx, deviceClass)).To(Succeed(), "Failed to create test device class")
 
@@ -408,6 +415,10 @@ var _ = Describe("Scheduler", Ordered, func() {
 				&kaiv1alpha2.BindRequestList{},
 			)
 			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test resources to be deleted")
+
+			Expect(ctrlClient.Delete(ctx, testNode)).To(Succeed(), "Failed to delete test node")
+			testNode = utils.CreateNodeObject(ctx, ctrlClient, utils.DefaultNodeConfig("test-node"))
+			Expect(ctrlClient.Create(ctx, testNode)).To(Succeed(), "Failed to create test node")
 		})
 
 		It("Should create a bind request for the pod with DeviceAllocationModeAll resource claim", func(ctx context.Context) {
