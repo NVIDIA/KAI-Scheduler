@@ -415,7 +415,9 @@ var _ = Describe("Scheduler", Ordered, func() {
 				&kaiv1alpha2.BindRequestList{},
 			)
 			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test resources to be deleted")
+		})
 
+		AfterAll(func(ctx context.Context) {
 			Expect(ctrlClient.Delete(ctx, testNode)).To(Succeed(), "Failed to delete test node")
 			testNode = utils.CreateNodeObject(ctx, ctrlClient, utils.DefaultNodeConfig("test-node"))
 			Expect(ctrlClient.Create(ctx, testNode)).To(Succeed(), "Failed to create test node")
