@@ -26,12 +26,16 @@ const (
 	nodePoolLabelKey  = "kai.scheduler/node-pool"
 )
 
+func newTestPyTorchGrouper() *PyTorchGrouper {
+	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
+	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
+	return NewPyTorchGrouper(kubeFlowGrouper)
+}
+
 func TestGetPodGroupMetadata_OnlyReplicas(t *testing.T) {
 	pytorchJob := getBasicPytorchJob()
 	pod := &v1.Pod{}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, workerReplicasNum+masterReplicasNum, metadata.MinAvailable)
@@ -43,9 +47,7 @@ func TestGetPodGroupMetadata_OnlyMinReplicas(t *testing.T) {
 	assert.Nil(t, err, "Got error when setting minReplicas for pytorch job")
 
 	pod := &v1.Pod{}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, minReplicasNum, metadata.MinAvailable)
@@ -58,9 +60,7 @@ func TestGetPodGroupMetadata_OnlyMinAvailable(t *testing.T) {
 	assert.Nil(t, err, "Got error when setting minAvailable for pytorch job")
 
 	pod := &v1.Pod{}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
@@ -79,9 +79,7 @@ func TestGetPodGroupMetadata_MinAvailableAndMinReplicas(t *testing.T) {
 	assert.Nil(t, err, "Got error when setting minAvailable for pytorch job")
 
 	pod := &v1.Pod{}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, minAvailableNum, metadata.MinAvailable)
@@ -91,9 +89,7 @@ func TestGetPodGroupMetadata_MinAvailableAndMinReplicas(t *testing.T) {
 func TestGetPodGroupMetadata_OnlyMasterReplicas(t *testing.T) {
 	pytorchJob := getPytorchJobWithOnlyMaster()
 	pod := &v1.Pod{}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, masterReplicasNum, metadata.MinAvailable)
@@ -103,9 +99,7 @@ func TestGetPodGroupMetadata_OnlyMasterReplicas(t *testing.T) {
 func TestGetPodGroupMetadata_OnlyWorkerReplicas(t *testing.T) {
 	pytorchJob := getPytorchJobWithOnlyWorker()
 	pod := &v1.Pod{}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, workerReplicasNum, metadata.MinAvailable)
@@ -119,9 +113,7 @@ func TestGetPodGroupMetadata_OnlyMasterWithMinReplicas(t *testing.T) {
 	assert.Nil(t, err, "Got error when setting minReplicas for pytorch job")
 
 	pod := &v1.Pod{}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, minReplicasNum, metadata.MinAvailable)
@@ -135,9 +127,7 @@ func TestGetPodGroupMetadata_OnlyWorkerWithMinReplicas(t *testing.T) {
 	assert.Nil(t, err, "Got error when setting minReplicas for pytorch job")
 
 	pod := &v1.Pod{}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, minReplicasNum, metadata.MinAvailable)
@@ -151,9 +141,7 @@ func TestGetPodGroupMetadata_OnlyMasterWithMinAvailable(t *testing.T) {
 	assert.Nil(t, err, "Got error when setting minAvailable for pytorch job")
 
 	pod := &v1.Pod{}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, minAvailableNum, metadata.MinAvailable)
@@ -167,9 +155,7 @@ func TestGetPodGroupMetadata_OnlyWorkerWithMinAvailable(t *testing.T) {
 	assert.Nil(t, err, "Got error when setting minAvailable for pytorch job")
 
 	pod := &v1.Pod{}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err, "Got error when getting pytorch pod group metadata")
 	assert.EqualValues(t, minAvailableNum, metadata.MinAvailable)
@@ -254,9 +240,7 @@ func TestGetPodGroupMetadata_SubGroups_MasterAndWorker(t *testing.T) {
 			},
 		},
 	}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err)
 
@@ -284,9 +268,7 @@ func TestGetPodGroupMetadata_SubGroups_WorkerPod(t *testing.T) {
 			},
 		},
 	}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err)
 
@@ -313,9 +295,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyMaster(t *testing.T) {
 			},
 		},
 	}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err)
 
@@ -338,9 +318,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyWorker(t *testing.T) {
 			},
 		},
 	}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err)
 
@@ -360,9 +338,7 @@ func TestGetPodGroupMetadata_SubGroups_PodWithoutReplicaTypeLabel(t *testing.T) 
 			Namespace: "test_namespace",
 		},
 	}
-	defaultGrouper := defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, fake.NewFakeClient())
-	kubeFlowGrouper := kubeflow.NewKubeflowDistributedGrouper(defaultGrouper)
-	grouper := NewPyTorchGrouper(kubeFlowGrouper)
+	grouper := newTestPyTorchGrouper()
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, pod)
 	assert.Nil(t, err)
 
