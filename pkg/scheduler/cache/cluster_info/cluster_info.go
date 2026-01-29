@@ -26,6 +26,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
@@ -70,6 +71,8 @@ type FairnessLevelType string
 const (
 	FullFairness         FairnessLevelType = "fullFairness"
 	ProjectLevelFairness FairnessLevelType = "projectLevelFairness"
+
+	noNodeName = ""
 )
 
 func New(
@@ -309,6 +312,11 @@ func (c *ClusterInfo) addTasksToNodes(allPods []*v1.Pod, existingPodsMap map[com
 		}
 		log.InfraLogger.V(6).Infof("Node: %v, indexed %d pods: %v", node.Name, len(node.PodInfos), podNames)
 	}
+
+	// Add generated podInfos to existingPodsMap
+	for _, podInfo := range nodePodInfosMap[noNodeName] {
+		existingPodsMap[podInfo.UID] = podInfo
+	}
 	return resultPods, nil
 }
 
@@ -443,10 +451,11 @@ func (c *ClusterInfo) getNodeToPodInfosMap(allPods []*v1.Pod,
 	nodePodInfosMap := map[string][]*pod_info.PodInfo{}
 	nodeReservationPodInfosMap := map[string][]*pod_info.PodInfo{}
 	draClaimMap := resourceClaimSliceToMap(draResourceClaims)
+	podsToClaimsMap := calcClaimsToPodsBaseMap(draClaimMap)
 
 	for _, pod := range allPods {
 		podBindRequest := bindRequests.GetBindRequestForPod(pod)
-		draPodClaims := getDraPodClaims(pod, draClaimMap)
+		draPodClaims := getDraPodClaims(pod, draClaimMap, podsToClaimsMap)
 		podInfo := pod_info.NewTaskInfoWithBindRequest(pod, podBindRequest, draPodClaims...)
 
 		if pod_info.IsResourceReservationTask(podInfo.Pod) {
@@ -578,13 +587,50 @@ func resourceClaimSliceToMap(draResourceClaims []*resourceapi.ResourceClaim) map
 	return draClaimMap
 }
 
-func getDraPodClaims(pod *v1.Pod, draClaimMap map[string]*resourceapi.ResourceClaim) []*resourceapi.ResourceClaim {
-	draPodClaims := []*resourceapi.ResourceClaim{}
-	for _, podClaim := range pod.Spec.ResourceClaims {
-		draPodClaim, found := draClaimMap[podClaim.Name]
-		if found {
-			draPodClaims = append(draPodClaims, draPodClaim)
+func calcClaimsToPodsBaseMap(draClaimsMap map[string]*resourceapi.ResourceClaim) map[types.UID]map[types.UID]*resourceapi.ResourceClaim {
+	podsToClaimsMap := map[types.UID]map[types.UID]*resourceapi.ResourceClaim{}
+	for _, claim := range draClaimsMap {
+		claimIsRelatedToPod := false
+		for _, ownerReference := range claim.OwnerReferences {
+			if ownerReference.Kind == "Pod" {
+				addClaimToPodClaimMap(claim, ownerReference.UID, podsToClaimsMap)
+				claimIsRelatedToPod = true
+				break
+			}
+		}
+		if claimIsRelatedToPod {
+			continue
+		}
+		for _, reservedFor := range claim.Status.ReservedFor {
+			if reservedFor.Resource == "pods" {
+				addClaimToPodClaimMap(claim, reservedFor.UID, podsToClaimsMap)
+				break
+			}
 		}
 	}
+	return podsToClaimsMap
+}
+
+func getDraPodClaims(pod *v1.Pod, draClaimMap map[string]*resourceapi.ResourceClaim,
+	podsToClaimsMap map[types.UID]map[types.UID]*resourceapi.ResourceClaim) []*resourceapi.ResourceClaim {
+	for _, claimReference := range pod.Spec.ResourceClaims {
+		claim, found := draClaimMap[claimReference.Name]
+		if found {
+			addClaimToPodClaimMap(claim, pod.UID, podsToClaimsMap)
+		}
+	}
+
+	draPodClaims := []*resourceapi.ResourceClaim{}
+	for _, claim := range podsToClaimsMap[pod.UID] {
+		draPodClaims = append(draPodClaims, claim)
+	}
 	return draPodClaims
+}
+
+func addClaimToPodClaimMap(claim *resourceapi.ResourceClaim, podUid types.UID,
+	podsToClaimsMap map[types.UID]map[types.UID]*resourceapi.ResourceClaim) {
+	if len(podsToClaimsMap[podUid]) == 0 {
+		podsToClaimsMap[podUid] = map[types.UID]*resourceapi.ResourceClaim{}
+	}
+	podsToClaimsMap[podUid][claim.UID] = claim
 }
