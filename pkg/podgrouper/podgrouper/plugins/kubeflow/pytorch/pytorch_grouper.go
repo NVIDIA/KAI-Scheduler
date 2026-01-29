@@ -5,7 +5,6 @@ package pytorch
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	pytorchv1 "github.com/kubeflow/training-operator/pkg/apis/kubeflow.org/v1"
@@ -19,11 +18,11 @@ import (
 )
 
 const (
-	ReplicaSpecName  = "pytorchReplicaSpecs"
-	ReplicaTypeLabel = pytorchv1.ReplicaTypeLabel
+	replicaSpecName  = "pytorchReplicaSpecs"
+	replicaTypeLabel = pytorchv1.ReplicaTypeLabel
 
-	ReplicaTypeMaster = pytorchv1.PyTorchJobReplicaTypeMaster
-	ReplicaTypeWorker = pytorchv1.PyTorchJobReplicaTypeWorker
+	replicaTypeMaster = pytorchv1.PyTorchJobReplicaTypeMaster
+	replicaTypeWorker = pytorchv1.PyTorchJobReplicaTypeWorker
 )
 
 type PyTorchGrouper struct {
@@ -43,7 +42,7 @@ func (ptg *PyTorchGrouper) Name() string {
 func (ptg *PyTorchGrouper) GetPodGroupMetadata(
 	topOwner *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {
-	podGroupMetadata, err := ptg.KubeflowDistributedGrouper.GetPodGroupMetadata(topOwner, pod, ReplicaSpecName, []string{})
+	podGroupMetadata, err := ptg.KubeflowDistributedGrouper.GetPodGroupMetadata(topOwner, pod, replicaSpecName, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -78,9 +77,9 @@ func (ptg *PyTorchGrouper) buildSubGroups(
 		return nil, fmt.Errorf("pytorchReplicaSpecs not found in PyTorchJob %s/%s", topOwner.GetNamespace(), topOwner.GetName())
 	}
 
-	masterReplicas, found, err := unstructured.NestedInt64(replicaSpecs, string(ReplicaTypeMaster), "replicas")
+	masterReplicas, found, err := unstructured.NestedInt64(replicaSpecs, string(replicaTypeMaster), "replicas")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get replicas from pytorchReplicaSpecs[%s] in PyTorchJob %s/%s. Err: %w", string(ReplicaTypeMaster), topOwner.GetNamespace(), topOwner.GetName(), err)
+		return nil, fmt.Errorf("failed to get replicas from pytorchReplicaSpecs[%s] in PyTorchJob %s/%s. Err: %w", string(replicaTypeMaster), topOwner.GetNamespace(), topOwner.GetName(), err)
 	}
 	if !found {
 		masterReplicas = 0
@@ -93,7 +92,7 @@ func (ptg *PyTorchGrouper) buildSubGroups(
 		subGroups = append(subGroups, masterSubGroup)
 	}
 
-	workerMinAvailable := math.Max(0, totalMinAvailable-int32(masterReplicas))
+	workerMinAvailable := max(0, totalMinAvailable-int32(masterReplicas))
 	workerSubGroup := buildWorkerSubGroup(replicaSpecs, pod, workerMinAvailable)
 	if workerSubGroup != nil {
 		subGroups = append(subGroups, workerSubGroup)
@@ -103,7 +102,7 @@ func (ptg *PyTorchGrouper) buildSubGroups(
 }
 
 func buildMasterSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, masterReplicas int32) *podgroup.SubGroupMetadata {
-	if _, exists := replicaSpecs[string(ReplicaTypeMaster)]; !exists {
+	if _, exists := replicaSpecs[string(replicaTypeMaster)]; !exists {
 		return nil
 	}
 	if masterReplicas == 0 {
@@ -111,7 +110,7 @@ func buildMasterSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, maste
 	}
 
 	var podReferences []*types.NamespacedName
-	if pod.Labels[ReplicaTypeLabel] == strings.ToLower(string(ReplicaTypeMaster)) {
+	if pod.Labels[replicaTypeLabel] == strings.ToLower(string(replicaTypeMaster)) {
 		podReferences = append(podReferences, &types.NamespacedName{
 			Namespace: pod.Namespace,
 			Name:      pod.Name,
@@ -119,19 +118,19 @@ func buildMasterSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, maste
 	}
 
 	return &podgroup.SubGroupMetadata{
-		Name:           string(ReplicaTypeMaster),
+		Name:           string(replicaTypeMaster),
 		MinAvailable:   masterReplicas,
 		PodsReferences: podReferences,
 	}
 }
 
 func buildWorkerSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, workerMinAvailable int32) *podgroup.SubGroupMetadata {
-	if _, exists := replicaSpecs[string(ReplicaTypeWorker)]; !exists {
+	if _, exists := replicaSpecs[string(replicaTypeWorker)]; !exists {
 		return nil
 	}
 
 	var podReferences []*types.NamespacedName
-	if pod.Labels[ReplicaTypeLabel] == strings.ToLower(string(ReplicaTypeWorker)) {
+	if pod.Labels[replicaTypeLabel] == strings.ToLower(string(replicaTypeWorker)) {
 		podReferences = append(podReferences, &types.NamespacedName{
 			Namespace: pod.Namespace,
 			Name:      pod.Name,
@@ -139,7 +138,7 @@ func buildWorkerSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, worke
 	}
 
 	return &podgroup.SubGroupMetadata{
-		Name:           string(ReplicaTypeWorker),
+		Name:           string(replicaTypeWorker),
 		MinAvailable:   workerMinAvailable,
 		PodsReferences: podReferences,
 	}

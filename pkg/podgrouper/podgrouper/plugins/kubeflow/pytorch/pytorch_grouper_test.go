@@ -236,7 +236,7 @@ func TestGetPodGroupMetadata_SubGroups_MasterAndWorker(t *testing.T) {
 			Name:      "test-pod-master-0",
 			Namespace: "test_namespace",
 			Labels: map[string]string{
-				ReplicaTypeLabel: "master",
+				replicaTypeLabel: "master",
 			},
 		},
 	}
@@ -246,13 +246,13 @@ func TestGetPodGroupMetadata_SubGroups_MasterAndWorker(t *testing.T) {
 
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
-	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeMaster))
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
 	assert.NotNil(t, masterSubGroup)
 	assert.Equal(t, 1, len(masterSubGroup.PodsReferences))
 	assert.Equal(t, "test-pod-master-0", masterSubGroup.PodsReferences[0].Name)
 	assert.Equal(t, "test_namespace", masterSubGroup.PodsReferences[0].Namespace)
 
-	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeWorker))
+	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeWorker))
 	assert.NotNil(t, workerSubGroup)
 	assert.Equal(t, 0, len(workerSubGroup.PodsReferences))
 }
@@ -264,7 +264,7 @@ func TestGetPodGroupMetadata_SubGroups_WorkerPod(t *testing.T) {
 			Name:      "test-pod-worker-0",
 			Namespace: "test_namespace",
 			Labels: map[string]string{
-				ReplicaTypeLabel: "worker",
+				replicaTypeLabel: "worker",
 			},
 		},
 	}
@@ -274,11 +274,11 @@ func TestGetPodGroupMetadata_SubGroups_WorkerPod(t *testing.T) {
 
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
-	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeMaster))
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
 	assert.NotNil(t, masterSubGroup)
 	assert.Equal(t, 0, len(masterSubGroup.PodsReferences))
 
-	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeWorker))
+	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeWorker))
 	assert.NotNil(t, workerSubGroup)
 	assert.Equal(t, 1, len(workerSubGroup.PodsReferences))
 	assert.Equal(t, "test-pod-worker-0", workerSubGroup.PodsReferences[0].Name)
@@ -291,7 +291,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyMaster(t *testing.T) {
 			Name:      "test-pod-master-0",
 			Namespace: "test_namespace",
 			Labels: map[string]string{
-				ReplicaTypeLabel: "master",
+				replicaTypeLabel: "master",
 			},
 		},
 	}
@@ -301,7 +301,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyMaster(t *testing.T) {
 
 	assert.Equal(t, 1, len(metadata.SubGroups))
 
-	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeMaster))
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
 	assert.NotNil(t, masterSubGroup)
 	assert.Equal(t, 1, len(masterSubGroup.PodsReferences))
 	assert.Equal(t, "test-pod-master-0", masterSubGroup.PodsReferences[0].Name)
@@ -314,7 +314,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyWorker(t *testing.T) {
 			Name:      "test-pod-worker-0",
 			Namespace: "test_namespace",
 			Labels: map[string]string{
-				ReplicaTypeLabel: "worker",
+				replicaTypeLabel: "worker",
 			},
 		},
 	}
@@ -324,7 +324,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyWorker(t *testing.T) {
 
 	assert.Equal(t, 1, len(metadata.SubGroups))
 
-	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(ReplicaTypeWorker))
+	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeWorker))
 	assert.NotNil(t, workerSubGroup)
 	assert.Equal(t, 1, len(workerSubGroup.PodsReferences))
 	assert.Equal(t, "test-pod-worker-0", workerSubGroup.PodsReferences[0].Name)
