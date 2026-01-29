@@ -382,21 +382,28 @@ var _ = Describe("Scheduler", Ordered, func() {
 			deviceNum       = 8
 		)
 
+		var (
+			deviceClass       *resourceapi.DeviceClass
+			nodeResourceSlice *resourceapi.ResourceSlice
+		)
+
 		BeforeAll(func(ctx context.Context) {
+			deviceClass = dynamicresource.CreateDeviceClass(deviceClassName)
+			Expect(ctrlClient.Create(ctx, deviceClass)).To(Succeed(), "Failed to create test device class")
+
+			nodeResourceSlice = dynamicresource.CreateNodeResourceSlice(
+				"test-node-resource-slice", driverName, testNode.Name, deviceNum)
+			Expect(ctrlClient.Create(ctx, nodeResourceSlice)).
+				To(Succeed(), "Failed to create test node resource slice")
+		})
+
+		BeforeEach(func(ctx context.Context) {
 			// Delete the test node and create a new one with no GPUs
 			Expect(ctrlClient.Delete(ctx, testNode)).To(Succeed(), "Failed to delete test node")
 			draGpuNodeConfig := utils.DefaultNodeConfig("test-node")
 			draGpuNodeConfig.GPUs = 0
 			testNode = utils.CreateNodeObject(ctx, ctrlClient, draGpuNodeConfig)
 			Expect(ctrlClient.Create(ctx, testNode)).To(Succeed(), "Failed to create test node")
-
-			deviceClass := dynamicresource.CreateDeviceClass(deviceClassName)
-			Expect(ctrlClient.Create(ctx, deviceClass)).To(Succeed(), "Failed to create test device class")
-
-			nodeResourceSlice := dynamicresource.CreateNodeResourceSlice(
-				"test-node-resource-slice", driverName, testNode.Name, deviceNum)
-			Expect(ctrlClient.Create(ctx, nodeResourceSlice)).
-				To(Succeed(), "Failed to create test node resource slice")
 		})
 
 		AfterEach(func(ctx context.Context) {
@@ -418,9 +425,11 @@ var _ = Describe("Scheduler", Ordered, func() {
 		})
 
 		AfterAll(func(ctx context.Context) {
-			Expect(ctrlClient.Delete(ctx, testNode)).To(Succeed(), "Failed to delete test node")
-			testNode = utils.CreateNodeObject(ctx, ctrlClient, utils.DefaultNodeConfig("test-node"))
-			Expect(ctrlClient.Create(ctx, testNode)).To(Succeed(), "Failed to create test node")
+			Expect(ctrlClient.Delete(ctx, nodeResourceSlice)).
+				To(Succeed(), "Failed to delete test node resource slice")
+
+			Expect(ctrlClient.Delete(ctx, deviceClass)).
+				To(Succeed(), "Failed to delete test device class")
 		})
 
 		It("Should create a bind request for the pod with DeviceAllocationModeAll resource claim", func(ctx context.Context) {
