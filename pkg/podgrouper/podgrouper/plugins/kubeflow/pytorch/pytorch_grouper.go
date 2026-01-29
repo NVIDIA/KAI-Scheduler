@@ -69,8 +69,6 @@ func (ptg *PyTorchGrouper) GetPodGroupMetadata(
 func (ptg *PyTorchGrouper) buildSubGroups(
 	topOwner *unstructured.Unstructured, pod *v1.Pod, totalMinAvailable int32,
 ) ([]*podgroup.SubGroupMetadata, error) {
-	var subGroups []*podgroup.SubGroupMetadata
-
 	replicaSpecs, found, err := unstructured.NestedMap(topOwner.Object, "spec", "pytorchReplicaSpecs")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pytorchReplicaSpecs from PyTorchJob %s/%s. Err: %w", topOwner.GetNamespace(), topOwner.GetName(), err)
@@ -87,32 +85,63 @@ func (ptg *PyTorchGrouper) buildSubGroups(
 		masterReplicas = 0
 	}
 
-	workerReplicas := totalMinAvailable - int32(masterReplicas)
+	var subGroups []*podgroup.SubGroupMetadata
 
-	for replicaType := range replicaSpecs {
-		var podReferences []*types.NamespacedName
-		if pod.Labels[ReplicaTypeLabel] == strings.ToLower(replicaType) {
-			podReferences = append(podReferences, &types.NamespacedName{
-				Namespace: pod.Namespace,
-				Name:      pod.Name,
-			})
-		}
+	masterSubGroup := buildMasterSubGroup(replicaSpecs, pod, int32(masterReplicas))
+	if masterSubGroup != nil {
+		subGroups = append(subGroups, masterSubGroup)
+	}
 
-		minAvailable := int32(0)
-		if replicaType == string(ReplicaTypeMaster) {
-			minAvailable = int32(masterReplicas)
-		} else if replicaType == string(ReplicaTypeWorker) {
-			minAvailable = workerReplicas
-		}
-
-		subGroups = append(subGroups, &podgroup.SubGroupMetadata{
-			Name:           replicaType,
-			MinAvailable:   minAvailable,
-			PodsReferences: podReferences,
-		})
+	workerMinAvailable := totalMinAvailable - int32(masterReplicas)
+	workerSubGroup := buildWorkerSubGroup(replicaSpecs, pod, workerMinAvailable)
+	if workerSubGroup != nil {
+		subGroups = append(subGroups, workerSubGroup)
 	}
 
 	return subGroups, nil
+}
+
+func buildMasterSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, masterReplicas int32) *podgroup.SubGroupMetadata {
+	if _, exists := replicaSpecs[string(ReplicaTypeMaster)]; !exists {
+		return nil
+	}
+	if masterReplicas == 0 {
+		return nil
+	}
+
+	var podReferences []*types.NamespacedName
+	if pod.Labels[ReplicaTypeLabel] == strings.ToLower(string(ReplicaTypeMaster)) {
+		podReferences = append(podReferences, &types.NamespacedName{
+			Namespace: pod.Namespace,
+			Name:      pod.Name,
+		})
+	}
+
+	return &podgroup.SubGroupMetadata{
+		Name:           string(ReplicaTypeMaster),
+		MinAvailable:   masterReplicas,
+		PodsReferences: podReferences,
+	}
+}
+
+func buildWorkerSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, workerMinAvailable int32) *podgroup.SubGroupMetadata {
+	if _, exists := replicaSpecs[string(ReplicaTypeWorker)]; !exists {
+		return nil
+	}
+
+	var podReferences []*types.NamespacedName
+	if pod.Labels[ReplicaTypeLabel] == strings.ToLower(string(ReplicaTypeWorker)) {
+		podReferences = append(podReferences, &types.NamespacedName{
+			Namespace: pod.Namespace,
+			Name:      pod.Name,
+		})
+	}
+
+	return &podgroup.SubGroupMetadata{
+		Name:           string(ReplicaTypeWorker),
+		MinAvailable:   workerMinAvailable,
+		PodsReferences: podReferences,
+	}
 }
 
 func getMinReplicas(topOwner *unstructured.Unstructured) (int64, error) {
