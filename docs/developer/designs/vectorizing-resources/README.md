@@ -184,8 +184,8 @@ type resourceVector []float64
 // resourceVectorMap maintains the mapping from indices to resource names
 // This is created once during cluster info snapshot and reused throughout
 type resourceVectorMap struct {
-    indexToName  []v1.ResourceName
-    nameToIndex  map[v1.ResourceName]int
+    indexToName  []string
+    nameToIndex  map[string]int
 }
 
 // ResourceVectorContext holds the vector map for a scheduling session
