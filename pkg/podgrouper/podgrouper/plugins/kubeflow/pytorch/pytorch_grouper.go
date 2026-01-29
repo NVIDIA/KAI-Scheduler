@@ -5,6 +5,7 @@ package pytorch
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	pytorchv1 "github.com/kubeflow/training-operator/pkg/apis/kubeflow.org/v1"
@@ -92,7 +93,7 @@ func (ptg *PyTorchGrouper) buildSubGroups(
 		subGroups = append(subGroups, masterSubGroup)
 	}
 
-	workerMinAvailable := totalMinAvailable - int32(masterReplicas)
+	workerMinAvailable := math.Max(0, totalMinAvailable-int32(masterReplicas))
 	workerSubGroup := buildWorkerSubGroup(replicaSpecs, pod, workerMinAvailable)
 	if workerSubGroup != nil {
 		subGroups = append(subGroups, workerSubGroup)
