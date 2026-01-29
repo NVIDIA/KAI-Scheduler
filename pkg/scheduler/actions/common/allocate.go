@@ -109,7 +109,7 @@ func allocatePodSet(ssn *framework.Session, stmt *framework.Statement, nodes nod
 func allocateTasksOnNodeSet(ssn *framework.Session, stmt *framework.Statement, nodes node_info.NodeSet,
 	job *podgroup_info.PodGroupInfo, tasksToAllocate []*pod_info.PodInfo, isPipelineOnly bool) bool {
 	for index, task := range tasksToAllocate {
-		success := allocateTask(ssn, stmt, nodes, task, isPipelineOnly)
+		success := allocateTask(ssn, stmt, nodes, job, task, isPipelineOnly)
 		if !success {
 			handleFailedTaskAllocation(job, task, index)
 			return false
@@ -118,9 +118,9 @@ func allocateTasksOnNodeSet(ssn *framework.Session, stmt *framework.Statement, n
 	return true
 }
 
-func allocateTask(ssn *framework.Session, stmt *framework.Statement, nodes []*node_info.NodeInfo,
+func allocateTask(ssn *framework.Session, stmt *framework.Statement, nodes []*node_info.NodeInfo, job *podgroup_info.PodGroupInfo,
 	task *pod_info.PodInfo, isPipelineOnly bool) (success bool) {
-	job := ssn.ClusterInfo.PodGroupInfos[task.Job]
+	//job := ssn.ClusterInfo.PodGroupInfos[task.Job]
 	err := ssn.PrePredicateFn(task, job)
 	if err != nil {
 		log.InfraLogger.V(6).Infof("pre-predicates failed on task %s/%s. Error: %v",
