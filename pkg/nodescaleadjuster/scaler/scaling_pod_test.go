@@ -110,7 +110,7 @@ func TestRequestedResources(t *testing.T) {
 	}
 
 	gpuReqRes := resource.MustParse("3")
-	if !requestedResources.Name(constants.GpuResource, resource.DecimalSI).Equal(gpuReqRes) {
+	if !requestedResources.Name(constants.NvidiaGpuResource, resource.DecimalSI).Equal(gpuReqRes) {
 		t.Errorf("Failed to aggregate memory requested resources")
 	}
 

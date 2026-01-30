@@ -203,7 +203,7 @@ func DescribeReclaimSpecs() bool {
 				for range 10 {
 					job := rd.CreateBatchJobObject(reclaimee1Queue, v1.ResourceRequirements{
 						Limits: map[v1.ResourceName]resource.Quantity{
-							constants.GpuResource: resource.MustParse("1"),
+							constants.NvidiaGpuResource: resource.MustParse("1"),
 						},
 					})
 					err := testCtx.ControllerClient.Create(ctx, job)
@@ -213,7 +213,7 @@ func DescribeReclaimSpecs() bool {
 				for range 10 {
 					job := rd.CreateBatchJobObject(reclaimee2Queue, v1.ResourceRequirements{
 						Limits: map[v1.ResourceName]resource.Quantity{
-							constants.GpuResource: resource.MustParse("1"),
+							constants.NvidiaGpuResource: resource.MustParse("1"),
 						},
 					})
 					err := testCtx.ControllerClient.Create(ctx, job)
@@ -237,7 +237,7 @@ func DescribeReclaimSpecs() bool {
 
 				reclaimerPod := rd.CreatePodObject(reclaimerQueue, v1.ResourceRequirements{
 					Limits: map[v1.ResourceName]resource.Quantity{
-						constants.GpuResource: resource.MustParse("3"),
+						constants.NvidiaGpuResource: resource.MustParse("3"),
 					},
 				})
 				reclaimerPod, err = rd.CreatePod(ctx, testCtx.KubeClientset, reclaimerPod)

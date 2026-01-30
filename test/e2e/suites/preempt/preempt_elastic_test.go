@@ -71,7 +71,7 @@ var _ = Describe("Priority Preemption with Elastic Jobs", Ordered, func() {
 
 		lowPodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 
@@ -93,7 +93,7 @@ var _ = Describe("Priority Preemption with Elastic Jobs", Ordered, func() {
 		// higher priority pod
 		highPodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("2"),
+				constants.NvidiaGpuResource: resource.MustParse("2"),
 			},
 		}
 
@@ -132,7 +132,7 @@ var _ = Describe("Priority Preemption with Elastic Jobs", Ordered, func() {
 
 		lowPodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 
@@ -145,7 +145,7 @@ var _ = Describe("Priority Preemption with Elastic Jobs", Ordered, func() {
 		// higher priority pod
 		highPodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("2"),
+				constants.NvidiaGpuResource: resource.MustParse("2"),
 			},
 		}
 

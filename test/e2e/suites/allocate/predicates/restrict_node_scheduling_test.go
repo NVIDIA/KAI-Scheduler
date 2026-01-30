@@ -87,7 +87,7 @@ var _ = Describe("Restrict node scheduling", Label(labels.Operated), Ordered, fu
 		It("Scheduling GPU pod", func(ctx context.Context) {
 			gpuPod := rd.CreatePodObject(testCtx.Queues[0], corev1.ResourceRequirements{
 				Limits: map[corev1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 
@@ -163,7 +163,7 @@ var _ = Describe("Restrict node scheduling", Label(labels.Operated), Ordered, fu
 
 			gpuPod := rd.CreatePodObject(testCtx.Queues[0], corev1.ResourceRequirements{
 				Limits: map[corev1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 

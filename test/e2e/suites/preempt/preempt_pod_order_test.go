@@ -76,7 +76,7 @@ var _ = Describe("Priority pod order preemption with Elastic Jobs", Ordered, fun
 		for i := 0; i < podForPodGroupNum; i++ {
 			pod := rd.CreatePodWithPodGroupReference(testQueue, pgName, v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			pod.Labels[rd.PodGroupLabelName] = pgName
@@ -97,7 +97,7 @@ var _ = Describe("Priority pod order preemption with Elastic Jobs", Ordered, fun
 		// higher priority pod
 		highPodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("2"),
+				constants.NvidiaGpuResource: resource.MustParse("2"),
 			},
 		}
 

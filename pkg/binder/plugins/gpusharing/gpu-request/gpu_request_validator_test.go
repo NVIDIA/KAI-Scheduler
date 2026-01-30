@@ -54,7 +54,7 @@ func TestValidateGpuRequests(t *testing.T) {
 						{
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: resource.MustParse("1"),
+									constants.NvidiaGpuResource: resource.MustParse("1"),
 								},
 							},
 						},
@@ -113,7 +113,7 @@ func TestValidateGpuRequests(t *testing.T) {
 						{
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: *resource.NewMilliQuantity(2, resource.DecimalSI),
+									constants.NvidiaGpuResource: *resource.NewMilliQuantity(2, resource.DecimalSI),
 								},
 							},
 						},
@@ -151,7 +151,7 @@ func TestValidateGpuRequests(t *testing.T) {
 						{
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: resource.MustParse("2"),
+									constants.NvidiaGpuResource: resource.MustParse("2"),
 								},
 							},
 						},
@@ -171,7 +171,7 @@ func TestValidateGpuRequests(t *testing.T) {
 						{
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: *resource.NewMilliQuantity(2000, resource.DecimalSI),
+									constants.NvidiaGpuResource: *resource.NewMilliQuantity(2000, resource.DecimalSI),
 								},
 							},
 						},
@@ -210,14 +210,14 @@ func TestValidateGpuRequests(t *testing.T) {
 						{
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: resource.MustParse("1"),
+									constants.NvidiaGpuResource: resource.MustParse("1"),
 								},
 							},
 						},
 						{
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: resource.MustParse("2"),
+									constants.NvidiaGpuResource: resource.MustParse("2"),
 								},
 							},
 						},
@@ -239,7 +239,7 @@ func TestValidateGpuRequests(t *testing.T) {
 						{
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: *resource.NewMilliQuantity(1, resource.DecimalSI),
+									constants.NvidiaGpuResource: *resource.NewMilliQuantity(1, resource.DecimalSI),
 								},
 							},
 						},
@@ -266,7 +266,7 @@ func TestValidateGpuRequests(t *testing.T) {
 							Name: "SneakyGPUContainer",
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: *resource.NewMilliQuantity(1, resource.DecimalSI),
+									constants.NvidiaGpuResource: *resource.NewMilliQuantity(1, resource.DecimalSI),
 								},
 							},
 						},

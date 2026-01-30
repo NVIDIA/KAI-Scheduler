@@ -72,10 +72,10 @@ func DescribeReclaimDistributedSpecs() bool {
 
 				resources := v1.ResourceRequirements{
 					Limits: v1.ResourceList{
-						constants.GpuResource: resource.MustParse("1"),
+						constants.NvidiaGpuResource: resource.MustParse("1"),
 					},
 					Requests: v1.ResourceList{
-						constants.GpuResource: resource.MustParse("1"),
+						constants.NvidiaGpuResource: resource.MustParse("1"),
 					},
 				}
 
@@ -93,8 +93,8 @@ func DescribeReclaimDistributedSpecs() bool {
 
 				reclaimerGPUs := gpusPerNode
 				reclaimerResources := resources.DeepCopy()
-				reclaimerResources.Requests[constants.GpuResource] = resource.MustParse(fmt.Sprintf("%d", reclaimerGPUs))
-				reclaimerResources.Limits[constants.GpuResource] = resource.MustParse(fmt.Sprintf("%d", reclaimerGPUs))
+				reclaimerResources.Requests[constants.NvidiaGpuResource] = resource.MustParse(fmt.Sprintf("%d", reclaimerGPUs))
+				reclaimerResources.Limits[constants.NvidiaGpuResource] = resource.MustParse(fmt.Sprintf("%d", reclaimerGPUs))
 
 				_, pods := pod_group.CreateDistributedJob(
 					ctx, testCtx.KubeClientset, testCtx.ControllerClient,

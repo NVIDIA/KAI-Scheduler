@@ -44,8 +44,8 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 			},
 			Status: v1.NodeStatus{
 				Allocatable: v1.ResourceList{
-					"cpu":                 resource.MustParse("1"),
-					constants.GpuResource: resource.MustParse("1"),
+					"cpu":                       resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			},
 		},
@@ -62,8 +62,8 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 			},
 			Status: v1.NodeStatus{
 				Allocatable: v1.ResourceList{
-					"cpu":                 resource.MustParse("1"),
-					constants.GpuResource: resource.MustParse("1"),
+					"cpu":                       resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			},
 		},
@@ -80,8 +80,8 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 			},
 			Status: v1.NodeStatus{
 				Allocatable: v1.ResourceList{
-					"cpu":                 resource.MustParse("1"),
-					constants.GpuResource: resource.MustParse("3"),
+					"cpu":                       resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("3"),
 				},
 			},
 		},

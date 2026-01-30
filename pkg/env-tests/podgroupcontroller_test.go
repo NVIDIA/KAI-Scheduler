@@ -107,7 +107,7 @@ var _ = Describe("PodGroupController", Ordered, func() {
 		It("Should update podgroup status", func(ctx context.Context) {
 			testPod := utils.CreatePodObject(testNamespace.Name, "test-pod", corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
@@ -153,7 +153,7 @@ var _ = Describe("PodGroupController", Ordered, func() {
 					return false, nil
 				}
 
-				if podgroup.Status.ResourcesStatus.Allocated[constants.GpuResource] != resource.MustParse("1") {
+				if podgroup.Status.ResourcesStatus.Allocated[constants.NvidiaGpuResource] != resource.MustParse("1") {
 					return false, nil
 				}
 

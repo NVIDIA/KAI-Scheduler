@@ -80,7 +80,7 @@ func CreateRackZoneTopology(
 
 	gpuNodesMap := map[int][]string{}
 	for _, node := range nodes.Items {
-		gpuCountQuantity := node.Status.Allocatable[v1.ResourceName(constants.GpuResource)]
+		gpuCountQuantity := node.Status.Allocatable[v1.ResourceName(constants.NvidiaGpuResource)]
 		gpuCount := int(gpuCountQuantity.Value())
 		if gpuCount == 0 {
 			continue // skip nodes without GPUs

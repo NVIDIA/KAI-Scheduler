@@ -87,7 +87,7 @@ var _ = Describe("Consolidation", Ordered, func() {
 		testQueue := testCtx.Queues[0]
 		requirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 
@@ -121,7 +121,7 @@ var _ = Describe("Consolidation", Ordered, func() {
 		gpuQuantity := resource.NewQuantity(numReleasedGPUs, resource.DecimalSI)
 		testedPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: *gpuQuantity,
+				constants.NvidiaGpuResource: *gpuQuantity,
 			},
 		})
 		testedPod, err = rd.CreatePod(ctx, testCtx.KubeClientset, testedPod)
@@ -198,7 +198,7 @@ var _ = Describe("Consolidation", Ordered, func() {
 		// schedule new pod requiring full GPU
 		testedPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		})
 		testedPod.Name = "consolidator-pod"

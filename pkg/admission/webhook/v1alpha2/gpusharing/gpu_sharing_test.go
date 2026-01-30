@@ -34,7 +34,7 @@ func TestValidate(t *testing.T) {
 						{
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: resource.MustParse("1"),
+									constants.NvidiaGpuResource: resource.MustParse("1"),
 								},
 							},
 						},
@@ -56,7 +56,7 @@ func TestValidate(t *testing.T) {
 						{
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: resource.MustParse("1"),
+									constants.NvidiaGpuResource: resource.MustParse("1"),
 								},
 							},
 						},
@@ -222,7 +222,7 @@ func TestMutate(t *testing.T) {
 							Name: "test-container",
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									constants.GpuResource: resource.MustParse("1"),
+									constants.NvidiaGpuResource: resource.MustParse("1"),
 								},
 							},
 						},

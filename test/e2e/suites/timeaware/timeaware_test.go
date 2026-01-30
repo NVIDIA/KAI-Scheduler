@@ -73,10 +73,10 @@ var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, 
 
 		resources := v1.ResourceRequirements{
 			Requests: v1.ResourceList{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 			Limits: v1.ResourceList{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 		_, queueAPods := pod_group.CreateWithPods(
@@ -97,7 +97,7 @@ var _ = Describe("Time Aware Fairness", Label("timeaware", "nightly"), Ordered, 
 		Eventually(func(g Gomega) {
 			updatedQueue, qErr := testCtx.KubeAiSchedClientset.SchedulingV2().Queues("").Get(ctx, queueA.Name, metav1.GetOptions{})
 			g.Expect(qErr).NotTo(HaveOccurred())
-			allocated := updatedQueue.Status.Allocated[constants.GpuResource]
+			allocated := updatedQueue.Status.Allocated[constants.NvidiaGpuResource]
 			g.Expect(allocated.Value()).To(BeNumerically(">=", idleGPUs), "Expected Queue status allocated GPUs to reach full cluster usage")
 		}, prometheusUsageTimeout, 5*time.Second).Should(Succeed())
 

@@ -59,7 +59,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 
 		reclaimeePodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
@@ -69,7 +69,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 
 		reclaimerPodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 		_, reclaimerPods := pod_group.CreateDistributedJob(
@@ -97,7 +97,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 
 		reclaimeePodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
@@ -109,7 +109,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 
 		reclaimerPodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 		_, reclaimerPods := pod_group.CreateDistributedJob(
@@ -138,7 +138,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 
 		reclaimeePodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 		reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
@@ -148,7 +148,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 
 		reclaimer1PodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 		_, reclaimer1Pods := pod_group.CreatePrefixedDistributedJob(
@@ -168,7 +168,7 @@ var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 
 		reclaimer2PodRequirements := v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 		_, reclaimer2Pods := pod_group.CreatePrefixedDistributedJob(
