@@ -72,12 +72,14 @@ After 4 hours of runtime, the job becomes eligible for requeue. It will only be 
 
 ## Metrics
 
-The plugin exposes the following Prometheus metrics:
+The plugin exposes the following Prometheus metrics. The metric prefix is the scheduler's metrics namespace (from `--metrics-namespace`; default is `kai` per `constants.DefaultMetricsNamespace`):
 
-- `kai_scheduler_requeue_nominations_total{plugin="expectedruntime"}`: Total number of requeue nominations
-- `kai_scheduler_requeue_nomination_skipped_total{plugin="expectedruntime",reason="<reason>"}`: Total number of skipped nominations
+- `kai_requeue_nominations_total{plugin="expectedruntime"}`: Total number of requeue nominations
+- `kai_requeue_nomination_skipped_total{plugin="expectedruntime",reason="<reason>"}`: Total number of skipped nominations
 
 Skip reasons: `cooldown`, `missing_start`, `invalid_duration`, `not_running`, `not_preemptible`, `clock_skew`, `invalid_not_before`
+
+If the scheduler is started with `--metrics-namespace=kai_scheduler`, the prefix becomes `kai_scheduler_` (e.g. `kai_scheduler_requeue_nominations_total`).
 
 ## Logging
 

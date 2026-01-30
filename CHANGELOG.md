@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added scheduler name match conditions to admission webhooks to improve cluster stability
 - Added DRA resources recording to snapshot [#830](https://github.com/NVIDIA/KAI-Scheduler/pull/830)
 - Temporarily Prevent device-plugin GPU pods on DRA-only nodes - until translation between device-plugin notation and DRA is implemented
-- Expected Runtime plugin for soft eviction via requeue nomination: nominates running jobs as requeue candidates when runtime exceeds configured `kai.scheduler/expected-runtime`; cooldown via `kai.scheduler/requeue-not-before`; metrics `kai_scheduler_requeue_nominations_total` and `kai_scheduler_requeue_nomination_skipped_total` [#904](https://github.com/NVIDIA/KAI-Scheduler/issues/904) [rich7420](https://github.com/rich7420)
+- Expected Runtime plugin for soft eviction via requeue nomination [#904](https://github.com/NVIDIA/KAI-Scheduler/issues/904) [rich7420](https://github.com/rich7420)
 
 ### Fixed
 - Fixed security vulnerability where PodGang could reference pods in other namespaces, preventing cross-namespace manipulation
