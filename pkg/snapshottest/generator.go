@@ -58,14 +58,14 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("\treturn []integration_tests_utils.TestTopologyMetadata{\n")
 	b.WriteString("\t\t{\n")
 	b.WriteString("\t\t\tTestTopologyBasic: test_utils.TestTopologyBasic{\n")
-	
+
 	// Add summary comments
 	b.WriteString(generateSummaryComments(summary))
-	
+
 	// Generate boilerplate structure
 	b.WriteString("\t\t\t\tName: \"test-name\", // TODO: Update with descriptive test name\n")
 	b.WriteString("\n")
-	
+
 	// Jobs boilerplate
 	b.WriteString("\t\t\t\tJobs: []*jobs_fake.TestJobBasic{\n")
 	b.WriteString("\t\t\t\t\t// TODO: Add jobs based on snapshot\n")
@@ -82,7 +82,7 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("\t\t\t\t\t// },\n")
 	b.WriteString("\t\t\t\t},\n")
 	b.WriteString("\n")
-	
+
 	// Nodes boilerplate
 	b.WriteString("\t\t\t\tNodes: map[string]nodes_fake.TestNodeBasic{\n")
 	b.WriteString("\t\t\t\t\t// TODO: Add nodes based on snapshot\n")
@@ -93,7 +93,7 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("\t\t\t\t\t// },\n")
 	b.WriteString("\t\t\t\t},\n")
 	b.WriteString("\n")
-	
+
 	// Queues boilerplate
 	b.WriteString("\t\t\t\tQueues: []test_utils.TestQueueBasic{\n")
 	b.WriteString("\t\t\t\t\t// TODO: Add queues based on snapshot\n")
@@ -105,7 +105,7 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("\t\t\t\t\t// },\n")
 	b.WriteString("\t\t\t\t},\n")
 	b.WriteString("\n")
-	
+
 	// Mocks boilerplate
 	b.WriteString("\t\t\t\t// TODO: Configure mocks if needed\n")
 	b.WriteString("\t\t\t\t// Mocks: &test_utils.TestMock{\n")
@@ -114,7 +114,7 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("\t\t\t\t// \t},\n")
 	b.WriteString("\t\t\t\t// },\n")
 	b.WriteString("\n")
-	
+
 	// JobExpectedResults boilerplate
 	b.WriteString("\t\t\t\t// TODO: Add expected results for jobs\n")
 	b.WriteString("\t\t\t\t// JobExpectedResults: map[string]test_utils.TestExpectedResultBasic{\n")
@@ -124,7 +124,7 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("\t\t\t\t// \t\tStatus: pod_status.Running,\n")
 	b.WriteString("\t\t\t\t// \t},\n")
 	b.WriteString("\t\t\t\t// },\n")
-	
+
 	b.WriteString("\t\t\t},\n")
 	b.WriteString("\t\t\tRoundsUntilMatch: 1, // TODO: Adjust based on test requirements\n")
 	b.WriteString("\t\t},\n")
@@ -135,13 +135,13 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 }
 
 type snapshotSummary struct {
-	nodeCount      int
-	podCount       int
-	podGroupCount  int
-	queueCount     int
-	nodeNames      []string
-	queueNames     []string
-	podGroupNames  []string
+	nodeCount     int
+	podCount      int
+	podGroupCount int
+	queueCount    int
+	nodeNames     []string
+	queueNames    []string
+	podGroupNames []string
 }
 
 func (g *TestGenerator) extractSnapshotSummary(snap *snapshot.Snapshot) snapshotSummary {
@@ -178,7 +178,7 @@ func generateSummaryComments(summary snapshotSummary) string {
 	b.WriteString(fmt.Sprintf("\t\t\t\t// - Pods: %d\n", summary.podCount))
 	b.WriteString(fmt.Sprintf("\t\t\t\t// - PodGroups: %d\n", summary.podGroupCount))
 	b.WriteString(fmt.Sprintf("\t\t\t\t// - Queues: %d\n", summary.queueCount))
-	
+
 	if len(summary.nodeNames) > 0 {
 		b.WriteString("\t\t\t\t// - Node names: ")
 		for i, name := range summary.nodeNames {
@@ -189,7 +189,7 @@ func generateSummaryComments(summary snapshotSummary) string {
 		}
 		b.WriteString("\n")
 	}
-	
+
 	if len(summary.queueNames) > 0 {
 		b.WriteString("\t\t\t\t// - Queue names: ")
 		for i, name := range summary.queueNames {
@@ -200,7 +200,7 @@ func generateSummaryComments(summary snapshotSummary) string {
 		}
 		b.WriteString("\n")
 	}
-	
+
 	if len(summary.podGroupNames) > 0 {
 		b.WriteString("\t\t\t\t// - PodGroup names: ")
 		for i, name := range summary.podGroupNames {
@@ -211,11 +211,10 @@ func generateSummaryComments(summary snapshotSummary) string {
 		}
 		b.WriteString("\n")
 	}
-	
+
 	b.WriteString("\n")
 	return b.String()
 }
-
 
 // GenerateTestName converts a snapshot filename to a test function name
 func GenerateTestName(snapshotFile string) string {
