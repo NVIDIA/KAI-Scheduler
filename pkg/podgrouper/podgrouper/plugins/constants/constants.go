@@ -22,7 +22,7 @@ const (
 	TopologyRequiredPlacementKey  = "kai.scheduler/topology-required-placement"
 	TopologyPreferredPlacementKey = "kai.scheduler/topology-preferred-placement"
 
-	SegmentSizeKey                        = "kai.scheduler/segment-size"
-	SegmentTopologyRequiredPlacementKey   = "kai.scheduler/segment-topology-required-placement"
-	SegmentTopologyPreferredPlacementKey  = "kai.scheduler/segment-topology-preferred-placement"
+	SegmentSizeKey                       = "kai.scheduler/segment-size"
+	SegmentTopologyRequiredPlacementKey  = "kai.scheduler/segment-topology-required-placement"
+	SegmentTopologyPreferredPlacementKey = "kai.scheduler/segment-topology-preferred-placement"
 )
