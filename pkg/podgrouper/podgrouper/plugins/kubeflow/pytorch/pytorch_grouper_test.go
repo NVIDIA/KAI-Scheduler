@@ -4,6 +4,7 @@
 package pytorch
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -246,12 +247,12 @@ func TestGetPodGroupMetadata_SubGroups_MasterAndWorker(t *testing.T) {
 
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
-	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, strings.ToLower(replicaTypeMaster))
 	assert.NotNil(t, masterSubGroup)
 	assert.Equal(t, 1, len(masterSubGroup.PodsReferences))
 	assert.Equal(t, "test-pod-master-0", masterSubGroup.PodsReferences[0])
 
-	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeWorker))
+	workerSubGroup := findSubGroupByName(metadata.SubGroups, strings.ToLower(replicaTypeWorker))
 	assert.NotNil(t, workerSubGroup)
 	assert.Equal(t, 0, len(workerSubGroup.PodsReferences))
 }
@@ -273,11 +274,11 @@ func TestGetPodGroupMetadata_SubGroups_WorkerPod(t *testing.T) {
 
 	assert.Equal(t, 2, len(metadata.SubGroups))
 
-	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, strings.ToLower(replicaTypeMaster))
 	assert.NotNil(t, masterSubGroup)
 	assert.Equal(t, 0, len(masterSubGroup.PodsReferences))
 
-	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeWorker))
+	workerSubGroup := findSubGroupByName(metadata.SubGroups, strings.ToLower(replicaTypeWorker))
 	assert.NotNil(t, workerSubGroup)
 	assert.Equal(t, 1, len(workerSubGroup.PodsReferences))
 	assert.Equal(t, "test-pod-worker-0", workerSubGroup.PodsReferences[0])
@@ -300,7 +301,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyMaster(t *testing.T) {
 
 	assert.Equal(t, 1, len(metadata.SubGroups))
 
-	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, strings.ToLower(replicaTypeMaster))
 	assert.NotNil(t, masterSubGroup)
 	assert.Equal(t, 1, len(masterSubGroup.PodsReferences))
 	assert.Equal(t, "test-pod-master-0", masterSubGroup.PodsReferences[0])
@@ -323,7 +324,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyWorker(t *testing.T) {
 
 	assert.Equal(t, 1, len(metadata.SubGroups))
 
-	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeWorker))
+	workerSubGroup := findSubGroupByName(metadata.SubGroups, strings.ToLower(replicaTypeWorker))
 	assert.NotNil(t, workerSubGroup)
 	assert.Equal(t, 1, len(workerSubGroup.PodsReferences))
 	assert.Equal(t, "test-pod-worker-0", workerSubGroup.PodsReferences[0])
@@ -378,12 +379,15 @@ func TestGetPodGroupMetadata_Segments_HappyFlow_4Workers_2PerSegment(t *testing.
 	assert.Nil(t, err)
 	assert.Equal(t, int32(5), metadata.MinAvailable) // 1 master + 4 workers
 
-	// Verify subgroups: 1 master + 2 worker segments
-	assert.Equal(t, 3, len(metadata.SubGroups))
-	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
+	// Verify subgroups: 1 master + 1 Worker parent + 2 worker segments
+	assert.Equal(t, 4, len(metadata.SubGroups))
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, strings.ToLower(replicaTypeMaster))
 	assert.NotNil(t, masterSubGroup)
 	assert.Equal(t, int32(1), masterSubGroup.MinAvailable)
 	assert.Equal(t, 1, len(masterSubGroup.PodsReferences))
+
+	workerSubgroup := findSubGroupByName(metadata.SubGroups, strings.ToLower(replicaTypeWorker))
+	assert.NotNil(t, workerSubgroup)
 
 	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
 	assert.NotNil(t, workerSegment0)
@@ -407,7 +411,7 @@ func TestGetPodGroupMetadata_Segments_HappyFlow_4Workers_2PerSegment(t *testing.
 	}
 	metadata, err = grouper.GetPodGroupMetadata(pytorchJob, workerPod0)
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(metadata.SubGroups))
+	assert.Equal(t, 4, len(metadata.SubGroups))
 	workerSegment0 = findSubGroupByName(metadata.SubGroups, "worker-0")
 	assert.NotNil(t, workerSegment0)
 	assert.Equal(t, 1, len(workerSegment0.PodsReferences))
@@ -458,9 +462,9 @@ func TestGetPodGroupMetadata_Segments_5Workers_2PerSegment(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, int32(6), metadata.MinAvailable) // 1 master + 5 workers
 
-	// Verify subgroups: 1 master + 2 worker segments (5/2 = 2)
-	assert.Equal(t, 3, len(metadata.SubGroups))
-	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
+	// Verify subgroups: 1 master + 1 Worker parent + 2 worker segments (5/2 = 2)
+	assert.Equal(t, 4, len(metadata.SubGroups))
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, strings.ToLower(replicaTypeMaster))
 	assert.NotNil(t, masterSubGroup)
 
 	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
@@ -491,7 +495,7 @@ func TestGetPodGroupMetadata_Segments_5Workers_2PerSegment(t *testing.T) {
 	// Worker 4 has segment index 2 (4/2=2), but only segments 0 and 1 exist
 	// So no segment should have this pod reference
 	for _, sg := range metadata.SubGroups {
-		if sg.Name != string(replicaTypeMaster) {
+		if sg.Name != strings.ToLower(replicaTypeMaster) {
 			assert.Equal(t, 0, len(sg.PodsReferences))
 		}
 	}
@@ -560,8 +564,8 @@ func TestGetPodGroupMetadata_Segments_SegmentSizeFromPodTemplate(t *testing.T) {
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
 	assert.Nil(t, err)
 
-	// Should have 3 subgroups: master + 2 worker segments
-	assert.Equal(t, 3, len(metadata.SubGroups))
+	// Should have 4 subgroups: master + Worker parent + 2 worker segments
+	assert.Equal(t, 4, len(metadata.SubGroups))
 
 	// Worker 1 should be in segment 0 (index 1 / segment_size 2 = 0)
 	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
@@ -685,7 +689,7 @@ func TestGetPodGroupMetadata_Segments_WithTopologyConstraints(t *testing.T) {
 
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(metadata.SubGroups))
+	assert.Equal(t, 4, len(metadata.SubGroups))
 
 	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
 	assert.NotNil(t, workerSegment0)
@@ -726,7 +730,7 @@ func TestGetPodGroupMetadata_Segments_TopologyFromRootAnnotation(t *testing.T) {
 
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(metadata.SubGroups))
+	assert.Equal(t, 4, len(metadata.SubGroups))
 
 	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
 	assert.NotNil(t, workerSegment0)
@@ -759,7 +763,7 @@ func TestGetPodGroupMetadata_Segments_NoTopologyWhenMissing(t *testing.T) {
 
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(metadata.SubGroups))
+	assert.Equal(t, 4, len(metadata.SubGroups))
 
 	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
 	assert.NotNil(t, workerSegment0)
@@ -854,7 +858,7 @@ func TestGetPodGroupMetadata_Segments_TopologyFromTemplate(t *testing.T) {
 
 	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(metadata.SubGroups))
+	assert.Equal(t, 4, len(metadata.SubGroups))
 
 	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
 	assert.NotNil(t, workerSegment0)

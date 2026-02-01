@@ -23,8 +23,8 @@ const (
 	replicaSpecName  = "pytorchReplicaSpecs"
 	replicaTypeLabel = pytorchv1.ReplicaTypeLabel
 
-	replicaTypeMaster = pytorchv1.PyTorchJobReplicaTypeMaster
-	replicaTypeWorker = pytorchv1.PyTorchJobReplicaTypeWorker
+	replicaTypeMaster = string(pytorchv1.PyTorchJobReplicaTypeMaster)
+	replicaTypeWorker = string(pytorchv1.PyTorchJobReplicaTypeWorker)
 )
 
 type PyTorchGrouper struct {
@@ -79,9 +79,9 @@ func (ptg *PyTorchGrouper) buildSubGroups(
 		return nil, fmt.Errorf("pytorchReplicaSpecs not found in PyTorchJob %s/%s", topOwner.GetNamespace(), topOwner.GetName())
 	}
 
-	masterReplicas, found, err := unstructured.NestedInt64(replicaSpecs, string(replicaTypeMaster), "replicas")
+	masterReplicas, found, err := unstructured.NestedInt64(replicaSpecs, replicaTypeMaster, "replicas")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get replicas from pytorchReplicaSpecs[%s] in PyTorchJob %s/%s. Err: %w", string(replicaTypeMaster), topOwner.GetNamespace(), topOwner.GetName(), err)
+		return nil, fmt.Errorf("failed to get replicas from pytorchReplicaSpecs[%s] in PyTorchJob %s/%s. Err: %w", replicaTypeMaster, topOwner.GetNamespace(), topOwner.GetName(), err)
 	}
 	if !found {
 		masterReplicas = 0
@@ -105,7 +105,7 @@ func (ptg *PyTorchGrouper) buildSubGroups(
 }
 
 func buildMasterSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, masterReplicas int32) *podgroup.SubGroupMetadata {
-	if _, exists := replicaSpecs[string(replicaTypeMaster)]; !exists {
+	if _, exists := replicaSpecs[replicaTypeMaster]; !exists {
 		return nil
 	}
 	if masterReplicas == 0 {
@@ -118,7 +118,7 @@ func buildMasterSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, maste
 	}
 
 	return &podgroup.SubGroupMetadata{
-		Name:           string(replicaTypeMaster),
+		Name:           strings.ToLower(replicaTypeMaster),
 		MinAvailable:   masterReplicas,
 		PodsReferences: podReferences,
 	}
@@ -127,11 +127,11 @@ func buildMasterSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, maste
 func buildWorkerSubGroups(
 	replicaSpecs map[string]interface{}, pod *v1.Pod, workerMinAvailable int32, topOwner *unstructured.Unstructured,
 ) ([]*podgroup.SubGroupMetadata, error) {
-	if _, exists := replicaSpecs[string(replicaTypeWorker)]; !exists {
+	if _, exists := replicaSpecs[replicaTypeWorker]; !exists {
 		return nil, nil
 	}
 
-	workerReplicas, found, err := unstructured.NestedInt64(replicaSpecs, string(replicaTypeWorker), "replicas")
+	workerReplicas, found, err := unstructured.NestedInt64(replicaSpecs, replicaTypeWorker, "replicas")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get replicas for worker groups. Err: %w", err)
 	}
@@ -150,7 +150,7 @@ func buildWorkerSubGroups(
 	}
 	if !found {
 		return []*podgroup.SubGroupMetadata{{
-			Name:           string(replicaTypeWorker),
+			Name:           strings.ToLower(replicaTypeWorker),
 			MinAvailable:   workerMinAvailable,
 			PodsReferences: podReferences,
 		}}, nil
@@ -164,12 +164,15 @@ func buildWorkerSubGroups(
 
 	topologyConstraints := getSegmentTopologyConstraints(pod, replicaSpecs, topOwner)
 
-	var subGroups []*podgroup.SubGroupMetadata
+	subGroups := []*podgroup.SubGroupMetadata{{
+		Name:         strings.ToLower(replicaTypeWorker),
+		MinAvailable: workerMinAvailable,
+	}}
 	for i := range numSegments {
 		subGroup := &podgroup.SubGroupMetadata{
 			Name:                fmt.Sprintf("worker-%d", i),
 			TopologyConstraints: topologyConstraints,
-			Parent:              ptr.To(string(replicaTypeWorker)),
+			Parent:              ptr.To(strings.ToLower(replicaTypeWorker)),
 		}
 		if i == segmentIndex {
 			subGroup.PodsReferences = podReferences
@@ -183,7 +186,7 @@ func buildWorkerSubGroups(
 // Returns the segment index for the pod. Returns -1 if the pod is not a worker pod.
 // Returns an error if the replica index label is not found or is invalid for a worker pod.
 func getPodSegmentIndex(pod *v1.Pod, segmentSize int) (int, error) {
-	if pod.Labels[replicaTypeLabel] != strings.ToLower(string(replicaTypeWorker)) {
+	if pod.Labels[replicaTypeLabel] != strings.ToLower(replicaTypeWorker) {
 		return -1, nil
 	}
 
@@ -208,7 +211,7 @@ func getSegmentSize(pod *v1.Pod, replicaSpecs map[string]interface{}) (int, bool
 	}
 
 	sizeStr, found, err := unstructured.NestedString(
-		replicaSpecs, string(replicaTypeWorker), "template", "metadata", "annotations", constants.SegmentSizeKey,
+		replicaSpecs, replicaTypeWorker, "template", "metadata", "annotations", constants.SegmentSizeKey,
 	)
 	if err != nil {
 		return 0, false, fmt.Errorf("failed to get segment size from worker podTemplate: %w", err)
@@ -229,7 +232,7 @@ func getTopology(pod *v1.Pod, replicaSpecs map[string]interface{}, topOwner *uns
 		return topology
 	}
 	topology, found, _ := unstructured.NestedString(
-		replicaSpecs, string(replicaTypeWorker), "template", "metadata", "annotations", constants.TopologyKey,
+		replicaSpecs, replicaTypeWorker, "template", "metadata", "annotations", constants.TopologyKey,
 	)
 	if found && topology != "" {
 		return topology
@@ -247,7 +250,7 @@ func getWorkerAnnotationValue(pod *v1.Pod, replicaSpecs map[string]interface{}, 
 		return value
 	}
 	value, found, _ := unstructured.NestedString(
-		replicaSpecs, string(replicaTypeWorker), "template", "metadata", "annotations", key,
+		replicaSpecs, replicaTypeWorker, "template", "metadata", "annotations", key,
 	)
 	if found {
 		return value
