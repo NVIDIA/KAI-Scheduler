@@ -29,7 +29,7 @@ metadata:
   name: my-job
   annotations:
     kai.scheduler/expected-runtime: "2h"
-    kai.scheduler/requeue-delay: "10m"  # Optional: cooldown period
+    # Optional: kai.scheduler/requeue-delay (cooldown duration) — if supported by Requeue action design
 spec:
   preemptibility: "preemptible"  # Required: job must be preemptible
   # ... other PodGroup spec
@@ -40,7 +40,7 @@ spec:
 | Annotation | Type | Required | Description |
 |------------|------|----------|-------------|
 | `kai.scheduler/expected-runtime` | Duration string | Yes | After this duration, the job becomes eligible for requeue nomination (e.g., `30m`, `2h`, `1d`) |
-| `kai.scheduler/requeue-delay` | Duration string | No | Cooldown period after a successful requeue commit (default: determined by Requeue action) |
+| `kai.scheduler/requeue-delay` | Duration string | No | If defined in Requeue action design: cooldown duration after a successful requeue commit |
 | `kai.scheduler/requeue-not-before` | RFC3339 timestamp | No | System-managed timestamp written after committed requeue; users should not set this manually |
 
 ## Eligibility Criteria
@@ -52,6 +52,8 @@ A job is nominated for requeue only if all of the following conditions are met:
 3. `expected-runtime` annotation exists and is valid
 4. Runtime exceeds expected duration: `now - LastStartTimestamp >= expectedRuntime`
 5. Cooldown period has expired (if `requeue-not-before` exists, `now >= not-before`)
+
+**Cooldown vs expected runtime:** Expected runtime = "after how long do we consider this job for eviction?" (time since start). Cooldown = "after we evicted it once, how long before we can nominate it again?" (avoids thrashing; enforced via `requeue-not-before`).
 
 ## Example
 
@@ -118,6 +120,7 @@ The plugin has no configurable parameters. It is automatically included in the s
 - Only supports PodGroup annotations (no Queue defaults)
 - Requires Requeue action to be implemented separately
 - MinRuntime interaction relies on Requeue action filters
+- Queue fair share is not considered when nominating; design should define whether nomination or the Requeue action should take fair share into account so jobs that should keep running are not evicted
 
 ## Testing
 
@@ -164,6 +167,4 @@ Create a test PodGroup with `kai.scheduler/expected-runtime: "1m"` annotation an
 
 ## See Also
 
-- [Expected Runtime Plugin Design](../designs/expected-runtime-requeue/expected-runtime-plugin.md)
-- [Requeue Flow Design](../designs/expected-runtime-requeue/expected-runtime-requeue-flow.md)
 - [MinRuntime Plugin](./minruntime.md)
