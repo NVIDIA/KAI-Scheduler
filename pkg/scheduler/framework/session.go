@@ -78,6 +78,7 @@ type Session struct {
 	PredicateFns                          []api.PredicateFn
 	BindRequestMutateFns                  []api.BindRequestMutateFn
 	PreJobAllocationFns                   []api.PreJobAllocationFn
+	RequeueCandidateNominationFns         []api.RequeueCandidateNominationFn
 
 	Config          *conf.SchedulerConfiguration
 	plugins         map[string]Plugin

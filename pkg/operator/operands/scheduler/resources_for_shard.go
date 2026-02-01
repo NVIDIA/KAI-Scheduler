@@ -161,6 +161,7 @@ func (s *SchedulerForShard) configMapForShard(
 				{Name: "nominatednode"},
 				{Name: "dynamicresources"},
 				{Name: "minruntime"},
+				{Name: "expectedruntime"},
 				{Name: "topology"},
 				{Name: "snapshot"},
 			},

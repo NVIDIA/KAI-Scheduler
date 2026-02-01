@@ -453,3 +453,27 @@ func (ssn *Session) PreJobAllocation(job *podgroup_info.PodGroupInfo) {
 		preJobAllocationFn(job)
 	}
 }
+
+func (ssn *Session) AddRequeueCandidateNominationFn(fn api.RequeueCandidateNominationFn) {
+	ssn.RequeueCandidateNominationFns = append(ssn.RequeueCandidateNominationFns, fn)
+}
+
+// CollectRequeueCandidates collects all requeue candidates nominated by registered plugins.
+// It deduplicates candidates by PodGroup UID and returns the union of all nominations.
+func (ssn *Session) CollectRequeueCandidates() []*podgroup_info.PodGroupInfo {
+	candidateMap := make(map[common_info.PodGroupID]*podgroup_info.PodGroupInfo)
+
+	for _, nominationFn := range ssn.RequeueCandidateNominationFns {
+		candidates := nominationFn(ssn.ClusterInfo)
+		for _, candidate := range candidates {
+			candidateMap[candidate.UID] = candidate
+		}
+	}
+
+	candidates := make([]*podgroup_info.PodGroupInfo, 0, len(candidateMap))
+	for _, candidate := range candidateMap {
+		candidates = append(candidates, candidate)
+	}
+
+	return candidates
+}
