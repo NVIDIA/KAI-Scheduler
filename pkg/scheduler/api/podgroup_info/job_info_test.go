@@ -1613,4 +1613,57 @@ func TestPodGroupInfo_SubGroupMinMemberIgnoresRootMinMember(t *testing.T) {
 	if auxMinAvailable != 1 {
 		t.Errorf("Expected aux minAvailable=1, got %d", auxMinAvailable)
 	}
+
+	workerPod := pod_info.NewTaskInfo(&v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:       "worker-1",
+			Namespace: "default",
+			Name:      "worker-1",
+			Labels: map[string]string{
+				commonconstants.SubGroupLabelKey: "workers",
+			},
+		},
+		Status: v1.PodStatus{Phase: v1.PodPending},
+	})
+
+	auxPod := pod_info.NewTaskInfo(&v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:       "aux-1",
+			Namespace: "default",
+			Name:      "aux-1",
+			Labels: map[string]string{
+				commonconstants.SubGroupLabelKey: "aux",
+			},
+		},
+		Status: v1.PodStatus{Phase: v1.PodPending},
+	})
+
+	noSubgroupPod := pod_info.NewTaskInfo(&v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:       "no-subgroup-1",
+			Namespace: "default",
+			Name:      "no-subgroup-1",
+		},
+		Status: v1.PodStatus{Phase: v1.PodPending},
+	})
+
+	jobInfo.AddTaskInfo(workerPod)
+	jobInfo.AddTaskInfo(auxPod)
+	jobInfo.AddTaskInfo(noSubgroupPod)
+
+	if len(podSets["workers"].GetPodInfos()) != 1 {
+		t.Errorf("Expected 1 pod in workers subgroup, got %d", len(podSets["workers"].GetPodInfos()))
+	}
+
+	if len(podSets["aux"].GetPodInfos()) != 1 {
+		t.Errorf("Expected 1 pod in aux subgroup, got %d", len(podSets["aux"].GetPodInfos()))
+	}
+
+	defaultSubgroup := jobInfo.PodSets[DefaultSubGroup]
+
+	// Currently, we don't support pods without a subgroup for a PodGroup with subgroups
+	// so we expect the default subgroup to be nil
+	if defaultSubgroup != nil {
+		t.Errorf("Expected default subgroup to not exist, got %v", defaultSubgroup)
+	}
 }
