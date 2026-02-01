@@ -272,7 +272,8 @@ func (pi *PodInfo) IsCPUOnlyRequest() bool {
 }
 
 func (pi *PodInfo) IsRequireAnyKindOfGPU() bool {
-	return pi.ResReq.GPUs() > 0 || pi.IsMemoryRequest() || pi.IsMigProfileRequest()
+	return pi.ResReq.GPUs() > 0 || pi.ResReq.GpuResourceRequirement.GetDraGpusCount() > 0 ||
+		pi.IsMemoryRequest() || pi.IsMigProfileRequest()
 }
 
 func (pi *PodInfo) GetSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {

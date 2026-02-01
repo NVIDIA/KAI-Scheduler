@@ -1133,3 +1133,21 @@ func TestPredicateByNodeResourcesType_DRA(t *testing.T) {
 		})
 	}
 }
+
+func TestIsCPUOnlyNode_DRA(t *testing.T) {
+	nodeWithDRA := &NodeInfo{
+		Name:        "dra-node",
+		HasDRAGPUs:  true,
+		Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4"),
+		Node:        &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "dra-node", Labels: map[string]string{}}},
+	}
+	assert.False(t, nodeWithDRA.IsCPUOnlyNode(), "node with HasDRAGPUs should not be CPU-only")
+
+	cpuOnlyNode := &NodeInfo{
+		Name:        "cpu-node",
+		HasDRAGPUs:  false,
+		Allocatable: common_info.BuildResource("1000m", "1G"),
+		Node:        &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "cpu-node", Labels: map[string]string{}}},
+	}
+	assert.True(t, cpuOnlyNode.IsCPUOnlyNode(), "node without GPUs and without HasDRAGPUs should be CPU-only")
+}
