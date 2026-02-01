@@ -15,7 +15,8 @@ const (
 	imageName                    = "admission"
 	defaultValidatingWebhookName = "validating-kai-admission"
 	defaultMutatingWebhookName   = "mutating-kai-admission"
-	defaultAverageRequestsPerPod = 100
+	defaultRequestsPerSecond     = 100
+	defaultCPUUtilizationPercent = 80
 )
 
 type Admission struct {
@@ -117,9 +118,13 @@ type Autoscaling struct {
 	// +kubebuilder:validation:Optional
 	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
 
-	// AverageRequestsPerPod is the target average webhook requests per pod
+	// RequestsPerSecond is the target webhook requests per second threshold
 	// +kubebuilder:validation:Optional
-	AverageRequestsPerPod *int32 `json:"averageRequestsPerPod,omitempty"`
+	RequestsPerSecond *int32 `json:"requestsPerSecond,omitempty"`
+
+	// CPUUtilizationPercent is the target CPU utilization percentage threshold
+	// +kubebuilder:validation:Optional
+	CPUUtilizationPercent *int32 `json:"cpuUtilizationPercent,omitempty"`
 }
 
 // SetDefaultsWhereNeeded sets default fields for unset fields
@@ -127,5 +132,6 @@ func (a *Autoscaling) SetDefaultsWhereNeeded() {
 	a.Enabled = common.SetDefault(a.Enabled, ptr.To(false))
 	a.MinReplicas = common.SetDefault(a.MinReplicas, ptr.To(int32(1)))
 	a.MaxReplicas = common.SetDefault(a.MaxReplicas, ptr.To(int32(5)))
-	a.AverageRequestsPerPod = common.SetDefault(a.AverageRequestsPerPod, ptr.To(int32(defaultAverageRequestsPerPod)))
+	a.RequestsPerSecond = common.SetDefault(a.RequestsPerSecond, ptr.To(int32(defaultRequestsPerSecond)))
+	a.CPUUtilizationPercent = common.SetDefault(a.CPUUtilizationPercent, ptr.To(int32(defaultCPUUtilizationPercent)))
 }

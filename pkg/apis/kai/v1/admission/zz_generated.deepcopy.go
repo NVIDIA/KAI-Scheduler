@@ -91,8 +91,13 @@ func (in *Autoscaling) DeepCopyInto(out *Autoscaling) {
 		*out = new(int32)
 		**out = **in
 	}
-	if in.AverageRequestsPerPod != nil {
-		in, out := &in.AverageRequestsPerPod, &out.AverageRequestsPerPod
+	if in.RequestsPerSecond != nil {
+		in, out := &in.RequestsPerSecond, &out.RequestsPerSecond
+		*out = new(int32)
+		**out = **in
+	}
+	if in.CPUUtilizationPercent != nil {
+		in, out := &in.CPUUtilizationPercent, &out.CPUUtilizationPercent
 		*out = new(int32)
 		**out = **in
 	}

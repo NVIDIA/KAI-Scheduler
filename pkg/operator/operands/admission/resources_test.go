@@ -234,12 +234,13 @@ func TestDeploymentForKAIConfig(t *testing.T) {
 
 func TestHPAForKAIConfig(t *testing.T) {
 	tests := []struct {
-		name                string
-		config              *kaiv1.Config
-		expectHPA           bool
-		expectedMinReplicas int32
-		expectedMaxReplicas int32
-		expectedTargetValue int64
+		name                        string
+		config                      *kaiv1.Config
+		expectHPA                   bool
+		expectedMinReplicas         int32
+		expectedMaxReplicas         int32
+		expectedRequestsPerSecond   int64
+		expectedCPUUtilizationMilli int64
 	}{
 		{
 			name: "HPA disabled - should return empty",
@@ -265,15 +266,17 @@ func TestHPAForKAIConfig(t *testing.T) {
 							Enabled:               ptr.To(true),
 							MinReplicas:           ptr.To(int32(1)),
 							MaxReplicas:           ptr.To(int32(5)),
-							AverageRequestsPerPod: ptr.To(int32(100)),
+							RequestsPerSecond:     ptr.To(int32(100)),
+							CPUUtilizationPercent: ptr.To(int32(80)),
 						},
 					},
 				},
 			},
-			expectHPA:           true,
-			expectedMinReplicas: 1,
-			expectedMaxReplicas: 5,
-			expectedTargetValue: 100,
+			expectHPA:                   true,
+			expectedMinReplicas:         1,
+			expectedMaxReplicas:         5,
+			expectedRequestsPerSecond:   100,
+			expectedCPUUtilizationMilli: 800,
 		},
 		{
 			name: "HPA enabled with custom values",
@@ -285,15 +288,17 @@ func TestHPAForKAIConfig(t *testing.T) {
 							Enabled:               ptr.To(true),
 							MinReplicas:           ptr.To(int32(2)),
 							MaxReplicas:           ptr.To(int32(10)),
-							AverageRequestsPerPod: ptr.To(int32(150)),
+							RequestsPerSecond:     ptr.To(int32(150)),
+							CPUUtilizationPercent: ptr.To(int32(90)),
 						},
 					},
 				},
 			},
-			expectHPA:           true,
-			expectedMinReplicas: 2,
-			expectedMaxReplicas: 10,
-			expectedTargetValue: 150,
+			expectHPA:                   true,
+			expectedMinReplicas:         2,
+			expectedMaxReplicas:         10,
+			expectedRequestsPerSecond:   150,
+			expectedCPUUtilizationMilli: 900,
 		},
 		{
 			name: "HPA not specified - should return empty (defaults to disabled)",
@@ -328,29 +333,34 @@ func TestHPAForKAIConfig(t *testing.T) {
 			assert.Equal(t, "admission", hpa.GetName())
 			assert.Equal(t, constants.DefaultKAINamespace, hpa.GetNamespace())
 
-			// Type assert to access HPA spec
 			hpaObj, ok := hpa.(*autoscalingv2.HorizontalPodAutoscaler)
 			require.True(t, ok, "object should be HorizontalPodAutoscaler")
 
-			// Check scale target ref
 			assert.Equal(t, "apps/v1", hpaObj.Spec.ScaleTargetRef.APIVersion)
 			assert.Equal(t, "Deployment", hpaObj.Spec.ScaleTargetRef.Kind)
 			assert.Equal(t, "admission", hpaObj.Spec.ScaleTargetRef.Name)
 
-			// Check replicas
 			assert.NotNil(t, hpaObj.Spec.MinReplicas)
 			assert.Equal(t, tt.expectedMinReplicas, *hpaObj.Spec.MinReplicas)
 			assert.Equal(t, tt.expectedMaxReplicas, hpaObj.Spec.MaxReplicas)
 
-			// Check metrics
-			require.Len(t, hpaObj.Spec.Metrics, 1)
-			metric := hpaObj.Spec.Metrics[0]
-			assert.Equal(t, autoscalingv2.PodsMetricSourceType, metric.Type)
-			require.NotNil(t, metric.Pods)
-			assert.Equal(t, "webhook_requests_in_flight", metric.Pods.Metric.Name)
-			assert.Equal(t, autoscalingv2.AverageValueMetricType, metric.Pods.Target.Type)
-			require.NotNil(t, metric.Pods.Target.AverageValue)
-			assert.Equal(t, tt.expectedTargetValue, metric.Pods.Target.AverageValue.Value())
+			require.Len(t, hpaObj.Spec.Metrics, 2)
+
+			requestsMetric := hpaObj.Spec.Metrics[0]
+			assert.Equal(t, autoscalingv2.PodsMetricSourceType, requestsMetric.Type)
+			require.NotNil(t, requestsMetric.Pods)
+			assert.Equal(t, "controller_runtime_webhook_requests_per_second", requestsMetric.Pods.Metric.Name)
+			assert.Equal(t, autoscalingv2.AverageValueMetricType, requestsMetric.Pods.Target.Type)
+			require.NotNil(t, requestsMetric.Pods.Target.AverageValue)
+			assert.Equal(t, tt.expectedRequestsPerSecond, requestsMetric.Pods.Target.AverageValue.Value())
+
+			cpuMetric := hpaObj.Spec.Metrics[1]
+			assert.Equal(t, autoscalingv2.PodsMetricSourceType, cpuMetric.Type)
+			require.NotNil(t, cpuMetric.Pods)
+			assert.Equal(t, "cpu_utilization", cpuMetric.Pods.Metric.Name)
+			assert.Equal(t, autoscalingv2.AverageValueMetricType, cpuMetric.Pods.Target.Type)
+			require.NotNil(t, cpuMetric.Pods.Target.AverageValue)
+			assert.Equal(t, tt.expectedCPUUtilizationMilli, cpuMetric.Pods.Target.AverageValue.MilliValue())
 		})
 	}
 }

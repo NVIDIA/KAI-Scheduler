@@ -106,7 +106,8 @@ admission:
     enabled: false # if autoscaling.enabled is true, then replicas field is ignored
     minReplicas: 1
     maxReplicas: 5
-    averageRequestsPerPod: 100 # based on webhook_requests_in_flight custom metric
+    requestsPerSecond: 100     # Scale when webhook requests exceed this rate
+    cpuUtilizationPercent: 80  # Scale when CPU exceeds this percentage
 
 nodescaleadjuster:
   image:

@@ -96,7 +96,7 @@ spec:
       bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
 ---
 apiVersion: monitoring.coreos.com/v1
-kind: ServiceMoitor
+kind: ServiceMonitor
 metadata:
   name: admission
   namespace: kai-scheduler

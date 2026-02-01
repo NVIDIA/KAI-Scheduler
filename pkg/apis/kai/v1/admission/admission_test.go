@@ -48,7 +48,8 @@ var _ = Describe("Admission", func() {
 		Expect(*admission.Autoscaling.Enabled).To(Equal(false))
 		Expect(*admission.Autoscaling.MinReplicas).To(Equal(int32(1)))
 		Expect(*admission.Autoscaling.MaxReplicas).To(Equal(int32(5)))
-		Expect(*admission.Autoscaling.AverageRequestsPerPod).To(Equal(int32(100)))
+		Expect(*admission.Autoscaling.RequestsPerSecond).To(Equal(int32(100)))
+		Expect(*admission.Autoscaling.CPUUtilizationPercent).To(Equal(int32(80)))
 	})
 
 	It("Set Autoscaling enabled with custom values", func(ctx context.Context) {
@@ -57,7 +58,8 @@ var _ = Describe("Admission", func() {
 				Enabled:               ptr.To(true),
 				MinReplicas:           ptr.To(int32(2)),
 				MaxReplicas:           ptr.To(int32(10)),
-				AverageRequestsPerPod: ptr.To(int32(150)),
+				RequestsPerSecond:     ptr.To(int32(150)),
+				CPUUtilizationPercent: ptr.To(int32(90)),
 			},
 		}
 		var replicaCount int32
@@ -67,7 +69,8 @@ var _ = Describe("Admission", func() {
 		Expect(*admission.Autoscaling.Enabled).To(Equal(true))
 		Expect(*admission.Autoscaling.MinReplicas).To(Equal(int32(2)))
 		Expect(*admission.Autoscaling.MaxReplicas).To(Equal(int32(10)))
-		Expect(*admission.Autoscaling.AverageRequestsPerPod).To(Equal(int32(150)))
+		Expect(*admission.Autoscaling.RequestsPerSecond).To(Equal(int32(150)))
+		Expect(*admission.Autoscaling.CPUUtilizationPercent).To(Equal(int32(90)))
 	})
 
 	It("Autoscaling disabled keeps replicas from config", func(ctx context.Context) {
@@ -121,7 +124,8 @@ var _ = Describe("Autoscaling", func() {
 		Expect(*autoscaling.Enabled).To(Equal(false))
 		Expect(*autoscaling.MinReplicas).To(Equal(int32(1)))
 		Expect(*autoscaling.MaxReplicas).To(Equal(int32(5)))
-		Expect(*autoscaling.AverageRequestsPerPod).To(Equal(int32(100)))
+		Expect(*autoscaling.RequestsPerSecond).To(Equal(int32(100)))
+		Expect(*autoscaling.CPUUtilizationPercent).To(Equal(int32(80)))
 	})
 
 	It("Preserves custom values", func(ctx context.Context) {
@@ -129,13 +133,15 @@ var _ = Describe("Autoscaling", func() {
 			Enabled:               ptr.To(true),
 			MinReplicas:           ptr.To(int32(3)),
 			MaxReplicas:           ptr.To(int32(20)),
-			AverageRequestsPerPod: ptr.To(int32(200)),
+			RequestsPerSecond:     ptr.To(int32(200)),
+			CPUUtilizationPercent: ptr.To(int32(95)),
 		}
 		autoscaling.SetDefaultsWhereNeeded()
 
 		Expect(*autoscaling.Enabled).To(Equal(true))
 		Expect(*autoscaling.MinReplicas).To(Equal(int32(3)))
 		Expect(*autoscaling.MaxReplicas).To(Equal(int32(20)))
-		Expect(*autoscaling.AverageRequestsPerPod).To(Equal(int32(200)))
+		Expect(*autoscaling.RequestsPerSecond).To(Equal(int32(200)))
+		Expect(*autoscaling.CPUUtilizationPercent).To(Equal(int32(95)))
 	})
 })

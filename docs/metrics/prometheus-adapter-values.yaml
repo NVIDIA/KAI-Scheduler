@@ -7,16 +7,26 @@ prometheus:
   port: 9090 
   path: ""
 
-# Define a custom rule to expose the 'controller_runtime_webhook_requests_in_flight' metric for admission service
 rules:
   custom:
-  - seriesQuery: 'controller_runtime_webhook_requests_in_flight{service="admission"}'
+  - seriesQuery: 'controller_runtime_webhook_requests_total{}'
     resources:
       overrides:
         namespace: {resource: "namespace"}
         pod: {resource: "pod"}
         service: {resource: "service"}
     name:
-      matches: "^controller_runtime_webhook_requests_in_flight"
-      as: "admission_webhook_requests_in_flight"
-    metricsQuery: 'controller_runtime_webhook_requests_in_flight{<<.LabelMatchers>>}'
+      matches: "^(.*)_total"
+      as: "${1}_per_second"
+    metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'
+
+  - seriesQuery: 'process_cpu_seconds_total{}'
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+        service: {resource: "service"}
+    name:
+      matches: "^(.*)_total"
+      as: "cpu_utilization"
+    metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'

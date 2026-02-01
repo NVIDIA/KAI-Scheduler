@@ -17,6 +17,7 @@ KIND_CONFIG=${REPO_ROOT}/hack/e2e-kind-config.yaml
 TEST_THIRD_PARTY_INTEGRATIONS=${TEST_THIRD_PARTY_INTEGRATIONS:-"false"}
 LOCAL_IMAGES_BUILD=${LOCAL_IMAGES_BUILD:-"false"}
 GPU_RESOURCES_AS_DRA=${GPU_RESOURCES_AS_DRA:-"false"}
+INSTALL_PROMETHEUS=${INSTALL_PROMETHEUS:-"false"}
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -32,10 +33,15 @@ while [[ $# -gt 0 ]]; do
       GPU_RESOURCES_AS_DRA="true"
       shift
       ;;
+    --install-prometheus)
+      INSTALL_PROMETHEUS="true"
+      shift
+      ;;
     -h|--help)
-      echo "Usage: $0 [--test-third-party-integrations] [--local-images-build]"
+      echo "Usage: $0 [--test-third-party-integrations] [--local-images-build] [--install-prometheus]"
       echo "  --test-third-party-integrations: Install third party operators for compatibility testing"
       echo "  --local-images-build: Build and use local images instead of pulling from registry"
+      echo "  --install-prometheus: Install Prometheus and prometheus-adapter for HPA testing"
       exit 0
       ;;
     *)
@@ -92,5 +98,13 @@ fi
 # Allow all the pods in the fake-gpu-operator and kai-scheduler to start
 sleep 30
 
-echo "Cluster setup complete. Cluster name: $CLUSTER_NAME"
 
+# Install Prometheus and prometheus-adapter for HPA testing
+if [ "$INSTALL_PROMETHEUS" = "true" ]; then
+    ${REPO_ROOT}/hack/deploy_prometheus.sh
+fi
+
+# Allow all the prometheus components to start
+sleep 10
+
+echo "Cluster setup complete. Cluster name: $CLUSTER_NAME"

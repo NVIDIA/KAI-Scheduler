@@ -148,7 +148,6 @@ func (a *Admission) hpaForKAIConfig(
 ) ([]client.Object, error) {
 	config := kaiConfig.Spec.Admission
 
-	// Return empty if autoscaling is not enabled
 	if config.Autoscaling == nil || !*config.Autoscaling.Enabled {
 		return []client.Object{}, nil
 	}
@@ -179,11 +178,23 @@ func (a *Admission) hpaForKAIConfig(
 			Type: autoscalingv2.PodsMetricSourceType,
 			Pods: &autoscalingv2.PodsMetricSource{
 				Metric: autoscalingv2.MetricIdentifier{
-					Name: "webhook_requests_in_flight",
+					Name: "controller_runtime_webhook_requests_per_second",
 				},
 				Target: autoscalingv2.MetricTarget{
 					Type:         autoscalingv2.AverageValueMetricType,
-					AverageValue: resource.NewQuantity(int64(*config.Autoscaling.AverageRequestsPerPod), resource.DecimalSI),
+					AverageValue: resource.NewQuantity(int64(*config.Autoscaling.RequestsPerSecond), resource.DecimalSI),
+				},
+			},
+		},
+		{
+			Type: autoscalingv2.PodsMetricSourceType,
+			Pods: &autoscalingv2.PodsMetricSource{
+				Metric: autoscalingv2.MetricIdentifier{
+					Name: "cpu_utilization",
+				},
+				Target: autoscalingv2.MetricTarget{
+					Type:         autoscalingv2.AverageValueMetricType,
+					AverageValue: resource.NewMilliQuantity(int64(*config.Autoscaling.CPUUtilizationPercent)*10, resource.DecimalSI),
 				},
 			},
 		},

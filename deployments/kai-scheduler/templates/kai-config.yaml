@@ -160,7 +160,8 @@ spec:
       enabled: {{ .Values.admission.autoscaling.enabled | default false }}
       minReplicas: {{ .Values.admission.autoscaling.minReplicas | default 1 }}
       maxReplicas: {{ .Values.admission.autoscaling.maxReplicas | default 5 }}
-      averageRequestsPerPod: {{ .Values.admission.autoscaling.averageRequestsPerPod | default 100 }}
+      requestsPerSecond: {{ .Values.admission.autoscaling.requestsPerSecond | default 100 }}
+      cpuUtilizationPercent: {{ .Values.admission.autoscaling.cpuUtilizationPercent | default 80 }}
 
   nodeScaleAdjuster:
     service:

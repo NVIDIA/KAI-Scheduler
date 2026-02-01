@@ -13,6 +13,7 @@ GOBIN=${GOPATH}/bin
 TEST_THIRD_PARTY_INTEGRATIONS="false"
 LOCAL_IMAGES_BUILD="false"
 PRESERVE_CLUSTER="false"
+INSTALL_PROMETHEUS="false"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -28,11 +29,16 @@ while [[ $# -gt 0 ]]; do
       PRESERVE_CLUSTER="true"
       shift
       ;;
+    --install-prometheus)
+      INSTALL_PROMETHEUS="true"
+      shift
+      ;;
     -h|--help)
-      echo "Usage: $0 [--test-third-party-integrations] [--local-images-build] [--preserve-cluster]"
+      echo "Usage: $0 [--test-third-party-integrations] [--local-images-build] [--preserve-cluster] [--install-prometheus]"
       echo "  --test-third-party-integrations: Install third party operators for compatibility testing"
       echo "  --local-images-build: Build and use local images instead of pulling from registry"
       echo "  --preserve-cluster: Keep the kind cluster after running the test suite"
+      echo "  --install-prometheus: Install Prometheus and prometheus-adapter for HPA testing"
       exit 0
       ;;
     *)
@@ -50,6 +56,9 @@ if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then
 fi
 if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
     SETUP_ARGS="$SETUP_ARGS --local-images-build"
+fi
+if [ "$INSTALL_PROMETHEUS" = "true" ]; then
+    SETUP_ARGS="$SETUP_ARGS --install-prometheus"
 fi
 
 # Run the cluster setup script
