@@ -355,3 +355,510 @@ func findSubGroupByName(subGroups []*podgroup.SubGroupMetadata, name string) *po
 	}
 	return nil
 }
+
+func TestGetPodGroupMetadata_Segments_HappyFlow_4Workers_2PerSegment(t *testing.T) {
+	pytorchJob := getPytorchJobWithSegments(1, 4, "2")
+	grouper := newTestPyTorchGrouper()
+
+	// Test with master pod
+	masterPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-master-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "master",
+				"training.kubeflow.org/replica-index": "0",
+			},
+			Annotations: map[string]string{
+				"kai.scheduler/segment-size": "2",
+			},
+		},
+	}
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, masterPod)
+	assert.Nil(t, err)
+	assert.Equal(t, int32(5), metadata.MinAvailable) // 1 master + 4 workers
+
+	// Verify subgroups: 1 master + 2 worker segments
+	assert.Equal(t, 3, len(metadata.SubGroups))
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
+	assert.NotNil(t, masterSubGroup)
+	assert.Equal(t, int32(1), masterSubGroup.MinAvailable)
+	assert.Equal(t, 1, len(masterSubGroup.PodsReferences))
+
+	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
+	assert.NotNil(t, workerSegment0)
+
+	workerSegment1 := findSubGroupByName(metadata.SubGroups, "worker-1")
+	assert.NotNil(t, workerSegment1)
+
+	// Test worker pod in segment 0 (replica index 0)
+	workerPod0 := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "0",
+			},
+			Annotations: map[string]string{
+				"kai.scheduler/segment-size": "2",
+			},
+		},
+	}
+	metadata, err = grouper.GetPodGroupMetadata(pytorchJob, workerPod0)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(metadata.SubGroups))
+	workerSegment0 = findSubGroupByName(metadata.SubGroups, "worker-0")
+	assert.NotNil(t, workerSegment0)
+	assert.Equal(t, 1, len(workerSegment0.PodsReferences))
+	assert.Equal(t, "test-job-worker-0", workerSegment0.PodsReferences[0].Name)
+
+	// Test worker pod in segment 1 (replica index 2)
+	workerPod2 := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-2",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "2",
+			},
+			Annotations: map[string]string{
+				"kai.scheduler/segment-size": "2",
+			},
+		},
+	}
+	metadata, err = grouper.GetPodGroupMetadata(pytorchJob, workerPod2)
+	assert.Nil(t, err)
+	workerSegment1 = findSubGroupByName(metadata.SubGroups, "worker-1")
+	assert.NotNil(t, workerSegment1)
+	assert.Equal(t, 1, len(workerSegment1.PodsReferences))
+	assert.Equal(t, "test-job-worker-2", workerSegment1.PodsReferences[0].Name)
+}
+
+func TestGetPodGroupMetadata_Segments_5Workers_2PerSegment(t *testing.T) {
+	// 5 workers with segment size 2 should create 2 segments (5/2 = 2 with integer division)
+	pytorchJob := getPytorchJobWithSegments(1, 5, "2")
+	grouper := newTestPyTorchGrouper()
+
+	workerPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "0",
+			},
+			Annotations: map[string]string{
+				"kai.scheduler/segment-size": "2",
+			},
+		},
+	}
+
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
+	assert.Nil(t, err)
+	assert.Equal(t, int32(6), metadata.MinAvailable) // 1 master + 5 workers
+
+	// Verify subgroups: 1 master + 2 worker segments (5/2 = 2)
+	assert.Equal(t, 3, len(metadata.SubGroups))
+	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
+	assert.NotNil(t, masterSubGroup)
+
+	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
+	assert.NotNil(t, workerSegment0)
+	assert.Equal(t, 1, len(workerSegment0.PodsReferences))
+
+	workerSegment1 := findSubGroupByName(metadata.SubGroups, "worker-1")
+	assert.NotNil(t, workerSegment1)
+	assert.Equal(t, 0, len(workerSegment1.PodsReferences))
+
+	// Worker with index 4 is in segment 2 (4/2=2), but only 2 segments are created
+	// So this worker would be assigned to segment index 2, which doesn't exist
+	workerPod4 := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-4",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "4",
+			},
+			Annotations: map[string]string{
+				"kai.scheduler/segment-size": "2",
+			},
+		},
+	}
+	metadata, err = grouper.GetPodGroupMetadata(pytorchJob, workerPod4)
+	assert.Nil(t, err)
+	// Worker 4 has segment index 2 (4/2=2), but only segments 0 and 1 exist
+	// So no segment should have this pod reference
+	for _, sg := range metadata.SubGroups {
+		if sg.Name != string(replicaTypeMaster) {
+			assert.Equal(t, 0, len(sg.PodsReferences))
+		}
+	}
+}
+
+func TestGetPodGroupMetadata_Segments_MalformedAnnotation(t *testing.T) {
+	pytorchJob := getPytorchJobWithSegments(1, 4, "invalid")
+	grouper := newTestPyTorchGrouper()
+
+	workerPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "0",
+			},
+			Annotations: map[string]string{
+				"kai.scheduler/segment-size": "not-a-number",
+			},
+		},
+	}
+
+	_, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "invalid segment size")
+}
+
+func TestGetPodGroupMetadata_Segments_MalformedAnnotationInTemplate(t *testing.T) {
+	pytorchJob := getPytorchJobWithSegments(1, 4, "invalid-size")
+	grouper := newTestPyTorchGrouper()
+
+	// Pod without segment annotation, relies on template annotation
+	workerPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "0",
+			},
+		},
+	}
+
+	_, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "invalid segment size")
+}
+
+func TestGetPodGroupMetadata_Segments_SegmentSizeFromPodTemplate(t *testing.T) {
+	pytorchJob := getPytorchJobWithSegments(1, 4, "2")
+	grouper := newTestPyTorchGrouper()
+
+	// Worker pod without segment annotation - should use template annotation
+	workerPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-1",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "1",
+			},
+		},
+	}
+
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
+	assert.Nil(t, err)
+
+	// Should have 3 subgroups: master + 2 worker segments
+	assert.Equal(t, 3, len(metadata.SubGroups))
+
+	// Worker 1 should be in segment 0 (index 1 / segment_size 2 = 0)
+	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
+	assert.NotNil(t, workerSegment0)
+	assert.Equal(t, 1, len(workerSegment0.PodsReferences))
+	assert.Equal(t, "test-job-worker-1", workerSegment0.PodsReferences[0].Name)
+}
+
+func getPytorchJobWithSegments(masterReplicas, workerReplicas int64, segmentSize string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PyTorchJob",
+			"apiVersion": "kubeflow.org/v1",
+			"metadata": map[string]interface{}{
+				"name":      "test-job-segments",
+				"namespace": "test_namespace",
+				"uid":       "seg-1",
+			},
+			"spec": map[string]interface{}{
+				"pytorchReplicaSpecs": map[string]interface{}{
+					"Master": map[string]interface{}{
+						"replicas": masterReplicas,
+					},
+					"Worker": map[string]interface{}{
+						"replicas": workerReplicas,
+						"template": map[string]interface{}{
+							"metadata": map[string]interface{}{
+								"annotations": map[string]interface{}{
+									"kai.scheduler/segment-size": segmentSize,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+type segmentTopologyConfig struct {
+	topology           string
+	requiredPlacement  string
+	preferredPlacement string
+}
+
+func getPytorchJobWithSegmentTopology(
+	masterReplicas, workerReplicas int64, segmentSize string, topologyConfig segmentTopologyConfig, topologyOnRoot bool,
+) *unstructured.Unstructured {
+	workerAnnotations := map[string]interface{}{
+		"kai.scheduler/segment-size": segmentSize,
+	}
+	if topologyConfig.requiredPlacement != "" {
+		workerAnnotations["kai.scheduler/segment-topology-required-placement"] = topologyConfig.requiredPlacement
+	}
+	if topologyConfig.preferredPlacement != "" {
+		workerAnnotations["kai.scheduler/segment-topology-preferred-placement"] = topologyConfig.preferredPlacement
+	}
+	if !topologyOnRoot && topologyConfig.topology != "" {
+		workerAnnotations["kai.scheduler/topology"] = topologyConfig.topology
+	}
+
+	metadata := map[string]interface{}{
+		"name":      "test-job-topology",
+		"namespace": "test_namespace",
+		"uid":       "topo-1",
+	}
+	if topologyOnRoot && topologyConfig.topology != "" {
+		metadata["annotations"] = map[string]interface{}{
+			"kai.scheduler/topology": topologyConfig.topology,
+		}
+	}
+
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PyTorchJob",
+			"apiVersion": "kubeflow.org/v1",
+			"metadata":   metadata,
+			"spec": map[string]interface{}{
+				"pytorchReplicaSpecs": map[string]interface{}{
+					"Master": map[string]interface{}{
+						"replicas": masterReplicas,
+					},
+					"Worker": map[string]interface{}{
+						"replicas": workerReplicas,
+						"template": map[string]interface{}{
+							"metadata": map[string]interface{}{
+								"annotations": workerAnnotations,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func TestGetPodGroupMetadata_Segments_WithTopologyConstraints(t *testing.T) {
+	pytorchJob := getPytorchJobWithSegmentTopology(1, 4, "2", segmentTopologyConfig{
+		topology:           "cluster-topology",
+		requiredPlacement:  "rack",
+		preferredPlacement: "node",
+	}, false)
+	grouper := newTestPyTorchGrouper()
+
+	workerPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "0",
+			},
+			Annotations: map[string]string{
+				"kai.scheduler/segment-size":                         "2",
+				"kai.scheduler/topology":                             "cluster-topology",
+				"kai.scheduler/segment-topology-required-placement":  "rack",
+				"kai.scheduler/segment-topology-preferred-placement": "node",
+			},
+		},
+	}
+
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(metadata.SubGroups))
+
+	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
+	assert.NotNil(t, workerSegment0)
+	assert.NotNil(t, workerSegment0.TopologyConstraints)
+	assert.Equal(t, "cluster-topology", workerSegment0.TopologyConstraints.Topology)
+	assert.Equal(t, "rack", workerSegment0.TopologyConstraints.RequiredTopologyLevel)
+	assert.Equal(t, "node", workerSegment0.TopologyConstraints.PreferredTopologyLevel)
+
+	workerSegment1 := findSubGroupByName(metadata.SubGroups, "worker-1")
+	assert.NotNil(t, workerSegment1)
+	assert.NotNil(t, workerSegment1.TopologyConstraints)
+	assert.Equal(t, "cluster-topology", workerSegment1.TopologyConstraints.Topology)
+	assert.Equal(t, "rack", workerSegment1.TopologyConstraints.RequiredTopologyLevel)
+	assert.Equal(t, "node", workerSegment1.TopologyConstraints.PreferredTopologyLevel)
+}
+
+func TestGetPodGroupMetadata_Segments_TopologyFromRootAnnotation(t *testing.T) {
+	pytorchJob := getPytorchJobWithSegmentTopology(1, 4, "2", segmentTopologyConfig{
+		topology:          "cluster-topology",
+		requiredPlacement: "rack",
+	}, true)
+	grouper := newTestPyTorchGrouper()
+
+	workerPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "0",
+			},
+			Annotations: map[string]string{
+				"kai.scheduler/segment-size":                        "2",
+				"kai.scheduler/segment-topology-required-placement": "rack",
+			},
+		},
+	}
+
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(metadata.SubGroups))
+
+	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
+	assert.NotNil(t, workerSegment0)
+	assert.NotNil(t, workerSegment0.TopologyConstraints)
+	assert.Equal(t, "cluster-topology", workerSegment0.TopologyConstraints.Topology)
+	assert.Equal(t, "rack", workerSegment0.TopologyConstraints.RequiredTopologyLevel)
+}
+
+func TestGetPodGroupMetadata_Segments_NoTopologyWhenMissing(t *testing.T) {
+	pytorchJob := getPytorchJobWithSegmentTopology(1, 4, "2", segmentTopologyConfig{
+		topology:          "",
+		requiredPlacement: "rack",
+	}, false)
+	grouper := newTestPyTorchGrouper()
+
+	workerPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "0",
+			},
+			Annotations: map[string]string{
+				"kai.scheduler/segment-size":                        "2",
+				"kai.scheduler/segment-topology-required-placement": "rack",
+			},
+		},
+	}
+
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(metadata.SubGroups))
+
+	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
+	assert.NotNil(t, workerSegment0)
+	assert.Nil(t, workerSegment0.TopologyConstraints)
+}
+
+func TestGetPodGroupMetadata_Segments_OnlyRequiredPlacement(t *testing.T) {
+	pytorchJob := getPytorchJobWithSegmentTopology(1, 4, "2", segmentTopologyConfig{
+		topology:          "cluster-topology",
+		requiredPlacement: "rack",
+	}, false)
+	grouper := newTestPyTorchGrouper()
+
+	workerPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "0",
+			},
+			Annotations: map[string]string{
+				"kai.scheduler/segment-size":                        "2",
+				"kai.scheduler/topology":                            "cluster-topology",
+				"kai.scheduler/segment-topology-required-placement": "rack",
+			},
+		},
+	}
+
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
+	assert.Nil(t, err)
+
+	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
+	assert.NotNil(t, workerSegment0)
+	assert.NotNil(t, workerSegment0.TopologyConstraints)
+	assert.Equal(t, "cluster-topology", workerSegment0.TopologyConstraints.Topology)
+	assert.Equal(t, "rack", workerSegment0.TopologyConstraints.RequiredTopologyLevel)
+	assert.Equal(t, "", workerSegment0.TopologyConstraints.PreferredTopologyLevel)
+}
+
+func TestGetPodGroupMetadata_Segments_OnlyPreferredPlacement(t *testing.T) {
+	pytorchJob := getPytorchJobWithSegmentTopology(1, 4, "2", segmentTopologyConfig{
+		topology:           "cluster-topology",
+		preferredPlacement: "node",
+	}, false)
+	grouper := newTestPyTorchGrouper()
+
+	workerPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "0",
+			},
+			Annotations: map[string]string{
+				"kai.scheduler/segment-size":                         "2",
+				"kai.scheduler/topology":                             "cluster-topology",
+				"kai.scheduler/segment-topology-preferred-placement": "node",
+			},
+		},
+	}
+
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
+	assert.Nil(t, err)
+
+	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
+	assert.NotNil(t, workerSegment0)
+	assert.NotNil(t, workerSegment0.TopologyConstraints)
+	assert.Equal(t, "cluster-topology", workerSegment0.TopologyConstraints.Topology)
+	assert.Equal(t, "", workerSegment0.TopologyConstraints.RequiredTopologyLevel)
+	assert.Equal(t, "node", workerSegment0.TopologyConstraints.PreferredTopologyLevel)
+}
+
+func TestGetPodGroupMetadata_Segments_TopologyFromTemplate(t *testing.T) {
+	pytorchJob := getPytorchJobWithSegmentTopology(1, 4, "2", segmentTopologyConfig{
+		topology:          "cluster-topology",
+		requiredPlacement: "rack",
+	}, false)
+	grouper := newTestPyTorchGrouper()
+
+	workerPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job-worker-0",
+			Namespace: "test_namespace",
+			Labels: map[string]string{
+				replicaTypeLabel:                      "worker",
+				"training.kubeflow.org/replica-index": "0",
+			},
+		},
+	}
+
+	metadata, err := grouper.GetPodGroupMetadata(pytorchJob, workerPod)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(metadata.SubGroups))
+
+	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
+	assert.NotNil(t, workerSegment0)
+	assert.NotNil(t, workerSegment0.TopologyConstraints)
+	assert.Equal(t, "cluster-topology", workerSegment0.TopologyConstraints.Topology)
+	assert.Equal(t, "rack", workerSegment0.TopologyConstraints.RequiredTopologyLevel)
+}
