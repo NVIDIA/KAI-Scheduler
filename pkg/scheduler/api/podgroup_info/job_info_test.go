@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
+	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -1573,5 +1574,43 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 		if got != tt.expected {
 			t.Errorf("IsStale() for case '%s' got %v, want %v", tt.name, got, tt.expected)
 		}
+	}
+}
+
+func TestPodGroupInfo_SubGroupMinMemberIgnoresRootMinMember(t *testing.T) {
+	// This test verifies that when subgroups are defined, the scheduler uses
+	// subgroup minMembers directly and ignores the root PodGroup MinMember.
+	podGroup := &enginev2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pg",
+			Namespace: "default",
+			UID:       types.UID("test-uid"),
+		},
+		Spec: enginev2alpha2.PodGroupSpec{
+			MinMember: 10, // Intentionally mismatched - should be ignored
+			Queue:     "test-queue",
+			SubGroups: []enginev2alpha2.SubGroup{
+				{Name: "workers", MinMember: 2},
+				{Name: "aux", MinMember: 1},
+			},
+		},
+	}
+
+	jobInfo := NewPodGroupInfo("test-uid")
+	jobInfo.SetPodGroup(podGroup)
+
+	podSets := jobInfo.GetSubGroups()
+	if len(podSets) != 2 {
+		t.Fatalf("Expected 2 podsets, got %d", len(podSets))
+	}
+
+	workersMinAvailable := podSets["workers"].GetMinAvailable()
+	if workersMinAvailable != 2 {
+		t.Errorf("Expected workers minAvailable=2, got %d", workersMinAvailable)
+	}
+
+	auxMinAvailable := podSets["aux"].GetMinAvailable()
+	if auxMinAvailable != 1 {
+		t.Errorf("Expected aux minAvailable=1, got %d", auxMinAvailable)
 	}
 }
