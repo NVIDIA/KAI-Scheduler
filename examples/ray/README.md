@@ -33,8 +33,8 @@ apiVersion: ray.io/v1
 kind: RayJob
 metadata:
   name: rayjob-sample
-  annotations:
-    scheduling.run.ai/queue-name: "default"          # KAI queue name
+  labels:
+    kai.scheduler/queue: "default-queue"          # KAI queue name
 spec:
   entrypoint: python /home/ray/samples/sample_code.py
   rayClusterSpec:
@@ -82,8 +82,8 @@ apiVersion: ray.io/v1
 kind: RayCluster
 metadata:
   name: raycluster-sample
-  annotations:
-    scheduling.run.ai/queue-name: "default"          # KAI queue name
+  labels:
+    kai.scheduler/queue: "default-queue"          # KAI queue name
 spec:
   rayVersion: '2.46.0'
   headGroupSpec:
