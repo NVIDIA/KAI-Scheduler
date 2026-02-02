@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.12.11] - 2026-02-03
+### Fixed
+- Added `binder.cdiEnabled` Helm value to allow explicit override of CDI auto-detection for environments without ClusterPolicy fixing compatibility issues in Openshift
+
 ## [v0.12.9] - 2026-01-21
 
 ### Fixed
