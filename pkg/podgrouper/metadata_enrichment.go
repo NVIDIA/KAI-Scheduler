@@ -12,7 +12,6 @@ import (
 	pluginconstants "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 )
 
-// enrichMetadata enriches the PodGroup metadata with node pool labels and user-requested subgroups.
 func enrichMetadata(metadata *podgroup.Metadata, pod *v1.Pod, topOwner *unstructured.Unstructured, configs Configs) {
 	if len(configs.NodePoolLabelKey) > 0 {
 		addNodePoolLabel(metadata, pod, configs.NodePoolLabelKey)
