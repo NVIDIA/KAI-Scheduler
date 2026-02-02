@@ -136,7 +136,7 @@ func buildWorkerSubGroups(
 		return nil, fmt.Errorf("failed to get replicas for worker groups. Err: %w", err)
 	}
 	if !found {
-		workerReplicas = 1 // Default to 1 if not specified
+		workerReplicas = 1
 	}
 
 	var podReferences []string
