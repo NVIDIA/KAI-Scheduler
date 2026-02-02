@@ -21,21 +21,13 @@ func enrichMetadata(metadata *podgroup.Metadata, pod *v1.Pod, topOwner *unstruct
 	handleRequestedSubgroups(metadata, pod, topOwner)
 }
 
-// handleRequestedSubgroups enriches the metadata with user-requested subgroups based on annotations.
-// This function handles two independent operations:
-// 1. If the TopOwner has the create-subgroup annotation, creates the requested subgroup (and a "default" subgroup if none exist)
-// 2. If the pod has the requested-subgroup annotation, assigns the pod to that subgroup's PodsReferences
-// These operations are orthogonal - a pod can request assignment to an existing subgroup without the TopOwner needing
-// to have the create-subgroup annotation.
 func handleRequestedSubgroups(metadata *podgroup.Metadata, pod *v1.Pod, topOwner *unstructured.Unstructured) {
-	// Step 1: Handle subgroup creation from TopOwner annotation (independent)
 	if topOwner != nil {
 		if createSubgroupName, found := getCreateSubgroupAnnotation(topOwner); found {
 			ensureRequestedSubgroupExists(metadata, createSubgroupName)
 		}
 	}
 
-	// Step 2: Handle pod assignment to subgroup (independent)
 	if requestedSubgroup, found := getRequestedSubgroupAnnotation(pod); found {
 		assignPodToSubgroup(metadata, pod, requestedSubgroup)
 	}
