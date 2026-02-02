@@ -16,20 +16,8 @@ func enrichMetadata(metadata *podgroup.Metadata, pod *v1.Pod, topOwner *unstruct
 	if len(configs.NodePoolLabelKey) > 0 {
 		addNodePoolLabel(metadata, pod, configs.NodePoolLabelKey)
 	}
-
-	handleRequestedSubgroups(metadata, pod, topOwner)
-}
-
-func handleRequestedSubgroups(metadata *podgroup.Metadata, pod *v1.Pod, topOwner *unstructured.Unstructured) {
-	if topOwner != nil {
-		if createSubgroupName, found := getCreateSubgroupAnnotation(topOwner); found {
-			ensureRequestedSubgroupExists(metadata, createSubgroupName)
-		}
-	}
-
-	if requestedSubgroup, found := getRequestedSubgroupAnnotation(pod); found {
-		assignPodToSubgroup(metadata, pod, requestedSubgroup)
-	}
+	handleSubgroupCreationRequest(topOwner, metadata)
+	handlePodSubgroupAssignmentRequest(pod, metadata)
 }
 
 func addNodePoolLabel(metadata *podgroup.Metadata, pod *v1.Pod, nodePoolKey string) {
@@ -50,26 +38,38 @@ func addNodePoolLabel(metadata *podgroup.Metadata, pod *v1.Pod, nodePoolKey stri
 	}
 }
 
-func getCreateSubgroupAnnotation(topOwner *unstructured.Unstructured) (string, bool) {
+func handleSubgroupCreationRequest(topOwner *unstructured.Unstructured, metadata *podgroup.Metadata) {
+	if topOwner == nil {
+		return
+	}
+
 	annotations := topOwner.GetAnnotations()
 	if annotations == nil {
-		return "", false
+		return
 	}
 
-	createSubgroupName, found := annotations[pluginconstants.CreateSubgroupAnnotationKey]
-	if !found || createSubgroupName == "" {
-		return "", false
+	subgroupName := annotations[pluginconstants.CreateSubgroupAnnotationKey]
+	if subgroupName == "" || subgroupName == "default" { // "default" is reserved
+		return
 	}
 
-	// Validate: "default" is reserved
-	if createSubgroupName == "default" {
-		return "", false
-	}
-
-	return createSubgroupName, true
+	ensureSubgroupExists(metadata, subgroupName)
 }
 
-func ensureRequestedSubgroupExists(metadata *podgroup.Metadata, subgroupName string) {
+func handlePodSubgroupAssignmentRequest(pod *v1.Pod, metadata *podgroup.Metadata) {
+	if pod.Annotations == nil {
+		return
+	}
+
+	requestedSubgroup := pod.Annotations[pluginconstants.RequestedSubgroupAnnotationKey]
+	if requestedSubgroup == "" {
+		return
+	}
+
+	assignPodToSubgroup(metadata, pod, requestedSubgroup)
+}
+
+func ensureSubgroupExists(metadata *podgroup.Metadata, subgroupName string) {
 	subgroupExists := false
 	for _, sg := range metadata.SubGroups {
 		if sg.Name == subgroupName {
@@ -99,19 +99,6 @@ func ensureRequestedSubgroupExists(metadata *podgroup.Metadata, subgroupName str
 
 	// Note: Incrementing MinAvailable here is primarily for observability and does not affect scheduling behavior.
 	metadata.MinAvailable = metadata.MinAvailable + 1
-}
-
-func getRequestedSubgroupAnnotation(pod *v1.Pod) (string, bool) {
-	if pod.Annotations == nil {
-		return "", false
-	}
-
-	requestedSubgroup, found := pod.Annotations[pluginconstants.RequestedSubgroupAnnotationKey]
-	if !found || requestedSubgroup == "" {
-		return "", false
-	}
-
-	return requestedSubgroup, true
 }
 
 func assignPodToSubgroup(metadata *podgroup.Metadata, pod *v1.Pod, subgroupName string) {
