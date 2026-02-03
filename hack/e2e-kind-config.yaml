@@ -10,18 +10,22 @@ nodes:
   labels:
     run.ai/simulated-gpu-node-pool: default
     nvidia.com/gpu.deploy.device-plugin: "true"
+    nvidia.com/gpu.memory: 11441
 - role: worker
   labels:
     run.ai/simulated-gpu-node-pool: default
     nvidia.com/gpu.deploy.device-plugin: "true"
+    nvidia.com/gpu.memory: 11441
 - role: worker
   labels:
     run.ai/simulated-gpu-node-pool: default
     nvidia.com/gpu.deploy.device-plugin: "true"
+    nvidia.com/gpu.memory: 11441
 - role: worker
   labels:
     run.ai/simulated-gpu-node-pool: default
     nvidia.com/gpu.deploy.device-plugin: "true"
+    nvidia.com/gpu.memory: 11441
 # DRA nodes
 - role: worker
   labels:
