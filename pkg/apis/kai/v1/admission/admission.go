@@ -15,6 +15,8 @@ const (
 	imageName                    = "admission"
 	defaultValidatingWebhookName = "validating-kai-admission"
 	defaultMutatingWebhookName   = "mutating-kai-admission"
+	defaultRequestsPerSecond     = 100
+	defaultCPUUtilizationPercent = 80
 )
 
 type Admission struct {
@@ -48,6 +50,10 @@ type Admission struct {
 	// set to empty string to disable
 	// +kubebuilder:validation:Optional
 	GPUPodRuntimeClassName *string `json:"gpuPodRuntimeClassName,omitempty"`
+
+	// Autoscaling defines HPA configuration for the admission controller
+	// +kubebuilder:validation:Optional
+	Autoscaling *Autoscaling `json:"autoscaling,omitempty"`
 }
 
 func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
@@ -68,6 +74,9 @@ func (b *Admission) SetDefaultsWhereNeeded(replicaCount *int32) {
 	b.MutatingWebhookConfigurationName = common.SetDefault(b.MutatingWebhookConfigurationName, ptr.To(defaultMutatingWebhookName))
 
 	b.GPUPodRuntimeClassName = common.SetDefault(b.GPUPodRuntimeClassName, ptr.To(constants.DefaultRuntimeClassName))
+
+	b.Autoscaling = common.SetDefault(b.Autoscaling, &Autoscaling{})
+	b.Autoscaling.SetDefaultsWhereNeeded()
 }
 
 // Webhook defines configuration for the admission webhook
@@ -93,4 +102,36 @@ func (w *Webhook) SetDefaultsWhereNeeded() {
 	w.TargetPort = common.SetDefault(w.TargetPort, ptr.To(9443))
 	w.ProbePort = common.SetDefault(w.ProbePort, ptr.To(8081))
 	w.MetricsPort = common.SetDefault(w.MetricsPort, ptr.To(8080))
+}
+
+// Autoscaling defines HPA configuration for the admission controller
+type Autoscaling struct {
+	// Enabled specifies whether autoscaling is enabled
+	// +kubebuilder:validation:Optional
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// MinReplicas is the minimum number of replicas for autoscaling
+	// +kubebuilder:validation:Optional
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+
+	// MaxReplicas is the maximum number of replicas for autoscaling
+	// +kubebuilder:validation:Optional
+	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
+
+	// RequestsPerSecond is the target webhook requests per second threshold
+	// +kubebuilder:validation:Optional
+	RequestsPerSecond *int32 `json:"requestsPerSecond,omitempty"`
+
+	// CPUUtilizationPercent is the target CPU utilization percentage threshold
+	// +kubebuilder:validation:Optional
+	CPUUtilizationPercent *int32 `json:"cpuUtilizationPercent,omitempty"`
+}
+
+// SetDefaultsWhereNeeded sets default fields for unset fields
+func (a *Autoscaling) SetDefaultsWhereNeeded() {
+	a.Enabled = common.SetDefault(a.Enabled, ptr.To(false))
+	a.MinReplicas = common.SetDefault(a.MinReplicas, ptr.To(int32(1)))
+	a.MaxReplicas = common.SetDefault(a.MaxReplicas, ptr.To(int32(5)))
+	a.RequestsPerSecond = common.SetDefault(a.RequestsPerSecond, ptr.To(int32(defaultRequestsPerSecond)))
+	a.CPUUtilizationPercent = common.SetDefault(a.CPUUtilizationPercent, ptr.To(int32(defaultCPUUtilizationPercent)))
 }

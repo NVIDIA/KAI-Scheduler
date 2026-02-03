@@ -20,3 +20,20 @@ To enable the prometheus as a grafana datasource, if desired, apply grafana-data
 ```sh
 kubectl apply -f grafana-datasource.yaml
 ```
+
+# Prometheus Adapter
+
+Prometheus Adapter exposes Prometheus metrics as Kubernetes custom metrics API, enabling HPA to scale based on custom metrics.
+
+## Installation
+
+Add the Prometheus Adapter Helm repository:
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update prometheus-community
+```
+
+Install Prometheus Adapter with custom metric rules:
+```bash
+helm upgrade -i --create-namespace -n monitoring prometheus-adapter prometheus-community/prometheus-adapter --values prometheus-adapter-values.yaml
+```

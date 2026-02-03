@@ -1,0 +1,32 @@
+
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+prometheus:
+  url: http://prometheus-operated.kai-scheduler.svc.cluster.local
+  port: 9090 
+  path: ""
+
+rules:
+  custom:
+  - seriesQuery: 'controller_runtime_webhook_requests_total{}'
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+        service: {resource: "service"}
+    name:
+      matches: "^(.*)_total"
+      as: "${1}_per_second"
+    metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'
+
+  - seriesQuery: 'process_cpu_seconds_total{}'
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+        service: {resource: "service"}
+    name:
+      matches: "^(.*)_total"
+      as: "cpu_utilization"
+    metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'

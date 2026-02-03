@@ -48,6 +48,34 @@ spec:
               admission:
                 description: Admission holds KAI admission webhooks
                 properties:
+                  autoscaling:
+                    description: Autoscaling defines HPA configuration for the admission
+                      controller
+                    properties:
+                      cpuUtilizationPercent:
+                        description: CPUUtilizationPercent is the target CPU utilization
+                          percentage threshold
+                        format: int32
+                        type: integer
+                      enabled:
+                        description: Enabled specifies whether autoscaling is enabled
+                        type: boolean
+                      maxReplicas:
+                        description: MaxReplicas is the maximum number of replicas
+                          for autoscaling
+                        format: int32
+                        type: integer
+                      minReplicas:
+                        description: MinReplicas is the minimum number of replicas
+                          for autoscaling
+                        format: int32
+                        type: integer
+                      requestsPerSecond:
+                        description: RequestsPerSecond is the target webhook requests
+                          per second threshold
+                        format: int32
+                        type: integer
+                    type: object
                   gpuPodRuntimeClassName:
                     description: |-
                       GPUPodRuntimeClassName specifies the runtime class to be set for GPU pods

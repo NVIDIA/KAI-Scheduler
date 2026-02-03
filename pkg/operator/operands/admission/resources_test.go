@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -227,6 +228,139 @@ func TestDeploymentForKAIConfig(t *testing.T) {
 			for _, notExpectedArg := range tt.notExpectedArgs {
 				assert.NotContains(t, args, notExpectedArg)
 			}
+		})
+	}
+}
+
+func TestHPAForKAIConfig(t *testing.T) {
+	tests := []struct {
+		name                        string
+		config                      *kaiv1.Config
+		expectHPA                   bool
+		expectedMinReplicas         int32
+		expectedMaxReplicas         int32
+		expectedRequestsPerSecond   int64
+		expectedCPUUtilizationMilli int64
+	}{
+		{
+			name: "HPA disabled - should return empty",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: constants.DefaultKAINamespace,
+					Admission: &admission.Admission{
+						Autoscaling: &admission.Autoscaling{
+							Enabled: ptr.To(false),
+						},
+					},
+				},
+			},
+			expectHPA: false,
+		},
+		{
+			name: "HPA enabled with default values",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: constants.DefaultKAINamespace,
+					Admission: &admission.Admission{
+						Autoscaling: &admission.Autoscaling{
+							Enabled:               ptr.To(true),
+							MinReplicas:           ptr.To(int32(1)),
+							MaxReplicas:           ptr.To(int32(5)),
+							RequestsPerSecond:     ptr.To(int32(100)),
+							CPUUtilizationPercent: ptr.To(int32(80)),
+						},
+					},
+				},
+			},
+			expectHPA:                   true,
+			expectedMinReplicas:         1,
+			expectedMaxReplicas:         5,
+			expectedRequestsPerSecond:   100,
+			expectedCPUUtilizationMilli: 800,
+		},
+		{
+			name: "HPA enabled with custom values",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: constants.DefaultKAINamespace,
+					Admission: &admission.Admission{
+						Autoscaling: &admission.Autoscaling{
+							Enabled:               ptr.To(true),
+							MinReplicas:           ptr.To(int32(2)),
+							MaxReplicas:           ptr.To(int32(10)),
+							RequestsPerSecond:     ptr.To(int32(150)),
+							CPUUtilizationPercent: ptr.To(int32(90)),
+						},
+					},
+				},
+			},
+			expectHPA:                   true,
+			expectedMinReplicas:         2,
+			expectedMaxReplicas:         10,
+			expectedRequestsPerSecond:   150,
+			expectedCPUUtilizationMilli: 900,
+		},
+		{
+			name: "HPA not specified - should return empty (defaults to disabled)",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Namespace: constants.DefaultKAINamespace,
+					Admission: &admission.Admission{},
+				},
+			},
+			expectHPA: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			client := fake.NewClientBuilder().Build()
+
+			tt.config.Spec.SetDefaultsWhereNeeded()
+			a := &Admission{BaseResourceName: defaultResourceName}
+
+			objects, err := a.hpaForKAIConfig(ctx, client, tt.config)
+			require.NoError(t, err)
+
+			if !tt.expectHPA {
+				assert.Len(t, objects, 0, "should return empty list when HPA is disabled")
+				return
+			}
+
+			require.Len(t, objects, 1)
+			hpa := objects[0]
+			assert.Equal(t, "admission", hpa.GetName())
+			assert.Equal(t, constants.DefaultKAINamespace, hpa.GetNamespace())
+
+			hpaObj, ok := hpa.(*autoscalingv2.HorizontalPodAutoscaler)
+			require.True(t, ok, "object should be HorizontalPodAutoscaler")
+
+			assert.Equal(t, "apps/v1", hpaObj.Spec.ScaleTargetRef.APIVersion)
+			assert.Equal(t, "Deployment", hpaObj.Spec.ScaleTargetRef.Kind)
+			assert.Equal(t, "admission", hpaObj.Spec.ScaleTargetRef.Name)
+
+			assert.NotNil(t, hpaObj.Spec.MinReplicas)
+			assert.Equal(t, tt.expectedMinReplicas, *hpaObj.Spec.MinReplicas)
+			assert.Equal(t, tt.expectedMaxReplicas, hpaObj.Spec.MaxReplicas)
+
+			require.Len(t, hpaObj.Spec.Metrics, 2)
+
+			requestsMetric := hpaObj.Spec.Metrics[0]
+			assert.Equal(t, autoscalingv2.PodsMetricSourceType, requestsMetric.Type)
+			require.NotNil(t, requestsMetric.Pods)
+			assert.Equal(t, "controller_runtime_webhook_requests_per_second", requestsMetric.Pods.Metric.Name)
+			assert.Equal(t, autoscalingv2.AverageValueMetricType, requestsMetric.Pods.Target.Type)
+			require.NotNil(t, requestsMetric.Pods.Target.AverageValue)
+			assert.Equal(t, tt.expectedRequestsPerSecond, requestsMetric.Pods.Target.AverageValue.Value())
+
+			cpuMetric := hpaObj.Spec.Metrics[1]
+			assert.Equal(t, autoscalingv2.PodsMetricSourceType, cpuMetric.Type)
+			require.NotNil(t, cpuMetric.Pods)
+			assert.Equal(t, "cpu_utilization", cpuMetric.Pods.Metric.Name)
+			assert.Equal(t, autoscalingv2.AverageValueMetricType, cpuMetric.Pods.Target.Type)
+			require.NotNil(t, cpuMetric.Pods.Target.AverageValue)
+			assert.Equal(t, tt.expectedCPUUtilizationMilli, cpuMetric.Pods.Target.AverageValue.MilliValue())
 		})
 	}
 }

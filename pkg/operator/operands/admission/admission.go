@@ -45,6 +45,7 @@ func (a *Admission) DesiredState(
 		a.deploymentForKAIConfig,
 		a.serviceAccountForKAIConfig,
 		a.serviceForKAIConfig,
+		a.hpaForKAIConfig,
 		func(_ context.Context, _ client.Reader, _ *kaiv1.Config) ([]client.Object, error) {
 			return []client.Object{secret}, nil
 		},
