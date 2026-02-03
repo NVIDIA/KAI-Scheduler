@@ -11,6 +11,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
@@ -19,10 +21,9 @@ import (
 	e2econstant "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/crd"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/scheduling_shard"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -32,6 +33,9 @@ const (
 	schedulerRestartTimeout = 30 * time.Second
 	prometheusCrdName       = "prometheuses.monitoring.coreos.com"
 	prometheusCrdVersion    = "v1"
+	draShardName            = "dra-shard"
+	draPartitionLabelValue  = "dra"
+	draNodeLabel            = "nvidia.com/gpu.deploy.dra-plugin-gpu"
 )
 
 var testCtx *testcontext.TestContext
@@ -46,12 +50,24 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	By("Setting up test context")
 	testCtx = testcontext.GetConnectivity(ctx, Default)
 
+	By("Creating SchedulingShard for DRA nodes")
+	err := scheduling_shard.CreateShardForLabeledNodes(
+		ctx,
+		testCtx.ControllerClient,
+		draShardName,
+		client.MatchingLabels{draNodeLabel: "true"},
+		kaiv1.SchedulingShardSpec{
+			PartitionLabelValue: draPartitionLabelValue,
+		},
+	)
+	Expect(err).NotTo(HaveOccurred())
+
 	By("Checking if Prometheus CRD is installed")
 	crd.SkipIfCrdIsNotInstalled(ctx, testCtx.KubeConfig, prometheusCrdName, prometheusCrdVersion)
 
 	By("Saving original KAI config for restoration")
 	originalKAIConfig := &kaiv1.Config{}
-	err := testCtx.ControllerClient.Get(ctx, client.ObjectKey{Name: constants.DefaultKAIConfigSingeltonInstanceName}, originalKAIConfig)
+	err = testCtx.ControllerClient.Get(ctx, client.ObjectKey{Name: constants.DefaultKAIConfigSingeltonInstanceName}, originalKAIConfig)
 	Expect(err).NotTo(HaveOccurred(), "Failed to get original KAI config")
 
 	By("Saving original SchedulingShard for restoration")
@@ -64,6 +80,11 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	err = configureTimeAwareFairness(ctx, testCtx, defaultShardName, config)
 	Expect(err).NotTo(HaveOccurred(), "Failed to enable time-aware fairness")
 	DeferCleanup(func(ctx context.Context) {
+		By("Deleting DRA SchedulingShard and removing labels")
+		if err := scheduling_shard.DeleteShardAndRemoveLabels(ctx, testCtx.ControllerClient, draShardName); err != nil {
+			GinkgoWriter.Printf("Warning: Failed to delete DRA shard: %v\n", err)
+		}
+
 		By("Restoring original SchedulingShard configuration")
 		if err := configurations.PatchSchedulingShard(ctx, testCtx, defaultShardName, func(shard *kaiv1.SchedulingShard) {
 			shard.Spec = originalSchedulingShard.Spec
