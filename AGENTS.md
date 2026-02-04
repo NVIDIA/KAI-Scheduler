@@ -154,42 +154,10 @@ PR titles must follow semantic format: `<type>(<scope>): <description>`
 
 ### PR Description format
 
-Use this template for PR descriptions:
-``` md
-<!--  Thanks for sending a pull request!  Here are some tips for you:
-
-1. If this is your first time, please read our [Contributor Guide](https://github.com/NVIDIA/KAI-Scheduler/blob/main/CONTRIBUTING.md)
-2. If this PR is unfinished, please mark it as a draft
-
--->
-
-## Description
-
-<!-- What does this PR do and why? -->
-
-## Related Issues
-
-Fixes #
-
-## Checklist
-
-> **Note:** Ensure your PR title follows the [Conventional Commits format](https://github.com/NVIDIA/KAI-Scheduler/blob/main/CONTRIBUTING.md#pr-title-guidelines) (e.g., `feat(scheduler): add new feature`)
-
-- [ ] Self-reviewed
-- [ ] Added/updated tests (if needed)
-- [ ] Updated documentation (if needed)
-
-## Breaking Changes
-
-<!-- If yes, describe what changes and how to migrate -->
-
-## Additional Notes
-
-<!-- Screenshots, performance/security considerations, reviewer guidance, etc. -->
-```
+When opening a PR, use the template in .github/pull_request_template.md for the PR description
 
 ### Changelog Requirements
-- Update `CHANGELOG.md` for PRs to `main` or version branches (`v*.*`) in relevant PRs: ones that add functionality, fix bugs, change APIs. Not needed for refactors, documentations, tests, and CI changes.
+- You must update `CHANGELOG.md` for PRs to `main` or version branches (`v*.*`) for behavior changes: ones that add functionality, fix bugs, change APIs, or introduce significant performance improvements. Not needed for refactors, documentations, tests, and CI changes.
 - Add `skip-changelog` or `dependencies` label to skip this check
 
 ### CI Checks (on-pr.yaml)
@@ -204,7 +172,7 @@ PRs trigger: `make validate` → `make test` → `make build` → E2E tests
     - Keep Comments short, explicit and concise
     - DO NOT use `I`, `we` or any other pronoun
 - When performing a major change, run `make validate` after changes
-- 
+
 ## Philosophy & Design
 
 - Documentation can be found in [`docs`](docs/) folder
