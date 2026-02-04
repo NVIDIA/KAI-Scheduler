@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Fixed a bug in ray gang scheduling where not all worker groups' minMember would be respected [#962](https://github.com/NVIDIA/KAI-Scheduler/pull/962) [itsomri](https://github.com/itsomri)
+
 ## [v0.12.11] - 2026-02-03
 ### Fixed
 - Added `binder.cdiEnabled` Helm value to allow explicit override of CDI auto-detection for environments without ClusterPolicy fixing compatibility issues in Openshift
@@ -15,7 +18,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - ClusterPolicy CDI parsing for gpu-operator > v25.10.0
 - Fixed missing `repository`, `tag`, and `pullPolicy` fields in `resourceReservationImage` section of kai-config Helm template [#895](https://github.com/NVIDIA/KAI-Scheduler/pull/895) [dttung2905](https://github.com/dttung2905)
-- Fixed a bug in ray gang scheduling where not all worker groups' minMember would be respected [#924](https://github.com/NVIDIA/KAI-Scheduler/pull/924) [itsomri](https://github.com/itsomri)
 
 ## [v0.12.8] - 2026-01-20
 
