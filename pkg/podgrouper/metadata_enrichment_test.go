@@ -167,7 +167,7 @@ func TestHandleSubgroupCreationRequest(t *testing.T) {
 				}
 			}
 
-			handleSubgroupCreationRequest(topOwner, metadata, logger)
+			handleSubgroupCreationRequest(topOwner, &v1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: tt.topOwnerAnnotations}}, metadata, logger)
 
 			assert.Equal(t, tt.expectedMinAvailable, metadata.MinAvailable)
 			assert.Equal(t, len(tt.expectedSubgroups), len(metadata.SubGroups))

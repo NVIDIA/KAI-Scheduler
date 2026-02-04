@@ -8,8 +8,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/common/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/aml"
-	pluginconstants "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/cronjobs"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/deployment"
@@ -70,7 +70,7 @@ type PluginsHub interface {
 func (ph *DefaultPluginsHub) GetPodGrouperPlugin(gvk metav1.GroupVersionKind, pod *v1.Pod) grouper.Grouper {
 	// Auxiliary pods always use default grouper to avoid errors from
 	// specialized groupers that require specific pod labels
-	if isAuxiliaryPod(pod) {
+	if utils.IsAuxiliaryPod(pod) {
 		return ph.defaultPlugin
 	}
 
@@ -84,14 +84,6 @@ func (ph *DefaultPluginsHub) GetPodGrouperPlugin(gvk metav1.GroupVersionKind, po
 		return f
 	}
 	return ph.defaultPlugin
-}
-
-func isAuxiliaryPod(pod *v1.Pod) bool {
-	if pod == nil || pod.Annotations == nil {
-		return false
-	}
-	_, isAux := pod.Annotations[pluginconstants.AuxiliaryPodAnnotationKey]
-	return isAux
 }
 
 func (ph *DefaultPluginsHub) GetDefaultPlugin() grouper.Grouper {
