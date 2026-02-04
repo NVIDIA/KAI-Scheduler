@@ -22,6 +22,8 @@ const (
 	TopologyRequiredPlacementKey  = "kai.scheduler/topology-required-placement"
 	TopologyPreferredPlacementKey = "kai.scheduler/topology-preferred-placement"
 
+	// Alpha annotations
 	CreateSubgroupAnnotationKey    = "kai.alpha.scheduler/create-subgroup"
 	RequestedSubgroupAnnotationKey = "kai.alpha.scheduler/requested-subgroup"
+	AuxiliaryPodAnnotationKey      = "kai.alpha.scheduler/auxiliary-pod"
 )

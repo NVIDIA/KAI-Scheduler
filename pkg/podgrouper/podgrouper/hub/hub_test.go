@@ -9,9 +9,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	pluginconstants "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 )
 
 const (
@@ -44,7 +47,7 @@ var _ = Describe("SupportedTypes", func() {
 				Version: "v1",
 				Kind:    "TFJob",
 			}
-			plugin := hub.GetPodGrouperPlugin(gvk)
+			plugin := hub.GetPodGrouperPlugin(gvk, nil)
 			Expect(plugin).NotTo(BeNil())
 			Expect(plugin.Name()).To(BeEquivalentTo("TensorFlow Grouper"))
 		})
@@ -65,7 +68,7 @@ var _ = Describe("SupportedTypes", func() {
 				Version: "v1",
 				Kind:    "NonExistentKind",
 			}
-			plugin := hub.GetPodGrouperPlugin(gvk)
+			plugin := hub.GetPodGrouperPlugin(gvk, nil)
 			Expect(plugin).NotTo(BeNil())
 			Expect(plugin.Name()).To(BeEquivalentTo("Default Grouper"))
 		})
@@ -100,7 +103,7 @@ var _ = Describe("SupportedTypes", func() {
 				Version: "v100",
 				Kind:    kindTrainingWorkload,
 			}
-			plugin := hub.GetPodGrouperPlugin(gvkWithWildcard)
+			plugin := hub.GetPodGrouperPlugin(gvkWithWildcard, nil)
 			Expect(plugin).NotTo(BeNil())
 			Expect(plugin.Name()).To(BeEquivalentTo("SkipTopOwner Grouper"))
 		})
@@ -111,7 +114,7 @@ var _ = Describe("SupportedTypes", func() {
 				Version: "*",
 				Kind:    kindTrainingWorkload,
 			}
-			plugin := hub.GetPodGrouperPlugin(gvkWithWildcard)
+			plugin := hub.GetPodGrouperPlugin(gvkWithWildcard, nil)
 			Expect(plugin).NotTo(BeNil())
 			Expect(plugin.Name()).To(BeEquivalentTo("SkipTopOwner Grouper"))
 		})
@@ -122,9 +125,60 @@ var _ = Describe("SupportedTypes", func() {
 				Version: "*",
 				Kind:    "NonExistentKind",
 			}
-			plugin := hub.GetPodGrouperPlugin(gvkWithWildcard)
+			plugin := hub.GetPodGrouperPlugin(gvkWithWildcard, nil)
 			Expect(plugin).NotTo(BeNil())
 			Expect(plugin.Name()).To(BeEquivalentTo("Default Grouper"))
+		})
+	})
+
+	Context("Auxiliary Pod Tests", func() {
+		var (
+			kubeClient client.Client
+			hub        *DefaultPluginsHub
+		)
+
+		BeforeEach(func() {
+			kubeClient = fake.NewFakeClient()
+			hub = NewDefaultPluginsHub(
+				kubeClient, false, false, queueLabelKey, nodePoolLabelKey, "", "",
+			)
+		})
+
+		It("should return default grouper for auxiliary pod regardless of GVK", func() {
+			gvk := metav1.GroupVersionKind{
+				Group:   "kubeflow.org",
+				Version: "v1",
+				Kind:    "TFJob",
+			}
+			auxPod := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aux-pod",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						pluginconstants.AuxiliaryPodAnnotationKey: "true",
+					},
+				},
+			}
+			plugin := hub.GetPodGrouperPlugin(gvk, auxPod)
+			Expect(plugin).NotTo(BeNil())
+			Expect(plugin.Name()).To(BeEquivalentTo("Default Grouper"))
+		})
+
+		It("should return specialized grouper for non-auxiliary pod", func() {
+			gvk := metav1.GroupVersionKind{
+				Group:   "kubeflow.org",
+				Version: "v1",
+				Kind:    "TFJob",
+			}
+			regularPod := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "regular-pod",
+					Namespace: "test-ns",
+				},
+			}
+			plugin := hub.GetPodGrouperPlugin(gvk, regularPod)
+			Expect(plugin).NotTo(BeNil())
+			Expect(plugin.Name()).To(BeEquivalentTo("TensorFlow Grouper"))
 		})
 	})
 })
