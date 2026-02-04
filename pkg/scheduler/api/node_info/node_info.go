@@ -83,6 +83,7 @@ type NodeInfo struct {
 
 	PodInfos               map[common_info.PodID]*pod_info.PodInfo
 	MaxTaskNum             int
+	AllocatedPodCount      int // Count of actively allocated pods (excludes Releasing)
 	MemoryOfEveryGpuOnNode int64
 	GpuMemorySynced        bool
 	LegacyMIGTasks         map[common_info.PodID]string
@@ -393,6 +394,12 @@ func (ni *NodeInfo) addTask(task *pod_info.PodInfo, allowTaskToExistOnDifferentG
 	ni.addTaskResources(task)
 	ni.addTaskStorage(task)
 	ni.PodAffinityInfo.AddPod(task.Pod)
+
+	// Track allocated pod count (excluding Releasing pods)
+	if pod_status.IsActiveAllocatedStatus(task.Status) {
+		ni.AllocatedPodCount++
+	}
+
 	return nil
 }
 
@@ -475,6 +482,12 @@ func (ni *NodeInfo) RemoveTask(ti *pod_info.PodInfo) error {
 		return fmt.Errorf("failed to find task <%v/%v> on host <%v>",
 			ti.Namespace, ti.Name, ni.Name)
 	}
+
+	// Track allocated pod count (decrement if pod was actively allocated)
+	if pod_status.IsActiveAllocatedStatus(task.Status) {
+		ni.AllocatedPodCount--
+	}
+
 	delete(ni.PodInfos, key)
 	if ni.Node == nil {
 		return fmt.Errorf("node is nil during remove task, node name: <%v>", ni.Name)

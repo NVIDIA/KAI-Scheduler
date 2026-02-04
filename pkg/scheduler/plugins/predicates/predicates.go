@@ -206,9 +206,11 @@ func (pp *predicatesPlugin) evaluateTaskOnPredicates(
 	if task.IsSharedGPURequest() {
 		podsCountForTask += 1 // we need to include a *potential* reservation pod for fraction
 	}
-	if len(k8sNodeInfo.Pods)+podsCountForTask > node.MaxTaskNum {
-		log.InfraLogger.V(6).Infof("NodePodNumber predicates Task <%s/%s> on Node <%s> failed",
-			task.Namespace, task.Name, node.Name)
+	// Use node.AllocatedPodCount which excludes Releasing pods
+	if node.AllocatedPodCount+podsCountForTask > node.MaxTaskNum {
+		log.InfraLogger.V(6).Infof("NodePodNumber predicates Task <%s/%s> on Node <%s> failed: "+
+			"allocated pods (%d) + new pods (%d) > max (%d)",
+			task.Namespace, task.Name, node.Name, node.AllocatedPodCount, podsCountForTask, node.MaxTaskNum)
 		return common_info.NewFitError(task.Name, task.Namespace, node.Name, api.NodePodNumberExceeded)
 	}
 
