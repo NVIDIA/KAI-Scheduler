@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ksf "k8s.io/kube-scheduler/framework"
@@ -20,9 +21,10 @@ import (
 
 func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 	type args struct {
-		nodePoolName string
-		nodesMap     map[string]*node_info.NodeInfo
-		pod          *v1.Pod
+		nodePoolName   string
+		nodesMap       map[string]*node_info.NodeInfo
+		resourceClaims []*resourceapi.ResourceClaim
+		pod            *v1.Pod
 	}
 	type expected struct {
 		status *ksf.Status
@@ -45,6 +47,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 						}),
 					},
 				},
+				resourceClaims: []*resourceapi.ResourceClaim{},
 				pod: &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "name1",
@@ -89,6 +92,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 						}),
 					},
 				},
+				resourceClaims: []*resourceapi.ResourceClaim{},
 				pod: &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "name1",
@@ -134,6 +138,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 						}),
 					},
 				},
+				resourceClaims: []*resourceapi.ResourceClaim{},
 				pod: &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "name1",
@@ -179,6 +184,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 						}),
 					},
 				},
+				resourceClaims: []*resourceapi.ResourceClaim{},
 				pod: &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "name1",
@@ -224,6 +230,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 						}),
 					},
 				},
+				resourceClaims: []*resourceapi.ResourceClaim{},
 				pod: &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "name1",
@@ -270,6 +277,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 						}),
 					},
 				},
+				resourceClaims: []*resourceapi.ResourceClaim{},
 				pod: &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "name1",
@@ -298,7 +306,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mnr := NewMaxNodeResourcesPredicate(tt.args.nodesMap, tt.args.nodePoolName)
+			mnr := NewMaxNodeResourcesPredicate(tt.args.nodesMap, tt.args.resourceClaims, tt.args.nodePoolName)
 			if _, status := mnr.PreFilter(nil, nil, tt.args.pod, nil); !reflect.DeepEqual(status, tt.expected.status) {
 				t.Errorf("PreFilter() = %v, want %v", status, tt.expected.status)
 			}

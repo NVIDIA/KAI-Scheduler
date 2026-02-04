@@ -20,6 +20,7 @@ limitations under the License.
 package framework
 
 import (
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -46,13 +47,14 @@ type Operation interface {
 type ReverseOperation func() error
 
 type evictOperation struct {
-	taskInfo          *pod_info.PodInfo
-	previousStatus    pod_status.PodStatus
-	previousNode      *node_info.NodeInfo
-	previousGpuGroups []string
-	message           string
-	evictionMetadata  eviction_info.EvictionMetadata
-	reverseOperation  ReverseOperation
+	taskInfo                  *pod_info.PodInfo
+	previousStatus            pod_status.PodStatus
+	previousNode              *node_info.NodeInfo
+	previousGpuGroups         []string
+	previousResourceClaimInfo bindrequest_info.ResourceClaimInfo
+	message                   string
+	evictionMetadata          eviction_info.EvictionMetadata
+	reverseOperation          ReverseOperation
 }
 
 func (op evictOperation) Name() string {
@@ -86,13 +88,14 @@ func (op allocateOperation) Reverse() error {
 }
 
 type pipelineOperation struct {
-	taskInfo          *pod_info.PodInfo
-	previousStatus    pod_status.PodStatus
-	previousNode      string
-	previousGpuGroups []string
-	nextNode          string
-	message           string
-	reverseOperation  ReverseOperation
+	taskInfo                  *pod_info.PodInfo
+	previousStatus            pod_status.PodStatus
+	previousNode              string
+	previousGpuGroups         []string
+	previousResourceClaimInfo bindrequest_info.ResourceClaimInfo
+	nextNode                  string
+	message                   string
+	reverseOperation          ReverseOperation
 }
 
 func (op pipelineOperation) Name() string {

@@ -65,6 +65,7 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 			Nodes:            nodesInfoMap,
 			Queues:           queueInfoMap,
 			PodGroupInfos:    jobInfoMap,
+			ResourceClaims:   getResourceClaims(testMetadata),
 			Topologies:       topologies,
 			MinNodeGPUMemory: node_info.DefaultGpuMemory,
 		},
@@ -319,21 +320,63 @@ func addSessionPlugins(ssn *framework.Session, tiers []conf.Tier, cacheMockExist
 
 func getDRAObjects(testMetadata TestTopologyBasic) []runtime.Object {
 	var objects []runtime.Object
-	for _, deviceClass := range testMetadata.DeviceClasses {
-		deviceClassObject := resourceapi.DeviceClass{
+	deviceClasses := getDeviceClasses(testMetadata)
+	for _, deviceClass := range deviceClasses {
+		objects = append(objects, deviceClass)
+	}
+
+	resourceSlices := getResourceSlices(testMetadata)
+	for _, resourceSlice := range resourceSlices {
+		objects = append(objects, resourceSlice)
+	}
+
+	resourceClaims := getResourceClaims(testMetadata)
+	for _, resourceClaim := range resourceClaims {
+		objects = append(objects, resourceClaim)
+	}
+
+	return objects
+}
+
+func getResourceClaims(testMetadata TestTopologyBasic) []*resourceapi.ResourceClaim {
+	var objects []*resourceapi.ResourceClaim
+	for _, resourceClaim := range testMetadata.ResourceClaims {
+		resourceClaimObject := resourceapi.ResourceClaim{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       "DeviceClass",
+				Kind:       "ResourceClaim",
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            deviceClass,
+				Name:            resourceClaim.Name,
+				Namespace:       resourceClaim.Namespace,
 				ResourceVersion: "0",
+				Labels:          resourceClaim.Labels,
 			},
-			Spec: resourceapi.DeviceClassSpec{},
+			Spec: resourceapi.ResourceClaimSpec{
+				Devices: resourceapi.DeviceClaim{
+					Requests: []resourceapi.DeviceRequest{
+						{
+							Name: "request",
+							Exactly: &resourceapi.ExactDeviceRequest{
+								DeviceClassName: resourceClaim.DeviceClassName,
+								AllocationMode:  resourceapi.DeviceAllocationModeExactCount,
+								Count:           resourceClaim.Count,
+							},
+						},
+					},
+				},
+			},
 		}
-		objects = append(objects, &deviceClassObject)
+		if resourceClaim.ClaimStatus != nil {
+			resourceClaimObject.Status = *resourceClaim.ClaimStatus
+		}
+		objects = append(objects, &resourceClaimObject)
 	}
+	return objects
+}
 
+func getResourceSlices(testMetadata TestTopologyBasic) []*resourceapi.ResourceSlice {
+	var objects []*resourceapi.ResourceSlice
 	for _, resourceSlice := range testMetadata.ResourceSlices {
 		resourceSliceObject := resourceapi.ResourceSlice{
 			TypeMeta: metav1.TypeMeta{
@@ -369,39 +412,24 @@ func getDRAObjects(testMetadata TestTopologyBasic) []runtime.Object {
 
 		objects = append(objects, &resourceSliceObject)
 	}
+	return objects
+}
 
-	for _, resourceClaim := range testMetadata.ResourceClaims {
-		resourceClaimObject := resourceapi.ResourceClaim{
+func getDeviceClasses(testMetadata TestTopologyBasic) []*resourceapi.DeviceClass {
+	var objects []*resourceapi.DeviceClass
+	for _, deviceClass := range testMetadata.DeviceClasses {
+		deviceClassObject := resourceapi.DeviceClass{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       "ResourceClaim",
+				Kind:       "DeviceClass",
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            resourceClaim.Name,
-				Namespace:       resourceClaim.Namespace,
+				Name:            deviceClass,
 				ResourceVersion: "0",
-				Labels:          resourceClaim.Labels,
 			},
-			Spec: resourceapi.ResourceClaimSpec{
-				Devices: resourceapi.DeviceClaim{
-					Requests: []resourceapi.DeviceRequest{
-						{
-							Name: "request",
-							Exactly: &resourceapi.ExactDeviceRequest{
-								DeviceClassName: resourceClaim.DeviceClassName,
-								AllocationMode:  resourceapi.DeviceAllocationModeExactCount,
-								Count:           resourceClaim.Count,
-							},
-						},
-					},
-				},
-			},
+			Spec: resourceapi.DeviceClassSpec{},
 		}
-		if resourceClaim.ClaimStatus != nil {
-			resourceClaimObject.Status = *resourceClaim.ClaimStatus
-		}
-		objects = append(objects, &resourceClaimObject)
+		objects = append(objects, &deviceClassObject)
 	}
-
 	return objects
 }
