@@ -4,12 +4,32 @@
 package main
 
 import (
+	"archive/zip"
+	"context"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
+	"runtime/pprof"
+	"syscall"
+	"time"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/snapshotrunner"
-	"github.com/NVIDIA/KAI-scheduler/pkg/snapshottest"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	featureutil "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/kubernetes/pkg/features"
+
+	kaischedulerfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf_util"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins"
+	snapshotplugin "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
 )
 
 func main() {
@@ -24,14 +44,13 @@ func main() {
 	_ = fs.Parse(os.Args[1:])
 
 	if *generateTest {
-		// Handle test generation mode
 		if filename == nil || *filename == "" {
 			fmt.Fprintf(os.Stderr, "Error: --filename is required when generating tests\n")
 			fs.Usage()
 			os.Exit(1)
 		}
 
-		snap, err := snapshotrunner.LoadSnapshot(*filename)
+		snap, err := loadSnapshot(*filename)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading snapshot: %v\n", err)
 			os.Exit(1)
@@ -39,22 +58,22 @@ func main() {
 
 		outputPath := *outputFile
 		if outputPath == "" {
-			outputPath = snapshottest.GenerateOutputPath(*filename)
+			outputPath = GenerateOutputPath(*filename)
 		}
 
 		testFuncName := *testName
 		if testFuncName == "" {
-			testFuncName = snapshottest.GenerateTestName(*filename)
+			testFuncName = GenerateTestName(*filename)
 		}
 
-		generator := snapshottest.NewTestGenerator(*packageName, testFuncName)
+		generator := NewTestGenerator(*packageName, testFuncName)
 		code, err := generator.Generate(snap)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error generating test code: %v\n", err)
 			os.Exit(1)
 		}
 
-		if err := os.WriteFile(outputPath, []byte(code), 0644); err != nil {
+		if err := os.WriteFile(outputPath, []byte(code), 0o644); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing output file: %v\n", err)
 			os.Exit(1)
 		}
@@ -63,19 +82,242 @@ func main() {
 		return
 	}
 
-	// Handle original snapshot execution mode
 	if filename == nil || len(*filename) == 0 {
 		fs.Usage()
 		return
 	}
 
-	opts := snapshotrunner.Options{
-		Filename:   *filename,
-		Verbosity:  int(*verbosity),
-		CPUProfile: *cpuprofile,
+	if err := log.InitLoggers(int(*verbosity)); err != nil {
+		fmt.Printf("Failed to initialize logger: %v", err)
+		return
+	}
+	defer func() {
+		syncErr := log.InfraLogger.Sync()
+		if syncErr != nil && !errors.Is(syncErr, syscall.EINVAL) {
+			fmt.Printf("Failed to write log: %v", syncErr)
+		}
+	}()
+	log.InfraLogger.SetSessionID("snapshot-runner")
+
+	snap, err := loadSnapshot(*filename)
+	if err != nil {
+		log.InfraLogger.Fatalf(err.Error(), err)
 	}
 
-	if err := snapshotrunner.Run(opts); err != nil {
-		fmt.Printf("Failed to run snapshot: %v\n", err)
+	if err := setDRAFeatureGate(snap); err != nil {
+		log.InfraLogger.V(2).Warnf("Failed to set DRA feature gate: %v", err)
 	}
+
+	actions.InitDefaultActions()
+	plugins.InitDefaultPlugins()
+
+	kubeClient, kaiClient := loadClientsWithSnapshot(snap.RawObjects)
+
+	schedulerCacheParams := &cache.SchedulerCacheParams{
+		KubeClient:                  kubeClient,
+		KAISchedulerClient:          kaiClient,
+		SchedulerName:               snap.SchedulerParams.SchedulerName,
+		NodePoolParams:              snap.SchedulerParams.PartitionParams,
+		RestrictNodeScheduling:      snap.SchedulerParams.RestrictSchedulingNodes,
+		DetailedFitErrors:           snap.SchedulerParams.DetailedFitErrors,
+		ScheduleCSIStorage:          snap.SchedulerParams.ScheduleCSIStorage,
+		FullHierarchyFairness:       snap.SchedulerParams.FullHierarchyFairness,
+		AllowConsolidatingReclaim:   snap.SchedulerParams.AllowConsolidatingReclaim,
+		NumOfStatusRecordingWorkers: snap.SchedulerParams.NumOfStatusRecordingWorkers,
+		DiscoveryClient:             kubeClient.Discovery(),
+	}
+
+	schedulerCache := cache.New(schedulerCacheParams)
+	stopCh := make(chan struct{})
+	schedulerCache.Run(stopCh)
+	schedulerCache.WaitForCacheSync(stopCh)
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.InfraLogger.Fatalf("Failed to create CPU profile file: %v", err)
+		}
+		err = pprof.StartCPUProfile(f)
+		if err != nil {
+			log.InfraLogger.Fatalf("Failed to start CPU profile: %v", err)
+		}
+
+		defer pprof.StopCPUProfile()
+	}
+
+	ssn, err := framework.OpenSession(
+		schedulerCache, snap.Config, snap.SchedulerParams, "", &http.ServeMux{},
+	)
+	if err != nil {
+		log.InfraLogger.Fatalf(err.Error(), err)
+	}
+	defer framework.CloseSession(ssn)
+
+	acts, _ := conf_util.GetActionsFromConfig(snap.Config)
+	for _, action := range acts {
+		log.InfraLogger.SetAction(string(action.Name()))
+		metrics.SetCurrentAction(string(action.Name()))
+		actionStartTime := time.Now()
+		action.Execute(ssn)
+		metrics.UpdateActionDuration(string(action.Name()), metrics.Duration(actionStartTime))
+	}
+}
+
+func loadSnapshot(filename string) (*snapshotplugin.Snapshot, error) {
+	zipFile, err := zip.OpenReader(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer zipFile.Close()
+
+	for _, file := range zipFile.File {
+		if file.Name == snapshotplugin.SnapshotFileName {
+			jsonFile, err := file.Open()
+			if err != nil {
+				return nil, err
+			}
+			defer jsonFile.Close()
+
+			var snap snapshotplugin.Snapshot
+			err = json.NewDecoder(jsonFile).Decode(&snap)
+			if err != nil {
+				return nil, err
+			}
+
+			return &snap, nil
+		}
+	}
+
+	return nil, os.ErrNotExist
+}
+
+func loadClientsWithSnapshot(rawObjects *snapshotplugin.RawKubernetesObjects) (*fake.Clientset, *kaischedulerfake.Clientset) {
+	kubeClient := fake.NewSimpleClientset()
+	kaiClient := kaischedulerfake.NewSimpleClientset()
+
+	for _, pod := range rawObjects.Pods {
+		_, err := kubeClient.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create pod: %v", err)
+		}
+	}
+
+	for _, node := range rawObjects.Nodes {
+		_, err := kubeClient.CoreV1().Nodes().Create(context.TODO(), node, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create node: %v", err)
+		}
+	}
+
+	for _, bindRequest := range rawObjects.BindRequests {
+		_, err := kaiClient.SchedulingV1alpha2().BindRequests(bindRequest.Namespace).Create(context.TODO(), bindRequest, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create bind request: %v", err)
+		}
+	}
+
+	for _, podGroup := range rawObjects.PodGroups {
+		_, err := kaiClient.SchedulingV2alpha2().PodGroups(podGroup.Namespace).Create(context.TODO(), podGroup, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create pod group: %v", err)
+		}
+	}
+
+	for _, queue := range rawObjects.Queues {
+		_, err := kaiClient.SchedulingV2().Queues(queue.Namespace).Create(context.TODO(), queue, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create queue: %v", err)
+		}
+	}
+
+	for _, priorityClass := range rawObjects.PriorityClasses {
+		_, err := kubeClient.SchedulingV1().PriorityClasses().Create(context.TODO(), priorityClass, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create priority class: %v", err)
+		}
+	}
+
+	for _, configMap := range rawObjects.ConfigMaps {
+		_, err := kubeClient.CoreV1().ConfigMaps(configMap.Namespace).Create(context.TODO(), configMap, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create config map: %v", err)
+		}
+	}
+
+	for _, persistentVolumeClaim := range rawObjects.PersistentVolumeClaims {
+		_, err := kubeClient.CoreV1().PersistentVolumeClaims(persistentVolumeClaim.Namespace).Create(context.TODO(), persistentVolumeClaim, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create persistent volume claim: %v", err)
+		}
+	}
+
+	for _, csiStorageCapacity := range rawObjects.CSIStorageCapacities {
+		_, err := kubeClient.StorageV1().CSIStorageCapacities(csiStorageCapacity.Namespace).Create(context.TODO(), csiStorageCapacity, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create CSI storage capacity: %v", err)
+		}
+	}
+
+	for _, storageClass := range rawObjects.StorageClasses {
+		_, err := kubeClient.StorageV1().StorageClasses().Create(context.TODO(), storageClass, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create storage class: %v", err)
+		}
+	}
+
+	for _, csiDriver := range rawObjects.CSIDrivers {
+		_, err := kubeClient.StorageV1().CSIDrivers().Create(context.TODO(), csiDriver, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create CSI driver: %v", err)
+		}
+	}
+
+	for _, topology := range rawObjects.Topologies {
+		_, err := kaiClient.KaiV1alpha1().Topologies().Create(context.TODO(), topology, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create topology: %v", err)
+		}
+	}
+
+	for _, resourceClaim := range rawObjects.ResourceClaims {
+		_, err := kubeClient.ResourceV1().ResourceClaims(resourceClaim.Namespace).Create(context.TODO(), resourceClaim, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create resource claim: %v", err)
+		}
+	}
+
+	for _, resourceSlice := range rawObjects.ResourceSlices {
+		_, err := kubeClient.ResourceV1().ResourceSlices().Create(context.TODO(), resourceSlice, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create resource slice: %v", err)
+		}
+	}
+
+	for _, deviceClass := range rawObjects.DeviceClasses {
+		_, err := kubeClient.ResourceV1().DeviceClasses().Create(context.TODO(), deviceClass, v1.CreateOptions{})
+		if err != nil {
+			log.InfraLogger.Errorf("Failed to create device class: %v", err)
+		}
+	}
+
+	return kubeClient, kaiClient
+}
+
+// DRA state is inferred from the presence of DRA-related resources
+// (ResourceSlices, ResourceClaims, or DeviceClasses) in the snapshot.
+func setDRAFeatureGate(snap *snapshotplugin.Snapshot) error {
+	draEnabled := false
+	if snap.RawObjects != nil {
+		hasResourceSlices := len(snap.RawObjects.ResourceSlices) > 0
+		hasResourceClaims := len(snap.RawObjects.ResourceClaims) > 0
+		hasDeviceClasses := len(snap.RawObjects.DeviceClasses) > 0
+
+		if hasResourceSlices || hasResourceClaims || hasDeviceClasses {
+			draEnabled = true
+			log.InfraLogger.V(3).Infof("DRA enabled based on presence of DRA resources in snapshot: ResourceSlices (%d), ResourceClaims (%d), DeviceClasses (%d)",
+				len(snap.RawObjects.ResourceSlices), len(snap.RawObjects.ResourceClaims), len(snap.RawObjects.DeviceClasses))
+		}
+	}
+	return featureutil.DefaultMutableFeatureGate.SetFromMap(
+		map[string]bool{string(features.DynamicResourceAllocation): draEnabled})
 }

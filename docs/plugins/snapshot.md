@@ -198,22 +198,20 @@ The snapshot plugin (`pkg/scheduler/plugins/snapshot/snapshot.go`) implements th
 
 The snapshot tool (`cmd/snapshot-tool/main.go`) implements:
 
-1. Snapshot loading and parsing (using `pkg/snapshotrunner`)
-2. Fake client creation with snapshot data
-3. Scheduler cache initialization
-4. Session management
-5. Action execution
-6. Test generation (when `--generate-test` flag is used, using `pkg/snapshottest`)
-
-The snapshot execution logic has been extracted to `pkg/snapshotrunner/runner.go`, which provides reusable functions for loading and running snapshots. This package is located outside the scheduler package to keep the codebase organized.
+1. Snapshot loading and parsing (reading the ZIP file and decoding the JSON snapshot)
+2. Fake client creation with snapshot data (pods, nodes, queues, PodGroups, BindRequests and related resources)
+3. Scheduler cache initialization and synchronization
+4. Session management using the scheduler framework
+5. Action execution based on the actions configured in the snapshot
+6. Test generation when the `--generate-test` flag is used
 
 ### Test Generation
 
-The test generation functionality (`pkg/snapshottest/generator.go`) implements:
+The test generation functionality is implemented inside the snapshot tool package (`cmd/snapshot-tool/generator.go`) and:
 
-1. Snapshot loading using `snapshotrunner.LoadSnapshot()` from `pkg/snapshotrunner`
-2. Extraction of summary information from the snapshot (counts and names)
-3. Generation of boilerplate Go test code with:
+1. Reuses the same snapshot loading logic as the main snapshot execution path
+2. Extracts summary information from the snapshot (counts and names)
+3. Generates boilerplate Go test code with:
    - Basic test function structure
    - Template `getTestsMetadata()` function with TODO comments
    - Example structures for all test components

@@ -1,14 +1,14 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package snapshottest
+package main
 
 import (
 	"fmt"
 	"path/filepath"
 	"strings"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
+	snapshotplugin "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
 )
 
 type TestGenerator struct {
@@ -23,10 +23,9 @@ func NewTestGenerator(packageName, testFuncName string) *TestGenerator {
 	}
 }
 
-func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
+func (g *TestGenerator) Generate(snap *snapshotplugin.Snapshot) (string, error) {
 	var b strings.Builder
 
-	// Write header
 	b.WriteString("// Copyright 2025 NVIDIA CORPORATION\n")
 	b.WriteString("// SPDX-License-Identifier: Apache-2.0\n")
 	b.WriteString("//\n")
@@ -34,7 +33,6 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("// This is a boilerplate file that you can edit to customize your test.\n\n")
 	b.WriteString(fmt.Sprintf("package %s\n\n", g.packageName))
 
-	// Write imports
 	b.WriteString("import (\n")
 	b.WriteString("\t\"testing\"\n\n")
 	b.WriteString("\t\"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/integration_tests/integration_tests_utils\"\n")
@@ -45,28 +43,22 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("\t\"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake\"\n")
 	b.WriteString(")\n\n")
 
-	// Extract summary information from snapshot for comments
 	summary := g.extractSnapshotSummary(snap)
 
-	// Write test function
 	b.WriteString(fmt.Sprintf("func %s(t *testing.T) {\n", g.testFuncName))
 	b.WriteString("\tintegration_tests_utils.RunTests(t, getTestsMetadata())\n")
 	b.WriteString("}\n\n")
 
-	// Write metadata function with boilerplate structure
 	b.WriteString("func getTestsMetadata() []integration_tests_utils.TestTopologyMetadata {\n")
 	b.WriteString("\treturn []integration_tests_utils.TestTopologyMetadata{\n")
 	b.WriteString("\t\t{\n")
 	b.WriteString("\t\t\tTestTopologyBasic: test_utils.TestTopologyBasic{\n")
 
-	// Add summary comments
 	b.WriteString(generateSummaryComments(summary))
 
-	// Generate boilerplate structure
 	b.WriteString("\t\t\t\tName: \"test-name\", // TODO: Update with descriptive test name\n")
 	b.WriteString("\n")
 
-	// Jobs boilerplate
 	b.WriteString("\t\t\t\tJobs: []*jobs_fake.TestJobBasic{\n")
 	b.WriteString("\t\t\t\t\t// TODO: Add jobs based on snapshot\n")
 	b.WriteString("\t\t\t\t\t// Example:\n")
@@ -83,7 +75,6 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("\t\t\t\t},\n")
 	b.WriteString("\n")
 
-	// Nodes boilerplate
 	b.WriteString("\t\t\t\tNodes: map[string]nodes_fake.TestNodeBasic{\n")
 	b.WriteString("\t\t\t\t\t// TODO: Add nodes based on snapshot\n")
 	b.WriteString("\t\t\t\t\t// Example:\n")
@@ -94,7 +85,6 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("\t\t\t\t},\n")
 	b.WriteString("\n")
 
-	// Queues boilerplate
 	b.WriteString("\t\t\t\tQueues: []test_utils.TestQueueBasic{\n")
 	b.WriteString("\t\t\t\t\t// TODO: Add queues based on snapshot\n")
 	b.WriteString("\t\t\t\t\t// Example:\n")
@@ -106,7 +96,6 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("\t\t\t\t},\n")
 	b.WriteString("\n")
 
-	// Mocks boilerplate
 	b.WriteString("\t\t\t\t// TODO: Configure mocks if needed\n")
 	b.WriteString("\t\t\t\t// Mocks: &test_utils.TestMock{\n")
 	b.WriteString("\t\t\t\t// \tCacheRequirements: &test_utils.CacheMocking{\n")
@@ -115,7 +104,6 @@ func (g *TestGenerator) Generate(snap *snapshot.Snapshot) (string, error) {
 	b.WriteString("\t\t\t\t// },\n")
 	b.WriteString("\n")
 
-	// JobExpectedResults boilerplate
 	b.WriteString("\t\t\t\t// TODO: Add expected results for jobs\n")
 	b.WriteString("\t\t\t\t// JobExpectedResults: map[string]test_utils.TestExpectedResultBasic{\n")
 	b.WriteString("\t\t\t\t// \t\"job-name\": {\n")
@@ -144,7 +132,7 @@ type snapshotSummary struct {
 	podGroupNames []string
 }
 
-func (g *TestGenerator) extractSnapshotSummary(snap *snapshot.Snapshot) snapshotSummary {
+func (g *TestGenerator) extractSnapshotSummary(snap *snapshotplugin.Snapshot) snapshotSummary {
 	summary := snapshotSummary{
 		nodeNames:     []string{},
 		queueNames:    []string{},
@@ -216,11 +204,10 @@ func generateSummaryComments(summary snapshotSummary) string {
 	return b.String()
 }
 
-// GenerateTestName converts a snapshot filename to a test function name
+// GenerateTestName converts a snapshot filename to a test function name.
 func GenerateTestName(snapshotFile string) string {
 	base := strings.TrimSuffix(filepath.Base(snapshotFile), filepath.Ext(snapshotFile))
 	base = strings.TrimSuffix(base, ".gzip")
-	// Convert to PascalCase for function name
 	parts := strings.Split(strings.ReplaceAll(base, "-", "_"), "_")
 	for i, part := range parts {
 		if len(part) > 0 {
@@ -230,7 +217,7 @@ func GenerateTestName(snapshotFile string) string {
 	return "TestSnapshot" + strings.Join(parts, "")
 }
 
-// GenerateOutputPath converts a snapshot filename to an output file path
+// GenerateOutputPath converts a snapshot filename to an output file path.
 func GenerateOutputPath(snapshotFile string) string {
 	base := strings.TrimSuffix(filepath.Base(snapshotFile), filepath.Ext(snapshotFile))
 	base = strings.TrimSuffix(base, ".gzip")
