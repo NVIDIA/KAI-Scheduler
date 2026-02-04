@@ -35,3 +35,5 @@ nodes:
   labels:
     run.ai/simulated-gpu-node-pool: default
     nvidia.com/gpu.deploy.dra-plugin-gpu: "true"
+# CPU Node
+- role: worker
