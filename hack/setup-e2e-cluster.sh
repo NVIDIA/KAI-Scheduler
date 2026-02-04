@@ -16,7 +16,6 @@ KIND_CONFIG=${REPO_ROOT}/hack/e2e-kind-config.yaml
 # Parse named parameters
 TEST_THIRD_PARTY_INTEGRATIONS=${TEST_THIRD_PARTY_INTEGRATIONS:-"false"}
 LOCAL_IMAGES_BUILD=${LOCAL_IMAGES_BUILD:-"false"}
-GPU_RESOURCES_AS_DRA=${GPU_RESOURCES_AS_DRA:-"false"}
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -26,10 +25,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --local-images-build)
       LOCAL_IMAGES_BUILD="true"
-      shift
-      ;;
-    --gpu-resources-as-dra)
-      GPU_RESOURCES_AS_DRA="true"
       shift
       ;;
     -h|--help)
@@ -53,16 +48,10 @@ kind create cluster \
 
 # Install the fake-gpu-operator to provide a fake GPU resources for the e2e tests
 
-if [ "$GPU_RESOURCES_AS_DRA" = "true" ]; then
-  helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.71 \
-      --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml \
-      --set draPlugin.enabled=true \
-      --set devicePlugin.enabled=false \
-      --wait
-else
-  helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.71 \
-      --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml --wait
-fi
+helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.71 \
+  --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml --wait
+kubectl create clusterrole pods-patcher --verb=patch --resource=pods
+kubectl create rolebinding fake-status-updater --clusterrole=pods-patcher --serviceaccount=gpu-operator:status-updater -n kai-resource-reservation
 
 # install third party operators to check the compatibility with the kai-scheduler
 if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then
