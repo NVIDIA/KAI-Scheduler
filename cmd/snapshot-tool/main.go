@@ -17,7 +17,9 @@ import (
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	featureutil "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/kubernetes/pkg/features"
 
 	kaischedulerfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
@@ -58,7 +60,9 @@ func main() {
 		log.InfraLogger.Fatalf(err.Error(), err)
 	}
 
-	draEnabled := isDRAEnabledFromSnapshot(snapshot)
+	if err := setDRAFeatureGate(snapshot); err != nil {
+		log.InfraLogger.V(2).Warnf("Failed to set DRA feature gate: %v", err)
+	}
 
 	actions.InitDefaultActions()
 	plugins.InitDefaultPlugins()
@@ -77,7 +81,6 @@ func main() {
 		AllowConsolidatingReclaim:   snapshot.SchedulerParams.AllowConsolidatingReclaim,
 		NumOfStatusRecordingWorkers: snapshot.SchedulerParams.NumOfStatusRecordingWorkers,
 		DiscoveryClient:             kubeClient.Discovery(),
-		DRAEnabled:                  &draEnabled,
 	}
 
 	schedulerCache := cache.New(schedulerCacheParams)
@@ -256,17 +259,22 @@ func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.C
 	return kubeClient, kaiClient
 }
 
-func isDRAEnabledFromSnapshot(snap *snapshot.Snapshot) bool {
-	if snap.RawObjects == nil {
-		return false
+// DRA state is inferred from the presence of DRA-related resources
+// (ResourceSlices, ResourceClaims, or DeviceClasses) in the snapshot.
+func setDRAFeatureGate(snap *snapshot.Snapshot) error {
+	// Infer DRA state from presence of DRA-related resources
+	draEnabled := false
+	if snap.RawObjects != nil {
+		hasResourceSlices := len(snap.RawObjects.ResourceSlices) > 0
+		hasResourceClaims := len(snap.RawObjects.ResourceClaims) > 0
+		hasDeviceClasses := len(snap.RawObjects.DeviceClasses) > 0
+
+		if hasResourceSlices || hasResourceClaims || hasDeviceClasses {
+			draEnabled = true
+			log.InfraLogger.V(3).Infof("DRA enabled based on presence of DRA resources in snapshot: ResourceSlices (%d), ResourceClaims (%d), DeviceClasses (%d)",
+				len(snap.RawObjects.ResourceSlices), len(snap.RawObjects.ResourceClaims), len(snap.RawObjects.DeviceClasses))
+		}
 	}
-	hasResourceSlices := len(snap.RawObjects.ResourceSlices) > 0
-	hasResourceClaims := len(snap.RawObjects.ResourceClaims) > 0
-	hasDeviceClasses := len(snap.RawObjects.DeviceClasses) > 0
-	if hasResourceSlices || hasResourceClaims || hasDeviceClasses {
-		log.InfraLogger.V(3).Infof("DRA enabled based on presence of DRA resources in snapshot: ResourceSlices (%d), ResourceClaims (%d), DeviceClasses (%d)",
-			len(snap.RawObjects.ResourceSlices), len(snap.RawObjects.ResourceClaims), len(snap.RawObjects.DeviceClasses))
-		return true
-	}
-	return false
+	return featureutil.DefaultMutableFeatureGate.SetFromMap(
+		map[string]bool{string(features.DynamicResourceAllocation): draEnabled})
 }

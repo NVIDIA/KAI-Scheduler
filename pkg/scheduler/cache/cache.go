@@ -92,7 +92,6 @@ type SchedulerCacheParams struct {
 	NumOfStatusRecordingWorkers int
 	UpdatePodEvictionCondition  bool
 	DiscoveryClient             discovery.DiscoveryInterface
-	DRAEnabled                  *bool
 }
 
 type SchedulerCache struct {
@@ -152,12 +151,8 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 	sc.informerFactory = informers.NewSharedInformerFactory(sc.kubeClient, 0)
 	sc.kubeAiSchedulerInformerFactory = kubeaischedulerinfo.NewSharedInformerFactory(sc.kubeAiSchedulerClient, 0)
 
-	if schedulerCacheParams.DRAEnabled != nil {
-		if err := featuregates.SetDRAFeatureGateFromValue(*schedulerCacheParams.DRAEnabled); err != nil {
-			log.InfraLogger.Warningf("Failed to set DRA feature gate: %v", err)
-		}
-	} else if err := featuregates.SetDRAFeatureGate(schedulerCacheParams.DiscoveryClient); err != nil {
-		log.InfraLogger.Warningf("Failed to set DRA feature gate: %v", err)
+	if err := featuregates.SetDRAFeatureGate(schedulerCacheParams.DiscoveryClient); err != nil {
+		log.InfraLogger.Warningf("Failed to set DRA feature gate: ", err)
 	}
 	sc.internalPlugins = k8splugins.InitializeInternalPlugins(sc.kubeClient, sc.informerFactory, sc.SnapshotSharedLister())
 
