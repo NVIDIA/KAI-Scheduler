@@ -43,9 +43,6 @@ spec:
   binder:
     service:
       enabled: true
-      {{- if hasKey .Values.binder "cdiEnabled" }}
-      cdiEnabled: {{ .Values.binder.cdiEnabled }}
-      {{- end }}
       image:
         name: {{ .Values.binder.image.name }}
         repository: {{ .Values.global.registry }}
@@ -82,6 +79,9 @@ spec:
       podResources:
         {{- toYaml .Values.binder.resourceReservationPodResources | nindent 8 }}
       {{- end }}
+    {{- if hasKey .Values.binder "cdiEnabled" }}
+    cdiEnabled: {{ .Values.binder.cdiEnabled }}
+    {{- end }}
 
   podGrouper:
     service:
