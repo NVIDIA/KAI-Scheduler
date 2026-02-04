@@ -115,7 +115,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	enrichMetadata(metadata, &pod, topOwner, r.configs)
+	enrichMetadata(metadata, &pod, topOwner, r.configs, logger)
 
 	err = r.PodGroupHandler.ApplyToCluster(ctx, *metadata)
 	if err != nil {

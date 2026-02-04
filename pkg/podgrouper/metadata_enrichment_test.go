@@ -6,6 +6,7 @@ package controllers
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +61,9 @@ func TestAddNodePoolLabel(t *testing.T) {
 func TestHandleSubgroupCreationRequest(t *testing.T) {
 	tests := []struct {
 		name                 string
+		topOwnerKind         string
 		topOwnerAnnotations  map[string]string
+		topOwnerSpec         map[string]interface{}
 		existingSubgroups    []string
 		initialMinAvailable  int32
 		expectedSubgroups    []string
@@ -74,18 +77,21 @@ func TestHandleSubgroupCreationRequest(t *testing.T) {
 		},
 		{
 			name:                 "empty annotation does nothing",
+			topOwnerKind:         "Job",
 			topOwnerAnnotations:  map[string]string{},
 			initialMinAvailable:  2,
 			expectedMinAvailable: 2,
 		},
 		{
 			name:                 "reserved 'default' name is ignored",
+			topOwnerKind:         "Job",
 			topOwnerAnnotations:  map[string]string{pluginconstants.CreateSubgroupAnnotationKey: "default"},
 			initialMinAvailable:  2,
 			expectedMinAvailable: 2,
 		},
 		{
 			name:                 "creates default and requested subgroups when none exist",
+			topOwnerKind:         "Job",
 			topOwnerAnnotations:  map[string]string{pluginconstants.CreateSubgroupAnnotationKey: "auth-proxy"},
 			initialMinAvailable:  2,
 			expectedSubgroups:    []string{"default", "auth-proxy"},
@@ -93,6 +99,7 @@ func TestHandleSubgroupCreationRequest(t *testing.T) {
 		},
 		{
 			name:                 "adds to existing subgroups without creating default",
+			topOwnerKind:         "Job",
 			topOwnerAnnotations:  map[string]string{pluginconstants.CreateSubgroupAnnotationKey: "auth-proxy"},
 			existingSubgroups:    []string{"workers"},
 			initialMinAvailable:  2,
@@ -101,14 +108,47 @@ func TestHandleSubgroupCreationRequest(t *testing.T) {
 		},
 		{
 			name:                 "skips if subgroup already exists",
+			topOwnerKind:         "Job",
 			topOwnerAnnotations:  map[string]string{pluginconstants.CreateSubgroupAnnotationKey: "auth-proxy"},
 			existingSubgroups:    []string{"auth-proxy"},
 			initialMinAvailable:  2,
 			expectedSubgroups:    []string{"auth-proxy"},
 			expectedMinAvailable: 2,
 		},
+		{
+			name:                 "skips for Deployment (multi-PodGroup workload)",
+			topOwnerKind:         "Deployment",
+			topOwnerAnnotations:  map[string]string{pluginconstants.CreateSubgroupAnnotationKey: "auth-proxy"},
+			initialMinAvailable:  2,
+			expectedMinAvailable: 2,
+		},
+		{
+			name:                 "skips for JobSet with InOrder startup (default)",
+			topOwnerKind:         "JobSet",
+			topOwnerAnnotations:  map[string]string{pluginconstants.CreateSubgroupAnnotationKey: "auth-proxy"},
+			initialMinAvailable:  2,
+			expectedMinAvailable: 2,
+		},
+		{
+			name:                 "skips for JobSet with explicit InOrder startup",
+			topOwnerKind:         "JobSet",
+			topOwnerAnnotations:  map[string]string{pluginconstants.CreateSubgroupAnnotationKey: "auth-proxy"},
+			topOwnerSpec:         map[string]interface{}{"startupPolicy": map[string]interface{}{"startupPolicyOrder": "InOrder"}},
+			initialMinAvailable:  2,
+			expectedMinAvailable: 2,
+		},
+		{
+			name:                 "allows JobSet with AnyOrder startup (single PodGroup)",
+			topOwnerKind:         "JobSet",
+			topOwnerAnnotations:  map[string]string{pluginconstants.CreateSubgroupAnnotationKey: "auth-proxy"},
+			topOwnerSpec:         map[string]interface{}{"startupPolicy": map[string]interface{}{"startupPolicyOrder": "AnyOrder"}},
+			initialMinAvailable:  2,
+			expectedSubgroups:    []string{"default", "auth-proxy"},
+			expectedMinAvailable: 3,
+		},
 	}
 
+	logger := logr.Discard()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			metadata := &podgroup.Metadata{MinAvailable: tt.initialMinAvailable}
@@ -118,10 +158,16 @@ func TestHandleSubgroupCreationRequest(t *testing.T) {
 
 			var topOwner *unstructured.Unstructured
 			if tt.topOwnerAnnotations != nil {
-				topOwner = &unstructured.Unstructured{Object: map[string]interface{}{"metadata": map[string]interface{}{"annotations": toInterfaceMap(tt.topOwnerAnnotations)}}}
+				topOwner = &unstructured.Unstructured{Object: map[string]interface{}{
+					"kind":     tt.topOwnerKind,
+					"metadata": map[string]interface{}{"annotations": toInterfaceMap(tt.topOwnerAnnotations), "name": "test-workload", "namespace": "test-ns"},
+				}}
+				if tt.topOwnerSpec != nil {
+					topOwner.Object["spec"] = tt.topOwnerSpec
+				}
 			}
 
-			handleSubgroupCreationRequest(topOwner, metadata)
+			handleSubgroupCreationRequest(topOwner, metadata, logger)
 
 			assert.Equal(t, tt.expectedMinAvailable, metadata.MinAvailable)
 			assert.Equal(t, len(tt.expectedSubgroups), len(metadata.SubGroups))
@@ -187,6 +233,32 @@ func TestHandlePodSubgroupAssignmentRequest(t *testing.T) {
 				}
 				assert.True(t, found, "pod should be assigned to subgroup")
 			}
+		})
+	}
+}
+
+func TestIsMultiPodGroupWorkload(t *testing.T) {
+	tests := []struct {
+		name     string
+		kind     string
+		spec     map[string]interface{}
+		expected bool
+	}{
+		{"Job is not multi-PodGroup", "Job", nil, false},
+		{"PyTorchJob is not multi-PodGroup", "PyTorchJob", nil, false},
+		{"Deployment is multi-PodGroup", "Deployment", nil, true},
+		{"JobSet with no startup policy (defaults to InOrder) is multi-PodGroup", "JobSet", nil, true},
+		{"JobSet with InOrder is multi-PodGroup", "JobSet", map[string]interface{}{"startupPolicy": map[string]interface{}{"startupPolicyOrder": "InOrder"}}, true},
+		{"JobSet with AnyOrder is not multi-PodGroup", "JobSet", map[string]interface{}{"startupPolicy": map[string]interface{}{"startupPolicyOrder": "AnyOrder"}}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			topOwner := &unstructured.Unstructured{Object: map[string]interface{}{"kind": tt.kind}}
+			if tt.spec != nil {
+				topOwner.Object["spec"] = tt.spec
+			}
+			assert.Equal(t, tt.expected, isMultiPodGroupWorkload(topOwner))
 		})
 	}
 }

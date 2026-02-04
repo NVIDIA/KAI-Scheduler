@@ -52,8 +52,6 @@ func (g *K8sJobGrouper) GetPodGroupMetadata(topOwner *unstructured.Unstructured,
 		return nil, err
 	}
 
-	// GuyContinue: Got into an issue with workloads that create multiple podgroups for the same job.
-	// We don't know which podgroup to assign the auxiliary pods to.
 	podGroupMetadata.Name, err = g.calcPodGroupName(topOwner, pod)
 	if err != nil {
 		return nil, err

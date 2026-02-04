@@ -4,6 +4,7 @@
 package controllers
 
 import (
+	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -12,11 +13,11 @@ import (
 	pluginconstants "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 )
 
-func enrichMetadata(metadata *podgroup.Metadata, pod *v1.Pod, topOwner *unstructured.Unstructured, configs Configs) {
+func enrichMetadata(metadata *podgroup.Metadata, pod *v1.Pod, topOwner *unstructured.Unstructured, configs Configs, logger logr.Logger) {
 	if len(configs.NodePoolLabelKey) > 0 {
 		addNodePoolLabel(metadata, pod, configs.NodePoolLabelKey)
 	}
-	handleSubgroupCreationRequest(topOwner, metadata)
+	handleSubgroupCreationRequest(topOwner, metadata, logger)
 	handlePodSubgroupAssignmentRequest(pod, metadata)
 }
 
@@ -38,7 +39,7 @@ func addNodePoolLabel(metadata *podgroup.Metadata, pod *v1.Pod, nodePoolKey stri
 	}
 }
 
-func handleSubgroupCreationRequest(topOwner *unstructured.Unstructured, metadata *podgroup.Metadata) {
+func handleSubgroupCreationRequest(topOwner *unstructured.Unstructured, metadata *podgroup.Metadata, logger logr.Logger) {
 	if topOwner == nil {
 		return
 	}
@@ -53,7 +54,34 @@ func handleSubgroupCreationRequest(topOwner *unstructured.Unstructured, metadata
 		return
 	}
 
+	// Skip subgroup creation for workloads that may create multiple PodGroups.
+	// For these workloads, it's ambiguous which PodGroup the auxiliary subgroup should belong to.
+	if isMultiPodGroupWorkload(topOwner) {
+		logger.Info("Skipping create-subgroup annotation: workload type may create multiple PodGroups",
+			"kind", topOwner.GetKind(),
+			"name", topOwner.GetName(),
+			"namespace", topOwner.GetNamespace(),
+			"requestedSubgroup", subgroupName)
+		return
+	}
+
 	ensureSubgroupExists(metadata, subgroupName)
+}
+
+// GuyContinue
+func isMultiPodGroupWorkload(topOwner *unstructured.Unstructured) bool {
+	kind := topOwner.GetKind()
+
+	switch kind {
+	case "Job":
+		// Deployments create one PodGroup per pod (not gang scheduled)
+		return true
+	case "JobSet":
+		// JobSet creates multiple PodGroups when using InOrder startup policy (default)
+		order, _, _ := unstructured.NestedString(topOwner.Object, "spec", "startupPolicy", "startupPolicyOrder")
+		return order == "" || order == "InOrder"
+	}
+	return false
 }
 
 func handlePodSubgroupAssignmentRequest(pod *v1.Pod, metadata *podgroup.Metadata) {
