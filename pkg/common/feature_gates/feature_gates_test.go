@@ -51,5 +51,12 @@ var _ = Describe("New", func() {
 			Entry("edge case version (1.31) with resource API should not enable DRA", "1", "31", []string{resourcev1alhpa3.SchemeGroupVersion.String()}, false),
 			Entry("higher compatible version (1.35) with resource API should enable DRA", "1", "34", []string{resourcev1.SchemeGroupVersion.String()}, true),
 		)
+		It("should set DRA feature gate from explicit value", func() {
+			Expect(SetDRAFeatureGateFromValue(true)).To(Succeed())
+			Expect(featureutil.DefaultFeatureGate.Enabled(features.DynamicResourceAllocation)).To(BeTrue())
+
+			Expect(SetDRAFeatureGateFromValue(false)).To(Succeed())
+			Expect(featureutil.DefaultFeatureGate.Enabled(features.DynamicResourceAllocation)).To(BeFalse())
+		})
 	})
 })

@@ -20,6 +20,10 @@ const (
 
 func SetDRAFeatureGate(discoveryClient discovery.DiscoveryInterface) error {
 	enabled := IsDynamicResourcesEnabled(discoveryClient)
+	return SetDRAFeatureGateFromValue(enabled)
+}
+
+func SetDRAFeatureGateFromValue(enabled bool) error {
 	return featureutil.DefaultMutableFeatureGate.SetFromMap(
 		map[string]bool{string(features.DynamicResourceAllocation): enabled})
 }
