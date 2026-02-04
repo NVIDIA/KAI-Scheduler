@@ -37,7 +37,7 @@ func SkipIfInsufficientDynamicResources(clientset kubernetes.Interface, deviceCl
 }
 
 // ListDevicesByNode counts devices per node that match the given DeviceClass selectors (CEL).
-// If the DeviceClass doesn't exist, the test is skipped. If it has no selectors, all devices match.
+// If the DeviceClass doesn't exist, the test is skipped. If it has no selectors, devices are counted by driver name only (same as previous behavior).
 func ListDevicesByNode(clientset kubernetes.Interface, deviceClassName string) map[string]int {
 	resourceSlices, err := clientset.ResourceV1().ResourceSlices().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
@@ -83,8 +83,14 @@ func ListDevicesByNode(clientset kubernetes.Interface, deviceClassName string) m
 		}
 
 		for _, device := range slice.Spec.Devices {
-			celDevice := convertToCelDevice(slice.Spec.Driver, device)
+			if len(compiledSelectors) == 0 {
+				if slice.Spec.Driver == deviceClassName {
+					devicesByNode[nodeName]++
+				}
+				continue
+			}
 
+			celDevice := convertToCelDevice(slice.Spec.Driver, device)
 			// DeviceClass selectors are AND'ed: each selector must match.
 			matches := true
 			for _, compiled := range compiledSelectors {
@@ -130,7 +136,6 @@ func convertToCelDevice(driver string, device resourceapi.Device) cel.Device {
 	}
 }
 
-// CleanupResourceClaims deletes all ResourceClaims with the engine-e2e label in the given namespace.
 func CleanupResourceClaims(ctx context.Context, clientset kubernetes.Interface, namespace string) {
 	err := clientset.ResourceV1beta1().ResourceClaims(namespace).
 		DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
