@@ -240,6 +240,13 @@ func (drap *draPlugin) allocateResourceClaim(task *pod_info.PodInfo, podClaim *v
 
 	resources.UpsertReservedFor(claim, task.Pod)
 
+	// If the claim info has already been allocated in the past (the deallocation was virtual), recover previous allocation data
+	allocatedFromMemory := false
+	if claimAllocationInfo, ok := task.ResourceClaimInfo[podClaim.Name]; ok && claimAllocationInfo.Allocation != nil {
+		claim.Status.Allocation = claimAllocationInfo.Allocation.DeepCopy()
+		allocatedFromMemory = true
+	}
+
 	if claim.Status.Allocation == nil {
 		allocatedState, err := drap.manager.ResourceClaims().GatherAllocatedState()
 		if err != nil {
@@ -276,10 +283,12 @@ func (drap *draPlugin) allocateResourceClaim(task *pod_info.PodInfo, podClaim *v
 		return fmt.Errorf("failed to update resource claim %s/%s: %v", task.Namespace, claimName, err)
 	}
 
-	task.ResourceClaimInfo = append(task.ResourceClaimInfo, schedulingv1alpha2.ResourceClaimAllocation{
+	log.InfraLogger.V(3).Infof("Allocated claim <%s/%s>, devices <%s>, allocation data from podInfo: %t.", task.Namespace, claimName, getClaimDevicesString(claim), allocatedFromMemory)
+
+	task.ResourceClaimInfo[podClaim.Name] = &schedulingv1alpha2.ResourceClaimAllocation{
 		Name:       podClaim.Name,
 		Allocation: claim.Status.Allocation.DeepCopy(),
-	})
+	}
 
 	return nil
 }
@@ -297,8 +306,9 @@ func (drap *draPlugin) deallocateResourceClaim(task *pod_info.PodInfo, podClaim 
 
 	claim := originalClaim.DeepCopy() // Modifying the original object will cause the manager to think there were no updates
 
-	resources.RemoveReservedFor(claim, task.Pod)
+	devicesDeallocatedStr := getClaimDevicesString(claim)
 
+	resources.RemoveReservedFor(claim, task.Pod)
 	if len(claim.Status.ReservedFor) == 0 {
 		claim.Status.Allocation = nil
 	}
@@ -309,13 +319,21 @@ func (drap *draPlugin) deallocateResourceClaim(task *pod_info.PodInfo, podClaim 
 	}
 
 	if task.ResourceClaimInfo != nil {
-		for i, rc := range task.ResourceClaimInfo {
-			if rc.Name == claimName {
-				task.ResourceClaimInfo = append(task.ResourceClaimInfo[:i], task.ResourceClaimInfo[i+1:]...)
-				break
-			}
-		}
+		delete(task.ResourceClaimInfo, podClaim.Name)
 	}
 
+	log.InfraLogger.V(3).Infof("Deallocated claim <%s/%s>, devices <%s>.", task.Namespace, claimName, devicesDeallocatedStr)
+
 	return nil
+}
+
+func getClaimDevicesString(claim *resourceapi.ResourceClaim) string {
+	if claim.Status.Allocation == nil {
+		return ""
+	}
+	devices := make([]string, 0, len(claim.Status.Allocation.Devices.Results))
+	for _, device := range claim.Status.Allocation.Devices.Results {
+		devices = append(devices, device.Device)
+	}
+	return strings.Join(devices, ", ")
 }

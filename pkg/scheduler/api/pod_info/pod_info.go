@@ -26,8 +26,10 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
+	"k8s.io/apimachinery/pkg/types"
 	clientcache "k8s.io/client-go/tools/cache"
 
+	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
@@ -36,6 +38,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -92,7 +95,8 @@ type PodInfo struct {
 
 	BindRequest *bindrequest_info.BindRequestInfo
 
-	ResourceClaimInfo bindrequest_info.ResourceClaimInfo
+	ResourceClaimInfo              bindrequest_info.ResourceClaimInfo
+	ResourceTemplatesWithoutClaims []*resourceapi.ResourceClaimTemplate
 
 	// OwnedStorageClaims are StorageClaims that are owned exclusively by the pod, and we can count on them being deleted
 	// if the pod is evicted
@@ -173,6 +177,12 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 		nodeName = bindRequest.BindRequest.Spec.SelectedNode
 	}
 
+	resourceClaimInfo, templatesWithoutClaims, err := calcResourceClaimInfo(draPodClaims, pod)
+	if err != nil {
+		log.InfraLogger.Errorf("PodInfo ctor failure - failed to calculate resource claim info for pod %s/%s: %v", pod.Namespace, pod.Name, err)
+		return nil
+	}
+
 	podInfo := &PodInfo{
 		UID:                            common_info.PodID(pod.UID),
 		Job:                            getPodGroupID(pod),
@@ -190,6 +200,8 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 		ResourceRequestType:            RequestTypeRegular,
 		ResourceReceivedType:           ReceivedTypeNone,
 		BindRequest:                    bindRequest,
+		ResourceClaimInfo:              resourceClaimInfo,
+		ResourceTemplatesWithoutClaims: templatesWithoutClaims,
 		schedulingConstraintsSignature: "",
 		storageClaims:                  map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
 		ownedStorageClaims:             map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
@@ -197,6 +209,38 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 
 	podInfo.updatePodAdditionalFields(bindRequest, draPodClaims...)
 	return podInfo
+}
+
+func calcResourceClaimInfo(draPodClaims []*resourceapi.ResourceClaim, pod *v1.Pod) (bindrequest_info.ResourceClaimInfo, []*resourceapi.ResourceClaimTemplate, error) {
+	resourceClaimInfo := make(bindrequest_info.ResourceClaimInfo)
+	templatesWithoutClaims := []*resourceapi.ResourceClaimTemplate{}
+
+	draPodClaimsMap := resource_info.ResourceClaimSliceToMap(draPodClaims)
+	for _, podClaim := range pod.Spec.ResourceClaims {
+		claimName, err := resources.GetResourceClaimName(pod, &podClaim)
+		if err != nil {
+			if podClaim.ResourceClaimTemplateName != nil {
+				templatesWithoutClaims = append(templatesWithoutClaims,
+					&resourceapi.ResourceClaimTemplate{ObjectMeta: metav1.ObjectMeta{Name: *podClaim.ResourceClaimTemplateName, Namespace: pod.Namespace}})
+				continue // The dra controller might not have created the claim yet - this is a valid state. The job is not ready to run yet.
+			}
+			return nil, nil, fmt.Errorf("PodInfo ctor failure - failed to get resource claim name for pod %s/%s, claim %s: %v", pod.Namespace, pod.Name, podClaim.Name, err)
+		}
+		claim, found := draPodClaimsMap[types.NamespacedName{Namespace: pod.Namespace, Name: claimName}.String()]
+		if !found || claim == nil {
+			if podClaim.ResourceClaimTemplateName != nil {
+				templatesWithoutClaims = append(templatesWithoutClaims,
+					&resourceapi.ResourceClaimTemplate{ObjectMeta: metav1.ObjectMeta{Name: *podClaim.ResourceClaimTemplateName, Namespace: pod.Namespace}})
+				continue // The dra controller might not have created the claim yet - this is a valid state. The job is not ready to run yet.
+			}
+			return nil, nil, fmt.Errorf("PodInfo ctor failure - failed to get claim from draPodClaimsMap for pod %s/%s, claim %s: %v", pod.Namespace, pod.Name, podClaim.Name, err)
+		}
+		resourceClaimInfo[podClaim.Name] = &schedulingv1alpha2.ResourceClaimAllocation{
+			Name:       podClaim.Name,
+			Allocation: claim.Status.Allocation,
+		}
+	}
+	return resourceClaimInfo, templatesWithoutClaims, nil
 }
 
 func (pi *PodInfo) Clone() *PodInfo {
