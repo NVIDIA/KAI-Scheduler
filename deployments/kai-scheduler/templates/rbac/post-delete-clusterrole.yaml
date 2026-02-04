@@ -11,12 +11,9 @@ metadata:
     "helm.sh/hook-delete-policy": hook-succeeded
 rules:
 - apiGroups:
-  - apps
+  - kai.scheduler
   resources:
-  - deployments
+  - configs
   verbs:
   - delete
-  - get
-  - list
-  - watch
 {{- end }}

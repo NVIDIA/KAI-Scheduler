@@ -24,7 +24,7 @@ spec:
             - /bin/sh
             - -c
             - |
-              echo "Deleting deployments..."
-              kubectl -n kai-scheduler delete deployment --all --ignore-not-found=true
+              echo "Deleting all KAI Services..."
+              kubectl delete Config kai-config --ignore-not-found
               echo "Cleanup complete."
 {{- end }}
