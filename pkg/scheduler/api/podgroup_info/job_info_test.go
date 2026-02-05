@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
+	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -1573,5 +1574,96 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 		if got != tt.expected {
 			t.Errorf("IsStale() for case '%s' got %v, want %v", tt.name, got, tt.expected)
 		}
+	}
+}
+
+func TestPodGroupInfo_SubGroupMinMemberIgnoresRootMinMember(t *testing.T) {
+	// This test verifies that when subgroups are defined, the scheduler uses
+	// subgroup minMembers directly and ignores the root PodGroup MinMember.
+	podGroup := &enginev2alpha2.PodGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pg",
+			Namespace: "default",
+			UID:       types.UID("test-uid"),
+		},
+		Spec: enginev2alpha2.PodGroupSpec{
+			MinMember: 10, // Intentionally mismatched - should be ignored
+			Queue:     "test-queue",
+			SubGroups: []enginev2alpha2.SubGroup{
+				{Name: "workers", MinMember: 2},
+				{Name: "aux", MinMember: 1},
+			},
+		},
+	}
+
+	jobInfo := NewPodGroupInfo("test-uid")
+	jobInfo.SetPodGroup(podGroup)
+
+	podSets := jobInfo.GetSubGroups()
+	if len(podSets) != 2 {
+		t.Fatalf("Expected 2 podsets, got %d", len(podSets))
+	}
+
+	workersMinAvailable := podSets["workers"].GetMinAvailable()
+	if workersMinAvailable != 2 {
+		t.Errorf("Expected workers minAvailable=2, got %d", workersMinAvailable)
+	}
+
+	auxMinAvailable := podSets["aux"].GetMinAvailable()
+	if auxMinAvailable != 1 {
+		t.Errorf("Expected aux minAvailable=1, got %d", auxMinAvailable)
+	}
+
+	workerPod := pod_info.NewTaskInfo(&v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:       "worker-1",
+			Namespace: "default",
+			Name:      "worker-1",
+			Labels: map[string]string{
+				commonconstants.SubGroupLabelKey: "workers",
+			},
+		},
+		Status: v1.PodStatus{Phase: v1.PodPending},
+	})
+
+	auxPod := pod_info.NewTaskInfo(&v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:       "aux-1",
+			Namespace: "default",
+			Name:      "aux-1",
+			Labels: map[string]string{
+				commonconstants.SubGroupLabelKey: "aux",
+			},
+		},
+		Status: v1.PodStatus{Phase: v1.PodPending},
+	})
+
+	noSubgroupPod := pod_info.NewTaskInfo(&v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:       "no-subgroup-1",
+			Namespace: "default",
+			Name:      "no-subgroup-1",
+		},
+		Status: v1.PodStatus{Phase: v1.PodPending},
+	})
+
+	jobInfo.AddTaskInfo(workerPod)
+	jobInfo.AddTaskInfo(auxPod)
+	jobInfo.AddTaskInfo(noSubgroupPod)
+
+	if len(podSets["workers"].GetPodInfos()) != 1 {
+		t.Errorf("Expected 1 pod in workers subgroup, got %d", len(podSets["workers"].GetPodInfos()))
+	}
+
+	if len(podSets["aux"].GetPodInfos()) != 1 {
+		t.Errorf("Expected 1 pod in aux subgroup, got %d", len(podSets["aux"].GetPodInfos()))
+	}
+
+	defaultSubgroup := jobInfo.PodSets[DefaultSubGroup]
+
+	// Currently, we don't support pods without a subgroup for a PodGroup with subgroups
+	// so we expect the default subgroup to be nil
+	if defaultSubgroup != nil {
+		t.Errorf("Expected default subgroup to not exist, got %v", defaultSubgroup)
 	}
 }
