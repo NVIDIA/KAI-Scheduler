@@ -25,6 +25,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 )
 
 const (
@@ -129,11 +130,18 @@ func (s *SchedulerForShard) configMapForShard(
 	placementArguments := calculatePlacementArguments(shard.Spec.PlacementStrategy)
 	innerConfig := conf.SchedulerConfiguration{}
 
-	actions := []string{"allocate"}
-	if placementArguments[gpuResource] != spreadStrategy && placementArguments[cpuResource] != spreadStrategy {
-		actions = append(actions, "consolidation")
+	var actions []string
+	if len(shard.Spec.Actions) > 0 {
+		// Use custom actions from shard spec
+		actions = shard.Spec.Actions
+	} else {
+		// Default actions
+		actions = []string{string(framework.Allocate)}
+		if placementArguments[gpuResource] != spreadStrategy && placementArguments[cpuResource] != spreadStrategy {
+			actions = append(actions, string(framework.Consolidation))
+		}
+		actions = append(actions, string(framework.Reclaim), string(framework.Preempt), string(framework.StaleGangEviction))
 	}
-	actions = append(actions, []string{"reclaim", "preempt", "stalegangeviction"}...)
 
 	innerConfig.Actions = strings.Join(actions, ", ")
 
