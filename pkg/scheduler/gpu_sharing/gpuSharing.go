@@ -12,7 +12,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
-type nodeGpuForSharing struct {
+type NodeGpuForSharing struct {
 	Groups      []string
 	IsReleasing bool
 }
@@ -20,7 +20,7 @@ type nodeGpuForSharing struct {
 func AllocateFractionalGPUTaskToNode(ssn *framework.Session, stmt *framework.Statement, pod *pod_info.PodInfo,
 	node *node_info.NodeInfo, isPipelineOnly bool) bool {
 	fittingGPUs := ssn.FittingGPUs(node, pod)
-	gpuForSharing := getNodePreferableGpuForSharing(fittingGPUs, node, pod, isPipelineOnly)
+	gpuForSharing := GetNodePreferableGpuForSharing(fittingGPUs, node, pod, isPipelineOnly)
 	if gpuForSharing == nil {
 		return false
 	}
@@ -35,10 +35,10 @@ func AllocateFractionalGPUTaskToNode(ssn *framework.Session, stmt *framework.Sta
 	return success
 }
 
-func getNodePreferableGpuForSharing(fittingGPUsOnNode []string, node *node_info.NodeInfo, pod *pod_info.PodInfo,
-	isPipelineOnly bool) *nodeGpuForSharing {
+func GetNodePreferableGpuForSharing(fittingGPUsOnNode []string, node *node_info.NodeInfo, pod *pod_info.PodInfo,
+	isPipelineOnly bool) *NodeGpuForSharing {
 
-	nodeGpusSharing := &nodeGpuForSharing{
+	nodeGpusSharing := &NodeGpuForSharing{
 		Groups:      []string{},
 		IsReleasing: false,
 	}
@@ -67,14 +67,14 @@ func getNodePreferableGpuForSharing(fittingGPUsOnNode []string, node *node_info.
 	return nil
 }
 
-func findGpuForSharingOnNode(task *pod_info.PodInfo, node *node_info.NodeInfo, isPipelineOnly bool) *nodeGpuForSharing {
+func findGpuForSharingOnNode(task *pod_info.PodInfo, node *node_info.NodeInfo, isPipelineOnly bool) *NodeGpuForSharing {
 	isReleasing := true
 	if !isPipelineOnly {
 		if taskAllocatable := node.IsTaskAllocatable(task); taskAllocatable {
 			isReleasing = false
 		}
 	}
-	return &nodeGpuForSharing{Groups: []string{string(uuid.NewUUID())}, IsReleasing: isReleasing}
+	return &NodeGpuForSharing{Groups: []string{string(uuid.NewUUID())}, IsReleasing: isReleasing}
 }
 
 func allocateSharedGPUTask(ssn *framework.Session, stmt *framework.Statement, node *node_info.NodeInfo,
