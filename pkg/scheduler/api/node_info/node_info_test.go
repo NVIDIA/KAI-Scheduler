@@ -125,6 +125,9 @@ func TestNodeInfo_AddPod(t *testing.T) {
 		GpuSharingNodeInfo:          *newGpuSharingNodeInfo(),
 		AccessibleStorageCapacities: map[common_info.StorageClassID][]*storagecapacity_info.StorageCapacityInfo{},
 	}
+	// Adjust pod counts in resources (2 pods used, 108 idle out of 110 total)
+	node1ExpectedNodeInfo.Idle.ScalarResources()[resource_info.PodsResourceName] = 108
+	node1ExpectedNodeInfo.Used.ScalarResources()[resource_info.PodsResourceName] = 2
 	for _, podInfo := range node1ExpectedNodeInfo.PodInfos {
 		node1ExpectedNodeInfo.setAcceptedResources(podInfo)
 	}
@@ -728,10 +731,18 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 			fields{
 				MemoryOfEveryGpuOnNode: 1000,
 				GpuMemorySynced:        true,
-				Idle:                   resource_info.NewResource(0, 0, 2),
+				Idle:                   func() *resource_info.Resource {
+					r := resource_info.NewResource(0, 0, 2)
+					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					return r
+				}(),
 				Used:                   resource_info.EmptyResource(),
 				Releasing:              resource_info.EmptyResource(),
-				Allocatable:            resource_info.NewResource(0, 0, 2),
+				Allocatable:            func() *resource_info.Resource {
+					r := resource_info.NewResource(0, 0, 2)
+					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					return r
+				}(),
 			},
 			args{
 				task: pod_info.NewTaskInfo(
@@ -753,7 +764,11 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 						},
 					},
 				),
-				nodeNonAllocatedResources: resource_info.NewResource(0, 0, 2),
+				nodeNonAllocatedResources: func() *resource_info.Resource {
+					r := resource_info.NewResource(0, 0, 2)
+					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					return r
+				}(),
 			},
 			false,
 		},
@@ -762,10 +777,18 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 			fields{
 				MemoryOfEveryGpuOnNode: 1000,
 				GpuMemorySynced:        true,
-				Idle:                   resource_info.NewResource(0, 0, 2),
+				Idle:                   func() *resource_info.Resource {
+					r := resource_info.NewResource(0, 0, 2)
+					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					return r
+				}(),
 				Used:                   resource_info.EmptyResource(),
 				Releasing:              resource_info.EmptyResource(),
-				Allocatable:            resource_info.NewResource(0, 0, 2),
+				Allocatable:            func() *resource_info.Resource {
+					r := resource_info.NewResource(0, 0, 2)
+					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					return r
+				}(),
 			},
 			args{
 				task: pod_info.NewTaskInfo(
@@ -787,7 +810,11 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 						},
 					},
 				),
-				nodeNonAllocatedResources: resource_info.NewResource(0, 0, 2),
+				nodeNonAllocatedResources: func() *resource_info.Resource {
+					r := resource_info.NewResource(0, 0, 2)
+					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					return r
+				}(),
 			},
 			true,
 		},
