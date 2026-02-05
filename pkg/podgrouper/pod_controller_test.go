@@ -355,12 +355,12 @@ func TestReconcilePodNotFound(t *testing.T) {
 
 func TestAssignPodToGroupAndSubGroup(t *testing.T) {
 	tests := []struct {
-		name                   string
-		pod                    *v1.Pod
-		metadata               *podgroup.Metadata
-		expectedPodGroup       string
-		expectedSubGroup       string
-		expectPatch            bool
+		name             string
+		pod              *v1.Pod
+		metadata         *podgroup.Metadata
+		expectedPodGroup string
+		expectedSubGroup string
+		expectPatch      bool
 	}{
 		{
 			name: "assigns podgroup annotation and subgroup label",

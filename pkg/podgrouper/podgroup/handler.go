@@ -131,4 +131,3 @@ func (h *Handler) createPodGroupForMetadata(podGroupMetadata Metadata) *scheduli
 
 	return pg
 }
-
