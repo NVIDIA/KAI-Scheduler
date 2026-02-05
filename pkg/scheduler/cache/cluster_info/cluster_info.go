@@ -26,7 +26,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
@@ -44,6 +43,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info/data_lister"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/status_updater"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
@@ -450,12 +450,12 @@ func (c *ClusterInfo) getNodeToPodInfosMap(allPods []*v1.Pod,
 	map[string][]*pod_info.PodInfo, map[string][]*pod_info.PodInfo, error) {
 	nodePodInfosMap := map[string][]*pod_info.PodInfo{}
 	nodeReservationPodInfosMap := map[string][]*pod_info.PodInfo{}
-	draClaimMap := resourceClaimSliceToMap(draResourceClaims)
-	podsToClaimsMap := calcClaimsToPodsBaseMap(draClaimMap)
+	draClaimMap := resource_info.ResourceClaimSliceToMap(draResourceClaims)
+	podsToClaimsMap := resource_info.CalcClaimsToPodsBaseMap(draClaimMap)
 
 	for _, pod := range allPods {
 		podBindRequest := bindRequests.GetBindRequestForPod(pod)
-		draPodClaims := getDraPodClaims(pod, draClaimMap, podsToClaimsMap)
+		draPodClaims := resource_info.GetDraPodClaims(pod, draClaimMap, podsToClaimsMap)
 		podInfo := pod_info.NewTaskInfoWithBindRequest(pod, podBindRequest, draPodClaims...)
 
 		if pod_info.IsResourceReservationTask(podInfo.Pod) {
@@ -577,60 +577,4 @@ func (c *ClusterInfo) isPodGroupUpForScheduler(podGroup *enginev2alpha2.PodGroup
 	}
 
 	return false
-}
-
-func resourceClaimSliceToMap(draResourceClaims []*resourceapi.ResourceClaim) map[string]*resourceapi.ResourceClaim {
-	draClaimMap := map[string]*resourceapi.ResourceClaim{}
-	for _, draClaim := range draResourceClaims {
-		draClaimMap[draClaim.Name] = draClaim
-	}
-	return draClaimMap
-}
-
-func calcClaimsToPodsBaseMap(draClaimsMap map[string]*resourceapi.ResourceClaim) map[types.UID]map[types.UID]*resourceapi.ResourceClaim {
-	podsToClaimsMap := map[types.UID]map[types.UID]*resourceapi.ResourceClaim{}
-	for _, claim := range draClaimsMap {
-		claimIsRelatedToPod := false
-		for _, ownerReference := range claim.OwnerReferences {
-			if ownerReference.Kind == "Pod" {
-				addClaimToPodClaimMap(claim, ownerReference.UID, podsToClaimsMap)
-				claimIsRelatedToPod = true
-				break
-			}
-		}
-		if claimIsRelatedToPod {
-			continue
-		}
-		for _, reservedFor := range claim.Status.ReservedFor {
-			if reservedFor.Resource == "pods" {
-				addClaimToPodClaimMap(claim, reservedFor.UID, podsToClaimsMap)
-				break
-			}
-		}
-	}
-	return podsToClaimsMap
-}
-
-func getDraPodClaims(pod *v1.Pod, draClaimMap map[string]*resourceapi.ResourceClaim,
-	podsToClaimsMap map[types.UID]map[types.UID]*resourceapi.ResourceClaim) []*resourceapi.ResourceClaim {
-	for _, claimReference := range pod.Spec.ResourceClaims {
-		claim, found := draClaimMap[claimReference.Name]
-		if found {
-			addClaimToPodClaimMap(claim, pod.UID, podsToClaimsMap)
-		}
-	}
-
-	draPodClaims := []*resourceapi.ResourceClaim{}
-	for _, claim := range podsToClaimsMap[pod.UID] {
-		draPodClaims = append(draPodClaims, claim)
-	}
-	return draPodClaims
-}
-
-func addClaimToPodClaimMap(claim *resourceapi.ResourceClaim, podUid types.UID,
-	podsToClaimsMap map[types.UID]map[types.UID]*resourceapi.ResourceClaim) {
-	if len(podsToClaimsMap[podUid]) == 0 {
-		podsToClaimsMap[podUid] = map[types.UID]*resourceapi.ResourceClaim{}
-	}
-	podsToClaimsMap[podUid][claim.UID] = claim
 }

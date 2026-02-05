@@ -10,6 +10,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/dynamic-resource-allocation/cel"
 	"k8s.io/dynamic-resource-allocation/structured"
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
@@ -240,11 +241,20 @@ func (drap *draPlugin) allocateResourceClaim(task *pod_info.PodInfo, podClaim *v
 
 	resources.UpsertReservedFor(claim, task.Pod)
 
+	// If the claim info has already been allocated in the past (the deallocation was virtual), recover previous allocation data
+	allocatedFromMemory := false
+	if claimAllocationInfo, ok := task.ResourceClaimInfo[podClaim.Name]; ok && claimAllocationInfo.Allocation != nil {
+		claim.Status.Allocation = claimAllocationInfo.Allocation.DeepCopy()
+		allocatedFromMemory = true
+	}
+
 	if claim.Status.Allocation == nil {
 		allocatedState, err := drap.manager.ResourceClaims().GatherAllocatedState()
 		if err != nil {
 			return fmt.Errorf("failed to list all allocated devices: %v", err)
 		}
+
+		drap.validateAllocatedState(allocatedState)
 
 		resourceSlices, err := drap.manager.ResourceSlices().ListWithDeviceTaintRules()
 		if err != nil {
@@ -276,10 +286,17 @@ func (drap *draPlugin) allocateResourceClaim(task *pod_info.PodInfo, podClaim *v
 		return fmt.Errorf("failed to update resource claim %s/%s: %v", task.Namespace, claimName, err)
 	}
 
-	task.ResourceClaimInfo = append(task.ResourceClaimInfo, schedulingv1alpha2.ResourceClaimAllocation{
+	deviceAllocated := ""
+	if claim.Status.Allocation != nil {
+		deviceAllocated = claim.Status.Allocation.Devices.Results[0].Device
+	}
+
+	log.InfraLogger.V(3).Infof("Allocated claim <%s/%s>, device <%s>, from memory: %t.", task.Namespace, claimName, deviceAllocated, allocatedFromMemory)
+
+	task.ResourceClaimInfo[podClaim.Name] = &schedulingv1alpha2.ResourceClaimAllocation{
 		Name:       podClaim.Name,
 		Allocation: claim.Status.Allocation.DeepCopy(),
-	})
+	}
 
 	return nil
 }
@@ -298,6 +315,10 @@ func (drap *draPlugin) deallocateResourceClaim(task *pod_info.PodInfo, podClaim 
 	claim := originalClaim.DeepCopy() // Modifying the original object will cause the manager to think there were no updates
 
 	resources.RemoveReservedFor(claim, task.Pod)
+	var deviceRemoved string
+	if claim.Status.Allocation != nil {
+		deviceRemoved = claim.Status.Allocation.Devices.Results[0].Device
+	}
 
 	if len(claim.Status.ReservedFor) == 0 {
 		claim.Status.Allocation = nil
@@ -309,13 +330,36 @@ func (drap *draPlugin) deallocateResourceClaim(task *pod_info.PodInfo, podClaim 
 	}
 
 	if task.ResourceClaimInfo != nil {
-		for i, rc := range task.ResourceClaimInfo {
-			if rc.Name == claimName {
-				task.ResourceClaimInfo = append(task.ResourceClaimInfo[:i], task.ResourceClaimInfo[i+1:]...)
-				break
-			}
-		}
+		delete(task.ResourceClaimInfo, podClaim.Name)
 	}
 
+	log.InfraLogger.V(3).Infof("Deallocated claim <%s/%s>, device <%s>.", task.Namespace, claimName, deviceRemoved)
+
+	allocatedState, err := drap.manager.ResourceClaims().GatherAllocatedState()
+	if err != nil {
+		return fmt.Errorf("failed to list all allocated devices: %v", err)
+	}
+	drap.validateAllocatedState(allocatedState)
+
 	return nil
+}
+
+func (drap *draPlugin) validateAllocatedState(allocatedState *structured.AllocatedState) {
+	resourceClaims, err := drap.manager.ResourceClaims().List()
+	if err != nil {
+		log.InfraLogger.Errorf("failed to list all resource claims: %v", err)
+	}
+	resourceClaimDevices := make(sets.Set[string])
+	for _, resourceClaim := range resourceClaims {
+		if resourceClaim.Status.Allocation != nil {
+			resourceClaimDevices.Insert(resourceClaim.Status.Allocation.Devices.Results[0].Device)
+		}
+	}
+	allocatedStateDevices := make(sets.Set[string])
+	for deviceID := range allocatedState.AllocatedDevices {
+		allocatedStateDevices.Insert(deviceID.Device.String())
+	}
+	if !resourceClaimDevices.Equal(allocatedStateDevices) {
+		log.InfraLogger.Errorf("allocated state does not match resource claim devices: %v", allocatedState.AllocatedDevices)
+	}
 }

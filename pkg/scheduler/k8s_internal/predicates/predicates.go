@@ -143,7 +143,7 @@ func NewSessionPredicates(ssn *framework.Session) k8s_internal.SessionPredicates
 		}
 	}
 
-	mnrPredicate := NewMaxNodeResourcesPredicate(ssn.ClusterInfo.Nodes, ssn.NodePoolName())
+	mnrPredicate := NewMaxNodeResourcesPredicate(ssn.ClusterInfo.Nodes, ssn.ClusterInfo.ResourceClaims, ssn.NodePoolName())
 	predicates[MaxNodePoolResources] = k8s_internal.SessionPredicate{
 		Name:                NodeScheduler,
 		IsPreFilterRequired: mnrPredicate.isPreFilterRequired,
