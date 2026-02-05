@@ -39,3 +39,14 @@ type Metadata struct {
 	RequiredTopologyLevel  string
 	Topology               string
 }
+
+func (m *Metadata) FindSubGroupForPod(podNamespace, podName string) *SubGroupMetadata {
+	for _, subGroup := range m.SubGroups {
+		for _, ref := range subGroup.PodsReferences {
+			if ref.Namespace == podNamespace && ref.Name == podName {
+				return subGroup
+			}
+		}
+	}
+	return nil
+}
