@@ -63,7 +63,7 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 		})
 
 		It("Allocate simple request", func(ctx context.Context) {
-			claim := rd.CreateResourceClaim(namespace, deviceClassName, 1)
+			claim := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, deviceClassName, 1)
 			claim, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
@@ -98,7 +98,7 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 		})
 
 		It("Fails to allocate request with wrong device class", func(ctx context.Context) {
-			claim := rd.CreateResourceClaim(namespace, "fake-device-class", 1)
+			claim := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, "fake-device-class", 1)
 			claim, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
@@ -144,7 +144,7 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 			}
 			Expect(nodeName).ToNot(Equal(""), "failed to find a node with multiple devices")
 
-			claimTemplate := rd.CreateResourceClaimTemplate(namespace, deviceClassName, 1)
+			claimTemplate := rd.CreateResourceClaimTemplate(namespace, testCtx.Queues[0].Name, deviceClassName, 1)
 			claimTemplate, err := testCtx.KubeClientset.ResourceV1().ResourceClaimTemplates(namespace).Create(ctx, claimTemplate, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
@@ -242,11 +242,11 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 
 		It("Should track DRA GPU resources in queue status", func(ctx context.Context) {
 			// Create ResourceClaims for GPU devices
-			claim1 := rd.CreateResourceClaim(namespace, gpuDeviceClassName, 1)
+			claim1 := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, gpuDeviceClassName, 1)
 			claim1, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim1, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			claim2 := rd.CreateResourceClaim(namespace, gpuDeviceClassName, 2)
+			claim2 := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, gpuDeviceClassName, 2)
 			claim2, err = testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim2, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 

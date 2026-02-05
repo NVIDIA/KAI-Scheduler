@@ -14,8 +14,10 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	commonresources "github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -119,7 +121,7 @@ func FindNodesWithEnoughGPUs(ctx context.Context, client runtimeClient.Client, n
 	return gpuNodes
 }
 
-func FindNodesWithExactGPUs(ctx context.Context, client runtimeClient.Client, numFreeGPUs int64) []*corev1.Node {
+func FindNodesWithExactAllocatableGPUs(ctx context.Context, client runtimeClient.Client, numFreeGPUs int64) []*corev1.Node {
 	allNodes := corev1.NodeList{}
 	var gpuNodes []*corev1.Node
 	Expect(client.List(ctx, &allNodes)).To(Succeed())
@@ -134,6 +136,31 @@ func FindNodesWithExactGPUs(ctx context.Context, client runtimeClient.Client, nu
 		}
 	}
 	return gpuNodes
+}
+
+func FindNodesWithExactAllocatableDRAGPUs(ctx context.Context, client runtimeClient.Client, numFreeGPUs int64) ([]*corev1.Node, error) {
+	allResourceSlices := resourceapi.ResourceSliceList{}
+	var matchingNodes []*corev1.Node
+	Expect(client.List(ctx, &allResourceSlices)).To(Succeed())
+	for _, resourceSlice := range allResourceSlices.Items {
+		if !commonresources.IsGPUDeviceClass(resourceSlice.Spec.Driver) {
+			continue
+		}
+		if resourceSlice.Spec.NodeName == nil || len(*resourceSlice.Spec.NodeName) == 0 {
+			return nil, fmt.Errorf("gpu resource slice %s should match a single node. NodeName %v, NodeSelector %v, AllNodes %v",
+				resourceSlice.Name, resourceSlice.Spec.NodeName, resourceSlice.Spec.NodeSelector, resourceSlice.Spec.AllNodes)
+		}
+		if len(resourceSlice.Spec.Devices) != int(numFreeGPUs) {
+			continue
+		}
+		node := &v1.Node{}
+		err := client.Get(ctx, runtimeClient.ObjectKey{Name: *resourceSlice.Spec.NodeName}, node)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get node with the matching number of gpus %s: %w", *resourceSlice.Spec.NodeName, err)
+		}
+		matchingNodes = append(matchingNodes, node)
+	}
+	return matchingNodes, nil
 }
 
 func GetNodeGpuDeviceMemory(ctx context.Context, client runtimeClient.Client, nodeName string) int64 {

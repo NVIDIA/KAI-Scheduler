@@ -6,16 +6,17 @@ package reclaim
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
+	resourceapi "k8s.io/api/resource/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
@@ -28,66 +29,61 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
-func createPod(ctx context.Context, testCtx *testcontext.TestContext, queue *v2.Queue, gpus float64) *v1.Pod {
-	pod := rd.CreatePodObject(queue, v1.ResourceRequirements{})
-	if gpus >= 1 {
-		pod.Spec.Containers[0].Resources.Limits = map[v1.ResourceName]resource.Quantity{
-			constants.GpuResource: resource.MustParse(fmt.Sprintf("%f", gpus)),
-		}
-	} else if gpus > 0 {
-		pod.Annotations = map[string]string{
-			constants.GpuFraction: fmt.Sprintf("%f", gpus),
-		}
-	}
+// createPodWithDRAClaim creates a pod with a DRA resource claim requesting gpus
+// The claim is created first and the pod is set as the owner
+func createPodWithDRAClaim(ctx context.Context, testCtx *testcontext.TestContext, q *v2.Queue, gpus int) *v1.Pod {
+	namespace := queue.GetConnectedNamespaceToQueue(q)
+	gpuDeviceClassName := "gpu.nvidia.com"
 
-	pod, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
+	// Create the resource claim
+	claim := rd.CreateResourceClaim(namespace, q.Name, gpuDeviceClassName, gpus)
+	claim, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim, metav1.CreateOptions{})
 	Expect(err).To(Succeed())
+
+	// Wait for the ResourceClaim to be accessible via the controller client
+	Eventually(func() error {
+		claimObj := &resourceapi.ResourceClaim{}
+		return testCtx.ControllerClient.Get(ctx, types.NamespacedName{
+			Namespace: namespace,
+			Name:      claim.Name,
+		}, claimObj)
+	}).Should(Succeed(), "ResourceClaim should be accessible via controller client")
+
+	// Create the pod with the claim
+	pod := rd.CreatePodObject(q, v1.ResourceRequirements{})
+	pod.Spec.ResourceClaims = []v1.PodResourceClaim{{
+		Name:              "gpu-claim",
+		ResourceClaimName: ptr.To(claim.Name),
+	}}
+
+	pod, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod)
+	Expect(err).To(Succeed())
+
+	// Update the claim to set the pod as owner
+	claim.OwnerReferences = []metav1.OwnerReference{
+		{
+			APIVersion: "v1",
+			Kind:       "Pod",
+			Name:       pod.Name,
+			UID:        pod.UID,
+		},
+	}
+	_, err = testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Update(ctx, claim, metav1.UpdateOptions{})
+	Expect(err).To(Succeed())
+
 	return pod
 }
 
-func createQueues(parentQueueDeserved, queue1Deserved, queue2Deserved float64) (
-	*v2.Queue, *v2.Queue, *v2.Queue) {
-	parentQueueName := utils.GenerateRandomK8sName(10)
-	parentQueue := queue.CreateQueueObjectWithGpuResource(parentQueueName,
-		v2.QueueResource{
-			Quota:           parentQueueDeserved,
-			OverQuotaWeight: 2,
-			Limit:           parentQueueDeserved,
-		}, "")
-
-	queue1Name := utils.GenerateRandomK8sName(10)
-	queue1 := queue.CreateQueueObjectWithGpuResource(queue1Name,
-		v2.QueueResource{
-			Quota:           queue1Deserved,
-			OverQuotaWeight: 2,
-			Limit:           -1,
-		}, parentQueueName)
-
-	queue2Name := utils.GenerateRandomK8sName(10)
-	queue2 := queue.CreateQueueObjectWithGpuResource(queue2Name,
-		v2.QueueResource{
-			Quota:           queue2Deserved,
-			OverQuotaWeight: 2,
-			Limit:           -1,
-		}, parentQueueName)
-
-	return parentQueue, queue1, queue2
-}
-
-var _ = Describe("Reclaim", Ordered, func() {
-	Context("Quota/Fair-share based reclaim", func() {
+var _ = Describe("Reclaim DRA", Ordered, func() {
+	Context("Quota/Fair-share based reclaim with DRA", func() {
 		var (
-			testCtx *testcontext.TestContext
+			testCtx            *testcontext.TestContext
+			gpuDeviceClassName = "gpu.nvidia.com"
 		)
 
 		BeforeAll(func(ctx context.Context) {
 			testCtx = testcontext.GetConnectivity(ctx, Default)
-			capacity.SkipIfInsufficientClusterTopologyResources(testCtx.KubeClientset, []capacity.ResourceList{
-				{
-					Gpu:      resource.MustParse("4"),
-					PodCount: 4,
-				},
-			})
+			capacity.SkipIfInsufficientDynamicResources(testCtx.KubeClientset, gpuDeviceClassName, 1, 4)
 		})
 
 		AfterEach(func(ctx context.Context) {
@@ -103,127 +99,129 @@ var _ = Describe("Reclaim", Ordered, func() {
 			parentQueue, reclaimeeQueue, reclaimerQueue := createQueues(4, 1, 1)
 			testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 
-			pod := createPod(ctx, testCtx, reclaimeeQueue, 2)
-			pod2 := createPod(ctx, testCtx, reclaimeeQueue, 2)
+			reclaimee1Namespace := queue.GetConnectedNamespaceToQueue(reclaimeeQueue)
+			claimTemplate := rd.CreateResourceClaimTemplate(reclaimee1Namespace, reclaimeeQueue.Name, gpuDeviceClassName, 1)
+			claimTemplate, err := testCtx.KubeClientset.ResourceV1().ResourceClaimTemplates(reclaimee1Namespace).Create(ctx, claimTemplate, metav1.CreateOptions{})
+			Expect(err).To(Succeed())
+
+			// Try with template claim
+			pod := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 2)
+			pod2 := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 2)
 
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod2)
 
-			pendingPod := createPod(ctx, testCtx, reclaimerQueue, 2)
+			pendingPod := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, 2)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pendingPod)
 		})
 
 		It("Under quota and Over fair share -> Under quota and Under quota - Should reclaim", func(ctx context.Context) {
 			// 4 GPUs in total (quota of 2)
 			// reclaimee: 1+2 => 3 (OFS)                 => 1 (UQ)
-			// reclaimer: 1   => 1 + requesting 0.5 (UQ) => 1.5 (UQ)
+			// reclaimer: 1   => 1 + requesting 1 (UQ) => 2 (UQ)
 
 			testCtx = testcontext.GetConnectivity(ctx, Default)
 			parentQueue, reclaimeeQueue, reclaimerQueue := createQueues(4, 2, 2)
 			testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 
-			pod := createPod(ctx, testCtx, reclaimeeQueue, 1)
-			pod2 := createPod(ctx, testCtx, reclaimeeQueue, 2)
+			pod := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 1)
+			pod2 := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 2)
 
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod2)
 
-			runningPod := createPod(ctx, testCtx, reclaimerQueue, 1)
+			runningPod := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, 1)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod)
 
-			pendingPod := createPod(ctx, testCtx, reclaimerQueue, 0.5)
+			pendingPod := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, 1)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pendingPod)
 		})
 
 		It("Under quota and Over fair share -> Over fair share and Over quota - Should not reclaim", func(ctx context.Context) {
 			// 4 GPUs in total (quota of 1)
-			// reclaimee: 2+1+0.5 => 3.5 (OFS)               => 1.5 (OQ)
-			// reclaimer: 0.5     => 0.5 + requesting 2 (UQ) => 2.5 (OFS)
+			// reclaimee: 2+1+1 => 4 (OFS)               => 2 (OQ)
+			// reclaimer: 1     => 1 + requesting 2 (UQ) => 3 (OFS)
 
 			testCtx = testcontext.GetConnectivity(ctx, Default)
 			parentQueue, reclaimeeQueue, reclaimerQueue := createQueues(4, 1, 1)
 			testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 
-			pod := createPod(ctx, testCtx, reclaimeeQueue, 2)
-			pod2 := createPod(ctx, testCtx, reclaimeeQueue, 1)
-			pod3 := createPod(ctx, testCtx, reclaimeeQueue, 0.5)
+			pod := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 2)
+			pod2 := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 1)
+			pod3 := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 1)
 
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod2)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod3)
 
-			runningPod := createPod(ctx, testCtx, reclaimerQueue, 0.5)
+			runningPod := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, 1)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod)
 
-			pendingPod := createPod(ctx, testCtx, reclaimerQueue, 2)
+			pendingPod := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, 2)
 			wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, pendingPod)
 		})
 
 		It("Over quota and Over fair share -> Over quota and Over quota - Should reclaim", func(ctx context.Context) {
 			// 4 GPUs in total (quota of 0)
 			// reclaimee: 1+2 => 3 (OFS)                  =>  1 (OQ)
-			// reclaimer: 1   => 1 + requesting 0.5 (OQ)  =>  1.5 (OQ)
+			// reclaimer: 1   => 1 + requesting 1 (OQ)  =>  2 (OQ)
 
 			testCtx = testcontext.GetConnectivity(ctx, Default)
 			parentQueue, reclaimeeQueue, reclaimerQueue := createQueues(4, 0, 0)
 			testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 
-			runningPod := createPod(ctx, testCtx, reclaimeeQueue, 1)
-			runningPod2 := createPod(ctx, testCtx, reclaimeeQueue, 2)
+			runningPod := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 1)
+			runningPod2 := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 2)
 
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod2)
 
-			runningPod3 := createPod(ctx, testCtx, reclaimerQueue, 1)
+			runningPod3 := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, 1)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod3)
 
-			pendingPod := createPod(ctx, testCtx, reclaimerQueue, 0.5)
+			pendingPod := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, 1)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pendingPod)
 		})
 
 		It("Under Quota and Over Quota -> Under Quota and Over Quota - Should reclaim", func(ctx context.Context) {
 			// 4 GPUs in total (quota of 2)
-			// reclaimee: 2+0.9+0.3+0.3 => 3.5 (OQ)          => 2.9/2.6 (OQ)
-			// reclaimer: 0             => requesting 1 (UQ) => 1 (UQ)
+			// reclaimee: 2+1+1 => 4 (OQ)          => 3 (OQ)
+			// reclaimer: 0     => requesting 1 (UQ) => 1 (UQ)
 
 			testCtx = testcontext.GetConnectivity(ctx, Default)
 			parentQueue, reclaimeeQueue, reclaimerQueue := createQueues(4, 2, 2)
 			testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 
-			runningPod := createPod(ctx, testCtx, reclaimeeQueue, 2)
-			runningPod2 := createPod(ctx, testCtx, reclaimeeQueue, 0.9)
-			runningPod3 := createPod(ctx, testCtx, reclaimeeQueue, 0.3)
-			runningPod4 := createPod(ctx, testCtx, reclaimeeQueue, 0.3)
+			runningPod := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 2)
+			runningPod2 := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 1)
+			runningPod3 := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 1)
 
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod2)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod3)
-			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod4)
 
-			pendingPod := createPod(ctx, testCtx, reclaimerQueue, 1)
+			pendingPod := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, 1)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pendingPod)
 		})
 
 		It("Under Quota and Over Quota -> Over Quota and Over Quota - Should reclaim", func(ctx context.Context) {
 			// 4 GPUs in total (quota of 0)
-			// reclaimee: 2 + 0.9 + 0.3 + 0.3 => 3.5 (OQ) => 2.9/2.6 (OQ)
-			// reclaimer: 0                   => requesting 1 (UQ)  => 1 (OQ)
+			// reclaimee: 2 + 1 + 1 => 4 (OQ) => 3 (OQ)
+			// reclaimer: 0         => requesting 1 (UQ)  => 1 (OQ)
 
 			testCtx = testcontext.GetConnectivity(ctx, Default)
 			parentQueue, reclaimeeQueue, reclaimerQueue := createQueues(4, 0, 0)
 			testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 
-			runningPod := createPod(ctx, testCtx, reclaimeeQueue, 2)
-			runningPod2 := createPod(ctx, testCtx, reclaimeeQueue, 0.9)
-			runningPod3 := createPod(ctx, testCtx, reclaimeeQueue, 0.3)
-			runningPod4 := createPod(ctx, testCtx, reclaimeeQueue, 0.3)
+			runningPod := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 2)
+			runningPod2 := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 1)
+			runningPod3 := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 1)
 
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod2)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod3)
-			wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod4)
 
-			pendingPod := createPod(ctx, testCtx, reclaimerQueue, 1)
+			pendingPod := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, 1)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pendingPod)
 		})
 
@@ -233,13 +231,13 @@ var _ = Describe("Reclaim", Ordered, func() {
 			reclaimerQueue.Spec.Priority = pointer.Int(constants.DefaultQueuePriority + 1)
 			testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 
-			pod := createPod(ctx, testCtx, reclaimeeQueue, 1)
+			pod := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 1)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
 
-			reclaimee := createPod(ctx, testCtx, reclaimeeQueue, 3)
+			reclaimee := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 3)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimee)
 
-			reclaimer := createPod(ctx, testCtx, reclaimerQueue, 1)
+			reclaimer := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, 1)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimer)
 		})
 
@@ -250,18 +248,18 @@ var _ = Describe("Reclaim", Ordered, func() {
 			reclaimeeQueue.Spec.ReclaimMinRuntime = &metav1.Duration{Duration: 60 * time.Second}
 			testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
 
-			pod := createPod(ctx, testCtx, reclaimeeQueue, 1)
+			pod := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 1)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
 
-			reclaimee := createPod(ctx, testCtx, reclaimeeQueue, 3)
+			reclaimee := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, 3)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimee)
 
-			reclaimer := createPod(ctx, testCtx, reclaimerQueue, 1)
+			reclaimer := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, 1)
 			wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, reclaimer)
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimer)
 		})
 
-		It("Reclaim based on priority, maintain over-quota weight proportion", func(ctx context.Context) {
+		It("Reclaim based on priority, maintain over-quota weight proportion - DRA", func(ctx context.Context) {
 			// 8 GPUs in total
 			// reclaimee1, reclaimee 2: 1 deserved each, 6 GPUs leftover
 			// reclaimee1: OQW 1: 2 over-quota
@@ -271,14 +269,10 @@ var _ = Describe("Reclaim", Ordered, func() {
 
 			testCtx = testcontext.GetConnectivity(ctx, Default)
 
-			capacity.SkipIfInsufficientClusterTopologyResources(testCtx.KubeClientset, []capacity.ResourceList{
-				{
-					Gpu:      resource.MustParse("8"),
-					PodCount: 8,
-				},
-			})
+			capacity.SkipIfInsufficientDynamicResources(testCtx.KubeClientset, gpuDeviceClassName, 1, 8)
 
-			nodes := rd.FindNodesWithExactAllocatableGPUs(ctx, testCtx.ControllerClient, 8)
+			nodes, err := rd.FindNodesWithExactAllocatableDRAGPUs(ctx, testCtx.ControllerClient, 8)
+			Expect(err).To(Succeed())
 			Expect(len(nodes)).To(BeNumerically(">", 0))
 			testNodeName := nodes[0].Name
 
@@ -299,30 +293,44 @@ var _ = Describe("Reclaim", Ordered, func() {
 			reclaimee1Namespace := queue.GetConnectedNamespaceToQueue(reclaimee1Queue)
 			reclaimee2Namespace := queue.GetConnectedNamespaceToQueue(reclaimee2Queue)
 
-			// Submit more jobs then can schedule
+			// Create claim template for the job
+			claimTemplate := rd.CreateResourceClaimTemplate(reclaimee1Namespace, reclaimee1Queue.Name, gpuDeviceClassName, 1)
+			claimTemplate, err = testCtx.KubeClientset.ResourceV1().ResourceClaimTemplates(reclaimee1Namespace).Create(ctx, claimTemplate, metav1.CreateOptions{})
+			Expect(err).To(Succeed())
+
+			// Submit more jobs than can schedule
 			for range 10 {
-				job := rd.CreateBatchJobObject(reclaimee1Queue, v1.ResourceRequirements{
-					Limits: map[v1.ResourceName]resource.Quantity{
-						constants.GpuResource: resource.MustParse("1"),
-					},
-				})
+				job := rd.CreateBatchJobObject(reclaimee1Queue, v1.ResourceRequirements{})
 				job.Spec.Template.Spec.NodeSelector = map[string]string{
 					"kubernetes.io/hostname": testNodeName,
 				}
-				err := testCtx.ControllerClient.Create(ctx, job)
+
+				job.Spec.Template.Spec.ResourceClaims = []v1.PodResourceClaim{{
+					Name:                      "gpu-claim",
+					ResourceClaimTemplateName: ptr.To(claimTemplate.Name),
+				}}
+
+				err = testCtx.ControllerClient.Create(ctx, job)
 				Expect(err).To(Succeed())
 			}
 
+			// Create claim template for the job
+			claimTemplate2 := rd.CreateResourceClaimTemplate(reclaimee2Namespace, reclaimee2Queue.Name, gpuDeviceClassName, 1)
+			claimTemplate2, err = testCtx.KubeClientset.ResourceV1().ResourceClaimTemplates(reclaimee2Namespace).Create(ctx, claimTemplate2, metav1.CreateOptions{})
+			Expect(err).To(Succeed())
+
 			for range 10 {
-				job := rd.CreateBatchJobObject(reclaimee2Queue, v1.ResourceRequirements{
-					Limits: map[v1.ResourceName]resource.Quantity{
-						constants.GpuResource: resource.MustParse("1"),
-					},
-				})
+				job := rd.CreateBatchJobObject(reclaimee2Queue, v1.ResourceRequirements{})
 				job.Spec.Template.Spec.NodeSelector = map[string]string{
 					"kubernetes.io/hostname": testNodeName,
 				}
-				err := testCtx.ControllerClient.Create(ctx, job)
+
+				job.Spec.Template.Spec.ResourceClaims = []v1.PodResourceClaim{{
+					Name:                      "gpu-claim",
+					ResourceClaimTemplateName: ptr.To(claimTemplate2.Name),
+				}}
+
+				err = testCtx.ControllerClient.Create(ctx, job)
 				Expect(err).To(Succeed())
 			}
 
@@ -343,16 +351,37 @@ var _ = Describe("Reclaim", Ordered, func() {
 			wait.ForAtLeastNPodsScheduled(ctx, testCtx.ControllerClient, reclaimee2Namespace, podListToPodsSlice(reclaimee2Pods), 5)
 
 			// Submit reclaimer pod that requests 3 GPUs
-			reclaimerPod := rd.CreatePodObject(reclaimerQueue, v1.ResourceRequirements{
-				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("3"),
-				},
-			})
+			reclaimerNamespace := queue.GetConnectedNamespaceToQueue(reclaimerQueue)
+
+			// Create claim for the reclaimer pod
+			claim := rd.CreateResourceClaim(reclaimerNamespace, reclaimerQueue.Name, gpuDeviceClassName, 3)
+			claim, err = testCtx.KubeClientset.ResourceV1().ResourceClaims(reclaimerNamespace).Create(ctx, claim, metav1.CreateOptions{})
+			Expect(err).To(Succeed())
+
+			reclaimerPod := rd.CreatePodObject(reclaimerQueue, v1.ResourceRequirements{})
 			reclaimerPod.Spec.NodeSelector = map[string]string{
 				"kubernetes.io/hostname": testNodeName,
 			}
+			reclaimerPod.Spec.ResourceClaims = []v1.PodResourceClaim{{
+				Name:              "gpu-claim",
+				ResourceClaimName: ptr.To(claim.Name),
+			}}
+
 			reclaimerPod, err = rd.CreatePod(ctx, testCtx.KubeClientset, reclaimerPod)
 			Expect(err).To(Succeed())
+
+			// Update the claim to set the pod as owner
+			claim.OwnerReferences = []metav1.OwnerReference{
+				{
+					APIVersion: "v1",
+					Kind:       "Pod",
+					Name:       reclaimerPod.Name,
+					UID:        reclaimerPod.UID,
+				},
+			}
+			_, err = testCtx.KubeClientset.ResourceV1().ResourceClaims(reclaimerNamespace).Update(ctx, claim, metav1.UpdateOptions{})
+			Expect(err).To(Succeed())
+
 			wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimerPod)
 			time.Sleep(3 * time.Second)
 
@@ -389,11 +418,3 @@ var _ = Describe("Reclaim", Ordered, func() {
 		})
 	})
 })
-
-func podListToPodsSlice(podList *v1.PodList) []*v1.Pod {
-	pods := make([]*v1.Pod, 0)
-	for _, pod := range podList.Items {
-		pods = append(pods, &pod)
-	}
-	return pods
-}
