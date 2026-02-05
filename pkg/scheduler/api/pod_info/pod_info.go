@@ -197,11 +197,6 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 
 	podInfo.updatePodAdditionalFields(bindRequest, draPodClaims...)
 
-	// Shared GPU tasks need an additional pod count for the reservation pod
-	if podInfo.IsSharedGPURequest() {
-		podInfo.ResReq.ScalarResources()[resource_info.PodsResourceName] += 1
-	}
-
 	return podInfo
 }
 
