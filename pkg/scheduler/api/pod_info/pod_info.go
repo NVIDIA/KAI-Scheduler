@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	clientcache "k8s.io/client-go/tools/cache"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -160,11 +161,11 @@ func (pi *PodInfo) UpsertStorageClaim(claimInfo *storageclaim_info.StorageClaimI
 	pi.storageClaims[claimInfo.Key] = claimInfo
 }
 
-func NewTaskInfo(pod *v1.Pod) *PodInfo {
-	return NewTaskInfoWithBindRequest(pod, nil)
+func NewTaskInfo(pod *v1.Pod, draPodClaims ...*resourceapi.ResourceClaim) *PodInfo {
+	return NewTaskInfoWithBindRequest(pod, nil, draPodClaims...)
 }
 
-func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo) *PodInfo {
+func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo, draPodClaims ...*resourceapi.ResourceClaim) *PodInfo {
 	initResreq := getPodResourceRequest(pod)
 
 	nodeName := pod.Spec.NodeName
@@ -194,7 +195,7 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 		ownedStorageClaims:             map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
 	}
 
-	podInfo.updatePodAdditionalFields(bindRequest)
+	podInfo.updatePodAdditionalFields(bindRequest, draPodClaims...)
 	return podInfo
 }
 
@@ -271,7 +272,8 @@ func (pi *PodInfo) IsCPUOnlyRequest() bool {
 }
 
 func (pi *PodInfo) IsRequireAnyKindOfGPU() bool {
-	return pi.ResReq.GPUs() > 0 || pi.IsMemoryRequest() || pi.IsMigProfileRequest()
+	return pi.ResReq.GPUs() > 0 || pi.ResReq.GpuResourceRequirement.GetDraGpusCount() > 0 ||
+		pi.IsMemoryRequest() || pi.IsMigProfileRequest()
 }
 
 func (pi *PodInfo) GetSchedulingConstraintsSignature() common_info.SchedulingConstraintsSignature {
@@ -370,7 +372,7 @@ func getTaskStatus(pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo) p
 	return pod_status.Unknown
 }
 
-func (pi *PodInfo) updatePodAdditionalFields(bindRequest *bindrequest_info.BindRequestInfo) {
+func (pi *PodInfo) updatePodAdditionalFields(bindRequest *bindrequest_info.BindRequestInfo, draPodClaims ...*resourceapi.ResourceClaim) {
 	if bindRequest != nil && len(bindRequest.BindRequest.Spec.SelectedGPUGroups) > 0 {
 		pi.GPUGroups = bindRequest.BindRequest.Spec.SelectedGPUGroups
 	} else {
@@ -409,6 +411,11 @@ func (pi *PodInfo) updatePodAdditionalFields(bindRequest *bindrequest_info.BindR
 					numFractionDevices, gpuFraction, gpuMemory)
 			}
 		}
+	}
+
+	if len(draPodClaims) > 0 {
+		draGpus := resources.ExtractDRAGPUResourcesFromClaims(draPodClaims)
+		pi.ResReq.GpuResourceRequirement.SetDraGpus(draGpus)
 	}
 
 	pi.updateLegacyMigResourceRequestFromAnnotations()

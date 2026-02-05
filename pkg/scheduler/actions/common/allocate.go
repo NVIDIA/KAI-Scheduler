@@ -121,6 +121,10 @@ func allocateTasksOnNodeSet(ssn *framework.Session, stmt *framework.Statement, n
 func allocateTask(ssn *framework.Session, stmt *framework.Statement, nodes []*node_info.NodeInfo,
 	task *pod_info.PodInfo, isPipelineOnly bool) (success bool) {
 	job := ssn.ClusterInfo.PodGroupInfos[task.Job]
+	if job == nil {
+		log.InfraLogger.Errorf("Failed to find job <%s> in session <%s>", task.Job, ssn.ID)
+		return false
+	}
 	err := ssn.PrePredicateFn(task, job)
 	if err != nil {
 		log.InfraLogger.V(6).Infof("pre-predicates failed on task %s/%s. Error: %v",

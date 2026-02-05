@@ -47,8 +47,11 @@ kind create cluster \
     --name $CLUSTER_NAME
 
 # Install the fake-gpu-operator to provide a fake GPU resources for the e2e tests
-helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.62 \
-    --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml --wait
+
+helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.71 \
+  --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml --wait
+kubectl create clusterrole pods-patcher --verb=patch --resource=pods
+kubectl create rolebinding fake-status-updater --clusterrole=pods-patcher --serviceaccount=gpu-operator:status-updater -n kai-resource-reservation
 
 # install third party operators to check the compatibility with the kai-scheduler
 if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then

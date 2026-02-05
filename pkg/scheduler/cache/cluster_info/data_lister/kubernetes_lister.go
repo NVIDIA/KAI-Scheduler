@@ -42,10 +42,11 @@ type k8sLister struct {
 	cmLister       listv1.ConfigMapLister
 	usageLister    *usagedb.UsageLister
 
-	pvcLister             listv1.PersistentVolumeClaimLister
-	storageCapacityLister v12.CSIStorageCapacityLister
-	storageClassLister    v12.StorageClassLister
-	csiDriverLister       v12.CSIDriverLister
+	pvcLister              listv1.PersistentVolumeClaimLister
+	storageCapacityLister  v12.CSIStorageCapacityLister
+	storageClassLister     v12.StorageClassLister
+	csiDriverLister        v12.CSIDriverLister
+	draResourceClaimLister resourcev1.ResourceClaimLister
 
 	bindRequestLister scheudlinglistv1alpha2.BindRequestLister
 
@@ -76,10 +77,11 @@ func New(
 		cmLister:       informerFactory.Core().V1().ConfigMaps().Lister(),
 		usageLister:    usageLister,
 
-		pvcLister:             informerFactory.Core().V1().PersistentVolumeClaims().Lister(),
-		storageCapacityLister: informerFactory.Storage().V1().CSIStorageCapacities().Lister(),
-		storageClassLister:    informerFactory.Storage().V1().StorageClasses().Lister(),
-		csiDriverLister:       informerFactory.Storage().V1().CSIDrivers().Lister(),
+		pvcLister:              informerFactory.Core().V1().PersistentVolumeClaims().Lister(),
+		storageCapacityLister:  informerFactory.Storage().V1().CSIStorageCapacities().Lister(),
+		storageClassLister:     informerFactory.Storage().V1().StorageClasses().Lister(),
+		csiDriverLister:        informerFactory.Storage().V1().CSIDrivers().Lister(),
+		draResourceClaimLister: informerFactory.Resource().V1().ResourceClaims().Lister(),
 
 		bindRequestLister:   kubeAiSchedulerInformerFactory.Scheduling().V1alpha2().BindRequests().Lister(),
 		kaiTopologyLister:   kubeAiSchedulerInformerFactory.Kai().V1alpha1().Topologies().Lister(),

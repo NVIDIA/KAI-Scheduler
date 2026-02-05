@@ -265,10 +265,10 @@ func BuildSession(testMetadata TestTopologyBasic, controller *Controller) *frame
 	}
 
 	addDefaultDepartmentIfNeeded(&testMetadata)
-	jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(testMetadata.Jobs)
+	jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(testMetadata.Jobs, getDRAObjects(testMetadata)...)
 
 	clusterPodAffinityInfo := cache.NewK8sClusterPodAffinityInfo()
-	nodesInfoMap := nodes_fake.BuildNodesInfoMap(testMetadata.Nodes, tasksToNodeMap, clusterPodAffinityInfo)
+	nodesInfoMap := nodes_fake.BuildNodesInfoMap(testMetadata.Nodes, tasksToNodeMap, clusterPodAffinityInfo, getDRAObjects(testMetadata)...)
 	queueInfoMap := BuildQueueInfoMap(testMetadata)
 
 	departmentInfoMap := BuildDepartmentInfoMap(testMetadata)
@@ -396,9 +396,9 @@ func getDRAObjects(testMetadata TestTopologyBasic) []runtime.Object {
 					},
 				},
 			},
-			Status: resourceapi.ResourceClaimStatus{
-				ReservedFor: resourceClaim.ReservedFor,
-			},
+		}
+		if resourceClaim.ClaimStatus != nil {
+			resourceClaimObject.Status = *resourceClaim.ClaimStatus
 		}
 		objects = append(objects, &resourceClaimObject)
 	}

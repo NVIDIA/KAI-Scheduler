@@ -20,14 +20,14 @@ jobs:
 
     steps:
       - name: Download PR number artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: pr-number-for-comment
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download coverage report artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: coverage-report-for-comment
           run-id: ${{ github.event.workflow_run.id }}

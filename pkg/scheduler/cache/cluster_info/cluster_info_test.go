@@ -473,7 +473,7 @@ func TestSnapshotNodes(t *testing.T) {
 			if err != nil {
 				assert.FailNow(t, fmt.Sprintf("SnapshotNode got error in test %s", t.Name()), err)
 			}
-			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil)
+			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil, nil)
 
 			assert.Equal(t, len(test.resultNodes), len(nodes))
 			assert.Equal(t, test.resultPodsLen, len(pods))
@@ -2396,6 +2396,7 @@ func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
 		nodes           []*corev1.Node
 		resourceSlices  []*resourceapi.ResourceSlice
 		expectedDRAGPUs map[string]float64
+		hasDRAGPUs      map[string]bool
 	}{
 		"Single node with DRA GPUs": {
 			nodes: []*corev1.Node{
@@ -2408,6 +2409,7 @@ func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
 				createTestResourceSlice("slice-1", "node-1", "nvidia.com/gpu", 4),
 			},
 			expectedDRAGPUs: map[string]float64{"node-1": 4},
+			hasDRAGPUs:      map[string]bool{"node-1": true},
 		},
 		"Multiple nodes with DRA GPUs": {
 			nodes: []*corev1.Node{
@@ -2425,6 +2427,7 @@ func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
 				createTestResourceSlice("slice-2", "node-2", "nvidia.com/gpu", 8),
 			},
 			expectedDRAGPUs: map[string]float64{"node-1": 4, "node-2": 8},
+			hasDRAGPUs:      map[string]bool{"node-1": true, "node-2": true},
 		},
 		"Node with no DRA GPUs": {
 			nodes: []*corev1.Node{
@@ -2435,6 +2438,7 @@ func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
 			},
 			resourceSlices:  []*resourceapi.ResourceSlice{},
 			expectedDRAGPUs: map[string]float64{"node-1": 0},
+			hasDRAGPUs:      map[string]bool{"node-1": false},
 		},
 		"Two device classes on same node": {
 			nodes: []*corev1.Node{
@@ -2448,6 +2452,7 @@ func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
 				createTestResourceSlice("slice-amd", "node-1", "amd.com/gpu", 2),
 			},
 			expectedDRAGPUs: map[string]float64{"node-1": 6},
+			hasDRAGPUs:      map[string]bool{"node-1": true},
 		},
 	}
 
@@ -2490,6 +2495,8 @@ func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
 				// Check total GPUs (DRA GPUs are merged into Allocatable)
 				actualGPUs := nodeInfo.Allocatable.GPUs()
 				assert.Equal(t, expectedGPUs, actualGPUs, "GPUs mismatch for node %s", nodeName)
+				expectedFlag := test.hasDRAGPUs[nodeName]
+				assert.Equal(t, expectedFlag, nodeInfo.HasDRAGPUs, "HasDRAGPUs mismatch for node %s", nodeName)
 			}
 		})
 	}

@@ -1072,3 +1072,82 @@ func Test_isMigResource(t *testing.T) {
 		})
 	}
 }
+
+func TestPredicateByNodeResourcesType_DRA(t *testing.T) {
+	tests := map[string]struct {
+		nodeInfo    *NodeInfo
+		task        *pod_info.PodInfo
+		expectError bool
+		errorMsg    string
+	}{
+		"Device-plugin GPU request on DRA-only node": {
+			nodeInfo: &NodeInfo{
+				Name:        "dra-node",
+				HasDRAGPUs:  true,
+				Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4"),
+				Node: &v1.Node{
+					ObjectMeta: metav1.ObjectMeta{Name: "dra-node", Labels: map[string]string{}},
+				},
+			},
+			task:        createPod("default", "gpu-pod", podCreationOptions{GPUs: 1}),
+			expectError: true,
+			errorMsg:    "device-plugin GPU requests cannot be scheduled on DRA-only nodes",
+		},
+		"CPU-only request on DRA-only node": {
+			nodeInfo: &NodeInfo{
+				Name:        "dra-node",
+				HasDRAGPUs:  true,
+				Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4"),
+				Node: &v1.Node{
+					ObjectMeta: metav1.ObjectMeta{Name: "dra-node", Labels: map[string]string{}},
+				},
+			},
+			task:        createPod("default", "cpu-pod", podCreationOptions{GPUs: 0}),
+			expectError: false,
+			errorMsg:    "",
+		},
+		"Device-plugin GPU request on device-plugin node": {
+			nodeInfo: &NodeInfo{
+				Name:        "device-plugin-node",
+				HasDRAGPUs:  false,
+				Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4"),
+				Node: &v1.Node{
+					ObjectMeta: metav1.ObjectMeta{Name: "device-plugin-node", Labels: map[string]string{}},
+				},
+			},
+			task:        createPod("default", "gpu-pod", podCreationOptions{GPUs: 1}),
+			expectError: false,
+			errorMsg:    "",
+		},
+	}
+
+	for testName, testData := range tests {
+		t.Run(testName, func(t *testing.T) {
+			err := testData.nodeInfo.PredicateByNodeResourcesType(testData.task)
+			if testData.expectError {
+				assert.Error(t, err, "Should reject request")
+				assert.Contains(t, err.Error(), testData.errorMsg)
+			} else {
+				assert.NoError(t, err, "Should allow request")
+			}
+		})
+	}
+}
+
+func TestIsCPUOnlyNode_DRA(t *testing.T) {
+	nodeWithDRA := &NodeInfo{
+		Name:        "dra-node",
+		HasDRAGPUs:  true,
+		Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4"),
+		Node:        &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "dra-node", Labels: map[string]string{}}},
+	}
+	assert.False(t, nodeWithDRA.IsCPUOnlyNode(), "node with HasDRAGPUs should not be CPU-only")
+
+	cpuOnlyNode := &NodeInfo{
+		Name:        "cpu-node",
+		HasDRAGPUs:  false,
+		Allocatable: common_info.BuildResource("1000m", "1G"),
+		Node:        &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "cpu-node", Labels: map[string]string{}}},
+	}
+	assert.True(t, cpuOnlyNode.IsCPUOnlyNode(), "node without GPUs and without HasDRAGPUs should be CPU-only")
+}

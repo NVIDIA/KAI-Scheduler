@@ -364,7 +364,9 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 							Labels: map[string]string{
 								constants.DefaultQueueLabel: "q-1",
 							},
-							ReservedFor: dra_fake.RandomReservedForReferences(resourceapi.ResourceClaimReservedForMaxSize),
+							ClaimStatus: &resourceapi.ResourceClaimStatus{
+								ReservedFor: dra_fake.RandomReservedForReferences(resourceapi.ResourceClaimReservedForMaxSize),
+							},
 						},
 					},
 				},

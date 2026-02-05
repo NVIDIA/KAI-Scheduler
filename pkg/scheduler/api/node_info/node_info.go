@@ -87,6 +87,9 @@ type NodeInfo struct {
 	GpuMemorySynced        bool
 	LegacyMIGTasks         map[common_info.PodID]string
 
+	// HasDRAGPUs indicates GPUs were added via DRA ResourceSlices. Temporary fix - remove when device-plugin pods are supported on DRA nodes.
+	HasDRAGPUs bool
+
 	PodAffinityInfo pod_affinity.NodePodAffinityInfo
 
 	GpuSharingNodeInfo
@@ -296,6 +299,15 @@ func (ni *NodeInfo) PredicateByNodeResourcesType(task *pod_info.PodInfo) error {
 
 	if task.IsCPUOnlyRequest() {
 		return nil
+	}
+
+	// Temporary fix: Reject device-plugin GPU requests on DRA-only nodes.
+	// Remove when device-plugin pods are supported on DRA nodes.
+	if task.ResReq.GPUs() > 0 && ni.HasDRAGPUs {
+		log.InfraLogger.V(4).Infof("Task %s/%s rejected on node %s: device-plugin GPU request on DRA-only node",
+			task.Namespace, task.Name, ni.Name)
+		return common_info.NewFitError(task.Name, task.Namespace, ni.Name,
+			"device-plugin GPU requests cannot be scheduled on DRA-only nodes")
 	}
 
 	migNode := ni.IsMIGEnabled()
@@ -653,7 +665,7 @@ func (ni *NodeInfo) IsCPUOnlyNode() bool {
 	if ni.IsMIGEnabled() {
 		return false
 	}
-	return ni.Allocatable.GPUs() <= 0
+	return ni.Allocatable.GPUs() <= 0 && !ni.HasDRAGPUs
 }
 
 func (ni *NodeInfo) IsMIGEnabled() bool {
@@ -689,7 +701,7 @@ func (ni *NodeInfo) GetMigStrategy() MigStrategy {
 func (ni *NodeInfo) GetRequiredInitQuota(pi *pod_info.PodInfo) *podgroup_info.JobRequirement {
 	quota := podgroup_info.JobRequirement{}
 	if len(pi.ResReq.MigResources()) != 0 {
-		quota.GPU = pi.ResReq.GetSumGPUs()
+		quota.GPU = pi.ResReq.GetGpusQuota()
 	} else {
 		quota.GPU = ni.getGpuMemoryFractionalOnNode(ni.GetResourceGpuMemory(pi.ResReq))
 	}
@@ -716,7 +728,11 @@ func (ni *NodeInfo) setAcceptedResources(pi *pod_info.PodInfo) {
 		pi.ResourceReceivedType = pod_info.ReceivedTypeRegular
 		pi.AcceptedResource.GpuResourceRequirement = *resource_info.NewGpuResourceRequirementWithGpus(
 			pi.ResReq.GPUs(), 0)
+
+		// TODO: improve by getting claims actual status. This approach doesn't support FirstAvailable requests.
+		pi.AcceptedResource.SetDraGpus(pi.ResReq.DraGpuCounts())
 	}
+
 }
 
 func (ni *NodeInfo) lessEqualTaskToNodeResources(

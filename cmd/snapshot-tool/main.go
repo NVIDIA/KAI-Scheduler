@@ -60,10 +60,6 @@ func main() {
 		log.InfraLogger.Fatalf(err.Error(), err)
 	}
 
-	if err := setDRAFeatureGate(snapshot); err != nil {
-		log.InfraLogger.V(2).Warnf("Failed to set DRA feature gate: %v", err)
-	}
-
 	actions.InitDefaultActions()
 	plugins.InitDefaultPlugins()
 
@@ -87,6 +83,10 @@ func main() {
 	stopCh := make(chan struct{})
 	schedulerCache.Run(stopCh)
 	schedulerCache.WaitForCacheSync(stopCh)
+
+	if err := enableDRAFeatureGate(); err != nil {
+		log.InfraLogger.V(2).Warnf("Failed to enable DRA feature gate: %v", err)
+	}
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -259,22 +259,7 @@ func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.C
 	return kubeClient, kaiClient
 }
 
-// DRA state is inferred from the presence of DRA-related resources
-// (ResourceSlices, ResourceClaims, or DeviceClasses) in the snapshot.
-func setDRAFeatureGate(snap *snapshot.Snapshot) error {
-	// Infer DRA state from presence of DRA-related resources
-	draEnabled := false
-	if snap.RawObjects != nil {
-		hasResourceSlices := len(snap.RawObjects.ResourceSlices) > 0
-		hasResourceClaims := len(snap.RawObjects.ResourceClaims) > 0
-		hasDeviceClasses := len(snap.RawObjects.DeviceClasses) > 0
-
-		if hasResourceSlices || hasResourceClaims || hasDeviceClasses {
-			draEnabled = true
-			log.InfraLogger.V(3).Infof("DRA enabled based on presence of DRA resources in snapshot: ResourceSlices (%d), ResourceClaims (%d), DeviceClasses (%d)",
-				len(snap.RawObjects.ResourceSlices), len(snap.RawObjects.ResourceClaims), len(snap.RawObjects.DeviceClasses))
-		}
-	}
+func enableDRAFeatureGate() error {
 	return featureutil.DefaultMutableFeatureGate.SetFromMap(
-		map[string]bool{string(features.DynamicResourceAllocation): draEnabled})
+		map[string]bool{string(features.DynamicResourceAllocation): true})
 }

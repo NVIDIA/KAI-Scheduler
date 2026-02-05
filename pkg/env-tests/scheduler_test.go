@@ -378,18 +378,32 @@ var _ = Describe("Scheduler", Ordered, func() {
 	Context("dynamic resource", Ordered, func() {
 		const (
 			deviceClassName = "gpu.nvidia.com"
-			driverName      = "nvidia"
+			driverName      = "gpu.nvidia.com"
 			deviceNum       = 8
 		)
 
+		var (
+			deviceClass       *resourceapi.DeviceClass
+			nodeResourceSlice *resourceapi.ResourceSlice
+		)
+
 		BeforeAll(func(ctx context.Context) {
-			deviceClass := dynamicresource.CreateDeviceClass(deviceClassName)
+			deviceClass = dynamicresource.CreateDeviceClass(deviceClassName)
 			Expect(ctrlClient.Create(ctx, deviceClass)).To(Succeed(), "Failed to create test device class")
 
-			nodeResourceSlice := dynamicresource.CreateNodeResourceSlice(
+			nodeResourceSlice = dynamicresource.CreateNodeResourceSlice(
 				"test-node-resource-slice", driverName, testNode.Name, deviceNum)
 			Expect(ctrlClient.Create(ctx, nodeResourceSlice)).
 				To(Succeed(), "Failed to create test node resource slice")
+		})
+
+		BeforeEach(func(ctx context.Context) {
+			// Delete the test node and create a new one with no GPUs
+			Expect(ctrlClient.Delete(ctx, testNode)).To(Succeed(), "Failed to delete test node")
+			draGpuNodeConfig := utils.DefaultNodeConfig("test-node")
+			draGpuNodeConfig.GPUs = 0
+			testNode = utils.CreateNodeObject(ctx, ctrlClient, draGpuNodeConfig)
+			Expect(ctrlClient.Create(ctx, testNode)).To(Succeed(), "Failed to create test node")
 		})
 
 		AfterEach(func(ctx context.Context) {
@@ -408,6 +422,14 @@ var _ = Describe("Scheduler", Ordered, func() {
 				&kaiv1alpha2.BindRequestList{},
 			)
 			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test resources to be deleted")
+		})
+
+		AfterAll(func(ctx context.Context) {
+			Expect(ctrlClient.Delete(ctx, nodeResourceSlice)).
+				To(Succeed(), "Failed to delete test node resource slice")
+
+			Expect(ctrlClient.Delete(ctx, deviceClass)).
+				To(Succeed(), "Failed to delete test device class")
 		})
 
 		It("Should create a bind request for the pod with DeviceAllocationModeAll resource claim", func(ctx context.Context) {

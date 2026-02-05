@@ -87,7 +87,7 @@ func IsNotReadyForScheduling(event *v1.Event) bool {
 		return false
 	}
 	match, err := regexp.MatchString(
-		"Job is not ready for scheduling. Waiting for \\d pods, currently \\d exist, \\d are gated",
+		"Job is not ready for scheduling. Waiting for \\d+ pods( for SubGroup \\S+)?, currently \\d+ exist, \\d+ are gated",
 		event.Message)
 	Expect(err).To(Succeed())
 	return match

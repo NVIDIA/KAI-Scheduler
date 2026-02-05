@@ -142,6 +142,9 @@ func (r *Resource) AddResourceRequirements(req *ResourceRequirements) {
 	}
 	r.BaseResource.Add(&req.BaseResource)
 	r.gpus += req.GPUs()
+	for _, rQuant := range req.draGpuCounts {
+		r.gpus += float64(rQuant)
+	}
 	for migProfile, migCount := range req.MigResources() {
 		r.BaseResource.scalarResources[migProfile] += migCount
 	}
@@ -150,6 +153,9 @@ func (r *Resource) AddResourceRequirements(req *ResourceRequirements) {
 func (r *Resource) SubResourceRequirements(req *ResourceRequirements) {
 	r.BaseResource.Sub(&req.BaseResource)
 	r.gpus -= req.GPUs()
+	for _, rQuant := range req.draGpuCounts {
+		r.gpus -= float64(rQuant)
+	}
 	for migProfile, migCount := range req.MigResources() {
 		r.BaseResource.scalarResources[migProfile] -= migCount
 	}
@@ -159,12 +165,12 @@ func (r *Resource) GPUs() float64 {
 	return r.gpus
 }
 
-func (r *Resource) GpusAsString() string {
+func (r *Resource) ExtendedResourceGpusAsString() string {
 	return strconv.FormatFloat(r.gpus, 'g', 3, 64)
 }
 
-func (r *Resource) GetSumGPUs() float64 {
-	var totalMigGPUs float64
+func (r *Resource) GetTotalGPURequest() float64 {
+	var totalGpusQuota float64
 	for resourceName, quant := range r.ScalarResources() {
 		if !IsMigResource(resourceName) {
 			continue
@@ -175,10 +181,11 @@ func (r *Resource) GetSumGPUs() float64 {
 			continue
 		}
 
-		totalMigGPUs += float64(gpuPortion) * float64(quant)
+		totalGpusQuota += float64(gpuPortion) * float64(quant)
 	}
+	totalGpusQuota += r.gpus
 
-	return totalMigGPUs + r.gpus
+	return totalGpusQuota
 }
 
 func (r *Resource) SetGPUs(gpus float64) {
