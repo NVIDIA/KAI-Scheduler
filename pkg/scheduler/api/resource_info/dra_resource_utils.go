@@ -17,7 +17,7 @@ const (
 func ResourceClaimSliceToMap(draResourceClaims []*resourceapi.ResourceClaim) map[string]*resourceapi.ResourceClaim {
 	draClaimMap := map[string]*resourceapi.ResourceClaim{}
 	for _, draClaim := range draResourceClaims {
-		draClaimMap[draClaim.Name] = draClaim
+		draClaimMap[types.NamespacedName{Namespace: draClaim.Namespace, Name: draClaim.Name}.String()] = draClaim
 	}
 	return draClaimMap
 }
@@ -56,7 +56,8 @@ func GetDraPodClaims(pod *v1.Pod, draClaimMap map[string]*resourceapi.ResourceCl
 		if claimReference.ResourceClaimName == nil {
 			continue
 		}
-		claim, found := draClaimMap[*claimReference.ResourceClaimName]
+		claimKey := types.NamespacedName{Namespace: pod.Namespace, Name: *claimReference.ResourceClaimName}.String()
+		claim, found := draClaimMap[claimKey]
 		if !found {
 			continue
 		}

@@ -25,53 +25,45 @@ var _ = Describe("DRA Resource Utils", func() {
 		It("should convert single claim to map", func() {
 			claim := &resourceapi.ResourceClaim{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "claim-1",
-					UID:  "uid-1",
+					Name:      "claim-1",
+					Namespace: "namespace-1",
+					UID:       "uid-1",
 				},
 			}
 			claims := []*resourceapi.ResourceClaim{claim}
 			result := ResourceClaimSliceToMap(claims)
 			Expect(result).To(HaveLen(1))
-			Expect(result["claim-1"]).To(Equal(claim))
+			Expect(result["namespace-1/claim-1"]).To(Equal(claim))
 		})
 
 		It("should convert multiple claims to map", func() {
 			claim1 := &resourceapi.ResourceClaim{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "claim-1",
-					UID:  "uid-1",
+					Name:      "claim-1",
+					Namespace: "namespace-1",
+					UID:       "uid-1",
 				},
 			}
 			claim2 := &resourceapi.ResourceClaim{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "claim-2",
-					UID:  "uid-2",
+					Name:      "claim-2",
+					Namespace: "namespace-1",
+					UID:       "uid-2",
 				},
 			}
-			claims := []*resourceapi.ResourceClaim{claim1, claim2}
-			result := ResourceClaimSliceToMap(claims)
-			Expect(result).To(HaveLen(2))
-			Expect(result["claim-1"]).To(Equal(claim1))
-			Expect(result["claim-2"]).To(Equal(claim2))
-		})
-
-		It("should overwrite duplicate names with last occurrence", func() {
-			claim1 := &resourceapi.ResourceClaim{
+			claim3 := &resourceapi.ResourceClaim{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "claim-1",
-					UID:  "uid-1",
+					Name:      "claim-1",
+					Namespace: "namespace-2",
+					UID:       "uid-3",
 				},
 			}
-			claim2 := &resourceapi.ResourceClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "claim-1",
-					UID:  "uid-2",
-				},
-			}
-			claims := []*resourceapi.ResourceClaim{claim1, claim2}
+			claims := []*resourceapi.ResourceClaim{claim1, claim2, claim3}
 			result := ResourceClaimSliceToMap(claims)
-			Expect(result).To(HaveLen(1))
-			Expect(result["claim-1"]).To(Equal(claim2))
+			Expect(result).To(HaveLen(3))
+			Expect(result["namespace-1/claim-1"]).To(Equal(claim1))
+			Expect(result["namespace-1/claim-2"]).To(Equal(claim2))
+			Expect(result["namespace-2/claim-1"]).To(Equal(claim3))
 		})
 	})
 
@@ -311,7 +303,7 @@ var _ = Describe("DRA Resource Utils", func() {
 					},
 				},
 			}
-			draClaimMap := map[string]*resourceapi.ResourceClaim{claimName: claim}
+			draClaimMap := map[string]*resourceapi.ResourceClaim{namespace + "/" + claimName: claim}
 			podsToClaimsMap := map[types.UID]map[types.UID]*resourceapi.ResourceClaim{}
 			result := GetDraPodClaims(pod, draClaimMap, podsToClaimsMap)
 			Expect(result).To(HaveLen(1))
@@ -337,7 +329,7 @@ var _ = Describe("DRA Resource Utils", func() {
 				},
 			}
 			draClaimMap := map[string]*resourceapi.ResourceClaim{
-				"template-1": {
+				"default/template-1": {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "template-1",
 						UID:  "template-uid-1",
@@ -471,7 +463,7 @@ var _ = Describe("DRA Resource Utils", func() {
 					},
 				},
 			}
-			draClaimMap := map[string]*resourceapi.ResourceClaim{claimName: claim1}
+			draClaimMap := map[string]*resourceapi.ResourceClaim{namespace + "/" + claimName: claim1}
 			podsToClaimsMap := map[types.UID]map[types.UID]*resourceapi.ResourceClaim{
 				podUID: {
 					"claim-uid-2": claim2,
