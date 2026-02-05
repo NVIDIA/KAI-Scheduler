@@ -731,14 +731,14 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 			fields{
 				MemoryOfEveryGpuOnNode: 1000,
 				GpuMemorySynced:        true,
-				Idle:                   func() *resource_info.Resource {
+				Idle: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
 					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
 					return r
 				}(),
-				Used:                   resource_info.EmptyResource(),
-				Releasing:              resource_info.EmptyResource(),
-				Allocatable:            func() *resource_info.Resource {
+				Used:      resource_info.EmptyResource(),
+				Releasing: resource_info.EmptyResource(),
+				Allocatable: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
 					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
 					return r
@@ -777,14 +777,14 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 			fields{
 				MemoryOfEveryGpuOnNode: 1000,
 				GpuMemorySynced:        true,
-				Idle:                   func() *resource_info.Resource {
+				Idle: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
 					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
 					return r
 				}(),
-				Used:                   resource_info.EmptyResource(),
-				Releasing:              resource_info.EmptyResource(),
-				Allocatable:            func() *resource_info.Resource {
+				Used:      resource_info.EmptyResource(),
+				Releasing: resource_info.EmptyResource(),
+				Allocatable: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
 					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
 					return r
