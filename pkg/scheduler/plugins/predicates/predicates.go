@@ -202,15 +202,8 @@ func (pp *predicatesPlugin) evaluateTaskOnPredicates(
 				" task: <%v/%v>, node: <%v>", task.Namespace, task.Name, node.Name))
 	}
 
-	podsCountForTask := 1
-	if task.IsSharedGPURequest() {
-		podsCountForTask += 1 // we need to include a *potential* reservation pod for fraction
-	}
-	if len(k8sNodeInfo.Pods)+podsCountForTask > node.MaxTaskNum {
-		log.InfraLogger.V(6).Infof("NodePodNumber predicates Task <%s/%s> on Node <%s> failed",
-			task.Namespace, task.Name, node.Name)
-		return common_info.NewFitError(task.Name, task.Namespace, node.Name, api.NodePodNumberExceeded)
-	}
+	// Pod count is now tracked as a scalar resource and checked by resource accounting
+	// The resource accounting will naturally enforce the max pods limit
 
 	fit, reasons, err := scheduler_util.CheckNodeConditionPredicate(node.Node)
 	log.InfraLogger.V(6).Infof("Check node condition predicates Task <%s/%s> on Node <%s>: fit %t, err %v",
