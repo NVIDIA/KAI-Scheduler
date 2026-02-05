@@ -11,14 +11,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateResourceClaim(namespace, deviceClassName string, deviceCount int) *resourceapi.ResourceClaim {
+func CreateResourceClaim(namespace, queueName, deviceClassName string, deviceCount int) *resourceapi.ResourceClaim {
 	return &resourceapi.ResourceClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        utils.GenerateRandomK8sName(10),
 			Namespace:   namespace,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
+				constants.AppLabelName:      "engine-e2e",
+				constants.DefaultQueueLabel: queueName,
 			},
 		},
 		Spec: resourceapi.ResourceClaimSpec{
@@ -39,20 +40,22 @@ func CreateResourceClaim(namespace, deviceClassName string, deviceCount int) *re
 	}
 }
 
-func CreateResourceClaimTemplate(namespace, deviceClassName string, deviceCount int) *resourceapi.ResourceClaimTemplate {
+func CreateResourceClaimTemplate(namespace, queueName, deviceClassName string, deviceCount int) *resourceapi.ResourceClaimTemplate {
 	return &resourceapi.ResourceClaimTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        utils.GenerateRandomK8sName(10),
 			Namespace:   namespace,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
+				constants.AppLabelName:      "engine-e2e",
+				constants.DefaultQueueLabel: queueName,
 			},
 		},
 		Spec: resourceapi.ResourceClaimTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					constants.AppLabelName: "engine-e2e",
+					constants.AppLabelName:      "engine-e2e",
+					constants.DefaultQueueLabel: queueName,
 				},
 			},
 			Spec: resourceapi.ResourceClaimSpec{

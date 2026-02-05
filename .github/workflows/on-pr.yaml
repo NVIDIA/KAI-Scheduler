@@ -222,7 +222,7 @@ jobs:
         uses: helm/kind-action@v1.13.0
         with:
           cluster_name: kind
-          version: v0.30.0
+          version: v0.31.0
           config: ./hack/e2e-kind-config.yaml
 
       - name: Deploy image registry
@@ -245,7 +245,7 @@ jobs:
       - name: Deploy fake gpu operator
         run: |
           helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
-              --version 0.0.62 --values ./hack/fake-gpu-operator-values.yaml --wait
+              --version 0.0.71 --values ./hack/fake-gpu-operator-values.yaml --wait
       
       - name: Deploy Prometheus Operator
         run: |
@@ -263,6 +263,8 @@ jobs:
         run: |
           helm upgrade -i kai-scheduler /mnt/images/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
             --set "global.gpuSharing=true" --set "global.registry=localhost:30100" --debug --wait
+          kubectl create clusterrole pods-patcher --verb=patch --resource=pods
+          kubectl create rolebinding fake-status-updater --clusterrole=pods-patcher --serviceaccount=gpu-operator:status-updater -n kai-resource-reservation
       
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -283,7 +285,10 @@ jobs:
 
       - name: Run e2e tests
         run: |
-          ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv --label-filter '!autoscale && !scale' ./test/e2e/suites
+          ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv --label-filter '!autoscale && !scale' --output-dir=. --json-report=e2e-report.json ./test/e2e/suites
+          echo ""
+          echo "=== Skipped Tests ==="
+          jq -r '.[].SpecReports[] | select(.State == "skipped") | ([.ContainerHierarchyTexts[], .LeafNodeText] | join(" > "))' e2e-report.json 2>/dev/null || echo "No skipped tests found"
 
       - name: Uninstall KAI-scheduler
         run: |

@@ -6,20 +6,25 @@ package node_order
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/capacity"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
+
+const draDriverName = "gpu.nvidia.com"
 
 var _ = Describe("Resource Type Plugins", Ordered, func() {
 	var (
@@ -43,7 +48,7 @@ var _ = Describe("Resource Type Plugins", Ordered, func() {
 
 	Context("CPU only jobs", func() {
 		BeforeEach(func(ctx context.Context) {
-			cpuNode := rd.FindNodeWithNoGPU(ctx, testCtx.ControllerClient)
+			cpuNode := rd.FindNodeWithNoGPU(ctx, testCtx.ControllerClient, testCtx.KubeClientset)
 			if cpuNode == nil {
 				Skip("Failed to find node without GPUs")
 			}
@@ -63,12 +68,19 @@ var _ = Describe("Resource Type Plugins", Ordered, func() {
 				&node,
 			)).To(Succeed())
 
-			Expect(isCPUOnlyNode(&node)).To(BeTrue())
+			Expect(isCPUOnlyNode(&node, testCtx.KubeClientset)).To(BeTrue(), fmt.Sprintf("node %s is not CPU only", node.Name))
 		})
 	})
 })
 
-func isCPUOnlyNode(node *v1.Node) bool {
+func isCPUOnlyNode(node *v1.Node, clientset kubernetes.Interface) bool {
 	gpus, found := node.Status.Capacity[constants.GpuResource]
-	return !found || gpus.CmpInt64(0) == 0
+	hasDevicePluginGPUs := found && gpus.CmpInt64(0) > 0
+	if hasDevicePluginGPUs {
+		return false
+	}
+
+	draDevicesByNode := capacity.ListDevicesByNode(clientset, draDriverName)
+	draGPUs, found := draDevicesByNode[node.Name]
+	return !found || draGPUs == 0
 }

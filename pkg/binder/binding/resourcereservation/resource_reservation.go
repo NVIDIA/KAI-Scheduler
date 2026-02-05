@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -400,23 +401,14 @@ func (rsc *service) createGPUReservationPod(ctx context.Context, nodeName, gpuGr
 		},
 	}
 
-	// Merge in configured CPU/Memory resources if provided, but skip GPU resources to prevent override
 	if rsc.podResources != nil {
 		if rsc.podResources.Limits != nil {
-			for resourceName, quantity := range rsc.podResources.Limits {
-				// Skip GPU resources - they are already set correctly
-				if resourceName != constants.GpuResource {
-					resources.Limits[resourceName] = quantity
-				}
-			}
+			delete(rsc.podResources.Limits, constants.GpuResource)
+			maps.Copy(resources.Limits, rsc.podResources.Limits)
 		}
 		if rsc.podResources.Requests != nil {
-			for resourceName, quantity := range rsc.podResources.Requests {
-				// Skip GPU resources - they are already set correctly
-				if resourceName != constants.GpuResource {
-					resources.Requests[resourceName] = quantity
-				}
-			}
+			delete(rsc.podResources.Requests, constants.GpuResource)
+			maps.Copy(resources.Requests, rsc.podResources.Requests)
 		}
 	}
 
