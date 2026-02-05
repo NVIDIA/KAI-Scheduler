@@ -18,8 +18,12 @@ func enrichMetadata(metadata *podgroup.Metadata, pod *v1.Pod, topOwner *unstruct
 	if len(configs.NodePoolLabelKey) > 0 {
 		addNodePoolLabel(metadata, pod, configs.NodePoolLabelKey)
 	}
-	handleSubgroupCreationRequest(topOwner, pod, metadata, logger)
-	handlePodSubgroupAssignmentRequest(pod, metadata)
+
+	// GuyContinue: If aux pod and multi pod group workload, don't create subgroup and don't assign to any subgroup
+	if !isMultiPodGroupWorkload(topOwner) {
+		handleSubgroupCreationRequest(topOwner, pod, metadata, logger)
+		handlePodSubgroupAssignmentRequest(pod, metadata)
+	}
 }
 
 func addNodePoolLabel(metadata *podgroup.Metadata, pod *v1.Pod, nodePoolKey string) {

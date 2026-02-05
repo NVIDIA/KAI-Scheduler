@@ -240,7 +240,7 @@ func createJobWithCreateSubgroupAnnotation(podQueue *v2.Queue, subgroupName stri
 					Labels: map[string]string{
 						commonconsts.AppLabelName: "engine-e2e",
 						rd.BatchJobAppLabel:       matchLabelValue,
-						"kai.scheduler/queue":    podQueue.Name,
+						"kai.scheduler/queue":     podQueue.Name,
 					},
 				},
 				Spec: v1.PodSpec{
