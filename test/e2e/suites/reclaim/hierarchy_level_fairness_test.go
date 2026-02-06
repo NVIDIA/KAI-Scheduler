@@ -13,7 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/configurations/feature_flags"
@@ -22,8 +24,15 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/fillers"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/scheduling_shard"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
+)
+
+const (
+	draShardName           = "dra-shard"
+	draPartitionLabelValue = "dra"
+	draNodeLabel           = "nvidia.com/gpu.deploy.dra-plugin-gpu"
 )
 
 var _ = Describe("Hierarchy level fairness", Ordered, func() {
@@ -39,6 +48,19 @@ var _ = Describe("Hierarchy level fairness", Ordered, func() {
 
 		BeforeAll(func(ctx context.Context) {
 			testCtx = testcontext.GetConnectivity(ctx, Default)
+
+			By("Creating SchedulingShard for DRA nodes")
+			err := scheduling_shard.CreateShardForLabeledNodes(
+				ctx,
+				testCtx.ControllerClient,
+				draShardName,
+				client.MatchingLabels{draNodeLabel: "true"},
+				kaiv1.SchedulingShardSpec{
+					PartitionLabelValue: draPartitionLabelValue,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
 			capacity.SkipIfInsufficientClusterTopologyResources(testCtx.KubeClientset, []capacity.ResourceList{
 				{
 					Gpu:      resource.MustParse("2"),
@@ -80,7 +102,6 @@ var _ = Describe("Hierarchy level fairness", Ordered, func() {
 			testCtx.InitQueues([]*v2.Queue{reclaimeeParentQueue, reclaimerParentQueue, reclaimeeQueue,
 				reclaimerQueue})
 
-			var err error
 			lowPriority, err = rd.CreatePreemptiblePriorityClass(ctx, testCtx.KubeClientset)
 			Expect(err).To(Succeed())
 
@@ -89,7 +110,11 @@ var _ = Describe("Hierarchy level fairness", Ordered, func() {
 		})
 
 		AfterAll(func(ctx context.Context) {
-			err := rd.DeleteAllE2EPriorityClasses(ctx, testCtx.ControllerClient)
+			By("Deleting DRA SchedulingShard and removing labels")
+			err := scheduling_shard.DeleteShardAndRemoveLabels(ctx, testCtx.ControllerClient, draShardName)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = rd.DeleteAllE2EPriorityClasses(ctx, testCtx.ControllerClient)
 			Expect(err).To(Succeed())
 			testCtx.ClusterCleanup(ctx)
 		})

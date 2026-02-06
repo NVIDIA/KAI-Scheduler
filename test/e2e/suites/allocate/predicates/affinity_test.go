@@ -80,7 +80,7 @@ var _ = Describe("Affinity", Ordered, func() {
 		})
 
 		It("doesn't schedule pod to nodes without requested affinity", func(ctx context.Context) {
-			cpuNode := rd.FindNodeWithNoGPU(ctx, testCtx.ControllerClient)
+			cpuNode := rd.FindNodeWithNoGPU(ctx, testCtx.ControllerClient, testCtx.KubeClientset)
 			if cpuNode == nil {
 				Skip("Failed to find node without GPUs")
 			}

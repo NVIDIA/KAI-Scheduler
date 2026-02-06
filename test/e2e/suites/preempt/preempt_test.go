@@ -293,7 +293,7 @@ var _ = Describe("Priority Preemption", Ordered, func() {
 			}
 			Expect(nodeName).ToNot(Equal(""), "failed to find a node with multiple devices")
 
-			claimTemplate := rd.CreateResourceClaimTemplate(namespace, deviceClassName, 1)
+			claimTemplate := rd.CreateResourceClaimTemplate(namespace, testCtx.Queues[0].Name, deviceClassName, 1)
 			claimTemplate, err := testCtx.KubeClientset.ResourceV1().ResourceClaimTemplates(namespace).Create(ctx, claimTemplate, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 

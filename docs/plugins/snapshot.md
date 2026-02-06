@@ -160,30 +160,6 @@ The tool generates a boilerplate Go test file containing:
 
 The generated file is designed to be easily editable. You should fill in the actual test data based on your requirements and the snapshot information provided in the comments.
 
-### Workflow
-
-1. Capture a snapshot from a running cluster:
-   ```bash
-   kubectl port-forward -n kai deployment/scheduler 8081 &
-   curl "localhost:8081/get-snapshot" > snapshot.gzip
-   ```
-
-2. Generate integration test boilerplate:
-   ```bash
-   snapshot-tool --filename snapshot.gzip --generate-test
-   ```
-
-3. Edit the generated test file:
-   - Review the snapshot summary comments to understand the cluster state
-   - Fill in the test data structures (Jobs, Nodes, Queues) based on your test requirements
-   - Add expected results if needed
-   - Configure mocks if required
-
-4. Run the test:
-   ```bash
-   go test ./pkg/scheduler/actions/integration_tests/snapshots/... -v -run TestSnapshot...
-   ```
-
 ## Implementation Details
 
 ### Snapshot Plugin

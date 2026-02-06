@@ -50,7 +50,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		snap, err := loadSnapshot(*filename)
+		snapshot, err := loadSnapshot(*filename)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading snapshot: %v\n", err)
 			os.Exit(1)
@@ -67,7 +67,7 @@ func main() {
 		}
 
 		generator := NewTestGenerator(*packageName, testFuncName)
-		code, err := generator.Generate(snap)
+		code, err := generator.Generate(snapshot)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error generating test code: %v\n", err)
 			os.Exit(1)
@@ -99,31 +99,27 @@ func main() {
 	}()
 	log.InfraLogger.SetSessionID("snapshot-runner")
 
-	snap, err := loadSnapshot(*filename)
+	snapshot, err := loadSnapshot(*filename)
 	if err != nil {
 		log.InfraLogger.Fatalf(err.Error(), err)
-	}
-
-	if err := setDRAFeatureGate(snap); err != nil {
-		log.InfraLogger.V(2).Warnf("Failed to set DRA feature gate: %v", err)
 	}
 
 	actions.InitDefaultActions()
 	plugins.InitDefaultPlugins()
 
-	kubeClient, kaiClient := loadClientsWithSnapshot(snap.RawObjects)
+	kubeClient, kaiClient := loadClientsWithSnapshot(snapshot.RawObjects)
 
 	schedulerCacheParams := &cache.SchedulerCacheParams{
 		KubeClient:                  kubeClient,
 		KAISchedulerClient:          kaiClient,
-		SchedulerName:               snap.SchedulerParams.SchedulerName,
-		NodePoolParams:              snap.SchedulerParams.PartitionParams,
-		RestrictNodeScheduling:      snap.SchedulerParams.RestrictSchedulingNodes,
-		DetailedFitErrors:           snap.SchedulerParams.DetailedFitErrors,
-		ScheduleCSIStorage:          snap.SchedulerParams.ScheduleCSIStorage,
-		FullHierarchyFairness:       snap.SchedulerParams.FullHierarchyFairness,
-		AllowConsolidatingReclaim:   snap.SchedulerParams.AllowConsolidatingReclaim,
-		NumOfStatusRecordingWorkers: snap.SchedulerParams.NumOfStatusRecordingWorkers,
+		SchedulerName:               snapshot.SchedulerParams.SchedulerName,
+		NodePoolParams:              snapshot.SchedulerParams.PartitionParams,
+		RestrictNodeScheduling:      snapshot.SchedulerParams.RestrictSchedulingNodes,
+		DetailedFitErrors:           snapshot.SchedulerParams.DetailedFitErrors,
+		ScheduleCSIStorage:          snapshot.SchedulerParams.ScheduleCSIStorage,
+		FullHierarchyFairness:       snapshot.SchedulerParams.FullHierarchyFairness,
+		AllowConsolidatingReclaim:   snapshot.SchedulerParams.AllowConsolidatingReclaim,
+		NumOfStatusRecordingWorkers: snapshot.SchedulerParams.NumOfStatusRecordingWorkers,
 		DiscoveryClient:             kubeClient.Discovery(),
 	}
 
@@ -131,6 +127,10 @@ func main() {
 	stopCh := make(chan struct{})
 	schedulerCache.Run(stopCh)
 	schedulerCache.WaitForCacheSync(stopCh)
+
+	if err := enableDRAFeatureGate(); err != nil {
+		log.InfraLogger.V(2).Warnf("Failed to enable DRA feature gate: %v", err)
+	}
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -146,15 +146,15 @@ func main() {
 	}
 
 	ssn, err := framework.OpenSession(
-		schedulerCache, snap.Config, snap.SchedulerParams, "", &http.ServeMux{},
+		schedulerCache, snapshot.Config, snapshot.SchedulerParams, "", &http.ServeMux{},
 	)
 	if err != nil {
 		log.InfraLogger.Fatalf(err.Error(), err)
 	}
 	defer framework.CloseSession(ssn)
 
-	acts, _ := conf_util.GetActionsFromConfig(snap.Config)
-	for _, action := range acts {
+	actions, _ := conf_util.GetActionsFromConfig(snapshot.Config)
+	for _, action := range actions {
 		log.InfraLogger.SetAction(string(action.Name()))
 		metrics.SetCurrentAction(string(action.Name()))
 		actionStartTime := time.Now()
@@ -303,21 +303,7 @@ func loadClientsWithSnapshot(rawObjects *snapshotplugin.RawKubernetesObjects) (*
 	return kubeClient, kaiClient
 }
 
-// DRA state is inferred from the presence of DRA-related resources
-// (ResourceSlices, ResourceClaims, or DeviceClasses) in the snapshot.
-func setDRAFeatureGate(snap *snapshotplugin.Snapshot) error {
-	draEnabled := false
-	if snap.RawObjects != nil {
-		hasResourceSlices := len(snap.RawObjects.ResourceSlices) > 0
-		hasResourceClaims := len(snap.RawObjects.ResourceClaims) > 0
-		hasDeviceClasses := len(snap.RawObjects.DeviceClasses) > 0
-
-		if hasResourceSlices || hasResourceClaims || hasDeviceClasses {
-			draEnabled = true
-			log.InfraLogger.V(3).Infof("DRA enabled based on presence of DRA resources in snapshot: ResourceSlices (%d), ResourceClaims (%d), DeviceClasses (%d)",
-				len(snap.RawObjects.ResourceSlices), len(snap.RawObjects.ResourceClaims), len(snap.RawObjects.DeviceClasses))
-		}
-	}
+func enableDRAFeatureGate() error {
 	return featureutil.DefaultMutableFeatureGate.SetFromMap(
-		map[string]bool{string(features.DynamicResourceAllocation): draEnabled})
+		map[string]bool{string(features.DynamicResourceAllocation): true})
 }

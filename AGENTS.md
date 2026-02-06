@@ -85,9 +85,8 @@ make validate                 # Verify generated code is up to date. Also format
 
 ### Tools (`/cmd/`)
 - `fairshare-simulator` - Simulate fairshare scheduling decisions
-- `time-aware-simulator` - Time-based scheduling simulation
+- `time-based-fairshare-simulator` - Time-based scheduling simulation
 - `snapshot-tool` - Cluster state snapshot utilities
-- `snapshot-to-test` - Generate integration test code from snapshot files
 - `scalingpod` - Helper for scaling pod operations
 
 ## Code Style Guidelines
@@ -153,8 +152,12 @@ PR titles must follow semantic format: `<type>(<scope>): <description>`
 
 **Scopes** (optional): `scheduler`, `binder`, `podgrouper`, `admission`, `operator`, `queue-controller`, `pod-group-controller`, `resource-reservation`, `chart`, `api`, `node-scale-adjuster`, `ci`, `release`, `docs`, `deps`
 
+### PR Description format
+
+When opening a PR, use the template in .github/pull_request_template.md for the PR description
+
 ### Changelog Requirements
-- Update `CHANGELOG.md` for PRs to `main` or version branches (`v*.*`)
+- You must update `CHANGELOG.md` for PRs to `main` or version branches (`v*.*`) for behavior changes: ones that add functionality, fix bugs, change APIs, or introduce significant performance improvements. Not needed for refactors, documentations, tests, and CI changes.
 - Add `skip-changelog` or `dependencies` label to skip this check
 
 ### CI Checks (on-pr.yaml)
@@ -169,7 +172,7 @@ PRs trigger: `make validate` → `make test` → `make build` → E2E tests
     - Keep Comments short, explicit and concise
     - DO NOT use `I`, `we` or any other pronoun
 - When performing a major change, run `make validate` after changes
-- 
+
 ## Philosophy & Design
 
 - Documentation can be found in [`docs`](docs/) folder
