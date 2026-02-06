@@ -26,7 +26,7 @@ func NewResourceVectorMap() *ResourceVectorMap {
 	}
 
 	// Add core resources first to ensure consistent ordering
-	coreResources := []string{string(v1.ResourceCPU), string(v1.ResourceMemory), constants.GpuResource}
+	coreResources := []string{string(v1.ResourceCPU), string(v1.ResourceMemory), constants.GpuResource, string(v1.ResourcePods)}
 	for _, resourceName := range coreResources {
 		result.AddResource(resourceName)
 	}
@@ -44,6 +44,21 @@ func NewSingleGpuVector(indexMap *ResourceVectorMap) ResourceVector {
 	if gpuIdx >= 0 {
 		vec.Set(gpuIdx, 1)
 	}
+	return vec
+}
+
+// NewResourceVectorWithValues is a convenience function for tests only.
+func NewResourceVectorWithValues(milliCPU, memory, gpus float64, indexMap *ResourceVectorMap) ResourceVector {
+	vec := NewResourceVector(indexMap)
+	cpuIdx := indexMap.GetIndex(string(v1.ResourceCPU))
+	memIdx := indexMap.GetIndex(string(v1.ResourceMemory))
+	gpuIdx := indexMap.GetIndex(constants.GpuResource)
+	if cpuIdx < 0 || memIdx < 0 || gpuIdx < 0 {
+		panic("resource vector map missing core resource indexes")
+	}
+	vec.Set(cpuIdx, milliCPU)
+	vec.Set(memIdx, memory)
+	vec.Set(gpuIdx, gpus)
 	return vec
 }
 
@@ -151,7 +166,6 @@ func (m *ResourceVectorMap) Len() int {
 	return len(m.resourceNames)
 }
 
-
 func (m *ResourceVectorMap) ResourceAt(index int) string {
 	if index < 0 || index >= len(m.resourceNames) {
 		return ""
@@ -212,7 +226,7 @@ func (r *ResourceRequirements) ToVector(indexMap *ResourceVectorMap) ResourceVec
 
 	vec.Set(indexMap.GetIndex(string(v1.ResourceCPU)), r.milliCpu)
 	vec.Set(indexMap.GetIndex(string(v1.ResourceMemory)), r.memory)
-	vec.Set(indexMap.GetIndex(constants.GpuResource), r.GPUs())
+	vec.Set(indexMap.GetIndex(constants.GpuResource), r.GPUs()+float64(r.GetDraGpusCount()))
 
 	for name, val := range r.MigResources() {
 		if idx := indexMap.GetIndex(string(name)); idx >= 0 {

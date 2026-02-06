@@ -208,8 +208,8 @@ var _ = Describe("NewResourceVector", func() {
 		indexMap := buildTestVectorMap(resourceCPU, resourceMemory, commonconstants.NvidiaGpuResource)
 		vec := NewResourceVector(indexMap)
 
-		Expect(vec).To(HaveLen(3))
-		Expect(vec).To(Equal(ResourceVector{0, 0, 0}))
+		Expect(vec).To(HaveLen(4))
+		Expect(vec).To(Equal(ResourceVector{0, 0, 0, 0}))
 	})
 })
 
@@ -225,10 +225,11 @@ var _ = Describe("BuildResourceVectorMap", func() {
 
 		indexMap := BuildResourceVectorMap(nodeResources)
 
-		Expect(indexMap.Len()).To(Equal(3))
+		Expect(indexMap.Len()).To(Equal(4))
 		Expect(indexMap.ResourceAt(0)).To(Equal(resourceCPU))
 		Expect(indexMap.ResourceAt(1)).To(Equal(resourceMemory))
 		Expect(indexMap.ResourceAt(2)).To(Equal(commonconstants.GpuResource))
+		Expect(indexMap.ResourceAt(3)).To(Equal(string(v1.ResourcePods)))
 	})
 
 	It("should handle multiple nodes with different resource sets", func() {
@@ -266,7 +267,7 @@ var _ = Describe("BuildResourceVectorMap", func() {
 		indexMap := BuildResourceVectorMap(nodeResources)
 
 		Expect(indexMap.GetIndex("gpu-memory")).To(Equal(-1))
-		Expect(indexMap.Len()).To(Equal(3))
+		Expect(indexMap.Len()).To(Equal(4))
 	})
 
 	It("should normalize non-nvidia GPU resources into generic gpu type", func() {
@@ -283,7 +284,7 @@ var _ = Describe("BuildResourceVectorMap", func() {
 		indexMap := BuildResourceVectorMap(nodeResources)
 
 		Expect(indexMap.GetIndex("gpu-memory")).To(Equal(-1))
-		Expect(indexMap.Len()).To(Equal(3))
+		Expect(indexMap.Len()).To(Equal(4))
 	})
 })
 
@@ -295,7 +296,7 @@ var _ = Describe("Resource conversion", func() {
 
 			vec := r.ToVector(indexMap)
 
-			Expect(vec).To(HaveLen(3))
+			Expect(vec).To(HaveLen(4))
 			Expect(vec.Get(indexMap.GetIndex(resourceCPU))).To(Equal(float64(cpuMedium)))
 			Expect(vec.Get(indexMap.GetIndex(resourceMemory))).To(Equal(float64(twoGiB)))
 			Expect(vec.Get(indexMap.GetIndex(commonconstants.GpuResource))).To(Equal(float64(gpuTwo)))
@@ -334,7 +335,7 @@ var _ = Describe("Resource conversion", func() {
 
 			vec := req.ToVector(indexMap)
 
-			Expect(vec).To(HaveLen(3))
+			Expect(vec).To(HaveLen(4))
 			Expect(vec.Get(indexMap.GetIndex(resourceCPU))).To(Equal(float64(cpuMedium)))
 			Expect(vec.Get(indexMap.GetIndex(resourceMemory))).To(Equal(float64(twoGiB)))
 			Expect(vec.Get(indexMap.GetIndex(commonconstants.GpuResource))).To(Equal(float64(gpuTwo)))
