@@ -67,6 +67,7 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 
 		It("Allocate simple request", func(ctx context.Context) {
 			claim := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, deviceClassName, 1)
+			claim.Name = "allocate-simple-" + claim.Name
 			claim, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
@@ -100,6 +101,7 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 
 		It("Fails to allocate request with wrong device class", func(ctx context.Context) {
 			claim := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, "fake-device-class", 1)
+			claim.Name = "fail-allocate-" + claim.Name
 			claim, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
@@ -144,6 +146,7 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 			Expect(nodeName).ToNot(Equal(""), "failed to find a node with multiple devices")
 
 			claimTemplate := rd.CreateResourceClaimTemplate(namespace, testCtx.Queues[0].Name, deviceClassName, 1)
+			claimTemplate.Name = "fill-a-node-" + claimTemplate.Name
 			claimTemplate, err := testCtx.KubeClientset.ResourceV1().ResourceClaimTemplates(namespace).Create(ctx, claimTemplate, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
@@ -237,10 +240,12 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 
 		It("Should track DRA GPU resources in queue status", func(ctx context.Context) {
 			claim1 := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, deviceClassName, 1)
+			claim1.Name = "bookkeeping-claim1-" + claim1.Name
 			claim1, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim1, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			claim2 := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, deviceClassName, 2)
+			claim2.Name = "bookkeeping-claim2-" + claim2.Name
 			claim2, err = testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim2, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
