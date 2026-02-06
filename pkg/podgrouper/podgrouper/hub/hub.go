@@ -4,9 +4,11 @@
 package pluginshub
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/common/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/aml"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/cronjobs"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
@@ -62,10 +64,16 @@ type DefaultPluginsHub struct {
 }
 
 type PluginsHub interface {
-	GetPodGrouperPlugin(gvk metav1.GroupVersionKind) grouper.Grouper
+	GetPodGrouperPlugin(gvk metav1.GroupVersionKind, pod *v1.Pod) grouper.Grouper
 }
 
-func (ph *DefaultPluginsHub) GetPodGrouperPlugin(gvk metav1.GroupVersionKind) grouper.Grouper {
+func (ph *DefaultPluginsHub) GetPodGrouperPlugin(gvk metav1.GroupVersionKind, pod *v1.Pod) grouper.Grouper {
+	// Auxiliary pods always use default grouper to avoid errors from
+	// specialized groupers that require specific pod labels
+	if utils.IsAuxiliaryPod(pod) {
+		return ph.defaultPlugin
+	}
+
 	if f, found := ph.customPlugins[gvk]; found {
 		return f
 	}

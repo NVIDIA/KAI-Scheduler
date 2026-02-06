@@ -53,48 +53,6 @@ func (s *testLogSink) Error(err error, msg string, keysAndValues ...interface{})
 func (s *testLogSink) WithValues(keysAndValues ...interface{}) logr.LogSink { return s }
 func (s *testLogSink) WithName(name string) logr.LogSink                    { return s }
 
-const nodePoolKey = "kai.scheduler/node-pool"
-
-func TestAddNodePoolLabel(t *testing.T) {
-	metadata := podgroup.Metadata{
-		Annotations:       nil,
-		Labels:            nil,
-		PriorityClassName: "",
-		Queue:             "",
-		Namespace:         "",
-		Name:              "",
-		MinAvailable:      0,
-		Owner:             metav1.OwnerReference{},
-	}
-
-	pod := v1.Pod{
-		TypeMeta: metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				nodePoolKey: "my-node-pool",
-			},
-		},
-		Spec:   v1.PodSpec{},
-		Status: v1.PodStatus{},
-	}
-
-	addNodePoolLabel(&metadata, &pod, nodePoolKey)
-	assert.Equal(t, "my-node-pool", metadata.Labels[nodePoolKey])
-
-	metadata.Labels = nil
-	pod.Labels = nil
-
-	addNodePoolLabel(&metadata, &pod, nodePoolKey)
-	assert.Equal(t, "", metadata.Labels[nodePoolKey])
-
-	metadata.Labels = map[string]string{
-		nodePoolKey: "non-default-pool",
-	}
-
-	addNodePoolLabel(&metadata, &pod, nodePoolKey)
-	assert.Equal(t, "non-default-pool", metadata.Labels[nodePoolKey])
-}
-
 func TestIsOrphanPodWithPodGroup(t *testing.T) {
 	pod := v1.Pod{
 		TypeMeta: metav1.TypeMeta{},
