@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package constant
 
 const (
+	NvidiaGPUResource               = "nvidia.com/gpu"
 	NvidiaGPUMemoryLabelName        = "nvidia.com/gpu.memory"
 	NodeNamePodLabelName            = "kubernetes.io/hostname"
 	SchedulerName                   = "kai-scheduler"
@@ -15,4 +16,6 @@ const (
 
 	SchedulerDeploymentName = "kai-scheduler-default"
 	SchedulerContainerName  = "scheduler"
+	AppLabelName            = "app"
+	KaiReservationNamespace = "kai-resource-reservation"
 )
