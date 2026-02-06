@@ -447,6 +447,9 @@ func (ni *NodeInfo) addTaskResources(task *pod_info.PodInfo) {
 
 	requestedResourceWithoutSharedGPU := getAcceptedTaskResourceWithoutSharedGPU(task)
 
+	// Pod count is already included in the task's AcceptedResource (from ResReq),
+	// so no need to add it here
+
 	// the added task will be the only one allocated on the GPU
 	ni.Used.Add(requestedResourceWithoutSharedGPU)
 
@@ -497,6 +500,9 @@ func (ni *NodeInfo) removeTaskResources(task *pod_info.PodInfo) {
 	log.InfraLogger.V(7).Infof("NodeInfo: %+v", ni)
 
 	requestedResourceWithoutSharedGPU := getAcceptedTaskResourceWithoutSharedGPU(task)
+
+	// Pod count is already included in the task's AcceptedResource (from ResReq),
+	// so no need to add it here
 
 	// the removed task in the only one currently allocated on the GPU
 	ni.Used.Sub(requestedResourceWithoutSharedGPU)

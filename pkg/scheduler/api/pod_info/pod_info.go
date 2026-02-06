@@ -196,6 +196,7 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 	}
 
 	podInfo.updatePodAdditionalFields(bindRequest, draPodClaims...)
+
 	return podInfo
 }
 
@@ -316,6 +317,9 @@ func getPodResourceRequest(pod *v1.Pod) *resource_info.ResourceRequirements {
 		overheadReq := resource_info.RequirementsFromResourceList(pod.Spec.Overhead)
 		result.Add(&overheadReq.BaseResource)
 	}
+
+	// Add pod count as a scalar resource (1 pod per task, shared GPU tasks need +1 handled separately)
+	result.ScalarResources()[resource_info.PodsResourceName] = 1
 
 	return result
 }

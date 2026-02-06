@@ -236,7 +236,7 @@ func Test_getNodePreferableGpuForSharing(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gpusForSharing := getNodePreferableGpuForSharing(
+			gpusForSharing := GetNodePreferableGpuForSharing(
 				tt.args.fittingGPUsOnNode, tt.args.node, tt.args.pod, tt.args.isPipelineOnly)
 
 			if gpusForSharing == nil {
