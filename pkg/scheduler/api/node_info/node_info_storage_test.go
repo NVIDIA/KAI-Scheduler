@@ -118,6 +118,7 @@ func TestNodeInfoStorage_AddPod(t *testing.T) {
 		PodInfos: map[common_info.PodID]*pod_info.PodInfo{
 			pod1Info.UID: pod1Info,
 		},
+		AllocatedPodCount:      1, // 1 Running pod
 		LegacyMIGTasks:         map[common_info.PodID]string{},
 		MemoryOfEveryGpuOnNode: DefaultGpuMemory,
 		GpuSharingNodeInfo:     *newGpuSharingNodeInfo(),

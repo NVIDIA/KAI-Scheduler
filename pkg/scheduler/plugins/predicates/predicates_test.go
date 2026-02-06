@@ -17,6 +17,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/predicates"
@@ -1028,6 +1029,68 @@ func Test_predicatesPlugin_evaluateTaskOnPredicates(t *testing.T) {
 				},
 			},
 			common_info.NewFitError("j1-0", "", "n1", api.NodePodNumberExceeded),
+		},
+		{
+			"max pods with releasing pods - should not count releasing pods",
+			args{
+				taskName:                                 "preemptor-0",
+				jobName:                                  "preemptor",
+				nodeName:                                 "n1",
+				storageSchedulingEnabled:                 false,
+				isNonPreemptableTaskOnNodeOverCapacityFn: isNonPreemptableTaskOnNodeOverCapacityFnAlwaysSchedulable,
+				k8sPredicates: k8s_internal.SessionPredicates{
+					predicates.PodFitsHostPorts:       predicates_fake.EmptyPredicate(predicates.PodFitsHostPorts),
+					predicates.PodToleratesNodeTaints: predicates_fake.EmptyPredicate(predicates.PodToleratesNodeTaints),
+					predicates.NodeAffinity:           predicates_fake.EmptyPredicate(predicates.NodeAffinity),
+					predicates.PodAffinity:            predicates_fake.EmptyPredicate(predicates.PodAffinity),
+					predicates.VolumeBinding:          predicates_fake.EmptyPredicate(predicates.VolumeBinding),
+					predicates.NodeScheduler:          predicates_fake.EmptyPredicate(predicates.NodeScheduler),
+				},
+			},
+			clusterData{
+				jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name: "victim",
+						Tasks: func() []*tasks_fake.TestTaskBasic {
+							// Create 109 Running pods + 1 Releasing pod on a node with MaxTaskNum=110
+							tasks := make([]*tasks_fake.TestTaskBasic, 110)
+							for i := 0; i < 109; i++ {
+								tasks[i] = &tasks_fake.TestTaskBasic{
+									NodeName: "n1",
+									State:    pod_status.Running,
+								}
+							}
+							// One pod is being released (preempted)
+							tasks[109] = &tasks_fake.TestTaskBasic{
+								NodeName: "n1",
+								State:    pod_status.Releasing,
+							}
+							return tasks
+						}(),
+					},
+					{
+						Name: "preemptor",
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								// This pod should be able to schedule because releasing pods shouldn't count
+								NodeName: "",
+							},
+						},
+					},
+				},
+				nodes: map[string]nodes_fake.TestNodeBasic{
+					"n1": {
+						MaxTaskNum: pointer.Int(110),
+					},
+				},
+				isRestrictNodeSchedulingEnabled: func() bool {
+					return false
+				},
+			},
+			// Currently this test will fail (bug): the predicate incorrectly counts releasing pods
+			// Expected behavior: nil error (should succeed)
+			// Actual behavior: NodePodNumberExceeded error (counts 110 + 1 = 111 > 110)
+			nil,
 		},
 		{
 			"fail on predicate HostPorts with error",

@@ -54,6 +54,62 @@ func nodeInfoEqual(l, r *NodeInfo) bool {
 	return reflect.DeepEqual(l, r)
 }
 
+// TestNodeInfoEqualDoesNotModifyOriginals verifies that nodeInfoEqual doesn't modify the original objects
+func TestNodeInfoEqualDoesNotModifyOriginals(t *testing.T) {
+	node := common_info.BuildNode("test-node", common_info.BuildResourceListWithGPU("8000m", "10G", "1"))
+
+	nodeInfo1 := &NodeInfo{
+		Name:              "test-node",
+		Node:              node,
+		AllocatedPodCount: 42,
+		Idle:              common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+		Used:              resource_info.EmptyResource(),
+		Releasing:         resource_info.EmptyResource(),
+		Allocatable:       common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+		PodInfos:          map[common_info.PodID]*pod_info.PodInfo{},
+		LegacyMIGTasks:    map[common_info.PodID]string{},
+	}
+
+	nodeInfo2 := &NodeInfo{
+		Name:              "test-node",
+		Node:              node,
+		AllocatedPodCount: 99,
+		Idle:              common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+		Used:              resource_info.EmptyResource(),
+		Releasing:         resource_info.EmptyResource(),
+		Allocatable:       common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+		PodInfos:          map[common_info.PodID]*pod_info.PodInfo{},
+		LegacyMIGTasks:    map[common_info.PodID]string{},
+	}
+
+	// Store original values
+	originalCount1 := nodeInfo1.AllocatedPodCount
+	originalCount2 := nodeInfo2.AllocatedPodCount
+
+	// Call nodeInfoEqual
+	result := nodeInfoEqual(nodeInfo1, nodeInfo2)
+
+	// Verify the function returns false (since AllocatedPodCount differs and we now validate it)
+	if result {
+		t.Errorf("nodeInfoEqual should return false when AllocatedPodCount differs")
+	}
+
+	// Verify original objects were NOT modified
+	if nodeInfo1.AllocatedPodCount != originalCount1 {
+		t.Errorf("nodeInfoEqual modified nodeInfo1.AllocatedPodCount: expected %d, got %d",
+			originalCount1, nodeInfo1.AllocatedPodCount)
+	}
+
+	if nodeInfo2.AllocatedPodCount != originalCount2 {
+		t.Errorf("nodeInfoEqual modified nodeInfo2.AllocatedPodCount: expected %d, got %d",
+			originalCount2, nodeInfo2.AllocatedPodCount)
+	}
+
+	t.Logf("✓ Original AllocatedPodCount values preserved: nodeInfo1=%d, nodeInfo2=%d",
+		nodeInfo1.AllocatedPodCount, nodeInfo2.AllocatedPodCount)
+	t.Logf("✓ nodeInfoEqual correctly detects AllocatedPodCount differences")
+}
+
 type AddRemovePodsTest struct {
 	name     string
 	node     *v1.Node
@@ -120,6 +176,7 @@ func TestNodeInfo_AddPod(t *testing.T) {
 			"c1/p1": pod_info.NewTaskInfo(pod1),
 			"c1/p2": pod_info.NewTaskInfo(pod2),
 		},
+		AllocatedPodCount:          2, // 2 Running pods
 		LegacyMIGTasks:              map[common_info.PodID]string{},
 		MemoryOfEveryGpuOnNode:      DefaultGpuMemory,
 		GpuSharingNodeInfo:          *newGpuSharingNodeInfo(),
@@ -170,6 +227,7 @@ func TestNodeInfo_RemovePod(t *testing.T) {
 			"c1/p3": pod3PodInfo,
 		},
 		LegacyMIGTasks:              map[common_info.PodID]string{},
+		AllocatedPodCount:          2, // 2 Running pods
 		MemoryOfEveryGpuOnNode:      DefaultGpuMemory,
 		GpuSharingNodeInfo:          *newGpuSharingNodeInfo(),
 		AccessibleStorageCapacities: map[common_info.StorageClassID][]*storagecapacity_info.StorageCapacityInfo{},
@@ -229,6 +287,7 @@ func TestAddRemovePods(t *testing.T) {
 				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
+		AllocatedPodCount:      0, // 1 Releasing pod = 0 allocated
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
 				GpuSharingNodeInfo: func() GpuSharingNodeInfo {
 					sharingMaps := *newGpuSharingNodeInfo()
@@ -248,6 +307,7 @@ func TestAddRemovePods(t *testing.T) {
 				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
+		AllocatedPodCount:      0, // All pods removed
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
 				GpuSharingNodeInfo: func() GpuSharingNodeInfo {
 					sharingMaps := *newGpuSharingNodeInfo()
@@ -293,6 +353,7 @@ func TestAddRemovePods(t *testing.T) {
 				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
+		AllocatedPodCount:      1, // 1 Releasing + 1 Pipelined = 1 allocated
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
 				GpuSharingNodeInfo: func() GpuSharingNodeInfo {
 					sharingMaps := *newGpuSharingNodeInfo()
@@ -315,6 +376,7 @@ func TestAddRemovePods(t *testing.T) {
 				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
+		AllocatedPodCount:      0, // All pods removed
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
 				GpuSharingNodeInfo: func() GpuSharingNodeInfo {
 					sharingMaps := *newGpuSharingNodeInfo()
@@ -372,6 +434,7 @@ func TestAddRemovePods(t *testing.T) {
 				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
+		AllocatedPodCount:      2, // 1 Releasing + 1 Running + 1 Pipelined = 2 allocated
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
 				GpuSharingNodeInfo: func() GpuSharingNodeInfo {
 					sharingMaps := *newGpuSharingNodeInfo()
@@ -390,6 +453,7 @@ func TestAddRemovePods(t *testing.T) {
 				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
+		AllocatedPodCount:      0, // All pods removed
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
 				GpuSharingNodeInfo: func() GpuSharingNodeInfo {
 					sharingMaps := *newGpuSharingNodeInfo()
