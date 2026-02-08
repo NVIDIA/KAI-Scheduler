@@ -239,7 +239,7 @@ func measureUnschedulableDelayInSeconds(
 	createJob func(context.Context, *testcontext.TestContext, *v2.Queue) (*v2alpha2.PodGroup, []*v1.Pod, error),
 ) float64 {
 	totalTime := time.Duration(0)
-	for range statusMeasuringSamples {
+	for i := 0; i < statusMeasuringSamples; i++ {
 		pg, pods, err := createJob(ctx, testCtx, testQueue)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func(g Gomega) bool {
@@ -354,8 +354,9 @@ func runNCCLSimulation(
 		currentPendingPods := 0
 
 		queuePodsByName := map[string]*v1.Pod{}
-		for _, pod := range queuePods.Items {
-			queuePodsByName[pod.Name] = &pod
+		for i := range queuePods.Items {
+			pod := &queuePods.Items[i]
+			queuePodsByName[pod.Name] = pod
 			if pod.Status.Phase == v1.PodPending {
 				currentPendingPods++
 			}

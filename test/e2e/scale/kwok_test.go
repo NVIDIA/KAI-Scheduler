@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
+	kwok "github.com/run-ai/kwok-operator/api/v1beta1"
 
 	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
@@ -34,9 +35,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait/watcher"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/scale/topology"
-	kwok "github.com/run-ai/kwok-operator/api/v1beta1"
-
-	kwokopv1beta1 "github.com/run-ai/kwok-operator/api/v1beta1"
 )
 
 var _ = ReportAfterSuite("report failed test suite if needed", func(report Report) {
@@ -250,7 +248,7 @@ var _ = Describe("Kwok scale test", Ordered, Label(labels.Scale), func() {
 			updateFakeGPUOperatorGPUsPerNode(ctx, testCtx)
 
 			GinkgoLogr.Info("Setting up managed node pool to 0 nodes")
-			managedNodePool := kwokopv1beta1.NodePool{
+			managedNodePool := kwok.NodePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: KWOKOperatorNodePoolName,
 				},

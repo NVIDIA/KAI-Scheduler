@@ -9,7 +9,7 @@ Scale tests validate KAI scheduler performance and correctness at large cluster 
 Scale tests verify:
 
 - **Scheduling performance**: Time to schedule large numbers of pods across many nodes
-- **Topology-aware scheduling**: Correct placement of distributed jobs with topology constraints
+- **Topology-aware scheduling**: Time to allocate for distributed jobs with topology constraints  
 - **Resource allocation**: Proper GPU allocation and queue quota enforcement at scale
 - **Reclaim behavior**: Preemption and resource reclamation with background workloads
 - **Distributed job scheduling**: Multi-pod job allocation across nodes
