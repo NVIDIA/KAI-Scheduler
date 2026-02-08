@@ -13,12 +13,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	kwok "github.com/run-ai/kwok-operator/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
-	kwok "github.com/run-ai/kwok-operator/api/v1beta1"
 
 	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
@@ -412,7 +412,7 @@ var _ = Describe("Kwok scale test", Ordered, Label(labels.Scale), func() {
 					Context("measure reclaim time", func() {
 						BeforeEach(func(ctx context.Context) {
 							GinkgoLogr.Info("Wait for pods in sanity queue to come back up")
-							wait.ForPodCountInQueue(ctx, testCtx.ControllerClient, sanityTestQueue, numberOfNodes*gpusPerNode, maxFlowTimeoutMinutes*time.Minute)
+							wait.ForPodCountInNamespace(ctx, testCtx.ControllerClient, sanityTestQueue, numberOfNodes*gpusPerNode, maxFlowTimeoutMinutes*time.Minute)
 						})
 
 						AfterEach(func(ctx context.Context) {
@@ -433,7 +433,7 @@ var _ = Describe("Kwok scale test", Ordered, Label(labels.Scale), func() {
 
 					It("reclaims many single GPU Jobs", func(ctx context.Context) {
 						GinkgoLogr.Info("Wait for pods in sanity queue to come back up")
-						wait.ForPodCountInQueue(ctx, testCtx.ControllerClient, sanityTestQueue, numberOfNodes*gpusPerNode, maxFlowTimeoutMinutes*time.Minute)
+						wait.ForPodCountInNamespace(ctx, testCtx.ControllerClient, sanityTestQueue, numberOfNodes*gpusPerNode, maxFlowTimeoutMinutes*time.Minute)
 
 						basicScaleTest(
 							ctx, testCtx, fmt.Sprintf(
@@ -471,7 +471,7 @@ var _ = Describe("Kwok scale test", Ordered, Label(labels.Scale), func() {
 					Context("measure reclaim time", func() {
 						BeforeEach(func(ctx context.Context) {
 							GinkgoLogr.Info("Wait for pods in sanity queue to come back up")
-							wait.ForPodCountInQueue(ctx, testCtx.ControllerClient, sanityTestQueue, numberOfNodes, maxFlowTimeoutMinutes*time.Minute)
+							wait.ForPodCountInNamespace(ctx, testCtx.ControllerClient, sanityTestQueue, numberOfNodes, maxFlowTimeoutMinutes*time.Minute)
 						})
 
 						AfterEach(func(ctx context.Context) {

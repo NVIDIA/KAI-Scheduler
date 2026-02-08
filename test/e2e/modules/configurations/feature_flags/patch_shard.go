@@ -14,8 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/configurations"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
-
 	testContext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
@@ -28,25 +28,18 @@ func patchShard(
 	shard := &kaiv1.SchedulingShard{}
 	err := testCtx.ControllerClient.Get(ctx, types.NamespacedName{Name: shardName}, shard)
 	if errors.IsNotFound(err) {
-		err = nil
 		shard = &kaiv1.SchedulingShard{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: shardName,
-			},
+			ObjectMeta: metav1.ObjectMeta{Name: shardName},
 		}
+		Expect(testCtx.ControllerClient.Create(ctx, shard)).To(Succeed())
 	}
-	if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
 
-	originalDefaultShard := shard.DeepCopy()
-	patch := client.MergeFrom(originalDefaultShard)
+	Expect(configurations.PatchSchedulingShard(ctx, testCtx, shardName, patcher)).To(Succeed())
 
-	patcher(shard)
-
-	Expect(testCtx.ControllerClient.Patch(ctx, shard, patch)).To(Succeed())
-
-	wait.ForSchedulingShardStatusOK(ctx, testCtx.ControllerClient, "default")
+	wait.ForSchedulingShardStatusOK(ctx, testCtx.ControllerClient, shardName)
 
 	// These lines are here to workaround shard status issue - RUN-13930:
 	engineConfig := &kaiv1.Config{}

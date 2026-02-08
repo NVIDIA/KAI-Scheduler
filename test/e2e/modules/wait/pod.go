@@ -162,7 +162,7 @@ func ForNoReservationPods(ctx context.Context, client runtimeClient.WithWatch) {
 	ForPodsToBeDeleted(ctx, client, runtimeClient.InNamespace(constant.KaiReservationNamespace))
 }
 
-func ForPodCountInQueue(ctx context.Context, client runtimeClient.WithWatch, q *v2.Queue, expectedPodCount int, waitTime time.Duration) {
+func ForPodCountInNamespace(ctx context.Context, client runtimeClient.WithWatch, q *v2.Queue, expectedPodCount int, waitTime time.Duration) {
 	condition := func(event watch.Event) bool {
 		podsListObj, ok := event.Object.(*v1.PodList)
 		if !ok {
