@@ -20,11 +20,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/common/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper"
 	pluginshub "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/hub"
-
-	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 const (
@@ -110,15 +110,17 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	isAuxiliaryPod := utils.IsAuxiliaryPod(&pod)
+	var pgName, sgName string
+	// GuyTodo: If Auxiliary Pod, don't apply the podgroup, only determine the group and subgroup names
+
 	metadata, err := r.podGrouper.GetPGMetadata(ctx, &pod, topOwner, allOwners)
 	if err != nil {
 		logger.V(1).Error(err, "Failed to create pod group metadata for pod", req.Namespace, req.Name)
 		return ctrl.Result{}, err
 	}
 
-	if len(r.configs.NodePoolLabelKey) > 0 {
-		addNodePoolLabel(metadata, &pod, r.configs.NodePoolLabelKey)
-	}
+	enrichMetadata(metadata, &pod, topOwner, r.configs, logger)
 
 	err = r.PodGroupHandler.ApplyToCluster(ctx, *metadata)
 	if err != nil {
@@ -192,24 +194,6 @@ func (r *PodReconciler) assignPodToGroupAndSubGroup(ctx context.Context, pod *v1
 	}
 
 	return r.Client.Patch(ctx, newPod, client.MergeFrom(pod))
-}
-
-func addNodePoolLabel(metadata *podgroup.Metadata, pod *v1.Pod, nodePoolKey string) {
-	if metadata.Labels == nil {
-		metadata.Labels = map[string]string{}
-	}
-
-	if _, found := metadata.Labels[nodePoolKey]; found {
-		return
-	}
-
-	if pod.Labels == nil {
-		pod.Labels = map[string]string{}
-	}
-
-	if labelValue, found := pod.Labels[nodePoolKey]; found {
-		metadata.Labels[nodePoolKey] = labelValue
-	}
 }
 
 func isOrphanPodWithPodGroup(pod *v1.Pod) bool {
