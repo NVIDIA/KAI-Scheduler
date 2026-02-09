@@ -40,9 +40,6 @@ type Metadata struct {
 }
 
 func (m *Metadata) FindSubGroupForPod(podNamespace, podName string) *SubGroupMetadata {
-	// podNamespace is checked to ensure we're in the right context,
-	// but PodsReferences now only stores pod names (not namespaced names)
-	// to prevent cross-namespace attacks
 	if m.Namespace != podNamespace {
 		return nil
 	}

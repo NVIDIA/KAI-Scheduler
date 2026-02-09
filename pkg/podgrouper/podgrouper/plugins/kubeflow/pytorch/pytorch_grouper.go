@@ -110,7 +110,6 @@ func buildMasterSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, maste
 
 	var podReferences []string
 	if pod.Labels[replicaTypeLabel] == strings.ToLower(string(replicaTypeMaster)) {
-		// Store only pod name to prevent cross-namespace attacks
 		podReferences = append(podReferences, pod.Name)
 	}
 
@@ -128,7 +127,6 @@ func buildWorkerSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, worke
 
 	var podReferences []string
 	if pod.Labels[replicaTypeLabel] == strings.ToLower(string(replicaTypeWorker)) {
-		// Store only pod name to prevent cross-namespace attacks
 		podReferences = append(podReferences, pod.Name)
 	}
 

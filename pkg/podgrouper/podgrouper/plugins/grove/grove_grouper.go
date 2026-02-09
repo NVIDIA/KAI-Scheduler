@@ -249,7 +249,6 @@ func parseGroveSubGroup(
 			return nil, fmt.Errorf("cross-namespace pod reference not allowed: pod %s/%s cannot be referenced from PodGang in namespace %s",
 				namespacedName.Namespace, namespacedName.Name, namespace)
 		}
-		// Store only the pod name (not namespace) to prevent cross-namespace attacks
 		pods = append(pods, namespacedName.Name)
 	}
 	topologyConstraint, err := parseTopologyConstraint(pg, topology, "topologyConstraint", "packConstraint")

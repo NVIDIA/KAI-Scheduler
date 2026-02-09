@@ -106,7 +106,6 @@ func assignRayPodToSubGroup(pod *v1.Pod, pgMetadata *podgroup.Metadata) error {
 
 	for _, subGroup := range pgMetadata.SubGroups {
 		if subGroup.Name == group {
-			// Store only pod name to prevent cross-namespace attacks
 			subGroup.PodsReferences = append(subGroup.PodsReferences, pod.Name)
 			return nil
 		}
