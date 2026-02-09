@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ksf "k8s.io/kube-scheduler/framework"
 
@@ -207,7 +208,6 @@ func (pp *predicatesPlugin) evaluateTaskOnPredicates(
 				" task: <%v/%v>, node: <%v>", task.Namespace, task.Name, node.Name))
 	}
 
-	// Check max pods with accurate GPU group reservation pod accounting
 	if err := pp.checkMaxPodsWithGpuGroupReservation(task, node); err != nil {
 		return err
 	}
@@ -262,39 +262,23 @@ func (pp *predicatesPlugin) evaluateTaskOnPredicates(
 	return nil
 }
 
-// checkMaxPodsWithGpuGroupReservation validates that adding this task won't exceed the node's max pod limit,
-// accounting for GPU group reservation pods accurately.
 func (pp *predicatesPlugin) checkMaxPodsWithGpuGroupReservation(
 	task *pod_info.PodInfo, node *node_info.NodeInfo) error {
-
-	k8sNodeInfo := node.PodAffinityInfo.(*cluster_info.K8sNodePodAffinityInfo).NodeInfo
-
-	// Count current pods on the node
-	currentPods := len(k8sNodeInfo.Pods)
-
-	// Count reservation pods being freed (GPU groups where all pods are releasing)
-	reservationPodsBeingFreed := countReleasingGpuGroupReservationPods(node)
-
-	// Effective current pods after releases complete
-	effectivePods := currentPods - reservationPodsBeingFreed
-
-	// Count pods needed for this task
-	podsCountForTask := 1
-	if task.IsSharedGPURequest() {
-		needsNewGpuGroup := pp.willCreateNewGpuGroup(task, node)
-		if needsNewGpuGroup {
-			podsCountForTask++ // Account for reservation pod
-		}
+	if !task.IsSharedGPURequest() {
+		return nil
 	}
 
-	if effectivePods+podsCountForTask > node.MaxTaskNum {
-		log.InfraLogger.V(6).Infof(
-			"NodePodNumber predicate failed for Task <%s/%s> on Node <%s>: "+
-				"current=%d, releasing_reservation_pods=%d, task_needs=%d, max=%d",
-			task.Namespace, task.Name, node.Name,
-			currentPods, reservationPodsBeingFreed, podsCountForTask, node.MaxTaskNum)
+	needsNewGpuGroup := pp.willCreateNewGpuGroup(task, node)
+	if !needsNewGpuGroup {
+		return nil
+	}
+
+	availablePods := node.Allocatable.Get(v1.ResourcePods) - node.Used.Get(v1.ResourceCPU)
+
+	if availablePods < 2 {
 		return common_info.NewFitError(task.Name, task.Namespace, node.Name,
-			api.NodePodNumberExceeded)
+			fmt.Sprintf("node %s has only %d pods available, task: <%v/%v> requires 2 pods including reservation pod",
+				node.Name, availablePods, task.Namespace, task.Name))
 	}
 
 	return nil

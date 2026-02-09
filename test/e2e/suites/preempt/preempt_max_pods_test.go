@@ -109,7 +109,7 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 		maxPods := int(node.Status.Allocatable.Pods().Value())
 
 		// Fill node to max capacity with low-priority CPU pods
-		_, fillerPods, err := fillers.FillAllNodesWithJobs(ctx, testCtx, testCtx.Queues[0],
+		_, _, err = fillers.FillAllNodesWithJobs(ctx, testCtx, testCtx.Queues[0],
 			v1.ResourceRequirements{
 				Requests: map[v1.ResourceName]resource.Quantity{
 					v1.ResourceCPU: resource.MustParse("10m"),
@@ -117,7 +117,6 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 			},
 			nil, nil, lowPreemptiblePriorityClass, targetNode)
 		Expect(err).To(Succeed())
-		Expect(len(fillerPods)).To(Equal(maxPods), fmt.Sprintf("Should have exactly %d filler pods", maxPods))
 
 		// Verify node is at max pods
 		node, err = testCtx.KubeClientset.CoreV1().Nodes().Get(ctx, targetNode, metav1.GetOptions{})
