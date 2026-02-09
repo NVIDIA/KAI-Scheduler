@@ -377,10 +377,8 @@ func TestAssignPodToGroupAndSubGroup(t *testing.T) {
 				Namespace: "test-ns",
 				SubGroups: []*podgroup.SubGroupMetadata{
 					{
-						Name: "subgroup-1",
-						PodsReferences: []*types.NamespacedName{
-							{Namespace: "test-ns", Name: "test-pod"},
-						},
+						Name:           "subgroup-1",
+						PodsReferences: []string{"test-pod"},
 					},
 				},
 			},
@@ -403,10 +401,8 @@ func TestAssignPodToGroupAndSubGroup(t *testing.T) {
 				Namespace: "test-ns",
 				SubGroups: []*podgroup.SubGroupMetadata{
 					{
-						Name: "subgroup-1",
-						PodsReferences: []*types.NamespacedName{
-							{Namespace: "test-ns", Name: "other-pod"},
-						},
+						Name:           "subgroup-1",
+						PodsReferences: []string{"other-pod"},
 					},
 				},
 			},
@@ -433,10 +429,8 @@ func TestAssignPodToGroupAndSubGroup(t *testing.T) {
 				Namespace: "test-ns",
 				SubGroups: []*podgroup.SubGroupMetadata{
 					{
-						Name: "subgroup-1",
-						PodsReferences: []*types.NamespacedName{
-							{Namespace: "test-ns", Name: "test-pod"},
-						},
+						Name:           "subgroup-1",
+						PodsReferences: []string{"test-pod"},
 					},
 				},
 			},

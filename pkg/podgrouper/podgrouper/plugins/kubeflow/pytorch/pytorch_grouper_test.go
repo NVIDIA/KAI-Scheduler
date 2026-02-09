@@ -249,8 +249,7 @@ func TestGetPodGroupMetadata_SubGroups_MasterAndWorker(t *testing.T) {
 	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
 	assert.NotNil(t, masterSubGroup)
 	assert.Equal(t, 1, len(masterSubGroup.PodsReferences))
-	assert.Equal(t, "test-pod-master-0", masterSubGroup.PodsReferences[0].Name)
-	assert.Equal(t, "test_namespace", masterSubGroup.PodsReferences[0].Namespace)
+	assert.Equal(t, "test-pod-master-0", masterSubGroup.PodsReferences[0])
 
 	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeWorker))
 	assert.NotNil(t, workerSubGroup)
@@ -281,7 +280,7 @@ func TestGetPodGroupMetadata_SubGroups_WorkerPod(t *testing.T) {
 	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeWorker))
 	assert.NotNil(t, workerSubGroup)
 	assert.Equal(t, 1, len(workerSubGroup.PodsReferences))
-	assert.Equal(t, "test-pod-worker-0", workerSubGroup.PodsReferences[0].Name)
+	assert.Equal(t, "test-pod-worker-0", workerSubGroup.PodsReferences[0])
 }
 
 func TestGetPodGroupMetadata_SubGroups_OnlyMaster(t *testing.T) {
@@ -304,7 +303,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyMaster(t *testing.T) {
 	masterSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeMaster))
 	assert.NotNil(t, masterSubGroup)
 	assert.Equal(t, 1, len(masterSubGroup.PodsReferences))
-	assert.Equal(t, "test-pod-master-0", masterSubGroup.PodsReferences[0].Name)
+	assert.Equal(t, "test-pod-master-0", masterSubGroup.PodsReferences[0])
 }
 
 func TestGetPodGroupMetadata_SubGroups_OnlyWorker(t *testing.T) {
@@ -327,7 +326,7 @@ func TestGetPodGroupMetadata_SubGroups_OnlyWorker(t *testing.T) {
 	workerSubGroup := findSubGroupByName(metadata.SubGroups, string(replicaTypeWorker))
 	assert.NotNil(t, workerSubGroup)
 	assert.Equal(t, 1, len(workerSubGroup.PodsReferences))
-	assert.Equal(t, "test-pod-worker-0", workerSubGroup.PodsReferences[0].Name)
+	assert.Equal(t, "test-pod-worker-0", workerSubGroup.PodsReferences[0])
 }
 
 func TestGetPodGroupMetadata_SubGroups_PodWithoutReplicaTypeLabel(t *testing.T) {

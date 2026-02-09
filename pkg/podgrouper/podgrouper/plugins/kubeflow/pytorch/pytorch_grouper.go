@@ -11,7 +11,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/kubeflow"
@@ -109,12 +108,10 @@ func buildMasterSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, maste
 		return nil
 	}
 
-	var podReferences []*types.NamespacedName
+	var podReferences []string
 	if pod.Labels[replicaTypeLabel] == strings.ToLower(string(replicaTypeMaster)) {
-		podReferences = append(podReferences, &types.NamespacedName{
-			Namespace: pod.Namespace,
-			Name:      pod.Name,
-		})
+		// Store only pod name to prevent cross-namespace attacks
+		podReferences = append(podReferences, pod.Name)
 	}
 
 	return &podgroup.SubGroupMetadata{
@@ -129,12 +126,10 @@ func buildWorkerSubGroup(replicaSpecs map[string]interface{}, pod *v1.Pod, worke
 		return nil
 	}
 
-	var podReferences []*types.NamespacedName
+	var podReferences []string
 	if pod.Labels[replicaTypeLabel] == strings.ToLower(string(replicaTypeWorker)) {
-		podReferences = append(podReferences, &types.NamespacedName{
-			Namespace: pod.Namespace,
-			Name:      pod.Name,
-		})
+		// Store only pod name to prevent cross-namespace attacks
+		podReferences = append(podReferences, pod.Name)
 	}
 
 	return &podgroup.SubGroupMetadata{
