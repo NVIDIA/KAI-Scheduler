@@ -228,6 +228,12 @@ func (r *ResourceRequirements) ToVector(indexMap *ResourceVectorMap) ResourceVec
 	vec.Set(indexMap.GetIndex(string(v1.ResourceMemory)), r.memory)
 	vec.Set(indexMap.GetIndex(constants.GpuResource), r.GPUs()+float64(r.GetDraGpusCount()))
 
+	for name, val := range r.scalarResources {
+		if idx := indexMap.GetIndex(string(name)); idx >= 0 {
+			vec.Set(idx, float64(val))
+		}
+	}
+
 	for name, val := range r.MigResources() {
 		if idx := indexMap.GetIndex(string(name)); idx >= 0 {
 			vec.Set(idx, float64(val))
@@ -248,6 +254,14 @@ func (r *ResourceRequirements) FromVector(vec ResourceVector, indexMap *Resource
 		r.GpuResourceRequirement = *NewGpuResourceRequirement()
 		r.GpuResourceRequirement.portion = gpuVal
 		r.GpuResourceRequirement.count = 1
+	}
+}
+
+func (v ResourceVector) SetMax(other ResourceVector) {
+	for i := range min(len(v), len(other)) {
+		if other[i] > v[i] {
+			v[i] = other[i]
+		}
 	}
 }
 
