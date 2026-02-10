@@ -32,7 +32,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
@@ -264,8 +263,13 @@ func (pp *predicatesPlugin) evaluateTaskOnPredicates(
 
 func (pp *predicatesPlugin) checkMaxPodsWithGpuGroupReservation(
 	task *pod_info.PodInfo, node *node_info.NodeInfo) error {
+	availablePods := node.Allocatable.Get(v1.ResourcePods) - node.Used.Get(v1.ResourcePods)
+
 	if !task.IsSharedGPURequest() {
-		return nil
+		if availablePods > 0 {
+			return nil
+		}
+		return common_info.NewFitError(task.Name, task.Namespace, node.Name, api.NodePodNumberExceeded)
 	}
 
 	needsNewGpuGroup := pp.willCreateNewGpuGroup(task, node)
@@ -273,12 +277,8 @@ func (pp *predicatesPlugin) checkMaxPodsWithGpuGroupReservation(
 		return nil
 	}
 
-	availablePods := node.Allocatable.Get(v1.ResourcePods) - node.Used.Get(v1.ResourceCPU)
-
 	if availablePods < 2 {
-		return common_info.NewFitError(task.Name, task.Namespace, node.Name,
-			fmt.Sprintf("node %s has only %d pods available, task: <%v/%v> requires 2 pods including reservation pod",
-				node.Name, availablePods, task.Namespace, task.Name))
+		return common_info.NewFitError(task.Name, task.Namespace, node.Name, api.NodePodNumberExceeded)
 	}
 
 	return nil
@@ -331,38 +331,6 @@ func isNewGpuGroup(gpuGroup string) bool {
 	// Existing GPU groups are numeric strings ("0", "1", "2", etc.)
 	_, err := strconv.Atoi(gpuGroup)
 	return err != nil // If not a number, it's a UUID = new group
-}
-
-// countReleasingGpuGroupReservationPods counts how many GPU group reservation pods will be freed
-// when currently releasing tasks complete (i.e., GPU groups where ALL pods are releasing).
-func countReleasingGpuGroupReservationPods(node *node_info.NodeInfo) int {
-	// Track GPU groups and their pod states
-	gpuGroupPodsTotal := make(map[string]int)
-	gpuGroupPodsReleasing := make(map[string]int)
-
-	for _, pod := range node.PodInfos {
-		if !pod.IsSharedGPUAllocation() {
-			continue // Skip non-shared-GPU pods
-		}
-
-		// Count pods per GPU group
-		for _, gpuGroup := range pod.GPUGroups {
-			gpuGroupPodsTotal[gpuGroup]++
-			if pod.Status == pod_status.Releasing {
-				gpuGroupPodsReleasing[gpuGroup]++
-			}
-		}
-	}
-
-	// Count GPU groups where all pods are releasing (their reservation pods will be freed)
-	reservationPodsBeingFreed := 0
-	for gpuGroup, total := range gpuGroupPodsTotal {
-		if gpuGroupPodsReleasing[gpuGroup] == total {
-			reservationPodsBeingFreed++
-		}
-	}
-
-	return reservationPodsBeingFreed
 }
 
 func (pp *predicatesPlugin) OnSessionClose(_ *framework.Session) {}

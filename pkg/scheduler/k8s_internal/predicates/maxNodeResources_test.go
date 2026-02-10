@@ -117,7 +117,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			},
 			expected{
 				ksf.NewStatus(ksf.Unschedulable,
-					"The pod n1/name1 requires GPU: 0, CPU: 1 (cores), memory: 0 (GB). Max CPU resources available in a single node in the default node-pool is topped at 0.5 cores"),
+					"The pod n1/name1 requires GPU: 0, CPU: 1 (cores), memory: 0 (GB), pods: 1. Max CPU resources available in a single node in the default node-pool is topped at 0.5 cores"),
 			},
 		},
 		{
@@ -163,7 +163,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			},
 			expected{
 				ksf.NewStatus(ksf.Unschedulable,
-					"The pod n1/name1 requires GPU: 0, CPU: 0 (cores), memory: 1 (GB). Max memory resources available in a single node in the default node-pool is topped at 0.419 GB"),
+					"The pod n1/name1 requires GPU: 0, CPU: 0 (cores), memory: 1 (GB), pods: 1. Max memory resources available in a single node in the default node-pool is topped at 0.419 GB"),
 			},
 		},
 		{
@@ -209,7 +209,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			},
 			expected{
 				ksf.NewStatus(ksf.Unschedulable,
-					"The pod n1/name1 requires GPU: 2, CPU: 0 (cores), memory: 0 (GB). Max GPU resources available in a single node in the default node-pool is topped at 1"),
+					"The pod n1/name1 requires GPU: 2, CPU: 0 (cores), memory: 0 (GB), pods: 1. Max GPU resources available in a single node in the default node-pool is topped at 1"),
 			},
 		},
 		{
@@ -254,7 +254,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			},
 			expected{
 				ksf.NewStatus(ksf.Unschedulable,
-					"The pod n1/name1 requires GPU: 0.5, CPU: 0 (cores), memory: 0 (GB). No node in the default node-pool has GPU resources"),
+					"The pod n1/name1 requires GPU: 0.5, CPU: 0 (cores), memory: 0 (GB), pods: 1. No node in the default node-pool has GPU resources"),
 			},
 		},
 		{
@@ -302,13 +302,18 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			},
 			expected{
 				ksf.NewStatus(ksf.Unschedulable,
-					"The pod n1/name1 requires GPU: 0, CPU: 0 (cores), memory: 0 (GB), ephemeral-storage: 25 (GB). "+
+					"The pod n1/name1 requires GPU: 0, CPU: 0 (cores), memory: 0 (GB), ephemeral-storage: 25 (GB), pods: 1. "+
 						"Max ephemeral-storage resources available in a single node in the default node-pool is topped at 21.474 GB"),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			for _, node := range tt.args.nodesMap {
+				if _, found := node.Allocatable.ScalarResources()[v1.ResourcePods]; !found {
+					node.Allocatable.ScalarResources()[v1.ResourcePods] = 110
+				}
+			}
 			mnr := NewMaxNodeResourcesPredicate(tt.args.nodesMap, tt.args.resourceClaims, tt.args.nodePoolName)
 			_, status := mnr.PreFilter(context.TODO(), nil, tt.args.pod, nil)
 			if !statusEqual(status, tt.expected.status) {

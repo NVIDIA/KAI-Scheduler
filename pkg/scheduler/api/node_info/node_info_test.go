@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	. "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
@@ -51,6 +52,41 @@ const (
 func nodeInfoEqual(l, r *NodeInfo) bool {
 	l.PodAffinityInfo = nil
 	r.PodAffinityInfo = nil
+
+	if l.Allocatable != nil && r.Allocatable != nil {
+		if !reflect.DeepEqual(l.Allocatable, r.Allocatable) {
+			return false
+		}
+	}
+
+	if l.Idle != nil && r.Idle != nil {
+		if !reflect.DeepEqual(l.Idle, r.Idle) {
+			return false
+		}
+	}
+
+	if l.Used != nil && r.Used != nil {
+		if !reflect.DeepEqual(l.Used, r.Used) {
+			return false
+		}
+	}
+
+	if l.Releasing != nil && r.Releasing != nil {
+		if !reflect.DeepEqual(l.Releasing, r.Releasing) {
+			return false
+		}
+	}
+
+	if l.PodInfos != nil && r.PodInfos != nil {
+		if !reflect.DeepEqual(l.PodInfos, r.PodInfos) {
+			return false
+		}
+	}
+
+	if l.MaxTaskNum != r.MaxTaskNum {
+		return false
+	}
+
 	return reflect.DeepEqual(l, r)
 }
 
@@ -89,8 +125,8 @@ func RunAddRemovePodsTests(t *testing.T, tests []AddRemovePodsTest) {
 
 			t.Log(test.expected.PodInfos)
 			if !nodeInfoEqual(ni, test.expected) {
-				t.Errorf("node info %d: \n expected %v, \n got %v \n",
-					i, test.expected, ni)
+				t.Errorf("node info %d: \n expected %v, \n got %v \n diff:\n%v",
+					i, test.expected, ni, cmp.Diff(test.expected, ni))
 			}
 		})
 	}
@@ -126,6 +162,8 @@ func TestNodeInfo_AddPod(t *testing.T) {
 		AccessibleStorageCapacities: map[common_info.StorageClassID][]*storagecapacity_info.StorageCapacityInfo{},
 	}
 	// Adjust pod counts in resources (2 pods used, 108 idle out of 110 total)
+	node1ExpectedNodeInfo.MaxTaskNum = 110
+	node1ExpectedNodeInfo.Allocatable.ScalarResources()[resource_info.PodsResourceName] = 110
 	node1ExpectedNodeInfo.Idle.ScalarResources()[resource_info.PodsResourceName] = 108
 	node1ExpectedNodeInfo.Used.ScalarResources()[resource_info.PodsResourceName] = 2
 	for _, podInfo := range node1ExpectedNodeInfo.PodInfos {
@@ -177,6 +215,10 @@ func TestNodeInfo_RemovePod(t *testing.T) {
 		GpuSharingNodeInfo:          *newGpuSharingNodeInfo(),
 		AccessibleStorageCapacities: map[common_info.StorageClassID][]*storagecapacity_info.StorageCapacityInfo{},
 	}
+	node1ExpectedNodeInfo.MaxTaskNum = 110
+	node1ExpectedNodeInfo.Allocatable.ScalarResources()[resource_info.PodsResourceName] = 110
+	node1ExpectedNodeInfo.Idle.ScalarResources()[resource_info.PodsResourceName] = 108
+	node1ExpectedNodeInfo.Used.ScalarResources()[resource_info.PodsResourceName] = 2
 	node1ExpectedNodeInfo.setAcceptedResources(pod1PodInfo)
 	node1ExpectedNodeInfo.setAcceptedResources(pod3PodInfo)
 
@@ -226,10 +268,10 @@ func TestAddRemovePods(t *testing.T) {
 			},
 			addedPodsNodeInfo: &NodeInfo{
 				Name:                   "n1",
-				Idle:                   common_info.BuildResourceWithGpu("7000m", "9G", "0"),
-				Used:                   common_info.BuildResourceWithGpu("1000m", "1G", "0"),
-				Releasing:              common_info.BuildResourceWithGpu("1000m", "1G", "1"),
-				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+				Idle:                   common_info.BuildResourceWithGpu("7000m", "9G", "0", "110"),
+				Used:                   common_info.BuildResourceWithGpu("1000m", "1G", "0", "1"),
+				Releasing:              common_info.BuildResourceWithGpu("1000m", "1G", "1", "1"),
+				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1", "110"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
@@ -245,10 +287,10 @@ func TestAddRemovePods(t *testing.T) {
 			},
 			removedPodsNodeInfo: &NodeInfo{
 				Name:                   "n1",
-				Idle:                   common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+				Idle:                   common_info.BuildResourceWithGpu("8000m", "10G", "1", "110"),
 				Used:                   resource_info.EmptyResource(),
 				Releasing:              resource_info.EmptyResource(),
-				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1", "110"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
@@ -290,10 +332,10 @@ func TestAddRemovePods(t *testing.T) {
 			},
 			addedPodsNodeInfo: &NodeInfo{
 				Name:                   "n1",
-				Idle:                   common_info.BuildResourceWithGpu("7000m", "9G", "0"),
-				Used:                   common_info.BuildResourceWithGpu("1500m", "2G", "0"),
-				Releasing:              common_info.BuildResourceWithGpu("500m", "0G", "0"),
-				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+				Idle:                   common_info.BuildResourceWithGpu("7000m", "9G", "0", "110"),
+				Used:                   common_info.BuildResourceWithGpu("1500m", "2G", "0", "1"),
+				Releasing:              common_info.BuildResourceWithGpu("500m", "0G", "0", "1"),
+				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1", "110"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
@@ -312,10 +354,10 @@ func TestAddRemovePods(t *testing.T) {
 			},
 			removedPodsNodeInfo: &NodeInfo{
 				Name:                   "n1",
-				Idle:                   common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+				Idle:                   common_info.BuildResourceWithGpu("8000m", "10G", "1", "110"),
 				Used:                   resource_info.EmptyResource(),
 				Releasing:              resource_info.EmptyResource(),
-				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1", "110"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
@@ -369,10 +411,10 @@ func TestAddRemovePods(t *testing.T) {
 			},
 			addedPodsNodeInfo: &NodeInfo{
 				Name:                   "n1",
-				Idle:                   common_info.BuildResourceWithGpu("6000m", "8G", "0"),
-				Used:                   common_info.BuildResourceWithGpu("2500m", "3G", "0"),
-				Releasing:              common_info.BuildResourceWithGpu("500m", "0G", "0"),
-				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+				Idle:                   common_info.BuildResourceWithGpu("6000m", "8G", "0", "110"),
+				Used:                   common_info.BuildResourceWithGpu("2500m", "3G", "0", "1"),
+				Releasing:              common_info.BuildResourceWithGpu("500m", "0G", "0", "1"),
+				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1", "110"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
@@ -387,10 +429,10 @@ func TestAddRemovePods(t *testing.T) {
 			},
 			removedPodsNodeInfo: &NodeInfo{
 				Name:                   "n1",
-				Idle:                   common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+				Idle:                   common_info.BuildResourceWithGpu("8000m", "10G", "1", "110"),
 				Used:                   resource_info.EmptyResource(),
 				Releasing:              resource_info.EmptyResource(),
-				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1"),
+				Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "1", "110"),
 				PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 				LegacyMIGTasks:         map[common_info.PodID]string{},
 				MemoryOfEveryGpuOnNode: DefaultGpuMemory,
@@ -413,6 +455,15 @@ func TestAddRemovePods(t *testing.T) {
 			test.addedPodsNodeInfo.Node = test.node
 			test.removedPodsNodeInfo.Node = test.node
 
+			numPods := len(test.podsInfoMetadata)
+			test.addedPodsNodeInfo.MaxTaskNum = 110
+			test.removedPodsNodeInfo.MaxTaskNum = 110
+			test.addedPodsNodeInfo.Allocatable.ScalarResources()[resource_info.PodsResourceName] = 110
+			test.addedPodsNodeInfo.Used.ScalarResources()[resource_info.PodsResourceName] = int64(numPods)
+			test.addedPodsNodeInfo.Idle.ScalarResources()[resource_info.PodsResourceName] = int64(110 - numPods)
+			test.removedPodsNodeInfo.Allocatable.ScalarResources()[resource_info.PodsResourceName] = 110
+			test.removedPodsNodeInfo.Idle.ScalarResources()[resource_info.PodsResourceName] = 110
+
 			controller := NewController(t)
 			nodePodAffinityInfoAdded := pod_affinity.NewMockNodePodAffinityInfo(controller)
 			nodePodAffinityInfoAdded.EXPECT().AddPod(Any()).Times(len(test.podsInfoMetadata))
@@ -429,7 +480,7 @@ func TestAddRemovePods(t *testing.T) {
 			for _, podInfo := range podsInfo {
 				_ = ni.AddTask(podInfo)
 				podInfoKey := common_info.PodID(fmt.Sprintf("%s/%s", podInfo.Namespace, podInfo.Name))
-				test.addedPodsNodeInfo.PodInfos[podInfoKey] = podInfo
+				test.addedPodsNodeInfo.PodInfos[podInfoKey] = podInfo.Clone()
 			}
 			if !nodeInfoEqual(ni, test.addedPodsNodeInfo) {
 				t.Errorf("pods added info: \n expected %v, \n got %v \n",
@@ -1111,7 +1162,7 @@ func TestPredicateByNodeResourcesType_DRA(t *testing.T) {
 			nodeInfo: &NodeInfo{
 				Name:        "dra-node",
 				HasDRAGPUs:  true,
-				Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4"),
+				Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4", "110"),
 				Node: &v1.Node{
 					ObjectMeta: metav1.ObjectMeta{Name: "dra-node", Labels: map[string]string{}},
 				},
@@ -1124,7 +1175,7 @@ func TestPredicateByNodeResourcesType_DRA(t *testing.T) {
 			nodeInfo: &NodeInfo{
 				Name:        "dra-node",
 				HasDRAGPUs:  true,
-				Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4"),
+				Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4", "110"),
 				Node: &v1.Node{
 					ObjectMeta: metav1.ObjectMeta{Name: "dra-node", Labels: map[string]string{}},
 				},
@@ -1137,7 +1188,7 @@ func TestPredicateByNodeResourcesType_DRA(t *testing.T) {
 			nodeInfo: &NodeInfo{
 				Name:        "device-plugin-node",
 				HasDRAGPUs:  false,
-				Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4"),
+				Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4", "110"),
 				Node: &v1.Node{
 					ObjectMeta: metav1.ObjectMeta{Name: "device-plugin-node", Labels: map[string]string{}},
 				},
@@ -1165,7 +1216,7 @@ func TestIsCPUOnlyNode_DRA(t *testing.T) {
 	nodeWithDRA := &NodeInfo{
 		Name:        "dra-node",
 		HasDRAGPUs:  true,
-		Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4"),
+		Allocatable: common_info.BuildResourceWithGpu("1000m", "1G", "4", "110"),
 		Node:        &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "dra-node", Labels: map[string]string{}}},
 	}
 	assert.False(t, nodeWithDRA.IsCPUOnlyNode(), "node with HasDRAGPUs should not be CPU-only")

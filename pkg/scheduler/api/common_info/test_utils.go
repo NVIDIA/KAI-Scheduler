@@ -128,16 +128,23 @@ func BuildResource(cpu string, memory string) *resource_info.Resource {
 	return resource_info.ResourceFromResourceList(v1.ResourceList{
 		v1.ResourceCPU:    resource.MustParse(cpu),
 		v1.ResourceMemory: resource.MustParse(memory),
-		// Don't include pods here - only BuildResourceList should include pods for node allocatable
 	})
 }
 
-func BuildResourceWithGpu(cpu string, memory string, gpu string) *resource_info.Resource {
+func BuildResourceWithPods(cpu string, memory string, pods string) *resource_info.Resource {
+	return resource_info.ResourceFromResourceList(v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse(cpu),
+		v1.ResourceMemory: resource.MustParse(memory),
+		v1.ResourcePods:   resource.MustParse(pods),
+	})
+}
+
+func BuildResourceWithGpu(cpu, memory, gpu, pods string) *resource_info.Resource {
 	return resource_info.ResourceFromResourceList(v1.ResourceList{
 		v1.ResourceCPU:                resource.MustParse(cpu),
 		v1.ResourceMemory:             resource.MustParse(memory),
 		resource_info.GPUResourceName: resource.MustParse(gpu),
-		// Don't include pods here - only BuildResourceList should include pods for node allocatable
+		v1.ResourcePods:               resource.MustParse(pods),
 	})
 }
 
