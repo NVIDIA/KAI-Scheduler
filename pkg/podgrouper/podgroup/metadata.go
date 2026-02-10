@@ -5,13 +5,12 @@ package podgroup
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 type SubGroupMetadata struct {
 	Name           string
 	MinAvailable   int32
-	PodsReferences []*types.NamespacedName
+	PodsReferences []string
 }
 
 type Metadata struct {
