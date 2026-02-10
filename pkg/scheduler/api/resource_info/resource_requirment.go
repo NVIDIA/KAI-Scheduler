@@ -16,7 +16,7 @@ import (
 const (
 	GPUResourceName    = "nvidia.com/gpu"
 	amdGpuResourceName = "amd.com/gpu"
-	PodsResourceName   = v1.ResourceName("pods") // Track pod count as a resource
+	PodsResourceName   = v1.ResourceName("pods")
 )
 
 type ResourceRequirements struct {

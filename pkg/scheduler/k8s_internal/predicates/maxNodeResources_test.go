@@ -397,11 +397,13 @@ func TestMaxNodeResourcesPredicateDRA(t *testing.T) {
 							v1.ResourceCPU:     resource.MustParse("100m"),
 							v1.ResourceMemory:  resource.MustParse("200Mi"),
 							"kai.scheduler/r1": resource.MustParse("2"),
+							"pods":             resource.MustParse("110"),
 						},
 						"n2": {
 							v1.ResourceCPU:     resource.MustParse("500m"),
 							v1.ResourceMemory:  resource.MustParse("200Mi"),
 							"kai.scheduler/r1": resource.MustParse("2"),
+							"pods":             resource.MustParse("110"),
 						},
 					},
 				),
@@ -462,11 +464,13 @@ func TestMaxNodeResourcesPredicateDRA(t *testing.T) {
 							v1.ResourceCPU:     resource.MustParse("100m"),
 							v1.ResourceMemory:  resource.MustParse("200Mi"),
 							"kai.scheduler/r1": resource.MustParse("2"),
+							"pods":             resource.MustParse("110"),
 						},
 						"n2": {
 							v1.ResourceCPU:     resource.MustParse("500m"),
 							v1.ResourceMemory:  resource.MustParse("200Mi"),
 							"kai.scheduler/r1": resource.MustParse("2"),
+							"pods":             resource.MustParse("110"),
 						},
 					},
 				),
@@ -513,7 +517,7 @@ func TestMaxNodeResourcesPredicateDRA(t *testing.T) {
 				},
 			},
 			ksf.NewStatus(ksf.Unschedulable,
-				"The pod n1/name1 requires GPU: 2, CPU: 0 (cores), memory: 0 (GB). Max GPU resources available in a single node in the default node-pool is topped at 1"),
+				"The pod n1/name1 requires GPU: 2, CPU: 0 (cores), memory: 0 (GB), pods: 1. Max GPU resources available in a single node in the default node-pool is topped at 1"),
 		},
 	}
 	for _, tt := range tests {

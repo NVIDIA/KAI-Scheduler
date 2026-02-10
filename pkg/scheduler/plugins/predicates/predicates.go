@@ -287,27 +287,20 @@ func (pp *predicatesPlugin) checkMaxPodsWithGpuGroupReservation(
 // willCreateNewGpuGroup determines if allocating this task will create a new GPU group
 // (and thus require a new reservation pod).
 func (pp *predicatesPlugin) willCreateNewGpuGroup(task *pod_info.PodInfo, node *node_info.NodeInfo) bool {
-	// If session is not available (e.g., in tests), conservatively assume new group
 	if pp.ssn == nil {
-		return true
+		return false
 	}
 
-	// Get fitting GPUs using the session's GPU selection logic
 	fittingGPUs := pp.ssn.FittingGPUs(node, task)
-
-	// Try immediate allocation first (isPipelineOnly=false)
 	gpuForSharingImmediate := gpu_sharing.GetNodePreferableGpuForSharing(fittingGPUs, node, task, false)
 
 	if gpuForSharingImmediate != nil && !gpuForSharingImmediate.IsReleasing {
-		// Can allocate immediately - check if it creates a new GPU group
 		return containsNewGpuGroup(gpuForSharingImmediate.Groups)
 	}
 
-	// Try pipelined allocation (isPipelineOnly=true)
 	gpuForSharingPipelined := gpu_sharing.GetNodePreferableGpuForSharing(fittingGPUs, node, task, true)
 
 	if gpuForSharingPipelined != nil {
-		// Will be pipelined - check if to a new or existing GPU group
 		return containsNewGpuGroup(gpuForSharingPipelined.Groups)
 	}
 

@@ -61,7 +61,6 @@ func ResourceFromResourceList(rList v1.ResourceList) *Resource {
 		case GPUResourceName, amdGpuResourceName:
 			r.gpus += float64(rQuant.Value())
 		case v1.ResourcePods:
-			// Treat pods as a countable resource
 			r.scalarResources[rName] += rQuant.Value()
 		default:
 			if IsMigResource(rName) {

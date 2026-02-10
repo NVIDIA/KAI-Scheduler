@@ -91,7 +91,7 @@ func BuildResourceList(cpu string, memory string) v1.ResourceList {
 	return v1.ResourceList{
 		v1.ResourceCPU:    resource.MustParse(cpu),
 		v1.ResourceMemory: resource.MustParse(memory),
-		v1.ResourcePods:   resource.MustParse("110"), // Default pod limit for test nodes
+		v1.ResourcePods:   resource.MustParse("110"),
 	}
 }
 
@@ -100,7 +100,7 @@ func BuildResourceListWithGPU(cpu string, memory string, gpu string) v1.Resource
 		v1.ResourceCPU:                resource.MustParse(cpu),
 		v1.ResourceMemory:             resource.MustParse(memory),
 		resource_info.GPUResourceName: resource.MustParse(gpu),
-		v1.ResourcePods:               resource.MustParse("110"), // Default pod limit for test nodes
+		v1.ResourcePods:               resource.MustParse("110"),
 	}
 }
 
@@ -108,7 +108,7 @@ func BuildResourceListWithMig(cpu string, memory string, migProfiles ...string) 
 	resources := v1.ResourceList{
 		v1.ResourceCPU:    resource.MustParse(cpu),
 		v1.ResourceMemory: resource.MustParse(memory),
-		v1.ResourcePods:   resource.MustParse("110"), // Default pod limit for test nodes
+		v1.ResourcePods:   resource.MustParse("110"),
 	}
 
 	for _, profile := range migProfiles {
@@ -152,7 +152,6 @@ func BuildResourceRequirements(cpu string, memory string) *resource_info.Resourc
 	return resource_info.RequirementsFromResourceList(v1.ResourceList{
 		v1.ResourceCPU:    resource.MustParse(cpu),
 		v1.ResourceMemory: resource.MustParse(memory),
-		// Don't include pods here - task requirements add pods automatically
 	})
 }
 

@@ -28,7 +28,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	. "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
@@ -52,41 +51,6 @@ const (
 func nodeInfoEqual(l, r *NodeInfo) bool {
 	l.PodAffinityInfo = nil
 	r.PodAffinityInfo = nil
-
-	if l.Allocatable != nil && r.Allocatable != nil {
-		if !reflect.DeepEqual(l.Allocatable, r.Allocatable) {
-			return false
-		}
-	}
-
-	if l.Idle != nil && r.Idle != nil {
-		if !reflect.DeepEqual(l.Idle, r.Idle) {
-			return false
-		}
-	}
-
-	if l.Used != nil && r.Used != nil {
-		if !reflect.DeepEqual(l.Used, r.Used) {
-			return false
-		}
-	}
-
-	if l.Releasing != nil && r.Releasing != nil {
-		if !reflect.DeepEqual(l.Releasing, r.Releasing) {
-			return false
-		}
-	}
-
-	if l.PodInfos != nil && r.PodInfos != nil {
-		if !reflect.DeepEqual(l.PodInfos, r.PodInfos) {
-			return false
-		}
-	}
-
-	if l.MaxTaskNum != r.MaxTaskNum {
-		return false
-	}
-
 	return reflect.DeepEqual(l, r)
 }
 
@@ -125,8 +89,8 @@ func RunAddRemovePodsTests(t *testing.T, tests []AddRemovePodsTest) {
 
 			t.Log(test.expected.PodInfos)
 			if !nodeInfoEqual(ni, test.expected) {
-				t.Errorf("node info %d: \n expected %v, \n got %v \n diff:\n%v",
-					i, test.expected, ni, cmp.Diff(test.expected, ni))
+				t.Errorf("node info %d: \n expected %v, \n got %v \n",
+					i, test.expected, ni)
 			}
 		})
 	}
@@ -161,7 +125,7 @@ func TestNodeInfo_AddPod(t *testing.T) {
 		GpuSharingNodeInfo:          *newGpuSharingNodeInfo(),
 		AccessibleStorageCapacities: map[common_info.StorageClassID][]*storagecapacity_info.StorageCapacityInfo{},
 	}
-	// Adjust pod counts in resources (2 pods used, 108 idle out of 110 total)
+
 	node1ExpectedNodeInfo.MaxTaskNum = 110
 	node1ExpectedNodeInfo.Allocatable.ScalarResources()[resource_info.PodsResourceName] = 110
 	node1ExpectedNodeInfo.Idle.ScalarResources()[resource_info.PodsResourceName] = 108
@@ -784,14 +748,14 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 				GpuMemorySynced:        true,
 				Idle: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
-					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					r.ScalarResources()[resource_info.PodsResourceName] = 10
 					return r
 				}(),
 				Used:      resource_info.EmptyResource(),
 				Releasing: resource_info.EmptyResource(),
 				Allocatable: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
-					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					r.ScalarResources()[resource_info.PodsResourceName] = 10
 					return r
 				}(),
 			},
@@ -817,7 +781,7 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 				),
 				nodeNonAllocatedResources: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
-					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					r.ScalarResources()[resource_info.PodsResourceName] = 10
 					return r
 				}(),
 			},
@@ -830,14 +794,14 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 				GpuMemorySynced:        true,
 				Idle: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
-					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					r.ScalarResources()[resource_info.PodsResourceName] = 10
 					return r
 				}(),
 				Used:      resource_info.EmptyResource(),
 				Releasing: resource_info.EmptyResource(),
 				Allocatable: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
-					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					r.ScalarResources()[resource_info.PodsResourceName] = 10
 					return r
 				}(),
 			},
@@ -863,7 +827,7 @@ func TestNodeInfo_isTaskAllocatableOnNonAllocatedResources(t *testing.T) {
 				),
 				nodeNonAllocatedResources: func() *resource_info.Resource {
 					r := resource_info.NewResource(0, 0, 2)
-					r.ScalarResources()[resource_info.PodsResourceName] = 10 // Add pods resource
+					r.ScalarResources()[resource_info.PodsResourceName] = 10
 					return r
 				}(),
 			},

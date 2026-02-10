@@ -76,6 +76,12 @@ func BuildNodesInfoMap(
 		if nodeMetadata.MaxTaskNum != nil {
 			nodeInfo.MaxTaskNum = *nodeMetadata.MaxTaskNum
 			nodeInfo.Allocatable.ScalarResources()[v1.ResourcePods] = int64(*nodeMetadata.MaxTaskNum)
+			usedPods := int64(nodeInfo.Used.Get(v1.ResourcePods))
+			availablePods := int64(*nodeMetadata.MaxTaskNum) - usedPods
+			if availablePods < 0 {
+				availablePods = 0
+			}
+			nodeInfo.Idle.ScalarResources()[v1.ResourcePods] = availablePods
 		}
 		nodesInfoMap[nodeName] = nodeInfo
 	}

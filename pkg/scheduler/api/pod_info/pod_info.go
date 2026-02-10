@@ -318,7 +318,6 @@ func getPodResourceRequest(pod *v1.Pod) *resource_info.ResourceRequirements {
 		result.Add(&overheadReq.BaseResource)
 	}
 
-	// Add pod count as a scalar resource (1 pod per task, shared GPU tasks need +1 handled separately)
 	result.ScalarResources()[resource_info.PodsResourceName] = 1
 
 	return result

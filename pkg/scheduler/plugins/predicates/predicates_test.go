@@ -24,7 +24,9 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal/predicates"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
@@ -189,7 +191,6 @@ func Test_evaluateTaskOnPrePredicate(t *testing.T) {
 
 func TestMaxPodsWithReleasingPods(t *testing.T) {
 	// Test that releasing pods don't count toward the max pods limit
-	// when pods are tracked as a scalar resource
 	node := common_info.BuildNode("n1", common_info.BuildResourceList("16000m", "32G"))
 	node.Status.Allocatable[v1.ResourcePods] = *resource.NewQuantity(110, resource.DecimalSI)
 
@@ -1187,13 +1188,21 @@ func Test_predicatesPlugin_evaluateTaskOnPredicates(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			jobsMap, tasksMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.clusterData.jobs)
+			nodesMap := nodes_fake.BuildNodesInfoMap(tt.clusterData.nodes, tasksMap, nil)
+			ssn := &framework.Session{
+				ClusterInfo: &api.ClusterInfo{
+					Nodes:         nodesMap,
+					PodGroupInfos: jobsMap,
+					Queues:        map[common_info.QueueID]*queue_info.QueueInfo{},
+				},
+			}
 			pp := &predicatesPlugin{
 				storageSchedulingEnabled: tt.args.storageSchedulingEnabled,
+				ssn:                      ssn,
 			}
 			skipPredicates := SkipPredicates{}
 
-			jobsMap, tasksMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.clusterData.jobs)
-			nodesMap := nodes_fake.BuildNodesInfoMap(tt.clusterData.nodes, tasksMap, nil)
 			task := jobsMap[tt.args.jobName].GetAllPodsMap()[tt.args.taskName]
 			job := jobsMap[tt.args.jobName]
 			node := nodesMap[tt.args.nodeName]
