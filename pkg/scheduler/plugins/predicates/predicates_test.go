@@ -247,18 +247,19 @@ func TestMaxPodsWithReleasingPods(t *testing.T) {
 	allocatable := ni.IsTaskAllocatableOnReleasingOrIdle(preemptorTask)
 
 	// Debug output
-	t.Logf("Node Allocatable pods: %v", ni.Allocatable.ScalarResources()[resource_info.PodsResourceName])
-	t.Logf("Node Idle pods: %v", ni.Idle.ScalarResources()[resource_info.PodsResourceName])
-	t.Logf("Node Used pods: %v", ni.Used.ScalarResources()[resource_info.PodsResourceName])
-	t.Logf("Node Releasing pods: %v", ni.Releasing.ScalarResources()[resource_info.PodsResourceName])
-	t.Logf("Preemptor ResReq pods: %v", preemptorTask.ResReq.ScalarResources()[resource_info.PodsResourceName])
+	podsIdx := ni.VectorMap.GetIndex(string(v1.ResourcePods))
+	t.Logf("Node Allocatable pods: %v", ni.AllocatableVector.Get(podsIdx))
+	t.Logf("Node Idle pods: %v", ni.IdleVector.Get(podsIdx))
+	t.Logf("Node Used pods: %v", ni.UsedVector.Get(podsIdx))
+	t.Logf("Node Releasing pods: %v", ni.ReleasingVector.Get(podsIdx))
+	t.Logf("Preemptor ResReqVector: %v", preemptorTask.ResReqVector)
 
 	if !allocatable {
 		t.Errorf("Preemptor pod should be allocatable (109 Running + 1 Releasing + 1 new = 110 total, but Releasing pod resources are available)")
-		t.Logf("Node Idle: %v", ni.Idle)
-		t.Logf("Node Used: %v", ni.Used)
-		t.Logf("Node Releasing: %v", ni.Releasing)
-		t.Logf("Preemptor ResReq: %v", preemptorTask.ResReq)
+		t.Logf("Node IdleVector: %v", ni.IdleVector)
+		t.Logf("Node UsedVector: %v", ni.UsedVector)
+		t.Logf("Node ReleasingVector: %v", ni.ReleasingVector)
+		t.Logf("Preemptor ResReqVector: %v", preemptorTask.ResReqVector)
 	}
 }
 
