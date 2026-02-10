@@ -22,6 +22,9 @@ func QuantifyResourceRequirements(resource *resource_info.ResourceRequirements) 
 }
 
 func QuantifyVector(vec resource_info.ResourceVector, vectorMap *resource_info.ResourceVectorMap) rs.ResourceQuantities {
+	if vec == nil || vectorMap == nil {
+		return rs.EmptyResourceQuantities()
+	}
 	cpuIdx := vectorMap.GetIndex(string(v1.ResourceCPU))
 	memIdx := vectorMap.GetIndex(string(v1.ResourceMemory))
 	gpuIdx := vectorMap.GetIndex(commonconstants.GpuResource)
