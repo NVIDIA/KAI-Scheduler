@@ -829,10 +829,8 @@ func TestGetUsageDBConfig(t *testing.T) {
 			kaiConfig: &kaiv1.Config{
 				Spec: kaiv1.ConfigSpec{
 					Namespace: "kai-system",
-					Global: &kaiv1.GlobalConfig{
-						ExternalTSDBConnection: &kaiv1.Connection{
-							URL: ptr.To("http://external-tsdb:9090"),
-						},
+					Prometheus: &kaiprometheus.Prometheus{
+						ExternalPrometheusUrl: ptr.To("http://external-tsdb:9090"),
 					},
 				},
 			},
@@ -856,19 +854,10 @@ func TestGetUsageDBConfig(t *testing.T) {
 				Spec: kaiv1.ConfigSpec{
 					Namespace:  "kai-system",
 					Prometheus: nil,
-					Global: &kaiv1.GlobalConfig{
-						ExternalTSDBConnection: &kaiv1.Connection{
-							URL: ptr.To("http://external-tsdb:9090"),
-						},
-					},
 				},
 			},
-			expectError: false,
-			validate: func(t *testing.T, result *usagedbapi.UsageDBConfig) {
-				assert.NotNil(t, result)
-				assert.Equal(t, "prometheus", result.ClientType)
-				assert.Equal(t, "http://external-tsdb:9090", result.ConnectionString)
-			},
+			expectError: true,
+			errorMsg:    "prometheus connection string not configured",
 		},
 		{
 			name: "prometheus with prometheus.enabled = false",
@@ -884,57 +873,6 @@ func TestGetUsageDBConfig(t *testing.T) {
 					Namespace: "kai-system",
 					Prometheus: &kaiprometheus.Prometheus{
 						Enabled: ptr.To(false),
-					},
-					Global: &kaiv1.GlobalConfig{
-						ExternalTSDBConnection: &kaiv1.Connection{
-							URL: ptr.To("http://external-tsdb:9090"),
-						},
-					},
-				},
-			},
-			expectError: false,
-			validate: func(t *testing.T, result *usagedbapi.UsageDBConfig) {
-				assert.NotNil(t, result)
-				assert.Equal(t, "prometheus", result.ClientType)
-				assert.Equal(t, "http://external-tsdb:9090", result.ConnectionString)
-			},
-		},
-		{
-			name: "prometheus with nil external TSDB connection",
-			shard: &kaiv1.SchedulingShard{
-				Spec: kaiv1.SchedulingShardSpec{
-					UsageDBConfig: &usagedbapi.UsageDBConfig{
-						ClientType: "prometheus",
-					},
-				},
-			},
-			kaiConfig: &kaiv1.Config{
-				Spec: kaiv1.ConfigSpec{
-					Namespace: "kai-system",
-					Global: &kaiv1.GlobalConfig{
-						ExternalTSDBConnection: nil,
-					},
-				},
-			},
-			expectError: true,
-			errorMsg:    "prometheus connection string not configured",
-		},
-		{
-			name: "prometheus with nil external TSDB URL",
-			shard: &kaiv1.SchedulingShard{
-				Spec: kaiv1.SchedulingShardSpec{
-					UsageDBConfig: &usagedbapi.UsageDBConfig{
-						ClientType: "prometheus",
-					},
-				},
-			},
-			kaiConfig: &kaiv1.Config{
-				Spec: kaiv1.ConfigSpec{
-					Namespace: "kai-system",
-					Global: &kaiv1.GlobalConfig{
-						ExternalTSDBConnection: &kaiv1.Connection{
-							URL: nil,
-						},
 					},
 				},
 			},
@@ -980,6 +918,7 @@ func TestGetUsageDBConfig(t *testing.T) {
 				assert.NotNil(t, result.UsageParams)
 				assert.Equal(t, 10*time.Minute, result.UsageParams.HalfLifePeriod.Duration)
 				assert.Equal(t, 20*time.Minute, result.UsageParams.WindowSize.Duration)
+				assert.Equal(t, "http://prometheus:9090", result.ConnectionString)
 			},
 		},
 	}
