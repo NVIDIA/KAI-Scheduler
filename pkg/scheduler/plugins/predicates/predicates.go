@@ -263,7 +263,7 @@ func (pp *predicatesPlugin) evaluateTaskOnPredicates(
 
 func (pp *predicatesPlugin) checkMaxPodsWithGpuGroupReservation(
 	task *pod_info.PodInfo, node *node_info.NodeInfo) error {
-	availablePods := node.Allocatable.Get(v1.ResourcePods) - node.Used.Get(v1.ResourcePods)
+	availablePods := node.Idle.Get(v1.ResourcePods) + node.Releasing.Get(v1.ResourcePods)
 
 	if !task.IsSharedGPURequest() {
 		if availablePods > 0 {
