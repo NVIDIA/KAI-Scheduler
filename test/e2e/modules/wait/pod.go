@@ -159,7 +159,7 @@ func ForNoE2EPods(ctx context.Context, client runtimeClient.WithWatch) {
 }
 
 func ForNoReservationPods(ctx context.Context, client runtimeClient.WithWatch) {
-	ForPodsToBeDeleted(ctx, client, runtimeClient.InNamespace(constant.KaiReservationNamespace))
+	ForPodsToBeDeleted(ctx, client, runtimeClient.InNamespace(constant.GetConfig().ReservationNamespace))
 }
 
 func ForPodCountInNamespace(ctx context.Context, client runtimeClient.WithWatch, q *v2.Queue, expectedPodCount int, waitTime time.Duration) {

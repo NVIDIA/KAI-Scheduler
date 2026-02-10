@@ -24,7 +24,7 @@ func ForKaiComponentPod(
 	appLabelComponentName string, condition checkCondition,
 ) {
 	pw := watcher.NewGenericWatcher[v1.PodList](client, watcher.CheckCondition(condition),
-		runtimeClient.InNamespace(constant.SystemPodsNamespace),
+		runtimeClient.InNamespace(constant.GetConfig().SystemPodsNamespace),
 		runtimeClient.MatchingLabels{constants.AppLabelName: appLabelComponentName})
 
 	if !watcher.ForEvent(ctx, client, pw) {
