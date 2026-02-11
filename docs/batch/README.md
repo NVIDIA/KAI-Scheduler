@@ -39,13 +39,14 @@ For technical details on the PodGrouper architecture and plugin system, see [Pod
 
 | Workload Type | Scheduling | Operator Required | Example |
 |---------------|-----------|-------------------|---------|
-| [Standard Kubernetes Job](#standard-kubernetes-job) | Batch | None (native K8s) | [job.yaml](examples/job.yaml) |
+| [Standard Kubernetes Job](#standard-kubernetes-job) | Independent | None (native K8s) | [job.yaml](examples/job.yaml) |
 | [PyTorchJob](#pytorchjob-kubeflow-training-operator) | Gang | Kubeflow Training Operator | [pytorchjob.yaml](examples/pytorchjob.yaml) |
 | [MPIJob](#mpijob-kubeflow-training-operator) | Gang | Kubeflow Training Operator / MPI Operator | [mpijob.yaml](examples/mpijob.yaml) |
 | [TFJob](#tfjob-kubeflow-training-operator) | Gang | Kubeflow Training Operator | [tfjob.yaml](examples/tfjob.yaml) |
 | [XGBoostJob](#xgboostjob-kubeflow-training-operator) | Gang | Kubeflow Training Operator | [xgboostjob.yaml](examples/xgboostjob.yaml) |
 | [JAXJob](#jaxjob-kubeflow-training-operator) | Gang | Kubeflow Training Operator | [jaxjob.yaml](examples/jaxjob.yaml) |
 | [RayJob](#rayjob-kuberay-operator) | Gang | KubeRay Operator | [rayjob.yaml](examples/rayjob.yaml) |
+| [RayCluster](#raycluster-kuberay-operator) | Gang | KubeRay Operator | [raycluster.yaml](examples/raycluster.yaml) |
 | [JobSet](#jobset-kubernetes-sig) | Gang | JobSet Controller | [jobset.yaml](examples/jobset.yaml) |
 | [SparkApplication](#sparkapplication-spark-operator) | Gang | Spark Operator | [sparkapplication.yaml](examples/sparkapplication.yaml) |
 
@@ -138,52 +139,14 @@ To use KAI scheduler with your Ray workloads, configure the pod templates in you
 | `kai.scheduler/queue` | `metadata.labels` | Queue name (e.g., `default-queue`) | Assigns workload to a KAI queue |
 | `schedulerName` | `spec.template.spec` (on each pod template) | `kai-scheduler` | Routes pods to KAI scheduler |
 
-**RayCluster Example:**
+### RayCluster (KubeRay Operator)
 
-You can also use RayCluster directly for long-running Ray clusters:
+RayCluster enables long-running Ray clusters for distributed computing and machine learning workloads.
 
-```yaml
-apiVersion: ray.io/v1
-kind: RayCluster
-metadata:
-  name: raycluster-sample
-  labels:
-    kai.scheduler/queue: default-queue
-spec:
-  rayVersion: '2.46.0'
-  headGroupSpec:
-    rayStartParams:
-      dashboard-host: '0.0.0.0'
-    template:
-      spec:
-        schedulerName: kai-scheduler
-        containers:
-        - name: ray-head
-          image: rayproject/ray:2.46.0
-          resources:
-            limits:
-              cpu: "2"
-              memory: "4Gi"
-            requests:
-              cpu: "1"
-              memory: "2Gi"
-  workerGroupSpecs:
-  - replicas: 3
-    groupName: gpu-workers
-    rayStartParams: {}
-    template:
-      spec:
-        schedulerName: kai-scheduler
-        containers:
-        - name: ray-worker
-          image: rayproject/ray:2.46.0
-          resources:
-            limits:
-              nvidia.com/gpu: "1"
-            requests:
-              cpu: "500m"
-              memory: "1Gi"
-```
+- **Scheduling Behavior:** Gang scheduling (all pods in the Ray cluster scheduled together)
+- **External Requirements:** Requires [KubeRay Operator](https://docs.ray.io/en/latest/cluster/kubernetes/index.html) - See installation instructions above
+- **Example:** [examples/raycluster.yaml](examples/raycluster.yaml)
+- **Apply:** `kubectl apply -f docs/batch/examples/raycluster.yaml`
 
 ### JobSet (Kubernetes SIG)
 
