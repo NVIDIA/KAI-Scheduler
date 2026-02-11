@@ -178,7 +178,7 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 	resourceClaimInfo, err := calcResourceClaimInfo(draPodClaims, pod)
 	if err != nil {
 		log.InfraLogger.Errorf("PodInfo ctor failure - failed to calculate resource claim info for pod %s/%s: %v", pod.Namespace, pod.Name, err)
-		return nil
+		// TODO: Publish Event and/or status on the pod for the user to see that the pod is not ready to run yet. Currently, the pod scheduling will fail on the dra plugin.
 	}
 
 	podInfo := &PodInfo{
@@ -225,7 +225,7 @@ func calcResourceClaimInfo(draPodClaims []*resourceapi.ResourceClaim, pod *v1.Po
 			if podClaim.ResourceClaimTemplateName != nil {
 				continue // The dra controller might not have created the claim yet - this is a valid state. The will fail on the dra plugin.
 			}
-			return nil, fmt.Errorf("PodInfo ctor failure - failed to get claim from draPodClaimsMap for pod %s/%s, claim %s: %v", pod.Namespace, pod.Name, podClaim.Name, err)
+			return nil, fmt.Errorf("PodInfo ctor failure - failed to get claim from draPodClaimsMap for pod %s/%s, claim %s", pod.Namespace, pod.Name, podClaim.Name)
 		}
 		resourceClaimInfo[podClaim.Name] = &schedulingv1alpha2.ResourceClaimAllocation{
 			Name:       podClaim.Name,
