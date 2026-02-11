@@ -15,7 +15,9 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 	v1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,11 +64,18 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 		})
 
 		AfterEach(func(ctx context.Context) {
+			By("delete all pods")
+			Expect(rd.DeleteAllPodsInNamespace(ctx, testCtx.ControllerClient, namespace)).To(Succeed())
+			wait.ForNoE2EPods(ctx, testCtx.ControllerClient)
+			By("cleanup resource claims")
 			capacity.CleanupResourceClaims(ctx, testCtx.KubeClientset, namespace)
+			By("cleanup resource claim templates")
+			cleanupResourceClaimTemplates(ctx, testCtx, namespace)
 		})
 
 		It("Allocate simple request", func(ctx context.Context) {
 			claim := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, deviceClassName, 1)
+			claim.Name = "allocate-simple-" + claim.Name
 			claim, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
@@ -100,6 +109,7 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 
 		It("Fails to allocate request with wrong device class", func(ctx context.Context) {
 			claim := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, "fake-device-class", 1)
+			claim.Name = "fail-allocate-" + claim.Name
 			claim, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
@@ -144,6 +154,7 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 			Expect(nodeName).ToNot(Equal(""), "failed to find a node with multiple devices")
 
 			claimTemplate := rd.CreateResourceClaimTemplate(namespace, testCtx.Queues[0].Name, deviceClassName, 1)
+			claimTemplate.Name = "fill-a-node-" + claimTemplate.Name
 			claimTemplate, err := testCtx.KubeClientset.ResourceV1().ResourceClaimTemplates(namespace).Create(ctx, claimTemplate, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
@@ -237,10 +248,12 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 
 		It("Should track DRA GPU resources in queue status", func(ctx context.Context) {
 			claim1 := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, deviceClassName, 1)
+			claim1.Name = "bookkeeping-claim1-" + claim1.Name
 			claim1, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim1, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			claim2 := rd.CreateResourceClaim(namespace, testCtx.Queues[0].Name, deviceClassName, 2)
+			claim2.Name = "bookkeeping-claim2-" + claim2.Name
 			claim2, err = testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim2, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -331,3 +344,14 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 		})
 	})
 })
+
+func cleanupResourceClaimTemplates(ctx context.Context, testCtx *testcontext.TestContext, namespace string) {
+	labelSelector := labels.Set{constants.AppLabelName: "engine-e2e"}.String()
+	if err := testCtx.KubeClientset.ResourceV1().ResourceClaimTemplates(namespace).DeleteCollection(
+		ctx,
+		metav1.DeleteOptions{},
+		metav1.ListOptions{LabelSelector: labelSelector},
+	); err != nil && !apierrors.IsNotFound(err) {
+		Expect(err).To(Succeed(), "Failed to delete resource claim template")
+	}
+}
