@@ -67,21 +67,6 @@ type GlobalConfig struct {
 	// PodLabelSelector filters pods for webhooks and pod grouper
 	// +kubebuilder:validation:Optional
 	PodLabelSelector map[string]string `json:"podLabelSelector,omitempty"`
-
-	// Connection defines the connection configuration for TSDB
-	// +kubebuilder:validation:Optional
-	ExternalTSDBConnection *Connection `json:"connection,omitempty"`
-}
-
-// Connection defines the connection configuration for TSDB
-type Connection struct {
-	// URL defines the connection URL for TSDB
-	// +kubebuilder:validation:Optional
-	URL *string `json:"url,omitempty"`
-
-	// AuthSecretName defines the name of the secret containing authentication credentials
-	// +kubebuilder:validation:Optional
-	AuthSecretName *string `json:"authSecretName,omitempty"`
 }
 
 func (g *GlobalConfig) SetDefaultWhereNeeded() {
@@ -112,7 +97,6 @@ func (g *GlobalConfig) SetDefaultWhereNeeded() {
 	if g.PodLabelSelector == nil {
 		g.PodLabelSelector = map[string]string{}
 	}
-	g.ExternalTSDBConnection = common.SetDefault(g.ExternalTSDBConnection, nil)
 
 	g.RequireDefaultPodAntiAffinityTerm = common.SetDefault(g.RequireDefaultPodAntiAffinityTerm, ptr.To(false))
 }

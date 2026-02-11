@@ -3194,18 +3194,6 @@ spec:
                             x-kubernetes-list-type: atomic
                         type: object
                     type: object
-                  connection:
-                    description: Connection defines the connection configuration for
-                      TSDB
-                    properties:
-                      authSecretName:
-                        description: AuthSecretName defines the name of the secret
-                          containing authentication credentials
-                        type: string
-                      url:
-                        description: URL defines the connection URL for TSDB
-                        type: string
-                    type: object
                   daemonsetsTolerations:
                     description: DaemonsetsTolerations defines additional tolerations
                       for daemonsets in cluster
