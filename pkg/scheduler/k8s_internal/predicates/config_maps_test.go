@@ -645,248 +645,31 @@ type FilterTest struct {
 func TestPreFilterOptionalConfigMapVolumes(t *testing.T) {
 	for _, test := range []FilterTest{
 		{
-			name:       "optional configmap volume, missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name: "optional-cm",
-								},
-							},
-						},
-					},
-					Volumes: []v1.Volume{
-						{
-							Name: "optional-cm",
-							VolumeSource: v1.VolumeSource{
-								ConfigMap: &v1.ConfigMapVolumeSource{
-									LocalObjectReference: v1.LocalObjectReference{Name: "optional-cm"},
-									Optional:             boolPtr(true),
-								},
-							},
-						},
-					},
-				},
-			},
+			name:          "optional configmap volume, missing",
+			configMaps:    nil,
+			pod:           podWithConfigMapVolume("optional-cm", boolPtr(true)),
 			expectedError: false,
 		},
 		{
-			name:       "required configmap volume (Optional=false), missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name: "required-cm",
-								},
-							},
-						},
-					},
-					Volumes: []v1.Volume{
-						{
-							Name: "required-cm",
-							VolumeSource: v1.VolumeSource{
-								ConfigMap: &v1.ConfigMapVolumeSource{
-									LocalObjectReference: v1.LocalObjectReference{Name: "required-cm"},
-									Optional:             boolPtr(false),
-								},
-							},
-						},
-					},
-				},
-			},
+			name:          "required configmap volume (Optional=false), missing",
+			configMaps:    nil,
+			pod:           podWithConfigMapVolume("required-cm", boolPtr(false)),
 			expectedError: true,
 		},
 		{
 			name:       "mixed optional and required volumes, required missing",
 			configMaps: map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo{},
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name: "optional-cm",
-								},
-								{
-									Name: "required-cm",
-								},
-							},
-						},
-					},
-					Volumes: []v1.Volume{
-						{
-							Name: "optional-cm",
-							VolumeSource: v1.VolumeSource{
-								ConfigMap: &v1.ConfigMapVolumeSource{
-									LocalObjectReference: v1.LocalObjectReference{Name: "optional-cm"},
-									Optional:             boolPtr(true),
-								},
-							},
-						},
-						{
-							Name: "required-cm",
-							VolumeSource: v1.VolumeSource{
-								ConfigMap: &v1.ConfigMapVolumeSource{
-									LocalObjectReference: v1.LocalObjectReference{Name: "required-cm"},
-									Optional:             boolPtr(false),
-								},
-							},
-						},
-					},
-				},
-			},
-			expectedError: true,
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			cmp := NewConfigMapPredicate(test.configMaps)
-			_, status := cmp.PreFilter(context.Background(), nil, test.pod, nil)
-			isError := status.AsError() != nil
-			if isError != test.expectedError {
-				t.Errorf("Test %s: Expected %t, got %v", test.name, test.expectedError, status)
-			}
-		})
-	}
-}
-
-func TestPreFilterOptionalConfigMapProjectedVolumes(t *testing.T) {
-	for _, test := range []FilterTest{
-		{
-			name:       "optional projected configmap volume, missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							VolumeMounts: []v1.VolumeMount{{
-								Name: "projected-cm",
-							}},
-						},
-					},
-					Volumes: []v1.Volume{
-						{
-							Name: "projected-cm",
-							VolumeSource: v1.VolumeSource{
-								Projected: &v1.ProjectedVolumeSource{
-									Sources: []v1.VolumeProjection{
-										{
-											ConfigMap: &v1.ConfigMapProjection{
-												LocalObjectReference: v1.LocalObjectReference{Name: "optional-cm"},
-												Optional:             boolPtr(true),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			expectedError: false,
-		},
-		{
-			name:       "required projected configmap volume, missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							VolumeMounts: []v1.VolumeMount{{
-								Name: "projected-cm",
-							}},
-						},
-					},
-					Volumes: []v1.Volume{
-						{
-							Name: "projected-cm",
-							VolumeSource: v1.VolumeSource{
-								Projected: &v1.ProjectedVolumeSource{
-									Sources: []v1.VolumeProjection{
-										{
-											ConfigMap: &v1.ConfigMapProjection{
-												LocalObjectReference: v1.LocalObjectReference{Name: "required-cm"},
-												Optional:             boolPtr(false),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			expectedError: true,
-		},
-		{
-			name:       "projected volume with mixed configmaps, required missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							VolumeMounts: []v1.VolumeMount{{
-								Name: "projected-cm",
-							}},
-						},
-					},
-					Volumes: []v1.Volume{
-						{
-							Name: "projected-cm",
-							VolumeSource: v1.VolumeSource{
-								Projected: &v1.ProjectedVolumeSource{
-									Sources: []v1.VolumeProjection{
-										{
-											ConfigMap: &v1.ConfigMapProjection{
-												LocalObjectReference: v1.LocalObjectReference{Name: "optional-cm"},
-												Optional:             boolPtr(true),
-											},
-										},
-										{
-											ConfigMap: &v1.ConfigMapProjection{
-												LocalObjectReference: v1.LocalObjectReference{Name: "required-cm"},
-												Optional:             boolPtr(false),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			pod: podWithConfigMapVolumes(
+				configMapVolumeSpec{name: "optional-cm", optional: boolPtr(true)},
+				configMapVolumeSpec{name: "required-cm", optional: boolPtr(false)},
+			),
 			expectedError: true,
 		},
 		{
 			name:       "projected configmap volume not mounted",
 			configMaps: nil,
 			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test"},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{{}},
 					Volumes: []v1.Volume{
@@ -921,110 +704,65 @@ func TestPreFilterOptionalConfigMapProjectedVolumes(t *testing.T) {
 	}
 }
 
-func TestPreFilterOptionalConfigMapEnvVars(t *testing.T) {
+func TestPreFilterOptionalConfigMapProjectedVolumes(t *testing.T) {
 	for _, test := range []FilterTest{
 		{
-			name:       "optional configmap env var, missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							Env: []v1.EnvVar{
-								{
-									Name: "OPTIONAL_VAR",
-									ValueFrom: &v1.EnvVarSource{
-										ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{Name: "optional-cm"},
-											Key:                  "key",
-											Optional:             boolPtr(true),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:          "optional projected configmap volume, missing",
+			configMaps:    nil,
+			pod:           podWithProjectedConfigMapVolume("optional-cm", boolPtr(true)),
 			expectedError: false,
 		},
 		{
-			name:       "required configmap env var (Optional=false), missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							Env: []v1.EnvVar{
-								{
-									Name: "REQUIRED_VAR",
-									ValueFrom: &v1.EnvVarSource{
-										ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{Name: "required-cm"},
-											Key:                  "key",
-											Optional:             boolPtr(false),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:          "required projected configmap volume, missing",
+			configMaps:    nil,
+			pod:           podWithProjectedConfigMapVolume("required-cm", boolPtr(false)),
 			expectedError: true,
 		},
 		{
-			name:       "optional configmap envFrom, missing",
+			name:       "projected volume with mixed configmaps, required missing",
 			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							EnvFrom: []v1.EnvFromSource{
-								{
-									ConfigMapRef: &v1.ConfigMapEnvSource{
-										LocalObjectReference: v1.LocalObjectReference{Name: "optional-cm"},
-										Optional:             boolPtr(true),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			pod: podWithMultipleProjectedConfigMaps(
+				projectedConfigMapSpec{name: "optional-cm", optional: boolPtr(true)},
+				projectedConfigMapSpec{name: "required-cm", optional: boolPtr(false)},
+			),
+			expectedError: true,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			cmp := NewConfigMapPredicate(test.configMaps)
+			_, status := cmp.PreFilter(context.Background(), nil, test.pod, nil)
+			isError := status.AsError() != nil
+			if isError != test.expectedError {
+				t.Errorf("Test %s: Expected %t, got %v", test.name, test.expectedError, status)
+			}
+		})
+	}
+}
+
+func TestPreFilterOptionalConfigMapEnvVars(t *testing.T) {
+	for _, test := range []FilterTest{
+		{
+			name:          "optional configmap env var, missing",
+			configMaps:    nil,
+			pod:           podWithConfigMapEnvVar("optional-cm", boolPtr(true)),
 			expectedError: false,
 		},
 		{
-			name:       "required configmap envFrom (Optional=false), missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							EnvFrom: []v1.EnvFromSource{
-								{
-									ConfigMapRef: &v1.ConfigMapEnvSource{
-										LocalObjectReference: v1.LocalObjectReference{Name: "required-cm"},
-										Optional:             boolPtr(false),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:          "required configmap env var (Optional=false), missing",
+			configMaps:    nil,
+			pod:           podWithConfigMapEnvVar("required-cm", boolPtr(false)),
+			expectedError: true,
+		},
+		{
+			name:          "optional configmap envFrom, missing",
+			configMaps:    nil,
+			pod:           podWithConfigMapEnvFrom("optional-cm", boolPtr(true)),
+			expectedError: false,
+		},
+		{
+			name:          "required configmap envFrom (Optional=false), missing",
+			configMaps:    nil,
+			pod:           podWithConfigMapEnvFrom("required-cm", boolPtr(false)),
 			expectedError: true,
 		},
 	} {
@@ -1042,115 +780,27 @@ func TestPreFilterOptionalConfigMapEnvVars(t *testing.T) {
 func TestPreFilterOptionalConfigMapEphemeralEnvVars(t *testing.T) {
 	for _, test := range []FilterTest{
 		{
-			name:       "optional configmap env var in ephemeral container, missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					EphemeralContainers: []v1.EphemeralContainer{
-						{
-							EphemeralContainerCommon: v1.EphemeralContainerCommon{
-								Env: []v1.EnvVar{
-									{
-										Name: "OPTIONAL_VAR",
-										ValueFrom: &v1.EnvVarSource{
-											ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-												LocalObjectReference: v1.LocalObjectReference{Name: "optional-cm"},
-												Key:                  "key",
-												Optional:             boolPtr(true),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:          "optional configmap env var in ephemeral container, missing",
+			configMaps:    nil,
+			pod:           podWithEphemeralConfigMapEnvVar("optional-cm", boolPtr(true)),
 			expectedError: false,
 		},
 		{
-			name:       "required configmap env var in ephemeral container, missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					EphemeralContainers: []v1.EphemeralContainer{
-						{
-							EphemeralContainerCommon: v1.EphemeralContainerCommon{
-								Env: []v1.EnvVar{
-									{
-										Name: "REQUIRED_VAR",
-										ValueFrom: &v1.EnvVarSource{
-											ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-												LocalObjectReference: v1.LocalObjectReference{Name: "required-cm"},
-												Key:                  "key",
-												Optional:             boolPtr(false),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:          "required configmap env var in ephemeral container, missing",
+			configMaps:    nil,
+			pod:           podWithEphemeralConfigMapEnvVar("required-cm", boolPtr(false)),
 			expectedError: true,
 		},
 		{
-			name:       "optional configmap envFrom in ephemeral container, missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					EphemeralContainers: []v1.EphemeralContainer{
-						{
-							EphemeralContainerCommon: v1.EphemeralContainerCommon{
-								EnvFrom: []v1.EnvFromSource{
-									{
-										ConfigMapRef: &v1.ConfigMapEnvSource{
-											LocalObjectReference: v1.LocalObjectReference{Name: "optional-cm"},
-											Optional:             boolPtr(true),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:          "optional configmap envFrom in ephemeral container, missing",
+			configMaps:    nil,
+			pod:           podWithEphemeralConfigMapEnvFrom("optional-cm", boolPtr(true)),
 			expectedError: false,
 		},
 		{
-			name:       "required configmap envFrom in ephemeral container, missing",
-			configMaps: nil,
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1.PodSpec{
-					EphemeralContainers: []v1.EphemeralContainer{
-						{
-							EphemeralContainerCommon: v1.EphemeralContainerCommon{
-								EnvFrom: []v1.EnvFromSource{
-									{
-										ConfigMapRef: &v1.ConfigMapEnvSource{
-											LocalObjectReference: v1.LocalObjectReference{Name: "required-cm"},
-											Optional:             boolPtr(false),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:          "required configmap envFrom in ephemeral container, missing",
+			configMaps:    nil,
+			pod:           podWithEphemeralConfigMapEnvFrom("required-cm", boolPtr(false)),
 			expectedError: true,
 		},
 	} {
@@ -1167,4 +817,186 @@ func TestPreFilterOptionalConfigMapEphemeralEnvVars(t *testing.T) {
 
 func boolPtr(b bool) *bool {
 	return &b
+}
+
+type configMapVolumeSpec struct {
+	name     string
+	optional *bool
+}
+
+type projectedConfigMapSpec struct {
+	name     string
+	optional *bool
+}
+
+func podWithConfigMapVolume(cmName string, optional *bool) *v1.Pod {
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test"},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{
+				VolumeMounts: []v1.VolumeMount{{Name: cmName}},
+			}},
+			Volumes: []v1.Volume{{
+				Name: cmName,
+				VolumeSource: v1.VolumeSource{
+					ConfigMap: &v1.ConfigMapVolumeSource{
+						LocalObjectReference: v1.LocalObjectReference{Name: cmName},
+						Optional:             optional,
+					},
+				},
+			}},
+		},
+	}
+}
+
+func podWithConfigMapVolumes(specs ...configMapVolumeSpec) *v1.Pod {
+	var volumeMounts []v1.VolumeMount
+	var volumes []v1.Volume
+	for _, spec := range specs {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{Name: spec.name})
+		volumes = append(volumes, v1.Volume{
+			Name: spec.name,
+			VolumeSource: v1.VolumeSource{
+				ConfigMap: &v1.ConfigMapVolumeSource{
+					LocalObjectReference: v1.LocalObjectReference{Name: spec.name},
+					Optional:             spec.optional,
+				},
+			},
+		})
+	}
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test"},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{VolumeMounts: volumeMounts}},
+			Volumes:    volumes,
+		},
+	}
+}
+
+func podWithProjectedConfigMapVolume(cmName string, optional *bool) *v1.Pod {
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test"},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{
+				VolumeMounts: []v1.VolumeMount{{Name: "projected-cm"}},
+			}},
+			Volumes: []v1.Volume{{
+				Name: "projected-cm",
+				VolumeSource: v1.VolumeSource{
+					Projected: &v1.ProjectedVolumeSource{
+						Sources: []v1.VolumeProjection{{
+							ConfigMap: &v1.ConfigMapProjection{
+								LocalObjectReference: v1.LocalObjectReference{Name: cmName},
+								Optional:             optional,
+							},
+						}},
+					},
+				},
+			}},
+		},
+	}
+}
+
+func podWithMultipleProjectedConfigMaps(specs ...projectedConfigMapSpec) *v1.Pod {
+	var sources []v1.VolumeProjection
+	for _, spec := range specs {
+		sources = append(sources, v1.VolumeProjection{
+			ConfigMap: &v1.ConfigMapProjection{
+				LocalObjectReference: v1.LocalObjectReference{Name: spec.name},
+				Optional:             spec.optional,
+			},
+		})
+	}
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test"},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{
+				VolumeMounts: []v1.VolumeMount{{Name: "projected-cm"}},
+			}},
+			Volumes: []v1.Volume{{
+				Name: "projected-cm",
+				VolumeSource: v1.VolumeSource{
+					Projected: &v1.ProjectedVolumeSource{
+						Sources: sources,
+					},
+				},
+			}},
+		},
+	}
+}
+
+func podWithConfigMapEnvVar(cmName string, optional *bool) *v1.Pod {
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test"},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{
+				Env: []v1.EnvVar{{
+					Name: "VAR",
+					ValueFrom: &v1.EnvVarSource{
+						ConfigMapKeyRef: &v1.ConfigMapKeySelector{
+							LocalObjectReference: v1.LocalObjectReference{Name: cmName},
+							Key:                  "key",
+							Optional:             optional,
+						},
+					},
+				}},
+			}},
+		},
+	}
+}
+
+func podWithConfigMapEnvFrom(cmName string, optional *bool) *v1.Pod {
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test"},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{
+				EnvFrom: []v1.EnvFromSource{{
+					ConfigMapRef: &v1.ConfigMapEnvSource{
+						LocalObjectReference: v1.LocalObjectReference{Name: cmName},
+						Optional:             optional,
+					},
+				}},
+			}},
+		},
+	}
+}
+
+func podWithEphemeralConfigMapEnvVar(cmName string, optional *bool) *v1.Pod {
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test"},
+		Spec: v1.PodSpec{
+			EphemeralContainers: []v1.EphemeralContainer{{
+				EphemeralContainerCommon: v1.EphemeralContainerCommon{
+					Env: []v1.EnvVar{{
+						Name: "VAR",
+						ValueFrom: &v1.EnvVarSource{
+							ConfigMapKeyRef: &v1.ConfigMapKeySelector{
+								LocalObjectReference: v1.LocalObjectReference{Name: cmName},
+								Key:                  "key",
+								Optional:             optional,
+							},
+						},
+					}},
+				},
+			}},
+		},
+	}
+}
+
+func podWithEphemeralConfigMapEnvFrom(cmName string, optional *bool) *v1.Pod {
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test"},
+		Spec: v1.PodSpec{
+			EphemeralContainers: []v1.EphemeralContainer{{
+				EphemeralContainerCommon: v1.EphemeralContainerCommon{
+					EnvFrom: []v1.EnvFromSource{{
+						ConfigMapRef: &v1.ConfigMapEnvSource{
+							LocalObjectReference: v1.LocalObjectReference{Name: cmName},
+							Optional:             optional,
+						},
+					}},
+				},
+			}},
+		},
+	}
 }
