@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## Fixed
+### Fixed
 - Fixed plugin server (snapshot and job-order endpoints) listening on all interfaces by binding to localhost only.
 
 ## [v0.10.5] - 2025-12-24
