@@ -179,7 +179,7 @@ func (ig *AccumulatedIdleGpus) updateRequiredResources(scenario *scenario.ByNode
 
 	var requiredResources []float64
 	for _, pod := range scenario.PendingTasks() {
-		requiredResources = append(requiredResources, pod.ResReqVector.Get(pod.VectorMap.GetIndex("gpu")))
+		requiredResources = append(requiredResources, pod.GpuRequirement.GetGpusQuota())
 		ig.pendingTasksInState[pod.UID] = true
 	}
 	sort.Sort(sort.Reverse(sort.Float64Slice(requiredResources)))
@@ -206,7 +206,7 @@ func (ig *AccumulatedIdleGpus) updateWithVictim(
 	}
 
 	prevMinRelevantValue := ig.nodesNameToIdleGpus[minIdleGpusRelevant]
-	ig.nodesNameToIdleGpus[task.NodeName] += task.AcceptedResourceVector.Get(task.VectorMap.GetIndex("gpu"))
+	ig.nodesNameToIdleGpus[task.NodeName] += task.AcceptedGpuRequirement.GetGpusQuota()
 
 	if ig.nodesNameToIdleGpus[task.NodeName] > prevMinRelevantValue {
 		ig.maxFreeGpuNodesSorted = orderedInsert(ig.maxFreeGpuNodesSorted, task.NodeName,

@@ -152,6 +152,30 @@ func (r *Resource) AddResourceRequirements(req *ResourceRequirements) {
 	}
 }
 
+func (r *Resource) AddVectorAndGpuReq(vec ResourceVector, vectorMap *ResourceVectorMap, gpuReq *GpuResourceRequirement) {
+	cpuIdx := vectorMap.GetIndex(string(v1.ResourceCPU))
+	memIdx := vectorMap.GetIndex(string(v1.ResourceMemory))
+	gpuIdx := vectorMap.GetIndex("gpu")
+
+	r.milliCpu += vec.Get(cpuIdx)
+	r.memory += vec.Get(memIdx)
+	r.gpus += gpuReq.GPUs()
+
+	for i := 0; i < vectorMap.Len(); i++ {
+		if i == cpuIdx || i == memIdx || i == gpuIdx {
+			continue
+		}
+		val := vec.Get(i)
+		if val != 0 {
+			rName := v1.ResourceName(vectorMap.ResourceAt(i))
+			r.BaseResource.scalarResources[rName] += int64(val)
+		}
+	}
+	for migProfile, migCount := range gpuReq.MigResources() {
+		r.BaseResource.scalarResources[migProfile] += migCount
+	}
+}
+
 func (r *Resource) SubResourceRequirements(req *ResourceRequirements) {
 	r.BaseResource.Sub(&req.BaseResource)
 	r.gpus -= req.GPUs()
@@ -159,6 +183,30 @@ func (r *Resource) SubResourceRequirements(req *ResourceRequirements) {
 		r.gpus -= float64(rQuant)
 	}
 	for migProfile, migCount := range req.MigResources() {
+		r.BaseResource.scalarResources[migProfile] -= migCount
+	}
+}
+
+func (r *Resource) SubVectorAndGpuReq(vec ResourceVector, vectorMap *ResourceVectorMap, gpuReq *GpuResourceRequirement) {
+	cpuIdx := vectorMap.GetIndex(string(v1.ResourceCPU))
+	memIdx := vectorMap.GetIndex(string(v1.ResourceMemory))
+	gpuIdx := vectorMap.GetIndex("gpu")
+
+	r.milliCpu -= vec.Get(cpuIdx)
+	r.memory -= vec.Get(memIdx)
+	r.gpus -= gpuReq.GPUs()
+
+	for i := 0; i < vectorMap.Len(); i++ {
+		if i == cpuIdx || i == memIdx || i == gpuIdx {
+			continue
+		}
+		val := vec.Get(i)
+		if val != 0 {
+			rName := v1.ResourceName(vectorMap.ResourceAt(i))
+			r.BaseResource.scalarResources[rName] -= int64(val)
+		}
+	}
+	for migProfile, migCount := range gpuReq.MigResources() {
 		r.BaseResource.scalarResources[migProfile] -= migCount
 	}
 }

@@ -4,6 +4,7 @@
 package resource_info
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
@@ -263,6 +264,53 @@ func (v ResourceVector) SetMax(other ResourceVector) {
 			v[i] = other[i]
 		}
 	}
+}
+
+func (v ResourceVector) IsZero() bool {
+	for _, val := range v {
+		if val != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func DetailedResourceString(vec ResourceVector, gpuReq *GpuResourceRequirement, m *ResourceVectorMap) string {
+	cpuIdx := m.GetIndex(string(v1.ResourceCPU))
+	memIdx := m.GetIndex(string(v1.ResourceMemory))
+
+	messageBuilder := strings.Builder{}
+	messageBuilder.WriteString(fmt.Sprintf(
+		"GPU: %s, CPU: %s (cores), memory: %s (GB)",
+		HumanizeResource(gpuReq.GetGpusQuota(), 1),
+		HumanizeResource(vec.Get(cpuIdx), MilliCPUToCores),
+		HumanizeResource(vec.Get(memIdx), MemoryToGB),
+	))
+
+	for i := 0; i < m.Len(); i++ {
+		name := m.ResourceAt(i)
+		if name == string(v1.ResourceCPU) || name == string(v1.ResourceMemory) || name == constants.GpuResource {
+			continue
+		}
+		if IsMigResource(v1.ResourceName(name)) {
+			continue
+		}
+		val := vec.Get(i)
+		if val == 0 {
+			continue
+		}
+		rName := v1.ResourceName(name)
+		if rName == v1.ResourceEphemeralStorage || rName == v1.ResourceStorage {
+			val = val / MemoryToGB
+			messageBuilder.WriteString(fmt.Sprintf(", %s: %s (GB)", name, HumanizeResource(val, 1)))
+		} else {
+			messageBuilder.WriteString(fmt.Sprintf(", %s: %s", name, HumanizeResource(val, 1)))
+		}
+	}
+	for migName, migQuant := range gpuReq.MigResources() {
+		messageBuilder.WriteString(fmt.Sprintf(", mig %s: %d", migName, migQuant))
+	}
+	return messageBuilder.String()
 }
 
 func (v ResourceVector) ToResourceQuantities(indexMap *ResourceVectorMap) map[string]float64 {
