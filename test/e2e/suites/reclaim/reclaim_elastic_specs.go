@@ -29,7 +29,6 @@ const (
 	PodGroupLabelName = "pod-group-name"
 )
 
-// DescribeReclaimElasticSpecs registers the shared Ginkgo specs for reclaim with elastic jobs.
 func DescribeReclaimElasticSpecs() bool {
 	return Describe("Reclaim with Elastic Jobs", Ordered, func() {
 		var (

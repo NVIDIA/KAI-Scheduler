@@ -27,10 +27,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
-// Shared elastic specs
 var _ = DescribeReclaimElasticSpecs()
 
-// KAI-only elastic test cases
 var _ = Describe("Reclaim with Elastic Jobs - KAI specific", Ordered, func() {
 	var (
 		testCtx            *testcontext.TestContext

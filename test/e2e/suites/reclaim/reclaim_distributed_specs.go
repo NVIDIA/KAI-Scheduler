@@ -25,7 +25,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
-// DescribeReclaimDistributedSpecs registers the shared Ginkgo specs for reclaim with distributed jobs.
 func DescribeReclaimDistributedSpecs() bool {
 	return Describe("Reclaim Distributed Jobs", Ordered, func() {
 		Context("Over more than one nodes", func() {

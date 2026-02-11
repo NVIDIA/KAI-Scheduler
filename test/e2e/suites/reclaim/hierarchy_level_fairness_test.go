@@ -4,5 +4,4 @@ SPDX-License-Identifier: Apache-2.0
 */
 package reclaim
 
-// Shared hierarchy level fairness specs
 var _ = DescribeHierarchyLevelFairnessSpecs()

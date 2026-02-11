@@ -22,10 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-// Shared specs from reclaim_specs.go
 var _ = DescribeReclaimSpecs()
 
-// KAI-only test cases
 var _ = Describe("Reclaim", Ordered, func() {
 	Context("Quota/Fair-share based reclaim", func() {
 		var (

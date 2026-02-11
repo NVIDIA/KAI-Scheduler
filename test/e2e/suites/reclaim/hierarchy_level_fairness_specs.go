@@ -35,7 +35,6 @@ const (
 	draNodeLabel           = "nvidia.com/gpu.deploy.dra-plugin-gpu"
 )
 
-// DescribeHierarchyLevelFairnessSpecs registers the shared Ginkgo specs for hierarchy level fairness.
 func DescribeHierarchyLevelFairnessSpecs() bool {
 	return Describe("Hierarchy level fairness", Ordered, func() {
 		Context("Hierarchy level fairness", func() {
