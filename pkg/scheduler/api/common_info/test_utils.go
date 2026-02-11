@@ -100,7 +100,15 @@ func BuildResourceListWithGPU(cpu string, memory string, gpu string) v1.Resource
 		v1.ResourceCPU:                resource.MustParse(cpu),
 		v1.ResourceMemory:             resource.MustParse(memory),
 		resource_info.GPUResourceName: resource.MustParse(gpu),
-		v1.ResourcePods:               resource.MustParse("110"),
+	}
+}
+
+func BuildResourceListWithGPUAndPods(cpu string, memory string, gpu string, pods string) v1.ResourceList {
+	return v1.ResourceList{
+		v1.ResourceCPU:                resource.MustParse(cpu),
+		v1.ResourceMemory:             resource.MustParse(memory),
+		resource_info.GPUResourceName: resource.MustParse(gpu),
+		v1.ResourcePods:               resource.MustParse(pods),
 	}
 }
 
@@ -145,6 +153,14 @@ func BuildResourceWithGpu(cpu, memory, gpu, pods string) *resource_info.Resource
 		v1.ResourceMemory:             resource.MustParse(memory),
 		resource_info.GPUResourceName: resource.MustParse(gpu),
 		v1.ResourcePods:               resource.MustParse(pods),
+	})
+}
+
+func BuildResourceWithGpuNoPods(cpu, memory, gpu string) *resource_info.Resource {
+	return resource_info.ResourceFromResourceList(v1.ResourceList{
+		v1.ResourceCPU:                resource.MustParse(cpu),
+		v1.ResourceMemory:             resource.MustParse(memory),
+		resource_info.GPUResourceName: resource.MustParse(gpu),
 	})
 }
 

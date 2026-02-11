@@ -171,7 +171,7 @@ func TestDeleteTaskInfo(t *testing.T) {
 
 				return &PodGroupInfo{
 					UID:             case01_uid,
-					Allocated:       common_info.BuildResource("3000m", "3G"),
+					Allocated:       common_info.BuildResourceWithPods("3000m", "3G", "1"),
 					RootSubGroupSet: subGroupSet,
 					PodSets:         map[string]*subgroup_info.PodSet{DefaultSubGroup: defaultSubGroup},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
@@ -201,7 +201,7 @@ func TestDeleteTaskInfo(t *testing.T) {
 
 				return &PodGroupInfo{
 					UID:             case02_uid,
-					Allocated:       common_info.BuildResource("3000m", "3G"),
+					Allocated:       common_info.BuildResourceWithPods("3000m", "3G", "1"),
 					RootSubGroupSet: subGroupSet,
 					PodSets:         map[string]*subgroup_info.PodSet{DefaultSubGroup: defaultSubGroup},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
