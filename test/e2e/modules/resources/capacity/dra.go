@@ -65,7 +65,7 @@ func ListDevicesByNode(clientset kubernetes.Interface, deviceClass string) map[s
 }
 
 func CleanupResourceClaims(ctx context.Context, clientset kubernetes.Interface, namespace string) {
-	err := clientset.ResourceV1beta1().ResourceClaims(namespace).
+	err := clientset.ResourceV1().ResourceClaims(namespace).
 		DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=engine-e2e", constants.AppLabelName),
 		})

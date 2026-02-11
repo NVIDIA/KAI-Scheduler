@@ -15,7 +15,9 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 	v1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,7 +64,13 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 		})
 
 		AfterEach(func(ctx context.Context) {
+			By("delete all pods")
+			Expect(rd.DeleteAllPodsInNamespace(ctx, testCtx.ControllerClient, namespace)).To(Succeed())
+			wait.ForNoE2EPods(ctx, testCtx.ControllerClient)
+			By("cleanup resource claims")
 			capacity.CleanupResourceClaims(ctx, testCtx.KubeClientset, namespace)
+			By("cleanup resource claim templates")
+			cleanupResourceClaimTemplates(ctx, testCtx, namespace)
 		})
 
 		It("Allocate simple request", func(ctx context.Context) {
@@ -336,3 +344,14 @@ var _ = Describe("Schedule pod with dynamic resource request", Ordered, func() {
 		})
 	})
 })
+
+func cleanupResourceClaimTemplates(ctx context.Context, testCtx *testcontext.TestContext, namespace string) {
+	labelSelector := labels.Set{constants.AppLabelName: "engine-e2e"}.String()
+	if err := testCtx.KubeClientset.ResourceV1().ResourceClaimTemplates(namespace).DeleteCollection(
+		ctx,
+		metav1.DeleteOptions{},
+		metav1.ListOptions{LabelSelector: labelSelector},
+	); err != nil && !apierrors.IsNotFound(err) {
+		Expect(err).To(Succeed(), "Failed to delete resource claim template")
+	}
+}
