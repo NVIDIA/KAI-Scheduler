@@ -12,6 +12,7 @@ import (
 	"github.com/dustin/go-humanize"
 	v1 "k8s.io/api/core/v1"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
 )
@@ -60,8 +61,8 @@ func NewFitErrorByReasons(name, namespace, nodeName string, err error, reasons .
 
 func NewFitErrorInsufficientResource(
 	name, namespace, nodeName string,
-	resourceRequested *resource_info.ResourceRequirements,
-	usedVector, capacityVector resource_info.ResourceVector,
+	gpuRequested *resource_info.GpuResourceRequirement,
+	requestedVector, usedVector, capacityVector resource_info.ResourceVector,
 	vectorMap *resource_info.ResourceVectorMap,
 	capacityGpuMemory int64, gangSchedulingJob bool, messageSuffix string,
 ) *TasksFitError {
@@ -75,8 +76,8 @@ func NewFitErrorInsufficientResource(
 	var shortMessages []string
 	var detailedMessages []string
 
-	if len(resourceRequested.MigResources()) > 0 {
-		for migProfile, quant := range resourceRequested.MigResources() {
+	if len(gpuRequested.MigResources()) > 0 {
+		for migProfile, quant := range gpuRequested.MigResources() {
 			migIdx := vectorMap.GetIndex(string(migProfile))
 			availableMigProfilesQuant := int64(availableVector.Get(migIdx))
 			capacityMigProfilesQuant := int64(capacityVector.Get(migIdx))
@@ -92,59 +93,66 @@ func NewFitErrorInsufficientResource(
 			}
 		}
 	} else {
-		requestedGPUs := resourceRequested.GPUs()
+		requestedGPUs := gpuRequested.GPUs()
 		availableGPUs := availableVector.Get(gpuIdx)
 		if requestedGPUs > availableGPUs {
 			detailedMessages = append(detailedMessages, k8s_internal.NewInsufficientResourceError(
 				"GPUs",
-				resourceRequested.GpusAsString(),
+				gpuRequested.GpusAsString(),
 				strconv.FormatFloat(usedVector.Get(gpuIdx), 'g', 3, 64),
 				strconv.FormatFloat(capacityVector.Get(gpuIdx), 'g', 3, 64),
 				gangSchedulingJob))
 			shortMessages = append(shortMessages, "node(s) didn't have enough resources: GPUs")
 		}
 
-		if resourceRequested.GpuMemory() > capacityGpuMemory {
+		if gpuRequested.GpuMemory() > capacityGpuMemory {
 			detailedMessages = append(detailedMessages, k8s_internal.NewInsufficientGpuMemoryCapacity(
-				resourceRequested.GpuMemory(), capacityGpuMemory, gangSchedulingJob))
+				gpuRequested.GpuMemory(), capacityGpuMemory, gangSchedulingJob))
 			shortMessages = append(shortMessages, "node(s) didn't have enough resources: GPU memory")
 		}
 	}
 
-	requestedCPUs := int64(resourceRequested.Cpu())
+	requestedCPUs := int64(requestedVector.Get(cpuIdx))
 	availableCPUs := int64(availableVector.Get(cpuIdx))
 	if requestedCPUs > availableCPUs {
 		detailedMessages = append(detailedMessages, k8s_internal.NewInsufficientResourceError(
 			"CPU cores",
-			humanize.FtoaWithDigits(resourceRequested.Cpu()/resource_info.MilliCPUToCores, 3),
+			humanize.FtoaWithDigits(requestedVector.Get(cpuIdx)/resource_info.MilliCPUToCores, 3),
 			humanize.FtoaWithDigits(usedVector.Get(cpuIdx)/resource_info.MilliCPUToCores, 3),
 			humanize.FtoaWithDigits(capacityVector.Get(cpuIdx)/resource_info.MilliCPUToCores, 3),
 			gangSchedulingJob))
 		shortMessages = append(shortMessages, "node(s) didn't have enough resources: CPU cores")
 	}
 
-	if resourceRequested.Memory() > availableVector.Get(memIdx) {
+	if requestedVector.Get(memIdx) > availableVector.Get(memIdx) {
 		detailedMessages = append(detailedMessages, k8s_internal.NewInsufficientResourceError(
 			"memory",
-			humanize.FtoaWithDigits(resourceRequested.Memory()/resource_info.MemoryToGB, 3),
+			humanize.FtoaWithDigits(requestedVector.Get(memIdx)/resource_info.MemoryToGB, 3),
 			humanize.FtoaWithDigits(usedVector.Get(memIdx)/resource_info.MemoryToGB, 3),
 			humanize.FtoaWithDigits(capacityVector.Get(memIdx)/resource_info.MemoryToGB, 3),
 			gangSchedulingJob))
 		shortMessages = append(shortMessages, "node(s) didn't have enough resources: memory")
 	}
 
-	for requestedResourceName, requestedResourceQuant := range resourceRequested.ScalarResources() {
-		scalarIdx := vectorMap.GetIndex(string(requestedResourceName))
-		availableResourceQuant := int64(availableVector.Get(scalarIdx))
-		capacityResourceQuant := int64(capacityVector.Get(scalarIdx))
-		if availableResourceQuant < requestedResourceQuant {
+	for i := 0; i < vectorMap.Len(); i++ {
+		rName := vectorMap.ResourceAt(i)
+		if rName == string(v1.ResourceCPU) || rName == string(v1.ResourceMemory) || rName == constants.GpuResource {
+			continue
+		}
+		if resource_info.IsMigResource(v1.ResourceName(rName)) {
+			continue
+		}
+		requestedQuant := int64(requestedVector.Get(i))
+		availableQuant := int64(availableVector.Get(i))
+		capacityQuant := int64(capacityVector.Get(i))
+		if requestedQuant > 0 && availableQuant < requestedQuant {
 			detailedMessages = append(detailedMessages, k8s_internal.NewInsufficientResourceErrorScalarResources(
-				requestedResourceName,
-				requestedResourceQuant,
-				int64(usedVector.Get(scalarIdx)), capacityResourceQuant,
+				v1.ResourceName(rName),
+				requestedQuant,
+				int64(usedVector.Get(i)), capacityQuant,
 				gangSchedulingJob))
 			shortMessages = append(shortMessages, fmt.Sprintf("node(s) didn't have enough resources: %s",
-				requestedResourceName))
+				rName))
 		}
 	}
 
