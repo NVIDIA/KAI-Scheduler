@@ -29,7 +29,7 @@ import (
 
 var _ = DescribeReclaimElasticSpecs()
 
-var _ = Describe("Reclaim with Elastic Jobs - KAI specific", Ordered, func() {
+var _ = Describe("Reclaim with Elastic Jobs", Ordered, func() {
 	var (
 		testCtx            *testcontext.TestContext
 		parentQueue        *v2.Queue
