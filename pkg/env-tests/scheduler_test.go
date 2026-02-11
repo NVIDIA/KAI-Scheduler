@@ -133,6 +133,56 @@ var _ = Describe("Scheduler", Ordered, func() {
 			Expect(len(bindRequests.Items)).To(Equal(1), "Expected 1 bind request", utils.PrettyPrintBindRequestList(bindRequests))
 		})
 
+		It("Should allow optional projected configmap references", func(ctx context.Context) {
+			testPod := utils.CreatePodObject(testNamespace.Name, "test-pod-optional-configmap", corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					constants.GpuResource: resource.MustParse("1"),
+				},
+			})
+			testPod.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
+				{
+					Name:      "optional-projected-configmap",
+					MountPath: "/etc/optional-configmap",
+				},
+			}
+			testPod.Spec.Volumes = []corev1.Volume{
+				{
+					Name: "optional-projected-configmap",
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							Sources: []corev1.VolumeProjection{
+								{
+									ConfigMap: &corev1.ConfigMapProjection{
+										LocalObjectReference: corev1.LocalObjectReference{Name: "optional-configmap"},
+										Optional:             ptr.To(true),
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
+
+			podGroupConfig := utils.PodGroupConfig{
+				QueueName:          testQueue.Name,
+				PodgroupName:       "test-podgroup-optional-configmap",
+				MinMember:          1,
+				TopologyConstraint: nil,
+			}
+			err := utils.GroupPods(ctx, ctrlClient, podGroupConfig, []*corev1.Pod{testPod})
+			Expect(err).NotTo(HaveOccurred(), "Failed to group pods")
+
+			err = utils.WaitForPodScheduled(ctx, ctrlClient, testPod.Name, testNamespace.Name, defaultTimeout, interval)
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for test pod to be scheduled")
+
+			bindRequests := &kaiv1alpha2.BindRequestList{}
+			Expect(ctrlClient.List(ctx, bindRequests, client.InNamespace(testNamespace.Name))).
+				To(Succeed(), "Failed to list bind requests")
+
+			Expect(len(bindRequests.Items)).To(Equal(1), "Expected 1 bind request", utils.PrettyPrintBindRequestList(bindRequests))
+		})
+
 		It("Should respect scheduling gates - simple pod", func(ctx context.Context) {
 			// Create your pod as before
 			testPod := utils.CreatePodObject(testNamespace.Name, "test-pod", corev1.ResourceRequirements{
