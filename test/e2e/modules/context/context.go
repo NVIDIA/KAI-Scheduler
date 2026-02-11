@@ -17,7 +17,7 @@ import (
 
 	kubeAiSchedClient "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
-	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/testconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/pod_group"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
@@ -89,7 +89,7 @@ func (tc *TestContext) TestContextCleanup(ctx context.Context) {
 	wait.ForNoReservationPods(ctx, tc.ControllerClient)
 
 	wait.ForRunningSystemComponentEvent(ctx, tc.ControllerClient, "binder")
-	wait.ForRunningSystemComponentEvent(ctx, tc.ControllerClient, constant.GetConfig().SchedulerDeploymentName)
+	wait.ForRunningSystemComponentEvent(ctx, tc.ControllerClient, testconfig.GetConfig().SchedulerDeploymentName)
 }
 
 func (tc *TestContext) ClusterCleanup(ctx context.Context) {

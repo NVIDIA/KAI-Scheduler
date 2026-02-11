@@ -2,8 +2,10 @@
 Copyright 2025 NVIDIA CORPORATION
 SPDX-License-Identifier: Apache-2.0
 */
-package constant
+package testconfig
 
+// TestConfig holds all values that differ between engine and kai-scheduler e2e tests.
+// Kai-scheduler defaults are set below. Engine overrides these in its test init.
 type TestConfig struct {
 	SchedulerName           string
 	SystemPodsNamespace     string
