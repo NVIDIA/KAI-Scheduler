@@ -2,15 +2,15 @@
 
 ## Overview
 
-KAI Scheduler provides sophisticated workload scheduling with support for both batch scheduling and gang scheduling. The scheduler automatically detects the workload type and applies the appropriate scheduling strategy through the PodGrouper component, which creates PodGroup custom resources to coordinate pod scheduling.
+KAI Scheduler provides sophisticated workload scheduling with support for both independent scheduling and gang scheduling. The scheduler automatically detects the workload type and applies the appropriate scheduling strategy through the PodGrouper component, which creates PodGroup custom resources to coordinate pod scheduling.
 
 ## Definitions
 
-### Batch Scheduling
+### Independent Scheduling
 
-Batch scheduling allows pods within a workload to be scheduled independently. Each pod is scheduled as resources become available, without waiting for other pods in the same workload. This is the default behavior for standard Kubernetes Jobs where individual pods can make progress independently.
+Independent scheduling allows pods within a workload to be scheduled independently. Each pod is scheduled as resources become available, without waiting for other pods in the same workload. This is the default behavior for standard Kubernetes Jobs where individual pods can make progress independently.
 
-In KAI Scheduler, batch-scheduled workloads are created with `minMember=1` in their PodGroup, meaning only one pod needs to be schedulable for the workload to start.
+In KAI Scheduler, independently-scheduled workloads are created with `minMember=1` in their PodGroup, meaning only one pod needs to be schedulable for the workload to start.
 
 ### Gang Scheduling
 
@@ -27,7 +27,7 @@ In KAI Scheduler, gang-scheduled workloads have `minMember` set to the total num
 
 The PodGrouper component automatically creates PodGroup custom resources for incoming workloads. Each workload type has a specialized plugin that determines the appropriate grouping logic:
 
-- **Standard Jobs**: Create PodGroups with `minMember=1` (batch scheduling)
+- **Standard Jobs**: Create PodGroups with `minMember=1` (independent scheduling)
 - **Distributed Training Jobs**: Create PodGroups with `minMember=<total replicas>` (gang scheduling)
 - **JobSets**: Create one or multiple PodGroups depending on startup policy
 
@@ -53,7 +53,7 @@ For technical details on the PodGrouper architecture and plugin system, see [Pod
 
 Standard Kubernetes Jobs run batch workloads where pods can be scheduled independently.
 
-- **Scheduling Behavior:** Batch scheduling (pods scheduled independently)
+- **Scheduling Behavior:** Independent scheduling (pods scheduled independently)
 - **External Requirements:** None (native Kubernetes resource)
 - **Example:** [examples/job.yaml](examples/job.yaml)
 - **Apply:** `kubectl apply -f docs/batch/examples/job.yaml`
@@ -108,9 +108,82 @@ JAXJob enables distributed JAX training workloads using JAX's native distributed
 RayJob enables distributed computing and machine learning workloads using the Ray framework.
 
 - **Scheduling Behavior:** Gang scheduling (all pods in the Ray cluster scheduled together)
-- **External Requirements:** Requires [KubeRay Operator](https://docs.ray.io/en/latest/cluster/kubernetes/index.html) - See [installation guide](https://docs.ray.io/en/latest/cluster/kubernetes/getting-started/raycluster-quick-start.html#kuberay-operator)
+- **External Requirements:** Requires [KubeRay Operator](https://docs.ray.io/en/latest/cluster/kubernetes/index.html) - See installation instructions below
 - **Example:** [examples/rayjob.yaml](examples/rayjob.yaml)
 - **Apply:** `kubectl apply -f docs/batch/examples/rayjob.yaml`
+
+#### Installing KubeRay Operator
+
+Install the KubeRay operator using Helm:
+
+```sh
+helm repo add kuberay https://ray-project.github.io/kuberay-helm/
+helm repo update
+
+# Install both CRDs and KubeRay operator v1.5.1
+helm install kuberay-operator kuberay/kuberay-operator \
+    --namespace ray \
+    --create-namespace \
+    --version 1.5.1
+```
+
+For full installation options and detailed documentation, see the [official KubeRay installation guide](https://docs.ray.io/en/latest/cluster/kubernetes/getting-started/kuberay-operator-installation.html).
+
+#### Configuring Ray Workloads for KAI Scheduler
+
+To use KAI scheduler with your Ray workloads, configure the pod templates in your RayJob or RayCluster specifications:
+
+| Field | Location | Value | Description |
+|-------|----------|-------|-------------|
+| `kai.scheduler/queue` | `metadata.labels` | Queue name (e.g., `default-queue`) | Assigns workload to a KAI queue |
+| `schedulerName` | `spec.template.spec` (on each pod template) | `kai-scheduler` | Routes pods to KAI scheduler |
+
+**RayCluster Example:**
+
+You can also use RayCluster directly for long-running Ray clusters:
+
+```yaml
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: raycluster-sample
+  labels:
+    kai.scheduler/queue: default-queue
+spec:
+  rayVersion: '2.46.0'
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: '0.0.0.0'
+    template:
+      spec:
+        schedulerName: kai-scheduler
+        containers:
+        - name: ray-head
+          image: rayproject/ray:2.46.0
+          resources:
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+  workerGroupSpecs:
+  - replicas: 3
+    groupName: gpu-workers
+    rayStartParams: {}
+    template:
+      spec:
+        schedulerName: kai-scheduler
+        containers:
+        - name: ray-worker
+          image: rayproject/ray:2.46.0
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+```
 
 ### JobSet (Kubernetes SIG)
 
