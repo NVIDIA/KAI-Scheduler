@@ -116,11 +116,6 @@ func (ps *PodSet) IsReadyForScheduling() bool {
 	if int32(readyTasks) < ps.minAvailable {
 		return false
 	}
-	for _, task := range ps.GetPodInfos() {
-		if len(task.ResourceTemplatesWithoutClaims) > 0 {
-			return false
-		}
-	}
 	return true
 }
 
