@@ -27,8 +27,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
-// DescribeReclaimSpecs registers the shared Ginkgo specs for the Reclaim test suite.
-// These specs are shared between KAI-scheduler and engine e2e tests.
 func DescribeReclaimSpecs() bool {
 	return Describe("Reclaim", Ordered, func() {
 		Context("Quota/Fair-share based reclaim", func() {
