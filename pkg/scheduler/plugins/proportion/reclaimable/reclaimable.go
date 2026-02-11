@@ -277,7 +277,7 @@ func getInvolvedResourcesNames(resources []*resource_info.Resource) map[rs.Resou
 			involvedResources[rs.MemoryResource] = struct{}{}
 		}
 
-		if resource.GPUs() > 0 {
+		if resource.GetSumGPUs() > 0 {
 			involvedResources[rs.GpuResource] = struct{}{}
 		}
 	}
