@@ -14,8 +14,8 @@ import (
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
-	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/testconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/testconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait/watcher"
 )
 

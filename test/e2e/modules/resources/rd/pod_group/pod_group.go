@@ -18,9 +18,9 @@ import (
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
-	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/testconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/testconfig"
 )
 
 const (

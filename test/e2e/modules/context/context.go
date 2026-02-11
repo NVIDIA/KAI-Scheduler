@@ -17,10 +17,10 @@ import (
 
 	kubeAiSchedClient "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
-	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/testconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/pod_group"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/testconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
