@@ -1,3 +1,6 @@
+# Copyright 2026 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
 # Workload: Disaggregated Inference - PCS with PCSG and multiple cliques
 # Test scenario: PCS (block) with 2 PCSGs (rack) containing disaggregated inference components
 ---

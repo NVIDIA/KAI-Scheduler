@@ -1,3 +1,6 @@
+# Copyright 2026 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
 # Topology resource defining the hierarchy for topology-aware scheduling
 # Levels are ordered from top (broadest) to bottom (narrowest)
 # Your nodes must have labels matching these nodeLabel values
