@@ -23,10 +23,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait/watcher"
 )
 
-const (
-	resourceReservationNamespace = "kai-resource-reservation"
-)
-
 type checkCondition func(watch.Event) bool
 type checkPodCondition func(*v1.Pod) bool
 
