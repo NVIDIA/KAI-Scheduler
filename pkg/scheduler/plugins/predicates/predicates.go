@@ -288,7 +288,7 @@ func (pp *predicatesPlugin) checkMaxPodsWithGpuGroupReservation(
 // (and thus require a new reservation pod).
 func (pp *predicatesPlugin) willCreateNewGpuGroup(task *pod_info.PodInfo, node *node_info.NodeInfo) bool {
 	if pp.ssn == nil {
-		return false
+		return true
 	}
 
 	fittingGPUs := pp.ssn.FittingGPUs(node, task)

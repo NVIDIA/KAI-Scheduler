@@ -12,7 +12,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
-type NodeGpuForSharing struct {
+type nodeGpuForSharing struct {
 	Groups      []string
 	IsReleasing bool
 }
@@ -36,9 +36,9 @@ func AllocateFractionalGPUTaskToNode(ssn *framework.Session, stmt *framework.Sta
 }
 
 func GetNodePreferableGpuForSharing(fittingGPUsOnNode []string, node *node_info.NodeInfo, pod *pod_info.PodInfo,
-	isPipelineOnly bool) *NodeGpuForSharing {
+	isPipelineOnly bool) *nodeGpuForSharing {
 
-	nodeGpusSharing := &NodeGpuForSharing{
+	nodeGpusSharing := &nodeGpuForSharing{
 		Groups:      []string{},
 		IsReleasing: false,
 	}
@@ -67,14 +67,14 @@ func GetNodePreferableGpuForSharing(fittingGPUsOnNode []string, node *node_info.
 	return nil
 }
 
-func findGpuForSharingOnNode(task *pod_info.PodInfo, node *node_info.NodeInfo, isPipelineOnly bool) *NodeGpuForSharing {
+func findGpuForSharingOnNode(task *pod_info.PodInfo, node *node_info.NodeInfo, isPipelineOnly bool) *nodeGpuForSharing {
 	isReleasing := true
 	if !isPipelineOnly {
 		if taskAllocatable := node.IsTaskAllocatable(task); taskAllocatable {
 			isReleasing = false
 		}
 	}
-	return &NodeGpuForSharing{Groups: []string{string(uuid.NewUUID())}, IsReleasing: isReleasing}
+	return &nodeGpuForSharing{Groups: []string{string(uuid.NewUUID())}, IsReleasing: isReleasing}
 }
 
 func allocateSharedGPUTask(ssn *framework.Session, stmt *framework.Statement, node *node_info.NodeInfo,

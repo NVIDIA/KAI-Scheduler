@@ -16,7 +16,7 @@ import (
 const (
 	GPUResourceName    = "nvidia.com/gpu"
 	amdGpuResourceName = "amd.com/gpu"
-	PodsResourceName   = v1.ResourceName("pods")
+	PodsResourceName   = v1.ResourcePods
 )
 
 type ResourceRequirements struct {
@@ -158,8 +158,6 @@ func (r *ResourceRequirements) DetailedString() string {
 		case v1.ResourceEphemeralStorage, v1.ResourceStorage:
 			rQuant = rQuant / int64(MemoryToGB) // convert from milli-bytes to GB
 			messageBuilder.WriteString(fmt.Sprintf(", %s: %v (GB)", rName, rQuant))
-		case v1.ResourcePods:
-			messageBuilder.WriteString(fmt.Sprintf(", %s: %v", rName, rQuant))
 		default:
 			messageBuilder.WriteString(fmt.Sprintf(", %s: %v", rName, rQuant))
 		}
