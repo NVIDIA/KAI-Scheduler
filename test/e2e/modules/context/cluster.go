@@ -40,6 +40,8 @@ func createQueueContext(ctx context.Context, q *v2.Queue) error {
 	if err != nil {
 		return err
 	}
+	// TODO: add RBAC role bindings
+	// TODO: patch the namespace to add appropriate secret to the service account
 
 	if hook := testconfig.GetConfig().OnNamespaceCreated; hook != nil {
 		if err := hook(ctx, kubeClientset, namespaceName, q.Name); err != nil {
