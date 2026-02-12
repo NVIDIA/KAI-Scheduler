@@ -26,12 +26,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
-const (
-	draShardName           = "dra-shard"
-	draPartitionLabelValue = "dra"
-	draNodeLabel           = "nvidia.com/gpu.deploy.dra-plugin-gpu"
-)
-
 func DescribeHierarchyLevelFairnessSpecs() bool {
 	return Describe("Hierarchy level fairness", Ordered, func() {
 		Context("Hierarchy level fairness", func() {
