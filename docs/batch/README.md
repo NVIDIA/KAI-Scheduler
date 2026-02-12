@@ -33,6 +33,17 @@ The PodGrouper component automatically creates PodGroup custom resources for inc
 
 For technical details on the PodGrouper architecture and plugin system, see [Pod Grouper Technical Details](../developer/pod-grouper.md).
 
+### Configuring Workloads for KAI Scheduler
+
+To use KAI scheduler with your workloads, configure the following fields in your workload specifications:
+
+| Field | Location | Value | Description |
+|-------|----------|-------|-------------|
+| `kai.scheduler/queue` | `metadata.labels` | Queue name (e.g., `default-queue`) | Assigns workload to a KAI queue |
+| `schedulerName` | Pod template spec | `kai-scheduler` | Routes pods to KAI scheduler |
+
+**Note:** For workloads with multiple pod templates (e.g., Ray head and workers, Spark driver and executors), you must set `schedulerName: kai-scheduler` in each pod template spec.
+
 ## Supported Workload Types
 
 ### Quick Reference
@@ -109,35 +120,9 @@ JAXJob enables distributed JAX training workloads using JAX's native distributed
 RayJob enables distributed computing and machine learning workloads using the Ray framework.
 
 - **Scheduling Behavior:** Gang scheduling (all pods in the Ray cluster scheduled together)
-- **External Requirements:** Requires [KubeRay Operator](https://docs.ray.io/en/latest/cluster/kubernetes/index.html) - See installation instructions below
+- **External Requirements:** Requires [KubeRay Operator](https://docs.ray.io/en/latest/cluster/kubernetes/index.html) - See [installation guide](https://docs.ray.io/en/latest/cluster/kubernetes/getting-started/kuberay-operator-installation.html)
 - **Example:** [examples/rayjob.yaml](examples/rayjob.yaml)
 - **Apply:** `kubectl apply -f docs/batch/examples/rayjob.yaml`
-
-#### Installing KubeRay Operator
-
-Install the KubeRay operator using Helm:
-
-```sh
-helm repo add kuberay https://ray-project.github.io/kuberay-helm/
-helm repo update
-
-# Install both CRDs and KubeRay operator v1.5.1
-helm install kuberay-operator kuberay/kuberay-operator \
-    --namespace ray \
-    --create-namespace \
-    --version 1.5.1
-```
-
-For full installation options and detailed documentation, see the [official KubeRay installation guide](https://docs.ray.io/en/latest/cluster/kubernetes/getting-started/kuberay-operator-installation.html).
-
-#### Configuring Ray Workloads for KAI Scheduler
-
-To use KAI scheduler with your Ray workloads, configure the pod templates in your RayJob or RayCluster specifications:
-
-| Field | Location | Value | Description |
-|-------|----------|-------|-------------|
-| `kai.scheduler/queue` | `metadata.labels` | Queue name (e.g., `default-queue`) | Assigns workload to a KAI queue |
-| `schedulerName` | `spec.template.spec` (on each pod template) | `kai-scheduler` | Routes pods to KAI scheduler |
 
 ### RayCluster (KubeRay Operator)
 
