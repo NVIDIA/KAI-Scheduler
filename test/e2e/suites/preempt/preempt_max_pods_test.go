@@ -214,22 +214,9 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 		// Wait and verify pod remains unschedulable
 		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, fractionPod)
 
-		// Verify the pod has max pods error in events
-		events, err := testCtx.KubeClientset.CoreV1().Events(fractionPod.Namespace).List(ctx, metav1.ListOptions{
-			FieldSelector: fmt.Sprintf("involvedObject.name=%s", fractionPod.Name),
+		wait.WaitForEventInNamespace(ctx, testCtx.ControllerClient, fractionPod.Namespace, func(event *v1.Event) bool {
+			return event.Reason == "Unschedulable" && (strings.Contains(event.Message, "pod number exceeded") || strings.Contains(event.Message, "max pods"))
 		})
-		Expect(err).To(Succeed())
-		hasMaxPodsError := false
-		for _, event := range events.Items {
-			if event.Reason != "Unschedulable" {
-				continue
-			}
-			if strings.Contains(event.Message, "pod number exceeded") || strings.Contains(event.Message, "max pods") {
-				hasMaxPodsError = true
-				break
-			}
-		}
-		Expect(hasMaxPodsError).To(BeTrue(), "Pod should fail due to max pods limit")
 	})
 
 	It("Proper reservation calculation: preempt fraction with fraction that reuses GPU group", Label(labels.ReservationPod), func(ctx context.Context) {
