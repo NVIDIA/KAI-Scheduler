@@ -158,7 +158,8 @@ func buildWorkerSubGroups(
 
 	workers := int(workerReplicas)
 	numSegments := workers / segmentSize
-	if workers%segmentSize != 0 {
+	partialSegmentSize := workers % segmentSize
+	if partialSegmentSize != 0 {
 		numSegments++
 	}
 	segmentIndex, err := getPodSegmentIndex(pod, segmentSize)
@@ -181,6 +182,9 @@ func buildWorkerSubGroups(
 		}
 		if i == segmentIndex {
 			subGroup.PodsReferences = podReferences
+		}
+		if partialSegmentSize != 0 && i == numSegments-1 {
+			subGroup.MinAvailable = int32(partialSegmentSize)
 		}
 		subGroups = append(subGroups, subGroup)
 	}

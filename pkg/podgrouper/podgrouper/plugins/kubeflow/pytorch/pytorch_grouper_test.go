@@ -479,7 +479,7 @@ func TestGetPodGroupMetadata_Segments_5Workers_2PerSegment(t *testing.T) {
 	workerSegment2 := findSubGroupByName(metadata.SubGroups, "worker-2")
 	assert.NotNil(t, workerSegment2)
 	assert.Equal(t, 0, len(workerSegment2.PodsReferences))
-	assert.Equal(t, int32(2), workerSegment2.MinAvailable)
+	assert.Equal(t, int32(1), workerSegment2.MinAvailable)
 
 	workerPod4 := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
