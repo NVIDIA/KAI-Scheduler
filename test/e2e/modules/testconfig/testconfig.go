@@ -4,6 +4,12 @@ SPDX-License-Identifier: Apache-2.0
 */
 package testconfig
 
+import (
+	"context"
+
+	"k8s.io/client-go/kubernetes"
+)
+
 type TestConfig struct {
 	SchedulerName           string
 	SystemPodsNamespace     string
@@ -12,6 +18,8 @@ type TestConfig struct {
 	QueueLabelKey           string
 	QueueNamespacePrefix    string
 	ContainerImage          string
+
+	OnNamespaceCreated func(ctx context.Context, kubeClientset kubernetes.Interface, namespaceName, queueName string) error
 }
 
 var activeConfig = TestConfig{
