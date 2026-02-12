@@ -153,66 +153,49 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 		Expect(scheduledPod.Spec.NodeName).To(Equal(targetNode))
 	})
 
-	It("Fractions allocation: node at maxPods-1, fraction pod cannot allocate (needs maxPods+1 with reservation)", Label(labels.ReservationPod), func(ctx context.Context) {
+	It("node at maxPods-1, fraction pod cannot allocate", Label(labels.ReservationPod), func(ctx context.Context) {
 		// Get node's max pod capacity
 		node, err := testCtx.KubeClientset.CoreV1().Nodes().Get(ctx, targetNode, metav1.GetOptions{})
 		Expect(err).To(Succeed())
 		maxPods := int(node.Status.Allocatable.Pods().Value())
-		targetPodCount := maxPods - 1
 
-		// Fill node with maxPods-1 low-priority CPU pods
+		// Fill node to max capacity with low-priority CPU pods
 		_, _, err = fillers.FillAllNodesWithJobs(ctx, testCtx, testCtx.Queues[0],
 			v1.ResourceRequirements{
 				Requests: map[v1.ResourceName]resource.Quantity{
 					v1.ResourceCPU: resource.MustParse("10m"),
 				},
 			},
-			nil, nil, lowNonPreemptiblePriorityClass, targetNode)
+			nil, nil, lowPreemptiblePriorityClass, targetNode)
 		Expect(err).To(Succeed())
 
-		// Wait for pods to settle and then check current pod count
-		Eventually(func() int {
-			podList, err := testCtx.KubeClientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
-				FieldSelector: fmt.Sprintf("spec.nodeName=%s,status.phase!=Failed,status.phase!=Succeeded", targetNode),
-			})
-			if err != nil {
-				return -1
-			}
-			return len(podList.Items)
-		}).Should(BeNumerically(">=", targetPodCount))
-
-		// Get current pod count and adjust to exactly targetPodCount (maxPods-1)
+		// Verify node is at max pods
+		node, err = testCtx.KubeClientset.CoreV1().Nodes().Get(ctx, targetNode, metav1.GetOptions{})
+		Expect(err).To(Succeed())
 		podList, err := testCtx.KubeClientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
 			FieldSelector: fmt.Sprintf("spec.nodeName=%s,status.phase!=Failed,status.phase!=Succeeded", targetNode),
 		})
 		Expect(err).To(Succeed())
+		currentPods := len(podList.Items)
+		maxPods = int(node.Status.Allocatable.Pods().Value())
+		Expect(currentPods).To(Equal(maxPods), "Node should be at max pod capacity")
 
-		if len(podList.Items) > targetPodCount {
-			// Delete pods to get exactly targetPodCount
-			podsToDelete := len(podList.Items) - targetPodCount
-			for i := 0; i < podsToDelete; i++ {
-				err := testCtx.KubeClientset.CoreV1().Pods(podList.Items[i].Namespace).
-					Delete(ctx, podList.Items[i].Name, metav1.DeleteOptions{})
-				Expect(err).To(Succeed())
+		// delete one e2e pod
+		for _, pod := range podList.Items {
+			if pod.Labels[constant.AppLabelName] != "engine-e2e" {
+				continue
 			}
-			// Wait for deletions
-			Eventually(func() int {
-				podList, err := testCtx.KubeClientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
-					FieldSelector: fmt.Sprintf("spec.nodeName=%s,status.phase!=Failed,status.phase!=Succeeded", targetNode),
-				})
-				if err != nil {
-					return -1
-				}
-				return len(podList.Items)
-			}).Should(Equal(targetPodCount))
+			if pod.Status.Phase != v1.PodRunning {
+				continue
+			}
+			if pod.Spec.NodeName != targetNode {
+				continue
+			}
+			namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+			err = testCtx.KubeClientset.CoreV1().Pods(namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+			Expect(err).To(Succeed())
+			break
 		}
-
-		// Verify node has exactly targetPodCount pods
-		podList, err = testCtx.KubeClientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
-			FieldSelector: fmt.Sprintf("spec.nodeName=%s,status.phase!=Failed,status.phase!=Succeeded", targetNode),
-		})
-		Expect(err).To(Succeed())
-		Expect(len(podList.Items)).To(Equal(targetPodCount), fmt.Sprintf("Should have exactly %d pods", targetPodCount))
 
 		// Create a fractional GPU pod (will need 2 pods: task + reservation)
 		// This should fail because 109 + 2 = 111 > 110
@@ -220,7 +203,7 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 		fractionPod.Annotations = map[string]string{
 			constants.GpuFraction: "0.5",
 		}
-		fractionPod.Spec.PriorityClassName = highNonPreemptiblePriorityClass // Non-preemptible
+		fractionPod.Spec.PriorityClassName = lowPreemptiblePriorityClass
 		fractionPod.Spec.NodeSelector = map[string]string{
 			constant.NodeNamePodLabelName: targetNode,
 		}
@@ -238,8 +221,10 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 		Expect(err).To(Succeed())
 		hasMaxPodsError := false
 		for _, event := range events.Items {
-			if event.Reason == "FailedScheduling" &&
-				(strings.Contains(event.Message, "NodePodNumberExceeded") || strings.Contains(event.Message, "max pods")) {
+			if event.Reason != "Unschedulable" {
+				continue
+			}
+			if strings.Contains(event.Message, "pod number exceeded") || strings.Contains(event.Message, "max pods") {
 				hasMaxPodsError = true
 				break
 			}
