@@ -415,7 +415,7 @@ func TestGetPodGroupMetadata_Segments_HappyFlow_4Workers_2PerSegment(t *testing.
 	workerSegment0 = findSubGroupByName(metadata.SubGroups, "worker-0")
 	assert.NotNil(t, workerSegment0)
 	assert.Equal(t, 1, len(workerSegment0.PodsReferences))
-	assert.Equal(t, "test-job-worker-0", workerSegment0.PodsReferences[0].Name)
+	assert.Equal(t, "test-job-worker-0", workerSegment0.PodsReferences[0])
 
 	// Test worker pod in segment 1 (replica index 2)
 	workerPod2 := &v1.Pod{
@@ -436,11 +436,11 @@ func TestGetPodGroupMetadata_Segments_HappyFlow_4Workers_2PerSegment(t *testing.
 	workerSegment1 = findSubGroupByName(metadata.SubGroups, "worker-1")
 	assert.NotNil(t, workerSegment1)
 	assert.Equal(t, 1, len(workerSegment1.PodsReferences))
-	assert.Equal(t, "test-job-worker-2", workerSegment1.PodsReferences[0].Name)
+	assert.Equal(t, "test-job-worker-2", workerSegment1.PodsReferences[0])
 }
 
 func TestGetPodGroupMetadata_Segments_5Workers_2PerSegment(t *testing.T) {
-	// 5 workers with segment size 2 should create 2 segments (5/2 = 2 with integer division)
+	// 5 workers with segment size 2 should create 3 segments (2 full ones, one partial)
 	pytorchJob := getPytorchJobWithSegments(1, 5, "2")
 	grouper := newTestPyTorchGrouper()
 
@@ -462,21 +462,25 @@ func TestGetPodGroupMetadata_Segments_5Workers_2PerSegment(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, int32(6), metadata.MinAvailable) // 1 master + 5 workers
 
-	// Verify subgroups: 1 master + 1 Worker parent + 2 worker segments (5/2 = 2)
-	assert.Equal(t, 4, len(metadata.SubGroups))
+	// Verify subgroups: 1 master + 1 Worker parent + 3 worker segments
+	assert.Equal(t, 5, len(metadata.SubGroups))
 	masterSubGroup := findSubGroupByName(metadata.SubGroups, strings.ToLower(replicaTypeMaster))
 	assert.NotNil(t, masterSubGroup)
 
 	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
 	assert.NotNil(t, workerSegment0)
 	assert.Equal(t, 1, len(workerSegment0.PodsReferences))
+	assert.Equal(t, int32(2), workerSegment0.MinAvailable)
 
 	workerSegment1 := findSubGroupByName(metadata.SubGroups, "worker-1")
 	assert.NotNil(t, workerSegment1)
 	assert.Equal(t, 0, len(workerSegment1.PodsReferences))
+	assert.Equal(t, int32(2), workerSegment1.MinAvailable)
+	workerSegment2 := findSubGroupByName(metadata.SubGroups, "worker-2")
+	assert.NotNil(t, workerSegment2)
+	assert.Equal(t, 0, len(workerSegment2.PodsReferences))
+	assert.Equal(t, int32(2), workerSegment2.MinAvailable)
 
-	// Worker with index 4 is in segment 2 (4/2=2), but only 2 segments are created
-	// So this worker would be assigned to segment index 2, which doesn't exist
 	workerPod4 := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-job-worker-4",
@@ -492,13 +496,10 @@ func TestGetPodGroupMetadata_Segments_5Workers_2PerSegment(t *testing.T) {
 	}
 	metadata, err = grouper.GetPodGroupMetadata(pytorchJob, workerPod4)
 	assert.Nil(t, err)
-	// Worker 4 has segment index 2 (4/2=2), but only segments 0 and 1 exist
-	// So no segment should have this pod reference
-	for _, sg := range metadata.SubGroups {
-		if sg.Name != strings.ToLower(replicaTypeMaster) {
-			assert.Equal(t, 0, len(sg.PodsReferences))
-		}
-	}
+	workerSegment2 = findSubGroupByName(metadata.SubGroups, "worker-2")
+	assert.NotNil(t, workerSegment2)
+	assert.Equal(t, 1, len(workerSegment2.PodsReferences))
+	assert.Equal(t, "test-job-worker-4", workerSegment2.PodsReferences[0])
 }
 
 func TestGetPodGroupMetadata_Segments_MalformedAnnotation(t *testing.T) {
@@ -571,7 +572,7 @@ func TestGetPodGroupMetadata_Segments_SegmentSizeFromPodTemplate(t *testing.T) {
 	workerSegment0 := findSubGroupByName(metadata.SubGroups, "worker-0")
 	assert.NotNil(t, workerSegment0)
 	assert.Equal(t, 1, len(workerSegment0.PodsReferences))
-	assert.Equal(t, "test-job-worker-1", workerSegment0.PodsReferences[0].Name)
+	assert.Equal(t, "test-job-worker-1", workerSegment0.PodsReferences[0])
 }
 
 func getPytorchJobWithSegments(masterReplicas, workerReplicas int64, segmentSize string) *unstructured.Unstructured {

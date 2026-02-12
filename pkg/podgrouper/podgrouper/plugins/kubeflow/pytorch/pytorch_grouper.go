@@ -156,7 +156,11 @@ func buildWorkerSubGroups(
 		}}, nil
 	}
 
-	numSegments := int(workerReplicas) / segmentSize
+	workers := int(workerReplicas)
+	numSegments := workers / segmentSize
+	if workers%segmentSize != 0 {
+		numSegments++
+	}
 	segmentIndex, err := getPodSegmentIndex(pod, segmentSize)
 	if err != nil {
 		return nil, err
@@ -173,6 +177,7 @@ func buildWorkerSubGroups(
 			Name:                fmt.Sprintf("worker-%d", i),
 			TopologyConstraints: topologyConstraints,
 			Parent:              ptr.To(strings.ToLower(replicaTypeWorker)),
+			MinAvailable:        int32(segmentSize),
 		}
 		if i == segmentIndex {
 			subGroup.PodsReferences = podReferences
@@ -223,6 +228,9 @@ func getSegmentSize(pod *v1.Pod, replicaSpecs map[string]interface{}) (int, bool
 	segmentSize, err := strconv.Atoi(sizeStr)
 	if err != nil {
 		return 0, false, fmt.Errorf("invalid segment size %s on worker podTemplate, err: %w", sizeStr, err)
+	}
+	if segmentSize <= 0 {
+		return 0, false, fmt.Errorf("segment size %s on worker podTemplate needs to be a positive integer", sizeStr)
 	}
 	return segmentSize, true, nil
 }
