@@ -4,6 +4,7 @@
 package dynamicresources_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -11,15 +12,23 @@ import (
 	. "go.uber.org/mock/gomock"
 	"gopkg.in/h2non/gock.v1"
 	resourceapi "k8s.io/api/resource/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	featuregate "k8s.io/component-base/featuregate/testing"
+	"k8s.io/dynamic-resource-allocation/structured"
 	"k8s.io/kubernetes/pkg/features"
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/dra_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/nodes_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
 )
 
@@ -566,4 +575,218 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Fake DRA manager and tracker for testing cached allocation behavior
+type fakeDRAManager struct {
+	claimsTracker *fakeResourceClaimTracker
+}
+
+func (f *fakeDRAManager) ResourceClaims() k8sframework.ResourceClaimTracker {
+	return f.claimsTracker
+}
+
+func (f *fakeDRAManager) ResourceSlices() k8sframework.ResourceSliceLister {
+	return fakeResourceSliceLister{}
+}
+
+func (f *fakeDRAManager) DeviceClasses() k8sframework.DeviceClassLister {
+	return fakeDeviceClassLister{}
+}
+
+type fakeResourceClaimTracker struct {
+	claims       map[string]*resourceapi.ResourceClaim
+	gatherCalled bool
+	returnError  error
+}
+
+func (f *fakeResourceClaimTracker) List() ([]*resourceapi.ResourceClaim, error) {
+	items := make([]*resourceapi.ResourceClaim, 0, len(f.claims))
+	for _, claim := range f.claims {
+		items = append(items, claim)
+	}
+	return items, nil
+}
+
+func (f *fakeResourceClaimTracker) Get(namespace, claimName string) (*resourceapi.ResourceClaim, error) {
+	key := fmt.Sprintf("%s/%s", namespace, claimName)
+	claim, found := f.claims[key]
+	if !found {
+		return nil, fmt.Errorf("resource claim %s not found", key)
+	}
+	return claim, nil
+}
+
+func (f *fakeResourceClaimTracker) ListAllAllocatedDevices() (sets.Set[structured.DeviceID], error) {
+	return sets.New[structured.DeviceID](), nil
+}
+
+func (f *fakeResourceClaimTracker) GatherAllocatedState() (*structured.AllocatedState, error) {
+	f.gatherCalled = true
+	if f.returnError != nil {
+		return nil, f.returnError
+	}
+	return &structured.AllocatedState{}, nil
+}
+
+func (f *fakeResourceClaimTracker) SignalClaimPendingAllocation(_ types.UID, _ *resourceapi.ResourceClaim) error {
+	return nil
+}
+
+func (f *fakeResourceClaimTracker) ClaimHasPendingAllocation(_ types.UID) bool {
+	return false
+}
+
+func (f *fakeResourceClaimTracker) RemoveClaimPendingAllocation(_ types.UID) (deleted bool) {
+	return false
+}
+
+func (f *fakeResourceClaimTracker) AssumeClaimAfterAPICall(claim *resourceapi.ResourceClaim) error {
+	key := fmt.Sprintf("%s/%s", claim.Namespace, claim.Name)
+	f.claims[key] = claim
+	return nil
+}
+
+func (f *fakeResourceClaimTracker) AssumedClaimRestore(_, _ string) {}
+
+type fakeResourceSliceLister struct{}
+
+func (fakeResourceSliceLister) ListWithDeviceTaintRules() ([]*resourceapi.ResourceSlice, error) {
+	return nil, nil
+}
+
+type fakeDeviceClassLister struct{}
+
+func (fakeDeviceClassLister) List() ([]*resourceapi.DeviceClass, error) {
+	return nil, nil
+}
+
+func (fakeDeviceClassLister) Get(_ string) (*resourceapi.DeviceClass, error) {
+	return nil, nil
+}
+
+// TestAllocateUsesCachedAllocationFromPodInfo verifies that cached DRA allocation
+// in ResourceClaimInfo prevents allocator calls during pipeline operations.
+func TestAllocateUsesCachedAllocationFromPodInfo(t *testing.T) {
+	test_utils.InitTestingInfrastructure()
+	controller := NewController(t)
+	defer controller.Finish()
+	defer gock.Off()
+
+	featuregate.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.DynamicResourceAllocation, true)
+
+	allocation := &resourceapi.AllocationResult{
+		Devices: resourceapi.DeviceAllocationResult{
+			Results: []resourceapi.DeviceRequestAllocationResult{
+				{
+					Request: "request",
+					Driver:  "nvidia.com",
+					Pool:    "node0",
+					Device:  "0",
+				},
+			},
+		},
+	}
+
+	claim := &resourceapi.ResourceClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "claim-0",
+			Namespace: "test",
+		},
+		Status: resourceapi.ResourceClaimStatus{
+			Allocation: allocation.DeepCopy(),
+		},
+	}
+
+	tracker := &fakeResourceClaimTracker{
+		claims: map[string]*resourceapi.ResourceClaim{
+			"test/claim-0": claim,
+		},
+		returnError: fmt.Errorf("allocator should not be called - cached allocation should be used"),
+	}
+
+	manager := &fakeDRAManager{claimsTracker: tracker}
+
+	testMetadata := test_utils.TestTopologyBasic{
+		Name: "cached-dra-allocation",
+		Mocks: &test_utils.TestMock{
+			SharedDRAManager: manager,
+			CacheRequirements: &test_utils.CacheMocking{
+				NumberOfPipelineActions: 1,
+			},
+		},
+		Nodes: map[string]nodes_fake.TestNodeBasic{
+			"node0": {
+				GPUs: 0,
+			},
+		},
+		Queues: []test_utils.TestQueueBasic{
+			{
+				Name:               "q-1",
+				DeservedGPUs:       1,
+				GPUOverQuotaWeight: 1,
+			},
+		},
+		Jobs: []*jobs_fake.TestJobBasic{
+			{
+				Name:      "job-1",
+				Namespace: "test",
+				QueueName: "q-1",
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{
+						Name:               "task-1",
+						State:              pod_status.Pending,
+						ResourceClaimNames: []string{"claim-0"},
+					},
+				},
+			},
+		},
+		TestDRAObjects: dra_fake.TestDRAObjects{
+			ResourceClaims: []*dra_fake.TestResourceClaim{
+				{
+					Name:            "claim-0",
+					Namespace:       "test",
+					DeviceClassName: "nvidia.com/gpu",
+					Count:           1,
+				},
+			},
+		},
+	}
+
+	ssn := test_utils.BuildSession(testMetadata, controller)
+
+	var task *pod_info.PodInfo
+	for _, job := range ssn.ClusterInfo.PodGroupInfos {
+		for _, podTask := range job.GetAllPodsMap() {
+			task = podTask
+			break
+		}
+	}
+	if task == nil {
+		t.Fatalf("expected task in session")
+	}
+
+	statement := ssn.Statement()
+
+	err := statement.Allocate(task, "node0")
+	assert.NoError(t, err, "Allocate should succeed using existing claim allocation")
+	assert.NotNil(t, task.ResourceClaimInfo["claim-0"], "Task should cache allocation after allocate")
+
+	err = statement.Evict(task, "evict for reclaim", eviction_info.EvictionMetadata{})
+	assert.NoError(t, err, "Evict should succeed")
+
+	claimAfterEvict, err := tracker.Get("test", "claim-0")
+	assert.NoError(t, err)
+	assert.Nil(t, claimAfterEvict.Status.Allocation, "Claim allocation should be cleared after deallocate")
+
+	err = statement.Pipeline(task, "node0", false)
+	assert.NoError(t, err, "Pipeline should succeed using cached allocation")
+
+	updatedClaim, err := tracker.Get("test", "claim-0")
+	assert.NoError(t, err)
+	assert.NotNil(t, updatedClaim.Status.Allocation, "Claim should have allocation set")
+	assert.Equal(t, allocation.Devices.Results[0].Device, updatedClaim.Status.Allocation.Devices.Results[0].Device,
+		"Allocation should use cached device assignment")
+
+	assert.False(t, tracker.gatherCalled, "GatherAllocatedState should NOT be called when cached allocation exists")
 }

@@ -55,6 +55,10 @@ type K8sFramework struct {
 
 var _ k8sframework.Handle = &K8sFramework{}
 
+func (f *K8sFramework) SetSharedDRAManager(manager k8sframework.SharedDRAManager) {
+	f.sharedDRAManager = manager
+}
+
 func (f *K8sFramework) SharedDRAManager() k8sframework.SharedDRAManager {
 	if f.resourceClaimCache == nil {
 		rrInformer := f.informerFactory.Resource().V1().ResourceClaims().Informer()

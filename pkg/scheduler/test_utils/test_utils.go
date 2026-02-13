@@ -17,9 +17,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 
 	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 
+	common_k8s_utils "github.com/NVIDIA/KAI-scheduler/pkg/common/k8s_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -59,6 +61,7 @@ type TestMock struct {
 	Cache             *cache.Cache
 	GPUMetric         *GPUMetricMocks
 	SchedulerConf     *conf.SchedulerConfiguration
+	SharedDRAManager  k8sframework.SharedDRAManager
 }
 
 type CacheMocking struct {
@@ -319,7 +322,7 @@ func GetTestCacheMock(
 ) *cache.MockCache {
 	cacheMock := cache.NewMockCache(controller)
 	cacheRequirements := &CacheMocking{}
-	if testMocks != nil {
+	if testMocks != nil && testMocks.CacheRequirements != nil {
 		cacheRequirements = testMocks.CacheRequirements
 	}
 
@@ -346,6 +349,11 @@ func GetTestCacheMock(
 	k8sPlugins := k8splugins.InitializeInternalPlugins(
 		cacheMock.KubeClient(), cacheMock.KubeInformerFactory(), cacheMock.SnapshotSharedLister(),
 	)
+	if testMocks != nil && testMocks.SharedDRAManager != nil {
+		if frameworkHandle, ok := k8sPlugins.FrameworkHandle.(*common_k8s_utils.K8sFramework); ok {
+			frameworkHandle.SetSharedDRAManager(testMocks.SharedDRAManager)
+		}
+	}
 	cacheMock.EXPECT().InternalK8sPlugins().AnyTimes().Return(k8sPlugins)
 
 	if cacheRequirements.NumberOfCacheEvictions != 0 {
