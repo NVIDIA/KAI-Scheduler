@@ -283,7 +283,7 @@ func (drap *draPlugin) allocateResourceClaim(task *pod_info.PodInfo, podClaim *v
 		return fmt.Errorf("failed to update resource claim %s/%s: %v", task.Namespace, claimName, err)
 	}
 
-	log.InfraLogger.V(3).Infof("Allocated claim <%s/%s>, devices <%s>, allocation data from podInfo: %t.", task.Namespace, claimName, getClaimDevicesString(claim), allocatedFromMemory)
+	log.InfraLogger.V(6).Infof("Allocated claim <%s/%s>, devices <%s>, allocation data from podInfo: %t.", task.Namespace, claimName, getClaimDevicesString(claim), allocatedFromMemory)
 
 	task.ResourceClaimInfo[podClaim.Name] = &schedulingv1alpha2.ResourceClaimAllocation{
 		Name:       podClaim.Name,
@@ -322,7 +322,7 @@ func (drap *draPlugin) deallocateResourceClaim(task *pod_info.PodInfo, podClaim 
 		delete(task.ResourceClaimInfo, podClaim.Name)
 	}
 
-	log.InfraLogger.V(3).Infof("Deallocated claim <%s/%s>, devices <%s>.", task.Namespace, claimName, devicesDeallocatedStr)
+	log.InfraLogger.V(6).Infof("Deallocated claim <%s/%s>, devices <%s>.", task.Namespace, claimName, devicesDeallocatedStr)
 
 	return nil
 }
