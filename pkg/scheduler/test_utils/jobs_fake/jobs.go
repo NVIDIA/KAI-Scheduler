@@ -78,11 +78,10 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic, draClaims ...runtime.Object) (
 		jobUID := common_info.PodGroupID(jobName)
 		queueUID := common_info.QueueID(job.QueueName)
 		numberOfJobs := len(Jobs)
-		var jobCreationTime time.Time
+
+		jobCreationTime := time.Now().Add(time.Minute * time.Duration(numberOfJobs-jobIndex) * (-1))
 		if job.JobAgeInMinutes != 0 {
 			jobCreationTime = time.Now().Add(time.Minute * time.Duration(job.JobAgeInMinutes) * (-1))
-		} else {
-			jobCreationTime = time.Now().Add(time.Minute * time.Duration(numberOfJobs-jobIndex) * (-1))
 		}
 
 		job.Preemptibility = pg.CalculatePreemptibility(job.Preemptibility, job.Priority)
@@ -207,6 +206,13 @@ func generateTasks(job *TestJobBasic, jobAllocatedResource *resource_info.Resour
 		if pod_status.AllocatedStatus(taskInfo.Status) && gpuFraction == "" {
 			jobAllocatedResource.Add(resource_info.ResourceFromResourceList(*podResourceList))
 		}
+		if gpuFraction != "" {
+			jobAllocatedResource.Add(resource_info.ResourceFromResourceList(
+				v1.ResourceList{
+					v1.ResourcePods: resource.MustParse("1"),
+				},
+			))
+		}
 
 		if tasks_fake.IsTaskStartedStatus(taskInfo.Status) {
 			gpuName := taskInfo.NodeName + fmt.Sprint(taskInfo.GPUGroups)
@@ -268,6 +274,9 @@ func CalcJobAndPodResources(job *TestJobBasic, jobAllocatedResource *resource_in
 		podResourceList = resources_fake.BuildResourceList(requiredCpuInput, requiredMemoryInput, &requiredGPUsAsString,
 			resources_fake.MigInstancesToMigInstanceCount(task.RequiredMigInstances))
 	}
+
+	(*podResourceList)[v1.ResourcePods] = resource.MustParse("1")
+
 	return podResourceList, gpuMemory, gpuFraction, gpuGroups
 }
 

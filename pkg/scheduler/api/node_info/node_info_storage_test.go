@@ -109,25 +109,23 @@ func TestNodeInfoStorage_AddPod(t *testing.T) {
 	expectedStorageCapacity := storageCapacity.Clone()
 
 	node1ExpectedNodeInfo := &NodeInfo{
-		Name:        "n1",
-		Node:        node1,
-		Idle:        common_info.BuildResource("7000m", "9G"),
-		Used:        common_info.BuildResource("1000m", "1G"),
-		Releasing:   resource_info.EmptyResource(),
-		Allocatable: common_info.BuildResource("8000m", "10G"),
-		PodInfos: map[common_info.PodID]*pod_info.PodInfo{
-			pod1Info.UID: pod1Info,
-		},
+		Name:                   "n1",
+		Node:                   node1,
+		Idle:                   common_info.BuildResourceWithGpu("7000m", "9G", "0", "109"),
+		Used:                   common_info.BuildResourceWithGpu("1000m", "1G", "0", "1"),
+		Releasing:              resource_info.EmptyResource(),
+		Allocatable:            common_info.BuildResourceWithGpu("8000m", "10G", "0", "110"),
+		PodInfos:               map[common_info.PodID]*pod_info.PodInfo{},
 		LegacyMIGTasks:         map[common_info.PodID]string{},
 		MemoryOfEveryGpuOnNode: DefaultGpuMemory,
 		GpuSharingNodeInfo:     *newGpuSharingNodeInfo(),
+		MaxTaskNum:             110,
 		AccessibleStorageCapacities: map[common_info.StorageClassID][]*storagecapacity_info.StorageCapacityInfo{
 			storageCapacity.StorageClass: {expectedStorageCapacity},
 		},
 	}
-	for _, podInfo := range node1ExpectedNodeInfo.PodInfos {
-		node1ExpectedNodeInfo.setAcceptedResources(podInfo)
-	}
+	node1ExpectedNodeInfo.setAcceptedResources(pod1Info)
+	node1ExpectedNodeInfo.PodInfos[pod1Info.UID] = pod1Info.Clone()
 
 	tests := []AddRemovePodsTestWithStorage{
 		{

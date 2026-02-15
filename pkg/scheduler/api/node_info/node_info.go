@@ -359,10 +359,6 @@ func (ni *NodeInfo) isTaskAllocatableOnNonAllocatedResources(
 	return false
 }
 
-func (ni *NodeInfo) shouldAddTaskResources(task *pod_info.PodInfo) bool {
-	return !pod_info.IsResourceReservationTask(task.Pod)
-}
-
 func (ni *NodeInfo) AddTask(task *pod_info.PodInfo) error {
 	return ni.addTask(task, false)
 }
@@ -437,28 +433,27 @@ func (ni *NodeInfo) addTaskStorage(task *pod_info.PodInfo) {
 }
 
 func (ni *NodeInfo) addTaskResources(task *pod_info.PodInfo) {
-	if !ni.shouldAddTaskResources(task) {
-		return
-	}
-
 	log.InfraLogger.V(7).Infof("About to add podsInfo: <%v/%v>, status: <%v>, node: <%s>",
 		task.Namespace, task.Name, task.Status, ni.Name)
 	log.InfraLogger.V(7).Infof("Node info: %+v", ni)
 
-	requestedResourceWithoutSharedGPU := getAcceptedTaskResourceWithoutSharedGPU(task)
+	resourcesToTrack := getAcceptedTaskResourceWithoutSharedGPU(task)
 
-	// the added task will be the only one allocated on the GPU
-	ni.Used.Add(requestedResourceWithoutSharedGPU)
+	if pod_info.IsResourceReservationTask(task.Pod) {
+		// Reservation pod: track all resources except GPUs
+		resourcesToTrack.SetGPUs(0)
+	}
+
+	ni.Used.Add(resourcesToTrack)
 
 	switch task.Status {
 	case pod_status.Releasing:
-		ni.Releasing.Add(requestedResourceWithoutSharedGPU)
-		ni.Idle.Sub(requestedResourceWithoutSharedGPU)
+		ni.Releasing.Add(resourcesToTrack)
+		ni.Idle.Sub(resourcesToTrack)
 	case pod_status.Pipelined:
-		ni.Releasing.Sub(requestedResourceWithoutSharedGPU)
-
+		ni.Releasing.Sub(resourcesToTrack)
 	default:
-		ni.Idle.Sub(requestedResourceWithoutSharedGPU)
+		ni.Idle.Sub(resourcesToTrack)
 	}
 
 	ni.addSharedTaskResources(task)
@@ -488,27 +483,27 @@ func (ni *NodeInfo) RemoveTask(ti *pod_info.PodInfo) error {
 }
 
 func (ni *NodeInfo) removeTaskResources(task *pod_info.PodInfo) {
-	if !ni.shouldAddTaskResources(task) {
-		return
-	}
-
 	log.InfraLogger.V(7).Infof("About to remove podsInfo: <%v/%v>, status: <%v>, node: <%s>",
 		task.Namespace, task.Name, task.Status, ni.Name)
 	log.InfraLogger.V(7).Infof("NodeInfo: %+v", ni)
 
-	requestedResourceWithoutSharedGPU := getAcceptedTaskResourceWithoutSharedGPU(task)
+	resourcesToTrack := getAcceptedTaskResourceWithoutSharedGPU(task)
 
-	// the removed task in the only one currently allocated on the GPU
-	ni.Used.Sub(requestedResourceWithoutSharedGPU)
+	if pod_info.IsResourceReservationTask(task.Pod) {
+		// Reservation pod: untrack all resources except GPUs
+		resourcesToTrack.SetGPUs(0)
+	}
+
+	ni.Used.Sub(resourcesToTrack)
 
 	switch task.Status {
 	case pod_status.Releasing:
-		ni.Releasing.Sub(requestedResourceWithoutSharedGPU)
-		ni.Idle.Add(requestedResourceWithoutSharedGPU)
+		ni.Releasing.Sub(resourcesToTrack)
+		ni.Idle.Add(resourcesToTrack)
 	case pod_status.Pipelined:
-		ni.Releasing.Add(requestedResourceWithoutSharedGPU)
+		ni.Releasing.Add(resourcesToTrack)
 	default:
-		ni.Idle.Add(requestedResourceWithoutSharedGPU)
+		ni.Idle.Add(resourcesToTrack)
 	}
 
 	ni.removeSharedTaskResources(task)

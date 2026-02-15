@@ -10,6 +10,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -74,6 +75,13 @@ func BuildNodesInfoMap(
 		}
 		if nodeMetadata.MaxTaskNum != nil {
 			nodeInfo.MaxTaskNum = *nodeMetadata.MaxTaskNum
+			nodeInfo.Allocatable.ScalarResources()[v1.ResourcePods] = int64(*nodeMetadata.MaxTaskNum)
+			usedPods := int64(nodeInfo.Used.Get(v1.ResourcePods))
+			availablePods := int64(*nodeMetadata.MaxTaskNum) - usedPods
+			if availablePods < 0 {
+				availablePods = 0
+			}
+			nodeInfo.Idle.ScalarResources()[v1.ResourcePods] = availablePods
 		}
 		nodesInfoMap[nodeName] = nodeInfo
 	}
@@ -132,11 +140,17 @@ func buildNodeInfo(
 		migEnabledLabel = "true"
 	}
 
-	nodeResource := resources_fake.BuildResourceList(&cpuMilliOverallVal, &memoryOverallVal, &nodeGpuCount,
+	nodeResource := *resources_fake.BuildResourceList(&cpuMilliOverallVal, &memoryOverallVal, &nodeGpuCount,
 		nodeMetadata.MigInstances)
-	nodeResourceAllocatable := resources_fake.BuildResourceList(&cpuMilliAllocatableVal, &memoryAllocatableVal,
+	if _, found := nodeResource[v1.ResourcePods]; !found {
+		nodeResource[v1.ResourcePods] = resource.MustParse("110")
+	}
+	nodeResourceAllocatable := *resources_fake.BuildResourceList(&cpuMilliAllocatableVal, &memoryAllocatableVal,
 		&nodeAllocatableGPUs, nodeMetadata.MigInstances)
-	node := BuildNode(nodeName, nodeResource, nodeResourceAllocatable)
+	if _, found := nodeResourceAllocatable[v1.ResourcePods]; !found {
+		nodeResourceAllocatable[v1.ResourcePods] = resource.MustParse("110")
+	}
+	node := BuildNode(nodeName, &nodeResource, &nodeResourceAllocatable)
 	node.Labels = map[string]string{
 		commonconstants.GpuCountLabel:    nodeGpuCount,
 		node_info.GpuMemoryLabel:         strconv.Itoa(node_info.DefaultGpuMemory),
