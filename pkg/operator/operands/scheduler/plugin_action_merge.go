@@ -6,7 +6,6 @@ package scheduler
 import (
 	"cmp"
 	"slices"
-	"strings"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
@@ -33,7 +32,7 @@ func resolvePlugins(plugins map[string]kaiv1.PluginConfig) []conf.PluginOption {
 	return result
 }
 
-func resolveActions(actions map[string]kaiv1.ActionConfig) (string, []string) {
+func resolveActions(actions map[string]kaiv1.ActionConfig) []string {
 	var names []string
 	for name, cfg := range actions {
 		if *cfg.Enabled {
@@ -48,5 +47,5 @@ func resolveActions(actions map[string]kaiv1.ActionConfig) (string, []string) {
 		return cmp.Compare(a, b)
 	})
 
-	return strings.Join(names, ", "), names
+	return names
 }

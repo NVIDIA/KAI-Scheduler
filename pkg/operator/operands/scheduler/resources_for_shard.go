@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/pflag"
 	"golang.org/x/exp/slices"
@@ -128,11 +129,11 @@ func (s *SchedulerForShard) configMapForShard(
 	innerConfig := conf.SchedulerConfiguration{}
 
 	innerConfig.Tiers = []conf.Tier{{Plugins: resolvePlugins(shard.Spec.Plugins)}}
-	actionsStr, actionNames := resolveActions(shard.Spec.Actions)
-	innerConfig.Actions = actionsStr
+	actions := resolveActions(shard.Spec.Actions)
+	innerConfig.Actions = strings.Join(actions, ", ")
 
 	if len(shard.Spec.QueueDepthPerAction) > 0 {
-		if err = validateJobDepthMap(shard, innerConfig, actionNames); err != nil {
+		if err = validateJobDepthMap(shard, innerConfig, actions); err != nil {
 			return nil, err
 		}
 		// Set the validated map to the scheduler config
