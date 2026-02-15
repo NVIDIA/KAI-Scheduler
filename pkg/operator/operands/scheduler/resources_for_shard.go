@@ -127,13 +127,8 @@ func (s *SchedulerForShard) configMapForShard(
 	}
 	innerConfig := conf.SchedulerConfiguration{}
 
-	defaultPlugins := buildDefaultPlugins(&shard.Spec)
-	defaultActions := buildDefaultActions(&shard.Spec)
-	mergePluginOverrides(defaultPlugins, shard.Spec.Plugins)
-	mergeActionOverrides(defaultActions, shard.Spec.Actions)
-
-	innerConfig.Tiers = []conf.Tier{{Plugins: resolvePlugins(defaultPlugins)}}
-	actionsStr, actionNames := resolveActions(defaultActions)
+	innerConfig.Tiers = []conf.Tier{{Plugins: resolvePlugins(shard.Spec.Plugins)}}
+	actionsStr, actionNames := resolveActions(shard.Spec.Actions)
 	innerConfig.Actions = actionsStr
 
 	if len(shard.Spec.QueueDepthPerAction) > 0 {
@@ -289,13 +284,6 @@ func buildArgsList(
 
 	return args, nil
 }
-
-func calculatePlacementArguments(placementStrategy *kaiv1.PlacementStrategy) map[string]string {
-	return map[string]string{
-		gpuResource: *placementStrategy.GPU, cpuResource: *placementStrategy.CPU,
-	}
-}
-
 
 func configMapName(config *kaiv1.Config, shard *kaiv1.SchedulingShard) string {
 	return fmt.Sprintf("%s-%s", *config.Spec.Global.SchedulerName, shard.Name)

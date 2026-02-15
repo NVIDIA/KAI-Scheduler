@@ -166,11 +166,18 @@ tiers:
 		})
 
 		It("Should create different configmap for spread", func(ctx context.Context) {
-			spreadShard := shard.DeepCopy()
-			spreadShard.Spec.PlacementStrategy = &kaiv1.PlacementStrategy{
-				CPU: ptr.To("spread"),
-				GPU: ptr.To("spread"),
+			spreadShard := &kaiv1.SchedulingShard{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: kaiv1.SchedulingShardSpec{
+					PlacementStrategy: &kaiv1.PlacementStrategy{
+						CPU: ptr.To("spread"),
+						GPU: ptr.To("spread"),
+					},
+				},
 			}
+			spreadShard.Spec.SetDefaultsWhereNeeded()
 			s := NewSchedulerForShard(shard)
 			cmObj, err := s.configMapForShard(ctx, fakeClient, kaiConfig, spreadShard)
 			cm := cmObj.(*v1.ConfigMap)

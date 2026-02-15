@@ -17,6 +17,10 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -26,6 +30,7 @@ import (
 
 const (
 	binpackStrategy = "binpack"
+	spreadStrategy  = "spread"
 )
 
 // PluginConfig allows overriding plugin settings in the scheduler configuration.
@@ -121,6 +126,141 @@ type SchedulingShardSpec struct {
 func (s *SchedulingShardSpec) SetDefaultsWhereNeeded() {
 	s.PlacementStrategy = common.SetDefault(s.PlacementStrategy, &PlacementStrategy{})
 	s.PlacementStrategy.SetDefaultWhereNeeded()
+
+	s.setDefaultPlugins()
+	s.setDefaultActions()
+}
+
+// Default priorities preserve the current hardcoded ordering.
+// Higher priority = runs first. Spaced by 100.
+var defaultPluginPriorities = map[string]int{
+	"predicates":       1900,
+	"proportion":       1800,
+	"priority":         1700,
+	"nodeavailability": 1600,
+	"resourcetype":     1500,
+	"podaffinity":      1400,
+	"elastic":          1300,
+	"kubeflow":         1200,
+	"ray":              1100,
+	"subgrouporder":    1000,
+	"taskorder":        900,
+	"nominatednode":    800,
+	"dynamicresources": 700,
+	"minruntime":       600,
+	"topology":         500,
+	"snapshot":         400,
+	"gpupack":          300,
+	"gpuspread":        300,
+	"nodeplacement":    200,
+	"gpusharingorder":  100,
+}
+
+var defaultActionPriorities = map[string]int{
+	"allocate":          500,
+	"consolidation":     400,
+	"reclaim":           300,
+	"preempt":           200,
+	"stalegangeviction": 100,
+}
+
+func (s *SchedulingShardSpec) setDefaultPlugins() {
+	defaults := make(map[string]PluginConfig)
+
+	gpuPlacementStrategy := *s.PlacementStrategy.GPU
+	gpuPluginName := fmt.Sprintf("gpu%s", strings.Replace(gpuPlacementStrategy, "bin", "", 1))
+
+	pluginNames := []string{
+		"predicates", "proportion", "priority", "nodeavailability",
+		"resourcetype", "podaffinity", "elastic", "kubeflow", "ray",
+		"subgrouporder", "taskorder", "nominatednode", "dynamicresources",
+		"minruntime", "topology", "snapshot", "nodeplacement",
+		gpuPluginName,
+	}
+	if gpuPlacementStrategy == binpackStrategy {
+		pluginNames = append(pluginNames, "gpusharingorder")
+	}
+
+	for _, name := range pluginNames {
+		defaults[name] = PluginConfig{
+			Enabled:   ptr.To(true),
+			Priority:  ptr.To(defaultPluginPriorities[name]),
+			Arguments: make(map[string]string),
+		}
+	}
+
+	if s.KValue != nil {
+		defaults["proportion"].Arguments["kValue"] = strconv.FormatFloat(*s.KValue, 'f', -1, 64)
+	}
+
+	if s.MinRuntime != nil {
+		if s.MinRuntime.PreemptMinRuntime != nil {
+			defaults["minruntime"].Arguments["defaultPreemptMinRuntime"] = *s.MinRuntime.PreemptMinRuntime
+		}
+		if s.MinRuntime.ReclaimMinRuntime != nil {
+			defaults["minruntime"].Arguments["defaultReclaimMinRuntime"] = *s.MinRuntime.ReclaimMinRuntime
+		}
+	}
+
+	defaults["nodeplacement"].Arguments["gpu"] = *s.PlacementStrategy.GPU
+	defaults["nodeplacement"].Arguments["cpu"] = *s.PlacementStrategy.CPU
+
+	// Merge user overrides
+	for name, override := range s.Plugins {
+		existing, found := defaults[name]
+		if !found {
+			existing = PluginConfig{Enabled: ptr.To(true), Priority: ptr.To(0)}
+		}
+		if override.Enabled != nil {
+			existing.Enabled = override.Enabled
+		}
+		if override.Priority != nil {
+			existing.Priority = override.Priority
+		}
+		if override.Arguments != nil {
+			existing.Arguments = override.Arguments
+		}
+		defaults[name] = existing
+	}
+
+	s.Plugins = defaults
+}
+
+func (s *SchedulingShardSpec) setDefaultActions() {
+	defaults := make(map[string]ActionConfig)
+
+	actionNames := []string{"allocate", "reclaim", "preempt", "stalegangeviction"}
+	if *s.PlacementStrategy.GPU != spreadStrategy && *s.PlacementStrategy.CPU != spreadStrategy {
+		actionNames = append(actionNames, "consolidation")
+	}
+
+	for _, name := range actionNames {
+		defaults[name] = ActionConfig{
+			Enabled:  ptr.To(true),
+			Priority: ptr.To(defaultActionPriorities[name]),
+		}
+	}
+
+	// Merge user overrides
+	for name, override := range s.Actions {
+		existing, found := defaults[name]
+		if !found {
+			// New action: default priority 0, enabled true
+			existing = ActionConfig{
+				Enabled:  ptr.To(true),
+				Priority: ptr.To(0),
+			}
+		}
+		if override.Enabled != nil {
+			existing.Enabled = override.Enabled
+		}
+		if override.Priority != nil {
+			existing.Priority = override.Priority
+		}
+		defaults[name] = existing
+	}
+
+	s.Actions = defaults
 }
 
 type MinRuntime struct {
