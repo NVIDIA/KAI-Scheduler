@@ -165,7 +165,7 @@ func TestSetDefaultPlugins_DisablePlugin(t *testing.T) {
 			GPU: ptr.To("binpack"),
 			CPU: ptr.To("binpack"),
 		},
-		Plugins: kaiv1.PluginConfigs{
+		Plugins: map[string]kaiv1.PluginConfig{
 			"elastic": {Enabled: ptr.To(false)},
 		},
 	}
@@ -185,7 +185,7 @@ func TestSetDefaultPlugins_ChangePriority(t *testing.T) {
 			GPU: ptr.To("binpack"),
 			CPU: ptr.To("binpack"),
 		},
-		Plugins: kaiv1.PluginConfigs{
+		Plugins: map[string]kaiv1.PluginConfig{
 			"predicates": {Priority: ptr.To(50)},
 		},
 	}
@@ -210,7 +210,7 @@ func TestSetDefaultPlugins_OverrideArguments(t *testing.T) {
 			GPU: ptr.To("binpack"),
 			CPU: ptr.To("binpack"),
 		},
-		Plugins: kaiv1.PluginConfigs{
+		Plugins: map[string]kaiv1.PluginConfig{
 			"proportion": {Arguments: map[string]string{"kValue": "3.0"}},
 		},
 	}
@@ -225,7 +225,7 @@ func TestSetDefaultPlugins_AddCustomPlugin(t *testing.T) {
 			GPU: ptr.To("binpack"),
 			CPU: ptr.To("binpack"),
 		},
-		Plugins: kaiv1.PluginConfigs{
+		Plugins: map[string]kaiv1.PluginConfig{
 			"myplugin": {Priority: ptr.To(1050), Arguments: map[string]string{"key": "val"}},
 		},
 	}
@@ -256,7 +256,7 @@ func TestSetDefaultActions_DisableAction(t *testing.T) {
 			GPU: ptr.To("binpack"),
 			CPU: ptr.To("binpack"),
 		},
-		Actions: kaiv1.ActionConfigs{
+		Actions: map[string]kaiv1.ActionConfig{
 			"preempt": {Enabled: ptr.To(false)},
 		},
 	}
@@ -275,7 +275,7 @@ func TestSetDefaultActions_ChangePriority(t *testing.T) {
 			GPU: ptr.To("binpack"),
 			CPU: ptr.To("binpack"),
 		},
-		Actions: kaiv1.ActionConfigs{
+		Actions: map[string]kaiv1.ActionConfig{
 			"reclaim": {Priority: ptr.To(600)},
 		},
 	}
@@ -300,7 +300,7 @@ func TestSetDefaultActions_AddCustomAction(t *testing.T) {
 			GPU: ptr.To("binpack"),
 			CPU: ptr.To("binpack"),
 		},
-		Actions: kaiv1.ActionConfigs{
+		Actions: map[string]kaiv1.ActionConfig{
 			"myaction": {Priority: ptr.To(250)},
 		},
 	}
@@ -335,7 +335,7 @@ func TestSetDefaultActions_EnableConditionallyAbsentAction(t *testing.T) {
 			GPU: ptr.To("spread"),
 			CPU: ptr.To("binpack"),
 		},
-		Actions: kaiv1.ActionConfigs{
+		Actions: map[string]kaiv1.ActionConfig{
 			"consolidation": {Enabled: ptr.To(true), Priority: ptr.To(400)},
 		},
 	}
@@ -350,7 +350,7 @@ func TestSetDefaultActions_EnableConditionallyAbsentAction(t *testing.T) {
 }
 
 func TestResolvePlugins_Ordering(t *testing.T) {
-	plugins := kaiv1.PluginConfigs{
+	plugins := map[string]kaiv1.PluginConfig{
 		"a": {Enabled: ptr.To(true), Priority: ptr.To(100)},
 		"b": {Enabled: ptr.To(true), Priority: ptr.To(200)},
 		"c": {Enabled: ptr.To(true), Priority: ptr.To(100)},
@@ -366,7 +366,7 @@ func TestResolvePlugins_Ordering(t *testing.T) {
 }
 
 func TestResolveActions_Ordering(t *testing.T) {
-	actions := kaiv1.ActionConfigs{
+	actions := map[string]kaiv1.ActionConfig{
 		"x": {Enabled: ptr.To(true), Priority: ptr.To(50)},
 		"y": {Enabled: ptr.To(true), Priority: ptr.To(100)},
 		"z": {Enabled: ptr.To(true), Priority: ptr.To(50)},
