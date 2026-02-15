@@ -12,7 +12,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 )
 
-func resolvePlugins(plugins kaiv1.PluginConfigs) []conf.PluginOption {
+func resolvePlugins(plugins map[string]kaiv1.PluginConfig) []conf.PluginOption {
 	var result []conf.PluginOption
 	for name, cfg := range plugins {
 		if *cfg.Enabled {
@@ -33,7 +33,7 @@ func resolvePlugins(plugins kaiv1.PluginConfigs) []conf.PluginOption {
 	return result
 }
 
-func resolveActions(actions kaiv1.ActionConfigs) (string, []string) {
+func resolveActions(actions map[string]kaiv1.ActionConfig) (string, []string) {
 	var names []string
 	for name, cfg := range actions {
 		if *cfg.Enabled {
