@@ -326,6 +326,34 @@ spec:
       minMember: 8
 ```
 
+**Critical Limitation with Heterogeneous SubGroups:**
+
+This approach fails for the 2-level hierarchy example with heterogeneous SubGroups (decode + prefill). Consider:
+
+```yaml
+spec:
+  minMember: 2       # Means "any 2 child SubGroups"
+  subGroups:
+    - name: decode
+      minMember: 2   # Means "any 2 child SubGroups"
+    - name: decode-leaders
+      parent: decode
+      minMember: 1   # Means "1 pod"
+    - name: decode-workers
+      parent: decode
+      minMember: 4   # Means "4 pods"
+    - name: prefill
+      minMember: 2   # Means "any 2 child SubGroups"
+    - name: prefill-leaders
+      parent: prefill
+      minMember: 1
+    - name: prefill-workers
+      parent: prefill
+      minMember: 4
+```
+
+The problem: `minMember: 2` at the PodGroup level means "any 2 SubGroups" but the workload requires **specifically** both decode AND prefill (not just any 2). Similarly, `minMember: 2` for decode means "any 2 children" but we need **specifically** both leaders AND workers. There's no way to express "all child SubGroup types must be present" vs "any N child SubGroups" with a single overloaded field.
+
 ### Why This Was Rejected
 
 **1. Ambiguous Semantics**
