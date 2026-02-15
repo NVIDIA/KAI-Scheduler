@@ -11,190 +11,190 @@ import (
 	"k8s.io/utils/ptr"
 
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 )
 
-func TestBuildDefaultPlugins(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultPlugins_Binpack(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	plugins := buildDefaultPlugins(spec)
-
-	// Verify base plugins are present
+	// Verify base plugins are present and enabled
 	for _, name := range []string{
 		"predicates", "proportion", "priority", "nodeavailability",
 		"resourcetype", "podaffinity", "elastic", "kubeflow", "ray",
 		"subgrouporder", "taskorder", "nominatednode", "dynamicresources",
 		"minruntime", "topology", "snapshot",
 	} {
-		p, found := plugins[name]
+		p, found := spec.Plugins[name]
 		require.True(t, found, "expected plugin %s to be present", name)
-		assert.True(t, p.enabled, "expected plugin %s to be enabled", name)
+		assert.True(t, *p.Enabled, "expected plugin %s to be enabled", name)
+		assert.NotNil(t, p.Priority, "expected plugin %s to have priority", name)
 	}
 
 	// Verify gpupack is present for binpack strategy
-	_, found := plugins["gpupack"]
+	_, found := spec.Plugins["gpupack"]
 	assert.True(t, found, "expected gpupack for binpack strategy")
 
 	// Verify gpusharingorder is present for binpack strategy
-	_, found = plugins["gpusharingorder"]
+	_, found = spec.Plugins["gpusharingorder"]
 	assert.True(t, found, "expected gpusharingorder for binpack strategy")
 
 	// Verify nodeplacement has placement arguments
-	np := plugins["nodeplacement"]
-	assert.Equal(t, map[string]string{"gpu": "binpack", "cpu": "binpack"}, np.option.Arguments)
+	np := spec.Plugins["nodeplacement"]
+	assert.Equal(t, map[string]string{"gpu": "binpack", "cpu": "binpack"}, np.Arguments)
 }
 
-func TestBuildDefaultPlugins_SpreadStrategy(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultPlugins_SpreadStrategy(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(spreadStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("spread"),
+			CPU: ptr.To("binpack"),
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	plugins := buildDefaultPlugins(spec)
-
-	// Verify gpuspread is present for spread strategy
-	_, found := plugins["gpuspread"]
+	// Verify gpuspread is present
+	_, found := spec.Plugins["gpuspread"]
 	assert.True(t, found, "expected gpuspread for spread strategy")
 
 	// Verify gpupack is NOT present
-	_, found = plugins["gpupack"]
+	_, found = spec.Plugins["gpupack"]
 	assert.False(t, found, "expected gpupack to be absent for spread strategy")
 
-	// Verify gpusharingorder is NOT present for spread strategy
-	_, found = plugins["gpusharingorder"]
+	// Verify gpusharingorder is NOT present
+	_, found = spec.Plugins["gpusharingorder"]
 	assert.False(t, found, "expected gpusharingorder to be absent for spread strategy")
 }
 
-func TestBuildDefaultPlugins_WithKValue(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultPlugins_WithKValue(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		KValue: ptr.To(1.5),
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	plugins := buildDefaultPlugins(spec)
-	assert.Equal(t, map[string]string{"kValue": "1.5"}, plugins["proportion"].option.Arguments)
+	assert.Equal(t, map[string]string{"kValue": "1.5"}, spec.Plugins["proportion"].Arguments)
 }
 
-func TestBuildDefaultPlugins_WithMinRuntime(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultPlugins_WithMinRuntime(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		MinRuntime: &kaiv1.MinRuntime{
 			PreemptMinRuntime: ptr.To("5m"),
 			ReclaimMinRuntime: ptr.To("10m"),
 		},
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	plugins := buildDefaultPlugins(spec)
 	assert.Equal(t, map[string]string{
 		"defaultPreemptMinRuntime": "5m",
 		"defaultReclaimMinRuntime": "10m",
-	}, plugins["minruntime"].option.Arguments)
+	}, spec.Plugins["minruntime"].Arguments)
 }
 
-func TestBuildDefaultActions(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultActions_Binpack(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	actions := buildDefaultActions(spec)
-
-	// All actions should be present for binpack strategy
 	for _, name := range []string{"allocate", "consolidation", "reclaim", "preempt", "stalegangeviction"} {
-		a, found := actions[name]
+		a, found := spec.Actions[name]
 		require.True(t, found, "expected action %s", name)
-		assert.True(t, a.enabled)
+		assert.True(t, *a.Enabled)
 	}
 }
 
-func TestBuildDefaultActions_SpreadStrategy(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultActions_SpreadStrategy(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(spreadStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("spread"),
+			CPU: ptr.To("binpack"),
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	actions := buildDefaultActions(spec)
-
-	// consolidation should be absent when GPU is spread
-	_, found := actions["consolidation"]
+	_, found := spec.Actions["consolidation"]
 	assert.False(t, found, "consolidation should be absent for spread strategy")
 }
 
-func TestMergePluginOverrides_NoOverrides(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultPlugins_NoOverridesPreservesDefaults(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	defaults := buildDefaultPlugins(spec)
-	originalCount := countEnabled(defaults)
+	enabledCount := 0
+	for _, p := range spec.Plugins {
+		if p.Enabled != nil && *p.Enabled {
+			enabledCount++
+		}
+	}
 
-	mergePluginOverrides(defaults, nil)
+	// Re-run SetDefaults on same spec - should not change count
+	spec.SetDefaultsWhereNeeded()
 
-	assert.Equal(t, originalCount, countEnabled(defaults), "no overrides should not change count")
+	newEnabledCount := 0
+	for _, p := range spec.Plugins {
+		if p.Enabled != nil && *p.Enabled {
+			newEnabledCount++
+		}
+	}
+	assert.Equal(t, enabledCount, newEnabledCount, "re-running defaults should not change count")
 }
 
-func TestMergePluginOverrides_DisablePlugin(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultPlugins_DisablePlugin(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
+		},
+		Plugins: kaiv1.PluginConfigs{
+			"elastic": {Enabled: ptr.To(false)},
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	defaults := buildDefaultPlugins(spec)
-	mergePluginOverrides(defaults, map[string]kaiv1.PluginConfig{
-		"elastic": {Enabled: ptr.To(false)},
-	})
+	assert.False(t, *spec.Plugins["elastic"].Enabled)
 
-	assert.False(t, defaults["elastic"].enabled)
-
-	// Verify it doesn't appear in resolved list
-	resolved := resolvePlugins(defaults)
+	resolved := resolvePlugins(spec.Plugins)
 	for _, p := range resolved {
 		assert.NotEqual(t, "elastic", p.Name, "disabled plugin should not appear in resolved list")
 	}
 }
 
-func TestMergePluginOverrides_ChangePriority(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultPlugins_ChangePriority(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
+		},
+		Plugins: kaiv1.PluginConfigs{
+			"predicates": {Priority: ptr.To(50)},
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	defaults := buildDefaultPlugins(spec)
-	mergePluginOverrides(defaults, map[string]kaiv1.PluginConfig{
-		"predicates": {Priority: ptr.To(50)},
-	})
+	assert.Equal(t, 50, *spec.Plugins["predicates"].Priority)
 
-	assert.Equal(t, 50, defaults["predicates"].priority)
-
-	// predicates should now be near the end
-	resolved := resolvePlugins(defaults)
+	resolved := resolvePlugins(spec.Plugins)
 	lastIdx := len(resolved) - 1
-	// predicates should come after gpusharingorder (priority 100)
-	// but the exact position depends on other plugin priorities
 	for i, p := range resolved {
 		if p.Name == "predicates" {
 			assert.Greater(t, i, lastIdx/2, "predicates with low priority should be in bottom half")
@@ -203,48 +203,41 @@ func TestMergePluginOverrides_ChangePriority(t *testing.T) {
 	}
 }
 
-func TestMergePluginOverrides_OverrideArguments(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultPlugins_OverrideArguments(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		KValue: ptr.To(1.5),
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
+		},
+		Plugins: kaiv1.PluginConfigs{
+			"proportion": {Arguments: map[string]string{"kValue": "3.0"}},
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	defaults := buildDefaultPlugins(spec)
-	// Verify default arguments first
-	assert.Equal(t, "1.5", defaults["proportion"].option.Arguments["kValue"])
-
-	// Override arguments (full replacement)
-	mergePluginOverrides(defaults, map[string]kaiv1.PluginConfig{
-		"proportion": {Arguments: map[string]string{"kValue": "3.0"}},
-	})
-
-	assert.Equal(t, map[string]string{"kValue": "3.0"}, defaults["proportion"].option.Arguments)
+	assert.Equal(t, map[string]string{"kValue": "3.0"}, spec.Plugins["proportion"].Arguments)
 }
 
-func TestMergePluginOverrides_AddCustomPlugin(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultPlugins_AddCustomPlugin(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
+		},
+		Plugins: kaiv1.PluginConfigs{
+			"myplugin": {Priority: ptr.To(1050), Arguments: map[string]string{"key": "val"}},
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	defaults := buildDefaultPlugins(spec)
-	mergePluginOverrides(defaults, map[string]kaiv1.PluginConfig{
-		"myplugin": {Priority: ptr.To(1050), Arguments: map[string]string{"key": "val"}},
-	})
-
-	p, found := defaults["myplugin"]
+	p, found := spec.Plugins["myplugin"]
 	require.True(t, found)
-	assert.True(t, p.enabled)
-	assert.Equal(t, 1050, p.priority)
-	assert.Equal(t, map[string]string{"key": "val"}, p.option.Arguments)
+	assert.True(t, *p.Enabled)
+	assert.Equal(t, 1050, *p.Priority)
+	assert.Equal(t, map[string]string{"key": "val"}, p.Arguments)
 
-	// Verify it appears in resolved list at the right position
-	resolved := resolvePlugins(defaults)
+	resolved := resolvePlugins(spec.Plugins)
 	var mypluginIdx, subgrouporderIdx int
 	for i, p := range resolved {
 		if p.Name == "myplugin" {
@@ -254,45 +247,41 @@ func TestMergePluginOverrides_AddCustomPlugin(t *testing.T) {
 			subgrouporderIdx = i
 		}
 	}
-	// myplugin (1050) should come right after subgrouporder (1000) -> before subgrouporder in the list
 	assert.Less(t, mypluginIdx, subgrouporderIdx, "myplugin should come before subgrouporder")
 }
 
-func TestMergeActionOverrides_DisableAction(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultActions_DisableAction(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
+		},
+		Actions: kaiv1.ActionConfigs{
+			"preempt": {Enabled: ptr.To(false)},
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	defaults := buildDefaultActions(spec)
-	mergeActionOverrides(defaults, map[string]kaiv1.ActionConfig{
-		"preempt": {Enabled: ptr.To(false)},
-	})
+	assert.False(t, *spec.Actions["preempt"].Enabled)
 
-	assert.False(t, defaults["preempt"].enabled)
-
-	actionsStr, actionNames := resolveActions(defaults)
+	actionsStr, actionNames := resolveActions(spec.Actions)
 	assert.NotContains(t, actionNames, "preempt")
 	assert.NotContains(t, actionsStr, "preempt")
 }
 
-func TestMergeActionOverrides_ChangePriority(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultActions_ChangePriority(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
+		},
+		Actions: kaiv1.ActionConfigs{
+			"reclaim": {Priority: ptr.To(600)},
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	defaults := buildDefaultActions(spec)
-	// reclaim (300) -> 600, which moves it above allocate (500)
-	mergeActionOverrides(defaults, map[string]kaiv1.ActionConfig{
-		"reclaim": {Priority: ptr.To(600)},
-	})
-
-	_, actionNames := resolveActions(defaults)
+	_, actionNames := resolveActions(spec.Actions)
 	var reclaimIdx, allocateIdx int
 	for i, name := range actionNames {
 		if name == "reclaim" {
@@ -305,28 +294,26 @@ func TestMergeActionOverrides_ChangePriority(t *testing.T) {
 	assert.Less(t, reclaimIdx, allocateIdx, "reclaim with higher priority should come before allocate")
 }
 
-func TestMergeActionOverrides_AddCustomAction(t *testing.T) {
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultActions_AddCustomAction(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(binpackStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
+		},
+		Actions: kaiv1.ActionConfigs{
+			"myaction": {Priority: ptr.To(250)},
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	defaults := buildDefaultActions(spec)
-	mergeActionOverrides(defaults, map[string]kaiv1.ActionConfig{
-		"myaction": {Priority: ptr.To(250)},
-	})
-
-	a, found := defaults["myaction"]
+	a, found := spec.Actions["myaction"]
 	require.True(t, found)
-	assert.True(t, a.enabled)
-	assert.Equal(t, 250, a.priority)
+	assert.True(t, *a.Enabled)
+	assert.Equal(t, 250, *a.Priority)
 
-	_, actionNames := resolveActions(defaults)
+	_, actionNames := resolveActions(spec.Actions)
 	assert.Contains(t, actionNames, "myaction")
 
-	// myaction (250) should be between reclaim (300) and preempt (200)
 	var myactionIdx, reclaimIdx, preemptIdx int
 	for i, name := range actionNames {
 		switch name {
@@ -342,38 +329,32 @@ func TestMergeActionOverrides_AddCustomAction(t *testing.T) {
 	assert.Less(t, myactionIdx, preemptIdx, "myaction should come before preempt")
 }
 
-func TestMergeActionOverrides_EnableConditionallyAbsentAction(t *testing.T) {
-	// Spread strategy means consolidation is absent by default
-	spec := &kaiv1.SchedulingShardSpec{
+func TestSetDefaultActions_EnableConditionallyAbsentAction(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
-			GPU: ptr.To(spreadStrategy),
-			CPU: ptr.To(binpackStrategy),
+			GPU: ptr.To("spread"),
+			CPU: ptr.To("binpack"),
+		},
+		Actions: kaiv1.ActionConfigs{
+			"consolidation": {Enabled: ptr.To(true), Priority: ptr.To(400)},
 		},
 	}
+	spec.SetDefaultsWhereNeeded()
 
-	defaults := buildDefaultActions(spec)
-	_, found := defaults["consolidation"]
-	require.False(t, found, "consolidation should be absent by default for spread strategy")
-
-	// User explicitly adds consolidation
-	mergeActionOverrides(defaults, map[string]kaiv1.ActionConfig{
-		"consolidation": {Enabled: ptr.To(true), Priority: ptr.To(400)},
-	})
-
-	a, found := defaults["consolidation"]
+	a, found := spec.Actions["consolidation"]
 	require.True(t, found)
-	assert.True(t, a.enabled)
+	assert.True(t, *a.Enabled)
 
-	_, actionNames := resolveActions(defaults)
+	_, actionNames := resolveActions(spec.Actions)
 	assert.Contains(t, actionNames, "consolidation")
 }
 
 func TestResolvePlugins_Ordering(t *testing.T) {
-	plugins := map[string]*pluginWithPriority{
-		"a": {option: conf.PluginOption{Name: "a"}, priority: 100, enabled: true},
-		"b": {option: conf.PluginOption{Name: "b"}, priority: 200, enabled: true},
-		"c": {option: conf.PluginOption{Name: "c"}, priority: 100, enabled: true},
-		"d": {option: conf.PluginOption{Name: "d"}, priority: 300, enabled: false},
+	plugins := kaiv1.PluginConfigs{
+		"a": {Enabled: ptr.To(true), Priority: ptr.To(100)},
+		"b": {Enabled: ptr.To(true), Priority: ptr.To(200)},
+		"c": {Enabled: ptr.To(true), Priority: ptr.To(100)},
+		"d": {Enabled: ptr.To(false), Priority: ptr.To(300)},
 	}
 
 	resolved := resolvePlugins(plugins)
@@ -385,11 +366,11 @@ func TestResolvePlugins_Ordering(t *testing.T) {
 }
 
 func TestResolveActions_Ordering(t *testing.T) {
-	actions := map[string]*actionWithPriority{
-		"x": {name: "x", priority: 50, enabled: true},
-		"y": {name: "y", priority: 100, enabled: true},
-		"z": {name: "z", priority: 50, enabled: true},
-		"w": {name: "w", priority: 200, enabled: false},
+	actions := kaiv1.ActionConfigs{
+		"x": {Enabled: ptr.To(true), Priority: ptr.To(50)},
+		"y": {Enabled: ptr.To(true), Priority: ptr.To(100)},
+		"z": {Enabled: ptr.To(true), Priority: ptr.To(50)},
+		"w": {Enabled: ptr.To(false), Priority: ptr.To(200)},
 	}
 
 	actionsStr, actionNames := resolveActions(actions)
@@ -397,14 +378,4 @@ func TestResolveActions_Ordering(t *testing.T) {
 	require.Len(t, actionNames, 3, "disabled action should be filtered")
 	assert.Equal(t, []string{"y", "x", "z"}, actionNames)
 	assert.Equal(t, "y, x, z", actionsStr)
-}
-
-func countEnabled(plugins map[string]*pluginWithPriority) int {
-	count := 0
-	for _, p := range plugins {
-		if p.enabled {
-			count++
-		}
-	}
-	return count
 }

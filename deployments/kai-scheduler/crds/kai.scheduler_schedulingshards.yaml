@@ -51,7 +51,6 @@ spec:
                     scheduler configuration.
                   properties:
                     enabled:
-                      default: true
                       description: Enabled controls whether this action is active.
                         Defaults to true.
                       type: boolean
@@ -125,7 +124,6 @@ spec:
                         the default arguments for the plugin.
                       type: object
                     enabled:
-                      default: true
                       description: Enabled controls whether this plugin is active.
                         Defaults to true.
                       type: boolean
