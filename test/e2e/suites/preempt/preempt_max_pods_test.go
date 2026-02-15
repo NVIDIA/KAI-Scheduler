@@ -218,4 +218,93 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 			return event.Reason == "Unschedulable" && (strings.Contains(event.Message, "pod number exceeded") || strings.Contains(event.Message, "max pods"))
 		})
 	})
+
+	It("Proper reservation calculation: preempt fraction with fraction that reuses GPU group", Label(labels.ReservationPod), func(ctx context.Context) {
+		// Step 1: Create 3 fractional GPU pods on the same GPU (will use 4 pods: 3 task + 1 reservation)
+		fractionPods := make([]*v1.Pod, 3)
+		for i := range 3 {
+			pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
+			pod.Annotations = map[string]string{
+				constants.GpuFraction: "0.3", // Each takes 30% of GPU
+			}
+			pod.Spec.PriorityClassName = lowPreemptiblePriorityClass
+			pod.Spec.NodeSelector = map[string]string{
+				constant.NodeNamePodLabelName: targetNode,
+			}
+			createdPod, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
+			Expect(err).To(Succeed())
+			fractionPods[i] = createdPod
+		}
+
+		// Wait for all fraction pods to be scheduled
+		for _, pod := range fractionPods {
+			wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
+		}
+
+		// Step 2: Fill remaining capacity with CPU pods (maxPods - 4 fraction/reservation pods)
+		_, _, err := fillers.FillAllNodesWithJobs(ctx, testCtx, testCtx.Queues[0],
+			v1.ResourceRequirements{
+				Requests: map[v1.ResourceName]resource.Quantity{
+					v1.ResourceCPU: resource.MustParse("10m"),
+				},
+			},
+			nil, nil, lowPreemptiblePriorityClass, targetNode)
+		Expect(err).To(Succeed())
+
+		// Verify node is at max pods
+		podList, err := testCtx.KubeClientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+			FieldSelector: fmt.Sprintf("spec.nodeName=%s,status.phase!=Failed,status.phase!=Succeeded", targetNode),
+		})
+		Expect(err).To(Succeed())
+		node, err := testCtx.KubeClientset.CoreV1().Nodes().Get(ctx, targetNode, metav1.GetOptions{})
+		Expect(err).To(Succeed())
+		maxPods := int(node.Status.Allocatable.Pods().Value())
+		Expect(len(podList.Items)).To(Equal(maxPods), "Node should be at max pod capacity")
+
+		// Step 3: Create high-priority fractional GPU pod that can reuse the same GPU group
+		// This should succeed by preempting one of the low-priority fraction pods
+		// Result: still maxPods total (3 fraction pods + 1 reservation + CPU fillers)
+		highPriorityFractionPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
+		highPriorityFractionPod.Annotations = map[string]string{
+			constants.GpuFraction: "0.3", // Same size, can fit on same GPU
+		}
+		highPriorityFractionPod.Spec.PriorityClassName = highPreemptiblePriorityClass
+		highPriorityFractionPod.Spec.NodeSelector = map[string]string{
+			constant.NodeNamePodLabelName: targetNode,
+		}
+
+		_, err = rd.CreatePod(ctx, testCtx.KubeClientset, highPriorityFractionPod)
+		Expect(err).To(Succeed())
+
+		// Wait for preemption and scheduling
+		wait.ForPodScheduled(ctx, testCtx.ControllerClient, highPriorityFractionPod)
+
+		// Verify high-priority fraction pod is scheduled on target node
+		scheduledPod, err := testCtx.KubeClientset.CoreV1().Pods(highPriorityFractionPod.Namespace).
+			Get(ctx, highPriorityFractionPod.Name, metav1.GetOptions{})
+		Expect(err).To(Succeed())
+		Expect(scheduledPod.Spec.NodeName).To(Equal(targetNode))
+
+		// Verify one of the low-priority fraction pods was preempted
+		remainingLowPriorityFractions := 0
+		for _, pod := range fractionPods {
+			pod, err := testCtx.KubeClientset.CoreV1().Pods(pod.Namespace).
+				Get(ctx, pod.Name, metav1.GetOptions{})
+			if err == nil && pod.Status.Phase == v1.PodRunning {
+				remainingLowPriorityFractions++
+			}
+		}
+		Expect(remainingLowPriorityFractions).To(Equal(2), "Exactly one low-priority fraction pod should be preempted")
+
+		// Verify total pod count is still at max
+		node2, err := testCtx.KubeClientset.CoreV1().Nodes().Get(ctx, targetNode, metav1.GetOptions{})
+		Expect(err).To(Succeed())
+		maxPods2 := int(node2.Status.Allocatable.Pods().Value())
+
+		finalPodList, err := testCtx.KubeClientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+			FieldSelector: fmt.Sprintf("spec.nodeName=%s,status.phase!=Failed,status.phase!=Succeeded", targetNode),
+		})
+		Expect(err).To(Succeed())
+		Expect(len(finalPodList.Items)).To(BeNumerically("<=", maxPods2), "Should not exceed max pods")
+	})
 })
