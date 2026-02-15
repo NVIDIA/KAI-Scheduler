@@ -61,13 +61,15 @@ func TestSetDefaultPlugins_SpreadStrategy(t *testing.T) {
 	_, found := spec.Plugins["gpuspread"]
 	assert.True(t, found, "expected gpuspread for spread strategy")
 
-	// Verify gpupack is NOT present
+	// Verify gpupack is NOT present (only the active GPU plugin is added)
 	_, found = spec.Plugins["gpupack"]
 	assert.False(t, found, "expected gpupack to be absent for spread strategy")
 
-	// Verify gpusharingorder is NOT present
-	_, found = spec.Plugins["gpusharingorder"]
-	assert.False(t, found, "expected gpusharingorder to be absent for spread strategy")
+	// Verify gpusharingorder is present but disabled for spread strategy
+	gso, found := spec.Plugins["gpusharingorder"]
+	assert.True(t, found, "expected gpusharingorder to be present")
+	assert.False(t, *gso.Enabled, "expected gpusharingorder to be disabled for spread strategy")
+	assert.Equal(t, 100, *gso.Priority, "expected gpusharingorder to have default priority")
 }
 
 func TestSetDefaultPlugins_WithKValue(t *testing.T) {
@@ -127,8 +129,10 @@ func TestSetDefaultActions_SpreadStrategy(t *testing.T) {
 	}
 	spec.SetDefaultsWhereNeeded()
 
-	_, found := spec.Actions["consolidation"]
-	assert.False(t, found, "consolidation should be absent for spread strategy")
+	a, found := spec.Actions["consolidation"]
+	require.True(t, found, "consolidation should be present")
+	assert.False(t, *a.Enabled, "consolidation should be disabled for spread strategy")
+	assert.Equal(t, 400, *a.Priority, "consolidation should have default priority")
 }
 
 func TestSetDefaultPlugins_NoOverridesPreservesDefaults(t *testing.T) {
@@ -264,9 +268,8 @@ func TestSetDefaultActions_DisableAction(t *testing.T) {
 
 	assert.False(t, *spec.Actions["preempt"].Enabled)
 
-	actionsStr, actionNames := resolveActions(spec.Actions)
+	actionNames := resolveActions(spec.Actions)
 	assert.NotContains(t, actionNames, "preempt")
-	assert.NotContains(t, actionsStr, "preempt")
 }
 
 func TestSetDefaultActions_ChangePriority(t *testing.T) {
@@ -281,7 +284,7 @@ func TestSetDefaultActions_ChangePriority(t *testing.T) {
 	}
 	spec.SetDefaultsWhereNeeded()
 
-	_, actionNames := resolveActions(spec.Actions)
+	actionNames := resolveActions(spec.Actions)
 	var reclaimIdx, allocateIdx int
 	for i, name := range actionNames {
 		if name == "reclaim" {
@@ -311,7 +314,7 @@ func TestSetDefaultActions_AddCustomAction(t *testing.T) {
 	assert.True(t, *a.Enabled)
 	assert.Equal(t, 250, *a.Priority)
 
-	_, actionNames := resolveActions(spec.Actions)
+	actionNames := resolveActions(spec.Actions)
 	assert.Contains(t, actionNames, "myaction")
 
 	var myactionIdx, reclaimIdx, preemptIdx int
@@ -329,14 +332,14 @@ func TestSetDefaultActions_AddCustomAction(t *testing.T) {
 	assert.Less(t, myactionIdx, preemptIdx, "myaction should come before preempt")
 }
 
-func TestSetDefaultActions_EnableConditionallyAbsentAction(t *testing.T) {
+func TestSetDefaultActions_EnableConsolidationOnSpreadWithoutPriority(t *testing.T) {
 	spec := kaiv1.SchedulingShardSpec{
 		PlacementStrategy: &kaiv1.PlacementStrategy{
 			GPU: ptr.To("spread"),
 			CPU: ptr.To("binpack"),
 		},
 		Actions: map[string]kaiv1.ActionConfig{
-			"consolidation": {Enabled: ptr.To(true), Priority: ptr.To(400)},
+			"consolidation": {Enabled: ptr.To(true)},
 		},
 	}
 	spec.SetDefaultsWhereNeeded()
@@ -344,9 +347,55 @@ func TestSetDefaultActions_EnableConditionallyAbsentAction(t *testing.T) {
 	a, found := spec.Actions["consolidation"]
 	require.True(t, found)
 	assert.True(t, *a.Enabled)
+	assert.Equal(t, 400, *a.Priority, "should inherit default priority")
 
-	_, actionNames := resolveActions(spec.Actions)
+	actionNames := resolveActions(spec.Actions)
 	assert.Contains(t, actionNames, "consolidation")
+}
+
+func TestSetDefaultPlugins_EnableGpuSharingOrderOnSpreadWithoutPriority(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
+		PlacementStrategy: &kaiv1.PlacementStrategy{
+			GPU: ptr.To("spread"),
+			CPU: ptr.To("binpack"),
+		},
+		Plugins: map[string]kaiv1.PluginConfig{
+			"gpusharingorder": {Enabled: ptr.To(true)},
+		},
+	}
+	spec.SetDefaultsWhereNeeded()
+
+	p, found := spec.Plugins["gpusharingorder"]
+	require.True(t, found)
+	assert.True(t, *p.Enabled)
+	assert.Equal(t, 100, *p.Priority, "should inherit default priority")
+
+	resolved := resolvePlugins(spec.Plugins)
+	var names []string
+	for _, rp := range resolved {
+		names = append(names, rp.Name)
+	}
+	assert.Contains(t, names, "gpusharingorder")
+}
+
+func TestSetDefaultActions_DisableConsolidationOnBinpack(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
+		PlacementStrategy: &kaiv1.PlacementStrategy{
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
+		},
+		Actions: map[string]kaiv1.ActionConfig{
+			"consolidation": {Enabled: ptr.To(false)},
+		},
+	}
+	spec.SetDefaultsWhereNeeded()
+
+	a, found := spec.Actions["consolidation"]
+	require.True(t, found)
+	assert.False(t, *a.Enabled)
+
+	actionNames := resolveActions(spec.Actions)
+	assert.NotContains(t, actionNames, "consolidation")
 }
 
 func TestResolvePlugins_Ordering(t *testing.T) {
@@ -373,9 +422,8 @@ func TestResolveActions_Ordering(t *testing.T) {
 		"w": {Enabled: ptr.To(false), Priority: ptr.To(200)},
 	}
 
-	actionsStr, actionNames := resolveActions(actions)
+	actionNames := resolveActions(actions)
 
 	require.Len(t, actionNames, 3, "disabled action should be filtered")
 	assert.Equal(t, []string{"y", "x", "z"}, actionNames)
-	assert.Equal(t, "y, x, z", actionsStr)
 }
