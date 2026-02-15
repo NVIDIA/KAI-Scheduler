@@ -28,6 +28,35 @@ const (
 	binpackStrategy = "binpack"
 )
 
+// PluginConfig allows overriding plugin settings in the scheduler configuration.
+type PluginConfig struct {
+	// Enabled controls whether this plugin is active. Default is true for built-in plugins.
+	// +kubebuilder:validation:Optional
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Priority controls the ordering of this plugin. Higher values run first.
+	// Built-in plugins use priorities in the range 0-10000, spaced by 100.
+	// +kubebuilder:validation:Optional
+	Priority *int `json:"priority,omitempty"`
+
+	// Arguments are key-value pairs passed to the plugin. When specified, they fully replace
+	// the default arguments for the plugin.
+	// +kubebuilder:validation:Optional
+	Arguments map[string]string `json:"arguments,omitempty"`
+}
+
+// ActionConfig allows overriding action settings in the scheduler configuration.
+type ActionConfig struct {
+	// Enabled controls whether this action is active. Default is true for built-in actions.
+	// +kubebuilder:validation:Optional
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Priority controls the ordering of this action. Higher values run first.
+	// Built-in actions use priorities in the range 0-10000, spaced by 100.
+	// +kubebuilder:validation:Optional
+	Priority *int `json:"priority,omitempty"`
+}
+
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // SchedulingShardSpec defines the desired state of SchedulingShard
@@ -67,6 +96,18 @@ type SchedulingShardSpec struct {
 	// UsageDBConfig defines configuration for the usage db client
 	// +kubebuilder:validation:Optional
 	UsageDBConfig *usagedbapi.UsageDBConfig `yaml:"usageDBConfig,omitempty" json:"usageDBConfig,omitempty"`
+
+	// Plugins allows overriding plugin configuration. Keys are plugin names.
+	// Built-in plugins can be disabled, reordered, or have their arguments changed.
+	// New plugins can be added by specifying a name not in the default set.
+	// +kubebuilder:validation:Optional
+	Plugins map[string]PluginConfig `json:"plugins,omitempty"`
+
+	// Actions allows overriding action configuration. Keys are action names.
+	// Built-in actions can be disabled or reordered.
+	// New actions can be added by specifying a name not in the default set.
+	// +kubebuilder:validation:Optional
+	Actions map[string]ActionConfig `json:"actions,omitempty"`
 }
 
 func (s *SchedulingShardSpec) SetDefaultsWhereNeeded() {
