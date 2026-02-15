@@ -297,3 +297,87 @@ spec:
 5. **Backward Compatibility**: Existing PodGroups continue to work unchanged
 
 ---
+
+## Appendix: Alternative Design Considered
+
+### Reusing `minMember` for SubGroup Counting
+
+**Approach:**
+Instead of introducing a new `minSubGroup` field, overload the existing `minMember` field to represent minimum SubGroup requirements when the PodGroup/SubGroup has child SubGroups. The semantics would change based on hierarchy level:
+- **Leaf SubGroups**: `minMember` represents minimum number of pods
+- **Mid-level SubGroups/PodGroups**: `minMember` represents minimum number of child SubGroups
+
+**Example:**
+```yaml
+apiVersion: scheduling.run.ai/v2alpha2
+kind: PodGroup
+metadata:
+  name: inference-service
+spec:
+  minMember: 3       # Reused: means "3 child SubGroups" (not pods)
+  subGroups:
+    - name: prefill-0
+      minMember: 8   # Still means "8 pods" (leaf level)
+    - name: prefill-1
+      minMember: 8
+    - name: prefill-2
+      minMember: 8
+    - name: prefill-3
+      minMember: 8
+```
+
+### Why This Was Rejected
+
+**1. Ambiguous Semantics**
+The same field name (`minMember`) would have completely different meanings depending on context:
+- At the PodGroup level: "minimum child SubGroups"
+- At the SubGroup level: "minimum pods" OR "minimum child SubGroups" (depends on whether it has children)
+
+This context-dependent behavior is confusing for users and error-prone. When reading a PodGroup YAML, it's not immediately clear what `minMember: 3` means without inspecting the SubGroup structure.
+
+**2. Loss of Future Flexibility**
+By making `minMember` and `minSubGroup` mutually exclusive but separate fields, we preserve the option for future use cases that might need both constraints simultaneously. For example:
+- A mid-level SubGroup requiring "at least 3 child SubGroups AND at least 20 total descendant pods"
+- Complex elasticity rules that operate at multiple granularities
+
+Reusing `minMember` would permanently foreclose these possibilities.
+
+**3. Difficult Validation and Error Messages**
+With overloaded semantics, validation logic becomes more complex:
+- Cannot validate `minMember` value without knowing the SubGroup structure
+- Error messages become unclear: "minMember exceeds limit" - limit of what? Pods or SubGroups?
+- Harder to provide clear, actionable feedback to users
+
+**4. Status Reporting Confusion**
+PodGroup status would need to carefully disambiguate which interpretation of `minMember` applies:
+```yaml
+status:
+  phase: Running
+  minMember: 3      # Does this mean 3 pods or 3 SubGroups are ready?
+```
+
+**5. Code Maintainability**
+Scheduler logic would need constant context-awareness when interpreting `minMember`:
+```go
+// Confusing: same field, different meanings
+if hasChildren(sg) {
+    // minMember means SubGroup count
+    requiredCount = sg.MinMember
+} else {
+    // minMember means pod count
+    requiredPods = sg.MinMember
+}
+```
+
+### Chosen Approach Advantages
+
+The selected design with separate `minSubGroup` and `minMember` fields provides:
+- **Self-documenting**: Field name clearly indicates what is being counted
+- **Type safety**: Different fields prevent accidental misuse
+- **Clear validation**: Each field has distinct, unambiguous validation rules
+- **Better UX**: Users immediately understand what each field controls
+- **Future-proof**: Keeps both dimensions available for advanced use cases
+
+While this approach adds one additional field to the API, the clarity and maintainability benefits significantly outweigh the minor increase in API surface area.
+
+---
