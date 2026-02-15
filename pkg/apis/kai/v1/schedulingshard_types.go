@@ -189,6 +189,13 @@ func (s *SchedulingShardSpec) setDefaultPlugins() {
 		}
 	}
 
+	isGpuSharingOrderEnabled := gpuPlacementStrategy == binpackStrategy
+	defaults["gpusharingorder"] = PluginConfig{
+		Enabled:   ptr.To(isGpuSharingOrderEnabled),
+		Priority:  ptr.To(defaultPluginPriorities["gpusharingorder"]),
+		Arguments: make(map[string]string),
+	}
+
 	if s.KValue != nil {
 		defaults["proportion"].Arguments["kValue"] = strconv.FormatFloat(*s.KValue, 'f', -1, 64)
 	}
@@ -229,16 +236,16 @@ func (s *SchedulingShardSpec) setDefaultPlugins() {
 func (s *SchedulingShardSpec) setDefaultActions() {
 	defaults := make(map[string]ActionConfig)
 
-	actionNames := []string{"allocate", "reclaim", "preempt", "stalegangeviction"}
-	if *s.PlacementStrategy.GPU != spreadStrategy && *s.PlacementStrategy.CPU != spreadStrategy {
-		actionNames = append(actionNames, "consolidation")
-	}
-
-	for _, name := range actionNames {
+	for _, name := range []string{"allocate", "reclaim", "preempt", "stalegangeviction"} {
 		defaults[name] = ActionConfig{
 			Enabled:  ptr.To(true),
 			Priority: ptr.To(defaultActionPriorities[name]),
 		}
+	}
+	isConsolidationEnabled := *s.PlacementStrategy.GPU != spreadStrategy && *s.PlacementStrategy.CPU != spreadStrategy
+	defaults["consolidation"] = ActionConfig{
+		Enabled:  ptr.To(isConsolidationEnabled),
+		Priority: ptr.To(defaultActionPriorities["consolidation"]),
 	}
 
 	// Merge user overrides
