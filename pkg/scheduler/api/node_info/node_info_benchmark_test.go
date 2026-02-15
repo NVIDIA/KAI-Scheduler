@@ -78,22 +78,22 @@ func BenchmarkIsTaskAllocatable(b *testing.B) {
 		},
 		{
 			name:      "custom-resources-1-with-1-missing",
-			setupNode: func(ctrl *gomock.Controller) *node_info.NodeInfo { return createNodeWithoutCustomResources(ctrl, 0) },
+			setupNode: func(ctrl *gomock.Controller) *node_info.NodeInfo { return createNodeWithCustomResources(ctrl, 0) },
 			setupTask: func() *pod_info.PodInfo { return createTaskWithCustomResources(1) },
 		},
 		{
 			name:      "custom-resources-2-with-1-missing",
-			setupNode: func(ctrl *gomock.Controller) *node_info.NodeInfo { return createNodeWithoutCustomResources(ctrl, 1) },
+			setupNode: func(ctrl *gomock.Controller) *node_info.NodeInfo { return createNodeWithCustomResources(ctrl, 1) },
 			setupTask: func() *pod_info.PodInfo { return createTaskWithCustomResources(2) },
 		},
 		{
 			name:      "custom-resources-5-with-1-missing",
-			setupNode: func(ctrl *gomock.Controller) *node_info.NodeInfo { return createNodeWithoutCustomResources(ctrl, 4) },
+			setupNode: func(ctrl *gomock.Controller) *node_info.NodeInfo { return createNodeWithCustomResources(ctrl, 4) },
 			setupTask: func() *pod_info.PodInfo { return createTaskWithCustomResources(5) },
 		},
 		{
 			name:      "custom-resources-10-with-1-missing",
-			setupNode: func(ctrl *gomock.Controller) *node_info.NodeInfo { return createNodeWithoutCustomResources(ctrl, 9) },
+			setupNode: func(ctrl *gomock.Controller) *node_info.NodeInfo { return createNodeWithCustomResources(ctrl, 9) },
 			setupTask: func() *pod_info.PodInfo { return createTaskWithCustomResources(10) },
 		},
 	}
@@ -187,17 +187,6 @@ func createNodeWithCustomResources(ctrl *gomock.Controller, numResources int) *n
 		Status: v1.NodeStatus{
 			Capacity:    resourceList,
 			Allocatable: resourceList,
-		},
-	}
-	return buildNodeInfoFromK8sNode(k8sNode, ctrl)
-}
-
-func createNodeWithoutCustomResources(ctrl *gomock.Controller, numResources int) *node_info.NodeInfo {
-	k8sNode := &v1.Node{
-		ObjectMeta: metav1.ObjectMeta{Name: "node-no-custom"},
-		Status: v1.NodeStatus{
-			Capacity:    common_info.BuildResourceList("8", "16G"),
-			Allocatable: common_info.BuildResourceList("8", "16G"),
 		},
 	}
 	return buildNodeInfoFromK8sNode(k8sNode, ctrl)
