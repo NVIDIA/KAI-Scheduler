@@ -17,9 +17,7 @@ limitations under the License.
 package v1
 
 import (
-	"fmt"
 	"strconv"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -167,34 +165,18 @@ var defaultActionPriorities = map[string]int{
 func (s *SchedulingShardSpec) setDefaultPlugins() {
 	defaults := make(map[string]PluginConfig)
 
-	gpuPlacementStrategy := *s.PlacementStrategy.GPU
-	gpuPluginName := fmt.Sprintf("gpu%s", strings.Replace(gpuPlacementStrategy, "bin", "", 1))
-
-	pluginNames := []string{
-		"predicates", "proportion", "priority", "nodeavailability",
-		"resourcetype", "podaffinity", "elastic", "kubeflow", "ray",
-		"subgrouporder", "taskorder", "nominatednode", "dynamicresources",
-		"minruntime", "topology", "snapshot", "nodeplacement",
-		gpuPluginName,
-	}
-	if gpuPlacementStrategy == binpackStrategy {
-		pluginNames = append(pluginNames, "gpusharingorder")
-	}
-
-	for _, name := range pluginNames {
-		defaults[name] = PluginConfig{
+	for pName, pPriority := range defaultPluginPriorities {
+		defaults[pName] = PluginConfig{
 			Enabled:   ptr.To(true),
-			Priority:  ptr.To(defaultPluginPriorities[name]),
+			Priority:  ptr.To(pPriority),
 			Arguments: make(map[string]string),
 		}
 	}
 
-	isGpuSharingOrderEnabled := gpuPlacementStrategy == binpackStrategy
-	defaults["gpusharingorder"] = PluginConfig{
-		Enabled:   ptr.To(isGpuSharingOrderEnabled),
-		Priority:  ptr.To(defaultPluginPriorities["gpusharingorder"]),
-		Arguments: make(map[string]string),
-	}
+	isGpuBinpackStrategy := *s.PlacementStrategy.GPU == binpackStrategy
+	updateMap(defaults, "gpusharingorder", func(o *PluginConfig) { o.Enabled = ptr.To(isGpuBinpackStrategy) })
+	updateMap(defaults, "gpupack", func(o *PluginConfig) { o.Enabled = ptr.To(isGpuBinpackStrategy) })
+	updateMap(defaults, "gpuspread", func(o *PluginConfig) { o.Enabled = ptr.To(!isGpuBinpackStrategy) })
 
 	if s.KValue != nil {
 		defaults["proportion"].Arguments["kValue"] = strconv.FormatFloat(*s.KValue, 'f', -1, 64)
@@ -236,17 +218,15 @@ func (s *SchedulingShardSpec) setDefaultPlugins() {
 func (s *SchedulingShardSpec) setDefaultActions() {
 	defaults := make(map[string]ActionConfig)
 
-	for _, name := range []string{"allocate", "reclaim", "preempt", "stalegangeviction"} {
-		defaults[name] = ActionConfig{
+	for aName, aPriority := range defaultActionPriorities {
+		defaults[aName] = ActionConfig{
 			Enabled:  ptr.To(true),
-			Priority: ptr.To(defaultActionPriorities[name]),
+			Priority: ptr.To(aPriority),
 		}
 	}
+
 	isConsolidationEnabled := *s.PlacementStrategy.GPU != spreadStrategy && *s.PlacementStrategy.CPU != spreadStrategy
-	defaults["consolidation"] = ActionConfig{
-		Enabled:  ptr.To(isConsolidationEnabled),
-		Priority: ptr.To(defaultActionPriorities["consolidation"]),
-	}
+	updateMap(defaults, "consolidation", func(o *ActionConfig) { o.Enabled = ptr.To(isConsolidationEnabled) })
 
 	// Merge user overrides
 	for name, override := range s.Actions {
