@@ -52,9 +52,9 @@ var defaultPluginPriorities = map[string]int{
 
 var defaultActionPriorities = map[string]int{
 	"allocate":          500,
-	"consolidation":    400,
-	"reclaim":          300,
-	"preempt":          200,
+	"consolidation":     400,
+	"reclaim":           300,
+	"preempt":           200,
 	"stalegangeviction": 100,
 }
 
