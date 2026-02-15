@@ -2,11 +2,16 @@
 
 ## Context
 
-When preempting to schedule a high-priority fractional GPU pod on a node at max capacity, the scheduler incorrectly allows victim pods to be re-allocated (pipelined) during simulation, which cancels their eviction. This results in no actual preemption occurring, leaving the high-priority pod unscheduled.
+When preempting to schedule a high-priority fractional GPU pod on a node at max capacity, the scheduler doesn't track an expected reservation pod for virtually pipelined fraction pods, allowing other victim pods in the simulation to be re-allocated (pipelined), which cancels their eviction. This results in no actual preemption occurring, leaving the high-priority pod unscheduled.
 
 **Test case**: `test/e2e/suites/preempt/preempt_max_pods_test.go` - "Proper reservation calculation: preempt fraction with fraction that reuses GPU group"
 
-**Expected behavior**: Pod `kai-gmhgqgutdo/qzgbekguul` (priority 50) should preempt one of the existing fraction pods (priority 49) and reuse their GPU group's reservation pod.
+**Expected behavior**: Pod `kai-gmhgqgutdo/qzgbekguul` (priority 50) should either:
+- Preempt one of the existing fraction pods (priority 49) and reuse their GPU group's reservation pod (the original intention of the test)
+- Correctly simulate preemption of a cpu-only filler pod: during simulation:
+   - Filler pod is evicted
+   - Pending fraction pod is able to get scheduled, including the max pods predicate
+   - Filler pod fails to get re-allocated to the node, since the scheduler tracks the expected reservation pod that will be created
 
 **Actual behavior**: The scheduler thinks it found a valid scenario but never actually evicts anything.
 
@@ -17,7 +22,7 @@ When preempting to schedule a high-priority fractional GPU pod on a node at max 
 1. **Node state**: 109/110 pods (maxPods - 1), including 3 fraction pods sharing 1 reservation pod
 2. **Preemption starts**: Scheduler evicts a low-priority CPU filler pod → creates 2 available pod slots
 3. **Fraction pod allocation**: Scheduler allocates the new high-priority fraction pod
-   - Scheduler detects it needs to create a **new** GPU group (incorrectly - it should reuse existing)
+   - Scheduler detects it needs to create a **new** GPU group
    - This requires 1 task pod + 1 reservation pod = 2 slots total
    - After allocating task pod: 1 slot remains available
 4. **Pipelining phase**: Evicted filler pod tries to re-allocate
@@ -45,7 +50,7 @@ It doesn't see:
 Track pending reservation pod creation in the `Statement` object. When the statement commits, create **virtual reservation pods** on the node that:
 1. Count towards the node's pod capacity limit
 2. Consume no other resources (CPU, GPU, memory)
-3. Persist for the entire scheduling session
+3. Persist for the rest of the scheduling session
 4. Prevent other pods from incorrectly pipelining back
 
 ### How It Solves The Issue
