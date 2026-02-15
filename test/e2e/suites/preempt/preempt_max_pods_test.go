@@ -222,7 +222,7 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 	It("Proper reservation calculation: preempt fraction with fraction that reuses GPU group", Label(labels.ReservationPod), func(ctx context.Context) {
 		// Step 1: Create 3 fractional GPU pods on the same GPU (will use 4 pods: 3 task + 1 reservation)
 		fractionPods := make([]*v1.Pod, 3)
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{})
 			pod.Annotations = map[string]string{
 				constants.GpuFraction: "0.3", // Each takes 30% of GPU

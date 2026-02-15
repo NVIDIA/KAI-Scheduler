@@ -1253,3 +1253,154 @@ func TestIsCPUOnlyNode_DRA(t *testing.T) {
 	}
 	assert.True(t, cpuOnlyNode.IsCPUOnlyNode(), "node without GPUs and without HasDRAGPUs should be CPU-only")
 }
+
+func TestResourceReservationPodConsumesMaxPods(t *testing.T) {
+	tests := []struct {
+		name              string
+		node              *v1.Node
+		pods              []*v1.Pod
+		expectedIdle      *resource_info.Resource
+		expectedUsed      *resource_info.Resource
+		expectedReleasing *resource_info.Resource
+	}{
+		{
+			name: "resource reservation pod consumes pod slot, CPU, memory but not GPU",
+			node: common_info.BuildNode("n1", common_info.BuildResourceListWithGPUAndPods("8000m", "10G", "2", "110")),
+			pods: []*v1.Pod{
+				func() *v1.Pod {
+					pod := common_info.BuildPod("c1", "reservation-pod", "n1", v1.PodRunning,
+						common_info.BuildResourceListWithGPU("1000m", "1G", "1"),
+						[]metav1.OwnerReference{}, map[string]string{
+							commonconstants.AppLabelName: "kai-resource-reservation",
+						}, map[string]string{
+							commonconstants.PodGroupAnnotationForPod: common_info.FakePogGroupId,
+						})
+					return pod
+				}(),
+			},
+			expectedIdle: func() *resource_info.Resource {
+				// Idle should have: original - (cpu, memory, pods) but GPU unchanged
+				r := common_info.BuildResourceWithGpu("7000m", "9G", "2", "109")
+				return r
+			}(),
+			expectedUsed: func() *resource_info.Resource {
+				// Used should have: cpu, memory, pods but NOT GPU
+				r := common_info.BuildResource("1000m", "1G")
+				r.ScalarResources()[resource_info.PodsResourceName] = 1
+				return r
+			}(),
+			expectedReleasing: resource_info.EmptyResource(),
+		},
+		{
+			name: "mixed reservation and regular pods",
+			node: common_info.BuildNode("n1", common_info.BuildResourceListWithGPUAndPods("8000m", "10G", "2", "110")),
+			pods: []*v1.Pod{
+				func() *v1.Pod {
+					pod := common_info.BuildPod("c1", "reservation-pod", "n1", v1.PodRunning,
+						common_info.BuildResourceListWithGPU("1000m", "1G", "1"),
+						[]metav1.OwnerReference{}, map[string]string{
+							commonconstants.AppLabelName: "kai-resource-reservation",
+						}, map[string]string{
+							commonconstants.PodGroupAnnotationForPod: common_info.FakePogGroupId,
+						})
+					return pod
+				}(),
+				common_info.BuildPod("c1", "regular-pod", "n1", v1.PodRunning,
+					common_info.BuildResourceListWithGPU("2000m", "2G", "1"),
+					[]metav1.OwnerReference{}, make(map[string]string), map[string]string{
+						pod_info.ReceivedResourceTypeAnnotationName: string(pod_info.ReceivedTypeRegular),
+						commonconstants.PodGroupAnnotationForPod:    common_info.FakePogGroupId,
+					}),
+			},
+			expectedIdle: func() *resource_info.Resource {
+				// Reservation pod: 1000m CPU, 1G memory, 0 GPU, 1 pod
+				// Regular pod: 2000m CPU, 2G memory, 1 GPU, 1 pod
+				// Idle = 8000m - 3000m CPU, 10G - 3G memory, 2 - 1 GPU, 110 - 2 pods
+				r := common_info.BuildResourceWithGpu("5000m", "7G", "1", "108")
+				return r
+			}(),
+			expectedUsed: func() *resource_info.Resource {
+				// Reservation pod: 1000m CPU, 1G memory, 0 GPU, 1 pod
+				// Regular pod: 2000m CPU, 2G memory, 1 GPU, 1 pod
+				// Total: 3000m CPU, 3G memory, 1 GPU, 2 pods
+				r := common_info.BuildResourceWithGpu("3000m", "3G", "1", "2")
+				return r
+			}(),
+			expectedReleasing: resource_info.EmptyResource(),
+		},
+		{
+			name: "releasing resource reservation pod",
+			node: common_info.BuildNode("n1", common_info.BuildResourceListWithGPUAndPods("8000m", "10G", "2", "110")),
+			pods: []*v1.Pod{
+				func() *v1.Pod {
+					pod := common_info.BuildPod("c1", "reservation-pod", "n1", v1.PodRunning,
+						common_info.BuildResourceListWithGPU("1000m", "1G", "1"),
+						[]metav1.OwnerReference{}, map[string]string{
+							commonconstants.AppLabelName: "kai-resource-reservation",
+						}, map[string]string{
+							commonconstants.PodGroupAnnotationForPod: common_info.FakePogGroupId,
+						})
+					pod.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+					return pod
+				}(),
+			},
+			expectedIdle: func() *resource_info.Resource {
+				// Idle should have: original - (cpu, memory, pods) but GPU unchanged
+				r := common_info.BuildResourceWithGpu("7000m", "9G", "2", "109")
+				return r
+			}(),
+			expectedUsed: func() *resource_info.Resource {
+				// Used should have: cpu, memory, pods but NOT GPU
+				r := common_info.BuildResource("1000m", "1G")
+				r.ScalarResources()[resource_info.PodsResourceName] = 1
+				return r
+			}(),
+			expectedReleasing: func() *resource_info.Resource {
+				// Releasing should have: cpu, memory, pods but NOT GPU
+				r := common_info.BuildResource("1000m", "1G")
+				r.ScalarResources()[resource_info.PodsResourceName] = 1
+				return r
+			}(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := NewController(t)
+			nodePodAffinityInfo := pod_affinity.NewMockNodePodAffinityInfo(controller)
+			nodePodAffinityInfo.EXPECT().AddPod(Any()).Times(len(tt.pods))
+
+			ni := NewNodeInfo(tt.node, nodePodAffinityInfo)
+
+			for _, pod := range tt.pods {
+				pi := pod_info.NewTaskInfo(pod)
+				err := ni.AddTask(pi)
+				assert.NoError(t, err, "failed to add pod")
+			}
+
+			// Verify idle resources
+			if !reflect.DeepEqual(ni.Idle, tt.expectedIdle) {
+				t.Errorf("Idle resources mismatch:\nexpected: %v\ngot: %v\nexpected pods: %v\ngot pods: %v",
+					tt.expectedIdle.DetailedString(), ni.Idle.DetailedString(),
+					tt.expectedIdle.ScalarResources()[resource_info.PodsResourceName],
+					ni.Idle.ScalarResources()[resource_info.PodsResourceName])
+			}
+
+			// Verify used resources
+			if !reflect.DeepEqual(ni.Used, tt.expectedUsed) {
+				t.Errorf("Used resources mismatch:\nexpected: %v\ngot: %v\nexpected pods: %v\ngot pods: %v",
+					tt.expectedUsed.DetailedString(), ni.Used.DetailedString(),
+					tt.expectedUsed.ScalarResources()[resource_info.PodsResourceName],
+					ni.Used.ScalarResources()[resource_info.PodsResourceName])
+			}
+
+			// Verify releasing resources
+			if !reflect.DeepEqual(ni.Releasing, tt.expectedReleasing) {
+				t.Errorf("Releasing resources mismatch:\nexpected: %v\ngot: %v\nexpected pods: %v\ngot pods: %v",
+					tt.expectedReleasing.DetailedString(), ni.Releasing.DetailedString(),
+					tt.expectedReleasing.ScalarResources()[resource_info.PodsResourceName],
+					ni.Releasing.ScalarResources()[resource_info.PodsResourceName])
+			}
+		})
+	}
+}
