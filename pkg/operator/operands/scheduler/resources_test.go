@@ -632,6 +632,54 @@ tiers:
 			},
 		},
 		{
+			name: "spread nodes with pack devices via plugin override",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Scheduler: &kaiv1scheduler.Scheduler{
+						Replicas: ptr.To(int32(1)),
+					},
+				},
+			},
+			shard: &kaiv1.SchedulingShard{
+				Spec: kaiv1.SchedulingShardSpec{
+					PlacementStrategy: &kaiv1.PlacementStrategy{
+						GPU: ptr.To(spreadStrategy),
+						CPU: ptr.To(binpackStrategy),
+					},
+					Plugins: map[string]kaiv1.PluginConfig{
+						"gpuspread": {Enabled: ptr.To(false)},
+						"gpupack":   {Enabled: ptr.To(true)},
+					},
+				},
+			},
+			expected: map[string]string{
+				"config.yaml": `actions: allocate,reclaim,preempt,stalegangeviction
+tiers:
+- plugins:
+  - name: predicates
+  - name: proportion
+  - name: priority
+  - name: nodeavailability
+  - name: resourcetype
+  - name: podaffinity
+  - name: elastic
+  - name: kubeflow
+  - name: ray
+  - name: subgrouporder
+  - name: taskorder
+  - name: nominatednode
+  - name: dynamicresources
+  - name: minruntime
+  - name: topology
+  - name: snapshot
+  - name: gpupack
+  - name: nodeplacement
+    arguments:
+      cpu: binpack
+      gpu: spread`,
+			},
+		},
+		{
 			name: "usage DB configuration",
 			config: &kaiv1.Config{
 				Spec: kaiv1.ConfigSpec{},

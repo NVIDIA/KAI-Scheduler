@@ -61,9 +61,11 @@ func TestSetDefaultPlugins_SpreadStrategy(t *testing.T) {
 	_, found := spec.Plugins["gpuspread"]
 	assert.True(t, found, "expected gpuspread for spread strategy")
 
-	// Verify gpupack is NOT present (only the active GPU plugin is added)
-	_, found = spec.Plugins["gpupack"]
-	assert.False(t, found, "expected gpupack to be absent for spread strategy")
+	// Verify gpupack is present but disabled for spread strategy
+	gpk, found := spec.Plugins["gpupack"]
+	assert.True(t, found, "expected gpupack to be present")
+	assert.False(t, *gpk.Enabled, "expected gpupack to be disabled for spread strategy")
+	assert.Equal(t, 300, *gpk.Priority, "expected gpupack to have default priority")
 
 	// Verify gpusharingorder is present but disabled for spread strategy
 	gso, found := spec.Plugins["gpusharingorder"]
@@ -396,6 +398,54 @@ func TestSetDefaultActions_DisableConsolidationOnBinpack(t *testing.T) {
 
 	actionNames := resolveActions(spec.Actions)
 	assert.NotContains(t, actionNames, "consolidation")
+}
+
+func TestSetDefaultPlugins_SpreadNodesPackDevices(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
+		PlacementStrategy: &kaiv1.PlacementStrategy{
+			GPU: ptr.To("spread"),
+			CPU: ptr.To("binpack"),
+		},
+		Plugins: map[string]kaiv1.PluginConfig{
+			"gpuspread": {Enabled: ptr.To(false)},
+			"gpupack":   {Enabled: ptr.To(true)},
+		},
+	}
+	spec.SetDefaultsWhereNeeded()
+
+	gpk := spec.Plugins["gpupack"]
+	assert.True(t, *gpk.Enabled)
+	assert.Equal(t, 300, *gpk.Priority, "gpupack should have default priority")
+
+	gps := spec.Plugins["gpuspread"]
+	assert.False(t, *gps.Enabled)
+
+	np := spec.Plugins["nodeplacement"]
+	assert.Equal(t, "spread", np.Arguments["gpu"], "node-level strategy should remain spread")
+}
+
+func TestSetDefaultPlugins_PackNodesSpreadDevices(t *testing.T) {
+	spec := kaiv1.SchedulingShardSpec{
+		PlacementStrategy: &kaiv1.PlacementStrategy{
+			GPU: ptr.To("binpack"),
+			CPU: ptr.To("binpack"),
+		},
+		Plugins: map[string]kaiv1.PluginConfig{
+			"gpupack":   {Enabled: ptr.To(false)},
+			"gpuspread": {Enabled: ptr.To(true)},
+		},
+	}
+	spec.SetDefaultsWhereNeeded()
+
+	gps := spec.Plugins["gpuspread"]
+	assert.True(t, *gps.Enabled)
+	assert.Equal(t, 300, *gps.Priority, "gpuspread should have default priority")
+
+	gpk := spec.Plugins["gpupack"]
+	assert.False(t, *gpk.Enabled)
+
+	np := spec.Plugins["nodeplacement"]
+	assert.Equal(t, "binpack", np.Arguments["gpu"], "node-level strategy should remain binpack")
 }
 
 func TestResolvePlugins_Ordering(t *testing.T) {
