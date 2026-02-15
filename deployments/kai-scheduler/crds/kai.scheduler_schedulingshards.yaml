@@ -51,8 +51,9 @@ spec:
                     scheduler configuration.
                   properties:
                     enabled:
+                      default: true
                       description: Enabled controls whether this action is active.
-                        Default is true for built-in actions.
+                        Defaults to true.
                       type: boolean
                     priority:
                       description: |-
@@ -64,6 +65,8 @@ spec:
                   Actions allows overriding action configuration. Keys are action names.
                   Built-in actions can be disabled or reordered.
                   New actions can be added by specifying a name not in the default set.
+                  Default actions and their priorities (higher runs first):
+                  allocate=500, consolidation=400, reclaim=300, preempt=200, stalegangeviction=100.
                 type: object
               args:
                 additionalProperties:
@@ -122,8 +125,9 @@ spec:
                         the default arguments for the plugin.
                       type: object
                     enabled:
+                      default: true
                       description: Enabled controls whether this plugin is active.
-                        Default is true for built-in plugins.
+                        Defaults to true.
                       type: boolean
                     priority:
                       description: |-
@@ -135,6 +139,12 @@ spec:
                   Plugins allows overriding plugin configuration. Keys are plugin names.
                   Built-in plugins can be disabled, reordered, or have their arguments changed.
                   New plugins can be added by specifying a name not in the default set.
+                  Default plugins and their priorities (higher runs first):
+                  predicates=1900, proportion=1800, priority=1700, nodeavailability=1600,
+                  resourcetype=1500, podaffinity=1400, elastic=1300, kubeflow=1200,
+                  ray=1100, subgrouporder=1000, taskorder=900, nominatednode=800,
+                  dynamicresources=700, minruntime=600, topology=500, snapshot=400,
+                  gpupack/gpuspread=300, nodeplacement=200, gpusharingorder=100.
                 type: object
               queueDepthPerAction:
                 additionalProperties:

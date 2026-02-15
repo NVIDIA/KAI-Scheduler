@@ -30,7 +30,7 @@ const (
 
 // PluginConfig allows overriding plugin settings in the scheduler configuration.
 type PluginConfig struct {
-	// Enabled controls whether this plugin is active. Default is true for built-in plugins.
+	// Enabled controls whether this plugin is active. Defaults to true.
 	// +kubebuilder:validation:Optional
 	Enabled *bool `json:"enabled,omitempty"`
 
@@ -47,7 +47,7 @@ type PluginConfig struct {
 
 // ActionConfig allows overriding action settings in the scheduler configuration.
 type ActionConfig struct {
-	// Enabled controls whether this action is active. Default is true for built-in actions.
+	// Enabled controls whether this action is active. Defaults to true.
 	// +kubebuilder:validation:Optional
 	Enabled *bool `json:"enabled,omitempty"`
 
@@ -100,12 +100,20 @@ type SchedulingShardSpec struct {
 	// Plugins allows overriding plugin configuration. Keys are plugin names.
 	// Built-in plugins can be disabled, reordered, or have their arguments changed.
 	// New plugins can be added by specifying a name not in the default set.
+	// Default plugins and their priorities (higher runs first):
+	// predicates=1900, proportion=1800, priority=1700, nodeavailability=1600,
+	// resourcetype=1500, podaffinity=1400, elastic=1300, kubeflow=1200,
+	// ray=1100, subgrouporder=1000, taskorder=900, nominatednode=800,
+	// dynamicresources=700, minruntime=600, topology=500, snapshot=400,
+	// gpupack/gpuspread=300, nodeplacement=200, gpusharingorder=100.
 	// +kubebuilder:validation:Optional
 	Plugins map[string]PluginConfig `json:"plugins,omitempty"`
 
 	// Actions allows overriding action configuration. Keys are action names.
 	// Built-in actions can be disabled or reordered.
 	// New actions can be added by specifying a name not in the default set.
+	// Default actions and their priorities (higher runs first):
+	// allocate=500, consolidation=400, reclaim=300, preempt=200, stalegangeviction=100.
 	// +kubebuilder:validation:Optional
 	Actions map[string]ActionConfig `json:"actions,omitempty"`
 }
