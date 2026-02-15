@@ -45,6 +45,26 @@ spec:
           spec:
             description: SchedulingShardSpec defines the desired state of SchedulingShard
             properties:
+              actions:
+                additionalProperties:
+                  description: ActionConfig allows overriding action settings in the
+                    scheduler configuration.
+                  properties:
+                    enabled:
+                      description: Enabled controls whether this action is active.
+                        Default is true for built-in actions.
+                      type: boolean
+                    priority:
+                      description: |-
+                        Priority controls the ordering of this action. Higher values run first.
+                        Built-in actions use priorities in the range 0-10000, spaced by 100.
+                      type: integer
+                  type: object
+                description: |-
+                  Actions allows overriding action configuration. Keys are action names.
+                  Built-in actions can be disabled or reordered.
+                  New actions can be added by specifying a name not in the default set.
+                type: object
               args:
                 additionalProperties:
                   type: string
@@ -88,6 +108,33 @@ spec:
                   gpu:
                     description: GPU scheduling strategy (binpack/spread)
                     type: string
+                type: object
+              plugins:
+                additionalProperties:
+                  description: PluginConfig allows overriding plugin settings in the
+                    scheduler configuration.
+                  properties:
+                    arguments:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        Arguments are key-value pairs passed to the plugin. When specified, they fully replace
+                        the default arguments for the plugin.
+                      type: object
+                    enabled:
+                      description: Enabled controls whether this plugin is active.
+                        Default is true for built-in plugins.
+                      type: boolean
+                    priority:
+                      description: |-
+                        Priority controls the ordering of this plugin. Higher values run first.
+                        Built-in plugins use priorities in the range 0-10000, spaced by 100.
+                      type: integer
+                  type: object
+                description: |-
+                  Plugins allows overriding plugin configuration. Keys are plugin names.
+                  Built-in plugins can be disabled, reordered, or have their arguments changed.
+                  New plugins can be added by specifying a name not in the default set.
                 type: object
               queueDepthPerAction:
                 additionalProperties:
