@@ -100,19 +100,6 @@ spec:
       enabled: false
 ```
 
-### Enable a strategy-disabled action
-
-When using spread placement, `consolidation` is disabled by default. To re-enable it:
-
-```yaml
-spec:
-  placementStrategy:
-    gpu: spread
-  actions:
-    consolidation:
-      enabled: true
-```
-
 ### Independent node-level and device-level placement
 
 Spread across nodes but pack within each node's GPUs:
