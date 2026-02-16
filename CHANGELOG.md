@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.12.12] - 2026-02-12
+
 ### Fixed
 - Fixed a bug in ray gang scheduling where not all worker groups' minMember would be respected [#962](https://github.com/NVIDIA/KAI-Scheduler/pull/962) [itsomri](https://github.com/itsomri)
 - Fixed plugin server (snapshot and job-order endpoints) listening on all interfaces by binding to localhost only.
