@@ -56,4 +56,3 @@ We’d love to hear from you! Here's how to reach out:
 - Technical Questions, Bugs, and Feature Requests: Please open [an issue on GitHub](https://github.com/NVIDIA/KAI-scheduler/issues/new) for anything related to technical support, bug reports, or feature suggestions. This helps us track and address them efficiently.
 - General Discussion & Roadmap Topics: For broader conversations—like roadmap discussions, scheduling strategies, or working group coordination—join the [CNCF Slack workspace](https://communityinviter.com/apps/cloud-native/cncf) and drop by the #batch-wg channel.
 
-.
