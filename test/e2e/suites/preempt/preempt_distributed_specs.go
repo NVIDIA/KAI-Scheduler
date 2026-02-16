@@ -77,10 +77,10 @@ func DescribePreemptDistributedSpecs() bool {
 
 				resources := v1.ResourceRequirements{
 					Limits: v1.ResourceList{
-						constants.GpuResource: resource.MustParse("1"),
+						constants.NvidiaGpuResource: resource.MustParse("1"),
 					},
 					Requests: v1.ResourceList{
-						constants.GpuResource: resource.MustParse("1"),
+						constants.NvidiaGpuResource: resource.MustParse("1"),
 					},
 				}
 
@@ -98,8 +98,8 @@ func DescribePreemptDistributedSpecs() bool {
 
 				preemptorGpu := gpusPerNode
 				preemptorResources := resources.DeepCopy()
-				preemptorResources.Requests[constants.GpuResource] = resource.MustParse(fmt.Sprintf("%d", preemptorGpu))
-				preemptorResources.Limits[constants.GpuResource] = resource.MustParse(fmt.Sprintf("%d", preemptorGpu))
+				preemptorResources.Requests[constants.NvidiaGpuResource] = resource.MustParse(fmt.Sprintf("%d", preemptorGpu))
+				preemptorResources.Limits[constants.NvidiaGpuResource] = resource.MustParse(fmt.Sprintf("%d", preemptorGpu))
 
 				_, pods := pod_group.CreateDistributedJob(
 					ctx, testCtx.KubeClientset, testCtx.ControllerClient,
