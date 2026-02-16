@@ -642,6 +642,65 @@ func TestNewTaskInfoWithBindRequest_ResourceClaimInfo(t *testing.T) {
 	assert.DeepEqual(t, alloc, allocation.Allocation)
 }
 
+func TestNewTaskInfoWithBindRequest_ResourceClaimInfo_BindRequestAllocationOverridesClaim(t *testing.T) {
+	claimAlloc := &resourceapi.AllocationResult{}
+	bindRequestAlloc := &resourceapi.AllocationResult{
+		Devices: resourceapi.DeviceAllocationResult{
+			Results: []resourceapi.DeviceRequestAllocationResult{
+				{Request: "gpu-claim", Driver: "nvidia.com/gpu", Pool: "node1", Device: "1"},
+			},
+		},
+	}
+	draClaim := &resourceapi.ResourceClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gpu-claim",
+			Namespace: "ns1",
+		},
+		Status: resourceapi.ResourceClaimStatus{
+			Allocation: claimAlloc,
+		},
+	}
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:       types.UID("pod-uid"),
+			Name:      "p1",
+			Namespace: "ns1",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{Resources: v1.ResourceRequirements{Requests: common_info.BuildResourceList("1000m", "1G")}},
+			},
+			ResourceClaims: []v1.PodResourceClaim{
+				{Name: "gpu-claim", ResourceClaimName: ptr.To("gpu-claim")},
+			},
+		},
+		Status: v1.PodStatus{Phase: v1.PodPending},
+	}
+	bindRequest := &schedulingv1alpha2.BindRequest{
+		ObjectMeta: metav1.ObjectMeta{Name: "br1", Namespace: "ns1"},
+		Spec: schedulingv1alpha2.BindRequestSpec{
+			PodName:      "p1",
+			SelectedNode: "node1",
+			ResourceClaimAllocations: []schedulingv1alpha2.ResourceClaimAllocation{
+				{Name: "gpu-claim", Allocation: bindRequestAlloc},
+			},
+		},
+	}
+	bindRequestInfo := bindrequest_info.NewBindRequestInfo(bindRequest)
+
+	pi := NewTaskInfoWithBindRequest(pod, bindRequestInfo, draClaim)
+	assert.Assert(t, pi != nil)
+	assert.Equal(t, 1, len(pi.ResourceClaimInfo))
+	assert.Equal(t, "node1", pi.NodeName, "NodeName should come from BindRequest SelectedNode")
+
+	allocation, ok := pi.ResourceClaimInfo["gpu-claim"]
+	assert.Assert(t, ok)
+	assert.Equal(t, "gpu-claim", allocation.Name)
+	assert.DeepEqual(t, bindRequestAlloc, allocation.Allocation)
+	assert.Assert(t, allocation.Allocation != claimAlloc,
+		"Allocation should be from BindRequest (node1/device 1), not claim status (empty)")
+}
+
 func TestNewTaskInfoWithBindRequest_ResourceClaimInfo_TemplateClaimSkippedWhenNotCreated(t *testing.T) {
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{UID: types.UID("pod-uid"), Name: "p1", Namespace: "ns1"},

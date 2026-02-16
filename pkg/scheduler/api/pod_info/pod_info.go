@@ -175,7 +175,7 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 		nodeName = bindRequest.BindRequest.Spec.SelectedNode
 	}
 
-	resourceClaimInfo, err := calcResourceClaimInfo(draPodClaims, pod)
+	resourceClaimInfo, err := resourceClaimInfoFromPodClaims(draPodClaims, pod, bindRequest)
 	if err != nil {
 		log.InfraLogger.Errorf("PodInfo ctor failure - failed to calculate resource claim info for pod %s/%s: %v", pod.Namespace, pod.Name, err)
 	}
@@ -207,8 +207,18 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 	return podInfo
 }
 
-func calcResourceClaimInfo(draPodClaims []*resourceapi.ResourceClaim, pod *v1.Pod) (bindrequest_info.ResourceClaimInfo, error) {
+func resourceClaimInfoFromPodClaims(draPodClaims []*resourceapi.ResourceClaim, pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo) (bindrequest_info.ResourceClaimInfo, error) {
 	resourceClaimInfo := make(bindrequest_info.ResourceClaimInfo)
+
+	bindingRequestClaimUpdates := make(map[string]*schedulingv1alpha2.ResourceClaimAllocation)
+	if bindRequest != nil {
+		for _, claimAllocation := range bindRequest.BindRequest.Spec.ResourceClaimAllocations {
+			bindingRequestClaimUpdates[claimAllocation.Name] = &schedulingv1alpha2.ResourceClaimAllocation{
+				Name:       claimAllocation.Name,
+				Allocation: claimAllocation.Allocation.DeepCopy(),
+			}
+		}
+	}
 
 	draPodClaimsMap := resource_info.ResourceClaimSliceToMap(draPodClaims)
 	for _, podClaim := range pod.Spec.ResourceClaims {
@@ -229,6 +239,11 @@ func calcResourceClaimInfo(draPodClaims []*resourceapi.ResourceClaim, pod *v1.Po
 		resourceClaimInfo[podClaim.Name] = &schedulingv1alpha2.ResourceClaimAllocation{
 			Name:       podClaim.Name,
 			Allocation: claim.Status.Allocation,
+		}
+
+		// If a binding claim already exists, assume this is the allocation that will happen for the pod
+		if claimUpdate, found := bindingRequestClaimUpdates[podClaim.Name]; found {
+			resourceClaimInfo[podClaim.Name].Allocation = claimUpdate.Allocation
 		}
 	}
 	return resourceClaimInfo, nil
