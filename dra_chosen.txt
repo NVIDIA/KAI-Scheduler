@@ -1,0 +1,12 @@
+consolidation 
+    Node level consolidation
+
+preempt
+    Preempts a pod based on DRA contention - dar template
+    should preempt jobs - distributed test
+
+reclaim
+    Under quota and Over fair share -> Over fair share and Over quota - Should not reclaim
+    Simple priority reclaim - but has min runtime
+    Reclaim based on priority, maintain over-quota weight proportion
+    Reclaim tasks from elastic jobs
