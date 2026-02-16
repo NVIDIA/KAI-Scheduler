@@ -211,7 +211,9 @@ func calcSubTreeFreeResources(domain *DomainInfo) *resource_info.Resource {
 }
 
 func calcNodeAccommodation(jobAllocationMetaData *jobAllocationMetaData, node *node_info.NodeInfo) int {
-	if jobAllocationMetaData.maxPodResources.LessEqual(resource_info.EmptyResourceRequirements()) {
+	onePodOnly := resource_info.EmptyResourceRequirements()
+	onePodOnly.ScalarResources()[resource_info.PodsResourceName] = 1
+	if jobAllocationMetaData.maxPodResources.LessEqual(onePodOnly) {
 		return len(jobAllocationMetaData.tasksToAllocate)
 	}
 
@@ -502,6 +504,10 @@ func getJobRatioToFreeResources(tasksResources *resource_info.Resource, domain *
 	freeDomainResourcesList := domain.IdleOrReleasingResources.ToResourceList()
 	for rName, taskResourceQuantity := range tasksResourcesList {
 		if taskResourceQuantity.Value() == 0 {
+			continue
+		}
+		// Ignore pods resource for bin-packing behavior
+		if rName == v1.ResourcePods {
 			continue
 		}
 		var resourceRatio float64

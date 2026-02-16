@@ -196,6 +196,7 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 	}
 
 	podInfo.updatePodAdditionalFields(bindRequest, draPodClaims...)
+
 	return podInfo
 }
 
@@ -316,6 +317,8 @@ func getPodResourceRequest(pod *v1.Pod) *resource_info.ResourceRequirements {
 		overheadReq := resource_info.RequirementsFromResourceList(pod.Spec.Overhead)
 		result.Add(&overheadReq.BaseResource)
 	}
+
+	result.ScalarResources()[resource_info.PodsResourceName] = 1
 
 	return result
 }

@@ -148,6 +148,10 @@ func TestGetPodResourceRequest(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
+		if _, exists := test.expectedResource.ScalarResources()[resource_info.PodsResourceName]; !exists {
+			test.expectedResource.ScalarResources()[resource_info.PodsResourceName] = 1
+		}
+
 		req := getPodResourceRequest(test.pod)
 		if !reflect.DeepEqual(req, test.expectedResource) {
 			t.Errorf("case %d(%s) failed: \n expected %v, \n got: %v \n",
