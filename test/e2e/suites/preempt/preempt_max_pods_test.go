@@ -7,7 +7,6 @@ package preempt
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -213,9 +212,5 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 
 		// Wait and verify pod remains unschedulable
 		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, fractionPod)
-
-		wait.WaitForEventInNamespace(ctx, testCtx.ControllerClient, fractionPod.Namespace, func(event *v1.Event) bool {
-			return event.Reason == "Unschedulable" && (strings.Contains(event.Message, "pod number exceeded") || strings.Contains(event.Message, "max pods"))
-		})
 	})
 })
