@@ -6,14 +6,13 @@ package reclaim
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
-	resourceapi "k8s.io/api/resource/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
@@ -25,52 +24,13 @@ import (
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/capacity"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/pod_group"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
 const draDeviceClassName = constant.GPUDeviceClassName
-
-func createPodWithDRAClaim(ctx context.Context, testCtx *testcontext.TestContext, q *v2.Queue, namespace string, deviceCount int, nodeName string) *v1.Pod {
-	claim := rd.CreateResourceClaim(namespace, q.Name, draDeviceClassName, deviceCount)
-	claim, err := testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Create(ctx, claim, metav1.CreateOptions{})
-	Expect(err).To(Succeed())
-
-	Eventually(func() error {
-		claimObj := &resourceapi.ResourceClaim{}
-		return testCtx.ControllerClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: claim.Name}, claimObj)
-	}).Should(Succeed(), "ResourceClaim should be accessible via controller client")
-
-	claimName := "gpu-claim"
-	pod := rd.CreatePodObject(q, v1.ResourceRequirements{
-		Claims: []v1.ResourceClaim{
-			{Name: claimName, Request: claimName},
-		},
-	})
-	pod.Spec.ResourceClaims = []v1.PodResourceClaim{{
-		Name:              claimName,
-		ResourceClaimName: ptr.To(claim.Name),
-	}}
-	if nodeName != "" {
-		pod.Spec.NodeSelector = map[string]string{"kubernetes.io/hostname": nodeName}
-	}
-	pod, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod)
-	Expect(err).To(Succeed())
-
-	claim, err = testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Get(ctx, claim.Name, metav1.GetOptions{})
-	Expect(err).To(Succeed())
-	claim.OwnerReferences = []metav1.OwnerReference{{
-		APIVersion: "v1",
-		Kind:       "Pod",
-		Name:       pod.Name,
-		UID:        pod.UID,
-	}}
-	_, err = testCtx.KubeClientset.ResourceV1().ResourceClaims(namespace).Update(ctx, claim, metav1.UpdateOptions{})
-	Expect(err).To(Succeed())
-
-	return pod
-}
 
 var _ = Describe("Reclaim DRA", Ordered, func() {
 	var (
@@ -99,19 +59,91 @@ var _ = Describe("Reclaim DRA", Ordered, func() {
 		reclaimeeNamespace := queue.GetConnectedNamespaceToQueue(reclaimeeQueue)
 		reclaimerNamespace := queue.GetConnectedNamespaceToQueue(reclaimerQueue)
 
-		pod := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, reclaimeeNamespace, 2, "")
-		pod2 := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, reclaimeeNamespace, 1, "")
-		pod3 := createPodWithDRAClaim(ctx, testCtx, reclaimeeQueue, reclaimeeNamespace, 1, "")
+		pod := rd.CreatePodWithGpuClaim(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimeeQueue, reclaimeeNamespace, 2, nil)
+		pod2 := rd.CreatePodWithGpuClaim(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimeeQueue, reclaimeeNamespace, 1, nil)
+		pod3 := rd.CreatePodWithGpuClaim(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimeeQueue, reclaimeeNamespace, 1, nil)
 
 		wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
 		wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod2)
 		wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod3)
 
-		runningPod := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, reclaimerNamespace, 1, "")
+		runningPod := rd.CreatePodWithGpuClaim(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimerQueue, reclaimerNamespace, 1, nil)
 		wait.ForPodScheduled(ctx, testCtx.ControllerClient, runningPod)
 
-		pendingPod := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, reclaimerNamespace, 2, "")
+		pendingPod := rd.CreatePodWithGpuClaim(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimerQueue, reclaimerNamespace, 2, nil)
 		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, pendingPod)
+	})
+
+	It("Simple priority reclaim - but has min runtime (DRA)", func(ctx context.Context) {
+		testCtx = testcontext.GetConnectivity(ctx, Default)
+		capacity.SkipIfInsufficientDynamicResources(testCtx.KubeClientset, draDeviceClassName, 1, 4)
+
+		parentQueue, reclaimeeQueue, reclaimerQueue := createQueues(4, 1, 0)
+		reclaimerQueue.Spec.Priority = pointer.Int(constants.DefaultQueuePriority + 1)
+		reclaimeeQueue.Spec.ReclaimMinRuntime = &metav1.Duration{Duration: 60 * time.Second}
+		testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
+
+		reclaimeeNamespace := queue.GetConnectedNamespaceToQueue(reclaimeeQueue)
+		reclaimerNamespace := queue.GetConnectedNamespaceToQueue(reclaimerQueue)
+
+		pod := rd.CreatePodWithGpuClaim(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimeeQueue, reclaimeeNamespace, 1, nil)
+		wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)
+
+		reclaimee := rd.CreatePodWithGpuClaim(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimeeQueue, reclaimeeNamespace, 3, nil)
+		wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimee)
+
+		reclaimer := rd.CreatePodWithGpuClaim(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimerQueue, reclaimerNamespace, 1, nil)
+		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, reclaimer)
+		wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimer)
+	})
+
+	It("Reclaim tasks from elastic jobs (DRA)", func(ctx context.Context) {
+		testCtx = testcontext.GetConnectivity(ctx, Default)
+		capacity.SkipIfInsufficientDynamicResources(testCtx.KubeClientset, draDeviceClassName, 1, 4)
+
+		parentQueue, reclaimeeQueue, reclaimerQueue := createQueues(4, 2, 2)
+		testCtx.InitQueues([]*v2.Queue{parentQueue, reclaimeeQueue, reclaimerQueue})
+		reclaimeeNamespace := queue.GetConnectedNamespaceToQueue(reclaimeeQueue)
+		reclaimerNamespace := queue.GetConnectedNamespaceToQueue(reclaimerQueue)
+
+		pg1 := pod_group.Create(reclaimeeNamespace, "elastic-reclaimee-job-1", reclaimeeQueue.Name)
+		pg1, err := testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(reclaimeeNamespace).Create(ctx, pg1, metav1.CreateOptions{})
+		Expect(err).To(Succeed())
+		pg2 := pod_group.Create(reclaimeeNamespace, "elastic-reclaimee-job-2", reclaimeeQueue.Name)
+		pg2, err = testCtx.KubeAiSchedClientset.SchedulingV2alpha2().PodGroups(reclaimeeNamespace).Create(ctx, pg2, metav1.CreateOptions{})
+		Expect(err).To(Succeed())
+
+		pods1 := []*v1.Pod{
+			rd.CreatePodWithGpuClaimAndPodGroup(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimeeQueue, reclaimeeNamespace, 1, pg1.Name),
+			rd.CreatePodWithGpuClaimAndPodGroup(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimeeQueue, reclaimeeNamespace, 1, pg1.Name),
+		}
+		pods2 := []*v1.Pod{
+			rd.CreatePodWithGpuClaimAndPodGroup(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimeeQueue, reclaimeeNamespace, 1, pg2.Name),
+			rd.CreatePodWithGpuClaimAndPodGroup(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimeeQueue, reclaimeeNamespace, 1, pg2.Name),
+		}
+		var preempteePods []*v1.Pod
+		preempteePods = append(preempteePods, pods1...)
+		preempteePods = append(preempteePods, pods2...)
+		wait.ForPodsScheduled(ctx, testCtx.ControllerClient, reclaimeeNamespace, preempteePods)
+
+		reclaimerPod := rd.CreatePodWithGpuClaim(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimerQueue, reclaimerNamespace, 2, nil)
+		wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimerPod)
+
+		wait.ForPodsWithCondition(ctx, testCtx.ControllerClient, func(watch.Event) bool {
+			pods, err := testCtx.KubeClientset.CoreV1().Pods(reclaimeeNamespace).List(ctx, metav1.ListOptions{
+				LabelSelector: fmt.Sprintf("%s=%s", rd.PodGroupLabelName, pg1.Name),
+			})
+			Expect(err).To(Succeed())
+			return len(pods.Items) == 1
+		}, runtimeClient.InNamespace(reclaimeeNamespace))
+
+		wait.ForPodsWithCondition(ctx, testCtx.ControllerClient, func(watch.Event) bool {
+			pods, err := testCtx.KubeClientset.CoreV1().Pods(reclaimeeNamespace).List(ctx, metav1.ListOptions{
+				LabelSelector: fmt.Sprintf("%s=%s", rd.PodGroupLabelName, pg2.Name),
+			})
+			Expect(err).To(Succeed())
+			return len(pods.Items) == 1
+		}, runtimeClient.InNamespace(reclaimeeNamespace))
 	})
 
 	It("Reclaim based on priority, maintain over-quota weight proportion", func(ctx context.Context) {
@@ -195,7 +227,10 @@ var _ = Describe("Reclaim DRA", Ordered, func() {
 		Expect(err).To(Succeed())
 		wait.ForAtLeastNPodsScheduled(ctx, testCtx.ControllerClient, reclaimee2Namespace, podListToPodsSlice(reclaimee2Pods), 5)
 
-		reclaimerPod := createPodWithDRAClaim(ctx, testCtx, reclaimerQueue, reclaimerNamespace, 3, testNodeName)
+		setNodeSelector := func(pod *v1.Pod) {
+			pod.Spec.NodeSelector = map[string]string{"kubernetes.io/hostname": testNodeName}
+		}
+		reclaimerPod := rd.CreatePodWithGpuClaim(ctx, testCtx.KubeClientset, testCtx.ControllerClient, reclaimerQueue, reclaimerNamespace, 3, setNodeSelector)
 		wait.ForPodScheduled(ctx, testCtx.ControllerClient, reclaimerPod)
 		time.Sleep(3 * time.Second)
 
