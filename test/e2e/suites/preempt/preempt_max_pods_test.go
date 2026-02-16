@@ -7,10 +7,13 @@ package preempt
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -25,6 +28,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
+	poll "k8s.io/apimachinery/pkg/util/wait"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
@@ -169,18 +174,19 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 		Expect(err).To(Succeed())
 
 		// Verify node is at max pods
-		node, err = testCtx.KubeClientset.CoreV1().Nodes().Get(ctx, targetNode, metav1.GetOptions{})
-		Expect(err).To(Succeed())
-		podList, err := testCtx.KubeClientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
-			FieldSelector: fmt.Sprintf("spec.nodeName=%s,status.phase!=Failed,status.phase!=Succeeded", targetNode),
-		})
-		Expect(err).To(Succeed())
-		currentPods := len(podList.Items)
-		maxPods = int(node.Status.Allocatable.Pods().Value())
-		Expect(currentPods).To(Equal(maxPods), "Node should be at max pod capacity")
+		var podsOnNode []v1.Pod
+		Eventually(func(g Gomega) {
+			podsOnNode, err = getPodsOnNode(ctx, testCtx, targetNode)
+			g.Expect(err).To(Succeed())
+			currentPods := len(podsOnNode)
+			maxPods = int(node.Status.Allocatable.Pods().Value())
+			g.Expect(currentPods).To(Equal(maxPods), "Node should be at max pod capacity")
+		}, 1*time.Minute, 1*time.Second).Should(Succeed(), fmt.Sprintf("Failed to wait for %d pods on node %s", maxPods, targetNode))
 
 		// delete one e2e pod
-		for _, pod := range podList.Items {
+		var deletedPodName string
+		namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+		for _, pod := range podsOnNode {
 			if pod.Labels[constant.AppLabelName] != "engine-e2e" {
 				continue
 			}
@@ -190,11 +196,36 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 			if pod.Spec.NodeName != targetNode {
 				continue
 			}
-			namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+			deletedPodName = pod.Name
+
 			err = testCtx.KubeClientset.CoreV1().Pods(namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 			Expect(err).To(Succeed())
+
 			break
 		}
+
+		// Wait for pod to be deleted
+		Eventually(func(g Gomega) {
+			p, err := testCtx.KubeClientset.CoreV1().Pods(namespace).Get(ctx, deletedPodName, metav1.GetOptions{})
+			if p != nil {
+				GinkgoWriter.Printf("pod phase: %s, deletionTimestamp: %+v\n", p.Status.Phase, p.DeletionTimestamp)
+			}
+			if err != nil {
+				GinkgoWriter.Printf("error: %+v\n", err)
+			}
+			g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
+		}, 1*time.Minute, 1*time.Second).Should(Succeed())
+
+		// Wait for node to be at maxPods-1
+		err = poll.PollUntilContextTimeout(ctx, 1*time.Second, 3*time.Minute, true, func(ctx context.Context) (bool, error) {
+			podsOnNode, err = getPodsOnNode(ctx, testCtx, targetNode)
+			if err != nil {
+				return false, err
+			}
+			maxPods = int(node.Status.Allocatable.Pods().Value())
+			return len(podsOnNode) == maxPods-1, nil
+		})
+		Expect(err).To(Succeed(), fmt.Sprintf("Failed to wait for node to be at %d pods, current pods: %d", maxPods-1, len(podsOnNode)))
 
 		// Create a fractional GPU pod (will need 2 pods: task + reservation)
 		// This should fail because 109 + 2 = 111 > 110
@@ -212,5 +243,22 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 
 		// Wait and verify pod remains unschedulable
 		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, fractionPod)
+
+		wait.WaitForEventInNamespaceAndPod(ctx, testCtx.ControllerClient, fractionPod.Namespace, fractionPod.Name, func(event *v1.Event) bool {
+			return event.Reason == "Unschedulable" && (strings.Contains(event.Message, "pod number exceeded") || strings.Contains(event.Message, "max pods"))
+		})
 	})
 })
+
+func getPodsOnNode(ctx context.Context, testCtx *testcontext.TestContext, nodeName string) ([]v1.Pod, error) {
+	var podList v1.PodList
+	err := testCtx.ControllerClient.List(ctx, &podList, &runtimeClient.ListOptions{
+		Raw: &metav1.ListOptions{
+			FieldSelector: fmt.Sprintf("spec.nodeName=%s,status.phase=Running", nodeName),
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return podList.Items, nil
+}
