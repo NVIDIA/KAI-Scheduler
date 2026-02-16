@@ -6,6 +6,7 @@ package reclaim
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -13,27 +14,27 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
-	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/configurations/feature_flags"
 	testcontext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/capacity"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/fillers"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/queue"
-	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd/scheduling_shard"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/testconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
-const (
-	draShardName           = "dra-shard"
-	draPartitionLabelValue = "dra"
-	draNodeLabel           = "nvidia.com/gpu.deploy.dra-plugin-gpu"
-)
+func setFullHierarchyFairness(ctx context.Context, testCtx *testcontext.TestContext, value *bool) error {
+	cb := testconfig.GetConfig().SetFullHierarchyFairness
+	if cb == nil {
+		return fmt.Errorf("testconfig.SetFullHierarchyFairness callback is not set; " +
+			"make sure the test suite's init() wires it before running these specs")
+	}
+	return cb(ctx, testCtx, value)
+}
 
 func DescribeHierarchyLevelFairnessSpecs() bool {
 	return Describe("Hierarchy level fairness", Ordered, func() {
@@ -49,18 +50,6 @@ func DescribeHierarchyLevelFairnessSpecs() bool {
 
 			BeforeAll(func(ctx context.Context) {
 				testCtx = testcontext.GetConnectivity(ctx, Default)
-
-				By("Creating SchedulingShard for DRA nodes")
-				err := scheduling_shard.CreateShardForLabeledNodes(
-					ctx,
-					testCtx.ControllerClient,
-					draShardName,
-					client.MatchingLabels{draNodeLabel: "true"},
-					kaiv1.SchedulingShardSpec{
-						PartitionLabelValue: draPartitionLabelValue,
-					},
-				)
-				Expect(err).NotTo(HaveOccurred())
 
 				capacity.SkipIfInsufficientClusterTopologyResources(testCtx.KubeClientset, []capacity.ResourceList{
 					{
@@ -103,26 +92,23 @@ func DescribeHierarchyLevelFairnessSpecs() bool {
 				testCtx.InitQueues([]*v2.Queue{reclaimeeParentQueue, reclaimerParentQueue, reclaimeeQueue,
 					reclaimerQueue})
 
+				var err error
 				lowPriority, err = rd.CreatePreemptiblePriorityClass(ctx, testCtx.KubeClientset)
 				Expect(err).To(Succeed())
 
-				err = feature_flags.SetFullHierarchyFairness(ctx, testCtx, nil)
+				err = setFullHierarchyFairness(ctx, testCtx, nil)
 				Expect(err).To(Succeed())
 			})
 
 			AfterAll(func(ctx context.Context) {
-				By("Deleting DRA SchedulingShard and removing labels")
-				err := scheduling_shard.DeleteShardAndRemoveLabels(ctx, testCtx.ControllerClient, draShardName)
-				Expect(err).NotTo(HaveOccurred())
-
-				err = rd.DeleteAllE2EPriorityClasses(ctx, testCtx.ControllerClient)
+				err := rd.DeleteAllE2EPriorityClasses(ctx, testCtx.ControllerClient)
 				Expect(err).To(Succeed())
 				testCtx.ClusterCleanup(ctx)
 			})
 
 			AfterEach(func(ctx context.Context) {
 				testCtx.TestContextCleanup(ctx)
-				err := feature_flags.SetFullHierarchyFairness(ctx, testCtx, nil)
+				err := setFullHierarchyFairness(ctx, testCtx, nil)
 				Expect(err).To(Succeed())
 			})
 
@@ -148,7 +134,7 @@ func DescribeHierarchyLevelFairnessSpecs() bool {
 				pod := CreatePod(ctx, testCtx, reclaimerQueue, 1)
 				wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, pod)
 
-				err = feature_flags.SetFullHierarchyFairness(ctx, testCtx, ptr.To(false))
+				err = setFullHierarchyFairness(ctx, testCtx, ptr.To(false))
 				Expect(err).To(Succeed())
 
 				wait.ForPodScheduled(ctx, testCtx.ControllerClient, pod)

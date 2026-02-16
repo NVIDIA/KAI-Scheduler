@@ -20,6 +20,11 @@ type TestConfig struct {
 	ContainerImage          string
 
 	OnNamespaceCreated func(ctx context.Context, kubeClientset kubernetes.Interface, namespaceName, queueName string) error
+
+	// Configuration callbacks — allow repos to plug in their own CRD-typed operations.
+	// testCtx is typed as `any` to avoid a circular import (context -> testconfig -> context).
+	// Callers pass *testcontext.TestContext; adapters type-assert it.
+	SetFullHierarchyFairness func(ctx context.Context, testCtx any, value *bool) error
 }
 
 var activeConfig = TestConfig{
