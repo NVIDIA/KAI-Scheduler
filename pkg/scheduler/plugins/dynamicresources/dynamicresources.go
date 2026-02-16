@@ -319,7 +319,9 @@ func (drap *draPlugin) deallocateResourceClaim(task *pod_info.PodInfo, podClaim 
 	}
 
 	if task.ResourceClaimInfo != nil {
-		delete(task.ResourceClaimInfo, podClaim.Name)
+		if claimInfoInTask := task.ResourceClaimInfo[podClaim.Name]; claimInfoInTask != nil {
+			claimInfoInTask.Allocation = claim.Status.Allocation
+		}
 	}
 
 	log.InfraLogger.V(6).Infof("Deallocated claim <%s/%s>, devices <%s>.", task.Namespace, claimName, devicesDeallocatedStr)
