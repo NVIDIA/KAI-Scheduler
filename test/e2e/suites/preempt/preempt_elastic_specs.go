@@ -73,11 +73,11 @@ func DescribePreemptElasticSpecs() bool {
 			}
 
 			podGroup1, pods1 := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
-				"elastic-job-low-1", testQueue, 2, pointer.String(lowPriority),
+				"elastic-job-low-1", testQueue, 2, pointer.String(lowPriority), "",
 				lowPodRequirements)
 
 			podGroup2, pods2 := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
-				"elastic-job-low-2", testQueue, 2, pointer.String(lowPriority),
+				"elastic-job-low-2", testQueue, 2, pointer.String(lowPriority), "",
 				lowPodRequirements)
 
 			var preempteePods []*v1.Pod
@@ -131,7 +131,7 @@ func DescribePreemptElasticSpecs() bool {
 
 			preempteePodGroup, preempteePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset,
 				testCtx.KubeAiSchedClientset, "elastic-job-low-1", testQueue, 2,
-				pointer.String(lowPriority), lowPodRequirements)
+				pointer.String(lowPriority), "", lowPodRequirements)
 			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, namespace, preempteePods)
 
 			highPodRequirements := v1.ResourceRequirements{
