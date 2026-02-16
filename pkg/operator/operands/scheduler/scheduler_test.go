@@ -178,7 +178,7 @@ tiers:
 				},
 			}
 			spreadShard.Spec.SetDefaultsWhereNeeded()
-			s := NewSchedulerForShard(shard)
+			s := NewSchedulerForShard(spreadShard)
 			cmObj, err := s.configMapForShard(ctx, fakeClient, kaiConfig, spreadShard)
 			cm := cmObj.(*v1.ConfigMap)
 
