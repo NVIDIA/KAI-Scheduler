@@ -1,3 +1,6 @@
+# Copyright 2026 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
 # Example values file demonstrating scheduler plugin and action customization
 # Usage: helm install kai-scheduler . -f examples/custom-plugins-actions-values.yaml
 
