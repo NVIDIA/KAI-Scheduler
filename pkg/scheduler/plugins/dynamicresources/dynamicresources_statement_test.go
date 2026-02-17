@@ -22,6 +22,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/dra_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
@@ -240,93 +241,28 @@ func TestStatementAllocateRollback_WithDRAClaims(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Logf("Running test number: %d, test name: %s", i, test.name)
 
-			featuregate.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.DynamicResourceAllocation, true)
-			ssn := test_utils.BuildSession(test.topology, controller)
-			time.Sleep(1 * time.Millisecond)
-
-			// Get the pending task from job-test
-			var task *pod_info.PodInfo
-			job := ssn.ClusterInfo.PodGroupInfos[common_info.PodGroupID("job-test")]
-			assert.NotNil(t, job, "Job job-test should exist in session")
-			for _, t := range job.GetAllPodsMap() {
-				if t.Status == pod_status.Pending {
-					task = t
-					break
-				}
-			}
-			assert.NotNil(t, task, "Should find pending task in job-test")
+			ssn := setupTestSession(t, test.topology, controller)
+			task := getTaskByStatus(t, ssn, "job-test", pod_status.Pending)
 
 			stmt := ssn.Statement()
-			cp := stmt.Checkpoint() // Take a checkpoint before allocation
+			cp := stmt.Checkpoint()
 
-			// Store initial state
-			initialNodeName := task.NodeName
-			initialStatus := task.Status
-			initialClaimInfoCount := len(task.ResourceClaimInfo)
+			initialState := captureTaskState(task)
 			expectedClaimCount := len(test.topology.TestDRAObjects.ResourceClaims)
-			initialAllocations := make(map[string]*schedulingv1alpha2.ResourceClaimAllocation)
-			for claimName, claimAlloc := range task.ResourceClaimInfo {
-				if claimAlloc != nil {
-					initialAllocations[claimName] = claimAlloc.DeepCopy()
-				}
-			}
-			assert.Equal(t, expectedClaimCount, initialClaimInfoCount, "Task should have ResourceClaimInfo entries for each claim")
+			assert.Equal(t, expectedClaimCount, initialState.claimInfoCount, "Task should have ResourceClaimInfo entries for each claim")
 
 			err := stmt.Allocate(task, test.nodeName)
-			assert.NoError(t, err, "Allocation should succeed")
+			assert.NoError(t, err)
 
-			// Verify allocation happened
-			assert.Equal(t, test.nodeName, task.NodeName, "Task should be allocated to node")
-			assert.Equal(t, pod_status.Allocated, task.Status, "Task status should be Allocated")
-
-			assert.Equal(t, initialClaimInfoCount, len(task.ResourceClaimInfo), "ResourceClaimInfo count should remain the same after allocation")
-			for claimName, claimAlloc := range task.ResourceClaimInfo {
-				assert.NotNil(t, claimAlloc, "Claim %s should exist", claimName)
-				assert.NotNil(t, claimAlloc.Allocation, "Claim %s should have allocation details after allocation", claimName)
-				assert.Greater(t, len(claimAlloc.Allocation.Devices.Results), 0, "Claim %s should have device results after allocation", claimName)
-				for _, deviceResult := range claimAlloc.Allocation.Devices.Results {
-					assert.NotEmpty(t, deviceResult.Device, "Claim %s should have allocated device name", claimName)
-					assert.NotEmpty(t, deviceResult.Driver, "Claim %s should have driver specified", claimName)
-				}
-			}
+			assert.Equal(t, test.nodeName, task.NodeName)
+			assert.Equal(t, pod_status.Allocated, task.Status)
+			assert.Equal(t, initialState.claimInfoCount, len(task.ResourceClaimInfo))
+			assertClaimAllocationsExist(t, task)
 
 			err = stmt.Rollback(cp)
-			assert.NoError(t, err, "Rollback should succeed")
+			assert.NoError(t, err)
 
-			// Verify rollback happened - task should be back to initial state
-			assert.Equal(t, initialNodeName, task.NodeName, "Task should be back to initial node after rollback")
-			assert.Equal(t, initialStatus, task.Status, "Task status should be back to initial status after rollback")
-
-			assert.Equal(t, initialClaimInfoCount, len(task.ResourceClaimInfo), "ResourceClaimInfo count should remain the same after rollback")
-			for claimName, currentAlloc := range task.ResourceClaimInfo {
-				initialAlloc := initialAllocations[claimName]
-
-				if initialAlloc == nil || initialAlloc.Allocation == nil {
-					// Initial had no allocation
-					if currentAlloc.Allocation != nil {
-						assert.Equal(t, 0, len(currentAlloc.Allocation.Devices.Results),
-							"Claim %s should have no device allocations after rollback (initial had none)", claimName)
-					}
-				} else {
-					// Initial had allocation - verify exact match
-					assert.NotNil(t, currentAlloc.Allocation, "Claim %s should have allocation after rollback", claimName)
-					assert.Equal(t, len(initialAlloc.Allocation.Devices.Results), len(currentAlloc.Allocation.Devices.Results),
-						"Claim %s should have same number of devices after rollback", claimName)
-
-					// Compare each device allocation
-					for i, initialDevice := range initialAlloc.Allocation.Devices.Results {
-						currentDevice := currentAlloc.Allocation.Devices.Results[i]
-						assert.Equal(t, initialDevice.Device, currentDevice.Device,
-							"Claim %s device %d name should match after rollback", claimName, i)
-						assert.Equal(t, initialDevice.Driver, currentDevice.Driver,
-							"Claim %s device %d driver should match after rollback", claimName, i)
-						assert.Equal(t, initialDevice.Pool, currentDevice.Pool,
-							"Claim %s device %d pool should match after rollback", claimName, i)
-						assert.Equal(t, initialDevice.Request, currentDevice.Request,
-							"Claim %s device %d request should match after rollback", claimName, i)
-					}
-				}
-			}
+			assertTaskStateRestored(t, task, initialState, "rollback")
 		})
 	}
 }
@@ -608,21 +544,14 @@ func TestStatementEvictUnevict_WithDRAClaims(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Logf("Running test number: %d, test name: %s", i, test.name)
 
-			featuregate.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.DynamicResourceAllocation, true)
-			ssn := test_utils.BuildSession(test.topology, controller)
-			time.Sleep(1 * time.Millisecond)
-
+			ssn := setupTestSession(t, test.topology, controller)
 			job := ssn.ClusterInfo.PodGroupInfos[common_info.PodGroupID("test-job")]
 			task := job.GetAllPodsMap()[common_info.PodID("test-job-0")]
 
-			// If this is a BindRequest test, recreate the PodInfo with a BindRequest
 			if test.bindRequest != nil {
 				bindRequestInfo := bindrequest_info.NewBindRequestInfo(test.bindRequest)
-
-				// Recreate the PodInfo with the BindRequest
 				newTask := pod_info.NewTaskInfoWithBindRequest(task.Pod, bindRequestInfo, ssn.ClusterInfo.ResourceClaims...)
 
-				// Replace the task in the job's podSet
 				for _, podSet := range job.PodSets {
 					if _, exists := podSet.GetPodInfos()[task.UID]; exists {
 						delete(podSet.GetPodInfos(), task.UID)
@@ -630,65 +559,28 @@ func TestStatementEvictUnevict_WithDRAClaims(t *testing.T) {
 						break
 					}
 				}
-
-				// Update our reference to point to the new task
 				task = newTask
 			}
 
 			stmt := ssn.Statement()
 			cp := stmt.Checkpoint()
 
-			// Store initial state
-			initialClaimInfoCount := len(task.ResourceClaimInfo)
-			initialAllocations := make(map[string]*schedulingv1alpha2.ResourceClaimAllocation)
-			for claimName, claimAlloc := range task.ResourceClaimInfo {
-				if claimAlloc != nil {
-					initialAllocations[claimName] = claimAlloc.DeepCopy()
-				}
-			}
-			assert.Greater(t, initialClaimInfoCount, 0, "Task should have ResourceClaimInfo")
-			initialNodeName := task.NodeName
-			initialStatus := task.Status
+			initialState := captureTaskState(task)
+			assert.Greater(t, initialState.claimInfoCount, 0, "Task should have ResourceClaimInfo")
 
 			err := stmt.Evict(task, "test eviction", eviction_info.EvictionMetadata{
 				EvictionGangSize: 1,
 				Action:           "reclaim",
 			})
-			assert.NoError(t, err, "Eviction should succeed")
+			assert.NoError(t, err)
 
-			// Verify eviction happened
-			assert.Equal(t, pod_status.Releasing, task.Status, "Task status should be Releasing after eviction")
-			assert.Equal(t, initialClaimInfoCount, len(task.ResourceClaimInfo), "ResourceClaimInfo count should remain constant after eviction")
+			assert.Equal(t, pod_status.Releasing, task.Status)
+			assert.Equal(t, initialState.claimInfoCount, len(task.ResourceClaimInfo))
 
-			// Rollback (unevict)
 			err = stmt.Rollback(cp)
-			assert.NoError(t, err, "Rollback should succeed")
+			assert.NoError(t, err)
 
-			// Verify uneviction happened - task should be back to initial state
-			assert.Equal(t, initialNodeName, task.NodeName, "Task should be back to initial node after unevict")
-			assert.Equal(t, initialStatus, task.Status, "Task status should be back to initial status after unevict")
-
-			assert.Equal(t, initialClaimInfoCount, len(task.ResourceClaimInfo), "ResourceClaimInfo count should remain constant after unevict")
-			for claimName, currentAlloc := range task.ResourceClaimInfo {
-				initialAlloc := initialAllocations[claimName]
-				assert.NotNil(t, initialAlloc, "Initial allocation for claim %s should exist", claimName)
-				assert.NotNil(t, currentAlloc, "Current allocation for claim %s should exist", claimName)
-				assert.NotNil(t, currentAlloc.Allocation, "Claim %s should have allocation after unevict", claimName)
-				assert.Equal(t, len(initialAlloc.Allocation.Devices.Results), len(currentAlloc.Allocation.Devices.Results),
-					"Claim %s should have same number of devices after unevict", claimName)
-
-				for i, initialDevice := range initialAlloc.Allocation.Devices.Results {
-					currentDevice := currentAlloc.Allocation.Devices.Results[i]
-					assert.Equal(t, initialDevice.Device, currentDevice.Device,
-						"Claim %s device %d name should match after unevict", claimName, i)
-					assert.Equal(t, initialDevice.Driver, currentDevice.Driver,
-						"Claim %s device %d driver should match after unevict", claimName, i)
-					assert.Equal(t, initialDevice.Pool, currentDevice.Pool,
-						"Claim %s device %d pool should match after unevict", claimName, i)
-					assert.Equal(t, initialDevice.Request, currentDevice.Request,
-						"Claim %s device %d request should match after unevict", claimName, i)
-				}
-			}
+			assertTaskStateRestored(t, task, initialState, "unevict")
 		})
 	}
 }
@@ -819,100 +711,124 @@ func TestStatementPipelineUnpipeline_WithDRAClaims(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Logf("Running test number: %d, test name: %s", i, test.name)
 
-			featuregate.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.DynamicResourceAllocation, true)
-			ssn := test_utils.BuildSession(test.topology, controller)
-			time.Sleep(1 * time.Millisecond)
-
-			// Get the pending task
-			var task *pod_info.PodInfo
-			job := ssn.ClusterInfo.PodGroupInfos[common_info.PodGroupID("job-pending")]
-			assert.NotNil(t, job, "Job job-pending should exist in session")
-			for _, t := range job.GetAllPodsMap() {
-				if t.Status == pod_status.Pending {
-					task = t
-					break
-				}
-			}
-			assert.NotNil(t, task, "Should find pending task in job-pending")
+			ssn := setupTestSession(t, test.topology, controller)
+			task := getTaskByStatus(t, ssn, "job-pending", pod_status.Pending)
 
 			stmt := ssn.Statement()
 			cp := stmt.Checkpoint()
 
-			// Store initial state
-			initialClaimInfoCount := len(task.ResourceClaimInfo)
-			initialAllocations := make(map[string]*schedulingv1alpha2.ResourceClaimAllocation)
-			for claimName, claimAlloc := range task.ResourceClaimInfo {
-				if claimAlloc != nil {
-					initialAllocations[claimName] = claimAlloc.DeepCopy()
-				}
-			}
-			assert.Greater(t, initialClaimInfoCount, 0, "Pending task should have ResourceClaimInfo")
-			initialNodeName := task.NodeName
-			initialStatus := task.Status
+			initialState := captureTaskState(task)
+			assert.Greater(t, initialState.claimInfoCount, 0, "Pending task should have ResourceClaimInfo")
 
-			// Pipeline the task
 			err := stmt.Pipeline(task, test.nodeName, false)
-			assert.NoError(t, err, "Pipeline should succeed")
+			assert.NoError(t, err)
 
-			// Verify pipeline happened
-			assert.Equal(t, test.nodeName, task.NodeName, "Task should be pipelined to node")
-			assert.Equal(t, pod_status.Pipelined, task.Status, "Task status should be Pipelined")
-			assert.Equal(t, initialClaimInfoCount, len(task.ResourceClaimInfo), "ResourceClaimInfo count should remain constant after pipeline")
+			assert.Equal(t, test.nodeName, task.NodeName)
+			assert.Equal(t, pod_status.Pipelined, task.Status)
+			assert.Equal(t, initialState.claimInfoCount, len(task.ResourceClaimInfo))
+			assertClaimAllocationsExist(t, task)
 
-			// Verify each claim now has allocation details
-			for claimName, claimAlloc := range task.ResourceClaimInfo {
-				assert.NotNil(t, claimAlloc, "Claim %s should exist", claimName)
-				assert.NotNil(t, claimAlloc.Allocation, "Claim %s should have allocation details after pipeline", claimName)
-				assert.Greater(t, len(claimAlloc.Allocation.Devices.Results), 0, "Claim %s should have device results after pipeline", claimName)
-
-				// Verify actual device allocation details
+			for _, claimAlloc := range task.ResourceClaimInfo {
 				for _, deviceResult := range claimAlloc.Allocation.Devices.Results {
-					assert.NotEmpty(t, deviceResult.Device, "Claim %s should have allocated device name", claimName)
-					assert.NotEmpty(t, deviceResult.Driver, "Claim %s should have driver specified", claimName)
-					assert.NotEmpty(t, deviceResult.Pool, "Claim %s should have pool specified", claimName)
+					assert.NotEmpty(t, deviceResult.Pool, "Pool should be specified")
 				}
 			}
 
-			// Rollback (unpipeline)
 			err = stmt.Rollback(cp)
-			assert.NoError(t, err, "Rollback should succeed")
+			assert.NoError(t, err)
 
-			// Verify unpipeline happened - task should be back to initial state
-			assert.Equal(t, initialNodeName, task.NodeName, "Task should be back to initial node after unpipeline")
-			assert.Equal(t, initialStatus, task.Status, "Task status should be back to initial status after unpipeline")
-			assert.Equal(t, initialClaimInfoCount, len(task.ResourceClaimInfo), "ResourceClaimInfo count should remain constant after unpipeline")
-
-			// Verify each claim's allocation details are restored to exact initial state
-			for claimName, currentAlloc := range task.ResourceClaimInfo {
-				initialAlloc := initialAllocations[claimName]
-
-				// Compare allocation content
-				if initialAlloc == nil || initialAlloc.Allocation == nil {
-					// Initial had no allocation
-					if currentAlloc.Allocation != nil {
-						assert.Equal(t, 0, len(currentAlloc.Allocation.Devices.Results),
-							"Claim %s should have no device allocations after unpipeline (initial had none)", claimName)
-					}
-				} else {
-					// Initial had allocation - verify exact match
-					assert.NotNil(t, currentAlloc.Allocation, "Claim %s should have allocation after unpipeline", claimName)
-					assert.Equal(t, len(initialAlloc.Allocation.Devices.Results), len(currentAlloc.Allocation.Devices.Results),
-						"Claim %s should have same number of devices after unpipeline", claimName)
-
-					// Compare each device allocation
-					for i, initialDevice := range initialAlloc.Allocation.Devices.Results {
-						currentDevice := currentAlloc.Allocation.Devices.Results[i]
-						assert.Equal(t, initialDevice.Device, currentDevice.Device,
-							"Claim %s device %d name should match after unpipeline", claimName, i)
-						assert.Equal(t, initialDevice.Driver, currentDevice.Driver,
-							"Claim %s device %d driver should match after unpipeline", claimName, i)
-						assert.Equal(t, initialDevice.Pool, currentDevice.Pool,
-							"Claim %s device %d pool should match after unpipeline", claimName, i)
-						assert.Equal(t, initialDevice.Request, currentDevice.Request,
-							"Claim %s device %d request should match after unpipeline", claimName, i)
-					}
-				}
-			}
+			assertTaskStateRestored(t, task, initialState, "unpipeline")
 		})
+	}
+}
+
+type taskState struct {
+	nodeName       string
+	status         pod_status.PodStatus
+	claimInfos     map[string]*schedulingv1alpha2.ResourceClaimAllocation
+	claimInfoCount int
+}
+
+func setupTestSession(t *testing.T, topology test_utils.TestTopologyBasic, controller *Controller) *framework.Session {
+	featuregate.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.DynamicResourceAllocation, true)
+	ssn := test_utils.BuildSession(topology, controller)
+	time.Sleep(1 * time.Millisecond)
+	return ssn
+}
+
+func getTaskByStatus(t *testing.T, ssn *framework.Session, jobName string, status pod_status.PodStatus) *pod_info.PodInfo {
+	job := ssn.ClusterInfo.PodGroupInfos[common_info.PodGroupID(jobName)]
+	assert.NotNil(t, job, "Job %s should exist", jobName)
+
+	for _, task := range job.GetAllPodsMap() {
+		if task.Status == status {
+			return task
+		}
+	}
+
+	assert.Fail(t, "Should find task with status %s in job %s", status, jobName)
+	return nil
+}
+
+func captureTaskState(task *pod_info.PodInfo) taskState {
+	state := taskState{
+		nodeName:       task.NodeName,
+		status:         task.Status,
+		claimInfoCount: len(task.ResourceClaimInfo),
+		claimInfos:     make(map[string]*schedulingv1alpha2.ResourceClaimAllocation),
+	}
+
+	for claimName, claimAlloc := range task.ResourceClaimInfo {
+		if claimAlloc != nil {
+			state.claimInfos[claimName] = claimAlloc.DeepCopy()
+		}
+	}
+
+	return state
+}
+
+func assertTaskStateRestored(t *testing.T, task *pod_info.PodInfo, initial taskState, contextMsg string) {
+	assert.Equal(t, initial.nodeName, task.NodeName, "Task node should be restored after %s", contextMsg)
+	assert.Equal(t, initial.status, task.Status, "Task status should be restored after %s", contextMsg)
+	assert.Equal(t, initial.claimInfoCount, len(task.ResourceClaimInfo), "ResourceClaimInfo count should match after %s", contextMsg)
+
+	for claimName, currentAlloc := range task.ResourceClaimInfo {
+		initialAlloc := initial.claimInfos[claimName]
+
+		if initialAlloc == nil || initialAlloc.Allocation == nil {
+			if currentAlloc.Allocation != nil {
+				assert.Equal(t, 0, len(currentAlloc.Allocation.Devices.Results),
+					"Claim %s should have no allocations after %s", claimName, contextMsg)
+			}
+		} else {
+			assert.NotNil(t, currentAlloc.Allocation, "Claim %s should have allocation after %s", claimName, contextMsg)
+			assert.Equal(t, len(initialAlloc.Allocation.Devices.Results), len(currentAlloc.Allocation.Devices.Results),
+				"Claim %s device count should match after %s", claimName, contextMsg)
+
+			for i, initialDevice := range initialAlloc.Allocation.Devices.Results {
+				currentDevice := currentAlloc.Allocation.Devices.Results[i]
+				assert.Equal(t, initialDevice.Device, currentDevice.Device,
+					"Claim %s device %d name should match after %s", claimName, i, contextMsg)
+				assert.Equal(t, initialDevice.Driver, currentDevice.Driver,
+					"Claim %s device %d driver should match after %s", claimName, i, contextMsg)
+				assert.Equal(t, initialDevice.Pool, currentDevice.Pool,
+					"Claim %s device %d pool should match after %s", claimName, i, contextMsg)
+				assert.Equal(t, initialDevice.Request, currentDevice.Request,
+					"Claim %s device %d request should match after %s", claimName, i, contextMsg)
+			}
+		}
+	}
+}
+
+func assertClaimAllocationsExist(t *testing.T, task *pod_info.PodInfo) {
+	for claimName, claimAlloc := range task.ResourceClaimInfo {
+		assert.NotNil(t, claimAlloc, "Claim %s should exist", claimName)
+		assert.NotNil(t, claimAlloc.Allocation, "Claim %s should have allocation", claimName)
+		assert.Greater(t, len(claimAlloc.Allocation.Devices.Results), 0, "Claim %s should have device results", claimName)
+
+		for _, deviceResult := range claimAlloc.Allocation.Devices.Results {
+			assert.NotEmpty(t, deviceResult.Device, "Claim %s device name should not be empty", claimName)
+			assert.NotEmpty(t, deviceResult.Driver, "Claim %s driver should not be empty", claimName)
+		}
 	}
 }
