@@ -16,31 +16,9 @@ spec:
   {{- end }}
   {{- if .Values.scheduler.plugins }}
   plugins:
-    {{- range $name, $config := .Values.scheduler.plugins }}
-    {{ $name }}:
-      {{- if hasKey $config "enabled" }}
-      enabled: {{ $config.enabled }}
-      {{- end }}
-      {{- if hasKey $config "priority" }}
-      priority: {{ $config.priority }}
-      {{- end }}
-      {{- if $config.arguments }}
-      arguments:
-        {{- range $key, $value := $config.arguments }}
-        {{ $key }}: {{ $value | quote }}
-        {{- end }}
-      {{- end }}
-    {{- end }}
+    {{- toYaml .Values.scheduler.plugins | nindent 4 }}
   {{- end }}
   {{- if .Values.scheduler.actions }}
   actions:
-    {{- range $name, $config := .Values.scheduler.actions }}
-    {{ $name }}:
-      {{- if hasKey $config "enabled" }}
-      enabled: {{ $config.enabled }}
-      {{- end }}
-      {{- if hasKey $config "priority" }}
-      priority: {{ $config.priority }}
-      {{- end }}
-    {{- end }}
+    {{- toYaml .Values.scheduler.actions | nindent 4 }}
   {{- end }}
