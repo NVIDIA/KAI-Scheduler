@@ -195,6 +195,16 @@ func GetRequiredSubGroupCount(sg *SubGroup) int {
 
 ---
 
+## Scheduler Logic Changes
+
+The scheduler's pod ordering logic (e.g., `subgrouporder` plugin) must adapt to `minSubGroup` constraints. When a parent has `minSubGroup` set, the scheduler prioritizes SubGroups that are below their `minMember` threshold and contribute toward satisfying the parent's `minSubGroup` requirement. Once the parent's `minSubGroup` is satisfied, additional SubGroups are deprioritized (elastic capacity).
+
+**When `minSubGroup` is nil:** The scheduler falls back to current behavior, requiring **all** child SubGroups to be ready before the parent is considered schedulable.
+
+**Tie-breaking:** When multiple SubGroups are equally starved (e.g., both at 2/3 pods ready), the scheduler defaults to the order defined in the PodGroup spec and queue—scheduling the first pending pod in line.
+
+---
+
 ## Validation Rules
 
 The following validations will be enforced via a Validating Webhook:
