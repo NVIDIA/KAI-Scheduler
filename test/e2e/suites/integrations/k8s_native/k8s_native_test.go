@@ -24,7 +24,7 @@ import (
 
 var _ = DescribeK8sNativeSpecs()
 
-var _ = Describe("K8S Native object integrations - KAI only", Ordered, func() {
+var _ = Describe("K8S Native object integrations", Ordered, func() {
 	var testCtx *testcontext.TestContext
 
 	BeforeAll(func(ctx context.Context) {

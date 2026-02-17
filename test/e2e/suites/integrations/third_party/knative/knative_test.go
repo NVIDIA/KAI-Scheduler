@@ -33,8 +33,7 @@ import (
 
 var _ = DescribeKnativeSpecs()
 
-// KAI-only: Non-Gang scheduling tests
-var _ = Describe("Knative integration - KAI Only", Ordered, func() {
+var _ = Describe("Knative integration", Ordered, func() {
 	var (
 		testCtx *testcontext.TestContext
 	)

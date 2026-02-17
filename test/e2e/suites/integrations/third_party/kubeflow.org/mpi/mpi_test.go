@@ -26,8 +26,7 @@ import (
 
 var _ = DescribeMpiSpecs()
 
-// KAI-only: Delayed Launcher test
-var _ = Describe("Kubeflow.org MPIJob Integration - KAI Only", Ordered, func() {
+var _ = Describe("Kubeflow.org MPIJob Integration", Ordered, func() {
 	var (
 		testCtx   *testcontext.TestContext
 		namespace string

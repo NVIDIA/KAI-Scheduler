@@ -24,11 +24,9 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
 )
 
-// Shared specs
 var _ = DescribeRaySpecs()
 
-// KAI-only tests
-var _ = Describe("Ray integration - KAI Only", Ordered, func() {
+var _ = Describe("Ray integration", Ordered, func() {
 	var (
 		testCtx *testcontext.TestContext
 	)
