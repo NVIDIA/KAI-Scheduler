@@ -475,6 +475,15 @@ func (s *Statement) unpipeline(
 	return nil
 }
 
+// UnpipelineTask reverts a pipelined task to Pending in the session only (no operation recorded, no commit).
+// Used at end of cycle to deallocate all pipelined pods without affecting PodGroup status or BindRequest.
+func (s *Statement) UnpipelineTask(task *pod_info.PodInfo) error {
+	if task.Status != pod_status.Pipelined {
+		return nil
+	}
+	return s.unpipeline(task, "", pod_status.Pending, nil, nil, false)
+}
+
 func (s *Statement) Unevict(taskToUnevict *pod_info.PodInfo) error {
 	log.InfraLogger.V(6).Infof("Unevicting task: %v", taskToUnevict.Name)
 	return s.undoEarliestValidOperation(taskToUnevict, evict)

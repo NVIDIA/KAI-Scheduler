@@ -117,6 +117,11 @@ func main() {
 		action.Execute(ssn)
 		metrics.UpdateActionDuration(string(action.Name()), metrics.Duration(actionStartTime))
 	}
+
+	actionsCleanup := framework.GetActionCleanup()
+	if actionsCleanup != nil {
+		actionsCleanup(ssn)
+	}
 }
 
 func loadSnapshot(filename string) (*snapshot.Snapshot, error) {
