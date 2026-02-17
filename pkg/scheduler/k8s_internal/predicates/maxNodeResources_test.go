@@ -347,6 +347,9 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			if !tt.expected.skipExactMatch && !statusEqual(status, tt.expected.status) {
 				t.Errorf("PreFilter() = %v, want %v", status, tt.expected.status)
 			}
+			if len(tt.expected.partialReasons) > 0 && status == nil {
+				t.Fatalf("PreFilter() returned nil status, but expected partial reasons: %v", strings.Join(tt.expected.partialReasons, ", "))
+			}
 			for _, partialReason := range tt.expected.partialReasons {
 				if !strings.Contains(status.Message(), partialReason) {
 					t.Errorf("PreFilter() = %v, missing partial reason: %v", status.Message(), partialReason)
