@@ -99,7 +99,7 @@ func validateMultiFractionRequest(hasGpuFractionsCount bool, gpuFractionsCountFr
 func getFirstGPULimit(pod *v1.Pod) *resource.Quantity {
 	containers := append(pod.Spec.Containers, pod.Spec.InitContainers...)
 	for _, container := range containers {
-		if limit, ok := container.Resources.Limits[constants.GpuResource]; ok {
+		if limit, ok := container.Resources.Limits[constants.NvidiaGpuResource]; ok {
 			return &limit
 		}
 	}

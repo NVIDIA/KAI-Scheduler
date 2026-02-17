@@ -68,7 +68,7 @@ func DescribePreemptElasticSpecs() bool {
 
 			lowPodRequirements := v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			}
 
@@ -87,7 +87,7 @@ func DescribePreemptElasticSpecs() bool {
 
 			highPodRequirements := v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("2"),
+					constants.NvidiaGpuResource: resource.MustParse("2"),
 				},
 			}
 
@@ -125,7 +125,7 @@ func DescribePreemptElasticSpecs() bool {
 
 			lowPodRequirements := v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			}
 
@@ -136,7 +136,7 @@ func DescribePreemptElasticSpecs() bool {
 
 			highPodRequirements := v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("2"),
+					constants.NvidiaGpuResource: resource.MustParse("2"),
 				},
 			}
 

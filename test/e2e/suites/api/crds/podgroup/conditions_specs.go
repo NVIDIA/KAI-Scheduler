@@ -74,7 +74,7 @@ func DescribeConditionsSpecs() bool {
 			It("sets condition with NonPreemptibleOverQuota reason on PodGroup", func(ctx context.Context) {
 				pod := rd.CreatePodObject(testQueue, v1.ResourceRequirements{
 					Limits: v1.ResourceList{
-						constants.GpuResource: resource.MustParse("1"),
+						constants.NvidiaGpuResource: resource.MustParse("1"),
 					},
 				})
 				pod.Spec.PriorityClassName = nonPreemptiblePriorityClass
@@ -101,7 +101,7 @@ func DescribeConditionsSpecs() bool {
 				It("sets condition with reason on PodGroup", func(ctx context.Context) {
 					pod := rd.CreatePodObject(testQueue, v1.ResourceRequirements{
 						Limits: v1.ResourceList{
-							constants.GpuResource: resource.MustParse("1"),
+							constants.NvidiaGpuResource: resource.MustParse("1"),
 						},
 					})
 					createdPod, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)
@@ -115,7 +115,7 @@ func DescribeConditionsSpecs() bool {
 				It("sets condition with reason on PodGroup", func(ctx context.Context) {
 					pod := rd.CreatePodObject(testQueue, v1.ResourceRequirements{
 						Limits: v1.ResourceList{
-							constants.GpuResource: resource.MustParse("1"),
+							constants.NvidiaGpuResource: resource.MustParse("1"),
 						},
 					})
 					createdPod, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod)

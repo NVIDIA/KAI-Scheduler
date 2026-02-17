@@ -35,6 +35,7 @@ import (
 const (
 	apiGroupArgo                     = "argoproj.io"
 	apiGroupRunai                    = "run.ai"
+	apiGroupTrainer                  = "trainer.kubeflow.org"
 	kindTrainingWorkload             = "TrainingWorkload"
 	kindInteractiveWorkload          = "InteractiveWorkload"
 	kindDistributedWorkload          = "DistributedWorkload"
@@ -55,6 +56,8 @@ const (
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns;taskruns,verbs=get;list;watch
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns/finalizers;taskruns/finalizers,verbs=patch;update;create
 // +kubebuilder:rbac:groups=run.ai,resources=trainingworkloads;interactiveworkloads;distributedworkloads;inferenceworkloads;distributedinferenceworkloads,verbs=get;list;watch
+// +kubebuilder:rbac:groups=trainer.kubeflow.org,resources=trainjobs,verbs=get;list;watch
+// +kubebuilder:rbac:groups=trainer.kubeflow.org,resources=trainjobs/finalizers,verbs=patch;update;create
 
 type DefaultPluginsHub struct {
 	defaultPlugin *defaultgrouper.DefaultGrouper
@@ -308,6 +311,13 @@ func NewDefaultPluginsHub(kubeClient client.Client, searchForLegacyPodGroups,
 			Kind:    kind,
 		}] = skipTopOwnerGrouper
 	}
+
+	// TrainJob (Kubeflow Trainer v2) wraps a JobSet; skip TrainJob and delegate to JobSet grouper
+	table[metav1.GroupVersionKind{
+		Group:   apiGroupTrainer,
+		Version: "v1alpha1",
+		Kind:    "TrainJob",
+	}] = skipTopOwnerGrouper
 
 	// Dynamo uses Grove Grouper and needs to propagate metadata from DynamoGraphDeployment to PodGang and PodClique.
 	table[metav1.GroupVersionKind{

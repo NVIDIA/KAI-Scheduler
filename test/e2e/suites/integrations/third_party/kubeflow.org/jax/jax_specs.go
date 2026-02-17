@@ -66,10 +66,10 @@ func DescribeJaxSpecs() bool {
 		It("should run the pods of the Jax", func(ctx context.Context) {
 			singleGPURequest := v1.ResourceRequirements{
 				Limits: v1.ResourceList{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 				Requests: v1.ResourceList{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			}
 

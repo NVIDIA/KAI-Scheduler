@@ -26,8 +26,10 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
+	"k8s.io/apimachinery/pkg/types"
 	clientcache "k8s.io/client-go/tools/cache"
 
+	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
@@ -173,6 +175,11 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 		nodeName = bindRequest.BindRequest.Spec.SelectedNode
 	}
 
+	resourceClaimInfo, err := resourceClaimInfoFromPodClaims(draPodClaims, pod, bindRequest)
+	if err != nil {
+		log.InfraLogger.Errorf("PodInfo ctor failure - failed to calculate resource claim info for pod %s/%s: %v", pod.Namespace, pod.Name, err)
+	}
+
 	podInfo := &PodInfo{
 		UID:                            common_info.PodID(pod.UID),
 		Job:                            getPodGroupID(pod),
@@ -190,6 +197,7 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 		ResourceRequestType:            RequestTypeRegular,
 		ResourceReceivedType:           ReceivedTypeNone,
 		BindRequest:                    bindRequest,
+		ResourceClaimInfo:              resourceClaimInfo,
 		schedulingConstraintsSignature: "",
 		storageClaims:                  map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
 		ownedStorageClaims:             map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo{},
@@ -198,6 +206,48 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 	podInfo.updatePodAdditionalFields(bindRequest, draPodClaims...)
 
 	return podInfo
+}
+
+func resourceClaimInfoFromPodClaims(draPodClaims []*resourceapi.ResourceClaim, pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo) (bindrequest_info.ResourceClaimInfo, error) {
+	resourceClaimInfo := make(bindrequest_info.ResourceClaimInfo)
+
+	bindingRequestClaimUpdates := make(map[string]*schedulingv1alpha2.ResourceClaimAllocation)
+	if bindRequest != nil {
+		for _, claimAllocation := range bindRequest.BindRequest.Spec.ResourceClaimAllocations {
+			bindingRequestClaimUpdates[claimAllocation.Name] = &schedulingv1alpha2.ResourceClaimAllocation{
+				Name:       claimAllocation.Name,
+				Allocation: claimAllocation.Allocation.DeepCopy(),
+			}
+		}
+	}
+
+	draPodClaimsMap := resource_info.ResourceClaimSliceToMap(draPodClaims)
+	for _, podClaim := range pod.Spec.ResourceClaims {
+		claimName, err := resources.GetResourceClaimName(pod, &podClaim)
+		if err != nil {
+			if podClaim.ResourceClaimTemplateName != nil {
+				continue // The dra controller might not have created the claim yet - this is a valid state. The will fail on the dra plugin.
+			}
+			return resourceClaimInfo, fmt.Errorf("PodInfo ctor failure - failed to get resource claim name for pod %s/%s, claim %s: %v", pod.Namespace, pod.Name, podClaim.Name, err)
+		}
+		claim, found := draPodClaimsMap[types.NamespacedName{Namespace: pod.Namespace, Name: claimName}.String()]
+		if !found || claim == nil {
+			if podClaim.ResourceClaimTemplateName != nil {
+				continue // The dra controller might not have created the claim yet - this is a valid state. The will fail on the dra plugin.
+			}
+			return resourceClaimInfo, fmt.Errorf("PodInfo ctor failure - failed to get claim from draPodClaimsMap for pod %s/%s, claim %s", pod.Namespace, pod.Name, podClaim.Name)
+		}
+		resourceClaimInfo[podClaim.Name] = &schedulingv1alpha2.ResourceClaimAllocation{
+			Name:       podClaim.Name,
+			Allocation: claim.Status.Allocation,
+		}
+
+		// If a binding claim already exists, assume this is the allocation that will happen for the pod
+		if claimUpdate, found := bindingRequestClaimUpdates[podClaim.Name]; found {
+			resourceClaimInfo[podClaim.Name].Allocation = claimUpdate.Allocation
+		}
+	}
+	return resourceClaimInfo, nil
 }
 
 func (pi *PodInfo) Clone() *PodInfo {

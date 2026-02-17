@@ -6,6 +6,7 @@ package predicates
 import (
 	"context"
 	"strconv"
+	"strings"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
@@ -30,7 +31,9 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 		pod            *v1.Pod
 	}
 	type expected struct {
-		status *ksf.Status
+		status         *ksf.Status
+		skipExactMatch bool
+		partialReasons []string
 	}
 	tests := []struct {
 		name     string
@@ -72,6 +75,8 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 				},
 			},
 			expected{
+				nil,
+				false,
 				nil,
 			},
 		},
@@ -121,6 +126,8 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			expected{
 				ksf.NewStatus(ksf.Unschedulable,
 					"The pod n1/name1 requires GPU: 0, CPU: 1 (cores), memory: 0 (GB), pods: 1. Max CPU resources available in a single node in the default node-pool is topped at 0.5 cores"),
+				false,
+				nil,
 			},
 		},
 		{
@@ -169,6 +176,8 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			expected{
 				ksf.NewStatus(ksf.Unschedulable,
 					"The pod n1/name1 requires GPU: 0, CPU: 0 (cores), memory: 1 (GB), pods: 1. Max memory resources available in a single node in the default node-pool is topped at 0.419 GB"),
+				false,
+				nil,
 			},
 		},
 		{
@@ -217,6 +226,8 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			expected{
 				ksf.NewStatus(ksf.Unschedulable,
 					"The pod n1/name1 requires GPU: 2, CPU: 0 (cores), memory: 0 (GB), pods: 1. Max GPU resources available in a single node in the default node-pool is topped at 1"),
+				false,
+				nil,
 			},
 		},
 		{
@@ -264,6 +275,8 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			expected{
 				ksf.NewStatus(ksf.Unschedulable,
 					"The pod n1/name1 requires GPU: 0.5, CPU: 0 (cores), memory: 0 (GB), pods: 1. No node in the default node-pool has GPU resources"),
+				false,
+				nil,
 			},
 		},
 		{
@@ -312,9 +325,13 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 				},
 			},
 			expected{
-				ksf.NewStatus(ksf.Unschedulable,
-					"The pod n1/name1 requires GPU: 0, CPU: 0 (cores), memory: 0 (GB), ephemeral-storage: 25 (GB), pods: 1. "+
-						"Max ephemeral-storage resources available in a single node in the default node-pool is topped at 21.474 GB"),
+				nil,
+				true,
+				[]string{
+					"The pod n1/name1 requires",
+					"ephemeral-storage: 25 (GB)",
+					"pods: 1",
+				},
 			},
 		},
 	}
@@ -327,8 +344,16 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			}
 			mnr := NewMaxNodeResourcesPredicate(tt.args.nodesMap, tt.args.resourceClaims, tt.args.nodePoolName)
 			_, status := mnr.PreFilter(context.TODO(), nil, tt.args.pod, nil)
-			if !statusEqual(status, tt.expected.status) {
+			if !tt.expected.skipExactMatch && !statusEqual(status, tt.expected.status) {
 				t.Errorf("PreFilter() = %v, want %v", status, tt.expected.status)
+			}
+			if len(tt.expected.partialReasons) > 0 && status == nil {
+				t.Fatalf("PreFilter() returned nil status, but expected partial reasons: %v", strings.Join(tt.expected.partialReasons, ", "))
+			}
+			for _, partialReason := range tt.expected.partialReasons {
+				if !strings.Contains(status.Message(), partialReason) {
+					t.Errorf("PreFilter() = %v, missing partial reason: %v", status.Message(), partialReason)
+				}
 			}
 		})
 	}

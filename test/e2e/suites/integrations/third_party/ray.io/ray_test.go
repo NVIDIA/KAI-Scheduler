@@ -89,10 +89,10 @@ var _ = Describe("Ray integration", Ordered, func() {
 			workerGroupB.MaxReplicas = ptr.To(int32(5))
 			workerGroupB.Template.Spec.Containers[0].Resources = v1.ResourceRequirements{
 				Requests: v1.ResourceList{
-					constants.GpuResource: resource.MustParse("99"),
+					constants.NvidiaGpuResource: resource.MustParse("99"),
 				},
 				Limits: v1.ResourceList{
-					constants.GpuResource: resource.MustParse("99"),
+					constants.NvidiaGpuResource: resource.MustParse("99"),
 				},
 			}
 

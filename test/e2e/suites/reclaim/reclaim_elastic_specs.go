@@ -59,7 +59,7 @@ func DescribeReclaimElasticSpecs() bool {
 
 			reclaimeePodRequirements := v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			}
 
@@ -78,7 +78,7 @@ func DescribeReclaimElasticSpecs() bool {
 
 			reclaimerPodRequirements := v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("2"),
+					constants.NvidiaGpuResource: resource.MustParse("2"),
 				},
 			}
 
@@ -113,7 +113,7 @@ func DescribeReclaimElasticSpecs() bool {
 
 			reclaimeePodRequirements := v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			}
 			reclaimeePodGroup, reclaimeePods := pod_group.CreateWithPods(ctx, testCtx.KubeClientset, testCtx.KubeAiSchedClientset,
@@ -123,7 +123,7 @@ func DescribeReclaimElasticSpecs() bool {
 
 			reclaimerPodRequirements := v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("2"),
+					constants.NvidiaGpuResource: resource.MustParse("2"),
 				},
 			}
 			reclaimerPod := rd.CreatePodObject(reclaimerQueue, reclaimerPodRequirements)

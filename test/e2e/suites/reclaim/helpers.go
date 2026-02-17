@@ -24,7 +24,7 @@ func CreatePod(ctx context.Context, testCtx *testcontext.TestContext, q *v2.Queu
 	pod := rd.CreatePodObject(q, v1.ResourceRequirements{})
 	if gpus >= 1 {
 		pod.Spec.Containers[0].Resources.Limits = map[v1.ResourceName]resource.Quantity{
-			constants.GpuResource: resource.MustParse(fmt.Sprintf("%f", gpus)),
+			constants.NvidiaGpuResource: resource.MustParse(fmt.Sprintf("%f", gpus)),
 		}
 	} else if gpus > 0 {
 		pod.Annotations = map[string]string{

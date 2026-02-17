@@ -113,7 +113,10 @@ func (ps *PodSet) WithPodInfos(tasks pod_info.PodsMap) *PodSet {
 
 func (ps *PodSet) IsReadyForScheduling() bool {
 	readyTasks := ps.GetNumAliveTasks() - ps.GetNumGatedTasks()
-	return int32(readyTasks) >= ps.minAvailable
+	if int32(readyTasks) < ps.minAvailable {
+		return false
+	}
+	return true
 }
 
 func (ps *PodSet) IsGangSatisfied() bool {

@@ -274,7 +274,7 @@ jobs:
 
       - name: Install ginkgo
         run: |
-          go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.4
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.25.3
 
       - name: Delete images from disk
         env:

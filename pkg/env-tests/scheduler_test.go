@@ -107,7 +107,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			// Create your pod as before
 			testPod := utils.CreatePodObject(testNamespace.Name, "test-pod", corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
@@ -136,7 +136,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 		It("Should allow optional projected configmap references", func(ctx context.Context) {
 			testPod := utils.CreatePodObject(testNamespace.Name, "test-pod-optional-configmap", corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			testPod.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
@@ -187,7 +187,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			// Create your pod as before
 			testPod := utils.CreatePodObject(testNamespace.Name, "test-pod", corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			testPod.Spec.SchedulingGates = []corev1.PodSchedulingGate{
@@ -242,7 +242,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 		It("Should respect scheduling gates - podgroup", func(ctx context.Context) {
 			testPod1 := utils.CreatePodObject(testNamespace.Name, "test-pod-1", corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			testPod1.Spec.SchedulingGates = []corev1.PodSchedulingGate{
@@ -254,7 +254,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 
 			testPod2 := utils.CreatePodObject(testNamespace.Name, "test-pod-2", corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			testPod2.Spec.SchedulingGates = []corev1.PodSchedulingGate{
@@ -317,7 +317,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 			// Create your pod as before
 			testPod := utils.CreatePodObject(testNamespace.Name, "test-pod", corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse("999"),
+					constants.NvidiaGpuResource: resource.MustParse("999"),
 				},
 			})
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
@@ -638,7 +638,7 @@ var _ = Describe("Scheduler", Ordered, func() {
 		It("Schedule pods with rack topology constraints", func(ctx context.Context) {
 			// schedule a single gpu pod outside of the topology to try and "pull" the topology constraint workload pods outside of a valid rack
 			binPackingPullPod := utils.CreatePodObject(testNamespace.Name, "bin-packing-pull-pod", corev1.ResourceRequirements{
-				Limits: corev1.ResourceList{constants.GpuResource: resource.MustParse("1")},
+				Limits: corev1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
 			})
 			binPackingPullPod.Spec.NodeSelector = map[string]string{
 				hostnameLabelKey: "test-node",
@@ -649,10 +649,10 @@ var _ = Describe("Scheduler", Ordered, func() {
 
 			singlePodResourceRequirements := corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse(fmt.Sprintf("%d", gpusPerNode-1)),
+					constants.NvidiaGpuResource: resource.MustParse(fmt.Sprintf("%d", gpusPerNode-1)),
 				},
 				Requests: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse(fmt.Sprintf("%d", gpusPerNode-1)),
+					constants.NvidiaGpuResource: resource.MustParse(fmt.Sprintf("%d", gpusPerNode-1)),
 				},
 			}
 

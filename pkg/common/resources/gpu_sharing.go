@@ -26,10 +26,10 @@ func RequestsGPUFraction(pod *v1.Pod) bool {
 
 func RequestsWholeGPU(pod *v1.Pod) bool {
 	for _, container := range pod.Spec.Containers {
-		if _, ok := container.Resources.Requests[constants.GpuResource]; ok {
+		if _, ok := container.Resources.Requests[constants.NvidiaGpuResource]; ok {
 			return true
 		}
-		if _, ok := container.Resources.Limits[constants.GpuResource]; ok {
+		if _, ok := container.Resources.Limits[constants.NvidiaGpuResource]; ok {
 			return true
 		}
 	}

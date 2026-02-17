@@ -114,7 +114,7 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 	defer cancel()
 
 	capacity := map[v1.ResourceName]float64{}
-	for _, resource := range []v1.ResourceName{commonconstants.GpuResource, v1.ResourceCPU, v1.ResourceMemory} {
+	for _, resource := range []v1.ResourceName{commonconstants.NvidiaGpuResource, v1.ResourceCPU, v1.ResourceMemory} {
 		resourceCapacity, err := p.queryResourceCapacity(ctx, p.capacityMetricsMap[string(resource)], p.usageWindowQuery)
 		if err != nil {
 			return nil, fmt.Errorf("error querying %s and capacity: %v", resource, err)
@@ -124,7 +124,7 @@ func (p *PrometheusClient) GetResourceUsage() (*queue_info.ClusterUsage, error) 
 
 	usage := queue_info.NewClusterUsage()
 
-	for _, resource := range []v1.ResourceName{commonconstants.GpuResource, v1.ResourceCPU, v1.ResourceMemory} {
+	for _, resource := range []v1.ResourceName{commonconstants.NvidiaGpuResource, v1.ResourceCPU, v1.ResourceMemory} {
 		capacityForResource, found := capacity[resource]
 		if !found {
 			capacityForResource = 1

@@ -80,7 +80,7 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 		It("Schedule on same node", func(ctx context.Context) {
 			pod1 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			pod1, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod1)
@@ -88,7 +88,7 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 
 			pod2 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			pod2, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod2)
@@ -153,7 +153,7 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 		It("Schedule on different nodes", func(ctx context.Context) {
 			pod1 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			pod1, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod1)
@@ -161,7 +161,7 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 
 			pod2 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			pod2, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod2)

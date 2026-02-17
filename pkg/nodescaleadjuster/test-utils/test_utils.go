@@ -96,10 +96,10 @@ func CreateScalingPod(unschedulablePodNamespace, unschedulablePodName string, nu
 				{
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							constants.GpuResource: *resource.NewQuantity(int64(numDevices), resource.DecimalSI),
+							constants.NvidiaGpuResource: *resource.NewQuantity(int64(numDevices), resource.DecimalSI),
 						},
 						Limits: corev1.ResourceList{
-							constants.GpuResource: *resource.NewQuantity(int64(numDevices), resource.DecimalSI),
+							constants.NvidiaGpuResource: *resource.NewQuantity(int64(numDevices), resource.DecimalSI),
 						},
 					},
 				},
