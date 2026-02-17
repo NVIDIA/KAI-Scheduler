@@ -32,6 +32,14 @@ const (
 
 // SchedulingShardSpec defines the desired state of SchedulingShard
 type SchedulingShardSpec struct {
+	// Actions defines the scheduler actions to run in order. If not specified, defaults to
+	// "allocate, consolidation, reclaim, preempt, stalegangeviction" (consolidation is
+	// excluded when using spread placement strategy).
+	// Available actions: allocate, consolidation, reclaim, preempt, stalegangeviction
+	// Example: ["allocate", "reclaim", "preempt"] to disable stalegangeviction and consolidation.
+	// +kubebuilder:validation:Optional
+	Actions []string `json:"actions,omitempty"`
+
 	// Args specifies custom CLI arguments for the scheduler. These are merged with automatically generated flags.
 	// Valid flags are those defined in the scheduler's code. Usage examples:
 	// - To pass "--custom-flag=value": Args: {"custom-flag": "value"}
