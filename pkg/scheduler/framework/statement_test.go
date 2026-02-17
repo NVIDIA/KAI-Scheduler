@@ -245,11 +245,13 @@ func TestStatement_Evict(t *testing.T) {
 				jobAllocation: resource_info.ResourceFromResourceList(
 					v1.ResourceList{
 						"nvidia.com/gpu": resource.MustParse("1"),
+						"pods":           resource.MustParse("1"),
 					},
 				),
 				usedOnNode: resource_info.ResourceFromResourceList(
 					v1.ResourceList{
 						"nvidia.com/gpu": resource.MustParse("1"),
+						"pods":           resource.MustParse("1"),
 					},
 				),
 			},

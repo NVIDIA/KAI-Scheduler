@@ -363,8 +363,8 @@ func TestNewTopologyInsufficientResourcesError(t *testing.T) {
 				subGroupName:      "subgroup1",
 				namespace:         "namespace1",
 				domainID:          "domain1",
-				resourceRequested: BuildResourceWithGpu("1000m", "1M", "2"),
-				availableResource: BuildResourceWithGpu("2000m", "2M", "1"),
+				resourceRequested: BuildResourceWithGpu("1000m", "1M", "2", "1"),
+				availableResource: BuildResourceWithGpu("2000m", "2M", "1", "110"),
 			},
 			want: &TopologyFitError{
 				JobFitErrorBase: JobFitErrorBase{
@@ -452,8 +452,8 @@ func TestNewTopologyInsufficientResourcesError(t *testing.T) {
 				subGroupName:      "subgroup1",
 				namespace:         "namespace1",
 				domainID:          "domain1",
-				resourceRequested: BuildResourceWithGpu("2000m", "3M", "2"),
-				availableResource: BuildResourceWithGpu("1000m", "2M", "1"),
+				resourceRequested: BuildResourceWithGpu("2000m", "3M", "2", "1"),
+				availableResource: BuildResourceWithGpu("1000m", "2M", "1", "110"),
 			},
 			want: &TopologyFitError{
 				JobFitErrorBase: JobFitErrorBase{

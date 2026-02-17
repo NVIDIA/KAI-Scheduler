@@ -282,7 +282,8 @@ func TestSnapshotNodes(t *testing.T) {
 					},
 					Status: corev1.NodeStatus{
 						Allocatable: corev1.ResourceList{
-							"cpu": resource.MustParse("10"),
+							"cpu":  resource.MustParse("10"),
+							"pods": resource.MustParse("110"),
 						},
 					},
 				},
@@ -293,13 +294,15 @@ func TestSnapshotNodes(t *testing.T) {
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
 						corev1.ResourceList{
-							"cpu": resource.MustParse("8"),
+							"cpu":  resource.MustParse("8"),
+							"pods": resource.MustParse("109"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
 						corev1.ResourceList{
 							"cpu":    resource.MustParse("2"),
 							"memory": resource.MustParse("0"),
+							"pods":   resource.MustParse("1"),
 						},
 					),
 					Releasing: resource_info.ResourceFromResourceList(
@@ -320,7 +323,8 @@ func TestSnapshotNodes(t *testing.T) {
 					},
 					Status: corev1.NodeStatus{
 						Allocatable: corev1.ResourceList{
-							"cpu": resource.MustParse("10"),
+							"cpu":  resource.MustParse("10"),
+							"pods": resource.MustParse("110"),
 						},
 					},
 				},
@@ -331,7 +335,8 @@ func TestSnapshotNodes(t *testing.T) {
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
 						corev1.ResourceList{
-							"cpu": resource.MustParse("10"),
+							"cpu":  resource.MustParse("10"),
+							"pods": resource.MustParse("110"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
@@ -361,7 +366,8 @@ func TestSnapshotNodes(t *testing.T) {
 					},
 					Status: corev1.NodeStatus{
 						Allocatable: corev1.ResourceList{
-							"cpu": resource.MustParse("10"),
+							"cpu":  resource.MustParse("10"),
+							"pods": resource.MustParse("110"),
 						},
 					},
 				},
@@ -374,7 +380,8 @@ func TestSnapshotNodes(t *testing.T) {
 					},
 					Status: corev1.NodeStatus{
 						Allocatable: corev1.ResourceList{
-							"cpu": resource.MustParse("10"),
+							"cpu":  resource.MustParse("10"),
+							"pods": resource.MustParse("110"),
 						},
 					},
 				},
@@ -386,13 +393,15 @@ func TestSnapshotNodes(t *testing.T) {
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
 						corev1.ResourceList{
-							"cpu": resource.MustParse("8"),
+							"cpu":  resource.MustParse("8"),
+							"pods": resource.MustParse("109"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
 						corev1.ResourceList{
 							"cpu":    resource.MustParse("2"),
 							"memory": resource.MustParse("0"),
+							"pods":   resource.MustParse("1"),
 						},
 					),
 					Releasing: resource_info.ResourceFromResourceList(
@@ -416,6 +425,7 @@ func TestSnapshotNodes(t *testing.T) {
 						Allocatable: corev1.ResourceList{
 							"cpu":                   resource.MustParse("10"),
 							"nvidia.com/mig-1g.5gb": resource.MustParse("10"),
+							"pods":                  resource.MustParse("110"),
 						},
 					},
 				},
@@ -429,6 +439,7 @@ func TestSnapshotNodes(t *testing.T) {
 						corev1.ResourceList{
 							"cpu":                   resource.MustParse("6"),
 							"nvidia.com/mig-1g.5gb": resource.MustParse("6"),
+							"pods":                  resource.MustParse("108"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
@@ -436,6 +447,7 @@ func TestSnapshotNodes(t *testing.T) {
 							"cpu":                   resource.MustParse("4"),
 							"memory":                resource.MustParse("0"),
 							"nvidia.com/mig-1g.5gb": resource.MustParse("4"),
+							"pods":                  resource.MustParse("2"),
 						},
 					),
 					Releasing: resource_info.ResourceFromResourceList(
@@ -1964,6 +1976,11 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 					"kubernetes.io/hostname": "node-1",
 				},
 			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					"pods": resource.MustParse("110"),
+				},
+			},
 		},
 		&storage.CSIStorageCapacity{
 			ObjectMeta: metav1.ObjectMeta{
@@ -2041,8 +2058,7 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 	assert.Equal(t, nil, err)
 	node = snapshot.Nodes["node-1"]
 	task = snapshot.PodGroupInfos["podGroup-0"].GetAllPodsMap()["pod-1"]
-	assert.Equal(t, node.IsTaskAllocatable(task), true)
-
+	assert.Equal(t, node.IsTaskAllocatable(task), true, "Expected task to be allocatable, but got %v", node.IsTaskAllocatable(task))
 }
 
 func createFakePodGroup(name string, schedulingBackoff *int32, nodePoolName string,
