@@ -14,3 +14,33 @@ spec:
     gpu: {{ .Values.scheduler.placementStrategy }}
     cpu: {{ .Values.scheduler.placementStrategy }}
   {{- end }}
+  {{- if .Values.scheduler.plugins }}
+  plugins:
+    {{- range $name, $config := .Values.scheduler.plugins }}
+    {{ $name }}:
+      {{- if hasKey $config "enabled" }}
+      enabled: {{ $config.enabled }}
+      {{- end }}
+      {{- if hasKey $config "priority" }}
+      priority: {{ $config.priority }}
+      {{- end }}
+      {{- if $config.arguments }}
+      arguments:
+        {{- range $key, $value := $config.arguments }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.scheduler.actions }}
+  actions:
+    {{- range $name, $config := .Values.scheduler.actions }}
+    {{ $name }}:
+      {{- if hasKey $config "enabled" }}
+      enabled: {{ $config.enabled }}
+      {{- end }}
+      {{- if hasKey $config "priority" }}
+      priority: {{ $config.priority }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
