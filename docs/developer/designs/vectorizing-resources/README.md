@@ -325,7 +325,9 @@ This section establishes baseline metrics for the current struct-based implement
 - **System**: Intel Core Ultra 7 165H
 - **CPU Governor**: performance
 - **Go Version**: Latest stable
-- **Benchmark Parameters**: `-benchmem -benchtime=10x -count=10` (10 iterations, 10 samples)
+- **Benchmark Parameters**: `-benchmem -count=10` (10 samples per benchmark)
+  - Action benchmarks: `-benchtime=10x` (10 iterations per sample, sufficient for ms-level operations)
+  - API micro-benchmarks (PodInfo.Clone, IsTaskAllocatable): default auto-calibrated `b.N` (millions of iterations for stable ns-level timing)
 
 ### Benchmark Methodology
 
@@ -334,7 +336,7 @@ Ten benchmark runs were executed (`-count=10`). Results below report the mean ac
 ### Baseline Results Summary
 
 Benchmarking focus areas:
-1. **AllocateAction**: Core allocation logic across small (10 nodes), medium (100 nodes), and large (500 nodes) clusters
+1. **AllocateAction**: Core allocation logic across small (10 nodes), medium (50 nodes), and large (100 nodes) clusters
 2. **ReclaimAction**: Reclaim decision-making
 3. **PreemptAction**: Preemption scenario validation
 4. **ConsolidationAction**: Workload consolidation logic
@@ -344,39 +346,40 @@ Benchmarking focus areas:
 
 | Benchmark | Configuration | Time (ns/op) | Memory (B/op) | Allocations |
 |-----------|---------------|-------------|--------------|------------|
-| AllocateAction | Small Cluster (10 nodes) | 107.2M | 2.16Mi | 35.4k |
-| AllocateAction | Medium Cluster (100 nodes) | 127.8M | 11.83Mi | 322.0k |
-| AllocateAction | Large Cluster (500 nodes) | 184.8M | 41.48Mi | 1.386M |
-| ReclaimAction | Small Cluster | 102.7M | 870.9Ki | 7.9k |
-| ReclaimAction | Medium Cluster | 104.8M | 2.74Mi | 24.5k |
-| ReclaimLargeJobs | 10 nodes | 104.9M | 1.65Mi | 17.9k |
-| ReclaimLargeJobs | 50 nodes | 130.4M | 14.75Mi | 205.6k |
-| ReclaimLargeJobs | 100 nodes | 222.0M | 49.80Mi | 772.5k |
-| ReclaimLargeJobs | 200 nodes | 800.4M | 197.26Mi | 3.304M |
-| ReclaimLargeJobs | 500 nodes | 8.35s | 1.44Gi | 26.970M |
-| PreemptAction | Small Cluster | 103.2M | 1015.2Ki | 10.8k |
-| PreemptAction | Medium Cluster | 110.4M | 3.95Mi | 37.2k |
-| ConsolidationAction | Small Cluster | 111.7M | 5.56Mi | 72.4k |
-| ConsolidationAction | Medium Cluster | 185.5M | 46.78Mi | 681.0k |
-| PodInfo.Clone | Minimal | 476ns | 576B | 7 |
-| PodInfo.Clone | With GPU | 474ns | 576B | 7 |
-| PodInfo.Clone | With Multiple GPUs | 457ns | 576B | 7 |
-| IsTaskAllocatable | best-effort-cpu-only | 141ns | 0B | 0 |
-| IsTaskAllocatable | regular-gpu | 297ns | 0B | 0 |
-| IsTaskAllocatable | fractional-gpu | 148ns | 0B | 0 |
-| IsTaskAllocatable | mig-1g-10gb | 336ns | 0B | 0 |
-| IsTaskAllocatable | gpu-memory-request | 153ns | 0B | 0 |
-| IsTaskAllocatable | custom-resources-1-present | 229ns | 0B | 0 |
-| IsTaskAllocatable | custom-resources-2-present | 213ns | 0B | 0 |
-| IsTaskAllocatable | custom-resources-5-present | 275ns | 0B | 0 |
-| IsTaskAllocatable | custom-resources-10-present | 579ns | 0B | 0 |
-| IsTaskAllocatable | custom-resources-1-with-1-missing | 221ns | 48B | 3 |
-| IsTaskAllocatable | custom-resources-2-with-1-missing | 294ns | 48B | 3 |
-| IsTaskAllocatable | custom-resources-5-with-1-missing | 305ns | 48B | 3 |
-| IsTaskAllocatable | custom-resources-10-with-1-missing | 372ns | 48B | 3 |
+| AllocateAction | Small Cluster (10 nodes) | 106.6M | 2.33Mi | 36.9k |
+| AllocateAction | Medium Cluster (50 nodes) | 127.1M | 12.53Mi | 327.8k |
+| AllocateAction | Large Cluster (100 nodes) | 183.3M | 43.20Mi | 1.401M |
+| ReclaimAction | Small Cluster (10 nodes) | 102.7M | 971.5Ki | 8.8k |
+| ReclaimAction | Medium Cluster (50 nodes) | 105.0M | 3.15Mi | 28.1k |
+| ReclaimLargeJobs | 10 nodes | 104.4M | 1.86Mi | 19.9k |
+| ReclaimLargeJobs | 50 nodes | 130.2M | 17.41Mi | 229.8k |
+| ReclaimLargeJobs | 100 nodes | 241.2M | 59.23Mi | 856.0k |
+| ReclaimLargeJobs | 200 nodes | 816.0M | 234.13Mi | 3.620M |
+| ReclaimLargeJobs | 500 nodes | 8.97s | 1.70Gi | 29.050M |
+| PreemptAction | Small Cluster (10 nodes) | 104.7M | 1.07Mi | 11.5k |
+| PreemptAction | Medium Cluster (50 nodes) | 110.5M | 4.25Mi | 39.9k |
+| ConsolidationAction | Small Cluster (10 nodes) | 111.4M | 5.83Mi | 74.6k |
+| ConsolidationAction | Medium Cluster (50 nodes) | 187.5M | 48.24Mi | 691.9k |
+| PodInfo.Clone | Minimal | 506ns | 976B | 12 |
+| PodInfo.Clone | With GPU | 511ns | 976B | 12 |
+| PodInfo.Clone | With Multiple GPUs | 617ns | 1184B | 13 |
+| IsTaskAllocatable | best-effort-cpu-only | 55ns | 0B | 0 |
+| IsTaskAllocatable | regular-gpu | 105ns | 48B | 3 |
+| IsTaskAllocatable | fractional-gpu | 107ns | 48B | 3 |
+| IsTaskAllocatable | mig-1g-10gb | 201ns | 0B | 0 |
+| IsTaskAllocatable | gpu-memory-request | 106ns | 48B | 3 |
+| IsTaskAllocatable | custom-resources-1-present | 117ns | 0B | 0 |
+| IsTaskAllocatable | custom-resources-2-present | 133ns | 0B | 0 |
+| IsTaskAllocatable | custom-resources-5-present | 174ns | 0B | 0 |
+| IsTaskAllocatable | custom-resources-10-present | 253ns | 0B | 0 |
+| IsTaskAllocatable | custom-resources-1-with-1-missing | 123ns | 48B | 3 |
+| IsTaskAllocatable | custom-resources-2-with-1-missing | 132ns | 48B | 3 |
+| IsTaskAllocatable | custom-resources-5-with-1-missing | 153ns | 48B | 3 |
+| IsTaskAllocatable | custom-resources-10-with-1-missing | 196ns | 48B | 3 |
 
 Notes:
 - BenchmarkReclaimLargeJobs_1000Node did not complete within a 40m timeout and is omitted.
+- Action benchmarks use `-benchtime=10x` (10 iterations); API micro-benchmarks use default auto-calibration (millions of iterations) for stable timing.
 
 
 ## After Optimization (filled in commit 10)
