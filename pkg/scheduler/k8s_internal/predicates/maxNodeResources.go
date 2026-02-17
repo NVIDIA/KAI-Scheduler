@@ -91,7 +91,6 @@ func (mnr *MaxNodeResourcesPredicate) PreFilter(_ context.Context, _ ksf.CycleSt
 				mnr.buildUnschedulableMessage(podInfo, string(rName), float64(maxVal), units))
 		}
 	}
-	// TODO: check if any of the resource slices good for the node can satisfy the pod's claim requests (device count for the device class)
 
 	return nil, nil
 }
