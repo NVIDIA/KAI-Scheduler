@@ -61,7 +61,7 @@ func TestMutate(t *testing.T) {
 					Containers: []v1.Container{
 						{
 							Resources: v1.ResourceRequirements{
-								Limits: v1.ResourceList{constants.GpuResource: resource.MustParse("1")},
+								Limits: v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
 							},
 						},
 					},
@@ -73,7 +73,7 @@ func TestMutate(t *testing.T) {
 					Containers: []v1.Container{
 						{
 							Resources: v1.ResourceRequirements{
-								Limits: v1.ResourceList{constants.GpuResource: resource.MustParse("1")},
+								Limits: v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
 							},
 						},
 					},
@@ -90,7 +90,7 @@ func TestMutate(t *testing.T) {
 					Containers: []v1.Container{
 						{
 							Resources: v1.ResourceRequirements{
-								Limits: v1.ResourceList{constants.GpuResource: resource.MustParse("1")},
+								Limits: v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
 							},
 						},
 					},
@@ -102,7 +102,7 @@ func TestMutate(t *testing.T) {
 					Containers: []v1.Container{
 						{
 							Resources: v1.ResourceRequirements{
-								Limits: v1.ResourceList{constants.GpuResource: resource.MustParse("1")},
+								Limits: v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
 							},
 						},
 					},

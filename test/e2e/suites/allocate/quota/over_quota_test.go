@@ -57,7 +57,7 @@ var _ = Describe("Over quota", func() {
 
 		pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		})
 		pod.Spec.PriorityClassName = nonPreemptiblePriorityClass

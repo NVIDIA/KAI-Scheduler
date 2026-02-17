@@ -50,12 +50,12 @@ const (
 var (
 	SingleGPURequirement = v1.ResourceRequirements{
 		Limits: map[v1.ResourceName]resource.Quantity{
-			constants.GpuResource: *resource.NewQuantity(1, resource.DecimalSI),
+			constants.NvidiaGpuResource: *resource.NewQuantity(1, resource.DecimalSI),
 		},
 	}
 	FullNodeGPURequirement = v1.ResourceRequirements{
 		Limits: map[v1.ResourceName]resource.Quantity{
-			constants.GpuResource: *resource.NewQuantity(gpusPerNode, resource.DecimalSI),
+			constants.NvidiaGpuResource: *resource.NewQuantity(gpusPerNode, resource.DecimalSI),
 		},
 	}
 )
@@ -95,7 +95,7 @@ func fillClusterWithJobs(
 	}
 
 	GinkgoLogr.Info("Creating pods")
-	gpuQuantity := resourceRequirements.Limits[constants.GpuResource]
+	gpuQuantity := resourceRequirements.Limits[constants.NvidiaGpuResource]
 	gpusPerJob := int(gpuQuantity.Value())
 	totalNumberOfJobs = (numberOfNodes * gpusPerNode) / gpusPerJob
 
@@ -158,7 +158,7 @@ func distributedJobsScaleTestInternal(
 				ctx, testCtx, testQueue,
 				v1.ResourceRequirements{
 					Limits: map[v1.ResourceName]resource.Quantity{
-						constants.GpuResource: *resource.NewQuantity(int64(gpuPerPod), resource.DecimalSI),
+						constants.NvidiaGpuResource: *resource.NewQuantity(int64(gpuPerPod), resource.DecimalSI),
 					},
 				}, podsPerDistributedJob,
 				map[string]string{}, topologyConstraint,
@@ -271,7 +271,7 @@ func reclaimForOneLargeJob(ctx context.Context, testCtx *testcontext.TestContext
 		ctx, testCtx, reclaimSingleGPUJobsQueue,
 		v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: *resource.NewQuantity(int64(gpusPerNode), resource.DecimalSI),
+				constants.NvidiaGpuResource: *resource.NewQuantity(int64(gpusPerNode), resource.DecimalSI),
 			},
 		},
 		numberOfPods, map[string]string{},

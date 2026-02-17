@@ -69,7 +69,7 @@ var _ = Describe("Schedule pod with resource request", Ordered, func() {
 		It("Whole GPU request", func(ctx context.Context) {
 			pod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 

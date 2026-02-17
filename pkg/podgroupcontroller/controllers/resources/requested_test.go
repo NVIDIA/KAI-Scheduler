@@ -27,7 +27,7 @@ func Test_extractRequestedResources(t *testing.T) {
 					Annotations: map[string]string{constants.GpuFraction: "0.5"},
 				},
 			},
-			v1.ResourceList{constants.GpuResource: resource.MustParse("0.5")},
+			v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("0.5")},
 		},
 		{
 			"Pod with gpu multi fraction",
@@ -39,7 +39,7 @@ func Test_extractRequestedResources(t *testing.T) {
 					},
 				},
 			},
-			v1.ResourceList{constants.GpuResource: resource.MustParse("1")},
+			v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
 		},
 		{
 			"Pod with gpu memory",

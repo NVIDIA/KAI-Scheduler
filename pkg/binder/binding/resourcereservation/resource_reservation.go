@@ -394,20 +394,20 @@ func (rsc *service) createGPUReservationPod(ctx context.Context, nodeName, gpuGr
 	// Build resource requirements starting with GPU resources
 	resources := v1.ResourceRequirements{
 		Limits: v1.ResourceList{
-			constants.GpuResource: *resource.NewQuantity(numberOfGPUsToReserve, resource.DecimalSI),
+			constants.NvidiaGpuResource: *resource.NewQuantity(numberOfGPUsToReserve, resource.DecimalSI),
 		},
 		Requests: v1.ResourceList{
-			constants.GpuResource: *resource.NewQuantity(numberOfGPUsToReserve, resource.DecimalSI),
+			constants.NvidiaGpuResource: *resource.NewQuantity(numberOfGPUsToReserve, resource.DecimalSI),
 		},
 	}
 
 	if rsc.podResources != nil {
 		if rsc.podResources.Limits != nil {
-			delete(rsc.podResources.Limits, constants.GpuResource)
+			delete(rsc.podResources.Limits, constants.NvidiaGpuResource)
 			maps.Copy(resources.Limits, rsc.podResources.Limits)
 		}
 		if rsc.podResources.Requests != nil {
-			delete(rsc.podResources.Requests, constants.GpuResource)
+			delete(rsc.podResources.Requests, constants.NvidiaGpuResource)
 			maps.Copy(resources.Requests, rsc.podResources.Requests)
 		}
 	}

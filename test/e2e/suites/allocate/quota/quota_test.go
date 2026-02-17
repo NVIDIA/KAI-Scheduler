@@ -119,7 +119,7 @@ func createPodForEachQueue(ctx context.Context, testCtx *testcontext.TestContext
 	for queueIndex := 1; queueIndex <= numOfSharingQueues; queueIndex++ {
 		pod := rd.CreatePodObject(testCtx.Queues[queueIndex], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		})
 		pod.Labels["singletest"] = testPodsIdentifiyingLabel

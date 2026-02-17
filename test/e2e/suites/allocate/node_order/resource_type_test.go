@@ -74,7 +74,7 @@ var _ = Describe("Resource Type Plugins", Ordered, func() {
 })
 
 func isCPUOnlyNode(node *v1.Node, clientset kubernetes.Interface) bool {
-	gpus, found := node.Status.Capacity[constants.GpuResource]
+	gpus, found := node.Status.Capacity[constants.NvidiaGpuResource]
 	hasDevicePluginGPUs := found && gpus.CmpInt64(0) > 0
 	if hasDevicePluginGPUs {
 		return false

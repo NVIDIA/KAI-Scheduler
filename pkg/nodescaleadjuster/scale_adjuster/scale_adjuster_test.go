@@ -86,7 +86,7 @@ var _ = Describe("Scale Adjuster Test Suite", func() {
 				Expect(err).To(BeNil())
 
 				if remainingPod.numDevices != nil {
-					actualNumDevices := pod.Spec.Containers[0].Resources.Limits[constants.GpuResource]
+					actualNumDevices := pod.Spec.Containers[0].Resources.Limits[constants.NvidiaGpuResource]
 					Expect(actualNumDevices.Value()).To(Equal(*remainingPod.numDevices))
 				}
 			}

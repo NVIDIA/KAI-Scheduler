@@ -173,9 +173,9 @@ func TestSnapshotUsage(t *testing.T) {
 			usage: &queue_info.ClusterUsage{
 				Queues: map[common_info.QueueID]queue_info.QueueUsage{
 					"queue-1": {
-						corev1.ResourceCPU:          10,
-						corev1.ResourceMemory:       10,
-						commonconstants.GpuResource: 10,
+						corev1.ResourceCPU:                10,
+						corev1.ResourceMemory:             10,
+						commonconstants.NvidiaGpuResource: 10,
 					},
 				},
 			},
@@ -183,9 +183,9 @@ func TestSnapshotUsage(t *testing.T) {
 			expectedUsage: &queue_info.ClusterUsage{
 				Queues: map[common_info.QueueID]queue_info.QueueUsage{
 					"queue-1": {
-						corev1.ResourceCPU:          10,
-						corev1.ResourceMemory:       10,
-						commonconstants.GpuResource: 10,
+						corev1.ResourceCPU:                10,
+						corev1.ResourceMemory:             10,
+						commonconstants.NvidiaGpuResource: 10,
 					},
 				},
 			},
@@ -201,9 +201,9 @@ func TestSnapshotUsage(t *testing.T) {
 			usage: &queue_info.ClusterUsage{
 				Queues: map[common_info.QueueID]queue_info.QueueUsage{
 					"queue-1": {
-						corev1.ResourceCPU:          11,
-						corev1.ResourceMemory:       11,
-						commonconstants.GpuResource: 11,
+						corev1.ResourceCPU:                11,
+						corev1.ResourceMemory:             11,
+						commonconstants.NvidiaGpuResource: 11,
 					},
 				},
 			},

@@ -139,7 +139,7 @@ func submitPod(
 ) *v1.Pod {
 	requirements := v1.ResourceRequirements{
 		Limits: map[v1.ResourceName]resource.Quantity{
-			constants.GpuResource: resource.MustParse("1"),
+			constants.NvidiaGpuResource: resource.MustParse("1"),
 		},
 	}
 	pod := rd.CreatePodObject(queue, requirements)

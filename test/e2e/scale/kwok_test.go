@@ -390,7 +390,7 @@ var _ = Describe("Kwok scale test", Ordered, Label(labels.Scale), func() {
 										ctx, testCtx, queue,
 										v1.ResourceRequirements{
 											Limits: map[v1.ResourceName]resource.Quantity{
-												constants.GpuResource: *resource.NewQuantity(int64(gpusPerNode), resource.DecimalSI),
+												constants.NvidiaGpuResource: *resource.NewQuantity(int64(gpusPerNode), resource.DecimalSI),
 											},
 										}, defaultPodsPerDistributedJob,
 										map[string]string{}, nil,
