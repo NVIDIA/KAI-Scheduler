@@ -335,7 +335,7 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests[5:6] {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for _, node := range tt.args.nodesMap {
 				if _, found := node.Allocatable.ScalarResources()[v1.ResourcePods]; !found {

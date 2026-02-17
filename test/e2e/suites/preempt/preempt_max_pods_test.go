@@ -176,7 +176,7 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 		// Verify node is at max pods
 		var podsOnNode []v1.Pod
 		Eventually(func(g Gomega) {
-			podsOnNode, err = getPodsOnNode(ctx, testCtx, targetNode)
+			podsOnNode, err = getRunningPodsOnNode(ctx, testCtx, targetNode)
 			g.Expect(err).To(Succeed())
 			currentPods := len(podsOnNode)
 			maxPods = int(node.Status.Allocatable.Pods().Value())
@@ -218,7 +218,7 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 
 		// Wait for node to be at maxPods-1
 		err = poll.PollUntilContextTimeout(ctx, 1*time.Second, 3*time.Minute, true, func(ctx context.Context) (bool, error) {
-			podsOnNode, err = getPodsOnNode(ctx, testCtx, targetNode)
+			podsOnNode, err = getRunningPodsOnNode(ctx, testCtx, targetNode)
 			if err != nil {
 				return false, err
 			}
@@ -250,7 +250,7 @@ var _ = Describe("Preemption with Max Pods Limit", Ordered, func() {
 	})
 })
 
-func getPodsOnNode(ctx context.Context, testCtx *testcontext.TestContext, nodeName string) ([]v1.Pod, error) {
+func getRunningPodsOnNode(ctx context.Context, testCtx *testcontext.TestContext, nodeName string) ([]v1.Pod, error) {
 	var podList v1.PodList
 	err := testCtx.ControllerClient.List(ctx, &podList, &runtimeClient.ListOptions{
 		Raw: &metav1.ListOptions{
