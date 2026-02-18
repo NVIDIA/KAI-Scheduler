@@ -72,5 +72,5 @@ func InitDefaultPlugins() {
 	framework.RegisterPluginBuilder("snapshot", snapshot.New)
 
 	// Always register the Job Order Plugin last.
-	framework.RegisterPluginBuilder("reflectjoborder", reflectjoborder.New)
+	framework.RegisterPluginBuilder("reflectjoborder", reflectjoborder.NewBuilder())
 }
