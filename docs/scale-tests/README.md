@@ -25,7 +25,7 @@ Tests use **Ginkgo** for test organization and execution. The test suite (`scale
 
 Tests use **KWOK** (Kubernetes WithOut Kubelet) to simulate large clusters without requiring real nodes:
 
-- **KWOK nodes**: Virtual nodes created via KWOK operator NodePools
+- **KWOK nodes**: Virtual nodes created via the [kwok-operator](https://github.com/run-ai/kwok-operator) `NodePool` CRD. Each `NodePool` defines the desired node count and a node template (labels, capacity, allocatable resources). The operator reconciles the pool by creating/deleting KWOK-backed virtual nodes to match the spec. See `test/e2e/scale/base_kwok_managed_nodepool.yaml` for the base pool definition.
 - **Default scale**: 500 nodes (configurable via `NODE_COUNT` environment variable)
 - **GPU simulation**: Fake GPU operator provides GPU resource reporting
 - **Pod lifecycle**: KWOK stages simulate pod completion and status transitions
