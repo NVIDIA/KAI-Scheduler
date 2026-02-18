@@ -12,6 +12,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/resources/rd"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/testconfig"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 )
 
@@ -72,8 +73,8 @@ func GetPodTemplate(queueName, matchLabelValue string) corev1.PodTemplateSpec {
 	return corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				constants.AppLabelName: matchLabelValue,
-				"kai.scheduler/queue":  queueName,
+				constants.AppLabelName:               matchLabelValue,
+				testconfig.GetConfig().QueueLabelKey: queueName,
 			},
 		},
 		Spec: corev1.PodSpec{

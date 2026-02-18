@@ -32,69 +32,70 @@ import (
 const (
 	tfjobCrdName    = "tfjobs.kubeflow.org"
 	tfjobCrdVersion = "v1"
-	podRoleLabelKey = "training.kubeflow.org/job-role"
 	numberOfChiefs  = 2
 	numberOfWorkers = 3
 )
 
-var _ = Describe("TFJob integration", Ordered, func() {
-	var (
-		testCtx *testcontext.TestContext
-	)
+func DescribeTFJobSpecs() bool {
+	return Describe("TFJob integration", Ordered, func() {
+		var (
+			testCtx *testcontext.TestContext
+		)
 
-	BeforeAll(func(ctx context.Context) {
-		testCtx = testcontext.GetConnectivity(ctx, Default)
-		parentQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), "")
-		childQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), parentQueue.Name)
-		testCtx.InitQueues([]*v2.Queue{childQueue, parentQueue})
+		BeforeAll(func(ctx context.Context) {
+			testCtx = testcontext.GetConnectivity(ctx, Default)
+			parentQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), "")
+			childQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), parentQueue.Name)
+			testCtx.InitQueues([]*v2.Queue{childQueue, parentQueue})
 
-		crd.SkipIfCrdIsNotInstalled(ctx, testCtx.KubeConfig, tfjobCrdName, tfjobCrdVersion)
-		capacity.SkipIfInsufficientClusterResources(testCtx.KubeClientset, &capacity.ResourceList{
-			Gpu: *resource.NewQuantity(numberOfChiefs+numberOfWorkers, resource.DecimalSI),
+			crd.SkipIfCrdIsNotInstalled(ctx, testCtx.KubeConfig, tfjobCrdName, tfjobCrdVersion)
+			capacity.SkipIfInsufficientClusterResources(testCtx.KubeClientset, &capacity.ResourceList{
+				Gpu: *resource.NewQuantity(numberOfChiefs+numberOfWorkers, resource.DecimalSI),
+			})
+
+			Expect(trainingoperatorv1.AddToScheme(testCtx.ControllerClient.Scheme())).To(Succeed())
 		})
 
-		Expect(trainingoperatorv1.AddToScheme(testCtx.ControllerClient.Scheme())).To(Succeed())
-	})
+		AfterAll(func(ctx context.Context) {
+			testCtx.ClusterCleanup(ctx)
+		})
 
-	AfterAll(func(ctx context.Context) {
-		testCtx.ClusterCleanup(ctx)
-	})
+		AfterEach(func(ctx context.Context) {
+			testCtx.TestContextCleanup(ctx)
+		})
 
-	AfterEach(func(ctx context.Context) {
-		testCtx.TestContextCleanup(ctx)
-	})
-
-	It("should run the pods of the TFJob", func(ctx context.Context) {
-		singleGPURequest := v1.ResourceRequirements{
-			Limits: v1.ResourceList{
-				constants.NvidiaGpuResource: resource.MustParse("1"),
-			},
-			Requests: v1.ResourceList{
-				constants.NvidiaGpuResource: resource.MustParse("1"),
-			},
-		}
-
-		tfJob, expectedPods := createExampleTFJob(
-			testCtx.Queues[0],
-			singleGPURequest, singleGPURequest,
-			numberOfChiefs, numberOfWorkers,
-		)
-		Expect(testCtx.ControllerClient.Create(ctx, tfJob)).To(Succeed())
-		defer func() {
-			Expect(testCtx.ControllerClient.Delete(ctx, tfJob)).To(Succeed())
-		}()
-		Eventually(func(g Gomega) bool {
-			pods := &v1.PodList{}
-			testCtx.ControllerClient.List(ctx, pods, runtimeClient.InNamespace(tfJob.Namespace))
-
-			g.Expect(len(pods.Items)).To(Equal(expectedPods))
-			for _, pod := range pods.Items {
-				g.Expect(rd.IsPodReady(&pod)).To(BeTrue())
+		It("should run the pods of the TFJob", func(ctx context.Context) {
+			singleGPURequest := v1.ResourceRequirements{
+				Limits: v1.ResourceList{
+					constants.NvidiaGpuResource: resource.MustParse("1"),
+				},
+				Requests: v1.ResourceList{
+					constants.NvidiaGpuResource: resource.MustParse("1"),
+				},
 			}
-			return true
-		}, time.Minute).Should(BeTrue())
+
+			tfJob, expectedPods := createExampleTFJob(
+				testCtx.Queues[0],
+				singleGPURequest, singleGPURequest,
+				numberOfChiefs, numberOfWorkers,
+			)
+			Expect(testCtx.ControllerClient.Create(ctx, tfJob)).To(Succeed())
+			defer func() {
+				Expect(testCtx.ControllerClient.Delete(ctx, tfJob)).To(Succeed())
+			}()
+			Eventually(func(g Gomega) bool {
+				pods := &v1.PodList{}
+				testCtx.ControllerClient.List(ctx, pods, runtimeClient.InNamespace(tfJob.Namespace))
+
+				g.Expect(len(pods.Items)).To(Equal(expectedPods))
+				for _, pod := range pods.Items {
+					g.Expect(rd.IsPodReady(&pod)).To(BeTrue())
+				}
+				return true
+			}, time.Minute).Should(BeTrue())
+		})
 	})
-})
+}
 
 func createExampleTFJob(
 	testQueue *v2.Queue,

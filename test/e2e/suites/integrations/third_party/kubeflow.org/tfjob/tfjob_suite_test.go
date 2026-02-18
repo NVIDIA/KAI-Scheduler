@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribeTFJobSpecs()
+
 func TestTFJobIntegration(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

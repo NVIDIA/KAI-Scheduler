@@ -35,64 +35,66 @@ const (
 	numberOfWorkers = 3
 )
 
-var _ = Describe("JAX integration", Ordered, func() {
-	var (
-		testCtx *testcontext.TestContext
-	)
+func DescribeJaxSpecs() bool {
+	return Describe("JAX integration", Ordered, func() {
+		var (
+			testCtx *testcontext.TestContext
+		)
 
-	BeforeAll(func(ctx context.Context) {
-		testCtx = testcontext.GetConnectivity(ctx, Default)
-		parentQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), "")
-		childQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), parentQueue.Name)
-		testCtx.InitQueues([]*v2.Queue{childQueue, parentQueue})
+		BeforeAll(func(ctx context.Context) {
+			testCtx = testcontext.GetConnectivity(ctx, Default)
+			parentQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), "")
+			childQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), parentQueue.Name)
+			testCtx.InitQueues([]*v2.Queue{childQueue, parentQueue})
 
-		crd.SkipIfCrdIsNotInstalled(ctx, testCtx.KubeConfig, JaxCrdName, JaxCrdVersion)
-		capacity.SkipIfInsufficientClusterResources(testCtx.KubeClientset, &capacity.ResourceList{
-			Gpu: *resource.NewMilliQuantity(1+numberOfWorkers, resource.DecimalSI),
+			crd.SkipIfCrdIsNotInstalled(ctx, testCtx.KubeConfig, JaxCrdName, JaxCrdVersion)
+			capacity.SkipIfInsufficientClusterResources(testCtx.KubeClientset, &capacity.ResourceList{
+				Gpu: *resource.NewMilliQuantity(1+numberOfWorkers, resource.DecimalSI),
+			})
+
+			Expect(trainingoperatorv1.AddToScheme(testCtx.ControllerClient.Scheme())).To(Succeed())
 		})
 
-		Expect(trainingoperatorv1.AddToScheme(testCtx.ControllerClient.Scheme())).To(Succeed())
-	})
+		AfterAll(func(ctx context.Context) {
+			testCtx.ClusterCleanup(ctx)
+		})
 
-	AfterAll(func(ctx context.Context) {
-		testCtx.ClusterCleanup(ctx)
-	})
+		AfterEach(func(ctx context.Context) {
+			testCtx.TestContextCleanup(ctx)
+		})
 
-	AfterEach(func(ctx context.Context) {
-		testCtx.TestContextCleanup(ctx)
-	})
-
-	It("should run the pods of the Jax", func(ctx context.Context) {
-		singleGPURequest := v1.ResourceRequirements{
-			Limits: v1.ResourceList{
-				constants.NvidiaGpuResource: resource.MustParse("1"),
-			},
-			Requests: v1.ResourceList{
-				constants.NvidiaGpuResource: resource.MustParse("1"),
-			},
-		}
-
-		jaxJob, expectedPods := createExampleJaxJob(
-			testCtx.Queues[0],
-			singleGPURequest,
-			numberOfWorkers,
-		)
-		Expect(testCtx.ControllerClient.Create(ctx, jaxJob)).To(Succeed())
-		defer func() {
-			Expect(testCtx.ControllerClient.Delete(ctx, jaxJob)).To(Succeed())
-		}()
-		Eventually(func(g Gomega) bool {
-			pods := &v1.PodList{}
-			testCtx.ControllerClient.List(ctx, pods, runtimeClient.InNamespace(jaxJob.Namespace))
-
-			g.Expect(len(pods.Items)).To(Equal(expectedPods))
-			for _, pod := range pods.Items {
-				g.Expect(rd.IsPodReady(&pod)).To(BeTrue())
+		It("should run the pods of the Jax", func(ctx context.Context) {
+			singleGPURequest := v1.ResourceRequirements{
+				Limits: v1.ResourceList{
+					constants.NvidiaGpuResource: resource.MustParse("1"),
+				},
+				Requests: v1.ResourceList{
+					constants.NvidiaGpuResource: resource.MustParse("1"),
+				},
 			}
-			return true
-		}, time.Minute).Should(BeTrue())
+
+			jaxJob, expectedPods := createExampleJaxJob(
+				testCtx.Queues[0],
+				singleGPURequest,
+				numberOfWorkers,
+			)
+			Expect(testCtx.ControllerClient.Create(ctx, jaxJob)).To(Succeed())
+			defer func() {
+				Expect(testCtx.ControllerClient.Delete(ctx, jaxJob)).To(Succeed())
+			}()
+			Eventually(func(g Gomega) bool {
+				pods := &v1.PodList{}
+				testCtx.ControllerClient.List(ctx, pods, runtimeClient.InNamespace(jaxJob.Namespace))
+
+				g.Expect(len(pods.Items)).To(Equal(expectedPods))
+				for _, pod := range pods.Items {
+					g.Expect(rd.IsPodReady(&pod)).To(BeTrue())
+				}
+				return true
+			}, time.Minute).Should(BeTrue())
+		})
 	})
-})
+}
 
 func createExampleJaxJob(
 	testQueue *v2.Queue,

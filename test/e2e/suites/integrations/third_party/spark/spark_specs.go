@@ -35,73 +35,73 @@ const (
 	podGroupNameAnnotation = "pod-group-name"
 )
 
-var _ = Describe("Spark integration", Ordered, func() {
-	var (
-		testCtx *testcontext.TestContext
-	)
+func DescribeSparkSpecs() bool {
+	return Describe("Spark integration", Ordered, func() {
+		var (
+			testCtx *testcontext.TestContext
+		)
 
-	BeforeAll(func(ctx context.Context) {
-		testCtx = testcontext.GetConnectivity(ctx, Default)
-		parentQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), "")
-		childQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), parentQueue.Name)
-		testCtx.InitQueues([]*v2.Queue{childQueue, parentQueue})
-	})
+		BeforeAll(func(ctx context.Context) {
+			testCtx = testcontext.GetConnectivity(ctx, Default)
+			parentQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), "")
+			childQueue := queue.CreateQueueObject(utils.GenerateRandomK8sName(10), parentQueue.Name)
+			testCtx.InitQueues([]*v2.Queue{childQueue, parentQueue})
+		})
 
-	AfterEach(func(ctx context.Context) {
-		testCtx.TestContextCleanup(ctx)
-	})
+		AfterEach(func(ctx context.Context) {
+			testCtx.TestContextCleanup(ctx)
+		})
 
-	AfterAll(func(ctx context.Context) {
-		testCtx.ClusterCleanup(ctx)
-	})
+		AfterAll(func(ctx context.Context) {
+			testCtx.ClusterCleanup(ctx)
+		})
 
-	Describe("spark-submit pods", Ordered, func() {
-		Context("With enough resources to run all pods", func() {
-			It("should run all pods of a single spark job in a single PodGroup", func(ctx context.Context) {
-				pods := startSparkWorkload(ctx, testCtx, 4)
-				Expect(len(pods)).To(Equal(5))
-				namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
-				wait.ForPodsReady(ctx, testCtx.ControllerClient, namespace, pods)
+		Describe("spark-submit pods", Ordered, func() {
+			Context("With enough resources to run all pods", func() {
+				It("should run all pods of a single spark job in a single PodGroup", func(ctx context.Context) {
+					pods := startSparkWorkload(ctx, testCtx, 4)
+					Expect(len(pods)).To(Equal(5))
+					namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+					wait.ForPodsReady(ctx, testCtx.ControllerClient, namespace, pods)
 
-				podGroupNames := map[string]bool{}
-				for index, pod := range pods {
-					Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(pod), pods[index])).NotTo(HaveOccurred())
-					podGroupNames[pods[index].Annotations[podGroupNameAnnotation]] = true
-				}
-
-				Expect(len(podGroupNames)).To(Equal(1))
-			})
-
-			It("will add new spark pods to the same PodGroup as the old ones", func(ctx context.Context) {
-				pods := startSparkWorkload(ctx, testCtx, 2)
-				Expect(len(pods)).To(Equal(3))
-				var lastExecutorPod *v1.Pod
-				namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
-				wait.ForPodsReady(ctx, testCtx.ControllerClient, namespace, pods)
-
-				for _, pod := range pods {
-					if pod.Labels[sparkRoleLabelName] == "executor" {
-						lastExecutorPod = pod
+					podGroupNames := map[string]bool{}
+					for index, pod := range pods {
+						Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(pod), pods[index])).NotTo(HaveOccurred())
+						podGroupNames[pods[index].Annotations[podGroupNameAnnotation]] = true
 					}
-				}
-				Expect(lastExecutorPod).NotTo(BeNil())
 
-				// delete existing executor pod
-				Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(lastExecutorPod), lastExecutorPod)).NotTo(HaveOccurred())
-				Expect(testCtx.ControllerClient.Delete(ctx, lastExecutorPod)).NotTo(HaveOccurred())
+					Expect(len(podGroupNames)).To(Equal(1))
+				})
 
-				// verify that a new one is getting the same PodGroup
-				newExecPods := ensureExecutorPodsCount(ctx, testCtx, lastExecutorPod.Labels[sparkAppSelectorLabelName])
-				Expect(len(newExecPods)).To(Equal(1))
+				It("will add new spark pods to the same PodGroup as the old ones", func(ctx context.Context) {
+					pods := startSparkWorkload(ctx, testCtx, 2)
+					Expect(len(pods)).To(Equal(3))
+					var lastExecutorPod *v1.Pod
+					namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
+					wait.ForPodsReady(ctx, testCtx.ControllerClient, namespace, pods)
 
-				wait.ForPodReady(ctx, testCtx.ControllerClient, newExecPods[0])
-				err := testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(newExecPods[0]), newExecPods[0])
-				Expect(err).NotTo(HaveOccurred())
-				Expect(newExecPods[0].Annotations[podGroupNameAnnotation]).To(Equal(lastExecutorPod.Annotations[podGroupNameAnnotation]))
+					for _, pod := range pods {
+						if pod.Labels[sparkRoleLabelName] == "executor" {
+							lastExecutorPod = pod
+						}
+					}
+					Expect(lastExecutorPod).NotTo(BeNil())
+
+					Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(lastExecutorPod), lastExecutorPod)).NotTo(HaveOccurred())
+					Expect(testCtx.ControllerClient.Delete(ctx, lastExecutorPod)).NotTo(HaveOccurred())
+
+					newExecPods := ensureExecutorPodsCount(ctx, testCtx, lastExecutorPod.Labels[sparkAppSelectorLabelName])
+					Expect(len(newExecPods)).To(Equal(1))
+
+					wait.ForPodReady(ctx, testCtx.ControllerClient, newExecPods[0])
+					err := testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(newExecPods[0]), newExecPods[0])
+					Expect(err).NotTo(HaveOccurred())
+					Expect(newExecPods[0].Annotations[podGroupNameAnnotation]).To(Equal(lastExecutorPod.Annotations[podGroupNameAnnotation]))
+				})
 			})
 		})
 	})
-})
+}
 
 func startSparkWorkload(ctx context.Context, testCtx *testcontext.TestContext, executorsCount int) []*v1.Pod {
 	var err error

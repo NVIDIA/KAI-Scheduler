@@ -13,6 +13,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribeAffinitySpecs()
+var _ = DescribeConfigMapSpecs()
+var _ = DescribePVCSpecs()
+var _ = DescribeTaintTolerationSpecs()
+
 func TestPredicates(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

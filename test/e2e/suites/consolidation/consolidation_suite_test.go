@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribeConsolidationSpecs()
+
 func TestConsolidation(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

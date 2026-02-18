@@ -13,6 +13,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/testconfig"
 )
 
 // CreateUnequalCompletionJobSetObject creates a JobSet with a single replicatedJob
@@ -22,8 +23,8 @@ func CreateUnequalCompletionJobSetObject(name, namespace, queueName string, para
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-				"kai.scheduler/queue":  queueName,
+				constants.AppLabelName:               "engine-e2e",
+				testconfig.GetConfig().QueueLabelKey: queueName,
 			},
 		},
 		Spec: jobsetv1alpha2.JobSetSpec{
@@ -85,8 +86,8 @@ func CreateObjectWithStartupPolicy(name, namespace, queueName, startupPolicyOrde
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-				"kai.scheduler/queue":  queueName,
+				constants.AppLabelName:               "engine-e2e",
+				testconfig.GetConfig().QueueLabelKey: queueName,
 			},
 		},
 		Spec: jobsetv1alpha2.JobSetSpec{
@@ -175,8 +176,8 @@ func CreateObjectWithHighParallelism(name, namespace, queueName string) *jobsetv
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-				"kai.scheduler/queue":  queueName,
+				constants.AppLabelName:               "engine-e2e",
+				testconfig.GetConfig().QueueLabelKey: queueName,
 			},
 		},
 		Spec: jobsetv1alpha2.JobSetSpec{
@@ -234,8 +235,8 @@ func CreateObjectWithMultipleReplicatedJobs(name, namespace, queueName string) *
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-				"kai.scheduler/queue":  queueName,
+				constants.AppLabelName:               "engine-e2e",
+				testconfig.GetConfig().QueueLabelKey: queueName,
 			},
 		},
 		Spec: jobsetv1alpha2.JobSetSpec{
@@ -323,8 +324,8 @@ func CreateObjectWithDefaultParallelism(name, namespace, queueName string) *jobs
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				constants.AppLabelName: "engine-e2e",
-				"kai.scheduler/queue":  queueName,
+				constants.AppLabelName:               "engine-e2e",
+				testconfig.GetConfig().QueueLabelKey: queueName,
 			},
 		},
 		Spec: jobsetv1alpha2.JobSetSpec{

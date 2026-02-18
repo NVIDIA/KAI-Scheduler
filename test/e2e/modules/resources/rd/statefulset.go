@@ -12,7 +12,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
-	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
+	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/testconfig"
 
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/utils"
 )
@@ -20,6 +20,7 @@ import (
 const StatefulSetAppLabel = "stateful-set-app-name"
 
 func CreateStatefulSetObject(namespace, queueName string) *v1.StatefulSet {
+	cfg := testconfig.GetConfig()
 	matchLabelValue := utils.GenerateRandomK8sName(10)
 
 	return &v1.StatefulSet{
@@ -44,13 +45,13 @@ func CreateStatefulSetObject(namespace, queueName string) *v1.StatefulSet {
 					Labels: map[string]string{
 						constants.AppLabelName: "engine-e2e",
 						StatefulSetAppLabel:    matchLabelValue,
-						"kai.scheduler/queue":  queueName,
+						cfg.QueueLabelKey:      queueName,
 					},
 				},
 				Spec: v12.PodSpec{
 					Containers: []v12.Container{
 						{
-							Image: "ubuntu",
+							Image: cfg.ContainerImage,
 							Name:  "ubuntu-container",
 							Args: []string{
 								"sleep",
@@ -60,7 +61,7 @@ func CreateStatefulSetObject(namespace, queueName string) *v1.StatefulSet {
 						},
 					},
 					TerminationGracePeriodSeconds: pointer.Int64(0),
-					SchedulerName:                 constant.SchedulerName,
+					SchedulerName:                 cfg.SchedulerName,
 					Tolerations: []v12.Toleration{
 						{
 							Key:      "nvidia.com/gpu",
