@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribeNamespaceSpecs()
+
 func TestPredicates(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

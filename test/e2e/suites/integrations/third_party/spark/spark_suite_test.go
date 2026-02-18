@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribeSparkSpecs()
+
 func TestSparkIntegration(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

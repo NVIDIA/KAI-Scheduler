@@ -13,6 +13,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribeHierarchyLevelFairnessSpecs()
+var _ = DescribeReclaimDistributedSpecs()
+
 func TestReclaim(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribeResourcesSpecs()
+
 func TestResourcesAllocation(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)
