@@ -69,7 +69,8 @@ Node count defaults to 500, override with `NODE_COUNT` env var.
 
 Scale tests should run from a **runner pod inside the target cluster**, not from an external machine. This minimizes API server latency during test execution and metric collection.
 
-The target cluster should be a **real cluster with real GPU nodes** — KWOK simulates node presence but the scheduler, binder, and control plane run on actual hardware. Control plane performance (API server, etcd) is a critical factor in scale test results, and only real infrastructure produces representative measurements.
+The target cluster should be a **real cluster with real GPU nodes** — KWOK simulates node presence but the scheduler, binder, and control plane run on actual hardware.
+As these tests are designed to measure Kai-scheduler's performance in real scenarios and not test logic, the tests must run on actual hardware.
 
 Minimal cluster requirements:
 - Dedicated control plane nodes (not shared with test workloads)
