@@ -15,13 +15,13 @@ The goal is to improve scheduler performance at scale (2000+ nodes) by accelerat
 
 Current scheduler performance degrades significantly with cluster scale:
 
-- **Scale test performance**: Full scheduling cycles take 3-4 minutes for 1000 nodes, 20+ minutes for 1000+ nodes
+- **Scale test performance**: Full scheduling cycles take 3-4 minutes for 1000 nodes, 20+ minutes for 1000+ nodes for some test cases (observed in the [scale test cluster](https://github.com/NVIDIA/KAI-Scheduler/tree/main/test/e2e/scale))
 - **Bottleneck**: Node ordering functions dominate during allocation simulations (filtering scenarios)
 - **Root cause**: Resource comparisons iterate over individual nodes and resources in sequence; no bulk operations
 
 With topology-aware scheduling, time-aware scheduling, and large reclaim scenarios becoming more common, the scheduler will face increasingly complex allocation decisions. Vectorizing resources allows:
 
-1. **Vectorized comparisons**: Compare resources for multiple nodes simultaneously
+1. **Vectorized comparisons**: Compare resources for multiple nodes concurrently (the vector-per-node layout enables goroutine-based parallelism; future refactors can adopt a column-major layout for SIMD iterations)
 2. **Efficient bin-packing**: Use normalized resource metrics (sum or DRF) for node sorting heuristics
 3. **Scenario filtering acceleration**: Pre-compute vector representations to enable quick feasibility checks
 
@@ -37,7 +37,6 @@ With topology-aware scheduling, time-aware scheduling, and large reclaim scenari
 
 ### Non-Goals
 
-- Implement resource vectors in this commit (deferred to commit 3)
 - Redesign the scenario filtering algorithm itself (only optimize existing heuristics)
 - Change the dominant-resource-fairness (DRF) algorithm for fairness calculations
 - Implement concurrent/parallel scenario filtering (prerequisite for future work)
@@ -177,28 +176,32 @@ The following test files contain assertions or test data using `*resource_info.R
 ```go
 // pkg/scheduler/api/resource_info/resource_vector.go
 
-// resourceVector represents a single entity's resources as a fixed-length array
-// All vectors use the same index mapping defined by resourceVectorMap
-type resourceVector []float64
+// ResourceVector represents a single entity's resources as a fixed-length array.
+// All vectors use the same index mapping defined by ResourceVectorMap.
+type ResourceVector []float64
 
-// resourceVectorMap maintains the mapping from indices to resource names
-// This is created once during cluster info snapshot and reused throughout
-type resourceVectorMap struct {
-    indexToName  []v1.ResourceName
-    nameToIndex  map[v1.ResourceName]int
+// ResourceVectorMap maintains the mapping from indices to resource names.
+// This is created once during cluster info snapshot and shared across all nodes and pods.
+// Resource names are normalized (e.g., "nvidia.com/gpu" → "gpu").
+type ResourceVectorMap struct {
+    resourceNames []string
+    namesToIndex  map[string]int
 }
 
-// ResourceVectorContext holds the vector map for a scheduling session
-type ResourceVectorContext struct {
-    vectorMap resourceVectorMap
-}
+// NewResourceVectorMap creates a new ResourceVectorMap initialized with core resources
+// (CPU, Memory, GPU, Pods) to ensure consistent ordering.
+func NewResourceVectorMap() *ResourceVectorMap
+
+// NewResourceVector creates a zero-filled vector of the correct length for the given map.
+// All vectors should be created through this factory to guarantee length consistency.
+func NewResourceVector(indexMap *ResourceVectorMap) ResourceVector
 ```
 
 ### Resource Vector Mapping Example
 
 For a cluster with resources: CPU, Memory, GPUs, EFA, Custom resources:
 
-```
+```text
 resourceVectorMap:
   Index 0: v1.ResourceCPU       → milliCPU value
   Index 1: v1.ResourceMemory    → memory bytes
@@ -213,37 +216,44 @@ Example Vector:
 
 ### Vector Operations
 
+All operations are methods on `ResourceVector`. When vectors have mismatched lengths, operations
+handle this gracefully: `Add`/`Sub` extend the shorter vector, and `LessEqual` treats missing
+indices as zero. `Sub` can produce negative values (used to track over-subscription).
+
 ```go
-// Comparison: Check if request can fit in available capacity
-// Equivalent to Resource.LessEqual(other)
-func VectorLessEqual(request, available resourceVector) bool {
-    for i := range request {
-        if request[i] > available[i] {
-            return false
-        }
-    }
-    return true
-}
+// LessEqual checks if all resources in v fit within other.
+// Mismatched lengths are handled: extra elements in v must be <= 0,
+// extra elements in other must be >= 0.
+func (v ResourceVector) LessEqual(other ResourceVector) bool
 
-// Addition: Aggregate resource allocations
-// Equivalent to Resource.Add(other)
-func VectorAdd(dst, src resourceVector) {
-    for i := range src {
-        dst[i] += src[i]
-    }
-}
+// Add aggregates resource allocations. Extends v if other is longer.
+func (v *ResourceVector) Add(other ResourceVector)
 
-// Subtraction: Remove allocated resources
-// Equivalent to Resource.Sub(other)
-func VectorSub(dst, src resourceVector) {
-    for i := range src {
-        dst[i] -= src[i]
-    }
-}
+// Sub removes allocated resources. Extends v if other is longer.
+// Results can be negative (indicating over-subscription).
+func (v *ResourceVector) Sub(other ResourceVector)
 
-// Normalization metrics for sorting (used in scenario filtering)
+// SetMax sets each element of v to the maximum of v[i] and other[i].
+func (v ResourceVector) SetMax(other ResourceVector)
+
+// Clone returns a deep copy of the vector.
+func (v ResourceVector) Clone() ResourceVector
+
+// Get returns the value at the given index, or 0 if index is out of bounds.
+func (v ResourceVector) Get(index int) float64
+
+// Set sets the value at the given index (no-op if out of bounds).
+func (v ResourceVector) Set(index int, value float64)
+
+// IsZero returns true if all elements are zero.
+func (v ResourceVector) IsZero() bool
+```
+
+Normalization metrics for sorting (used in scenario filtering):
+
+```go
 // Normalized sum: sum(resource[i] / totalCapacity[i])
-func NormalizedSum(vec, totalCapacity resourceVector) float64 {
+func NormalizedSum(vec, totalCapacity ResourceVector) float64 {
     var sum float64
     for i := range vec {
         if totalCapacity[i] > 0 {
@@ -254,53 +264,53 @@ func NormalizedSum(vec, totalCapacity resourceVector) float64 {
 }
 
 // Dominant resource (max ratio): max(resource[i] / totalCapacity[i])
-func DominantResource(vec, totalCapacity resourceVector) float64 {
-    var max float64
+func DominantResource(vec, totalCapacity ResourceVector) float64 {
+    var maxRatio float64
     for i := range vec {
         if totalCapacity[i] > 0 {
             ratio := vec[i] / totalCapacity[i]
-            if ratio > max {
-                max = ratio
+            if ratio > maxRatio {
+                maxRatio = ratio
             }
         }
     }
-    return max
+    return maxRatio
 }
 ```
 
-### PodGroup and Node Representations
+### Conversion Functions
 
-Hierarchical resource structures maintain vector form:
+Conversion between existing `Resource`/`ResourceRequirements` structs and vectors:
 
 ```go
-// Pod group represented as hierarchical vector structure
-type PodGroupAsVector struct {
-    // For leaf pods: direct vector representation
-    podVectors []resourceVector  // One vector per pod
-    
-    // For sub-groups: recursive structure
-    subGroups []*PodGroupAsVector
-}
+// ToVector converts a Resource struct to a ResourceVector using the given map.
+func (r *Resource) ToVector(indexMap *ResourceVectorMap) ResourceVector
 
-// Cluster nodes in vector form
-type ClusterNodesVector struct {
-    vectorMap     resourceVectorMap
-    nodeNames     []string
-    nodeResources []resourceVector  // One vector per node
-}
+// FromVector populates a Resource struct from a ResourceVector.
+func (r *Resource) FromVector(vec ResourceVector, indexMap *ResourceVectorMap)
+
+// ToVector converts ResourceRequirements to a ResourceVector.
+func (r *ResourceRequirements) ToVector(indexMap *ResourceVectorMap) ResourceVector
+
+// FromVector populates ResourceRequirements from a ResourceVector.
+func (r *ResourceRequirements) FromVector(vec ResourceVector, indexMap *ResourceVectorMap)
+
+// NewResourceVectorFromResourceList creates a vector from a Kubernetes ResourceList.
+func NewResourceVectorFromResourceList(resourceList v1.ResourceList, indexMap *ResourceVectorMap) ResourceVector
 ```
 
 ## Migration Plan
 
 ### Phase 1: Type Introduction
-- Introduce `resourceVector`, `resourceVectorMap`, and `ResourceVectorContext` types
-- Create conversion functions: `ResourceToVector()` and `VectorToResource()`
-- Add vector operation helpers: `VectorAdd`, `VectorSub`, `VectorLessEqual`
+- Introduce `ResourceVector`, `ResourceVectorMap` types
+- Create conversion functions: `Resource.ToVector()`, `Resource.FromVector()`, `NewResourceVectorFromResourceList()`
+- Add vector operations as methods: `Add`, `Sub`, `LessEqual`, `Clone`, `SetMax`, `IsZero`
+- Create `NewResourceVector` factory to guarantee correct vector length
 - Create unit tests for vector operations
 
 ### Phase 2: Vector Map Generation
-- Extend `ClusterInfoSnapshot` to build `resourceVectorMap` from cluster state
-- Create `ResourceVectorContext` during session initialization
+- Extend `ClusterInfoSnapshot` to build `ResourceVectorMap` from cluster state using `BuildResourceVectorMap`
+- Pass shared `ResourceVectorMap` to all nodes and pods during session initialization
 - Document vector map lifecycle and cache strategy
 
 ### Phase 3: Pod & Node Info Vectorization
@@ -318,7 +328,7 @@ type ClusterNodesVector struct {
 
 ## Baseline Performance
 
-This section establishes baseline metrics for the current struct-based implementation. These metrics will be compared against vector-based implementation in commit 10 to quantify performance improvements.
+This section establishes baseline metrics for the current struct-based implementation. These metrics will be compared against the vector-based implementation (Phase 5) to quantify performance improvements.
 
 ### Test Environment
 
@@ -382,7 +392,7 @@ Notes:
 - Action benchmarks use `-benchtime=10x` (10 iterations); API micro-benchmarks use default auto-calibration (millions of iterations) for stable timing.
 
 
-## After Optimization (filled in commit 10)
+## After Optimization (filled in Phase 5)
 
 *Placeholder for final performance metrics and improvements.*
 
