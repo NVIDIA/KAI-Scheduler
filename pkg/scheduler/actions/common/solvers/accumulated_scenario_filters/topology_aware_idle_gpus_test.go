@@ -1,0 +1,423 @@
+// Copyright 2025 NVIDIA CORPORATION
+// SPDX-License-Identifier: Apache-2.0
+
+package accumulated_scenario_filters
+
+import (
+	"strconv"
+	"testing"
+
+	"go.uber.org/mock/gomock"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
+
+	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/scenario"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_affinity"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
+)
+
+func TestNewTopologyAwareIdleGpusFilter_NoConstraints(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 8,
+		"node-2": 8,
+	}, nil)
+
+	jobs := []*jobs_fake.TestJobBasic{{
+		Name:                "pending-job",
+		Namespace:           "default",
+		QueueName:           "default",
+		RequiredGPUsPerTask: 4,
+		Tasks:               []*tasks_fake.TestTaskBasic{{State: pod_status.Pending}},
+		RootSubGroupSet:     nil,
+	}}
+	jobsInfoMap, _, _ := jobs_fake.BuildJobsAndTasksMaps(jobs)
+	pendingJob := jobsInfoMap["pending-job"]
+
+	testScenario := scenario.NewByNodeScenario(nil, pendingJob, pendingJob, nil, nil)
+	filter := NewTopologyAwareIdleGpusFilter(testScenario, nodes)
+
+	if filter != nil {
+		t.Errorf("Expected nil filter for scenario without topology constraints, got %v", filter)
+	}
+}
+
+func TestTopologyAwareIdleGpus_SingleDomainSufficientCapacity(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	topology := "cluster-topology"
+	requiredLevel := "topologyLevel/rack"
+	topologyLabelsPernodes := map[string]map[string]string{
+		"node-1": {requiredLevel: "rack-1"},
+		"node-2": {requiredLevel: "rack-1"},
+		"node-3": {requiredLevel: "rack-2"},
+	}
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 8,
+		"node-2": 8,
+		"node-3": 4,
+	}, topologyLabelsPernodes)
+
+	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup(podgroup_info.DefaultSubGroup, topology, requiredLevel, 2))
+	pendingJob := buildJob("pending-job", []*tasks_fake.TestTaskBasic{
+		{SubGroupName: "default", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(8))},
+		{SubGroupName: "default", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(4))},
+	}, rootSubGroupSet)
+
+	testScenario := scenario.NewByNodeScenario(nil, pendingJob, pendingJob, nil, nil)
+	filter := NewTopologyAwareIdleGpusFilter(testScenario, nodes)
+
+	if filter == nil {
+		t.Fatal("Expected non-nil filter")
+	}
+	runFilterCheck(t, filter, testScenario, true, "rack-1 has 16 GPUs which is enough for 12 GPUs needed")
+}
+
+func TestTopologyAwareIdleGpus_NoDomainHasSufficientCapacity(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	topology := "cluster-topology"
+	requiredLevel := "rack"
+	topologyLabelKey := topology + "/" + requiredLevel
+	topologyLabels := map[string]map[string]string{
+		"node-1": {topologyLabelKey: "rack-1"},
+		"node-2": {topologyLabelKey: "rack-2"},
+		"node-3": {topologyLabelKey: "rack-3"},
+	}
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 4,
+		"node-2": 5,
+		"node-3": 6,
+	}, topologyLabels)
+
+	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup(podgroup_info.DefaultSubGroup, topology, requiredLevel, 2))
+	pendingJob := buildJob("pending-job", []*tasks_fake.TestTaskBasic{
+		{SubGroupName: "default", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(8))},
+		{SubGroupName: "default", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(8))},
+	}, rootSubGroupSet)
+
+	testScenario := scenario.NewByNodeScenario(nil, pendingJob, pendingJob, nil, nil)
+	filter := NewTopologyAwareIdleGpusFilter(testScenario, nodes)
+
+	if filter == nil {
+		t.Fatal("Expected non-nil filter")
+	}
+	runFilterCheck(t, filter, testScenario, false, "no rack has 16 GPUs")
+}
+
+func TestTopologyAwareIdleGpus_MultiplePodSetsWithSameConstraint(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	topology := "cluster-topology"
+	requiredLevel := "topologyLevel/rack"
+	topologyLabelsPerNodes := map[string]map[string]string{
+		"node-1": {requiredLevel: "rack-1"},
+		"node-2": {requiredLevel: "rack-2"},
+		"node-3": {requiredLevel: "rack-2"},
+	}
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 10,
+		"node-2": 2,
+		"node-3": 20,
+	}, topologyLabelsPerNodes)
+
+	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup("podset1", topology, requiredLevel, 2))
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup("podset2", topology, requiredLevel, 1))
+	pendingJob := buildJob("pending-job", []*tasks_fake.TestTaskBasic{
+		{SubGroupName: "podset1", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(8))},
+		{SubGroupName: "podset1", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(8))},
+		{SubGroupName: "podset2", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(10))},
+	}, rootSubGroupSet)
+
+	testScenario := scenario.NewByNodeScenario(nil, pendingJob, pendingJob, nil, nil)
+	filter := NewTopologyAwareIdleGpusFilter(testScenario, nodes)
+
+	if filter == nil {
+		t.Fatal("Expected non-nil filter")
+	}
+	runFilterCheck(t, filter, testScenario, true,
+		"rack-1 for the second group and rack-2 for the first group have sufficient capacity")
+}
+
+func TestTopologyAwareIdleGpus_WithVictimTasks(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	topology := "cluster-topology"
+	requiredLevel := "topologyLevel2/rack"
+	topologyLabelsPerNodes := map[string]map[string]string{
+		"node-1": {requiredLevel: "rack-1"},
+		"node-2": {requiredLevel: "rack-2"},
+	}
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 4,
+		"node-2": 12,
+	}, topologyLabelsPerNodes)
+
+	victimPod := createRunningPodWithGpus("victim-1", "default", "node-1", 8)
+	victimTask := pod_info.NewTaskInfo(victimPod)
+	nodes["node-1"].AddTask(victimTask)
+
+	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup(podgroup_info.DefaultSubGroup, topology, requiredLevel, 1))
+	pendingJob := buildJob("pending-job", []*tasks_fake.TestTaskBasic{
+		{SubGroupName: "default", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(10))},
+	}, rootSubGroupSet)
+
+	session := &framework.Session{
+		ClusterInfo: &api.ClusterInfo{
+			PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+				"victim-1-job": podgroup_info.NewPodGroupInfo("victim-1-job"),
+			},
+		},
+	}
+
+	testScenario := scenario.NewByNodeScenario(
+		session,
+		pendingJob,
+		pendingJob,
+		[]*pod_info.PodInfo{victimTask},
+		nil,
+	)
+
+	filter := NewTopologyAwareIdleGpusFilter(testScenario, nodes)
+	if filter == nil {
+		t.Fatal("Expected non-nil filter")
+	}
+	runFilterCheck(t, filter, testScenario, true, "rack-1 will have 12 GPUs after evicting victim")
+}
+
+func TestTopologyAwareIdleGpus_MultipleLevels(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	topology := "cluster-topology"
+	topologyLevels := []string{"topologyPrefix/zone", "topologyPrefix/rack"}
+	topologyLabelsPerNodes := map[string]map[string]string{
+		"node-1": {topologyLevels[0]: "zone-1", topologyLevels[1]: "rack-1"},
+		"node-2": {topologyLevels[0]: "zone-1", topologyLevels[1]: "rack-2"},
+		"node-3": {topologyLevels[0]: "zone-2", topologyLevels[1]: "rack-3"},
+	}
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 8,
+		"node-2": 8,
+		"node-3": 8,
+	}, topologyLabelsPerNodes)
+
+	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup("podset1", topology, topologyLevels[1], 1))
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup("podset2", topology, topologyLevels[0], 2))
+	pendingJob := buildJob("pending-job", []*tasks_fake.TestTaskBasic{
+		{SubGroupName: "podset1", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(6))},
+		{SubGroupName: "podset2", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(8))},
+		{SubGroupName: "podset2", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(8))},
+	}, rootSubGroupSet)
+
+	testScenario := scenario.NewByNodeScenario(nil, pendingJob, pendingJob, nil, nil)
+	filter := NewTopologyAwareIdleGpusFilter(testScenario, nodes)
+
+	if filter == nil {
+		t.Fatal("Expected non-nil filter")
+	}
+	runFilterCheck(t, filter, testScenario, true,
+		"any rack can fit task-1 and zone-1 can fit task-2+task-3")
+}
+
+func TestTopologyDomainKey_Equality(t *testing.T) {
+	key1 := TopologyDomainKey{topologyName: "topo", level: "rack", value: "rack-1"}
+	key2 := TopologyDomainKey{topologyName: "topo", level: "rack", value: "rack-1"}
+	key3 := TopologyDomainKey{topologyName: "topo", level: "rack", value: "rack-2"}
+
+	// Test map usage
+	m := make(map[TopologyDomainKey]int)
+	m[key1] = 1
+	m[key2] = 2
+
+	if m[key1] != 2 {
+		t.Errorf("Expected key1 and key2 to be equal, got different values")
+	}
+	if _, exists := m[key3]; exists {
+		t.Errorf("Expected key3 to not exist in map")
+	}
+}
+
+func TestTopologyAwareIdleGpus_BinPackingPreventsOverAllocation(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	topology := "cluster-topology"
+	requiredLevel := "rack"
+	topologyLabels := map[string]map[string]string{
+		"node-1": {requiredLevel: "rack-1"},
+		"node-2": {requiredLevel: "rack-2"},
+	}
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 15,
+		"node-2": 15,
+	}, topologyLabels)
+
+	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup("podset1", topology, requiredLevel, 1))
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup("podset2", topology, requiredLevel, 1))
+	job := buildJob("job", []*tasks_fake.TestTaskBasic{
+		{SubGroupName: "podset1", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(10))},
+		{SubGroupName: "podset2", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(10))},
+	}, rootSubGroupSet)
+
+	testScenario := scenario.NewByNodeScenario(nil, job, job, nil, nil)
+	filter := NewTopologyAwareIdleGpusFilter(testScenario, nodes)
+	if filter == nil {
+		t.Fatal("Expected non-nil filter")
+	}
+	runFilterCheck(t, filter, testScenario, true,
+		"two PodSets of 10 GPUs each should fit in two racks of 15 GPUs each")
+}
+
+func TestTopologyAwareIdleGpus_BinPackingRejectsInsufficientDomains(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	topology := "cluster-topology"
+	requiredLevel := "rack"
+	topologyLabels := map[string]map[string]string{
+		"node-1": {requiredLevel: "rack-1"},
+	}
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 15,
+	}, topologyLabels)
+
+	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup("podset1", topology, requiredLevel, 1))
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup("podset2", topology, requiredLevel, 1))
+	job := buildJob("job", []*tasks_fake.TestTaskBasic{
+		{SubGroupName: "podset1", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(10))},
+		{SubGroupName: "podset2", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(10))},
+	}, rootSubGroupSet)
+
+	testScenario := scenario.NewByNodeScenario(nil, job, job, nil, nil)
+	filter := NewTopologyAwareIdleGpusFilter(testScenario, nodes)
+	if filter == nil {
+		t.Fatal("Expected non-nil filter")
+	}
+	// Filter checks each SubGroupSet in isolation; each 10-GPU group fits in the 15-GPU rack alone
+	runFilterCheck(t, filter, testScenario, true, "each SubGroupSet fits in rack in isolation")
+}
+
+// Helper functions for creating test data
+
+// newConstrainedSubGroup creates a SubGroupSet with a topology constraint and a single PodSet.
+func newConstrainedSubGroup(name, topology, requiredLevel string, podCount int32) *subgroup_info.SubGroupSet {
+	constraint := &topology_info.TopologyConstraintInfo{
+		Topology:      topology,
+		RequiredLevel: requiredLevel,
+	}
+	subGroup := subgroup_info.NewSubGroupSet(name, constraint)
+	subGroup.AddPodSet(subgroup_info.NewPodSet(name, podCount, nil))
+	return subGroup
+}
+
+// buildJob creates a job with default namespace/queue and returns it from the jobs map.
+func buildJob(name string, tasks []*tasks_fake.TestTaskBasic, rootSubGroupSet *subgroup_info.SubGroupSet) *podgroup_info.PodGroupInfo {
+	jobs := []*jobs_fake.TestJobBasic{{
+		Name:            name,
+		Namespace:       "default",
+		QueueName:       "default",
+		RootSubGroupSet: rootSubGroupSet,
+		Tasks:           tasks,
+	}}
+	jobsInfoMap, _, _ := jobs_fake.BuildJobsAndTasksMaps(jobs)
+	return jobsInfoMap[common_info.PodGroupID(name)]
+}
+
+// runFilterCheck runs the filter and asserts the expected validity.
+func runFilterCheck(t *testing.T, filter *TopologyAwareIdleGpus, s *scenario.ByNodeScenario, wantValid bool, reason string) {
+	t.Helper()
+	valid, err := filter.Filter(s)
+	if err != nil {
+		t.Fatalf("Filter returned error: %v", err)
+	}
+	if valid != wantValid {
+		t.Errorf("Expected valid=%v: %s", wantValid, reason)
+	}
+}
+
+func createTestNodes(
+	ctrl *gomock.Controller,
+	nodeCapacities map[string]int,
+	topologyLabels map[string]map[string]string,
+) map[string]*node_info.NodeInfo {
+	nodes := make(map[string]*node_info.NodeInfo)
+
+	for nodeName := range nodeCapacities {
+		nodePodAffinityInfo := pod_affinity.NewMockNodePodAffinityInfo(ctrl)
+		nodePodAffinityInfo.EXPECT().AddPod(gomock.Any()).AnyTimes()
+		nodePodAffinityInfo.EXPECT().RemovePod(gomock.Any()).AnyTimes()
+
+		labels := make(map[string]string)
+		if topologyLabels != nil && topologyLabels[nodeName] != nil {
+			labels = topologyLabels[nodeName]
+		}
+
+		node := &v1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   nodeName,
+				Labels: labels,
+			},
+			Status: v1.NodeStatus{
+				Allocatable: v1.ResourceList{
+					"nvidia.com/gpu": resource.MustParse(strconv.Itoa(nodeCapacities[nodeName])),
+				},
+			},
+		}
+
+		nodeInfo := node_info.NewNodeInfo(node, nodePodAffinityInfo)
+		nodes[nodeName] = nodeInfo
+	}
+
+	return nodes
+}
+
+func createRunningPodWithGpus(name, namespace, nodeName string, gpus int) *v1.Pod {
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:  types.UID(name + "-uid"),
+			Name: name, Namespace: namespace,
+			Annotations: map[string]string{
+				commonconstants.PodGroupAnnotationForPod: name + "-job",
+			},
+		},
+		Spec: v1.PodSpec{
+			NodeName: nodeName,
+			Containers: []v1.Container{{
+				Resources: v1.ResourceRequirements{
+					Requests: v1.ResourceList{
+						"nvidia.com/gpu": resource.MustParse(strconv.Itoa(gpus)),
+					},
+				},
+			}},
+		},
+		Status: v1.PodStatus{Phase: v1.PodRunning},
+	}
+}

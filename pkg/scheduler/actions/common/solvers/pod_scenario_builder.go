@@ -45,6 +45,14 @@ func NewPodAccumulatedScenarioBuilder(
 	}
 
 	var scenarioFilters []accumulated_scenario_filters.Interface
+
+	// Basic topology-aware gpu capacity filter
+	topologyAwareFilter := accumulated_scenario_filters.NewTopologyAwareIdleGpusFilter(scenario, session.ClusterInfo.Nodes)
+	if topologyAwareFilter != nil {
+		scenarioFilters = append(scenarioFilters, topologyAwareFilter)
+	}
+
+	// Full cluster-level idle GPUs filter
 	idleGpusScenarioFilter := accumulated_scenario_filters.NewIdleGpusFilter(scenario, session.ClusterInfo.Nodes)
 	if idleGpusScenarioFilter != nil {
 		scenarioFilters = append(scenarioFilters, idleGpusScenarioFilter)
