@@ -209,6 +209,120 @@ func TestTopologyAwareIdleGpus_WithVictimTasks(t *testing.T) {
 	runFilterCheck(t, filter, testScenario, true, "rack-1 will have 12 GPUs after evicting victim")
 }
 
+// TestTopologyAwareIdleGpus_VictimNotDoubleCountedAcrossFilterCalls verifies that a victim's
+// freed GPUs are counted exactly once even when the same victim appears in the PotentialVictimsTasks
+// list of multiple consecutive Filter calls.
+//
+// Setup: rack-1 has 4 idle GPUs on node-1; victim-1 holds 4 more GPUs on that node.
+// After eviction, rack-1 has 8 GPUs total — still short of the 10 GPUs the job needs.
+// A second Filter call presenting the same victim must not re-add its 4 GPUs (which would
+// artificially inflate rack-1 to 12 GPUs and incorrectly allow the scenario).
+func TestTopologyAwareIdleGpus_VictimNotDoubleCountedAcrossFilterCalls(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	topology := "cluster-topology"
+	requiredLevel := "rack"
+	topologyLabelsPerNodes := map[string]map[string]string{
+		"node-1": {requiredLevel: "rack-1"},
+	}
+	// node-1: 8 allocatable GPUs, victim-1 uses 4 → 4 idle at construction time
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 8,
+	}, topologyLabelsPerNodes)
+
+	victimPod := createRunningPodWithGpus("victim-1", "default", "node-1", 4)
+	victimTask := pod_info.NewTaskInfo(victimPod)
+	nodes["node-1"].AddTask(victimTask)
+
+	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup(podgroup_info.DefaultSubGroup, topology, requiredLevel, 1))
+	pendingJob := buildJob("pending-job", []*tasks_fake.TestTaskBasic{
+		{SubGroupName: "default", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(10))},
+	}, rootSubGroupSet)
+
+	session := &framework.Session{
+		ClusterInfo: &api.ClusterInfo{
+			PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+				"victim-1-job": podgroup_info.NewPodGroupInfo("victim-1-job"),
+			},
+		},
+	}
+
+	// Both scenarios present the same victim-1.
+	scenario1 := scenario.NewByNodeScenario(session, pendingJob, pendingJob, []*pod_info.PodInfo{victimTask}, nil)
+	scenario2 := scenario.NewByNodeScenario(session, pendingJob, pendingJob, []*pod_info.PodInfo{victimTask}, nil)
+
+	filter := NewTopologyAwareIdleGpusFilter(scenario1, nodes)
+	if filter == nil {
+		t.Fatal("Expected non-nil filter")
+	}
+
+	// First call: rack-1 = 4 (idle) + 4 (victim-1 freed) = 8 GPUs < 10 needed → invalid.
+	runFilterCheck(t, filter, scenario1, false, "rack-1 has 8 GPUs (4 idle + 4 freed), less than 10 needed")
+
+	// Second call with the same victim: rack-1 must remain 8 GPUs — victim-1's freed GPUs
+	// must not be added again. Without a victim cache, rack-1 would reach 12 GPUs and the
+	// filter would incorrectly allow the scenario.
+	runFilterCheck(t, filter, scenario2, false, "victim-1's freed GPUs must not be double-counted on the second Filter call")
+}
+
+// TestTopologyAwareIdleGpus_RecordedVictimsCountedTowardCapacity verifies that freed GPUs from
+// recorded (already-committed) victims are counted toward domain capacity, not just potential ones.
+//
+// Setup: rack-1 has 4 idle GPUs on node-1; victim-1 holds 8 more GPUs on that node.
+// The pending job needs 10 GPUs.  Without the recorded victim the domain has only 4 GPUs
+// (invalid).  Once victim-1 is passed as a recorded victim its 8 freed GPUs are added,
+// giving rack-1 12 GPUs total, which satisfies the requirement (valid).
+func TestTopologyAwareIdleGpus_RecordedVictimsCountedTowardCapacity(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	topology := "cluster-topology"
+	requiredLevel := "rack"
+	topologyLabelsPerNodes := map[string]map[string]string{
+		"node-1": {requiredLevel: "rack-1"},
+	}
+	// node-1: 12 allocatable GPUs; victim-1 uses 8 → 4 idle at construction time.
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 12,
+	}, topologyLabelsPerNodes)
+
+	victimPod := createRunningPodWithGpus("victim-1", "default", "node-1", 8)
+	victimTask := pod_info.NewTaskInfo(victimPod)
+	nodes["node-1"].AddTask(victimTask)
+
+	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup(podgroup_info.DefaultSubGroup, topology, requiredLevel, 1))
+	pendingJob := buildJob("pending-job", []*tasks_fake.TestTaskBasic{
+		{SubGroupName: "default", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(10))},
+	}, rootSubGroupSet)
+
+	// Build a PodGroupInfo for the victim job that contains the running task so that
+	// RecordedVictimsTasks() can return it.
+	victimJob := podgroup_info.NewPodGroupInfo(common_info.PodGroupID("victim-1-job"))
+	victimJob.AddTaskInfo(victimTask)
+
+	session := &framework.Session{
+		ClusterInfo: &api.ClusterInfo{
+			PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+				"victim-1-job": victimJob,
+			},
+		},
+	}
+
+	// Pass victim-1 as a recorded (committed) victim, not a potential one.
+	testScenario := scenario.NewByNodeScenario(
+		session, pendingJob, pendingJob, nil, []*podgroup_info.PodGroupInfo{victimJob},
+	)
+	filter := NewTopologyAwareIdleGpusFilter(testScenario, nodes)
+	if filter == nil {
+		t.Fatal("Expected non-nil filter")
+	}
+	runFilterCheck(t, filter, testScenario, true,
+		"rack-1 has 12 GPUs (4 idle + 8 freed by recorded victim), enough for 10 needed")
+}
+
 func TestTopologyAwareIdleGpus_MultipleLevels(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -321,8 +435,50 @@ func TestTopologyAwareIdleGpus_BinPackingRejectsInsufficientDomains(t *testing.T
 	if filter == nil {
 		t.Fatal("Expected non-nil filter")
 	}
-	// Filter checks each SubGroupSet in isolation; each 10-GPU group fits in the 15-GPU rack alone
-	runFilterCheck(t, filter, testScenario, true, "each SubGroupSet fits in rack in isolation")
+	runFilterCheck(t, filter, testScenario, false, "two PodSets of 10 GPUs each cannot both fit in a single rack of 15 GPUs")
+}
+
+// TestTopologyAwareIdleGpus_FragmentedCapacityRejected demonstrates that sorted greedy matching
+// detects cases where each subgroup fits in some domain independently, but no joint assignment
+// exists due to fragmentation.
+//
+// Setup: two racks with 10 and 9 GPUs (19 total), three subgroups needing 8, 8, and 3 GPUs
+// (19 total).  Each subgroup individually fits in at least one rack (8≤10, 8≤10, 3≤10), so an
+// independent per-subgroup check would return valid.  However, the two 8-GPU subgroups must each
+// occupy one rack, leaving at most 2 GPUs in rack-1 and 1 GPU in rack-2 — neither can fit the
+// 3-GPU subgroup.
+func TestTopologyAwareIdleGpus_FragmentedCapacityRejected(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	topology := "cluster-topology"
+	requiredLevel := "rack"
+	topologyLabels := map[string]map[string]string{
+		"node-1": {requiredLevel: "rack-1"},
+		"node-2": {requiredLevel: "rack-2"},
+	}
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 10,
+		"node-2": 9,
+	}, topologyLabels)
+
+	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup("subA", topology, requiredLevel, 1))
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup("subB", topology, requiredLevel, 1))
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup("subC", topology, requiredLevel, 1))
+	job := buildJob("job", []*tasks_fake.TestTaskBasic{
+		{SubGroupName: "subA", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(8))},
+		{SubGroupName: "subB", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(8))},
+		{SubGroupName: "subC", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(3))},
+	}, rootSubGroupSet)
+
+	testScenario := scenario.NewByNodeScenario(nil, job, job, nil, nil)
+	filter := NewTopologyAwareIdleGpusFilter(testScenario, nodes)
+	if filter == nil {
+		t.Fatal("Expected non-nil filter")
+	}
+	runFilterCheck(t, filter, testScenario, false,
+		"total capacity (19) equals total need (19) but fragmentation prevents joint assignment")
 }
 
 // Helper functions for creating test data
