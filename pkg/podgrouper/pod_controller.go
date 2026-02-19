@@ -116,6 +116,10 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	if metadata == nil {
+		return ctrl.Result{}, nil
+	}
+
 	if len(r.configs.NodePoolLabelKey) > 0 {
 		addNodePoolLabel(metadata, &pod, r.configs.NodePoolLabelKey)
 	}

@@ -24,6 +24,10 @@ const (
 	labelKeyPodGangName = "grove.io/podgang"
 )
 
+const (
+	annotationKeyIgnorePodGang = "grove.io/ignore"
+)
+
 type GroveGrouper struct {
 	client client.Client
 	*defaultgrouper.DefaultGrouper
@@ -65,6 +69,11 @@ func (gg *GroveGrouper) GetPodGroupMetadata(
 	podGang, err := gg.fetchPodGang(pod.Namespace, podGangName)
 	if err != nil {
 		return nil, err
+	}
+
+	// Ignore PodGang if it contains a specific annotation
+	if _, ok := podGang.GetAnnotations()[annotationKeyIgnorePodGang]; ok {
+		return nil, nil
 	}
 
 	metadata, err := gg.DefaultGrouper.GetPodGroupMetadata(podGang, pod)

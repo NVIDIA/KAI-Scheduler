@@ -151,6 +151,63 @@ func TestGetPodGroupMetadata(t *testing.T) {
 	assert.Equal(t, "test_queue", metadata.Queue)
 }
 
+func TestGetPodGroupMetadata_IgnorePodGang(t *testing.T) {
+	podGang := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PodGang",
+			"apiVersion": "scheduler.grove.io/v1alpha1",
+			"metadata": map[string]interface{}{
+				"name":      "pgs1",
+				"namespace": "test-ns",
+				"uid":       "1",
+				"labels": map[string]interface{}{
+					"test_label": "test_value",
+				},
+				"annotations": map[string]interface{}{
+					"test_annotation": "test_value",
+					"grove.io/ignore": "any_value",
+				},
+			},
+			"spec": map[string]interface{}{
+				"podgroups": []interface{}{
+					map[string]interface{}{
+						"name": "pgs1-pga",
+						"podReferences": []interface{}{
+							map[string]interface{}{
+								"namespace": "test-ns",
+								"name":      "pgs1-pga1",
+							},
+						},
+						"minReplicas": int64(1),
+					},
+				},
+				"priorityClassName": "inference",
+			},
+		},
+	}
+	pod := &v1.Pod{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pgs1-pga1",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				queueLabelKey:       "test_queue",
+				labelKeyPodGangName: "pgs1",
+			},
+			UID: "100",
+		},
+		Spec:   v1.PodSpec{},
+		Status: v1.PodStatus{},
+	}
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(podGang).Build()
+	grouper := NewGroveGrouper(client, defaultgrouper.NewDefaultGrouper(queueLabelKey, nodePoolLabelKey, client))
+	metadata, err := grouper.GetPodGroupMetadata(nil, pod)
+	assert.Nil(t, err)
+	if metadata != nil {
+		assert.Fail(t, "PodGang not ignored")
+	}
+}
+
 func TestGetPodGroupMetadata_NestedValueErrors(t *testing.T) {
 	podGang := &unstructured.Unstructured{
 		Object: map[string]interface{}{
