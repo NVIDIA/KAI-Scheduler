@@ -23,7 +23,7 @@ func simpleTask(name string, subGroupName string, status pod_status.PodStatus) *
 		common_info.BuildResourceList("1", "1G"),
 		nil, nil, nil,
 	)
-	info := pod_info.NewTaskInfo(pod)
+	info := pod_info.NewTaskInfo(pod, nil, resource_info.NewResourceVectorMap())
 	info.Status = status
 	info.SubGroupName = subGroupName
 	return info
@@ -220,8 +220,8 @@ func Test_GetTasksToAllocateRequestedGPUs(t *testing.T) {
 	pg := NewPodGroupInfo("test-podgroup")
 	pg.GetSubGroups()[DefaultSubGroup].SetMinAvailable(1)
 	task := simpleTask("p1", "", pod_status.Pending)
-	// manually set up a fake ResReq that returns 2 for GPUs and 1000 for GpuMemory
-	task.ResReq = resource_info.NewResourceRequirements(2, 1000, 2000)
+	// manually set up a fake GpuRequirement that returns 2 for GPUs
+	task.GpuRequirement = *resource_info.NewGpuResourceRequirementWithGpus(2, 0)
 	pg.AddTaskInfo(task)
 	gpus, _ := GetTasksToAllocateRequestedGPUs(pg, subGroupOrderFn, tasksOrderFn, true)
 	if gpus != 2 {
@@ -229,27 +229,55 @@ func Test_GetTasksToAllocateRequestedGPUs(t *testing.T) {
 	}
 }
 
-func Test_GetTasksToAllocateInitResource(t *testing.T) {
-	pg := NewPodGroupInfo("ri")
+func Test_GetTasksToAllocateInitResourceVector(t *testing.T) {
 	// Nil case
-	res := GetTasksToAllocateInitResource(nil, subGroupOrderFn, tasksOrderFn, true, 0)
-	if !res.IsEmpty() {
-		t.Error("empty resource expected for nil pg")
+	res := GetTasksToAllocateInitResourceVector(nil, subGroupOrderFn, tasksOrderFn, true, 0)
+	if res != nil {
+		t.Error("nil expected for nil pg")
 	}
 
-	pg.GetSubGroups()[DefaultSubGroup].SetMinAvailable(1)
-	task := simpleTask("p", "", pod_status.Pending)
-	task.ResReq = resource_info.NewResourceRequirements(0, 5000, 0)
-	pg.AddTaskInfo(task)
-	resource := GetTasksToAllocateInitResource(pg, subGroupOrderFn, tasksOrderFn, true, 0)
-	cpu := resource.BaseResource.Get(v1.ResourceCPU)
-	if cpu != 5000 {
-		t.Fatalf("want cpu=5, got %v", cpu)
+	vectorMap := resource_info.NewResourceVectorMap()
+	pg := NewPodGroupInfoWithVectorMap("ri-vec", vectorMap)
+	pg.GetSubGroups()[DefaultSubGroup].SetMinAvailable(2)
+
+	task1 := simpleTask("p1", "", pod_status.Pending)
+	req1 := resource_info.NewResourceRequirements(1, 2000, 4000)
+	task1.GpuRequirement = req1.GpuResourceRequirement
+	task1.ResReqVector = req1.ToVector(vectorMap)
+	task1.VectorMap = vectorMap
+	pg.AddTaskInfo(task1)
+
+	task2 := simpleTask("p2", "", pod_status.Pending)
+	req2 := resource_info.NewResourceRequirements(2, 3000, 5000)
+	task2.GpuRequirement = req2.GpuResourceRequirement
+	task2.ResReqVector = req2.ToVector(vectorMap)
+	task2.VectorMap = vectorMap
+	pg.AddTaskInfo(task2)
+
+	vec := GetTasksToAllocateInitResourceVector(pg, subGroupOrderFn, tasksOrderFn, true, 0)
+	cpuIdx := vectorMap.GetIndex(string(v1.ResourceCPU))
+	memIdx := vectorMap.GetIndex(string(v1.ResourceMemory))
+	gpuIdx := vectorMap.GetIndex("gpu")
+
+	if vec.Get(cpuIdx) != 5000 {
+		t.Errorf("want cpu=5000, got %v", vec.Get(cpuIdx))
 	}
-	// Memoization/second call should return r
-	newResource := GetTasksToAllocateInitResource(pg, subGroupOrderFn, tasksOrderFn, true, 0)
-	if newResource != resource {
-		t.Error("cached resource pointer mismatch")
+	if vec.Get(memIdx) != 9000 {
+		t.Errorf("want mem=9000, got %v", vec.Get(memIdx))
+	}
+	if vec.Get(gpuIdx) != 3 {
+		t.Errorf("want gpu=3, got %v", vec.Get(gpuIdx))
+	}
+
+	// Caching: second call should return same slice
+	vec2 := GetTasksToAllocateInitResourceVector(pg, subGroupOrderFn, tasksOrderFn, true, 0)
+	if len(vec) != len(vec2) {
+		t.Fatal("cached vector length mismatch")
+	}
+	for i := range vec {
+		if vec[i] != vec2[i] {
+			t.Errorf("cached vector mismatch at index %d: %v != %v", i, vec[i], vec2[i])
+		}
 	}
 }
 
@@ -611,7 +639,7 @@ func Test_getNumOfAllocatedTasks(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pg := NewPodGroupInfo("u1")
 			for i, pod := range tt.args.pods {
-				pi := pod_info.NewTaskInfo(pod)
+				pi := pod_info.NewTaskInfo(pod, nil, resource_info.NewResourceVectorMap())
 				pg.AddTaskInfo(pi)
 
 				if tt.args.overridingStatus != nil {

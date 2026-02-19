@@ -201,7 +201,7 @@ func (pp *predicatesPlugin) evaluateTaskOnPredicates(
 		return fitError
 	}
 
-	if task.ResReq.GpuMemory() > 0 && !node.GpuMemorySynced {
+	if task.GpuRequirement.GpuMemory() > 0 && !node.GpuMemorySynced {
 		return common_info.NewFitError(task.Name, task.Namespace, node.Name,
 			fmt.Sprintf("node is not a gpu node or the gpu memory count on the node was not synced yet,"+
 				" task: <%v/%v>, node: <%v>", task.Namespace, task.Name, node.Name))
@@ -263,7 +263,8 @@ func (pp *predicatesPlugin) evaluateTaskOnPredicates(
 
 func (pp *predicatesPlugin) checkMaxPodsWithGpuGroupReservation(
 	task *pod_info.PodInfo, node *node_info.NodeInfo) error {
-	availablePods := node.Idle.Get(v1.ResourcePods) + node.Releasing.Get(v1.ResourcePods)
+	podsIdx := node.VectorMap.GetIndex(string(v1.ResourcePods))
+	availablePods := node.IdleVector.Get(podsIdx) + node.ReleasingVector.Get(podsIdx)
 
 	if !task.IsSharedGPURequest() {
 		if availablePods > 0 {

@@ -100,10 +100,14 @@ var _ = Describe("resourceType", func() {
 	})
 })
 
+var testVectorMap = resource_info.NewResourceVectorMap()
+
 func createFakeTask(taskName string, gpu float64, cpu float64) *pod_info.PodInfo {
 	return &pod_info.PodInfo{
-		Name:   taskName,
-		ResReq: createResource(gpu, cpu),
+		Name:           taskName,
+		GpuRequirement: *resource_info.NewGpuResourceRequirementWithGpus(gpu, 0),
+		ResReqVector:   resource_info.NewResourceVectorWithValues(cpu, 0, gpu, testVectorMap),
+		VectorMap:      testVectorMap,
 		Pod: &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				CreationTimestamp: metav1.Now(),
@@ -113,11 +117,11 @@ func createFakeTask(taskName string, gpu float64, cpu float64) *pod_info.PodInfo
 }
 
 func createFakeTaskWithDRA(taskName string, draGpuCount int64) *pod_info.PodInfo {
-	req := resource_info.EmptyResourceRequirements()
-	req.GpuResourceRequirement.SetDraGpus(map[string]int64{"nvidia.com/gpu": draGpuCount})
+	gpuReq := resource_info.NewGpuResourceRequirement()
+	gpuReq.SetDraGpus(map[string]int64{"nvidia.com/gpu": draGpuCount})
 	return &pod_info.PodInfo{
-		Name:   taskName,
-		ResReq: req,
+		Name:           taskName,
+		GpuRequirement: *gpuReq,
 		Pod: &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				CreationTimestamp: metav1.Now(),
@@ -133,7 +137,11 @@ func createFakeNode(nodeName string, capacityGPU int, migProfiles map[v1.Resourc
 	node := nodes_fake.BuildNode(nodeName, nodeResource, nodeResource)
 	clusterPodAffinityInfo := cache.NewK8sClusterPodAffinityInfo()
 	podAffinityInfo := cluster_info.NewK8sNodePodAffinityInfo(node, clusterPodAffinityInfo)
-	return node_info.NewNodeInfo(node, podAffinityInfo)
+	vectorMap := resource_info.NewResourceVectorMap()
+	for resourceName := range node.Status.Allocatable {
+		vectorMap.AddResource(string(resourceName))
+	}
+	return node_info.NewNodeInfo(node, podAffinityInfo, vectorMap)
 }
 
 func createFakeNodeWithDRA(nodeName string, draGPUs int) *node_info.NodeInfo {
@@ -143,11 +151,11 @@ func createFakeNodeWithDRA(nodeName string, draGPUs int) *node_info.NodeInfo {
 	node := nodes_fake.BuildNode(nodeName, nodeResource, nodeResource)
 	clusterPodAffinityInfo := cache.NewK8sClusterPodAffinityInfo()
 	podAffinityInfo := cluster_info.NewK8sNodePodAffinityInfo(node, clusterPodAffinityInfo)
-	ni := node_info.NewNodeInfo(node, podAffinityInfo)
+	vectorMap := resource_info.NewResourceVectorMap()
+	for resourceName := range node.Status.Allocatable {
+		vectorMap.AddResource(string(resourceName))
+	}
+	ni := node_info.NewNodeInfo(node, podAffinityInfo, vectorMap)
 	ni.HasDRAGPUs = true
 	return ni
-}
-
-func createResource(gpu float64, cpu float64) *resource_info.ResourceRequirements {
-	return resource_info.NewResourceRequirements(gpu, cpu, 0)
 }

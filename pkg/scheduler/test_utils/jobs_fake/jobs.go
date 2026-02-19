@@ -50,8 +50,9 @@ type TestJobBasic struct {
 	StaleDuration                       *time.Duration
 }
 
-func BuildJobsAndTasksMaps(Jobs []*TestJobBasic, draClaims ...runtime.Object) (
-	map[common_info.PodGroupID]*podgroup_info.PodGroupInfo, map[string]pod_info.PodsMap, map[string]map[string]bool) {
+func BuildJobsAndTasksMaps(Jobs []*TestJobBasic, vectorMap *resource_info.ResourceVectorMap, draClaims ...runtime.Object) (
+	map[common_info.PodGroupID]*podgroup_info.PodGroupInfo, map[string]pod_info.PodsMap, map[string]map[string]bool,
+) {
 	jobsInfoMap := map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{}
 	usedSharedGPUs := map[string]map[string]bool{}
 	tasksToNodeMap := map[string]pod_info.PodsMap{}
@@ -73,7 +74,7 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic, draClaims ...runtime.Object) (
 
 		jobAllocatedResource := resource_info.EmptyResource()
 		taskInfos := generateTasks(job, jobAllocatedResource, usedSharedGPUs, allocatedGPUs,
-			tasksToNodeMap, draClaimsMap)
+			tasksToNodeMap, draClaimsMap, vectorMap)
 
 		jobUID := common_info.PodGroupID(jobName)
 		queueUID := common_info.QueueID(job.QueueName)
@@ -87,8 +88,8 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic, draClaims ...runtime.Object) (
 		job.Preemptibility = pg.CalculatePreemptibility(job.Preemptibility, job.Priority)
 
 		jobInfo := BuildJobInfo(
-			jobName, job.Namespace, jobUID, jobAllocatedResource, job.RootSubGroupSet, taskInfos,
-			job.Priority, job.Preemptibility, queueUID, jobCreationTime, job.StaleDuration,
+			jobName, job.Namespace, jobUID, job.RootSubGroupSet, taskInfos,
+			job.Priority, job.Preemptibility, queueUID, jobCreationTime, job.StaleDuration, vectorMap,
 		)
 		jobsInfoMap[common_info.PodGroupID(job.Name)] = jobInfo
 	}
@@ -97,10 +98,10 @@ func BuildJobsAndTasksMaps(Jobs []*TestJobBasic, draClaims ...runtime.Object) (
 }
 
 func BuildJobInfo(
-	name, namespace string, uid common_info.PodGroupID, allocatedResource *resource_info.Resource,
+	name, namespace string, uid common_info.PodGroupID,
 	rootSubGroupSet *subgroup_info.SubGroupSet, taskInfos []*pod_info.PodInfo,
 	priority int32, preemptibility enginev2alpha2.Preemptibility, queueUID common_info.QueueID,
-	jobCreationTime time.Time, staleDuration *time.Duration,
+	jobCreationTime time.Time, staleDuration *time.Duration, vectorMap *resource_info.ResourceVectorMap,
 ) *podgroup_info.PodGroupInfo {
 	allTasks := pod_info.PodsMap{}
 	taskStatusIndex := map[pod_status.PodStatus]pod_info.PodsMap{}
@@ -132,14 +133,22 @@ func BuildJobInfo(
 		}
 	}
 
+	allocatedVector := resource_info.NewResourceVector(vectorMap)
+	for _, taskInfo := range taskInfos {
+		if pod_status.AllocatedStatus(taskInfo.Status) {
+			allocatedVector.Add(taskInfo.ResReqVector)
+		}
+	}
+
 	result := &podgroup_info.PodGroupInfo{
-		UID:            uid,
-		Name:           name,
-		Namespace:      namespace,
-		Allocated:      allocatedResource,
-		PodStatusIndex: taskStatusIndex,
-		Priority:       priority,
-		Preemptibility: preemptibility, JobFitErrors: make([]common_info.JobFitError, 0),
+		UID:             uid,
+		Name:            name,
+		Namespace:       namespace,
+		AllocatedVector: allocatedVector,
+		VectorMap:       vectorMap,
+		PodStatusIndex:  taskStatusIndex,
+		Priority:        priority,
+		Preemptibility:  preemptibility, JobFitErrors: make([]common_info.JobFitError, 0),
 		TasksFitErrors:    map[common_info.PodID]*common_info.TasksFitErrors{},
 		Queue:             queueUID,
 		CreationTimestamp: metav1.Time{Time: jobCreationTime},
@@ -177,9 +186,12 @@ func DefaultSubGroup(minAvailable int32) *subgroup_info.SubGroupSet {
 	return subGroup
 }
 
-func generateTasks(job *TestJobBasic, jobAllocatedResource *resource_info.Resource,
+func generateTasks(
+	job *TestJobBasic, jobAllocatedResource *resource_info.Resource,
 	usedSharedGPUs map[string]map[string]bool, allocatedGPUs map[string]interface{},
-	tasksToNodeMap map[string]pod_info.PodsMap, draClaimsMap map[string]*resourceapi.ResourceClaim) []*pod_info.PodInfo {
+	tasksToNodeMap map[string]pod_info.PodsMap, draClaimsMap map[string]*resourceapi.ResourceClaim,
+	vectorMap *resource_info.ResourceVectorMap,
+) []*pod_info.PodInfo {
 	taskInfos := []*pod_info.PodInfo{}
 	for taskIndex, task := range job.Tasks {
 		gpuGroups := tasks_fake.GetTestTaskGPUIndex(task)
@@ -196,7 +208,11 @@ func generateTasks(job *TestJobBasic, jobAllocatedResource *resource_info.Resour
 			draPodClaims = getDraClaimsForPod(task, draClaimsMap)
 		}
 
-		taskInfo := pod_info.NewTaskInfo(podOfTask, draPodClaims...)
+		for _, container := range append(podOfTask.Spec.Containers, podOfTask.Spec.InitContainers...) {
+			vectorMap.AddResourceList(container.Resources.Requests)
+		}
+
+		taskInfo := pod_info.NewTaskInfo(podOfTask, draPodClaims, vectorMap)
 		taskInfo.Status = task.State
 		taskInfo.GPUGroups = gpuGroups
 		taskInfo.SubGroupName = task.SubGroupName

@@ -79,9 +79,14 @@ type PodInfo struct {
 	ResourceRequestType  ResourceRequestType
 	ResourceReceivedType ResourceReceivedType
 
-	// ResReq are the minimal resources that needed to launch a pod. (includes init containers resources)
-	ResReq           *resource_info.ResourceRequirements
-	AcceptedResource *resource_info.ResourceRequirements
+	// Vector representation of resource requirements
+	ResReqVector           resource_info.ResourceVector
+	AcceptedResourceVector resource_info.ResourceVector
+	VectorMap              *resource_info.ResourceVectorMap
+
+	// GPU-specific resource requirements (portion, count, gpu memory, MIG resources)
+	GpuRequirement         resource_info.GpuResourceRequirement
+	AcceptedGpuRequirement resource_info.GpuResourceRequirement
 
 	schedulingConstraintsSignature common_info.SchedulingConstraintsSignature
 
@@ -163,11 +168,11 @@ func (pi *PodInfo) UpsertStorageClaim(claimInfo *storageclaim_info.StorageClaimI
 	pi.storageClaims[claimInfo.Key] = claimInfo
 }
 
-func NewTaskInfo(pod *v1.Pod, draPodClaims ...*resourceapi.ResourceClaim) *PodInfo {
-	return NewTaskInfoWithBindRequest(pod, nil, draPodClaims...)
+func NewTaskInfo(pod *v1.Pod, draPodClaims []*resourceapi.ResourceClaim, vectorMap *resource_info.ResourceVectorMap) *PodInfo {
+	return NewTaskInfoWithBindRequest(pod, nil, draPodClaims, vectorMap)
 }
 
-func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo, draPodClaims ...*resourceapi.ResourceClaim) *PodInfo {
+func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindRequestInfo, draPodClaims []*resourceapi.ResourceClaim, vectorMap *resource_info.ResourceVectorMap) *PodInfo {
 	initResreq := getPodResourceRequest(pod)
 
 	nodeName := pod.Spec.NodeName
@@ -191,8 +196,11 @@ func NewTaskInfoWithBindRequest(pod *v1.Pod, bindRequest *bindrequest_info.BindR
 		IsVirtualStatus:                false,
 		IsLegacyMIGtask:                false,
 		Pod:                            pod,
-		ResReq:                         initResreq,
-		AcceptedResource:               resource_info.EmptyResourceRequirements(),
+		GpuRequirement:                 initResreq.GpuResourceRequirement,
+		AcceptedGpuRequirement:         *resource_info.NewGpuResourceRequirement(),
+		ResReqVector:                   initResreq.ToVector(vectorMap),
+		AcceptedResourceVector:         resource_info.NewResourceVector(vectorMap),
+		VectorMap:                      vectorMap,
 		GPUGroups:                      []string{},
 		ResourceRequestType:            RequestTypeRegular,
 		ResourceReceivedType:           ReceivedTypeNone,
@@ -250,32 +258,50 @@ func resourceClaimInfoFromPodClaims(draPodClaims []*resourceapi.ResourceClaim, p
 	return resourceClaimInfo, nil
 }
 
+func (pi *PodInfo) SetVectorMap(vectorMap *resource_info.ResourceVectorMap) {
+	pi.VectorMap = vectorMap
+	// Rebuild vectors from pod spec - ResReqVector was already computed from the pod resource request
+	// AcceptedResourceVector stays as-is since it's set by setAcceptedResources
+}
+
 func (pi *PodInfo) Clone() *PodInfo {
+	var resReqVectorClone resource_info.ResourceVector
+	if pi.ResReqVector != nil {
+		resReqVectorClone = pi.ResReqVector.Clone()
+	}
+	var acceptedResourceVectorClone resource_info.ResourceVector
+	if pi.AcceptedResourceVector != nil {
+		acceptedResourceVectorClone = pi.AcceptedResourceVector.Clone()
+	}
+
 	return &PodInfo{
-		UID:                  pi.UID,
-		Job:                  pi.Job,
-		Name:                 pi.Name,
-		Namespace:            pi.Namespace,
-		SubGroupName:         pi.SubGroupName,
-		NodeName:             pi.NodeName,
-		Status:               pi.Status,
-		Pod:                  pi.Pod,
-		ResReq:               pi.ResReq.Clone(),
-		AcceptedResource:     pi.AcceptedResource.Clone(),
-		GPUGroups:            pi.GPUGroups,
-		ResourceClaimInfo:    pi.ResourceClaimInfo.Clone(),
-		ResourceRequestType:  pi.ResourceRequestType,
-		ResourceReceivedType: pi.ResourceReceivedType,
-		IsVirtualStatus:      pi.IsVirtualStatus,
-		IsLegacyMIGtask:      pi.IsLegacyMIGtask,
-		storageClaims:        pi.storageClaims,
-		ownedStorageClaims:   pi.ownedStorageClaims,
+		UID:                    pi.UID,
+		Job:                    pi.Job,
+		Name:                   pi.Name,
+		Namespace:              pi.Namespace,
+		SubGroupName:           pi.SubGroupName,
+		NodeName:               pi.NodeName,
+		Status:                 pi.Status,
+		Pod:                    pi.Pod,
+		GpuRequirement:         *pi.GpuRequirement.Clone(),
+		AcceptedGpuRequirement: *pi.AcceptedGpuRequirement.Clone(),
+		ResReqVector:           resReqVectorClone,
+		AcceptedResourceVector: acceptedResourceVectorClone,
+		VectorMap:              pi.VectorMap,
+		GPUGroups:              pi.GPUGroups,
+		ResourceClaimInfo:      pi.ResourceClaimInfo.Clone(),
+		ResourceRequestType:    pi.ResourceRequestType,
+		ResourceReceivedType:   pi.ResourceReceivedType,
+		IsVirtualStatus:        pi.IsVirtualStatus,
+		IsLegacyMIGtask:        pi.IsLegacyMIGtask,
+		storageClaims:          pi.storageClaims,
+		ownedStorageClaims:     pi.ownedStorageClaims,
 	}
 }
 
 func (pi PodInfo) String() string {
-	return fmt.Sprintf("Pod (%v:%v/%v): job %v, status %v, resreq %v",
-		pi.UID, pi.Namespace, pi.Name, pi.Job, pi.Status, pi.ResReq)
+	return fmt.Sprintf("Pod (%v:%v/%v): job %v, status %v, resreq %v, gpu %v",
+		pi.UID, pi.Namespace, pi.Name, pi.Job, pi.Status, pi.ResReqVector, pi.GpuRequirement.GpusAsString())
 }
 
 func (pi *PodInfo) IsMigProfileRequest() bool {
@@ -323,7 +349,7 @@ func (pi *PodInfo) IsCPUOnlyRequest() bool {
 }
 
 func (pi *PodInfo) IsRequireAnyKindOfGPU() bool {
-	return pi.ResReq.GPUs() > 0 || pi.ResReq.GpuResourceRequirement.GetDraGpusCount() > 0 ||
+	return pi.GpuRequirement.GPUs() > 0 || pi.GpuRequirement.GetDraGpusCount() > 0 ||
 		pi.IsMemoryRequest() || pi.IsMigProfileRequest()
 }
 
@@ -443,15 +469,14 @@ func (pi *PodInfo) updatePodAdditionalFields(bindRequest *bindrequest_info.BindR
 
 	gpuMemory, err := strconv.ParseInt(pi.Pod.Annotations[GpuMemoryAnnotationName], 10, 64)
 	if err == nil && gpuMemory > 0 {
-		pi.ResReq.GpuResourceRequirement =
-			*resource_info.NewGpuResourceRequirementWithGpus(0, gpuMemory)
+		pi.GpuRequirement = *resource_info.NewGpuResourceRequirementWithGpus(0, gpuMemory)
 		pi.ResourceRequestType = RequestTypeGpuMemory
 	}
 
 	gpuFractionString := pi.Pod.Annotations[common_info.GPUFraction]
 	gpuFraction, GPUFractionErr := strconv.ParseFloat(gpuFractionString, 64)
 	if !(gpuFraction <= 0 || gpuFraction > 1 || GPUFractionErr != nil) {
-		pi.ResReq.GpuResourceRequirement = *resource_info.NewGpuResourceRequirementWithGpus(gpuFraction, 0)
+		pi.GpuRequirement = *resource_info.NewGpuResourceRequirementWithGpus(gpuFraction, 0)
 		pi.ResourceRequestType = RequestTypeFraction
 	}
 
@@ -460,7 +485,7 @@ func (pi *PodInfo) updatePodAdditionalFields(bindRequest *bindrequest_info.BindR
 		if found && numFractionDevicesStr != "" {
 			numFractionDevices, numFractionDevicesErr := strconv.ParseInt(numFractionDevicesStr, 10, 64)
 			if numFractionDevicesErr == nil {
-				pi.ResReq.GpuResourceRequirement = *resource_info.NewGpuResourceRequirementWithMultiFraction(
+				pi.GpuRequirement = *resource_info.NewGpuResourceRequirementWithMultiFraction(
 					numFractionDevices, gpuFraction, gpuMemory)
 			}
 		}
@@ -468,13 +493,14 @@ func (pi *PodInfo) updatePodAdditionalFields(bindRequest *bindrequest_info.BindR
 
 	if len(draPodClaims) > 0 {
 		draGpus := resources.ExtractDRAGPUResourcesFromClaims(draPodClaims)
-		pi.ResReq.GpuResourceRequirement.SetDraGpus(draGpus)
+		pi.GpuRequirement.SetDraGpus(draGpus)
 	}
 
 	pi.updateLegacyMigResourceRequestFromAnnotations()
-	if len(pi.ResReq.MigResources()) > 0 {
+	if len(pi.GpuRequirement.MigResources()) > 0 {
 		pi.ResourceRequestType = RequestTypeMigInstance
 	}
+	pi.rebuildResReqVector()
 }
 
 // updateLegacyMigResourceRequestFromAnnotations updates the mig resource request of legacy MIG pods
@@ -489,8 +515,19 @@ func (pi *PodInfo) updateLegacyMigResourceRequestFromAnnotations() {
 			migResources := map[v1.ResourceName]int64{
 				v1.ResourceName(annotationName): value,
 			}
-			pi.ResReq.GpuResourceRequirement = *resource_info.NewGpuResourceRequirementWithMig(migResources)
+			pi.GpuRequirement = *resource_info.NewGpuResourceRequirementWithMig(migResources)
 			pi.IsLegacyMIGtask = true
+		}
+	}
+}
+
+// rebuildResReqVector rebuilds ResReqVector from the current vector base resources and GpuRequirement.
+func (pi *PodInfo) rebuildResReqVector() {
+	gpuIdx := pi.VectorMap.GetIndex("gpu")
+	pi.ResReqVector.Set(gpuIdx, pi.GpuRequirement.GPUs()+float64(pi.GpuRequirement.GetDraGpusCount()))
+	for migName, migCount := range pi.GpuRequirement.MigResources() {
+		if idx := pi.VectorMap.GetIndex(string(migName)); idx >= 0 {
+			pi.ResReqVector.Set(idx, float64(migCount))
 		}
 	}
 }

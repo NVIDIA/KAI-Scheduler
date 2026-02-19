@@ -32,6 +32,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storagecapacity_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclass_info"
@@ -57,6 +58,9 @@ type ClusterInfo struct {
 	Topologies                  []*kaiv1alpha1.Topology
 
 	MinNodeGPUMemory int64
+
+	// Shared resource vector index map for this scheduling cycle
+	ResourceVectorMap *resource_info.ResourceVectorMap
 }
 
 func NewClusterInfo() *ClusterInfo {
@@ -83,7 +87,7 @@ func (ci ClusterInfo) String() string {
 		str = str + "Nodes:\n"
 		for _, n := range ci.Nodes {
 			str = str + fmt.Sprintf("\t %s: idle(%v) used(%v) allocatable(%v) pods(%d)\n",
-				n.Name, n.Idle, n.Used, n.Allocatable, len(n.PodInfos))
+				n.Name, n.IdleVector, n.UsedVector, n.AllocatableVector, len(n.PodInfos))
 
 			i := 0
 			for _, p := range n.PodInfos {

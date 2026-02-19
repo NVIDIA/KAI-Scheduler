@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -18,19 +19,20 @@ import (
 )
 
 type nodeAssertedInfo struct {
-	idle                        *resource_info.Resource
-	used                        *resource_info.Resource
-	allocatable                 *resource_info.Resource
-	releasing                   *resource_info.Resource
+	idle                        resource_info.ResourceVector
+	used                        resource_info.ResourceVector
+	allocatable                 resource_info.ResourceVector
+	releasing                   resource_info.ResourceVector
+	vectorMap                   *resource_info.ResourceVectorMap
 	accessibleStorageCapacities map[common_info.StorageClassID][]*storagecapacity.StorageCapacityInfo
 	gpuSharingNodeInfo          *node_info.GpuSharingNodeInfo
 }
 
 func (nri *nodeAssertedInfo) assertEqual(t *testing.T, nriRight *nodeAssertedInfo) {
-	assert.Equal(t, *(nri.idle), *(nriRight.idle))
-	assert.Equal(t, *(nri.used), *(nriRight.used))
-	assert.Equal(t, *(nri.allocatable), *(nriRight.allocatable))
-	assert.Equal(t, *(nri.releasing), *(nriRight.releasing))
+	assert.Equal(t, nri.idle, nriRight.idle)
+	assert.Equal(t, nri.used, nriRight.used)
+	assert.Equal(t, nri.allocatable, nriRight.allocatable)
+	assert.Equal(t, nri.releasing, nriRight.releasing)
 	assert.Equal(t, nri.accessibleStorageCapacities, nriRight.accessibleStorageCapacities)
 	assert.Equal(t, nri.gpuSharingNodeInfo.ReleasingSharedGPUs, nriRight.gpuSharingNodeInfo.ReleasingSharedGPUs)
 	assert.Equal(t, nri.gpuSharingNodeInfo.UsedSharedGPUsMemory, nriRight.gpuSharingNodeInfo.UsedSharedGPUsMemory)
@@ -63,16 +65,20 @@ func (nri *nodeAssertedInfo) assertSharedGpuReleasingMapEqual(t *testing.T, rele
 
 func validateEvictedFromNode(t *testing.T,
 	nodeInfo *node_info.NodeInfo, originalNodeAssertData *nodeAssertedInfo,
-	taskResources *resource_info.ResourceRequirements) {
+	taskResReqVector resource_info.ResourceVector, taskVectorMap *resource_info.ResourceVectorMap) {
 	if originalNodeAssertData != nil {
 		actualNode := extractNodeAssertedInfo(nodeInfo)
+		vm := actualNode.vectorMap
+		gpuIdx := vm.GetIndex("gpu")
+		cpuIdx := vm.GetIndex(string(v1.ResourceCPU))
+		memIdx := vm.GetIndex(string(v1.ResourceMemory))
 
-		assert.Equal(t, originalNodeAssertData.releasing.GPUs(),
-			actualNode.releasing.GPUs()-taskResources.GPUs())
-		assert.Equal(t, originalNodeAssertData.releasing.Memory(),
-			actualNode.releasing.Memory()-taskResources.Memory())
-		assert.Equal(t, originalNodeAssertData.releasing.Cpu(),
-			actualNode.releasing.Cpu()-taskResources.Cpu())
+		assert.Equal(t, originalNodeAssertData.releasing.Get(gpuIdx),
+			actualNode.releasing.Get(gpuIdx)-taskResReqVector.Get(taskVectorMap.GetIndex("gpu")))
+		assert.Equal(t, originalNodeAssertData.releasing.Get(memIdx),
+			actualNode.releasing.Get(memIdx)-taskResReqVector.Get(taskVectorMap.GetIndex(string(v1.ResourceMemory))))
+		assert.Equal(t, originalNodeAssertData.releasing.Get(cpuIdx),
+			actualNode.releasing.Get(cpuIdx)-taskResReqVector.Get(taskVectorMap.GetIndex(string(v1.ResourceCPU))))
 
 		assert.Equal(t, originalNodeAssertData.used, actualNode.used)
 		assert.Equal(t, originalNodeAssertData.idle, actualNode.idle)
@@ -81,18 +87,18 @@ func validateEvictedFromNode(t *testing.T,
 
 func validateEvictedJob(t *testing.T, ssn *Session, jobName common_info.PodGroupID,
 	task *pod_info.PodInfo, originalJob *podgroup_info.PodGroupInfo,
-	expectedJobAllocation *resource_info.Resource) {
-	actualAllocated := (*ssn.ClusterInfo.PodGroupInfos[jobName].Allocated).Clone()
+	expectedJobAllocation resource_info.ResourceVector) {
+	actualAllocated := ssn.ClusterInfo.PodGroupInfos[jobName].AllocatedVector.Clone()
+	gpuIdx := ssn.ClusterInfo.PodGroupInfos[jobName].VectorMap.GetIndex("gpu")
 
 	if pod_status.AllocatedStatus(task.Status) {
-		assert.Equal(t, expectedJobAllocation.GPUs(),
-			actualAllocated.GPUs()+(*task.ResReq).GPUs())
-		actualAllocated.AddResourceRequirements(task.ResReq)
-		assert.Equal(t, *originalJob.Allocated,
-			*actualAllocated)
+		assert.Equal(t, expectedJobAllocation.Get(gpuIdx),
+			actualAllocated.Get(gpuIdx)+task.ResReqVector.Get(task.VectorMap.GetIndex("gpu")))
+		actualAllocated.Add(task.ResReqVector)
+		assert.Equal(t, originalJob.AllocatedVector, actualAllocated)
 	} else {
-		assert.Equal(t, *originalJob.Allocated, *actualAllocated)
-		assert.Equal(t, expectedJobAllocation.GPUs(), actualAllocated.GPUs())
+		assert.Equal(t, originalJob.AllocatedVector, actualAllocated)
+		assert.Equal(t, expectedJobAllocation.Get(gpuIdx), actualAllocated.Get(gpuIdx))
 	}
 }
 
@@ -100,7 +106,8 @@ func validateEvictedTask(t *testing.T, ssn *Session,
 	jobName common_info.PodGroupID, podName common_info.PodID, originalTask *pod_info.PodInfo) {
 	actualTask := ssn.ClusterInfo.PodGroupInfos[jobName].GetAllPodsMap()[podName]
 
-	assert.Equal(t, *originalTask.ResReq, *actualTask.ResReq)
+	assert.Equal(t, originalTask.GpuRequirement, actualTask.GpuRequirement)
+	assert.Equal(t, originalTask.ResReqVector, actualTask.ResReqVector)
 
 	if pod_status.AllocatedStatus(originalTask.Status) {
 		assert.Equal(t, pod_status.Releasing, actualTask.Status)
@@ -113,39 +120,44 @@ func validatePipelinedTask(t *testing.T, ssn *Session, jobName common_info.PodGr
 	nodeToPipeline string, originalPipelinedTask *pod_info.PodInfo) {
 	actualOnEvictTask := ssn.ClusterInfo.PodGroupInfos[jobName].GetAllPodsMap()[podName]
 
-	assert.Equal(t, *originalPipelinedTask.ResReq, *actualOnEvictTask.ResReq)
+	assert.Equal(t, originalPipelinedTask.GpuRequirement, actualOnEvictTask.GpuRequirement)
+	assert.Equal(t, originalPipelinedTask.ResReqVector, actualOnEvictTask.ResReqVector)
 	assert.Equal(t, pod_status.Pipelined, actualOnEvictTask.Status)
 	assert.Equal(t, nodeToPipeline, actualOnEvictTask.NodeName)
 }
 
 func validatePipelinedJob(t *testing.T, ssn *Session, jobName common_info.PodGroupID,
 	originalTask *pod_info.PodInfo, originalJob *podgroup_info.PodGroupInfo,
-	expectedJobAllocation *resource_info.Resource) {
-	actualAllocated := (*ssn.ClusterInfo.PodGroupInfos[jobName].Allocated).Clone()
+	expectedJobAllocation resource_info.ResourceVector) {
+	actualAllocated := ssn.ClusterInfo.PodGroupInfos[jobName].AllocatedVector.Clone()
+	gpuIdx := ssn.ClusterInfo.PodGroupInfos[jobName].VectorMap.GetIndex("gpu")
 
 	if pod_status.AllocatedStatus(originalTask.Status) {
-		assert.Equal(t, expectedJobAllocation.GPUs(),
-			actualAllocated.GPUs()+(*originalTask.ResReq).GPUs())
-		actualAllocated.AddResourceRequirements(originalTask.ResReq)
-		assert.Equal(t, *originalJob.Allocated,
-			*actualAllocated)
+		assert.Equal(t, expectedJobAllocation.Get(gpuIdx),
+			actualAllocated.Get(gpuIdx)+originalTask.ResReqVector.Get(originalTask.VectorMap.GetIndex("gpu")))
+		actualAllocated.Add(originalTask.ResReqVector)
+		assert.Equal(t, originalJob.AllocatedVector, actualAllocated)
 	} else {
-		assert.Equal(t, *originalJob.Allocated, *actualAllocated)
-		assert.Equal(t, expectedJobAllocation.GPUs(), actualAllocated.GPUs())
+		assert.Equal(t, originalJob.AllocatedVector, actualAllocated)
+		assert.Equal(t, expectedJobAllocation.Get(gpuIdx), actualAllocated.Get(gpuIdx))
 	}
 }
 
 func validatePipelinedToNode(t *testing.T,
 	nodeInfo *node_info.NodeInfo, targetNodeOriginalData *nodeAssertedInfo,
-	taskResources *resource_info.ResourceRequirements) {
+	taskResReqVector resource_info.ResourceVector, taskVectorMap *resource_info.ResourceVectorMap) {
 	actualNode := extractNodeAssertedInfo(nodeInfo)
+	vm := actualNode.vectorMap
+	gpuIdx := vm.GetIndex("gpu")
+	cpuIdx := vm.GetIndex(string(v1.ResourceCPU))
+	memIdx := vm.GetIndex(string(v1.ResourceMemory))
 
-	assert.Equal(t, targetNodeOriginalData.used.GPUs(),
-		actualNode.used.GPUs()-taskResources.GPUs())
-	assert.Equal(t, targetNodeOriginalData.used.Memory(),
-		actualNode.used.Memory()-taskResources.Memory())
-	assert.Equal(t, targetNodeOriginalData.used.Cpu(),
-		actualNode.used.Cpu()-taskResources.Cpu())
+	assert.Equal(t, targetNodeOriginalData.used.Get(gpuIdx),
+		actualNode.used.Get(gpuIdx)-taskResReqVector.Get(taskVectorMap.GetIndex("gpu")))
+	assert.Equal(t, targetNodeOriginalData.used.Get(memIdx),
+		actualNode.used.Get(memIdx)-taskResReqVector.Get(taskVectorMap.GetIndex(string(v1.ResourceMemory))))
+	assert.Equal(t, targetNodeOriginalData.used.Get(cpuIdx),
+		actualNode.used.Get(cpuIdx)-taskResReqVector.Get(taskVectorMap.GetIndex(string(v1.ResourceCPU))))
 
 	assert.Equal(t, targetNodeOriginalData.idle, actualNode.idle)
 }
@@ -154,49 +166,66 @@ func validateAllocatedTask(t *testing.T, ssn *Session, jobName common_info.PodGr
 	nodeToAllocate string, originalPipelinedTask *pod_info.PodInfo) {
 	actualTask := ssn.ClusterInfo.PodGroupInfos[jobName].GetAllPodsMap()[podName]
 
-	assert.Equal(t, *originalPipelinedTask.ResReq, *actualTask.ResReq)
+	assert.Equal(t, originalPipelinedTask.GpuRequirement, actualTask.GpuRequirement)
+	assert.Equal(t, originalPipelinedTask.ResReqVector, actualTask.ResReqVector)
 	assert.Equal(t, pod_status.Allocated, actualTask.Status)
 	assert.Equal(t, nodeToAllocate, actualTask.NodeName)
 }
 
 func validateAllocatedJob(t *testing.T, ssn *Session, jobName common_info.PodGroupID,
 	originalAllocateTask *pod_info.PodInfo, originalAllocateJob *podgroup_info.PodGroupInfo,
-	expectedJobAllocation *resource_info.Resource) {
-	actualAllocated := (*ssn.ClusterInfo.PodGroupInfos[jobName].Allocated).Clone()
+	expectedJobAllocation resource_info.ResourceVector) {
+	actualAllocated := ssn.ClusterInfo.PodGroupInfos[jobName].AllocatedVector.Clone()
+	gpuIdx := ssn.ClusterInfo.PodGroupInfos[jobName].VectorMap.GetIndex("gpu")
 
 	if !pod_status.AllocatedStatus(originalAllocateTask.Status) {
-		assert.Equal(t, expectedJobAllocation.GPUs(),
-			originalAllocateJob.Allocated.GPUs()+(*originalAllocateTask.ResReq).GPUs())
-		originalAllocateJob.Allocated.AddResourceRequirements(originalAllocateTask.ResReq)
-		assert.Equal(t, *actualAllocated, *originalAllocateJob.Allocated)
+		assert.Equal(t, expectedJobAllocation.Get(gpuIdx),
+			originalAllocateJob.AllocatedVector.Get(gpuIdx)+originalAllocateTask.ResReqVector.Get(originalAllocateTask.VectorMap.GetIndex("gpu")))
+		originalAllocateJob.AllocatedVector.Add(originalAllocateTask.ResReqVector)
+		assert.Equal(t, actualAllocated, originalAllocateJob.AllocatedVector)
 	} else {
-		assert.Equal(t, *originalAllocateJob.Allocated, *actualAllocated)
-		assert.Equal(t, expectedJobAllocation.GPUs(), actualAllocated.GPUs())
+		assert.Equal(t, originalAllocateJob.AllocatedVector, actualAllocated)
+		assert.Equal(t, expectedJobAllocation.Get(gpuIdx), actualAllocated.Get(gpuIdx))
 	}
 }
 
 func validateAllocatedToNode(t *testing.T,
 	nodeInfo *node_info.NodeInfo, targetNodeOriginalData *nodeAssertedInfo,
-	taskResources *resource_info.ResourceRequirements) {
+	taskResReqVector resource_info.ResourceVector, taskVectorMap *resource_info.ResourceVectorMap) {
 	actualNode := extractNodeAssertedInfo(nodeInfo)
+	vm := actualNode.vectorMap
+	gpuIdx := vm.GetIndex("gpu")
+	cpuIdx := vm.GetIndex(string(v1.ResourceCPU))
+	memIdx := vm.GetIndex(string(v1.ResourceMemory))
 
-	assert.Equal(t, targetNodeOriginalData.idle.GPUs(), actualNode.idle.GPUs()+taskResources.GPUs())
-	assert.Equal(t, targetNodeOriginalData.idle.Memory(), actualNode.idle.Memory()+taskResources.Memory())
-	assert.Equal(t, targetNodeOriginalData.idle.Cpu(), actualNode.idle.Cpu()+taskResources.Cpu())
+	taskGpuIdx := taskVectorMap.GetIndex("gpu")
+	taskMemIdx := taskVectorMap.GetIndex(string(v1.ResourceMemory))
+	taskCpuIdx := taskVectorMap.GetIndex(string(v1.ResourceCPU))
 
-	assert.Equal(t, targetNodeOriginalData.used.GPUs(), actualNode.used.GPUs()-taskResources.GPUs())
-	assert.Equal(t, targetNodeOriginalData.used.Memory(), actualNode.used.Memory()-taskResources.Memory())
-	assert.Equal(t, targetNodeOriginalData.used.Cpu(), actualNode.used.Cpu()-taskResources.Cpu())
+	assert.Equal(t, targetNodeOriginalData.idle.Get(gpuIdx), actualNode.idle.Get(gpuIdx)+taskResReqVector.Get(taskGpuIdx))
+	assert.Equal(t, targetNodeOriginalData.idle.Get(memIdx), actualNode.idle.Get(memIdx)+taskResReqVector.Get(taskMemIdx))
+	assert.Equal(t, targetNodeOriginalData.idle.Get(cpuIdx), actualNode.idle.Get(cpuIdx)+taskResReqVector.Get(taskCpuIdx))
+
+	assert.Equal(t, targetNodeOriginalData.used.Get(gpuIdx), actualNode.used.Get(gpuIdx)-taskResReqVector.Get(taskGpuIdx))
+	assert.Equal(t, targetNodeOriginalData.used.Get(memIdx), actualNode.used.Get(memIdx)-taskResReqVector.Get(taskMemIdx))
+	assert.Equal(t, targetNodeOriginalData.used.Get(cpuIdx), actualNode.used.Get(cpuIdx)-taskResReqVector.Get(taskCpuIdx))
 
 	assert.Equal(t, targetNodeOriginalData.releasing, actualNode.releasing)
 }
 
+func buildGpuVector(vectorMap *resource_info.ResourceVectorMap, gpus float64) resource_info.ResourceVector {
+	vec := resource_info.NewResourceVector(vectorMap)
+	vec.Set(vectorMap.GetIndex("gpu"), gpus)
+	return vec
+}
+
 func extractNodeAssertedInfo(nodeInfo *node_info.NodeInfo) *nodeAssertedInfo {
 	assertedInfo := nodeAssertedInfo{}
-	assertedInfo.idle = nodeInfo.Idle.Clone()
-	assertedInfo.used = nodeInfo.Used.Clone()
-	assertedInfo.allocatable = nodeInfo.Allocatable.Clone()
-	assertedInfo.releasing = nodeInfo.Releasing.Clone()
+	assertedInfo.idle = nodeInfo.IdleVector.Clone()
+	assertedInfo.used = nodeInfo.UsedVector.Clone()
+	assertedInfo.allocatable = nodeInfo.AllocatableVector.Clone()
+	assertedInfo.releasing = nodeInfo.ReleasingVector.Clone()
+	assertedInfo.vectorMap = nodeInfo.VectorMap
 
 	assertedInfo.accessibleStorageCapacities =
 		map[common_info.StorageClassID][]*storagecapacity.StorageCapacityInfo{}

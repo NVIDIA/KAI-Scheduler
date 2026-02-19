@@ -36,7 +36,6 @@ import (
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_affinity"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
@@ -268,9 +267,15 @@ func TestSnapshotNodes(t *testing.T) {
 		commonconstants.PodGroupAnnotationForPod: "pg-1",
 	}
 	exampleMIGPodWithPG.Spec.Containers[0].Resources.Requests["nvidia.com/mig-1g.5gb"] = resource.MustParse("2")
+	type expectedNodeData struct {
+		Name      string
+		Idle      *resource_info.Resource
+		Used      *resource_info.Resource
+		Releasing *resource_info.Resource
+	}
 	tests := map[string]struct {
 		objs          []runtime.Object
-		resultNodes   []*node_info.NodeInfo
+		resultNodes   []expectedNodeData
 		resultPodsLen int
 		nodePoolName  string
 	}{
@@ -289,7 +294,7 @@ func TestSnapshotNodes(t *testing.T) {
 				},
 				examplePod,
 			},
-			resultNodes: []*node_info.NodeInfo{
+			resultNodes: []expectedNodeData{
 				{
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
@@ -330,7 +335,7 @@ func TestSnapshotNodes(t *testing.T) {
 				},
 				newCompletedPod(examplePod),
 			},
-			resultNodes: []*node_info.NodeInfo{
+			resultNodes: []expectedNodeData{
 				{
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
@@ -388,7 +393,7 @@ func TestSnapshotNodes(t *testing.T) {
 				newPodOnNode(examplePod, "node-1"),
 				newPodOnNode(examplePod, "node-2"),
 			},
-			resultNodes: []*node_info.NodeInfo{
+			resultNodes: []expectedNodeData{
 				{
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
@@ -432,7 +437,7 @@ func TestSnapshotNodes(t *testing.T) {
 				exampleMIGPod,
 				exampleMIGPodWithPG,
 			},
-			resultNodes: []*node_info.NodeInfo{
+			resultNodes: []expectedNodeData{
 				{
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
@@ -481,19 +486,21 @@ func TestSnapshotNodes(t *testing.T) {
 			clusterPodAffinityInfo.EXPECT().AddNode(gomock.Any(), gomock.Any()).AnyTimes()
 
 			allPods, _ := clusterInfo.dataLister.ListPods()
-			nodes, _, err := clusterInfo.snapshotNodes(clusterPodAffinityInfo)
+			vectorMap := resource_info.NewResourceVectorMap()
+			nodes, _, err := clusterInfo.snapshotNodes(clusterPodAffinityInfo, vectorMap)
 			if err != nil {
 				assert.FailNow(t, fmt.Sprintf("SnapshotNode got error in test %s", t.Name()), err)
 			}
-			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil, nil)
+			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil, nil, vectorMap)
 
 			assert.Equal(t, len(test.resultNodes), len(nodes))
 			assert.Equal(t, test.resultPodsLen, len(pods))
 
 			for _, expectedNode := range test.resultNodes {
-				assert.Equal(t, expectedNode.Idle, nodes[expectedNode.Name].Idle, "Expected idle resources to be equal")
-				assert.Equal(t, expectedNode.Used, nodes[expectedNode.Name].Used, "Expected used resources to be equal")
-				assert.Equal(t, expectedNode.Releasing, nodes[expectedNode.Name].Releasing, "Expected releasing resources to be equal")
+				actualNode := nodes[expectedNode.Name]
+				assert.Equal(t, expectedNode.Idle.ToVector(vectorMap), actualNode.IdleVector, "Expected idle resources to be equal")
+				assert.Equal(t, expectedNode.Used.ToVector(vectorMap), actualNode.UsedVector, "Expected used resources to be equal")
+				assert.Equal(t, expectedNode.Releasing.ToVector(vectorMap), actualNode.ReleasingVector, "Expected releasing resources to be equal")
 			}
 		})
 	}
@@ -948,7 +955,8 @@ func TestBindRequests(t *testing.T) {
 		assert.Equal(t, assertedPods, expectedPodAsserts)
 
 		for _, node := range snapshot.Nodes {
-			assert.Equal(t, float64(test.resultNodes[node.Name].MilliValue()), node.Idle.Cpu())
+			cpuIdx := node.VectorMap.GetIndex(string(corev1.ResourceCPU))
+			assert.Equal(t, float64(test.resultNodes[node.Name].MilliValue()), node.IdleVector.Get(cpuIdx))
 		}
 	}
 }
@@ -1239,7 +1247,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 		existingPods := map[common_info.PodID]*pod_info.PodInfo{}
 		podGroups, err := clusterInfo.snapshotPodGroups(
 			map[common_info.QueueID]*queue_info.QueueInfo{"queue-0": predefinedQueue},
-			existingPods)
+			existingPods, resource_info.NewResourceVectorMap())
 		if err != nil {
 			assert.FailNow(t, fmt.Sprintf("SnapshotNode got error in test %v", name), err)
 		}
@@ -1307,7 +1315,7 @@ func TestSnapshotPodGroups_QueueDoesNotExist_AddsJobFitError(t *testing.T) {
 	existingPods := map[common_info.PodID]*pod_info.PodInfo{}
 	podGroups, err := clusterInfo.snapshotPodGroups(
 		map[common_info.QueueID]*queue_info.QueueInfo{"queue-0": predefinedQueue},
-		existingPods)
+		existingPods, resource_info.NewResourceVectorMap())
 
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(podGroups), "Expected 1 podgroup even with missing queue")
@@ -2502,14 +2510,15 @@ func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
 				clusterPodAffinityInfo: clusterPodAffinityInfo,
 			}
 
-			nodes, _, err := ci.snapshotNodes(clusterPodAffinityInfo)
+			vectorMap := resource_info.NewResourceVectorMap()
+			nodes, _, err := ci.snapshotNodes(clusterPodAffinityInfo, vectorMap)
 			assert.NoError(t, err)
 
 			for nodeName, expectedGPUs := range test.expectedDRAGPUs {
 				nodeInfo, found := nodes[nodeName]
 				assert.True(t, found, "Node %s not found", nodeName)
-				// Check total GPUs (DRA GPUs are merged into Allocatable)
-				actualGPUs := nodeInfo.Allocatable.GPUs()
+				// Check total GPUs (DRA GPUs are merged into AllocatableVector)
+				actualGPUs := nodeInfo.AllocatableVector.Get(vectorMap.GetIndex("gpu"))
 				assert.Equal(t, expectedGPUs, actualGPUs, "GPUs mismatch for node %s", nodeName)
 				expectedFlag := test.hasDRAGPUs[nodeName]
 				assert.Equal(t, expectedFlag, nodeInfo.HasDRAGPUs, "HasDRAGPUs mismatch for node %s", nodeName)

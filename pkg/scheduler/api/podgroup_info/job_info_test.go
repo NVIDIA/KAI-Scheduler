@@ -33,11 +33,22 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
 )
 
 func jobInfoEqual(l, r *PodGroupInfo) bool {
-	if !reflect.DeepEqual(l, r) {
+	// Create shallow copies to avoid modifying the original objects
+	lCopy := *l
+	rCopy := *r
+
+	// Ignore vector fields for comparison (they're tested separately)
+	lCopy.AllocatedVector = nil
+	rCopy.AllocatedVector = nil
+	lCopy.VectorMap = nil
+	rCopy.VectorMap = nil
+
+	if !reflect.DeepEqual(lCopy, rCopy) {
 		return false
 	}
 
@@ -54,14 +65,15 @@ func TestAddTaskInfo(t *testing.T) {
 		pod_info.ReceivedResourceTypeAnnotationName: string(pod_info.ReceivedTypeRegular),
 		commonconstants.PodGroupAnnotationForPod:    common_info.FakePogGroupId,
 	}
+	vectorMap := resource_info.BuildResourceVectorMap([]v1.ResourceList{common_info.BuildResourceList("1000m", "1G")})
 	case01_pod1 := common_info.BuildPod(case01_ns, "p1", "", v1.PodPending, common_info.BuildResourceList("1000m", "1G"), []metav1.OwnerReference{case01_owner}, make(map[string]string), podAnnotations)
-	case01_task1 := pod_info.NewTaskInfo(case01_pod1)
+	case01_task1 := pod_info.NewTaskInfo(case01_pod1, nil, vectorMap)
 	case01_pod2 := common_info.BuildPod(case01_ns, "p2", "n1", v1.PodRunning, common_info.BuildResourceList("2000m", "2G"), []metav1.OwnerReference{case01_owner}, make(map[string]string), podAnnotations)
-	case01_task2 := pod_info.NewTaskInfo(case01_pod2)
+	case01_task2 := pod_info.NewTaskInfo(case01_pod2, nil, vectorMap)
 	case01_pod3 := common_info.BuildPod(case01_ns, "p3", "n1", v1.PodPending, common_info.BuildResourceList("1000m", "1G"), []metav1.OwnerReference{case01_owner}, make(map[string]string), podAnnotations)
-	case01_task3 := pod_info.NewTaskInfo(case01_pod3)
+	case01_task3 := pod_info.NewTaskInfo(case01_pod3, nil, vectorMap)
 	case01_pod4 := common_info.BuildPod(case01_ns, "p4", "n1", v1.PodPending, common_info.BuildResourceList("1000m", "1G"), []metav1.OwnerReference{case01_owner}, make(map[string]string), podAnnotations)
-	case01_task4 := pod_info.NewTaskInfo(case01_pod4)
+	case01_task4 := pod_info.NewTaskInfo(case01_pod4, nil, vectorMap)
 
 	subGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
 	defaultSubGroup := subgroup_info.NewPodSet(DefaultSubGroup, 1, nil).WithPodInfos(pod_info.PodsMap{
@@ -84,7 +96,6 @@ func TestAddTaskInfo(t *testing.T) {
 			pods: []*v1.Pod{case01_pod1, case01_pod2, case01_pod3, case01_pod4},
 			expected: &PodGroupInfo{
 				UID:             case01_uid,
-				Allocated:       common_info.BuildResourceWithPods("4000m", "4G", "3"),
 				RootSubGroupSet: subGroupSet,
 				PodSets:         map[string]*subgroup_info.PodSet{DefaultSubGroup: defaultSubGroup},
 				PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
@@ -110,7 +121,7 @@ func TestAddTaskInfo(t *testing.T) {
 		ps := NewPodGroupInfo(test.uid)
 
 		for _, pod := range test.pods {
-			pi := pod_info.NewTaskInfo(pod)
+			pi := pod_info.NewTaskInfo(pod, nil, vectorMap)
 			ps.AddTaskInfo(pi)
 		}
 
@@ -127,25 +138,26 @@ func TestDeleteTaskInfo(t *testing.T) {
 	case01_ns := "c1"
 	runningPodAnnotations := map[string]string{pod_info.ReceivedResourceTypeAnnotationName: string(pod_info.ReceivedTypeRegular)}
 	pendingPodAnnotations := make(map[string]string)
+	deleteVectorMap := resource_info.BuildResourceVectorMap([]v1.ResourceList{common_info.BuildResourceList("1000m", "1G")})
 
 	case01_owner := common_info.BuildOwnerReference(string(case01_uid))
 	case01_pod1 := common_info.BuildPod(case01_ns, "p1", "", v1.PodPending, common_info.BuildResourceList("1000m", "1G"), []metav1.OwnerReference{case01_owner}, make(map[string]string), pendingPodAnnotations)
-	case01_task1 := pod_info.NewTaskInfo(case01_pod1)
+	case01_task1 := pod_info.NewTaskInfo(case01_pod1, nil, deleteVectorMap)
 	case01_pod2 := common_info.BuildPod(case01_ns, "p2", "n1", v1.PodRunning, common_info.BuildResourceList("2000m", "2G"), []metav1.OwnerReference{case01_owner}, make(map[string]string), runningPodAnnotations)
-	case01_task2 := pod_info.NewTaskInfo(case01_pod2)
+	case01_task2 := pod_info.NewTaskInfo(case01_pod2, nil, deleteVectorMap)
 	case01_pod3 := common_info.BuildPod(case01_ns, "p3", "n1", v1.PodRunning, common_info.BuildResourceList("3000m", "3G"), []metav1.OwnerReference{case01_owner}, make(map[string]string), runningPodAnnotations)
-	case01_task3 := pod_info.NewTaskInfo(case01_pod3)
+	case01_task3 := pod_info.NewTaskInfo(case01_pod3, nil, deleteVectorMap)
 	// case2
 	case02_uid := common_info.PodGroupID("owner2")
 	case02_ns := "c2"
 
 	case02_owner := common_info.BuildOwnerReference(string(case02_uid))
 	case02_pod1 := common_info.BuildPod(case02_ns, "p1", "", v1.PodPending, common_info.BuildResourceList("1000m", "1G"), []metav1.OwnerReference{case02_owner}, make(map[string]string), pendingPodAnnotations)
-	case02_task1 := pod_info.NewTaskInfo(case02_pod1)
+	case02_task1 := pod_info.NewTaskInfo(case02_pod1, nil, deleteVectorMap)
 	case02_pod2 := common_info.BuildPod(case02_ns, "p2", "n1", v1.PodPending, common_info.BuildResourceList("2000m", "2G"), []metav1.OwnerReference{case02_owner}, make(map[string]string), pendingPodAnnotations)
-	case02_task2 := pod_info.NewTaskInfo(case02_pod2)
+	case02_task2 := pod_info.NewTaskInfo(case02_pod2, nil, deleteVectorMap)
 	case02_pod3 := common_info.BuildPod(case02_ns, "p3", "n1", v1.PodRunning, common_info.BuildResourceList("3000m", "3G"), []metav1.OwnerReference{case02_owner}, make(map[string]string), runningPodAnnotations)
-	case02_task3 := pod_info.NewTaskInfo(case02_pod3)
+	case02_task3 := pod_info.NewTaskInfo(case02_pod3, nil, deleteVectorMap)
 
 	tests := []struct {
 		name     string
@@ -171,7 +183,6 @@ func TestDeleteTaskInfo(t *testing.T) {
 
 				return &PodGroupInfo{
 					UID:             case01_uid,
-					Allocated:       common_info.BuildResourceWithPods("3000m", "3G", "1"),
 					RootSubGroupSet: subGroupSet,
 					PodSets:         map[string]*subgroup_info.PodSet{DefaultSubGroup: defaultSubGroup},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
@@ -201,7 +212,6 @@ func TestDeleteTaskInfo(t *testing.T) {
 
 				return &PodGroupInfo{
 					UID:             case02_uid,
-					Allocated:       common_info.BuildResourceWithPods("3000m", "3G", "1"),
 					RootSubGroupSet: subGroupSet,
 					PodSets:         map[string]*subgroup_info.PodSet{DefaultSubGroup: defaultSubGroup},
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
@@ -224,12 +234,12 @@ func TestDeleteTaskInfo(t *testing.T) {
 		ps := NewPodGroupInfo(test.uid)
 
 		for _, pod := range test.pods {
-			pi := pod_info.NewTaskInfo(pod)
+			pi := pod_info.NewTaskInfo(pod, nil, deleteVectorMap)
 			ps.AddTaskInfo(pi)
 		}
 
 		for _, pod := range test.rmPods {
-			pi := pod_info.NewTaskInfo(pod)
+			pi := pod_info.NewTaskInfo(pod, nil, deleteVectorMap)
 			//nolint:golint,errcheck
 			ps.resetTaskState(pi)
 		}
@@ -264,7 +274,7 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
-						}})),
+						}}, nil, resource_info.NewResourceVectorMap())),
 			expected: 1,
 		},
 		{
@@ -279,7 +289,7 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodSucceeded,
-						}})),
+						}}, nil, resource_info.NewResourceVectorMap())),
 			expected: 0,
 		},
 		{
@@ -294,7 +304,7 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
-						}}),
+						}}, nil, resource_info.NewResourceVectorMap()),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -304,7 +314,7 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodRunning,
-						}}),
+						}}, nil, resource_info.NewResourceVectorMap()),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -314,7 +324,7 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodFailed,
-						}}),
+						}}, nil, resource_info.NewResourceVectorMap()),
 			),
 			expected: 2,
 		},
@@ -330,7 +340,7 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
-						}}),
+						}}, nil, resource_info.NewResourceVectorMap()),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -340,7 +350,7 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodRunning,
-						}}),
+						}}, nil, resource_info.NewResourceVectorMap()),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -350,7 +360,7 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodFailed,
-						}}),
+						}}, nil, resource_info.NewResourceVectorMap()),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -368,7 +378,7 @@ func TestPodGroupInfo_GetNumAliveTasks(t *testing.T) {
 								},
 							},
 						},
-					}),
+					}, nil, resource_info.NewResourceVectorMap()),
 			),
 			expected: 3,
 		},
@@ -402,7 +412,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
-						}})),
+						}}, nil, resource_info.NewResourceVectorMap())),
 			minAvailable: ptr.To(int32(1)),
 			expected:     true,
 		},
@@ -427,6 +437,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 							},
 						},
 					},
+					nil, resource_info.NewResourceVectorMap(),
 				),
 			),
 			minAvailable: ptr.To(int32(1)),
@@ -444,7 +455,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
-						}})),
+						}}, nil, resource_info.NewResourceVectorMap())),
 			minAvailable: ptr.To(int32(2)),
 			expected:     false,
 		},
@@ -461,6 +472,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
 						}},
+					nil, resource_info.NewResourceVectorMap(),
 				),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
@@ -472,6 +484,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
 						}},
+					nil, resource_info.NewResourceVectorMap(),
 				),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
@@ -490,6 +503,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
 						}},
+					nil, resource_info.NewResourceVectorMap(),
 				),
 			),
 			minAvailable: ptr.To(int32(2)),
@@ -508,6 +522,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
 						}},
+					nil, resource_info.NewResourceVectorMap(),
 				),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
@@ -519,6 +534,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
 						}},
+					nil, resource_info.NewResourceVectorMap(),
 				),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
@@ -537,6 +553,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
 						}},
+					nil, resource_info.NewResourceVectorMap(),
 				),
 			),
 			minAvailable: ptr.To(int32(3)),
@@ -559,6 +576,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodPending,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 							"222": pod_info.NewTaskInfo(
 								&v1.Pod{
@@ -570,6 +588,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodPending,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 						}),
 					"sb-2": subgroup_info.NewPodSet("sb-2", 1, nil).
@@ -584,6 +603,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodPending,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 						}),
 				},
@@ -607,6 +627,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodPending,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 							"222": pod_info.NewTaskInfo(
 								&v1.Pod{
@@ -618,6 +639,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodPending,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 						}),
 					"sb-2": subgroup_info.NewPodSet("sb-2", 1, nil).
@@ -632,6 +654,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodRunning,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 						}),
 				},
@@ -655,6 +678,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodPending,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 							"222": pod_info.NewTaskInfo(
 								&v1.Pod{
@@ -666,6 +690,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodPending,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 							"333": pod_info.NewTaskInfo(
 								&v1.Pod{
@@ -677,6 +702,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodPending,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 						}),
 					"sb-2": subgroup_info.NewPodSet("sb-2", 1, nil).
@@ -691,6 +717,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodPending,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 						}),
 				},
@@ -714,6 +741,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodPending,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 						}),
 					"sb-2": subgroup_info.NewPodSet("sb-2", 1, nil).
@@ -728,6 +756,7 @@ func TestPodGroupInfo_IsReadyForScheduling(t *testing.T) {
 									Status: v1.PodStatus{
 										Phase: v1.PodPending,
 									}},
+								nil, resource_info.NewResourceVectorMap(),
 							),
 						}),
 				},
@@ -771,7 +800,7 @@ func TestPodGroupInfo_GetNumPendingTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
-						}})),
+						}}, nil, resource_info.NewResourceVectorMap())),
 			expected: 1,
 		},
 		{
@@ -786,7 +815,7 @@ func TestPodGroupInfo_GetNumPendingTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodRunning,
-						}})),
+						}}, nil, resource_info.NewResourceVectorMap())),
 			expected: 0,
 		},
 		{
@@ -801,7 +830,7 @@ func TestPodGroupInfo_GetNumPendingTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
-						}}),
+						}}, nil, resource_info.NewResourceVectorMap()),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -811,7 +840,7 @@ func TestPodGroupInfo_GetNumPendingTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodRunning,
-						}}),
+						}}, nil, resource_info.NewResourceVectorMap()),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -821,7 +850,7 @@ func TestPodGroupInfo_GetNumPendingTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodFailed,
-						}}),
+						}}, nil, resource_info.NewResourceVectorMap()),
 			),
 			expected: 1,
 		},
@@ -837,7 +866,7 @@ func TestPodGroupInfo_GetNumPendingTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodPending,
-						}}),
+						}}, nil, resource_info.NewResourceVectorMap()),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -847,7 +876,7 @@ func TestPodGroupInfo_GetNumPendingTasks(t *testing.T) {
 						},
 						Status: v1.PodStatus{
 							Phase: v1.PodRunning,
-						}}),
+						}}, nil, resource_info.NewResourceVectorMap()),
 				pod_info.NewTaskInfo(
 					&v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
@@ -865,7 +894,7 @@ func TestPodGroupInfo_GetNumPendingTasks(t *testing.T) {
 								},
 							},
 						},
-					}),
+					}, nil, resource_info.NewResourceVectorMap()),
 			),
 			expected: 1,
 		},
@@ -890,7 +919,7 @@ func TestPodGroupInfo_GetSchedulingConstraintsSignature(t *testing.T) {
 				Namespace: "ns",
 			},
 			Status: v1.PodStatus{Phase: v1.PodPending},
-		})
+		}, nil, resource_info.NewResourceVectorMap())
 	}
 
 	// Helper function to create a running (allocated) pod task
@@ -903,7 +932,7 @@ func TestPodGroupInfo_GetSchedulingConstraintsSignature(t *testing.T) {
 			},
 			Spec:   v1.PodSpec{NodeName: "node-1"},
 			Status: v1.PodStatus{Phase: v1.PodRunning},
-		})
+		}, nil, resource_info.NewResourceVectorMap())
 	}
 
 	tests := []struct {
@@ -1411,7 +1440,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 					},
 					Status: v1.PodStatus{Phase: v1.PodPending},
 				}
-				task := pod_info.NewTaskInfo(pod)
+				task := pod_info.NewTaskInfo(pod, nil, resource_info.NewResourceVectorMap())
 				pgi := NewPodGroupInfo("test-podgroup", task)
 				pgi.GetSubGroups()[DefaultSubGroup].SetMinAvailable(1)
 				return pgi
@@ -1437,8 +1466,8 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 					},
 					Status: v1.PodStatus{Phase: v1.PodRunning},
 				}
-				task1 := pod_info.NewTaskInfo(pod1)
-				task2 := pod_info.NewTaskInfo(pod2)
+				task1 := pod_info.NewTaskInfo(pod1, nil, resource_info.NewResourceVectorMap())
+				task2 := pod_info.NewTaskInfo(pod2, nil, resource_info.NewResourceVectorMap())
 				pgi := NewPodGroupInfo("test-podgroup", task1, task2)
 				pgi.GetSubGroups()[DefaultSubGroup].SetMinAvailable(2)
 				return pgi
@@ -1456,7 +1485,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 					},
 					Status: v1.PodStatus{Phase: v1.PodRunning},
 				}
-				task := pod_info.NewTaskInfo(pod)
+				task := pod_info.NewTaskInfo(pod, nil, resource_info.NewResourceVectorMap())
 				pgi := NewPodGroupInfo("test-podgroup", task)
 				pgi.GetSubGroups()[DefaultSubGroup].SetMinAvailable(2)
 				return pgi
@@ -1474,7 +1503,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 					},
 					Status: v1.PodStatus{Phase: v1.PodRunning},
 				}
-				task := pod_info.NewTaskInfo(pod)
+				task := pod_info.NewTaskInfo(pod, nil, resource_info.NewResourceVectorMap())
 				pgi := NewPodGroupInfo("test-podgroup", task)
 				pgi.GetSubGroups()[DefaultSubGroup].SetMinAvailable(1)
 				return pgi
@@ -1502,7 +1531,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 						},
 					},
 					Status: v1.PodStatus{Phase: v1.PodRunning},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				task2 := pod_info.NewTaskInfo(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1514,7 +1543,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 						},
 					},
 					Status: v1.PodStatus{Phase: v1.PodRunning},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				pgi.AddTaskInfo(task1)
 				pgi.AddTaskInfo(task2)
@@ -1545,7 +1574,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 						},
 					},
 					Status: v1.PodStatus{Phase: v1.PodRunning},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				task2 := pod_info.NewTaskInfo(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1557,7 +1586,7 @@ func TestPodGroupInfo_IsStale(t *testing.T) {
 						},
 					},
 					Status: v1.PodStatus{Phase: v1.PodRunning},
-				})
+				}, nil, resource_info.NewResourceVectorMap())
 
 				pgi.AddTaskInfo(task1)
 				pgi.AddTaskInfo(task2)
