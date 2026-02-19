@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Implemented block-level segmentation for pytorchjobs [#938](https://github.com/NVIDIA/KAI-Scheduler/pull/938) [itsomri](https://github.com/itsomri)
 
 ### Fixed
+- Fixed admission webhook to skip runtimeClassName injection when gpuPodRuntimeClassName is empty [#1035](https://github.com/NVIDIA/KAI-Scheduler/pull/1035)
 - Fixed helm uninstall does not remove webhooks [#959](https://github.com/NVIDIA/KAI-Scheduler/pull/959) [faizan-exe](https://github.com/faizan-exe)
 - Fixed security vulnerability where PodGang could reference pods in other namespaces, preventing cross-namespace manipulation
 - Fixed pod controller logging to use request namespace/name instead of empty pod object fields when pod is not found
