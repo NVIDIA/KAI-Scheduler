@@ -38,3 +38,19 @@ kubectl patch schedulingshard default --type merge -p '{"spec":{"args": {"max-co
 kubectl patch config.kai.scheduler kai-config --type merge -p '{"spec":{"binder": {"maxConcurrentReconciles": 100}}}'
 # Set admission replicas
 kubectl patch config.kai.scheduler kai-config --type merge -p '{"spec":{"admission": {"replicas": 4}}}'
+
+# Expand resources for selected services manually for scale tests
+# Scheduler
+kubectl patch config.kai.scheduler kai-config --type merge -p '{"spec":{"scheduler":{"service":{"resources":{"requests":{"cpu":"3","memory":"7Gi"},"limits":{"cpu":"5","memory":"7Gi"}}}}}}'
+
+# Binder
+kubectl patch config.kai.scheduler kai-config --type merge -p '{"spec":{"binder":{"service":{"resources":{"requests":{"cpu":"100m","memory":"2500Mi"},"limits":{"cpu":"400m","memory":"2500Mi"}}}}}}'
+
+# pod group controller
+kubectl patch config.kai.scheduler kai-config --type merge -p '{"spec":{"podGroupController":{"service":{"resources":{"requests":{"cpu":"50m","memory":"8000Mi"},"limits":{"cpu":"200m","memory":"8000Mi"}}}}}}'
+
+# queue controller
+kubectl patch config.kai.scheduler kai-config --type merge -p '{"spec":{"queueController":{"service":{"resources":{"requests":{"cpu":"50m","memory":"200Mi"},"limits":{"cpu":"200m","memory":"200Mi"}}}}}}'
+
+# pod grouper
+kubectl patch config.kai.scheduler kai-config --type merge -p '{"spec":{"podGrouper":{"service":{"resources":{"requests":{"cpu":"50m","memory":"2000Mi"},"limits":{"cpu":"200m","memory":"2000Mi"}}}}}}'
