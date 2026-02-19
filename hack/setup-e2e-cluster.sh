@@ -5,6 +5,8 @@
 # This script sets up a kind cluster for e2e testing with the kai-scheduler.
 # It can be run independently or sourced from run-e2e-kind.sh.
 
+set -e
+
 CLUSTER_NAME=${CLUSTER_NAME:-e2e-kai-scheduler}
 
 REPO_ROOT=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/..
@@ -43,17 +45,29 @@ done
 
 kind create cluster \
     --config ${KIND_CONFIG} \
-    --image ${KIND_IMAGE}\
+    --image ${KIND_IMAGE} \
     --name $CLUSTER_NAME
 
-# Install the fake-gpu-operator to provide a fake GPU resources for the e2e tests
+# Deploy local image registry
+echo "Deploying local image registry..."
+kubectl apply -f ${REPO_ROOT}/hack/local_registry.yaml
+kubectl wait --for=condition=available --timeout=60s deployment/registry -n kube-registry
 
-helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.71 \
-  --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml --wait
-kubectl create clusterrole pods-patcher --verb=patch --resource=pods
-kubectl create rolebinding fake-status-updater --clusterrole=pods-patcher --serviceaccount=gpu-operator:status-updater -n kai-resource-reservation
+# Install the fake-gpu-operator to provide fake GPU resources for the e2e tests
+helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
+    --version 0.0.71 --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml --wait
 
-# install third party operators to check the compatibility with the kai-scheduler
+# Deploy Prometheus Operator
+echo "Deploying Prometheus Operator..."
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
+helm repo update prometheus-community
+helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace \
+    --set "alertmanager.enabled=false" \
+    --set "grafana.enabled=false" \
+    --set "prometheus.enabled=false" \
+    --wait
+
+# Install third party operators to check the compatibility with the kai-scheduler
 if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then
     ${REPO_ROOT}/hack/third_party_integrations/deploy_ray.sh
     ${REPO_ROOT}/hack/third_party_integrations/deploy_kubeflow.sh
@@ -62,24 +76,46 @@ if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then
     ${REPO_ROOT}/hack/third_party_integrations/deploy_jobset.sh
 fi
 
-if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
-    cd ${REPO_ROOT}
-    PACKAGE_VERSION=0.0.0-$(git rev-parse --short HEAD)
-    make build VERSION=$PACKAGE_VERSION
-    for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
-        kind load docker-image $image --name $CLUSTER_NAME
-    done
-    helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
-    helm upgrade -i kai-scheduler ./charts/kai-scheduler-$PACKAGE_VERSION.tgz  -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --wait
-    rm -rf ./charts/kai-scheduler-$PACKAGE_VERSION.tgz 
-    cd ${REPO_ROOT}/hack
-else
-    PACKAGE_VERSION=0.0.0-$(git rev-parse --short origin/main)
-    helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace --set "global.gpuSharing=true" --version "$PACKAGE_VERSION"
+# Build and install kai-scheduler
+if [ -z "$PACKAGE_VERSION" ]; then
+    GIT_REV=$(git rev-parse --short HEAD | sed 's/^0*//')
+    PACKAGE_VERSION=0.0.0-$GIT_REV
 fi
 
-# Allow all the pods in the fake-gpu-operator and kai-scheduler to start
-sleep 30
+if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
+    cd ${REPO_ROOT}
+    echo "Building docker images with version $PACKAGE_VERSION..."
+    make build VERSION=$PACKAGE_VERSION
+
+    # Start port-forward to local registry
+    kubectl port-forward -n kube-registry deploy/registry 5000:5000 &
+    PORT_FORWARD_PID=$!
+    sleep 2
+
+    # Push images to local registry
+    echo "Pushing images to local registry..."
+    for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
+        new_image=$(echo "$image" | sed -E 's|.*/([^/]+:[^/]+)$|localhost:5000/\1|')
+        docker tag $image $new_image
+        docker push $new_image
+    done
+
+    kill $PORT_FORWARD_PID 2>/dev/null || true
+
+    # Package and install helm chart
+    helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
+    helm upgrade -i kai-scheduler ./charts/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
+        --set "global.gpuSharing=true" --set "global.registry=localhost:30100" --debug --wait
+    rm -rf ./charts/kai-scheduler-$PACKAGE_VERSION.tgz
+    cd ${REPO_ROOT}/hack
+else
+    helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace \
+        --set "global.gpuSharing=true" --wait
+fi
+
+# Create RBAC for fake-gpu-operator status updates
+kubectl create clusterrole pods-patcher --verb=patch --resource=pods
+kubectl create rolebinding fake-status-updater --clusterrole=pods-patcher --serviceaccount=gpu-operator:status-updater -n kai-resource-reservation
 
 echo "Cluster setup complete. Cluster name: $CLUSTER_NAME"
 
