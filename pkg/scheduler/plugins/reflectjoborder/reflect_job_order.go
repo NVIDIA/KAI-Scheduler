@@ -23,9 +23,15 @@ type ReflectJobOrder struct {
 	QueueOrder  map[common_info.QueueID][]JobOrder `json:"queue_order"`
 }
 
+type jobOrderCache struct {
+	order       *ReflectJobOrder
+	fingerprint uint64
+}
+
 type JobOrderPlugin struct {
 	session         *framework.Session
 	ReflectJobOrder *ReflectJobOrder
+	cache           *jobOrderCache
 }
 
 func (jp *JobOrderPlugin) Name() string {
@@ -36,11 +42,40 @@ func New(_ framework.PluginArguments) framework.Plugin {
 	return &JobOrderPlugin{}
 }
 
+// NewBuilder returns a PluginBuilder whose closure captures a shared cache,
+// allowing successive plugin instances to skip recomputation when session
+// state is unchanged.
+func NewBuilder() framework.PluginBuilder {
+	cache := &jobOrderCache{}
+	return func(_ framework.PluginArguments) framework.Plugin {
+		return &JobOrderPlugin{cache: cache}
+	}
+}
+
 func (jp *JobOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 	jp.session = ssn
 	log.InfraLogger.V(3).Info("Job Order registering get-jobs")
+	ssn.AddHttpHandler("/get-job-order", jp.serveJobs)
 
-	jp.ReflectJobOrder = &ReflectJobOrder{
+	if jp.cache != nil {
+		fp := computeFingerprint(ssn)
+		if fp == jp.cache.fingerprint && jp.cache.order != nil {
+			jp.ReflectJobOrder = jp.cache.order
+			return
+		}
+		jp.ReflectJobOrder = buildJobOrder(ssn)
+		jp.cache.fingerprint = fp
+		jp.cache.order = jp.ReflectJobOrder
+		return
+	}
+
+	jp.ReflectJobOrder = buildJobOrder(ssn)
+}
+
+func (jp *JobOrderPlugin) OnSessionClose(ssn *framework.Session) {}
+
+func buildJobOrder(ssn *framework.Session) *ReflectJobOrder {
+	order := &ReflectJobOrder{
 		GlobalOrder: make([]JobOrder, 0),
 		QueueOrder:  make(map[common_info.QueueID][]JobOrder),
 	}
@@ -58,14 +93,12 @@ func (jp *JobOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 			ID:       job.UID,
 			Priority: job.Priority,
 		}
-		jp.ReflectJobOrder.GlobalOrder = append(jp.ReflectJobOrder.GlobalOrder, jobOrder)
-		jp.ReflectJobOrder.QueueOrder[job.Queue] = append(jp.ReflectJobOrder.QueueOrder[job.Queue], jobOrder)
+		order.GlobalOrder = append(order.GlobalOrder, jobOrder)
+		order.QueueOrder[job.Queue] = append(order.QueueOrder[job.Queue], jobOrder)
 	}
 
-	ssn.AddHttpHandler("/get-job-order", jp.serveJobs)
+	return order
 }
-
-func (jp *JobOrderPlugin) OnSessionClose(ssn *framework.Session) {}
 
 func (jp *JobOrderPlugin) serveJobs(w http.ResponseWriter, r *http.Request) {
 	if jp.ReflectJobOrder == nil {
