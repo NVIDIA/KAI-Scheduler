@@ -21,6 +21,7 @@ package actions
 
 import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/allocate"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/cleanup"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/consolidation"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/preempt"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/reclaim"
@@ -34,4 +35,6 @@ func InitDefaultActions() {
 	framework.RegisterAction(preempt.New())
 	framework.RegisterAction(consolidation.New())
 	framework.RegisterAction(stalegangeviction.New())
+
+	framework.RegisterActionsCleanupFunction(cleanup.ActionsCleanup)
 }

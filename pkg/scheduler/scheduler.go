@@ -135,6 +135,11 @@ func (s *Scheduler) runOnce() {
 		metrics.UpdateActionDuration(string(action.Name()), metrics.Duration(actionStartTime))
 	}
 	log.InfraLogger.RemoveActionLogger()
+
+	actionsCleanup := framework.GetActionCleanup()
+	if actionsCleanup != nil {
+		actionsCleanup(ssn)
+	}
 }
 
 func newClients(config *rest.Config) (kubernetes.Interface, kubeaischedulerver.Interface) {
