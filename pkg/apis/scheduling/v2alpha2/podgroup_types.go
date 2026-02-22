@@ -121,6 +121,7 @@ type SubGroup struct {
 
 	// Parent is an optional attribute that specifies the name of the parent SubGroup
 	// Must consist of lowercase alphanumeric characters or hyphens.
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	Parent *string `json:"parent,omitempty"`
 
