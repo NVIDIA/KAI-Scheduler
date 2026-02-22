@@ -96,8 +96,7 @@ func TestTopologyAwareIdleGpus_NoDomainHasSufficientCapacity(t *testing.T) {
 	defer ctrl.Finish()
 
 	topology := "cluster-topology"
-	requiredLevel := "rack"
-	topologyLabelKey := topology + "/" + requiredLevel
+	topologyLabelKey := topology + "/rack"
 	topologyLabels := map[string]map[string]string{
 		"node-1": {topologyLabelKey: "rack-1"},
 		"node-2": {topologyLabelKey: "rack-2"},
@@ -110,7 +109,7 @@ func TestTopologyAwareIdleGpus_NoDomainHasSufficientCapacity(t *testing.T) {
 	}, topologyLabels)
 
 	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
-	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup(podgroup_info.DefaultSubGroup, topology, requiredLevel, 2))
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup(podgroup_info.DefaultSubGroup, topology, topologyLabelKey, 2))
 	pendingJob := buildJob("pending-job", []*tasks_fake.TestTaskBasic{
 		{SubGroupName: "default", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(8))},
 		{SubGroupName: "default", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(8))},
@@ -375,6 +374,60 @@ func TestTopologyDomainKey_Equality(t *testing.T) {
 	if _, exists := m[key3]; exists {
 		t.Errorf("Expected key3 to not exist in map")
 	}
+}
+
+// TestTopologyAwareIdleGpus_FilterDomainMovesTwoStepsLeft verifies that when Filter is called
+// with a scenario that includes a victim on the smallest-capacity rack, the domain's capacity
+// increase triggers repositionDomainAfterIncrease and the domain moves 2 steps left. Initially
+// racks are [rack-1: 10, rack-2: 8, rack-3: 6]. A victim on rack-3 frees 5 GPUs, so rack-3
+// becomes 11 and must move to the front for correct greedy matching. The job needs 11 GPUs
+// in one rack; only after the reorder does rack-3 satisfy that, so Filter returns true.
+func TestTopologyAwareIdleGpus_FilterDomainMovesTwoStepsLeft(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	topology := "cluster-topology"
+	requiredLevel := "rack"
+	topologyLabels := map[string]map[string]string{
+		"node-1": {requiredLevel: "rack-1"},
+		"node-2": {requiredLevel: "rack-2"},
+		"node-3": {requiredLevel: "rack-3"},
+	}
+	// rack-1: 10 idle, rack-2: 8 idle, rack-3: 11 total with victim using 5 → 6 idle.
+	// Initial order [rack-1, rack-2, rack-3]. After victim applied, rack-3 = 11 → moves 2 steps left.
+	nodes := createTestNodes(ctrl, map[string]int{
+		"node-1": 10,
+		"node-2": 8,
+		"node-3": 11,
+	}, topologyLabels)
+
+	victimPod := createRunningPodWithGpus("victim-1", "default", "node-3", 5)
+	victimTask := pod_info.NewTaskInfo(victimPod)
+	nodes["node-3"].AddTask(victimTask)
+
+	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup(podgroup_info.DefaultSubGroup, topology, requiredLevel, 1))
+	pendingJob := buildJob("pending-job", []*tasks_fake.TestTaskBasic{
+		{SubGroupName: "default", State: pod_status.Pending, RequiredGPUs: ptr.To(int64(11))},
+	}, rootSubGroupSet)
+
+	session := &framework.Session{
+		ClusterInfo: &api.ClusterInfo{
+			PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+				"victim-1-job": podgroup_info.NewPodGroupInfo("victim-1-job"),
+			},
+		},
+	}
+
+	testScenario := scenario.NewByNodeScenario(
+		session, pendingJob, pendingJob, []*pod_info.PodInfo{victimTask}, nil,
+	)
+	filter := NewTopologyAwareIdleGpusFilter(testScenario, nodes)
+	if filter == nil {
+		t.Fatal("Expected non-nil filter")
+	}
+	runFilterCheck(t, filter, testScenario, true,
+		"rack-3 gains 5 GPUs from victim (6+5=11), moves 2 steps left; job needs 11 GPUs in one rack")
 }
 
 func TestTopologyAwareIdleGpus_BinPackingPreventsOverAllocation(t *testing.T) {
