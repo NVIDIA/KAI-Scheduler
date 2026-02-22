@@ -176,9 +176,9 @@ func TestTopologyAwareIdleGpus_WithVictimTasks(t *testing.T) {
 		"node-2": 12,
 	}, topologyLabelsPerNodes)
 
-	victimPod := createRunningPodWithGpus("victim-1", "default", "node-1", 8)
+	victimPod := createRunningPodWithGpus("victim-1", "default", "node-2", 8)
 	victimTask := pod_info.NewTaskInfo(victimPod)
-	nodes["node-1"].AddTask(victimTask)
+	nodes["node-2"].AddTask(victimTask)
 
 	rootSubGroupSet := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
 	rootSubGroupSet.AddSubGroup(newConstrainedSubGroup(podgroup_info.DefaultSubGroup, topology, requiredLevel, 1))
@@ -206,7 +206,7 @@ func TestTopologyAwareIdleGpus_WithVictimTasks(t *testing.T) {
 	if filter == nil {
 		t.Fatal("Expected non-nil filter")
 	}
-	runFilterCheck(t, filter, testScenario, true, "rack-1 will have 12 GPUs after evicting victim")
+	runFilterCheck(t, filter, testScenario, true, "rack-2 will have 12 GPUs after evicting victim")
 }
 
 // TestTopologyAwareIdleGpus_VictimNotDoubleCountedAcrossFilterCalls verifies that a victim's

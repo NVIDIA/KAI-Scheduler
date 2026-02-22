@@ -39,7 +39,7 @@ func greedyMatchRequirements[K comparable](
 	virtuallyAllocated := make(map[K]float64, len(holders))
 	for _, required := range requirements {
 		if required == 0 {
-			continue
+			return true
 		}
 		matched := false
 		for _, holder := range holders {
