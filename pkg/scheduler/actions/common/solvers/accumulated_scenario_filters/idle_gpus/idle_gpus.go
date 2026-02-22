@@ -151,7 +151,7 @@ func (ig *AccumulatedIdleGpus) updateRequiredResources(scenario *scenario.ByNode
 
 	var requiredResources []float64
 	for _, pod := range scenario.PendingTasks() {
-		requiredResources = append(requiredResources, pod.ResReq.GPUs())
+		requiredResources = append(requiredResources, pod.ResReq.GPUs()+float64(pod.ResReq.GetDraGpusCount()))
 		ig.pendingTasksInState[pod.UID] = true
 	}
 	sort.Sort(sort.Reverse(sort.Float64Slice(requiredResources)))
@@ -174,7 +174,7 @@ func (ig *AccumulatedIdleGpus) updateWithVictim(task *pod_info.PodInfo, minIdleG
 	}
 
 	prevMinRelevantValue := ig.nodesNameToIdleGpus[minIdleGpusRelevant]
-	ig.nodesNameToIdleGpus[task.NodeName] += task.AcceptedResource.GPUs()
+	ig.nodesNameToIdleGpus[task.NodeName] += task.AcceptedResource.GPUs() + float64(task.AcceptedResource.GetDraGpusCount())
 
 	if ig.nodesNameToIdleGpus[task.NodeName] > prevMinRelevantValue {
 		ig.maxFreeGpuNodesSorted = orderedInsert(ig.maxFreeGpuNodesSorted, task.NodeName,
@@ -192,9 +192,7 @@ func createGpuMap(nodeInfosMap map[string]*node_info.NodeInfo, relevantNodesLen 
 	minRelevantValue := float64(-1)
 
 	for _, nodeInfo := range nodeInfosMap {
-		nodeIdleGpus, _ := nodeInfo.GetSumOfIdleGPUs()
-		nodeReleasingGpus, _ := nodeInfo.GetSumOfReleasingGPUs()
-		idleGpusMap[nodeInfo.Name] = nodeIdleGpus + nodeReleasingGpus
+		idleGpusMap[nodeInfo.Name] = nodeIdleOrReleasingGpuCapacity(nodeInfo)
 
 		if idleGpusMap[nodeInfo.Name] > minRelevantValue || len(relevantNodesSorted) < relevantNodesLen {
 			replace := relevantNodesLen <= len(relevantNodesSorted)
@@ -241,10 +239,7 @@ func updateLocationIfTAlreadyExists[T cmp.Ordered](ts []T, t T, i int) ([]T, boo
 			if j == i {
 				return ts, true
 			}
-			for k := j; k > i; k-- {
-				ts[k] = ts[k-1]
-			}
-			ts[i] = t
+			shiftElementLeft(ts, j, i)
 			return ts, true
 		}
 	}

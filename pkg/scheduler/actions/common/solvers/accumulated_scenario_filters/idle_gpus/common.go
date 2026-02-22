@@ -5,8 +5,28 @@ package accumulated_scenario_filters
 
 import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 )
+
+func nodeIdleOrReleasingGpuCapacity(ni *node_info.NodeInfo) float64 {
+	idle, _ := ni.GetSumOfIdleGPUs()
+	releasing, _ := ni.GetSumOfReleasingGPUs()
+	return idle + releasing
+}
+
+// shiftElementLeft moves the element at currentPos to newPos by shifting the intervening
+// elements one step to the right. Requires newPos <= currentPos; the slice is modified in place.
+func shiftElementLeft[K any](slice []K, currentPos, newPos int) {
+	if newPos >= currentPos {
+		return
+	}
+	elem := slice[currentPos]
+	for k := currentPos; k > newPos; k-- {
+		slice[k] = slice[k-1]
+	}
+	slice[newPos] = elem
+}
 
 // greedyMatchRequirements checks whether each resource requirement (of numerical type) can be satisfied by one of the
 // capacity holders using greedy virtual allocation. Both requirements and holders must be sorted

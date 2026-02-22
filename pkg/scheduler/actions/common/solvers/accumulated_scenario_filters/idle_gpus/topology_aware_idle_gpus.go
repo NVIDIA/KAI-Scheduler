@@ -125,10 +125,7 @@ func repositionDomainAfterIncrease(
 	}
 
 	// Shift elements [newPos..currentPos-1] one step to the right, then place domain at newPos.
-	for k := currentPos; k > newPos; k-- {
-		domains[k] = domains[k-1]
-	}
-	domains[newPos] = domain
+	shiftElementLeft(domains, currentPos, newPos)
 }
 
 // requiredTopologyCapacityExists groups subgroups by constraint, sorts subgroup requirements
@@ -217,9 +214,7 @@ func buildDomainCapacity(
 	}
 
 	for _, nodeInfo := range nodeInfosMap {
-		nodeIdleGpus, _ := nodeInfo.GetSumOfIdleGPUs()
-		nodeReleasingGpus, _ := nodeInfo.GetSumOfReleasingGPUs()
-		totalIdleGpus := nodeIdleGpus + nodeReleasingGpus
+		totalIdleGpus := nodeIdleOrReleasingGpuCapacity(nodeInfo)
 
 		for cgKey := range constraintKeys {
 			domainValue := nodeInfo.Node.Labels[cgKey.level]
