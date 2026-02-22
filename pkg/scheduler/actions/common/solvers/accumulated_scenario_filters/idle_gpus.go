@@ -51,10 +51,6 @@ type AccumulatedIdleGpus struct {
 	// We have a separate map for each type of task to help with scenario accumulated build assertions.
 }
 
-type matchingState struct {
-	nodesToVirtuallyAllocatedGpus map[string]float64
-}
-
 func NewIdleGpusFilter(
 	scenario *scenario.ByNodeScenario, nodeInfosMap map[string]*node_info.NodeInfo) *AccumulatedIdleGpus {
 	idleGpusMap, relevantNodesSorted := createGpuMap(nodeInfosMap, len(scenario.PendingTasks()))
@@ -84,23 +80,11 @@ func (ig *AccumulatedIdleGpus) Filter(scenario *scenario.ByNodeScenario) (bool, 
 		return false, err
 	}
 
-	numOfRelevantNodes := len(ig.maxFreeGpuNodesSorted)
-	matchState := matchingState{
-		nodesToVirtuallyAllocatedGpus: make(map[string]float64, numOfRelevantNodes),
-	}
-
-	for _, currentRequiredGpus := range ig.requiredGpusSorted {
-		if currentRequiredGpus == 0 {
-			continue
-		}
-
-		taskAllocatable := ig.matchRelevantNodeToTask(currentRequiredGpus, matchState)
-		if !taskAllocatable {
-			return false, nil
-		}
-	}
-
-	return true, nil
+	return greedyMatchRequirements(
+		ig.requiredGpusSorted,
+		ig.maxFreeGpuNodesSorted,
+		func(node string) float64 { return ig.nodesNameToIdleGpus[node] },
+	), nil
 }
 
 func (ig *AccumulatedIdleGpus) updateStateWithScenario(scenario *scenario.ByNodeScenario, isFirstScenario bool) error {
@@ -126,26 +110,14 @@ func (ig *AccumulatedIdleGpus) updateStateWithScenario(scenario *scenario.ByNode
 func (ig *AccumulatedIdleGpus) updateVictimList(
 	victimTasks []*pod_info.PodInfo, relevantCacheData map[common_info.PodID]bool,
 ) int {
-	numOfCacheHits := 0
-
 	var minIdleGpusRelevant string
-	if len(ig.maxFreeGpuNodesSorted) == 0 {
-		minIdleGpusRelevant = ""
-	} else {
+	if len(ig.maxFreeGpuNodesSorted) > 0 {
 		minIdleGpusRelevant = ig.maxFreeGpuNodesSorted[len(ig.maxFreeGpuNodesSorted)-1]
 	}
 
-	for _, task := range victimTasks {
-		if task.NodeName == "" {
-			continue
-		}
-		if relevantCacheData[task.UID] {
-			numOfCacheHits += 1
-			continue
-		}
-		minIdleGpusRelevant = ig.updateWithVictim(task, minIdleGpusRelevant, relevantCacheData)
-	}
-	return numOfCacheHits
+	return iterateNewVictims(victimTasks, relevantCacheData, func(task *pod_info.PodInfo) {
+		minIdleGpusRelevant = ig.updateWithVictim(task, minIdleGpusRelevant)
+	})
 }
 
 func (ig *AccumulatedIdleGpus) assertRecordedVictimsState(
@@ -196,11 +168,7 @@ func (ig *AccumulatedIdleGpus) assertRequiredResourcesInCache(scenario *scenario
 	return nil
 }
 
-func (ig *AccumulatedIdleGpus) updateWithVictim(
-	task *pod_info.PodInfo, minIdleGpusRelevant string,
-	relevantCacheData map[common_info.PodID]bool,
-) string {
-	relevantCacheData[task.UID] = true
+func (ig *AccumulatedIdleGpus) updateWithVictim(task *pod_info.PodInfo, minIdleGpusRelevant string) string {
 	if len(ig.nodesNameToIdleGpus) == 0 {
 		return ""
 	}
@@ -216,32 +184,6 @@ func (ig *AccumulatedIdleGpus) updateWithVictim(
 		minIdleGpusRelevant = ig.maxFreeGpuNodesSorted[len(ig.maxFreeGpuNodesSorted)-1]
 	}
 	return minIdleGpusRelevant
-}
-
-// matchRelevantNodeToTask tries to find a node in which there are enough free gpus to accommodate the pending task's gpus.
-func (ig *AccumulatedIdleGpus) matchRelevantNodeToTask(pendingTaskGpus float64, filterMatchState matchingState) bool {
-	// Try to allocate this task's gpus only on the N most "gpu free" nodes. N = len(scenario.pendingTasks)
-	//  If we cannot find "allocation" in these N nodes, we won't find any allocation for this task in the current scenario.
-	for _, currentNode := range ig.maxFreeGpuNodesSorted {
-		// The nodes and pendingResources are sorted by the number of free gpus.
-		// If the currentNode doesn't have enough free gpus for the current task, no other node has enough free gpus.
-		nodeIdleGpus := ig.nodesNameToIdleGpus[currentNode]
-		if nodeIdleGpus < pendingTaskGpus {
-			return false
-		}
-
-		// If this isn't the first pendingTask, then we need to take into account previously "matched" scenario pending tasks.
-		//  filterMatchState saves the amount of previously matched gpus per node.
-		//  <Currently amount of free gpus per node> = ig.nodesNameToIdleGpus[currentNode] - <matched gpus per job>
-		previouslyVirtuallyAllocatedGpus := filterMatchState.nodesToVirtuallyAllocatedGpus[currentNode]
-		if nodeIdleGpus-previouslyVirtuallyAllocatedGpus < pendingTaskGpus {
-			continue
-		} else {
-			filterMatchState.nodesToVirtuallyAllocatedGpus[currentNode] += pendingTaskGpus
-			return true
-		}
-	}
-	return false
 }
 
 func createGpuMap(nodeInfosMap map[string]*node_info.NodeInfo, relevantNodesLen int) (map[string]float64, []string) {

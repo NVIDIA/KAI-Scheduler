@@ -80,15 +80,7 @@ func (taf *TopologyAwareIdleGpus) updateDomainCapacityWithVictims(scenario *scen
 }
 
 func (taf *TopologyAwareIdleGpus) applyVictimTasks(victimTasks []*pod_info.PodInfo) {
-	for _, victimTask := range victimTasks {
-		if victimTask.NodeName == "" {
-			continue
-		}
-		if taf.processedVictims[victimTask.UID] {
-			continue
-		}
-		taf.processedVictims[victimTask.UID] = true
-
+	iterateNewVictims(victimTasks, taf.processedVictims, func(victimTask *pod_info.PodInfo) {
 		freedGpus := victimTask.AcceptedResource.GPUs() + float64(victimTask.AcceptedResource.GetDraGpusCount())
 		if domains, ok := taf.nodeToTopologyDomains[victimTask.NodeName]; ok {
 			for _, domainKey := range domains {
@@ -97,7 +89,7 @@ func (taf *TopologyAwareIdleGpus) applyVictimTasks(victimTasks []*pod_info.PodIn
 				repositionDomainAfterIncrease(taf.domainsByConstraint[cgKey], domainKey, taf.domainCapacity)
 			}
 		}
-	}
+	})
 }
 
 // repositionDomainAfterIncrease moves domain leftward within the descending-sorted slice to
@@ -176,32 +168,9 @@ func (taf *TopologyAwareIdleGpus) groupSubgroupGpusByConstraint() map[constraint
 func (taf *TopologyAwareIdleGpus) matchSubgroupsToDomains(
 	gpuRequirements []float64, domains []TopologyDomainKey,
 ) bool {
-	virtuallyAllocated := make(map[TopologyDomainKey]float64, len(domains))
-
-	for _, gpusNeeded := range gpuRequirements {
-		if gpusNeeded == 0 {
-			continue
-		}
-		matched := false
-		for _, domain := range domains {
-			totalCapacity := taf.domainCapacity[domain]
-			// Early exit: domains are sorted by total capacity descending.
-			// If the largest total capacity is below gpusNeeded, no domain can ever fit it.
-			if totalCapacity < gpusNeeded {
-				break
-			}
-			available := totalCapacity - virtuallyAllocated[domain]
-			if available >= gpusNeeded {
-				virtuallyAllocated[domain] += gpusNeeded
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			return false
-		}
-	}
-	return true
+	return greedyMatchRequirements(gpuRequirements, domains, func(domain TopologyDomainKey) float64 {
+		return taf.domainCapacity[domain]
+	})
 }
 
 func extractRequiredTopologyConstraints(scenario *scenario.ByNodeScenario) []*subgroup_info.SubGroupSet {
