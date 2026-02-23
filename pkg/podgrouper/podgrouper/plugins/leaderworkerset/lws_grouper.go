@@ -5,13 +5,17 @@ package leader_worker_set
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
+	lws "sigs.k8s.io/lws/api/leaderworkerset/v1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgroup"
+	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/plugins/defaultgrouper"
 )
 
@@ -19,10 +23,11 @@ const (
 	startupPolicyLeaderReady   = "LeaderReady"
 	startupPolicyLeaderCreated = "LeaderCreated"
 
-	subGroupLeader  = "leader"
-	subGroupWorkers = "workers"
+	leaderSubGroupName  = "leader"
+	workersSubGroupName = "workers"
 
 	leaderSubGroupSize = 1
+	leaderIndex        = "0"
 
 	// LWS annotation and label keys
 	lwsSizeAnnotation   = "leaderworkerset.sigs.k8s.io/size"
@@ -77,7 +82,7 @@ func (lwsGrouper *LwsGrouper) GetPodGroupMetadata(
 		return nil, fmt.Errorf("unknown startupPolicy: %s", startupPolicy)
 	}
 
-	subGroups, err := lwsGrouper.buildSubGroups(pod, podGroupMetadata.MinAvailable)
+	subGroups, err := lwsGrouper.buildSubGroups(lwsJob, pod, int(podGroupMetadata.MinAvailable))
 	if err != nil {
 		return nil, err
 	}
@@ -121,47 +126,6 @@ func (lwsGrouper *LwsGrouper) getStartupPolicy(lwsJob *unstructured.Unstructured
 	return policy, nil
 }
 
-func (lwsGrouper *LwsGrouper) buildSubGroups(pod *v1.Pod, available int32) ([]*podgroup.SubGroupMetadata, error) {
-	leaderSubGroup := buildLeaderSubGroup(pod)
-	workerSubGroup := buildWorkerSubGroup(pod, available)
-
-	subGroups := []*podgroup.SubGroupMetadata{leaderSubGroup}
-	if workerSubGroup != nil {
-		subGroups = append(subGroups, workerSubGroup)
-	}
-	return subGroups, nil
-}
-
-func buildWorkerSubGroup(pod *v1.Pod, minAvailable int32) *podgroup.SubGroupMetadata {
-	if minAvailable <= leaderSubGroupSize {
-		return nil
-	}
-
-	podReferences := []string{}
-	if !isLeaderPod(pod) {
-		podReferences = append(podReferences, pod.Name)
-	}
-
-	return &podgroup.SubGroupMetadata{
-		Name:           subGroupWorkers,
-		MinAvailable:   minAvailable - leaderSubGroupSize,
-		PodsReferences: podReferences,
-	}
-}
-
-func buildLeaderSubGroup(pod *v1.Pod) *podgroup.SubGroupMetadata {
-	podReferences := []string{}
-	if isLeaderPod(pod) {
-		podReferences = append(podReferences, pod.Name)
-	}
-
-	return &podgroup.SubGroupMetadata{
-		Name:           subGroupLeader,
-		MinAvailable:   leaderSubGroupSize,
-		PodsReferences: podReferences,
-	}
-}
-
 func handleLeaderReadyPolicy(pod *v1.Pod, podGroupMetadata *podgroup.Metadata, fallbackSize int32) error {
 	groupSize := fallbackSize
 
@@ -187,7 +151,212 @@ func handleLeaderReadyPolicy(pod *v1.Pod, podGroupMetadata *podgroup.Metadata, f
 	return nil
 }
 
+func (lwsGrouper *LwsGrouper) buildSubGroups(lwsJob *unstructured.Unstructured, pod *v1.Pod, replicasSize int) ([]*podgroup.SubGroupMetadata, error) {
+	subGroupPolicy, err := getSubGroupPolicy(lwsJob, replicasSize)
+	if err != nil {
+		return nil, err
+	}
+	if subGroupPolicy == nil {
+		return buildSubGroupsWithoutSegmentation(replicasSize, pod), nil
+	}
+	return buildSubGroupsWithSegmentation(subGroupPolicy, replicasSize, pod)
+}
+
+func getSubGroupPolicy(lwsJob *unstructured.Unstructured, replicasSize int) (*lws.SubGroupPolicy, error) {
+	segmentSizeInt64, foundSegmentDefinition, err := unstructured.NestedInt64(lwsJob.Object, "spec", "leaderWorkerTemplate", "subGroupPolicy",
+		"subGroupSize")
+	segmentSize := int(segmentSizeInt64)
+	if err != nil {
+		return nil, err
+	}
+	if !foundSegmentDefinition {
+		if segmentSizeStr, found := lwsJob.GetAnnotations()[constants.SegmentSizeKey]; found {
+			if segmentSize, err = strconv.Atoi(segmentSizeStr); err == nil {
+				foundSegmentDefinition = true
+			} else {
+				return nil, fmt.Errorf("invalid segment size annotation %s in LWS %s/%s: %w",
+					segmentSizeStr, lwsJob.GetNamespace(), lwsJob.GetName(), err)
+			}
+		}
+	}
+	if !foundSegmentDefinition {
+		return nil, nil
+	}
+	if segmentSize <= 1 {
+		return nil, fmt.Errorf("segmentSize %d is not valid. It must be greater than 1", segmentSize)
+	}
+	policyStr, found, err := unstructured.NestedString(lwsJob.Object, "spec", "leaderWorkerTemplate", "subGroupPolicy", "subGroupPolicyType")
+	if err != nil {
+		return nil, err
+	}
+	policy := lws.SubGroupPolicyTypeLeaderWorker
+	if found {
+		policy = lws.SubGroupPolicyType(policyStr)
+	}
+	if segmentSize > replicasSize {
+		return nil, fmt.Errorf("segmentSize %d is greater than replicasSize %d", segmentSize, replicasSize)
+	}
+	return &lws.SubGroupPolicy{
+		SubGroupSize: ptr.To(int32(segmentSize)),
+		Type:         ptr.To(lws.SubGroupPolicyType(policy)),
+	}, nil
+}
+
+func buildSubGroupsWithoutSegmentation(replicasSize int, pod *v1.Pod) []*podgroup.SubGroupMetadata {
+	leaderSubGroup := &podgroup.SubGroupMetadata{
+		Name:           leaderSubGroupName,
+		MinAvailable:   leaderSubGroupSize,
+		PodsReferences: []string{},
+	}
+	if isLeaderPod(pod) {
+		leaderSubGroup.PodsReferences = append(leaderSubGroup.PodsReferences, pod.Name)
+	}
+	subGroups := []*podgroup.SubGroupMetadata{leaderSubGroup}
+
+	if replicasSize-leaderSubGroupSize > 0 {
+		workerSubGroup := &podgroup.SubGroupMetadata{
+			Name:           workersSubGroupName,
+			MinAvailable:   int32(replicasSize - leaderSubGroupSize),
+			PodsReferences: []string{},
+		}
+		if !isLeaderPod(pod) {
+			workerSubGroup.PodsReferences = append(workerSubGroup.PodsReferences, pod.Name)
+		}
+		subGroups = append(subGroups, workerSubGroup)
+	}
+	return subGroups
+}
+
+func buildSubGroupsWithSegmentation(subGroupPolicy *lws.SubGroupPolicy, replicasSize int, pod *v1.Pod) ([]*podgroup.SubGroupMetadata, error) {
+	segmentSize := int(*subGroupPolicy.SubGroupSize)
+	policy := *subGroupPolicy.Type
+
+	subGroups := createSegmentSubgroups(replicasSize, segmentSize)
+	podSegment, err := getPodSegment(pod, replicasSize, segmentSize)
+	if err != nil {
+		return nil, err
+	}
+
+	setPodSubgroupReference := false
+	if policy == lws.SubGroupPolicyTypeLeaderWorker {
+		subGroups, setPodSubgroupReference = handleLeaderInFirstSegment(subGroups, replicasSize, segmentSize, pod, podSegment)
+	}
+
+	if !setPodSubgroupReference {
+		subGroups[podSegment].PodsReferences = append(subGroups[podSegment].PodsReferences, pod.Name)
+	}
+
+	if policy == lws.SubGroupPolicyTypeLeaderExcluded {
+		subGroups, err = handleLeaderExcludedFromSegments(subGroups, pod, replicasSize, segmentSize)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return subGroups, nil
+}
+
+func createSegmentSubgroups(replicasSize int, segmentSize int) []*podgroup.SubGroupMetadata {
+	subGroups := []*podgroup.SubGroupMetadata{}
+	numOfSegmentSubgroups := getSegmentIndex(replicasSize-1, replicasSize, segmentSize) + 1
+	for segmentIndex := 0; segmentIndex < numOfSegmentSubgroups; segmentIndex++ {
+		subGroups = append(subGroups, &podgroup.SubGroupMetadata{
+			Name:           fmt.Sprintf("segment-%d", segmentIndex),
+			MinAvailable:   int32(segmentSize),
+			PodsReferences: []string{},
+		})
+	}
+	return subGroups
+}
+
+func getPodSegment(pod *v1.Pod, replicasSize int, segmentSize int) (int, error) {
+	podWorkerIndex, err := strconv.Atoi(pod.Labels[lwsWorkerIndexLabel])
+	if err != nil {
+		return 0, fmt.Errorf("failed to get worker index from pod %s/%s: %w", pod.Namespace, pod.Name, err)
+	}
+	podSegmentIndex := getSegmentIndex(podWorkerIndex, replicasSize, segmentSize)
+	return podSegmentIndex, nil
+}
+
+func handleLeaderInFirstSegment(
+	subGroups []*podgroup.SubGroupMetadata, replicasSize int, segmentSize int, pod *v1.Pod, podSegment int) ([]*podgroup.SubGroupMetadata, bool) {
+	setPodSubgroupReference := false
+	firstSegmentSubGroup := subGroups[0]
+	if isReplicasSizeDivisibleBySubGroupSize(replicasSize, segmentSize) {
+		// the first segment will contain pods (0, 1, ... subGroupSize) if replicasSize is divisible by segmentSize
+		firstSegmentSubGroup.MinAvailable += leaderSubGroupSize
+	}
+
+	var segmentSubGroups []*podgroup.SubGroupMetadata
+	segmentSubGroups, setPodSubgroupReference = addLeaderAndWorkersSubgroupsForSegment(firstSegmentSubGroup.Name,
+		firstSegmentSubGroup.MinAvailable, pod, podSegment)
+	subGroups = append(subGroups, segmentSubGroups...)
+	return subGroups, setPodSubgroupReference
+}
+
+func addLeaderAndWorkersSubgroupsForSegment(
+	segmentSubGroupName string, segmentSubGroupMinAvailable int32, pod *v1.Pod, podSubGroupIndex int) ([]*podgroup.SubGroupMetadata, bool) {
+	setPodSubgroupReference := false
+
+	subGroups := make([]*podgroup.SubGroupMetadata, 2)
+	leaderSubGroup := &podgroup.SubGroupMetadata{
+		Name:           leaderSubGroupName,
+		MinAvailable:   leaderSubGroupSize,
+		Parent:         ptr.To(segmentSubGroupName),
+		PodsReferences: []string{},
+	}
+	if isLeaderPod(pod) {
+		leaderSubGroup.PodsReferences = append(leaderSubGroup.PodsReferences, pod.Name)
+		setPodSubgroupReference = true
+	}
+	subGroups = append(subGroups, leaderSubGroup)
+
+	firstSubGroupWorkers := &podgroup.SubGroupMetadata{
+		Name:           workersSubGroupName,
+		MinAvailable:   segmentSubGroupMinAvailable - leaderSubGroupSize,
+		Parent:         ptr.To(segmentSubGroupName),
+		PodsReferences: []string{},
+	}
+	if podSubGroupIndex == 0 && !isLeaderPod(pod) {
+		firstSubGroupWorkers.PodsReferences = append(firstSubGroupWorkers.PodsReferences, pod.Name)
+		setPodSubgroupReference = true
+	}
+	subGroups = append(subGroups, firstSubGroupWorkers)
+	return subGroups, setPodSubgroupReference
+}
+
+func handleLeaderExcludedFromSegments(
+	subGroups []*podgroup.SubGroupMetadata, pod *v1.Pod, replicasSize int, segmentSize int) ([]*podgroup.SubGroupMetadata, error) {
+	if !isReplicasSizeDivisibleBySubGroupSize(replicasSize, segmentSize) {
+		return nil, fmt.Errorf("replicasSize %d is not divisible by segmentSize %d. "+
+			"LeaderExcluded policy is only supported when replicasSize is divisible by segmentSize.", replicasSize, segmentSize)
+	}
+	subGroups = slices.Insert(subGroups, 0, &podgroup.SubGroupMetadata{
+		Name:           leaderSubGroupName,
+		MinAvailable:   leaderSubGroupSize,
+		PodsReferences: []string{},
+	})
+	if isLeaderPod(pod) {
+		subGroups[0].PodsReferences = append(subGroups[0].PodsReferences, pod.Name)
+	}
+	return subGroups, nil
+}
+
+func isReplicasSizeDivisibleBySubGroupSize(replicasSize int, subGroupSize int) bool {
+	return (replicasSize-leaderSubGroupSize)%subGroupSize == 0
+}
+
+func getSegmentIndex(workerIndex int, replicasSize int, subGroupSize int) int {
+	if workerIndex == 0 {
+		return 0 // leader is always in the first subgroup
+	}
+	if isReplicasSizeDivisibleBySubGroupSize(replicasSize, subGroupSize) {
+		// Leader is considered as extra pod, it is part of the first group
+		return (workerIndex - 1) / subGroupSize
+	}
+	return workerIndex / subGroupSize
+}
+
 func isLeaderPod(pod *v1.Pod) bool {
 	workerIndex, hasWorkerIndex := pod.Labels[lwsWorkerIndexLabel]
-	return hasWorkerIndex && workerIndex == "0"
+	return hasWorkerIndex && workerIndex == leaderIndex
 }
