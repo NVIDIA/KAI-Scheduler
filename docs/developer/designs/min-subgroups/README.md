@@ -221,8 +221,7 @@ The following validations will be enforced via a Validating Webhook:
 
 **When using `minMember`:**
 1. `minMember` must be > 0
-2. For leaf SubGroups: `minMember` must be ≤ number of pods that will be assigned
-3. For mid-level SubGroups/PodGroups: Reserved for future use (currently must use `minSubGroup`)
+2. For mid-level SubGroups/PodGroups: Reserved for future use (currently must use `minSubGroup`)
 
 **When using `minSubGroup`:**
 1. `minSubGroup` must be > 0
