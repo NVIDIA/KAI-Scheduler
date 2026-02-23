@@ -13,6 +13,7 @@ The `reflectjoborder` plugin eagerly computes job ordering on every scheduling s
 | Small (50 jobs) | 102ms | 0.48ms | ~0.5% |
 | Medium (500 jobs) | 105ms | 3.1ms | ~3% |
 | Large (5000 jobs) | 148ms | 72.9ms | ~49% |
+| XLarge (50000 jobs) | 493ms | 899ms | ~182% |
 
 At large scale, this single plugin dominates session open time.
 
@@ -102,7 +103,7 @@ func (jp *JobOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 ## Benchmark Results
 
 All times below are for the **plugin's `OnSessionOpen`** only, not the total session open.
-For context, total session open (all plugins) is ~102ms/105ms/148ms for small/medium/large clusters respectively.
+For context, total session open (all plugins) is ~102ms/105ms/148ms/493ms for small/medium/large/xlarge clusters respectively.
 
 ### Before Caching (plugin OnSessionOpen, single-shot)
 
@@ -111,6 +112,7 @@ For context, total session open (all plugins) is ~102ms/105ms/148ms for small/me
 | Small (50 jobs) | 0.48ms | 318KB | 2708 |
 | Medium (500 jobs) | 3.1ms | 2.95MB | 24743 |
 | Large (5000 jobs) | 72.9ms | 76.3MB | 610978 |
+| XLarge (50000 jobs) | 899ms | 981MB | 7862905 |
 
 ### After Caching (plugin OnSessionOpen, cache hit path)
 
@@ -119,6 +121,7 @@ For context, total session open (all plugins) is ~102ms/105ms/148ms for small/me
 | Small (50 jobs) | 46µs | 10KB | 497 | 10.5x |
 | Medium (500 jobs) | 389µs | 80KB | 3733 | 7.9x |
 | Large (5000 jobs) | 5.4ms | 907KB | 37034 | 13.5x |
+| XLarge (50000 jobs) | 131ms | 50MB | 689756 | 6.9x |
 
 ### End-to-End Impact
 
@@ -127,5 +130,6 @@ For context, total session open (all plugins) is ~102ms/105ms/148ms for small/me
 | Small (50 jobs) | 102ms | 0.48ms | 46µs | ~0.4ms (~0.4%) |
 | Medium (500 jobs) | 105ms | 3.1ms | 389µs | ~2.7ms (~2.6%) |
 | Large (5000 jobs) | 148ms | 72.9ms | 5.4ms | ~67.5ms (~46%) |
+| XLarge (50000 jobs) | 493ms | 899ms | 131ms | ~768ms (~55%) |
 
-The cache hit path is dominated by fingerprint computation. At large scale, the plugin drops from ~49% of total session open time to ~3.6%, saving ~67ms per session. Memory allocation drops from 76MB to 907KB.
+The cache hit path is dominated by fingerprint computation. At large scale, the plugin dominates session open time — at 50K jobs it takes nearly 2x the rest of the session combined. Caching saves ~768ms per session at XLarge scale (55% of total). Memory allocation drops from 981MB to 50MB.

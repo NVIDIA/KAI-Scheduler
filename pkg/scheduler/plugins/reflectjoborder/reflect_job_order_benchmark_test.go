@@ -42,6 +42,11 @@ func BenchmarkSessionOpen_LargeCluster(b *testing.B) {
 	benchmarkSessionOpen(b, 5000, 20, 5)
 }
 
+// BenchmarkSessionOpen_XLargeCluster benchmarks full session open with 50000 jobs
+func BenchmarkSessionOpen_XLargeCluster(b *testing.B) {
+	benchmarkSessionOpen(b, 50000, 100, 10)
+}
+
 // --- ReflectJobOrder OnSessionOpen ---
 
 // BenchmarkReflectJobOrder_OnSessionOpen_SmallCluster benchmarks OnSessionOpen with 50 jobs, 4 queues
@@ -57,6 +62,11 @@ func BenchmarkReflectJobOrder_OnSessionOpen_MediumCluster(b *testing.B) {
 // BenchmarkReflectJobOrder_OnSessionOpen_LargeCluster benchmarks OnSessionOpen with 5000 jobs, 20 queues
 func BenchmarkReflectJobOrder_OnSessionOpen_LargeCluster(b *testing.B) {
 	benchmarkOnSessionOpen(b, 5000, 20, 5)
+}
+
+// BenchmarkReflectJobOrder_OnSessionOpen_XLargeCluster benchmarks OnSessionOpen with 50000 jobs, 100 queues
+func BenchmarkReflectJobOrder_OnSessionOpen_XLargeCluster(b *testing.B) {
+	benchmarkOnSessionOpen(b, 50000, 100, 10)
 }
 
 // --- Isolated JobsOrderByQueues tree build + drain ---
@@ -76,6 +86,11 @@ func BenchmarkReflectJobOrder_JobsOrderByQueues_LargeCluster(b *testing.B) {
 	benchmarkJobsOrderByQueues(b, 5000, 20, 5)
 }
 
+// BenchmarkReflectJobOrder_JobsOrderByQueues_XLargeCluster benchmarks just the tree build+drain with 50000 jobs
+func BenchmarkReflectJobOrder_JobsOrderByQueues_XLargeCluster(b *testing.B) {
+	benchmarkJobsOrderByQueues(b, 50000, 100, 10)
+}
+
 // --- ReflectJobOrder RepeatedOnSessionOpen (same plugin instance, simulates cross-session caching) ---
 
 // BenchmarkReflectJobOrder_RepeatedOnSessionOpen_SmallCluster benchmarks repeated OnSessionOpen with 50 jobs
@@ -91,6 +106,11 @@ func BenchmarkReflectJobOrder_RepeatedOnSessionOpen_MediumCluster(b *testing.B) 
 // BenchmarkReflectJobOrder_RepeatedOnSessionOpen_LargeCluster benchmarks repeated OnSessionOpen with 5000 jobs
 func BenchmarkReflectJobOrder_RepeatedOnSessionOpen_LargeCluster(b *testing.B) {
 	benchmarkRepeatedOnSessionOpen(b, 5000, 20, 5)
+}
+
+// BenchmarkReflectJobOrder_RepeatedOnSessionOpen_XLargeCluster benchmarks repeated OnSessionOpen with 50000 jobs
+func BenchmarkReflectJobOrder_RepeatedOnSessionOpen_XLargeCluster(b *testing.B) {
+	benchmarkRepeatedOnSessionOpen(b, 50000, 100, 10)
 }
 
 // --- Benchmark implementations ---
