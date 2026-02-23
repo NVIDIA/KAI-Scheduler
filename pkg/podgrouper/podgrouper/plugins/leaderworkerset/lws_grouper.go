@@ -92,17 +92,6 @@ func (lwsGrouper *LwsGrouper) GetPodGroupMetadata(
 	return podGroupMetadata, nil
 }
 
-func (lwsGrouper *LwsGrouper) buildSubGroups(pod *v1.Pod, available int32) ([]*podgroup.SubGroupMetadata, error) {
-	leaderSubGroup := buildLeaderSubGroup(pod)
-	workerSubGroup := buildWorkerSubGroup(pod, available)
-
-	subGroups := []*podgroup.SubGroupMetadata{leaderSubGroup}
-	if workerSubGroup != nil {
-		subGroups = append(subGroups, workerSubGroup)
-	}
-	return subGroups, nil
-}
-
 func (lwsGrouper *LwsGrouper) getLwsGroupSize(lwsJob *unstructured.Unstructured) (int32, error) {
 	size, found, err := unstructured.NestedInt64(lwsJob.Object, "spec", "leaderWorkerTemplate", "size")
 	if err != nil {
@@ -130,6 +119,17 @@ func (lwsGrouper *LwsGrouper) getStartupPolicy(lwsJob *unstructured.Unstructured
 		return startupPolicyLeaderCreated, nil
 	}
 	return policy, nil
+}
+
+func (lwsGrouper *LwsGrouper) buildSubGroups(pod *v1.Pod, available int32) ([]*podgroup.SubGroupMetadata, error) {
+	leaderSubGroup := buildLeaderSubGroup(pod)
+	workerSubGroup := buildWorkerSubGroup(pod, available)
+
+	subGroups := []*podgroup.SubGroupMetadata{leaderSubGroup}
+	if workerSubGroup != nil {
+		subGroups = append(subGroups, workerSubGroup)
+	}
+	return subGroups, nil
 }
 
 func buildWorkerSubGroup(pod *v1.Pod, minAvailable int32) *podgroup.SubGroupMetadata {
