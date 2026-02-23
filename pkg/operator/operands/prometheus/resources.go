@@ -360,7 +360,7 @@ func validateExternalPrometheusConnection(ctx context.Context, prometheusURL str
 	if err != nil {
 		return fmt.Errorf("failed to connect to external Prometheus: %v", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	// Check if we got a successful response
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {

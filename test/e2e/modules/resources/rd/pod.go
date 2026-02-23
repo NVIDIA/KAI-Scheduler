@@ -94,7 +94,7 @@ func GetPodLogs(ctx context.Context, client *kubernetes.Clientset, namespace str
 		return "", err
 	}
 
-	defer podLogs.Close()
+	defer podLogs.Close() //nolint:errcheck
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, podLogs)
 	if err != nil {
