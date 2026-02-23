@@ -29,7 +29,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/metrics"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
+	snapshotplugin "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/plugins/snapshot"
 )
 
 func main() {
@@ -37,7 +37,51 @@ func main() {
 	verbosity := fs.Int("verbosity", 4, "logging verbosity")
 	filename := fs.String("filename", "", "location of the zipped JSON file")
 	cpuprofile := fs.String("cpuprofile", "", "write cpu profile to file")
+	generateTest := fs.Bool("generate-test", false, "generate integration test from snapshot")
+	outputFile := fs.String("output", "", "output Go test file path (default: <snapshot-basename>_test.go)")
+	testName := fs.String("test-name", "", "name for the generated test function (default: TestSnapshot<snapshot-basename>)")
+	packageName := fs.String("package", "snapshots_test", "package name for generated test file")
 	_ = fs.Parse(os.Args[1:])
+
+	if *generateTest {
+		if filename == nil || *filename == "" {
+			fmt.Fprintf(os.Stderr, "Error: --filename is required when generating tests\n")
+			fs.Usage()
+			os.Exit(1)
+		}
+
+		snapshot, err := loadSnapshot(*filename)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading snapshot: %v\n", err)
+			os.Exit(1)
+		}
+
+		outputPath := *outputFile
+		if outputPath == "" {
+			outputPath = GenerateOutputPath(*filename)
+		}
+
+		testFuncName := *testName
+		if testFuncName == "" {
+			testFuncName = GenerateTestName(*filename)
+		}
+
+		generator := NewTestGenerator(*packageName, testFuncName)
+		code, err := generator.Generate(snapshot)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error generating test code: %v\n", err)
+			os.Exit(1)
+		}
+
+		if err := os.WriteFile(outputPath, []byte(code), 0o644); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing output file: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("Successfully generated test file: %s\n", outputPath)
+		return
+	}
+
 	if filename == nil || len(*filename) == 0 {
 		fs.Usage()
 		return
@@ -119,7 +163,7 @@ func main() {
 	}
 }
 
-func loadSnapshot(filename string) (*snapshot.Snapshot, error) {
+func loadSnapshot(filename string) (*snapshotplugin.Snapshot, error) {
 	zipFile, err := zip.OpenReader(filename)
 	if err != nil {
 		return nil, err
@@ -127,27 +171,27 @@ func loadSnapshot(filename string) (*snapshot.Snapshot, error) {
 	defer zipFile.Close()
 
 	for _, file := range zipFile.File {
-		if file.Name == snapshot.SnapshotFileName {
+		if file.Name == snapshotplugin.SnapshotFileName {
 			jsonFile, err := file.Open()
 			if err != nil {
 				return nil, err
 			}
 			defer jsonFile.Close()
 
-			var snapshot snapshot.Snapshot
-			err = json.NewDecoder(jsonFile).Decode(&snapshot)
+			var snap snapshotplugin.Snapshot
+			err = json.NewDecoder(jsonFile).Decode(&snap)
 			if err != nil {
 				return nil, err
 			}
 
-			return &snapshot, nil
+			return &snap, nil
 		}
 	}
 
 	return nil, os.ErrNotExist
 }
 
-func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.Clientset, *kaischedulerfake.Clientset) {
+func loadClientsWithSnapshot(rawObjects *snapshotplugin.RawKubernetesObjects) (*fake.Clientset, *kaischedulerfake.Clientset) {
 	kubeClient := fake.NewSimpleClientset()
 	kaiClient := kaischedulerfake.NewSimpleClientset()
 

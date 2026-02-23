@@ -97,6 +97,69 @@ snapshot-tool --filename snapshot.zip
 snapshot-tool --filename snapshot.zip --verbosity 5
 ```
 
+## Generating Integration Tests from Snapshots
+
+The snapshot-tool can generate Go integration test code from snapshot files using the `--generate-test` flag. This allows you to convert captured cluster snapshots into executable integration tests that can be run as part of the test suite.
+
+### Features
+
+- Generates boilerplate Go integration test code from snapshot files
+- Provides a template structure that is easy to edit and customize
+- Includes snapshot summary information (node names, queue names, PodGroup names) as comments
+- Creates a starting point for writing integration tests based on real cluster states
+
+### Usage
+
+```bash
+snapshot-tool --filename <snapshot-file> --generate-test [options]
+```
+
+#### Arguments
+
+- `--filename`: Path to the snapshot ZIP file (required)
+- `--generate-test`: Enable test generation mode
+- `--output`: Output Go test file path (default: `<snapshot-basename>_test.go`)
+- `--test-name`: Name for the generated test function (default: `TestSnapshot<snapshot-basename>`)
+- `--package`: Package name for generated test file (default: `snapshots_test`)
+
+### Examples
+
+```bash
+# Generate test file with default settings
+snapshot-tool --filename snapshot.gzip --generate-test
+
+# Generate test file with custom output path and test name
+snapshot-tool \
+  --filename snapshot.gzip \
+  --generate-test \
+  --output pkg/scheduler/actions/integration_tests/snapshots/my_test.go \
+  --test-name TestMySnapshot
+
+# Generate test file with custom package name
+snapshot-tool \
+  --filename snapshot.gzip \
+  --generate-test \
+  --package my_test_package
+```
+
+### Generated Test Structure
+
+The tool generates a boilerplate Go test file containing:
+
+1. A test function that calls `integration_tests_utils.RunTests()`
+2. A `getTestsMetadata()` function with a template structure
+3. Summary information from the snapshot as comments:
+   - Number of nodes, pods, PodGroups, and queues
+   - Names of nodes, queues, and PodGroups found in the snapshot
+4. TODO comments and example structures for:
+   - Jobs (with example job structure)
+   - Nodes (with example node structure)
+   - Queues (with example queue structure)
+   - Mocks (commented out, ready to configure if needed)
+   - JobExpectedResults (commented out, ready to add expected outcomes)
+
+The generated file is designed to be easily editable. You should fill in the actual test data based on your requirements and the snapshot information provided in the comments.
+
 ## Implementation Details
 
 ### Snapshot Plugin
@@ -111,11 +174,26 @@ The snapshot plugin (`pkg/scheduler/plugins/snapshot/snapshot.go`) implements th
 
 The snapshot tool (`cmd/snapshot-tool/main.go`) implements:
 
-1. Snapshot loading and parsing
-2. Fake client creation with snapshot data
-3. Scheduler cache initialization
-4. Session management
-5. Action execution
+1. Snapshot loading and parsing (reading the ZIP file and decoding the JSON snapshot)
+2. Fake client creation with snapshot data (pods, nodes, queues, PodGroups, BindRequests and related resources)
+3. Scheduler cache initialization and synchronization
+4. Session management using the scheduler framework
+5. Action execution based on the actions configured in the snapshot
+6. Test generation when the `--generate-test` flag is used
+
+### Test Generation
+
+The test generation functionality is implemented inside the snapshot tool package (`cmd/snapshot-tool/generator.go`) and:
+
+1. Reuses the same snapshot loading logic as the main snapshot execution path
+2. Extracts summary information from the snapshot (counts and names)
+3. Generates boilerplate Go test code with:
+   - Basic test function structure
+   - Template `getTestsMetadata()` function with TODO comments
+   - Example structures for all test components
+   - Snapshot summary information as comments
+
+The generated boilerplate is intentionally minimal and easy to edit, allowing developers to customize the test based on their specific requirements.
 
 ## Limitations
 
