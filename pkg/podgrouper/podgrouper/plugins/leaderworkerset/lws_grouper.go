@@ -19,6 +19,11 @@ const (
 	startupPolicyLeaderReady   = "LeaderReady"
 	startupPolicyLeaderCreated = "LeaderCreated"
 
+	subGroupLeader  = "leader"
+	subGroupWorkers = "workers"
+
+	leaderSubGroupSize = 1
+
 	// LWS annotation and label keys
 	lwsSizeAnnotation   = "leaderworkerset.sigs.k8s.io/size"
 	lwsGroupIndexLabel  = "leaderworkerset.sigs.k8s.io/group-index"
@@ -72,6 +77,12 @@ func (lwsGrouper *LwsGrouper) GetPodGroupMetadata(
 		return nil, fmt.Errorf("unknown startupPolicy: %s", startupPolicy)
 	}
 
+	subGroups, err := lwsGrouper.buildSubGroups(pod, podGroupMetadata.MinAvailable)
+	if err != nil {
+		return nil, err
+	}
+	podGroupMetadata.SubGroups = subGroups
+
 	if groupIndexStr, ok := pod.Labels[lwsGroupIndexLabel]; ok {
 		if groupIndex, err := strconv.Atoi(groupIndexStr); err == nil {
 			podGroupMetadata.Name = fmt.Sprintf("%s-group-%d", podGroupMetadata.Name, groupIndex)
@@ -110,6 +121,47 @@ func (lwsGrouper *LwsGrouper) getStartupPolicy(lwsJob *unstructured.Unstructured
 	return policy, nil
 }
 
+func (lwsGrouper *LwsGrouper) buildSubGroups(pod *v1.Pod, available int32) ([]*podgroup.SubGroupMetadata, error) {
+	leaderSubGroup := buildLeaderSubGroup(pod)
+	workerSubGroup := buildWorkerSubGroup(pod, available)
+
+	subGroups := []*podgroup.SubGroupMetadata{leaderSubGroup}
+	if workerSubGroup != nil {
+		subGroups = append(subGroups, workerSubGroup)
+	}
+	return subGroups, nil
+}
+
+func buildWorkerSubGroup(pod *v1.Pod, minAvailable int32) *podgroup.SubGroupMetadata {
+	if minAvailable <= leaderSubGroupSize {
+		return nil
+	}
+
+	podReferences := []string{}
+	if !isLeaderPod(pod) {
+		podReferences = append(podReferences, pod.Name)
+	}
+
+	return &podgroup.SubGroupMetadata{
+		Name:           subGroupWorkers,
+		MinAvailable:   minAvailable - leaderSubGroupSize,
+		PodsReferences: podReferences,
+	}
+}
+
+func buildLeaderSubGroup(pod *v1.Pod) *podgroup.SubGroupMetadata {
+	podReferences := []string{}
+	if isLeaderPod(pod) {
+		podReferences = append(podReferences, pod.Name)
+	}
+
+	return &podgroup.SubGroupMetadata{
+		Name:           subGroupLeader,
+		MinAvailable:   leaderSubGroupSize,
+		PodsReferences: podReferences,
+	}
+}
+
 func handleLeaderReadyPolicy(pod *v1.Pod, podGroupMetadata *podgroup.Metadata, fallbackSize int32) error {
 	groupSize := fallbackSize
 
@@ -133,4 +185,9 @@ func handleLeaderReadyPolicy(pod *v1.Pod, podGroupMetadata *podgroup.Metadata, f
 	}
 
 	return nil
+}
+
+func isLeaderPod(pod *v1.Pod) bool {
+	workerIndex, hasWorkerIndex := pod.Labels[lwsWorkerIndexLabel]
+	return hasWorkerIndex && workerIndex == "0"
 }
