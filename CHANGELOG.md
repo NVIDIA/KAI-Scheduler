@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- Fixed a bug where queue status did not reflect its podgroups resources correctly [#1049](https://github.com/NVIDIA/KAI-Scheduler/pull/1049)
 - Fixed plugin server (snapshot and job-order endpoints) listening on all interfaces by binding to localhost only.
 
 ## [v0.9.12] - 2026-01-21
