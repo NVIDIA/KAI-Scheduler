@@ -27,6 +27,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/cluster_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
@@ -52,6 +53,7 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 	createCacheMockIfNotExists bool,
 	topologies []*kaiv1alpha1.Topology,
 	clusterPodAffinityInfo *cache.K8sClusterPodAffinityInfo,
+	vectorMap *resource_info.ResourceVectorMap,
 ) *framework.Session {
 	ssn := framework.Session{
 		Config: &conf.SchedulerConfiguration{
@@ -62,12 +64,13 @@ func CreateFakeSession(schedulerConfig *TestSessionConfig,
 			},
 		},
 		ClusterInfo: &api.ClusterInfo{
-			Nodes:            nodesInfoMap,
-			Queues:           queueInfoMap,
-			PodGroupInfos:    jobInfoMap,
-			ResourceClaims:   getResourceClaims(testMetadata),
-			Topologies:       topologies,
-			MinNodeGPUMemory: node_info.DefaultGpuMemory,
+			Nodes:             nodesInfoMap,
+			Queues:            queueInfoMap,
+			PodGroupInfos:     jobInfoMap,
+			ResourceClaims:    getResourceClaims(testMetadata),
+			Topologies:        topologies,
+			MinNodeGPUMemory:  node_info.DefaultGpuMemory,
+			ResourceVectorMap: vectorMap,
 		},
 		SchedulerParams: conf.SchedulerParams{
 			QueueLabelKey: constants.DefaultQueueLabel,
@@ -266,10 +269,12 @@ func BuildSession(testMetadata TestTopologyBasic, controller *Controller) *frame
 	}
 
 	addDefaultDepartmentIfNeeded(&testMetadata)
-	jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(testMetadata.Jobs, getDRAObjects(testMetadata)...)
+
+	vectorMap := resource_info.NewResourceVectorMap()
+	jobsInfoMap, tasksToNodeMap, _ := jobs_fake.BuildJobsAndTasksMaps(testMetadata.Jobs, vectorMap, getDRAObjects(testMetadata)...)
 
 	clusterPodAffinityInfo := cache.NewK8sClusterPodAffinityInfo()
-	nodesInfoMap := nodes_fake.BuildNodesInfoMap(testMetadata.Nodes, tasksToNodeMap, clusterPodAffinityInfo, getDRAObjects(testMetadata)...)
+	nodesInfoMap := nodes_fake.BuildNodesInfoMap(testMetadata.Nodes, tasksToNodeMap, clusterPodAffinityInfo, vectorMap, getDRAObjects(testMetadata)...)
 	queueInfoMap := BuildQueueInfoMap(testMetadata)
 
 	departmentInfoMap := BuildDepartmentInfoMap(testMetadata)
@@ -282,7 +287,7 @@ func BuildSession(testMetadata TestTopologyBasic, controller *Controller) *frame
 		testMetadata.Mocks.Cache == nil
 
 	return CreateFakeSession(&schedulerConfig, nodesInfoMap, jobsInfoMap, queueInfoMap, testMetadata,
-		controller, createCacheMockIfNotExists, testMetadata.Topologies, clusterPodAffinityInfo)
+		controller, createCacheMockIfNotExists, testMetadata.Topologies, clusterPodAffinityInfo, vectorMap)
 }
 
 func mergeQueues(queuesMaps ...map[common_info.QueueID]*queue_info.QueueInfo) map[common_info.QueueID]*queue_info.QueueInfo {

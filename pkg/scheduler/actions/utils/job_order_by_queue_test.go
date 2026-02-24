@@ -39,6 +39,8 @@ const (
 	testPod         = "p1"
 )
 
+var testVectorMap = resource_info.NewResourceVectorMap()
+
 func TestNumericalPriorityWithinSameQueue(t *testing.T) {
 	ssn := newPrioritySession(t)
 
@@ -210,16 +212,15 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
 						pod_status.Allocated: {
 							"p1": {
-								UID: "p1",
-								AcceptedResource: resource_info.NewResourceRequirements(
-									1,
-									1000,
-									1024,
-								),
+								UID:                    "p1",
+								VectorMap:              testVectorMap,
+								AcceptedGpuRequirement: resource_info.NewResourceRequirements(1, 1000, 1024).GpuResourceRequirement,
+								AcceptedResourceVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 							},
 						},
 					},
-					Allocated: resource_info.NewResource(1000, 1024, 1),
+					VectorMap:       testVectorMap,
+					AllocatedVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 				},
 				"q1j2": {
 					Name:     "q1j2",
@@ -228,16 +229,15 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
 						pod_status.Allocated: {
 							"p1": {
-								UID: "p1",
-								AcceptedResource: resource_info.NewResourceRequirements(
-									1,
-									1000,
-									1024,
-								),
+								UID:                    "p1",
+								VectorMap:              testVectorMap,
+								AcceptedGpuRequirement: resource_info.NewResourceRequirements(1, 1000, 1024).GpuResourceRequirement,
+								AcceptedResourceVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 							},
 						},
 					},
-					Allocated: resource_info.NewResource(1000, 1024, 1),
+					VectorMap:       testVectorMap,
+					AllocatedVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 				},
 				"q1j3": {
 					Name:     "q1j3",
@@ -246,16 +246,15 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
 						pod_status.Allocated: {
 							"p1": {
-								UID: "p1",
-								AcceptedResource: resource_info.NewResourceRequirements(
-									1,
-									1000,
-									1024,
-								),
+								UID:                    "p1",
+								VectorMap:              testVectorMap,
+								AcceptedGpuRequirement: resource_info.NewResourceRequirements(1, 1000, 1024).GpuResourceRequirement,
+								AcceptedResourceVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 							},
 						},
 					},
-					Allocated: resource_info.NewResource(1000, 1024, 1),
+					VectorMap:       testVectorMap,
+					AllocatedVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 				},
 				"q2j1": {
 					Name:     "q2j1",
@@ -264,16 +263,15 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
 						pod_status.Allocated: {
 							"p1": {
-								UID: "p1",
-								AcceptedResource: resource_info.NewResourceRequirements(
-									1,
-									1000,
-									1024,
-								),
+								UID:                    "p1",
+								VectorMap:              testVectorMap,
+								AcceptedGpuRequirement: resource_info.NewResourceRequirements(1, 1000, 1024).GpuResourceRequirement,
+								AcceptedResourceVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 							},
 						},
 					},
-					Allocated: resource_info.NewResource(1000, 1024, 1),
+					VectorMap:       testVectorMap,
+					AllocatedVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 				},
 				"q2j2": {
 					Name:     "q2j2",
@@ -282,16 +280,15 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
 						pod_status.Allocated: {
 							"p1": {
-								UID: "p1",
-								AcceptedResource: resource_info.NewResourceRequirements(
-									1,
-									1000,
-									1024,
-								),
+								UID:                    "p1",
+								VectorMap:              testVectorMap,
+								AcceptedGpuRequirement: resource_info.NewResourceRequirements(1, 1000, 1024).GpuResourceRequirement,
+								AcceptedResourceVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 							},
 						},
 					},
-					Allocated: resource_info.NewResource(1000, 1024, 1),
+					VectorMap:       testVectorMap,
+					AllocatedVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 				},
 				"q2j3": {
 					Name:     "q2j3",
@@ -300,16 +297,15 @@ func TestVictimQueue_PopNextJob(t *testing.T) {
 					PodStatusIndex: map[pod_status.PodStatus]pod_info.PodsMap{
 						pod_status.Allocated: {
 							"p1": {
-								UID: "p1",
-								AcceptedResource: resource_info.NewResourceRequirements(
-									1,
-									1000,
-									1024,
-								),
+								UID:                    "p1",
+								VectorMap:              testVectorMap,
+								AcceptedGpuRequirement: resource_info.NewResourceRequirements(1, 1000, 1024).GpuResourceRequirement,
+								AcceptedResourceVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 							},
 						},
 					},
-					Allocated: resource_info.NewResource(1000, 1024, 1),
+					VectorMap:       testVectorMap,
+					AllocatedVector: resource_info.NewResourceRequirements(1, 1000, 1024).ToVector(testVectorMap),
 				},
 			},
 			expectedJobNames: []string{"q1j3", "q2j3", "q1j2", "q2j2", "q1j1", "q2j1"},

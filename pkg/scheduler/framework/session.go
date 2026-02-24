@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ksf "k8s.io/kube-scheduler/framework"
 
+	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
@@ -36,6 +37,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
@@ -169,12 +171,15 @@ func (ssn *Session) FittingGPUs(node *node_info.NodeInfo, pod *pod_info.PodInfo)
 func filterGpusByEnoughResources(node *node_info.NodeInfo, pod *pod_info.PodInfo) []string {
 	filteredGPUs := []string{}
 	for gpuIdx := range node.UsedSharedGPUsMemory {
-		if node.IsTaskFitOnGpuGroup(pod.ResReq, gpuIdx) {
+		if node.IsTaskFitOnGpuGroup(&pod.GpuRequirement, gpuIdx) {
 			filteredGPUs = append(filteredGPUs, gpuIdx)
 		}
 	}
-	if node.Idle.GPUs() > 0 || node.Releasing.GPUs() > 0 {
-		for range int(node.Idle.GPUs()) + int(node.Releasing.GPUs()) {
+	gpuIdx := node.VectorMap.GetIndex(commonconstants.GpuResource)
+	idleGPUs := node.IdleVector.Get(gpuIdx)
+	releasingGPUs := node.ReleasingVector.Get(gpuIdx)
+	if idleGPUs > 0 || releasingGPUs > 0 {
+		for range int(idleGPUs) + int(releasingGPUs) {
 			filteredGPUs = append(filteredGPUs, pod_info.WholeGpuIndicator)
 		}
 	}
@@ -206,7 +211,7 @@ func (ssn *Session) FittingNode(task *pod_info.PodInfo, node *node_info.NodeInfo
 	job := ssn.ClusterInfo.PodGroupInfos[task.Job]
 
 	log.InfraLogger.V(6).Infof("Checking if task <%v/%v> is allocatable on node <%v>: <%v> vs. <%v>",
-		task.Namespace, task.Name, node.Name, task.ResReq, node.Idle)
+		task.Namespace, task.Name, node.Name, task.ResReqVector, node.IdleVector)
 	allocatable, fitError := ssn.isTaskAllocatableOnNode(task, job, node, writeFittingDelta)
 	if !allocatable {
 		if fitError != nil && writeFittingDelta {
@@ -271,7 +276,7 @@ func (ssn *Session) isTaskAllocatableOnNode(task *pod_info.PodInfo, job *podgrou
 		allocatable = false
 		log.InfraLogger.V(6).Infof("Not enough resources for task: <%s/%s>, init requested: <%v>. "+
 			"Node <%s> with limited resources, releasing: <%v>, idle: <%v>",
-			task.Namespace, task.Name, task.ResReq, node.Name, node.Releasing, node.Idle)
+			task.Namespace, task.Name, task.ResReqVector, node.Name, node.ReleasingVector, node.IdleVector)
 		if writeFittingDelta {
 			if taskAllocatable := node.IsTaskAllocatable(task); !taskAllocatable {
 				fitError = node.FittingError(task, len(job.GetAllPodsMap()) > 1)
@@ -451,6 +456,15 @@ func (ssn *Session) OverrideSchedulerName(name string) {
 
 func (ssn *Session) InternalK8sPlugins() *k8splugins.K8sPlugins {
 	return ssn.Cache.InternalK8sPlugins()
+}
+
+// ResourceVectorMap returns the shared vector index map for this scheduling cycle.
+// All vectors created during this cycle use the same map for consistent indexing.
+func (ssn *Session) ResourceVectorMap() *resource_info.ResourceVectorMap {
+	if ssn.ClusterInfo == nil {
+		return resource_info.NewResourceVectorMap()
+	}
+	return ssn.ClusterInfo.ResourceVectorMap
 }
 
 func sortNodesByScore(nodeScores map[float64][]*node_info.NodeInfo) []*node_info.NodeInfo {
