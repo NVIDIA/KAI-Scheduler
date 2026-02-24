@@ -6,6 +6,7 @@ package common
 import (
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -278,17 +279,28 @@ func orderedPodSets(ssn *framework.Session, podSets []*subgroup_info.PodSet) []*
 }
 
 func filterNodesByResourceVectors(task *pod_info.PodInfo, nodes []*node_info.NodeInfo) []*node_info.NodeInfo {
-	feasibleNodes := make([]*node_info.NodeInfo, 0, len(nodes))
-	for _, node := range nodes {
-		isFeasible := true
-		for i := range task.ResReqVector {
-			if task.ResReqVector.Get(i) > node.IdleVector.Get(i)+node.ReleasingVector.Get(i) {
-				isFeasible = false
-				break
-			}
-		}
+	feasibleByIndex := make([]bool, len(nodes))
+	var wg sync.WaitGroup
+	for idx, node := range nodes {
+		wg.Add(1)
+		go func(index int, currentNode *node_info.NodeInfo) {
+			defer wg.Done()
 
-		if isFeasible {
+			isFeasible := true
+			for i := range task.ResReqVector {
+				if task.ResReqVector.Get(i) > currentNode.IdleVector.Get(i)+currentNode.ReleasingVector.Get(i) {
+					isFeasible = false
+					break
+				}
+			}
+			feasibleByIndex[index] = isFeasible
+		}(idx, node)
+	}
+	wg.Wait()
+
+	feasibleNodes := make([]*node_info.NodeInfo, 0, len(nodes))
+	for idx, node := range nodes {
+		if feasibleByIndex[idx] {
 			feasibleNodes = append(feasibleNodes, node)
 		}
 	}
