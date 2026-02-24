@@ -78,10 +78,9 @@ func (h *Handler) ignoreFields(oldPodGroup, newPodGroup *schedulingv2alpha2.PodG
 	}
 
 	queueName, found := oldPodGroup.Labels[h.queueLabelKey]
-	if !found {
-		queueName = oldPodGroup.Spec.Queue
+	if found {
+		newPodGroupCopy.Labels[h.queueLabelKey] = queueName
 	}
-	newPodGroupCopy.Labels[h.queueLabelKey] = queueName
 
 	return newPodGroupCopy
 }
@@ -128,13 +127,6 @@ func (h *Handler) createPodGroupForMetadata(podGroupMetadata Metadata) *scheduli
 		PreferredTopologyLevel: podGroupMetadata.PreferredTopologyLevel,
 		RequiredTopologyLevel:  podGroupMetadata.RequiredTopologyLevel,
 		Topology:               podGroupMetadata.Topology,
-	}
-
-	if h.queueLabelKey != "" && podGroupMetadata.Queue != "" {
-		if pg.Labels == nil {
-			pg.Labels = map[string]string{}
-		}
-		pg.Labels[h.queueLabelKey] = podGroupMetadata.Queue
 	}
 
 	return pg
