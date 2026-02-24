@@ -78,8 +78,17 @@ fi
 
 # Build and install kai-scheduler
 if [ -z "$PACKAGE_VERSION" ]; then
-    GIT_REV=$(git rev-parse --short HEAD | sed 's/^0*//')
-    PACKAGE_VERSION=0.0.0-$GIT_REV
+    if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
+        GIT_REV=$(git rev-parse --short HEAD | sed 's/^0*//')
+        PACKAGE_VERSION=0.0.0-$GIT_REV
+    else
+        PACKAGE_VERSION=$(curl -s https://api.github.com/repos/NVIDIA/KAI-Scheduler/releases/latest | jq -r .tag_name)
+        if [ -z "$PACKAGE_VERSION" ] || [ "$PACKAGE_VERSION" = "null" ]; then
+            echo "Failed to resolve latest release. Falling back to commit-based version."
+            GIT_REV=$(git rev-parse --short HEAD | sed 's/^0*//')
+            PACKAGE_VERSION=0.0.0-$GIT_REV
+        fi
+    fi
 fi
 
 if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
@@ -110,7 +119,7 @@ if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
     cd ${REPO_ROOT}/hack
 else
     helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace \
-        --set "global.gpuSharing=true" --wait
+        --set "global.gpuSharing=true" --wait --version "$PACKAGE_VERSION"
 fi
 
 # Create RBAC for fake-gpu-operator status updates
@@ -118,4 +127,3 @@ kubectl create clusterrole pods-patcher --verb=patch --resource=pods
 kubectl create rolebinding fake-status-updater --clusterrole=pods-patcher --serviceaccount=gpu-operator:status-updater -n kai-resource-reservation
 
 echo "Cluster setup complete. Cluster name: $CLUSTER_NAME"
-
