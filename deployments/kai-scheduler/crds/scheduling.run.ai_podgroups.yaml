@@ -112,17 +112,13 @@ spec:
                       minimum: 1
                       type: integer
                     name:
-                      description: |-
-                        Name uniquely identifies the SubGroup within the PodGroup.
-                        Must consist of lowercase alphanumeric characters or hyphens.
+                      description: Name uniquely identifies the SubGroup within the
+                        PodGroup.
                       minLength: 1
-                      pattern: ^[a-z0-9][a-z0-9\-]*$
                       type: string
                     parent:
-                      description: |-
-                        Parent is an optional attribute that specifies the name of the parent SubGroup.
-                        Must consist of lowercase alphanumeric characters or hyphens, matching the Name pattern.
-                      pattern: ^[a-z0-9][a-z0-9\-]*$
+                      description: Parent is an optional attribute that specifies
+                        the name of the parent SubGroup
                       type: string
                     topologyConstraint:
                       description: TopologyConstraint defines the topology constraints
