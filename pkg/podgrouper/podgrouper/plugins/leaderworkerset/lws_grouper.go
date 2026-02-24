@@ -154,12 +154,67 @@ func handleLeaderReadyPolicy(pod *v1.Pod, podGroupMetadata *podgroup.Metadata, f
 func (lwsGrouper *LwsGrouper) buildSubGroups(lwsJob *unstructured.Unstructured, pod *v1.Pod, replicasSize int) ([]*podgroup.SubGroupMetadata, error) {
 	subGroupPolicy, err := getSubGroupPolicy(lwsJob, replicasSize)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get sub group policy for LWS %s/%s: %w", lwsJob.GetNamespace(), lwsJob.GetName(), err)
 	}
 	if subGroupPolicy == nil {
 		return buildSubGroupsWithoutSegmentation(replicasSize, pod), nil
 	}
-	return buildSubGroupsWithSegmentation(subGroupPolicy, replicasSize, pod)
+	topologyConstraints, err := getSegmentTopologyConstraints(pod, lwsJob)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get segment topology constraints for LWS %s/%s: %w", lwsJob.GetNamespace(), lwsJob.GetName(), err)
+	}
+	return buildSubGroupsWithSegmentation(subGroupPolicy, topologyConstraints, replicasSize, pod)
+}
+
+func getSegmentTopologyConstraints(pod *v1.Pod, lwsJob *unstructured.Unstructured) (*podgroup.TopologyConstraintMetadata, error) {
+	workerTemplate, found, err := unstructured.NestedMap(lwsJob.Object, "spec", "leaderWorkerTemplate", "workerTemplate")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get workerTemplate from LWS %s/%s: %w", lwsJob.GetNamespace(), lwsJob.GetName(), err)
+	}
+	if !found {
+		return nil, nil
+	}
+	topology := getTopology(pod, workerTemplate, lwsJob)
+	if topology == "" {
+		return nil, nil
+	}
+
+	required := getWorkerAnnotationValue(pod, workerTemplate, constants.SegmentTopologyRequiredPlacementKey)
+	preferred := getWorkerAnnotationValue(pod, workerTemplate, constants.SegmentTopologyPreferredPlacementKey)
+	if required == "" && preferred == "" {
+		return nil, nil
+	}
+
+	return &podgroup.TopologyConstraintMetadata{
+		Topology:               topology,
+		RequiredTopologyLevel:  required,
+		PreferredTopologyLevel: preferred,
+	}, nil
+}
+
+func getTopology(pod *v1.Pod, workerTemplate map[string]interface{}, lwsJob *unstructured.Unstructured) string {
+	if topology, found := pod.Annotations[constants.TopologyKey]; found && topology != "" {
+		return topology
+	}
+	topology := getWorkerAnnotationValue(pod, workerTemplate, constants.TopologyKey)
+	if topology != "" {
+		return topology
+	}
+	if topology, found := lwsJob.GetAnnotations()[constants.TopologyKey]; found {
+		return topology
+	}
+	return ""
+}
+
+func getWorkerAnnotationValue(pod *v1.Pod, workerTemplate map[string]interface{}, key string) string {
+	if value, found := pod.Annotations[key]; found && value != "" {
+		return value
+	}
+	value, found, _ := unstructured.NestedString(workerTemplate, "metadata", "annotations", key)
+	if found {
+		return value
+	}
+	return ""
 }
 
 func getSubGroupPolicy(lwsJob *unstructured.Unstructured, replicasSize int) (*lws.SubGroupPolicy, error) {
@@ -227,11 +282,13 @@ func buildSubGroupsWithoutSegmentation(replicasSize int, pod *v1.Pod) []*podgrou
 	return subGroups
 }
 
-func buildSubGroupsWithSegmentation(subGroupPolicy *lws.SubGroupPolicy, replicasSize int, pod *v1.Pod) ([]*podgroup.SubGroupMetadata, error) {
+func buildSubGroupsWithSegmentation(
+	subGroupPolicy *lws.SubGroupPolicy, topologyConstraints *podgroup.TopologyConstraintMetadata,
+	replicasSize int, pod *v1.Pod) ([]*podgroup.SubGroupMetadata, error) {
 	segmentSize := int(*subGroupPolicy.SubGroupSize)
 	policy := *subGroupPolicy.Type
 
-	subGroups := createSegmentSubgroups(replicasSize, segmentSize)
+	subGroups := createSegmentSubgroups(topologyConstraints, replicasSize, segmentSize)
 	podSegment, err := getPodSegment(pod, replicasSize, segmentSize)
 	if err != nil {
 		return nil, err
@@ -255,17 +312,38 @@ func buildSubGroupsWithSegmentation(subGroupPolicy *lws.SubGroupPolicy, replicas
 	return subGroups, nil
 }
 
-func createSegmentSubgroups(replicasSize int, segmentSize int) []*podgroup.SubGroupMetadata {
+func createSegmentSubgroups(topologyConstraints *podgroup.TopologyConstraintMetadata, replicasSize int, segmentSize int) []*podgroup.SubGroupMetadata {
 	subGroups := []*podgroup.SubGroupMetadata{}
-	numOfSegmentSubgroups := getSegmentIndex(replicasSize-1, replicasSize, segmentSize) + 1
+	maxWorkerIndex := replicasSize - leaderSubGroupSize
+	numOfSegmentSubgroups := getSegmentIndex(maxWorkerIndex, replicasSize, segmentSize) + 1
 	for segmentIndex := 0; segmentIndex < numOfSegmentSubgroups; segmentIndex++ {
 		subGroups = append(subGroups, &podgroup.SubGroupMetadata{
-			Name:           fmt.Sprintf("segment-%d", segmentIndex),
-			MinAvailable:   int32(segmentSize),
-			PodsReferences: []string{},
+			Name:                fmt.Sprintf("segment-%d", segmentIndex),
+			TopologyConstraints: topologyConstraints,
+			MinAvailable:        int32(segmentSize),
+			PodsReferences:      []string{},
 		})
 	}
+
+	fixLastSegmentSize(replicasSize, segmentSize, subGroups)
 	return subGroups
+}
+
+// The last segment might contain less pods then the other segments.
+// This function calculates how many workers will actually go into the last segment.
+func fixLastSegmentSize(replicasSize int, segmentSize int, subGroups []*podgroup.SubGroupMetadata) {
+	lastSegment := subGroups[len(subGroups)-1]
+	lastSegmentWorkersCount := 0
+	maxWorkerIndex := replicasSize - leaderSubGroupSize
+	for workerIndex := maxWorkerIndex; workerIndex >= 0; workerIndex-- {
+		segmentIndex := getSegmentIndex(workerIndex, replicasSize, segmentSize)
+		if segmentIndex == len(subGroups)-1 {
+			lastSegmentWorkersCount++
+		} else {
+			break
+		}
+	}
+	lastSegment.MinAvailable = int32(lastSegmentWorkersCount)
 }
 
 func getPodSegment(pod *v1.Pod, replicasSize int, segmentSize int) (int, error) {
@@ -297,7 +375,7 @@ func addLeaderAndWorkersSubgroupsForSegment(
 	segmentSubGroupName string, segmentSubGroupMinAvailable int32, pod *v1.Pod, podSubGroupIndex int) ([]*podgroup.SubGroupMetadata, bool) {
 	setPodSubgroupReference := false
 
-	subGroups := make([]*podgroup.SubGroupMetadata, 2)
+	subGroups := []*podgroup.SubGroupMetadata{}
 	leaderSubGroup := &podgroup.SubGroupMetadata{
 		Name:           leaderSubGroupName,
 		MinAvailable:   leaderSubGroupSize,
