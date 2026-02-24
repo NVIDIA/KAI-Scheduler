@@ -20,38 +20,6 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/queuecontroller/common"
 )
 
-func podGroupQueueIndexer(object client.Object) []string {
-	pg := object.(*v2alpha2.PodGroup)
-	if pg.Spec.Queue == "" {
-		return []string{}
-	}
-	return []string{pg.Spec.Queue}
-}
-
-func parentQueueIndexer(object client.Object) []string {
-	queue := object.(*v2.Queue)
-	if queue.Spec.ParentQueue == "" {
-		return []string{}
-	}
-	return []string{queue.Spec.ParentQueue}
-}
-
-func newTestScheme(t *testing.T) *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	err := v2alpha2.AddToScheme(scheme)
-	assert.Nil(t, err)
-	err = v2.AddToScheme(scheme)
-	assert.Nil(t, err)
-	return scheme
-}
-
-func newTestClientBuilder(t *testing.T) *fake.ClientBuilder {
-	return fake.NewClientBuilder().
-		WithScheme(newTestScheme(t)).
-		WithIndex(&v2.Queue{}, common.ParentQueueIndexName, parentQueueIndexer).
-		WithIndex(&v2alpha2.PodGroup{}, common.PodGroupQueueIndexName, podGroupQueueIndexer)
-}
-
 func TestUpdateQueue_PodGroupsOnly(t *testing.T) {
 	objects := []client.Object{
 		&v2alpha2.PodGroup{
@@ -144,7 +112,7 @@ func TestUpdateQueue_PodGroupsOnly(t *testing.T) {
 	}
 
 	updater := ResourceUpdater{
-		Client: newTestClientBuilder(t).WithObjects(objects...).Build(),
+		Client: newFakeClientBuilder(t).WithObjects(objects...).Build(),
 	}
 
 	err := updater.UpdateQueue(context.Background(), &queue)
@@ -218,7 +186,7 @@ func TestUpdateQueue_PodGroupWithoutQueueLabel(t *testing.T) {
 	}
 
 	updater := ResourceUpdater{
-		Client: newTestClientBuilder(t).WithObjects(objects...).Build(),
+		Client: newFakeClientBuilder(t).WithObjects(objects...).Build(),
 	}
 
 	err := updater.UpdateQueue(context.Background(), &queue)
@@ -309,7 +277,7 @@ func TestUpdateQueue_QueuesOnly(t *testing.T) {
 	}
 
 	updater := ResourceUpdater{
-		Client: newTestClientBuilder(t).WithObjects(objects...).Build(),
+		Client: newFakeClientBuilder(t).WithObjects(objects...).Build(),
 	}
 
 	err := updater.UpdateQueue(context.Background(), &queue)
@@ -329,4 +297,36 @@ func TestUpdateQueue_QueuesOnly(t *testing.T) {
 	assert.True(t, expectedMemory.Equal(queue.Status.Allocated["memory"]))
 	assert.True(t, expectedMemory.Equal(queue.Status.AllocatedNonPreemptible["memory"]))
 	assert.True(t, expectedMemory.Equal(queue.Status.Requested["memory"]))
+}
+
+func newFakeClientBuilder(t *testing.T) *fake.ClientBuilder {
+	return fake.NewClientBuilder().
+		WithScheme(newTestScheme(t)).
+		WithIndex(&v2.Queue{}, common.ParentQueueIndexName, parentQueueIndexer).
+		WithIndex(&v2alpha2.PodGroup{}, common.PodGroupQueueIndexName, podGroupQueueIndexer)
+}
+
+func podGroupQueueIndexer(object client.Object) []string {
+	pg := object.(*v2alpha2.PodGroup)
+	if pg.Spec.Queue == "" {
+		return []string{}
+	}
+	return []string{pg.Spec.Queue}
+}
+
+func parentQueueIndexer(object client.Object) []string {
+	queue := object.(*v2.Queue)
+	if queue.Spec.ParentQueue == "" {
+		return []string{}
+	}
+	return []string{queue.Spec.ParentQueue}
+}
+
+func newTestScheme(t *testing.T) *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	err := v2alpha2.AddToScheme(scheme)
+	assert.Nil(t, err)
+	err = v2.AddToScheme(scheme)
+	assert.Nil(t, err)
+	return scheme
 }
