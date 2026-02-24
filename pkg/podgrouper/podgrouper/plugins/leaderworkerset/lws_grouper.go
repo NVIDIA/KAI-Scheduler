@@ -45,44 +45,41 @@ func NewLwsGrouper(defaultGrouper *defaultgrouper.DefaultGrouper) *LwsGrouper {
 	}
 }
 
-func (lwsGrouper *LwsGrouper) Name() string {
+func (lwsg *LwsGrouper) Name() string {
 	return "LWS Grouper"
 }
 
 // +kubebuilder:rbac:groups=leaderworkerset.x-k8s.io,resources=leaderworkersets,verbs=get;list;watch
 // +kubebuilder:rbac:groups=leaderworkerset.x-k8s.io,resources=leaderworkersets/finalizers,verbs=patch;update;create
 
-func (lwsGrouper *LwsGrouper) GetPodGroupMetadata(
+func (lwsg *LwsGrouper) GetPodGroupMetadata(
 	lwsJob *unstructured.Unstructured, pod *v1.Pod, _ ...*metav1.PartialObjectMetadata,
 ) (*podgroup.Metadata, error) {
-	podGroupMetadata, err := lwsGrouper.DefaultGrouper.GetPodGroupMetadata(lwsJob, pod)
+	podGroupMetadata, err := lwsg.DefaultGrouper.GetPodGroupMetadata(lwsJob, pod)
 	if err != nil {
 		return nil, err
 	}
 
-	groupSize, err := lwsGrouper.getLwsGroupSize(lwsJob)
+	groupSize, err := getGroupSize(lwsJob)
 	if err != nil {
 		return nil, err
 	}
 
-	startupPolicy, err := lwsGrouper.getStartupPolicy(lwsJob)
+	startupPolicy, err := getStartupPolicy(lwsJob)
 	if err != nil {
 		return nil, err
 	}
 
-	// Initialize podGroupMetadata with the group size
 	switch startupPolicy {
 	case startupPolicyLeaderReady:
-		if err := handleLeaderReadyPolicy(pod, podGroupMetadata, groupSize); err != nil {
-			return nil, fmt.Errorf("error handling leader ready policy: %w", err)
-		}
+		podGroupMetadata.MinAvailable = calcLeaderReadyMinAvailable(pod, groupSize)
 	case startupPolicyLeaderCreated:
 		podGroupMetadata.MinAvailable = groupSize
 	default:
 		return nil, fmt.Errorf("unknown startupPolicy: %s", startupPolicy)
 	}
 
-	subGroups, err := lwsGrouper.buildSubGroups(lwsJob, pod, int(podGroupMetadata.MinAvailable))
+	subGroups, err := lwsg.buildSubGroups(lwsJob, pod, int(podGroupMetadata.MinAvailable))
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +94,7 @@ func (lwsGrouper *LwsGrouper) GetPodGroupMetadata(
 	return podGroupMetadata, nil
 }
 
-func (lwsGrouper *LwsGrouper) getLwsGroupSize(lwsJob *unstructured.Unstructured) (int32, error) {
+func getGroupSize(lwsJob *unstructured.Unstructured) (int32, error) {
 	size, found, err := unstructured.NestedInt64(lwsJob.Object, "spec", "leaderWorkerTemplate", "size")
 	if err != nil {
 		return 0, fmt.Errorf("failed to get leaderWorkerTemplate.size from LWS %s/%s with error: %w",
@@ -112,8 +109,7 @@ func (lwsGrouper *LwsGrouper) getLwsGroupSize(lwsJob *unstructured.Unstructured)
 	return int32(size), nil
 }
 
-// getStartupPolicy extracts the startup policy from the LWS object
-func (lwsGrouper *LwsGrouper) getStartupPolicy(lwsJob *unstructured.Unstructured) (string, error) {
+func getStartupPolicy(lwsJob *unstructured.Unstructured) (string, error) {
 	policy, found, err := unstructured.NestedString(lwsJob.Object, "spec", "startupPolicy")
 	if err != nil {
 		return "", fmt.Errorf("failed to get startupPolicy from LWS %s/%s: %w",
@@ -126,7 +122,7 @@ func (lwsGrouper *LwsGrouper) getStartupPolicy(lwsJob *unstructured.Unstructured
 	return policy, nil
 }
 
-func handleLeaderReadyPolicy(pod *v1.Pod, podGroupMetadata *podgroup.Metadata, fallbackSize int32) error {
+func calcLeaderReadyMinAvailable(pod *v1.Pod, fallbackSize int32) int32 {
 	groupSize := fallbackSize
 
 	// Check for the size annotation on the pod
@@ -142,16 +138,13 @@ func handleLeaderReadyPolicy(pod *v1.Pod, podGroupMetadata *podgroup.Metadata, f
 
 	if isLeader && !isScheduled {
 		// Leader pod not yet scheduled, only need leader to be available
-		podGroupMetadata.MinAvailable = 1
-	} else {
-		// Either worker pod or leader is already scheduled
-		podGroupMetadata.MinAvailable = groupSize
+		return 1
 	}
-
-	return nil
+	// Either worker pod or leader is already scheduled
+	return groupSize
 }
 
-func (lwsGrouper *LwsGrouper) buildSubGroups(lwsJob *unstructured.Unstructured, pod *v1.Pod, replicasSize int) ([]*podgroup.SubGroupMetadata, error) {
+func (lwsg *LwsGrouper) buildSubGroups(lwsJob *unstructured.Unstructured, pod *v1.Pod, replicasSize int) ([]*podgroup.SubGroupMetadata, error) {
 	subGroupPolicy, err := getSubGroupPolicy(lwsJob, replicasSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sub group policy for LWS %s/%s: %w", lwsJob.GetNamespace(), lwsJob.GetName(), err)
