@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Fixed admission webhook to skip runtimeClassName injection when gpuPodRuntimeClassName is empty [#1035](https://github.com/NVIDIA/KAI-Scheduler/pull/1035)
+- Fixed topology-migration helm hook failing on OpenShift due to missing `kai-topology-migration` service account in the `kai-system` SCC [#1050](https://github.com/NVIDIA/KAI-Scheduler/pull/1050)
 - Fixed a bug where queue status did not reflect its podgroups resources correctly [#1049](https://github.com/NVIDIA/KAI-Scheduler/pull/1049)
 - Fixed helm uninstall does not remove webhooks [#959](https://github.com/NVIDIA/KAI-Scheduler/pull/959) [faizan-exe](https://github.com/faizan-exe)
 - Fixed security vulnerability where PodGang could reference pods in other namespaces, preventing cross-namespace manipulation
