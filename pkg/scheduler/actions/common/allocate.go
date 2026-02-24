@@ -139,7 +139,8 @@ func allocateTask(ssn *framework.Session, stmt *framework.Statement, nodes []*no
 	log.InfraLogger.V(6).Infof("Looking for best node for task - Task: <%s/%s>, init requested: <%v>.",
 		task.Namespace, task.Name, task.ResReqVector)
 
-	orderedNodes := ssn.OrderedNodesByTask(nodes, task)
+	feasibleNodes := filterNodesByResourceVectors(task, nodes)
+	orderedNodes := ssn.OrderedNodesByTask(feasibleNodes, task)
 	for _, node := range orderedNodes {
 		if !ssn.FittingNode(task, node, !isPipelineOnly) {
 			continue
@@ -274,4 +275,22 @@ func orderedPodSets(ssn *framework.Session, podSets []*subgroup_info.PodSet) []*
 		return ssn.PodSetOrderFn(result[i], result[j])
 	})
 	return result
+}
+
+func filterNodesByResourceVectors(task *pod_info.PodInfo, nodes []*node_info.NodeInfo) []*node_info.NodeInfo {
+	feasibleNodes := make([]*node_info.NodeInfo, 0, len(nodes))
+	for _, node := range nodes {
+		isFeasible := true
+		for i := range task.ResReqVector {
+			if task.ResReqVector.Get(i) > node.IdleVector.Get(i)+node.ReleasingVector.Get(i) {
+				isFeasible = false
+				break
+			}
+		}
+
+		if isFeasible {
+			feasibleNodes = append(feasibleNodes, node)
+		}
+	}
+	return feasibleNodes
 }
