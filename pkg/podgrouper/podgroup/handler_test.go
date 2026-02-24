@@ -678,3 +678,123 @@ func Test_createPodGroupForMetadata(t *testing.T) {
 		})
 	}
 }
+
+func Test_createPodGroupForMetadata_SetsQueueLabel(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          Metadata
+		expectedLabels map[string]string
+	}{
+		{
+			name: "queue label added when missing from labels",
+			input: Metadata{
+				Name:      "test-pg",
+				Namespace: "ns",
+				Labels:    map[string]string{"other": "label"},
+				Queue:     "my-queue",
+				Owner:     metav1.OwnerReference{APIVersion: "v1", Kind: "Pod", Name: "p", UID: "u"},
+			},
+			expectedLabels: map[string]string{
+				"other":               "label",
+				"kai.scheduler/queue": "my-queue",
+			},
+		},
+		{
+			name: "queue label added when labels are nil",
+			input: Metadata{
+				Name:      "test-pg",
+				Namespace: "ns",
+				Labels:    nil,
+				Queue:     "my-queue",
+				Owner:     metav1.OwnerReference{APIVersion: "v1", Kind: "Pod", Name: "p", UID: "u"},
+			},
+			expectedLabels: map[string]string{
+				"kai.scheduler/queue": "my-queue",
+			},
+		},
+		{
+			name: "existing queue label is preserved",
+			input: Metadata{
+				Name:   "test-pg",
+				Labels: map[string]string{"kai.scheduler/queue": "original-queue"},
+				Queue:  "my-queue",
+				Owner:  metav1.OwnerReference{APIVersion: "v1", Kind: "Pod", Name: "p", UID: "u"},
+			},
+			expectedLabels: map[string]string{
+				"kai.scheduler/queue": "my-queue",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := &Handler{queueLabelKey: "kai.scheduler/queue"}
+			result := handler.createPodGroupForMetadata(tt.input)
+
+			if diff := cmp.Diff(tt.expectedLabels, result.Labels); diff != "" {
+				t.Errorf("labels mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func Test_ignoreFields_HealsQueueLabel(t *testing.T) {
+	tests := []struct {
+		name           string
+		oldPodGroup    *schedulingv2alpha2.PodGroup
+		newPodGroup    *schedulingv2alpha2.PodGroup
+		expectedLabels map[string]string
+	}{
+		{
+			name: "heals missing queue label from Spec.Queue",
+			oldPodGroup: &schedulingv2alpha2.PodGroup{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{},
+				},
+				Spec: schedulingv2alpha2.PodGroupSpec{
+					Queue: "my-queue",
+				},
+			},
+			newPodGroup: &schedulingv2alpha2.PodGroup{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{},
+				},
+			},
+			expectedLabels: map[string]string{
+				"kai.scheduler/queue": "my-queue",
+			},
+		},
+		{
+			name: "preserves existing queue label from old PodGroup",
+			oldPodGroup: &schedulingv2alpha2.PodGroup{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"kai.scheduler/queue": "old-queue",
+					},
+				},
+				Spec: schedulingv2alpha2.PodGroupSpec{
+					Queue: "old-queue",
+				},
+			},
+			newPodGroup: &schedulingv2alpha2.PodGroup{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{},
+				},
+			},
+			expectedLabels: map[string]string{
+				"kai.scheduler/queue": "old-queue",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := &Handler{queueLabelKey: "kai.scheduler/queue"}
+			result := handler.ignoreFields(tt.oldPodGroup, tt.newPodGroup)
+
+			if diff := cmp.Diff(tt.expectedLabels, result.Labels); diff != "" {
+				t.Errorf("labels mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
