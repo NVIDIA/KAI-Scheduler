@@ -57,6 +57,7 @@ tiers:
       gpu: binpack
   - name: minruntime
   - name: topology
+  - name: snapshot
 `
 
 func ResolveConfigurationFromFile(confPath string) (*conf.SchedulerConfiguration, error) {
