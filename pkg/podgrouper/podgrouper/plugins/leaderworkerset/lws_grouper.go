@@ -298,17 +298,22 @@ func buildSubGroupsWithSegmentation(
 	if policy == lws.SubGroupPolicyTypeLeaderWorker {
 		subGroups, setPodSubgroupReference = handleLeaderInFirstSegment(subGroups, replicasSize, segmentSize, pod, podSegment)
 	}
+	if policy == lws.SubGroupPolicyTypeLeaderExcluded {
+		subGroups, err = addExcludedLeaderSegments(subGroups, replicasSize, segmentSize)
+		if err != nil {
+			return nil, err
+		}
 
+		if !isLeaderPod(pod) {
+			// We added an extra subgroup, that will contain only the leader.
+			// We need to adjust the pod segment index for workers to point to the correct subgroup.
+			podSegment += 1
+		}
+	}
 	if !setPodSubgroupReference {
 		subGroups[podSegment].PodsReferences = append(subGroups[podSegment].PodsReferences, pod.Name)
 	}
 
-	if policy == lws.SubGroupPolicyTypeLeaderExcluded {
-		subGroups, err = handleLeaderExcludedFromSegments(subGroups, pod, replicasSize, segmentSize)
-		if err != nil {
-			return nil, err
-		}
-	}
 	return subGroups, nil
 }
 
@@ -402,8 +407,8 @@ func addLeaderAndWorkersSubgroupsForSegment(
 	return subGroups, setPodSubgroupReference
 }
 
-func handleLeaderExcludedFromSegments(
-	subGroups []*podgroup.SubGroupMetadata, pod *v1.Pod, replicasSize int, segmentSize int) ([]*podgroup.SubGroupMetadata, error) {
+func addExcludedLeaderSegments(
+	subGroups []*podgroup.SubGroupMetadata, replicasSize int, segmentSize int) ([]*podgroup.SubGroupMetadata, error) {
 	if !isReplicasSizeDivisibleBySubGroupSize(replicasSize, segmentSize) {
 		return nil, fmt.Errorf("replicasSize %d is not divisible by segmentSize %d. "+
 			"LeaderExcluded policy is only supported when replicasSize is divisible by segmentSize.", replicasSize, segmentSize)
@@ -413,9 +418,6 @@ func handleLeaderExcludedFromSegments(
 		MinAvailable:   leaderSubGroupSize,
 		PodsReferences: []string{},
 	})
-	if isLeaderPod(pod) {
-		subGroups[0].PodsReferences = append(subGroups[0].PodsReferences, pod.Name)
-	}
 	return subGroups, nil
 }
 
