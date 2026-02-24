@@ -145,18 +145,18 @@ func calcLeaderReadyMinAvailable(pod *v1.Pod, fallbackSize int32) int32 {
 }
 
 func (lwsg *LwsGrouper) buildSubGroups(lwsJob *unstructured.Unstructured, pod *v1.Pod, replicasSize int) ([]*podgroup.SubGroupMetadata, error) {
-	subGroupPolicy, err := getSubGroupPolicy(lwsJob, replicasSize)
+	segmentationPolicy, err := getSegmentationPolicy(lwsJob, replicasSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sub group policy for LWS %s/%s: %w", lwsJob.GetNamespace(), lwsJob.GetName(), err)
 	}
-	if subGroupPolicy == nil {
+	if segmentationPolicy == nil {
 		return buildSubGroupsWithoutSegmentation(replicasSize, pod), nil
 	}
 	topologyConstraints, err := getSegmentTopologyConstraints(pod, lwsJob)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get segment topology constraints for LWS %s/%s: %w", lwsJob.GetNamespace(), lwsJob.GetName(), err)
 	}
-	return buildSubGroupsWithSegmentation(subGroupPolicy, topologyConstraints, replicasSize, pod)
+	return buildSubGroupsWithSegmentation(segmentationPolicy, topologyConstraints, replicasSize, pod)
 }
 
 func getSegmentTopologyConstraints(pod *v1.Pod, lwsJob *unstructured.Unstructured) (*podgroup.TopologyConstraintMetadata, error) {
@@ -210,7 +210,15 @@ func getWorkerAnnotationValue(pod *v1.Pod, workerTemplate map[string]interface{}
 	return ""
 }
 
-func getSubGroupPolicy(lwsJob *unstructured.Unstructured, replicasSize int) (*lws.SubGroupPolicy, error) {
+// getSegmentationPolicy resolves the sub-group segmentation policy from the LWS spec.
+// The segment size is read first from spec.leaderWorkerTemplate.subGroupPolicy.subGroupSize,
+// then falls back to the kai.scheduler/segment-size annotation on the LWS object.
+
+// The policy type, which defines if the leader pod will be included in a subgroup under the segments or sits in a separate subgroup,
+// is read from subGroupPolicyType and defaults to LeaderWorker when not specified.
+//
+// Returns nil when no segment size is defined (segmentation disabled).
+func getSegmentationPolicy(lwsJob *unstructured.Unstructured, replicasSize int) (*lws.SubGroupPolicy, error) {
 	segmentSizeInt64, foundSegmentDefinition, err := unstructured.NestedInt64(lwsJob.Object, "spec", "leaderWorkerTemplate", "subGroupPolicy",
 		"subGroupSize")
 	if err != nil {
@@ -276,10 +284,10 @@ func buildSubGroupsWithoutSegmentation(replicasSize int, pod *v1.Pod) []*podgrou
 }
 
 func buildSubGroupsWithSegmentation(
-	subGroupPolicy *lws.SubGroupPolicy, topologyConstraints *podgroup.TopologyConstraintMetadata,
+	segmentationPolicy *lws.SubGroupPolicy, topologyConstraints *podgroup.TopologyConstraintMetadata,
 	replicasSize int, pod *v1.Pod) ([]*podgroup.SubGroupMetadata, error) {
-	segmentSize := int(*subGroupPolicy.SubGroupSize)
-	policy := *subGroupPolicy.Type
+	segmentSize := int(*segmentationPolicy.SubGroupSize)
+	policy := *segmentationPolicy.Type
 
 	subGroups := createSegmentSubgroups(topologyConstraints, replicasSize, segmentSize)
 	podSegment, err := getPodSegment(pod, replicasSize, segmentSize)
