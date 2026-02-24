@@ -213,10 +213,10 @@ func getWorkerAnnotationValue(pod *v1.Pod, workerTemplate map[string]interface{}
 func getSubGroupPolicy(lwsJob *unstructured.Unstructured, replicasSize int) (*lws.SubGroupPolicy, error) {
 	segmentSizeInt64, foundSegmentDefinition, err := unstructured.NestedInt64(lwsJob.Object, "spec", "leaderWorkerTemplate", "subGroupPolicy",
 		"subGroupSize")
-	segmentSize := int(segmentSizeInt64)
 	if err != nil {
 		return nil, err
 	}
+	segmentSize := int(segmentSizeInt64)
 	if !foundSegmentDefinition {
 		if segmentSizeStr, found := lwsJob.GetAnnotations()[constants.SegmentSizeKey]; found {
 			if segmentSize, err = strconv.Atoi(segmentSizeStr); err == nil {
