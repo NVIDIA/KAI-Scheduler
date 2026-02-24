@@ -126,7 +126,7 @@ var _ = Describe("QueueController", Ordered, func() {
 			Scheme: mgr.GetScheme(),
 		}
 
-		err = controller.SetupWithManager(mgr, "kai.scheduler/queue")
+		err = controller.SetupWithManager(mgr)
 		Expect(err).ToNot(HaveOccurred())
 
 		managerDone = make(chan struct{})
