@@ -81,3 +81,61 @@ metadata:
 ```
 
 Where .spec.workers refer to the path in the subgroup.
+
+## Proposal
+
+### Resolving grouping logic (how to decide by which logic to group the pods)
+
+First, we need to add the following logic to the podGrouper:
+- Let the RI have the first attempt to group pods (consider having tiered plugin system? or just special-case the RI?)
+- Let podgrouper plugins return a "handoff" error value, meaning: "I give up on grouping this podgroup and let other plugins try". This is distinct from temporary errors which might be resolved.
+- Modify RI plugin to "handoff" for unpopulated gangScheduling types
+    - this will also take care of the issue with dynamo/grove grouping
+- If a plugin returns a handoff, the grouper should attempt the regular plugins.
+- If they also handoff/no plugin supports the type, the podgrouper should go down the ownership chain, and attempt the same procedure on each type, until one resolves or until exhausting all options.
+- We should have a way to specify intent to resolve certain types to the default grouper - could be done in RI as well, probably
+
+The following is a concrete example using a `RayCluster` resource (the immediate pod owner). The `foreach` approach is preferred over grouping pods by label at runtime: relying on pod labels to discover subgroups can result in partial podgroups if not all pods have been created yet, whereas iterating over the owner spec lets the podgrouper determine the full subgroup structure at creation time, satisfying the pre-defined hierarchy requirement.
+
+```yaml
+apiVersion: kai.scheduler/v1
+kind: ResourceInterface
+metadata:
+  name: raycluster
+spec:
+  targetGVK:
+    group: ray.io
+    version: v1
+    kind: RayCluster
+  gangScheduling:
+    podGroups:
+      - name: cluster
+        subgroups:
+          - componentName: head
+            podClassifier:
+              matchLabels:
+                ray.io/node-type: head
+            minReplicas: "1"
+
+          - foreach: ".spec.workerGroupSpecs[] as $wg"
+            componentName: "$wg.groupName"
+            podClassifier:
+              matchExpressions:
+                - key: ray.io/group
+                  operator: Equals
+                  valuePath: "$wg.groupName"
+            minReplicasPath:
+              - "$wg.minReplicas"
+              - "$wg.replicas"
+```
+
+Paths starting with `.` are always root-relative (evaluated against the owner object's full spec); named variables bound via `as $var` in the `foreach` expression refer to the current iteration element and remain in scope in any nested `foreach` blocks. Path fields (e.g. `minReplicasPath`) are always lists, ordered by priority; the first path that resolves to a non-null value is used.
+
+This maps directly to the companion `raycluster.yaml` example:
+- `headGroupSpec` → static `head` subgroup (1 pod, CPU-only)
+- `workerGroupSpecs[0]` (`groupName: gpu-workers`, `minReplicas: 4`) → subgroup `gpu-workers`, requires 4 pods
+- `workerGroupSpecs[1]` (`groupName: gpu-shmorkers`, `minReplicas: 4`) → subgroup `gpu-shmorkers`, requires 4 pods
+
+## Out of scope at the moment:
+- Segmentation, like we did for pytorch
+- Weird grouping logics like lws

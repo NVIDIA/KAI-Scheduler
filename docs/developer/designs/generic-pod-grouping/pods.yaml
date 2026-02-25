@@ -1,0 +1,1800 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      pod-group-name: pg-rayjob-team-a-a865b91d-7737-4c31-8d07-af2b5b1d22ad
+    creationTimestamp: "2026-02-25T14:58:46Z"
+    generateName: rayjob-team-a-47fh9-gpu-shmorkers-worker-
+    generation: 1
+    labels:
+      app.kubernetes.io/created-by: kuberay-operator
+      app.kubernetes.io/name: kuberay
+      kai.scheduler/subgroup-name: gpu-shmorkers
+      ray.io/cluster: rayjob-team-a-47fh9
+      ray.io/group: gpu-shmorkers
+      ray.io/identifier: rayjob-team-a-47fh9-worker
+      ray.io/is-ray-node: "yes"
+      ray.io/node-type: worker
+    name: rayjob-team-a-47fh9-gpu-shmorkers-worker-dqktf
+    namespace: demo
+    ownerReferences:
+    - apiVersion: ray.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: RayCluster
+      name: rayjob-team-a-47fh9
+      uid: 26684c43-d40d-4b15-bb7d-38a375461cef
+    resourceVersion: "471532"
+    uid: 5cae0f95-1454-4a0d-b01d-58963944db92
+  spec:
+    containers:
+    - args:
+      - 'ulimit -n 65536; ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      - name: RAY_CLUSTER_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/cluster']
+      - name: RAY_CLOUD_INSTANCE_ID
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: RAY_NODE_TYPE_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/group']
+      - name: KUBERAY_GEN_RAY_START_CMD
+        value: 'ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      - name: RAY_PORT
+        value: "6379"
+      - name: RAY_ADDRESS
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+      - name: RAY_USAGE_STATS_KUBERAY_IN_USE
+        value: "1"
+      - name: RAY_DASHBOARD_ENABLE_K8S_DISK_USAGE
+        value: "1"
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 120
+        initialDelaySeconds: 30
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      name: ray-worker
+      ports:
+      - containerPort: 8080
+        name: metrics
+        protocol: TCP
+      readinessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 10
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      resources:
+        limits:
+          cpu: "1"
+          nvidia.com/gpu: "8"
+        requests:
+          cpu: 200m
+          nvidia.com/gpu: "8"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /dev/shm
+        name: shared-mem
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-65698
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    initContainers:
+    - args:
+      - "\n\t\t\t\t\tSECONDS=0\n\t\t\t\t\twhile true; do\n\t\t\t\t\t\tif (( SECONDS
+        <= 120 )); then\n\t\t\t\t\t\t\tif ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+        > /dev/null 2>&1; then\n\t\t\t\t\t\t\t\techo \"GCS is ready.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Waiting for GCS to be ready.\"\n\t\t\t\t\t\telse\n\t\t\t\t\t\t\tif
+        ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379;
+        then\n\t\t\t\t\t\t\t\techo \"GCS is ready. Any error messages above can be
+        safely ignored.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Still waiting for GCS to be ready. For troubleshooting,
+        refer to the FAQ at https://github.com/ray-project/kuberay/blob/master/docs/guidance/FAQ.md.\"\n\t\t\t\t\t\tfi\n\t\t\t\t\t\tsleep
+        5\n\t\t\t\t\tdone\n\t\t\t\t"
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      name: wait-gcs-ready
+      resources:
+        limits:
+          cpu: 200m
+          memory: 256Mi
+        requests:
+          cpu: 200m
+          memory: 256Mi
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-65698
+        readOnly: true
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    runtimeClassName: nvidia
+    schedulerName: kai-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - emptyDir:
+        medium: Memory
+      name: shared-mem
+    - name: kube-api-access-65698
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-02-25T14:58:47Z"
+      message: 'PodSchedulingErrors: Resources were found for 0 pods from all sub-groups
+        while sub-group gpu-workers requires 4 pods for gang scheduling. Additional
+        pods cannot be scheduled in this sub-group due to: no nodes with enough resources
+        were found: 7 node(s) didn''t have enough resources: GPUs..'
+      reason: Unschedulable
+      status: "False"
+      type: PodScheduled
+    phase: Pending
+    qosClass: Burstable
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      pod-group-name: pg-rayjob-team-a-a865b91d-7737-4c31-8d07-af2b5b1d22ad
+    creationTimestamp: "2026-02-25T14:58:46Z"
+    generateName: rayjob-team-a-47fh9-gpu-shmorkers-worker-
+    generation: 1
+    labels:
+      app.kubernetes.io/created-by: kuberay-operator
+      app.kubernetes.io/name: kuberay
+      kai.scheduler/subgroup-name: gpu-shmorkers
+      ray.io/cluster: rayjob-team-a-47fh9
+      ray.io/group: gpu-shmorkers
+      ray.io/identifier: rayjob-team-a-47fh9-worker
+      ray.io/is-ray-node: "yes"
+      ray.io/node-type: worker
+    name: rayjob-team-a-47fh9-gpu-shmorkers-worker-f8qcc
+    namespace: demo
+    ownerReferences:
+    - apiVersion: ray.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: RayCluster
+      name: rayjob-team-a-47fh9
+      uid: 26684c43-d40d-4b15-bb7d-38a375461cef
+    resourceVersion: "471528"
+    uid: 918ce369-398f-488e-a5de-2a63b63bdbdb
+  spec:
+    containers:
+    - args:
+      - 'ulimit -n 65536; ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      - name: RAY_CLUSTER_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/cluster']
+      - name: RAY_CLOUD_INSTANCE_ID
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: RAY_NODE_TYPE_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/group']
+      - name: KUBERAY_GEN_RAY_START_CMD
+        value: 'ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      - name: RAY_PORT
+        value: "6379"
+      - name: RAY_ADDRESS
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+      - name: RAY_USAGE_STATS_KUBERAY_IN_USE
+        value: "1"
+      - name: RAY_DASHBOARD_ENABLE_K8S_DISK_USAGE
+        value: "1"
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 120
+        initialDelaySeconds: 30
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      name: ray-worker
+      ports:
+      - containerPort: 8080
+        name: metrics
+        protocol: TCP
+      readinessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 10
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      resources:
+        limits:
+          cpu: "1"
+          nvidia.com/gpu: "8"
+        requests:
+          cpu: 200m
+          nvidia.com/gpu: "8"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /dev/shm
+        name: shared-mem
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-7vklz
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    initContainers:
+    - args:
+      - "\n\t\t\t\t\tSECONDS=0\n\t\t\t\t\twhile true; do\n\t\t\t\t\t\tif (( SECONDS
+        <= 120 )); then\n\t\t\t\t\t\t\tif ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+        > /dev/null 2>&1; then\n\t\t\t\t\t\t\t\techo \"GCS is ready.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Waiting for GCS to be ready.\"\n\t\t\t\t\t\telse\n\t\t\t\t\t\t\tif
+        ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379;
+        then\n\t\t\t\t\t\t\t\techo \"GCS is ready. Any error messages above can be
+        safely ignored.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Still waiting for GCS to be ready. For troubleshooting,
+        refer to the FAQ at https://github.com/ray-project/kuberay/blob/master/docs/guidance/FAQ.md.\"\n\t\t\t\t\t\tfi\n\t\t\t\t\t\tsleep
+        5\n\t\t\t\t\tdone\n\t\t\t\t"
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      name: wait-gcs-ready
+      resources:
+        limits:
+          cpu: 200m
+          memory: 256Mi
+        requests:
+          cpu: 200m
+          memory: 256Mi
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-7vklz
+        readOnly: true
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    runtimeClassName: nvidia
+    schedulerName: kai-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - emptyDir:
+        medium: Memory
+      name: shared-mem
+    - name: kube-api-access-7vklz
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-02-25T14:58:47Z"
+      message: 'PodSchedulingErrors: Resources were found for 0 pods from all sub-groups
+        while sub-group gpu-workers requires 4 pods for gang scheduling. Additional
+        pods cannot be scheduled in this sub-group due to: no nodes with enough resources
+        were found: 7 node(s) didn''t have enough resources: GPUs..'
+      reason: Unschedulable
+      status: "False"
+      type: PodScheduled
+    phase: Pending
+    qosClass: Burstable
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      pod-group-name: pg-rayjob-team-a-a865b91d-7737-4c31-8d07-af2b5b1d22ad
+    creationTimestamp: "2026-02-25T14:58:46Z"
+    generateName: rayjob-team-a-47fh9-gpu-shmorkers-worker-
+    generation: 1
+    labels:
+      app.kubernetes.io/created-by: kuberay-operator
+      app.kubernetes.io/name: kuberay
+      kai.scheduler/subgroup-name: gpu-shmorkers
+      ray.io/cluster: rayjob-team-a-47fh9
+      ray.io/group: gpu-shmorkers
+      ray.io/identifier: rayjob-team-a-47fh9-worker
+      ray.io/is-ray-node: "yes"
+      ray.io/node-type: worker
+    name: rayjob-team-a-47fh9-gpu-shmorkers-worker-jmbm9
+    namespace: demo
+    ownerReferences:
+    - apiVersion: ray.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: RayCluster
+      name: rayjob-team-a-47fh9
+      uid: 26684c43-d40d-4b15-bb7d-38a375461cef
+    resourceVersion: "471527"
+    uid: ec443366-6321-4431-81b1-f34597939179
+  spec:
+    containers:
+    - args:
+      - 'ulimit -n 65536; ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      - name: RAY_CLUSTER_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/cluster']
+      - name: RAY_CLOUD_INSTANCE_ID
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: RAY_NODE_TYPE_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/group']
+      - name: KUBERAY_GEN_RAY_START_CMD
+        value: 'ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      - name: RAY_PORT
+        value: "6379"
+      - name: RAY_ADDRESS
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+      - name: RAY_USAGE_STATS_KUBERAY_IN_USE
+        value: "1"
+      - name: RAY_DASHBOARD_ENABLE_K8S_DISK_USAGE
+        value: "1"
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 120
+        initialDelaySeconds: 30
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      name: ray-worker
+      ports:
+      - containerPort: 8080
+        name: metrics
+        protocol: TCP
+      readinessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 10
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      resources:
+        limits:
+          cpu: "1"
+          nvidia.com/gpu: "8"
+        requests:
+          cpu: 200m
+          nvidia.com/gpu: "8"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /dev/shm
+        name: shared-mem
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-22skf
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    initContainers:
+    - args:
+      - "\n\t\t\t\t\tSECONDS=0\n\t\t\t\t\twhile true; do\n\t\t\t\t\t\tif (( SECONDS
+        <= 120 )); then\n\t\t\t\t\t\t\tif ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+        > /dev/null 2>&1; then\n\t\t\t\t\t\t\t\techo \"GCS is ready.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Waiting for GCS to be ready.\"\n\t\t\t\t\t\telse\n\t\t\t\t\t\t\tif
+        ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379;
+        then\n\t\t\t\t\t\t\t\techo \"GCS is ready. Any error messages above can be
+        safely ignored.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Still waiting for GCS to be ready. For troubleshooting,
+        refer to the FAQ at https://github.com/ray-project/kuberay/blob/master/docs/guidance/FAQ.md.\"\n\t\t\t\t\t\tfi\n\t\t\t\t\t\tsleep
+        5\n\t\t\t\t\tdone\n\t\t\t\t"
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      name: wait-gcs-ready
+      resources:
+        limits:
+          cpu: 200m
+          memory: 256Mi
+        requests:
+          cpu: 200m
+          memory: 256Mi
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-22skf
+        readOnly: true
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    runtimeClassName: nvidia
+    schedulerName: kai-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - emptyDir:
+        medium: Memory
+      name: shared-mem
+    - name: kube-api-access-22skf
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-02-25T14:58:47Z"
+      message: 'PodSchedulingErrors: Resources were found for 0 pods from all sub-groups
+        while sub-group gpu-workers requires 4 pods for gang scheduling. Additional
+        pods cannot be scheduled in this sub-group due to: no nodes with enough resources
+        were found: 7 node(s) didn''t have enough resources: GPUs..'
+      reason: Unschedulable
+      status: "False"
+      type: PodScheduled
+    phase: Pending
+    qosClass: Burstable
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      pod-group-name: pg-rayjob-team-a-a865b91d-7737-4c31-8d07-af2b5b1d22ad
+    creationTimestamp: "2026-02-25T14:58:46Z"
+    generateName: rayjob-team-a-47fh9-gpu-shmorkers-worker-
+    generation: 1
+    labels:
+      app.kubernetes.io/created-by: kuberay-operator
+      app.kubernetes.io/name: kuberay
+      kai.scheduler/subgroup-name: gpu-shmorkers
+      ray.io/cluster: rayjob-team-a-47fh9
+      ray.io/group: gpu-shmorkers
+      ray.io/identifier: rayjob-team-a-47fh9-worker
+      ray.io/is-ray-node: "yes"
+      ray.io/node-type: worker
+    name: rayjob-team-a-47fh9-gpu-shmorkers-worker-lfxs7
+    namespace: demo
+    ownerReferences:
+    - apiVersion: ray.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: RayCluster
+      name: rayjob-team-a-47fh9
+      uid: 26684c43-d40d-4b15-bb7d-38a375461cef
+    resourceVersion: "471535"
+    uid: 36233119-7282-4e29-9ed4-50145bc540c7
+  spec:
+    containers:
+    - args:
+      - 'ulimit -n 65536; ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      - name: RAY_CLUSTER_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/cluster']
+      - name: RAY_CLOUD_INSTANCE_ID
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: RAY_NODE_TYPE_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/group']
+      - name: KUBERAY_GEN_RAY_START_CMD
+        value: 'ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      - name: RAY_PORT
+        value: "6379"
+      - name: RAY_ADDRESS
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+      - name: RAY_USAGE_STATS_KUBERAY_IN_USE
+        value: "1"
+      - name: RAY_DASHBOARD_ENABLE_K8S_DISK_USAGE
+        value: "1"
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 120
+        initialDelaySeconds: 30
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      name: ray-worker
+      ports:
+      - containerPort: 8080
+        name: metrics
+        protocol: TCP
+      readinessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 10
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      resources:
+        limits:
+          cpu: "1"
+          nvidia.com/gpu: "8"
+        requests:
+          cpu: 200m
+          nvidia.com/gpu: "8"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /dev/shm
+        name: shared-mem
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-vf5tr
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    initContainers:
+    - args:
+      - "\n\t\t\t\t\tSECONDS=0\n\t\t\t\t\twhile true; do\n\t\t\t\t\t\tif (( SECONDS
+        <= 120 )); then\n\t\t\t\t\t\t\tif ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+        > /dev/null 2>&1; then\n\t\t\t\t\t\t\t\techo \"GCS is ready.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Waiting for GCS to be ready.\"\n\t\t\t\t\t\telse\n\t\t\t\t\t\t\tif
+        ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379;
+        then\n\t\t\t\t\t\t\t\techo \"GCS is ready. Any error messages above can be
+        safely ignored.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Still waiting for GCS to be ready. For troubleshooting,
+        refer to the FAQ at https://github.com/ray-project/kuberay/blob/master/docs/guidance/FAQ.md.\"\n\t\t\t\t\t\tfi\n\t\t\t\t\t\tsleep
+        5\n\t\t\t\t\tdone\n\t\t\t\t"
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      name: wait-gcs-ready
+      resources:
+        limits:
+          cpu: 200m
+          memory: 256Mi
+        requests:
+          cpu: 200m
+          memory: 256Mi
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-vf5tr
+        readOnly: true
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    runtimeClassName: nvidia
+    schedulerName: kai-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - emptyDir:
+        medium: Memory
+      name: shared-mem
+    - name: kube-api-access-vf5tr
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-02-25T14:58:47Z"
+      message: 'PodSchedulingErrors: Resources were found for 0 pods from all sub-groups
+        while sub-group gpu-workers requires 4 pods for gang scheduling. Additional
+        pods cannot be scheduled in this sub-group due to: no nodes with enough resources
+        were found: 7 node(s) didn''t have enough resources: GPUs..'
+      reason: Unschedulable
+      status: "False"
+      type: PodScheduled
+    phase: Pending
+    qosClass: Burstable
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      pod-group-name: pg-rayjob-team-a-a865b91d-7737-4c31-8d07-af2b5b1d22ad
+    creationTimestamp: "2026-02-25T14:58:46Z"
+    generateName: rayjob-team-a-47fh9-gpu-workers-worker-
+    generation: 1
+    labels:
+      app.kubernetes.io/created-by: kuberay-operator
+      app.kubernetes.io/name: kuberay
+      kai.scheduler/subgroup-name: gpu-workers
+      ray.io/cluster: rayjob-team-a-47fh9
+      ray.io/group: gpu-workers
+      ray.io/identifier: rayjob-team-a-47fh9-worker
+      ray.io/is-ray-node: "yes"
+      ray.io/node-type: worker
+    name: rayjob-team-a-47fh9-gpu-workers-worker-8s9wh
+    namespace: demo
+    ownerReferences:
+    - apiVersion: ray.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: RayCluster
+      name: rayjob-team-a-47fh9
+      uid: 26684c43-d40d-4b15-bb7d-38a375461cef
+    resourceVersion: "471533"
+    uid: 03f8059d-8d6c-4880-b4da-a8ea4ae39544
+  spec:
+    containers:
+    - args:
+      - 'ulimit -n 65536; ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      - name: RAY_CLUSTER_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/cluster']
+      - name: RAY_CLOUD_INSTANCE_ID
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: RAY_NODE_TYPE_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/group']
+      - name: KUBERAY_GEN_RAY_START_CMD
+        value: 'ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      - name: RAY_PORT
+        value: "6379"
+      - name: RAY_ADDRESS
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+      - name: RAY_USAGE_STATS_KUBERAY_IN_USE
+        value: "1"
+      - name: RAY_DASHBOARD_ENABLE_K8S_DISK_USAGE
+        value: "1"
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 120
+        initialDelaySeconds: 30
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      name: ray-worker
+      ports:
+      - containerPort: 8080
+        name: metrics
+        protocol: TCP
+      readinessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 10
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      resources:
+        limits:
+          cpu: "1"
+          nvidia.com/gpu: "8"
+        requests:
+          cpu: 200m
+          nvidia.com/gpu: "8"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /dev/shm
+        name: shared-mem
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-2ch5t
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    initContainers:
+    - args:
+      - "\n\t\t\t\t\tSECONDS=0\n\t\t\t\t\twhile true; do\n\t\t\t\t\t\tif (( SECONDS
+        <= 120 )); then\n\t\t\t\t\t\t\tif ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+        > /dev/null 2>&1; then\n\t\t\t\t\t\t\t\techo \"GCS is ready.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Waiting for GCS to be ready.\"\n\t\t\t\t\t\telse\n\t\t\t\t\t\t\tif
+        ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379;
+        then\n\t\t\t\t\t\t\t\techo \"GCS is ready. Any error messages above can be
+        safely ignored.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Still waiting for GCS to be ready. For troubleshooting,
+        refer to the FAQ at https://github.com/ray-project/kuberay/blob/master/docs/guidance/FAQ.md.\"\n\t\t\t\t\t\tfi\n\t\t\t\t\t\tsleep
+        5\n\t\t\t\t\tdone\n\t\t\t\t"
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      name: wait-gcs-ready
+      resources:
+        limits:
+          cpu: 200m
+          memory: 256Mi
+        requests:
+          cpu: 200m
+          memory: 256Mi
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-2ch5t
+        readOnly: true
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    runtimeClassName: nvidia
+    schedulerName: kai-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - emptyDir:
+        medium: Memory
+      name: shared-mem
+    - name: kube-api-access-2ch5t
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-02-25T14:58:47Z"
+      message: 'no nodes with enough resources were found: 7 node(s) didn''t have
+        enough resources: GPUs.'
+      reason: Unschedulable
+      status: "False"
+      type: PodScheduled
+    phase: Pending
+    qosClass: Burstable
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      pod-group-name: pg-rayjob-team-a-a865b91d-7737-4c31-8d07-af2b5b1d22ad
+    creationTimestamp: "2026-02-25T14:58:46Z"
+    generateName: rayjob-team-a-47fh9-gpu-workers-worker-
+    generation: 1
+    labels:
+      app.kubernetes.io/created-by: kuberay-operator
+      app.kubernetes.io/name: kuberay
+      kai.scheduler/subgroup-name: gpu-workers
+      ray.io/cluster: rayjob-team-a-47fh9
+      ray.io/group: gpu-workers
+      ray.io/identifier: rayjob-team-a-47fh9-worker
+      ray.io/is-ray-node: "yes"
+      ray.io/node-type: worker
+    name: rayjob-team-a-47fh9-gpu-workers-worker-k2ncd
+    namespace: demo
+    ownerReferences:
+    - apiVersion: ray.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: RayCluster
+      name: rayjob-team-a-47fh9
+      uid: 26684c43-d40d-4b15-bb7d-38a375461cef
+    resourceVersion: "471534"
+    uid: 6cdf3dac-cd7b-4b05-a9a1-670313cfa244
+  spec:
+    containers:
+    - args:
+      - 'ulimit -n 65536; ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      - name: RAY_CLUSTER_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/cluster']
+      - name: RAY_CLOUD_INSTANCE_ID
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: RAY_NODE_TYPE_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/group']
+      - name: KUBERAY_GEN_RAY_START_CMD
+        value: 'ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      - name: RAY_PORT
+        value: "6379"
+      - name: RAY_ADDRESS
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+      - name: RAY_USAGE_STATS_KUBERAY_IN_USE
+        value: "1"
+      - name: RAY_DASHBOARD_ENABLE_K8S_DISK_USAGE
+        value: "1"
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 120
+        initialDelaySeconds: 30
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      name: ray-worker
+      ports:
+      - containerPort: 8080
+        name: metrics
+        protocol: TCP
+      readinessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 10
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      resources:
+        limits:
+          cpu: "1"
+          nvidia.com/gpu: "8"
+        requests:
+          cpu: 200m
+          nvidia.com/gpu: "8"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /dev/shm
+        name: shared-mem
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-jcn2m
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    initContainers:
+    - args:
+      - "\n\t\t\t\t\tSECONDS=0\n\t\t\t\t\twhile true; do\n\t\t\t\t\t\tif (( SECONDS
+        <= 120 )); then\n\t\t\t\t\t\t\tif ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+        > /dev/null 2>&1; then\n\t\t\t\t\t\t\t\techo \"GCS is ready.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Waiting for GCS to be ready.\"\n\t\t\t\t\t\telse\n\t\t\t\t\t\t\tif
+        ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379;
+        then\n\t\t\t\t\t\t\t\techo \"GCS is ready. Any error messages above can be
+        safely ignored.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Still waiting for GCS to be ready. For troubleshooting,
+        refer to the FAQ at https://github.com/ray-project/kuberay/blob/master/docs/guidance/FAQ.md.\"\n\t\t\t\t\t\tfi\n\t\t\t\t\t\tsleep
+        5\n\t\t\t\t\tdone\n\t\t\t\t"
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      name: wait-gcs-ready
+      resources:
+        limits:
+          cpu: 200m
+          memory: 256Mi
+        requests:
+          cpu: 200m
+          memory: 256Mi
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-jcn2m
+        readOnly: true
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    runtimeClassName: nvidia
+    schedulerName: kai-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - emptyDir:
+        medium: Memory
+      name: shared-mem
+    - name: kube-api-access-jcn2m
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-02-25T14:58:47Z"
+      message: 'PodSchedulingErrors: Resources were found for 0 pods from all sub-groups
+        while sub-group gpu-workers requires 4 pods for gang scheduling. Additional
+        pods cannot be scheduled in this sub-group due to: no nodes with enough resources
+        were found: 7 node(s) didn''t have enough resources: GPUs..'
+      reason: Unschedulable
+      status: "False"
+      type: PodScheduled
+    phase: Pending
+    qosClass: Burstable
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      pod-group-name: pg-rayjob-team-a-a865b91d-7737-4c31-8d07-af2b5b1d22ad
+    creationTimestamp: "2026-02-25T14:58:46Z"
+    generateName: rayjob-team-a-47fh9-gpu-workers-worker-
+    generation: 1
+    labels:
+      app.kubernetes.io/created-by: kuberay-operator
+      app.kubernetes.io/name: kuberay
+      kai.scheduler/subgroup-name: gpu-workers
+      ray.io/cluster: rayjob-team-a-47fh9
+      ray.io/group: gpu-workers
+      ray.io/identifier: rayjob-team-a-47fh9-worker
+      ray.io/is-ray-node: "yes"
+      ray.io/node-type: worker
+    name: rayjob-team-a-47fh9-gpu-workers-worker-ssj8z
+    namespace: demo
+    ownerReferences:
+    - apiVersion: ray.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: RayCluster
+      name: rayjob-team-a-47fh9
+      uid: 26684c43-d40d-4b15-bb7d-38a375461cef
+    resourceVersion: "471526"
+    uid: 6ecbc2a8-93d4-4949-a019-142dbcdf7c66
+  spec:
+    containers:
+    - args:
+      - 'ulimit -n 65536; ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      - name: RAY_CLUSTER_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/cluster']
+      - name: RAY_CLOUD_INSTANCE_ID
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: RAY_NODE_TYPE_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/group']
+      - name: KUBERAY_GEN_RAY_START_CMD
+        value: 'ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      - name: RAY_PORT
+        value: "6379"
+      - name: RAY_ADDRESS
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+      - name: RAY_USAGE_STATS_KUBERAY_IN_USE
+        value: "1"
+      - name: RAY_DASHBOARD_ENABLE_K8S_DISK_USAGE
+        value: "1"
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 120
+        initialDelaySeconds: 30
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      name: ray-worker
+      ports:
+      - containerPort: 8080
+        name: metrics
+        protocol: TCP
+      readinessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 10
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      resources:
+        limits:
+          cpu: "1"
+          nvidia.com/gpu: "8"
+        requests:
+          cpu: 200m
+          nvidia.com/gpu: "8"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /dev/shm
+        name: shared-mem
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-8sbd7
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    initContainers:
+    - args:
+      - "\n\t\t\t\t\tSECONDS=0\n\t\t\t\t\twhile true; do\n\t\t\t\t\t\tif (( SECONDS
+        <= 120 )); then\n\t\t\t\t\t\t\tif ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+        > /dev/null 2>&1; then\n\t\t\t\t\t\t\t\techo \"GCS is ready.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Waiting for GCS to be ready.\"\n\t\t\t\t\t\telse\n\t\t\t\t\t\t\tif
+        ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379;
+        then\n\t\t\t\t\t\t\t\techo \"GCS is ready. Any error messages above can be
+        safely ignored.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Still waiting for GCS to be ready. For troubleshooting,
+        refer to the FAQ at https://github.com/ray-project/kuberay/blob/master/docs/guidance/FAQ.md.\"\n\t\t\t\t\t\tfi\n\t\t\t\t\t\tsleep
+        5\n\t\t\t\t\tdone\n\t\t\t\t"
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      name: wait-gcs-ready
+      resources:
+        limits:
+          cpu: 200m
+          memory: 256Mi
+        requests:
+          cpu: 200m
+          memory: 256Mi
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-8sbd7
+        readOnly: true
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    runtimeClassName: nvidia
+    schedulerName: kai-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - emptyDir:
+        medium: Memory
+      name: shared-mem
+    - name: kube-api-access-8sbd7
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-02-25T14:58:47Z"
+      message: 'PodSchedulingErrors: Resources were found for 0 pods from all sub-groups
+        while sub-group gpu-workers requires 4 pods for gang scheduling. Additional
+        pods cannot be scheduled in this sub-group due to: no nodes with enough resources
+        were found: 7 node(s) didn''t have enough resources: GPUs..'
+      reason: Unschedulable
+      status: "False"
+      type: PodScheduled
+    phase: Pending
+    qosClass: Burstable
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      pod-group-name: pg-rayjob-team-a-a865b91d-7737-4c31-8d07-af2b5b1d22ad
+    creationTimestamp: "2026-02-25T14:58:46Z"
+    generateName: rayjob-team-a-47fh9-gpu-workers-worker-
+    generation: 1
+    labels:
+      app.kubernetes.io/created-by: kuberay-operator
+      app.kubernetes.io/name: kuberay
+      kai.scheduler/subgroup-name: gpu-workers
+      ray.io/cluster: rayjob-team-a-47fh9
+      ray.io/group: gpu-workers
+      ray.io/identifier: rayjob-team-a-47fh9-worker
+      ray.io/is-ray-node: "yes"
+      ray.io/node-type: worker
+    name: rayjob-team-a-47fh9-gpu-workers-worker-wm7zt
+    namespace: demo
+    ownerReferences:
+    - apiVersion: ray.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: RayCluster
+      name: rayjob-team-a-47fh9
+      uid: 26684c43-d40d-4b15-bb7d-38a375461cef
+    resourceVersion: "471529"
+    uid: cd9a7379-37e5-478e-9af9-0e07031e05cd
+  spec:
+    containers:
+    - args:
+      - 'ulimit -n 65536; ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      - name: RAY_CLUSTER_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/cluster']
+      - name: RAY_CLOUD_INSTANCE_ID
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: RAY_NODE_TYPE_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/group']
+      - name: KUBERAY_GEN_RAY_START_CMD
+        value: 'ray start  --address=rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379  --block  --dashboard-agent-listen-port=52365  --metrics-export-port=8080  --num-cpus=1  --num-gpus=8 '
+      - name: RAY_PORT
+        value: "6379"
+      - name: RAY_ADDRESS
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+      - name: RAY_USAGE_STATS_KUBERAY_IN_USE
+        value: "1"
+      - name: RAY_DASHBOARD_ENABLE_K8S_DISK_USAGE
+        value: "1"
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 120
+        initialDelaySeconds: 30
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      name: ray-worker
+      ports:
+      - containerPort: 8080
+        name: metrics
+        protocol: TCP
+      readinessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success
+        failureThreshold: 10
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 2
+      resources:
+        limits:
+          cpu: "1"
+          nvidia.com/gpu: "8"
+        requests:
+          cpu: 200m
+          nvidia.com/gpu: "8"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /dev/shm
+        name: shared-mem
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-2p2l7
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    initContainers:
+    - args:
+      - "\n\t\t\t\t\tSECONDS=0\n\t\t\t\t\twhile true; do\n\t\t\t\t\t\tif (( SECONDS
+        <= 120 )); then\n\t\t\t\t\t\t\tif ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379
+        > /dev/null 2>&1; then\n\t\t\t\t\t\t\t\techo \"GCS is ready.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Waiting for GCS to be ready.\"\n\t\t\t\t\t\telse\n\t\t\t\t\t\t\tif
+        ray health-check --address rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local:6379;
+        then\n\t\t\t\t\t\t\t\techo \"GCS is ready. Any error messages above can be
+        safely ignored.\"\n\t\t\t\t\t\t\t\tbreak\n\t\t\t\t\t\t\tfi\n\t\t\t\t\t\t\techo
+        \"$SECONDS seconds elapsed: Still waiting for GCS to be ready. For troubleshooting,
+        refer to the FAQ at https://github.com/ray-project/kuberay/blob/master/docs/guidance/FAQ.md.\"\n\t\t\t\t\t\tfi\n\t\t\t\t\t\tsleep
+        5\n\t\t\t\t\tdone\n\t\t\t\t"
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: FQ_RAY_IP
+        value: rayjob-team-a-47fh9-head-svc.demo.svc.cluster.local
+      - name: RAY_IP
+        value: rayjob-team-a-47fh9-head-svc
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      name: wait-gcs-ready
+      resources:
+        limits:
+          cpu: 200m
+          memory: 256Mi
+        requests:
+          cpu: 200m
+          memory: 256Mi
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-2p2l7
+        readOnly: true
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    runtimeClassName: nvidia
+    schedulerName: kai-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - emptyDir:
+        medium: Memory
+      name: shared-mem
+    - name: kube-api-access-2p2l7
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-02-25T14:58:47Z"
+      message: 'PodSchedulingErrors: Resources were found for 0 pods from all sub-groups
+        while sub-group gpu-workers requires 4 pods for gang scheduling. Additional
+        pods cannot be scheduled in this sub-group due to: no nodes with enough resources
+        were found: 7 node(s) didn''t have enough resources: GPUs..'
+      reason: Unschedulable
+      status: "False"
+      type: PodScheduled
+    phase: Pending
+    qosClass: Burstable
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      pod-group-name: pg-rayjob-team-a-a865b91d-7737-4c31-8d07-af2b5b1d22ad
+      ray.io/ft-enabled: "false"
+    creationTimestamp: "2026-02-25T14:58:45Z"
+    generateName: rayjob-team-a-47fh9-head-
+    generation: 1
+    labels:
+      app.kubernetes.io/created-by: kuberay-operator
+      app.kubernetes.io/name: kuberay
+      kai.scheduler/subgroup-name: headgroup
+      ray.io/cluster: rayjob-team-a-47fh9
+      ray.io/group: headgroup
+      ray.io/identifier: rayjob-team-a-47fh9-head
+      ray.io/is-ray-node: "yes"
+      ray.io/node-type: head
+    name: rayjob-team-a-47fh9-head-sd67z
+    namespace: demo
+    ownerReferences:
+    - apiVersion: ray.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: RayCluster
+      name: rayjob-team-a-47fh9
+      uid: 26684c43-d40d-4b15-bb7d-38a375461cef
+    resourceVersion: "471525"
+    uid: 594e046e-ee31-421a-a64b-dfe683d7987f
+  spec:
+    containers:
+    - args:
+      - 'ulimit -n 65536; ray start --head  --block  --dashboard-agent-listen-port=52365  --dashboard-host=0.0.0.0  --metrics-export-port=8080  --num-cpus=1 '
+      command:
+      - /bin/bash
+      - -c
+      - --
+      env:
+      - name: RAY_CLUSTER_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/cluster']
+      - name: RAY_CLOUD_INSTANCE_ID
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: RAY_NODE_TYPE_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['ray.io/group']
+      - name: KUBERAY_GEN_RAY_START_CMD
+        value: 'ray start --head  --block  --dashboard-agent-listen-port=52365  --dashboard-host=0.0.0.0  --metrics-export-port=8080  --num-cpus=1 '
+      - name: RAY_PORT
+        value: "6379"
+      - name: RAY_ADDRESS
+        value: 127.0.0.1:6379
+      - name: RAY_USAGE_STATS_KUBERAY_IN_USE
+        value: "1"
+      - name: RAY_USAGE_STATS_EXTRA_TAGS
+        value: kuberay_version=v1.4.2;kuberay_crd=RayJob
+      - name: RAY_DASHBOARD_ENABLE_K8S_DISK_USAGE
+        value: "1"
+      image: rayproject/ray:2.46.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success && wget --tries 1 -T 10 -q -O- http://localhost:8265/api/gcs_healthz
+            | grep success
+        failureThreshold: 120
+        initialDelaySeconds: 30
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 5
+      name: ray-head
+      ports:
+      - containerPort: 8080
+        name: metrics
+        protocol: TCP
+      readinessProbe:
+        exec:
+          command:
+          - bash
+          - -c
+          - wget --tries 1 -T 2 -q -O- http://localhost:52365/api/local_raylet_healthz
+            | grep success && wget --tries 1 -T 10 -q -O- http://localhost:8265/api/gcs_healthz
+            | grep success
+        failureThreshold: 10
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 5
+      resources:
+        limits:
+          cpu: "1"
+        requests:
+          cpu: 200m
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /dev/shm
+        name: shared-mem
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-xhbb7
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: kai-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - emptyDir:
+        medium: Memory
+      name: shared-mem
+    - name: kube-api-access-xhbb7
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-02-25T14:58:47Z"
+      message: 'PodSchedulingErrors: Resources were found for 0 pods from all sub-groups
+        while sub-group gpu-workers requires 4 pods for gang scheduling. Additional
+        pods cannot be scheduled in this sub-group due to: no nodes with enough resources
+        were found: 7 node(s) didn''t have enough resources: GPUs..'
+      reason: Unschedulable
+      status: "False"
+      type: PodScheduled
+    phase: Pending
+    qosClass: Burstable
+kind: List
+metadata:
+  resourceVersion: ""

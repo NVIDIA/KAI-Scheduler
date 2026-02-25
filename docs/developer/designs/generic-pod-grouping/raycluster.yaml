@@ -1,0 +1,125 @@
+apiVersion: v1
+items:
+- apiVersion: ray.io/v1
+  kind: RayCluster
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"ray.io/v1","kind":"RayJob","metadata":{"annotations":{},"labels":{"kai.scheduler/queue":"team-a"},"name":"rayjob-team-a","namespace":"demo"},"spec":{"entrypoint":"python /home/ray/samples/sample_code.py","rayClusterSpec":{"headGroupSpec":{"rayStartParams":{},"template":{"spec":{"containers":[{"image":"rayproject/ray:2.46.0","name":"ray-head","resources":{"limits":{"cpu":"1"},"requests":{"cpu":"200m"}}}],"schedulerName":"kai-scheduler"}}},"rayVersion":"2.46.0","workerGroupSpecs":[{"groupName":"gpu-workers","maxReplicas":4,"minReplicas":4,"rayStartParams":{},"replicas":4,"template":{"spec":{"containers":[{"image":"rayproject/ray:2.46.0","name":"ray-worker","resources":{"limits":{"cpu":"1","nvidia.com/gpu":"8"},"requests":{"cpu":"200m"}}}],"schedulerName":"kai-scheduler"}}},{"groupName":"gpu-shmorkers","maxReplicas":4,"minReplicas":4,"rayStartParams":{},"replicas":4,"template":{"spec":{"containers":[{"image":"rayproject/ray:2.46.0","name":"ray-worker","resources":{"limits":{"cpu":"1","nvidia.com/gpu":"8"},"requests":{"cpu":"200m"}}}],"schedulerName":"kai-scheduler"}}}]}}}
+    creationTimestamp: "2026-02-25T14:58:45Z"
+    generation: 1
+    labels:
+      kai.scheduler/queue: team-a
+      ray.io/originated-from-cr-name: rayjob-team-a
+      ray.io/originated-from-crd: RayJob
+    name: rayjob-team-a-47fh9
+    namespace: demo
+    ownerReferences:
+    - apiVersion: ray.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: RayJob
+      name: rayjob-team-a
+      uid: a865b91d-7737-4c31-8d07-af2b5b1d22ad
+    resourceVersion: "471490"
+    uid: 26684c43-d40d-4b15-bb7d-38a375461cef
+  spec:
+    headGroupSpec:
+      rayStartParams: {}
+      template:
+        metadata: {}
+        spec:
+          containers:
+          - image: rayproject/ray:2.46.0
+            name: ray-head
+            resources:
+              limits:
+                cpu: "1"
+              requests:
+                cpu: 200m
+          schedulerName: kai-scheduler
+    rayVersion: 2.46.0
+    workerGroupSpecs:
+    - groupName: gpu-workers
+      maxReplicas: 4
+      minReplicas: 4
+      numOfHosts: 1
+      rayStartParams: {}
+      replicas: 4
+      scaleStrategy: {}
+      template:
+        metadata: {}
+        spec:
+          containers:
+          - image: rayproject/ray:2.46.0
+            name: ray-worker
+            resources:
+              limits:
+                cpu: "1"
+                nvidia.com/gpu: "8"
+              requests:
+                cpu: 200m
+          schedulerName: kai-scheduler
+    - groupName: gpu-shmorkers
+      maxReplicas: 4
+      minReplicas: 4
+      numOfHosts: 1
+      rayStartParams: {}
+      replicas: 4
+      scaleStrategy: {}
+      template:
+        metadata: {}
+        spec:
+          containers:
+          - image: rayproject/ray:2.46.0
+            name: ray-worker
+            resources:
+              limits:
+                cpu: "1"
+                nvidia.com/gpu: "8"
+              requests:
+                cpu: 200m
+          schedulerName: kai-scheduler
+  status:
+    conditions:
+    - lastTransitionTime: "2026-02-25T14:58:46Z"
+      message: ""
+      reason: Unknown
+      status: "False"
+      type: HeadPodReady
+    - lastTransitionTime: "2026-02-25T14:58:46Z"
+      message: RayCluster Pods are being provisioned for first time
+      reason: RayClusterPodsProvisioning
+      status: "False"
+      type: RayClusterProvisioned
+    - lastTransitionTime: "2026-02-25T14:58:46Z"
+      message: ""
+      reason: RayClusterSuspended
+      status: "False"
+      type: RayClusterSuspended
+    - lastTransitionTime: "2026-02-25T14:58:46Z"
+      message: ""
+      reason: RayClusterSuspending
+      status: "False"
+      type: RayClusterSuspending
+    desiredCPU: 1800m
+    desiredGPU: "64"
+    desiredMemory: "0"
+    desiredTPU: "0"
+    desiredWorkerReplicas: 8
+    endpoints:
+      client: "10001"
+      dashboard: "8265"
+      gcs-server: "6379"
+      metrics: "8080"
+      serve: "8000"
+    head:
+      podName: rayjob-team-a-47fh9-head-sd67z
+      serviceName: rayjob-team-a-47fh9-head-svc
+    lastUpdateTime: "2026-02-25T14:58:46Z"
+    maxWorkerReplicas: 8
+    minWorkerReplicas: 8
+    observedGeneration: 1
+kind: List
+metadata:
+  resourceVersion: ""
