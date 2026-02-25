@@ -7,6 +7,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/accumulated_scenario_filters"
+	idle_gpus_filter "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/accumulated_scenario_filters/idle_gpus"
 	solverscenario "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/scenario"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -45,7 +46,15 @@ func NewPodAccumulatedScenarioBuilder(
 	}
 
 	var scenarioFilters []accumulated_scenario_filters.Interface
-	idleGpusScenarioFilter := accumulated_scenario_filters.NewIdleGpusFilter(scenario, session.ClusterInfo.Nodes)
+
+	// Basic topology-aware gpu capacity filter
+	topologyAwareFilter := idle_gpus_filter.NewTopologyAwareIdleGpusFilter(scenario, session.ClusterInfo.Nodes)
+	if topologyAwareFilter != nil {
+		scenarioFilters = append(scenarioFilters, topologyAwareFilter)
+	}
+
+	// Full cluster-level idle GPUs filter
+	idleGpusScenarioFilter := idle_gpus_filter.NewIdleGpusFilter(scenario, session.ClusterInfo.Nodes)
 	if idleGpusScenarioFilter != nil {
 		scenarioFilters = append(scenarioFilters, idleGpusScenarioFilter)
 	}

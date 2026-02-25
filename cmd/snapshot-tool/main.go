@@ -17,9 +17,9 @@ import (
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	featureutil "k8s.io/apiserver/pkg/util/feature"
+	version "k8s.io/apimachinery/pkg/version"
+	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/kubernetes/pkg/features"
 
 	kaischedulerfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
@@ -63,7 +63,7 @@ func main() {
 	actions.InitDefaultActions()
 	plugins.InitDefaultPlugins()
 
-	kubeClient, kaiClient := loadClientsWithSnapshot(snapshot.RawObjects)
+	kubeClient, kaiClient := loadClientsWithSnapshot(snapshot.RawObjects, snapshot.Discovery)
 
 	schedulerCacheParams := &cache.SchedulerCacheParams{
 		KubeClient:                  kubeClient,
@@ -83,10 +83,6 @@ func main() {
 	stopCh := make(chan struct{})
 	schedulerCache.Run(stopCh)
 	schedulerCache.WaitForCacheSync(stopCh)
-
-	if err := enableDRAFeatureGate(); err != nil {
-		log.InfraLogger.V(2).Warnf("Failed to enable DRA feature gate: %v", err)
-	}
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -147,9 +143,10 @@ func loadSnapshot(filename string) (*snapshot.Snapshot, error) {
 	return nil, os.ErrNotExist
 }
 
-func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.Clientset, *kaischedulerfake.Clientset) {
+func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects, discoverySnapshot *snapshot.DiscoverySnapshot) (*fake.Clientset, *kaischedulerfake.Clientset) {
 	kubeClient := fake.NewSimpleClientset()
 	kaiClient := kaischedulerfake.NewSimpleClientset()
+	applyDiscoverySnapshot(kubeClient, discoverySnapshot)
 
 	for _, pod := range rawObjects.Pods {
 		_, err := kubeClient.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, v1.CreateOptions{})
@@ -259,7 +256,23 @@ func loadClientsWithSnapshot(rawObjects *snapshot.RawKubernetesObjects) (*fake.C
 	return kubeClient, kaiClient
 }
 
-func enableDRAFeatureGate() error {
-	return featureutil.DefaultMutableFeatureGate.SetFromMap(
-		map[string]bool{string(features.DynamicResourceAllocation): true})
+func applyDiscoverySnapshot(kubeClient *fake.Clientset, discoverySnapshot *snapshot.DiscoverySnapshot) {
+	if kubeClient == nil || discoverySnapshot == nil {
+		return
+	}
+
+	fakeDiscoveryClient, ok := kubeClient.Discovery().(*fakediscovery.FakeDiscovery)
+	if !ok {
+		return
+	}
+
+	if discoverySnapshot.ServerVersion != nil {
+		fakeDiscoveryClient.FakedServerVersion = &version.Info{
+			Major: discoverySnapshot.ServerVersion.Major,
+			Minor: discoverySnapshot.ServerVersion.Minor,
+		}
+	}
+	if discoverySnapshot.Resources != nil {
+		kubeClient.Resources = discoverySnapshot.Resources
+	}
 }
