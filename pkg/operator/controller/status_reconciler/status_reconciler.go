@@ -206,33 +206,14 @@ func (r *StatusReconciler) getDependenciesFulfilledCondition(ctx context.Context
 }
 
 func (r *StatusReconciler) getReadyCondition(ctx context.Context, gen int64) metav1.Condition {
-	available, err := r.deployable.IsAvailable(ctx, r.Client)
-	if err != nil {
-		return metav1.Condition{
-			Type:               string(kaiv1.ConditionTypeReady),
-			Status:             metav1.ConditionFalse,
-			Reason:             string(kaiv1.NotReady),
-			Message:            err.Error(),
-			ObservedGeneration: gen,
-			LastTransitionTime: metav1.Now(),
-		}
+	condition := r.getAvailableCondition(ctx, gen)
+	condition.Type = string(kaiv1.ConditionTypeReady)
+	if condition.Status == metav1.ConditionTrue {
+		condition.Reason = string(kaiv1.Ready)
+		condition.Message = "System is ready"
+	} else {
+		condition.Reason = string(kaiv1.NotReady)
+		condition.Message = "System not ready"
 	}
-	if available {
-		return metav1.Condition{
-			Type:               string(kaiv1.ConditionTypeReady),
-			Status:             metav1.ConditionTrue,
-			Reason:             string(kaiv1.Ready),
-			Message:            "System is ready",
-			ObservedGeneration: gen,
-			LastTransitionTime: metav1.Now(),
-		}
-	}
-	return metav1.Condition{
-		Type:               string(kaiv1.ConditionTypeReady),
-		Status:             metav1.ConditionFalse,
-		Reason:             string(kaiv1.NotReady),
-		Message:            "System not ready",
-		ObservedGeneration: gen,
-		LastTransitionTime: metav1.Now(),
-	}
+	return condition
 }
