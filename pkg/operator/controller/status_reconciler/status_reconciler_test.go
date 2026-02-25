@@ -81,7 +81,7 @@ var _ = Describe("Status Controller", func() {
 				if condition.Type == string(kaiv1.ConditionTypeReconciling) &&
 					condition.Status == metav1.ConditionTrue &&
 					condition.ObservedGeneration == kaiConfig.Generation &&
-				condition.Reason == string(kaiv1.Reconciling) {
+					condition.Reason == string(kaiv1.Reconciling) {
 					found = true
 				}
 			}
