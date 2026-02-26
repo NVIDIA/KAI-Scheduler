@@ -67,7 +67,7 @@ func (naf *NodeAffinitiesFilter) initNodeMaps(feasibleNodeInfos map[string]*node
 
 func preemptorHasPodsWithNodeAffinities(scenario *scenario.ByNodeScenario) bool {
 	for _, task := range scenario.PendingTasks() {
-		if hasNodeAffinity(task) {
+		if hasRequiredNodeAffinity(task) {
 			return true
 		}
 	}
@@ -108,8 +108,7 @@ func (naf *NodeAffinitiesFilter) updateVictimNodesFromTask(task *pod_info.PodInf
 
 func (naf *NodeAffinitiesFilter) allPendingPodsHaveMatchingNodes(scenario *scenario.ByNodeScenario) bool {
 	for _, task := range scenario.PendingTasks() {
-		hasNodeAffinity := hasNodeAffinity(task)
-		if !hasNodeAffinity {
+		if !hasRequiredNodeAffinity(task) {
 			continue
 		}
 		if !naf.hasNodeMatchingPodInSet(task) {
@@ -119,17 +118,17 @@ func (naf *NodeAffinitiesFilter) allPendingPodsHaveMatchingNodes(scenario *scena
 	return true
 }
 
-func hasNodeAffinity(task *pod_info.PodInfo) bool {
+func hasRequiredNodeAffinity(task *pod_info.PodInfo) bool {
 	if task.Pod == nil {
 		return false
 	}
 	if task.Pod.Spec.NodeSelector != nil {
 		return true
 	}
-	if task.Pod.Spec.Affinity != nil && task.Pod.Spec.Affinity.NodeAffinity != nil {
-		return true
+	if task.Pod.Spec.Affinity == nil || task.Pod.Spec.Affinity.NodeAffinity == nil {
+		return false
 	}
-	return false
+	return task.Pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil
 }
 
 func (naf *NodeAffinitiesFilter) hasNodeMatchingPodInSet(task *pod_info.PodInfo) bool {
@@ -162,7 +161,8 @@ func (naf *NodeAffinitiesFilter) preFilteredNodeNames(
 	preFilterResult, status := preFilterPlugin.PreFilter(
 		context.Background(), state, pod, naf.feasibleNodeInfos())
 	if status != nil && status.IsSkip() {
-		return nil, true
+		// Skip means no required terms (e.g. preferred-only affinity) — all nodes remain eligible.
+		return sets.New(slices.Collect(maps.Keys(naf.feasibleNodes))...), true
 	}
 	if status != nil && !status.IsSuccess() {
 		return nil, false
@@ -170,8 +170,6 @@ func (naf *NodeAffinitiesFilter) preFilteredNodeNames(
 	if preFilterResult == nil || preFilterResult.NodeNames == nil {
 		// Per the k8s scheduler framework contract, a nil PreFilterResult (or nil NodeNames within it)
 		// means the plugin has no node restriction to apply — all nodes passed to PreFilter remain eligible.
-		// Returning nil here would be misread by the caller as "skip filtering entirely", so we
-		// explicitly expand to the full feasible set.
 		return sets.New(slices.Collect(maps.Keys(naf.feasibleNodes))...), true
 	}
 	return preFilterResult.NodeNames, true

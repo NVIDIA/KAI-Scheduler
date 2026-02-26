@@ -153,6 +153,39 @@ func podWithNodeAffinityMatchFields(uid, name, jobID, targetNodeName string) *po
 	})
 }
 
+func podWithPreferredNodeAffinityOnly(uid, name, jobID, labelKey, labelValue string, weight int32) *pod_info.PodInfo {
+	return pod_info.NewTaskInfo(&v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:       types.UID(uid),
+			Name:      name,
+			Namespace: "test",
+			Annotations: map[string]string{
+				commonconstants.PodGroupAnnotationForPod: jobID,
+			},
+		},
+		Spec: v1.PodSpec{
+			Affinity: &v1.Affinity{
+				NodeAffinity: &v1.NodeAffinity{
+					PreferredDuringSchedulingIgnoredDuringExecution: []v1.PreferredSchedulingTerm{
+						{
+							Weight: weight,
+							Preference: v1.NodeSelectorTerm{
+								MatchExpressions: []v1.NodeSelectorRequirement{
+									{
+										Key:      labelKey,
+										Operator: v1.NodeSelectorOpIn,
+										Values:   []string{labelValue},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
 func podWithoutAffinity(uid, name, jobID string) *pod_info.PodInfo {
 	return pod_info.NewTaskInfo(&v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -192,6 +225,17 @@ func TestNewNodeAffinitiesFilter_NilScenario(t *testing.T) {
 func TestNewNodeAffinitiesFilter_NoPendingTasksWithNodeAffinity(t *testing.T) {
 	// Pending tasks exist but none have node affinity — NewNodeAffinitiesFilter should return nil
 	task := podWithoutAffinity("uid-1", "plain-pod", "job-1")
+	pg := podgroup_info.NewPodGroupInfo("job-1", task)
+	ssn := newTestSession(t, map[string]*node_info.NodeInfo{}, map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{"job-1": pg})
+
+	sc := scenario.NewByNodeScenario(ssn, nil, pg, []*pod_info.PodInfo{}, []*podgroup_info.PodGroupInfo{})
+	filter := NewNodeAffinitiesFilter(sc, map[string]*node_info.NodeInfo{}, ssn)
+	assert.Nil(t, filter)
+}
+
+func TestNewNodeAffinitiesFilter_PreferredOnlyNodeAffinityReturnsNil(t *testing.T) {
+	// Preferred-only node affinity is not a hard constraint — filter should not be created
+	task := podWithPreferredNodeAffinityOnly("uid-1", "pod-1", "job-1", "gpu-type", "A100", 100)
 	pg := podgroup_info.NewPodGroupInfo("job-1", task)
 	ssn := newTestSession(t, map[string]*node_info.NodeInfo{}, map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{"job-1": pg})
 
@@ -336,6 +380,20 @@ func TestNodeAffinitiesFilter_Filter(t *testing.T) {
 				victimPodOnNode("victim-uid", "victim-pod", "job-victim", "node-v100"),
 			},
 			wantFilterResult: false,
+		},
+		{
+			name: "mixed pending pods: required affinity matches, preferred-only pod present - filter passes",
+			allNodes: map[string]*node_info.NodeInfo{
+				"node-a100": newNodeInfo(newNode("node-a100", map[string]string{"gpu-type": "A100"})),
+			},
+			feasibleNodes: map[string]*node_info.NodeInfo{
+				"node-a100": newNodeInfo(newNode("node-a100", map[string]string{"gpu-type": "A100"})),
+			},
+			pendingTasks: []*pod_info.PodInfo{
+				podWithNodeAffinity("uid-1", "pod-required", "job-1", "gpu-type", "A100"),
+				podWithPreferredNodeAffinityOnly("uid-2", "pod-preferred", "job-1", "gpu-type", "A100", 100),
+			},
+			wantFilterResult: true,
 		},
 	}
 
