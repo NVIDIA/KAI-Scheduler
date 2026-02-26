@@ -113,6 +113,10 @@ spec:
       enabled: false
     gpupack:
       enabled: true  # Device-level: pack within a node
+    gpusharingorder:
+      # Between nodes with the same amount of GPU devices
+      # this plugin prefers the one where a pod can allocate on a shared GPU
+      enabled: true
 ```
 
 The `placementStrategy` controls the `nodeplacement` plugin arguments (node-level), while `gpupack`/`gpuspread` control device-level placement within a node.
