@@ -30,13 +30,14 @@ type remainingPod struct {
 }
 
 type testData struct {
-	unschedulablePods []*corev1.Pod
-	scalingPods       []*corev1.Pod
-	remainingPods     []remainingPod
-	coolDownSeconds   *int
-	interceptFuncs    *interceptor.Funcs
-	wantErr           bool
-	isInCoolDown      bool
+	unschedulablePods        []*corev1.Pod
+	scalingPods              []*corev1.Pod
+	remainingPods            []remainingPod
+	coolDownSeconds          *int
+	unschedulableGracePeriod *int64
+	interceptFuncs           *interceptor.Funcs
+	wantErr                  bool
+	isInCoolDown             bool
 }
 
 func TestScaleAdjuster(t *testing.T) {
@@ -66,10 +67,15 @@ var _ = Describe("Scale Adjuster Test Suite", func() {
 				coolDown = *data.coolDownSeconds
 			}
 
+			gracePeriod := int64(consts.DefaultUnschedulableGracePeriod)
+			if data.unschedulableGracePeriod != nil {
+				gracePeriod = *data.unschedulableGracePeriod
+			}
+
 			scaler := scaler.NewScaler(client, consts.DefaultScalingPodImage, testutils.ScalingPodNamespace,
 				testutils.ScalingPodAppLabel, testutils.ScalingPodServiceAccount)
 			sa := NewScaleAdjuster(client, scaler, testutils.ScalingPodNamespace, int64(coolDown),
-				consts.DefaultGPUMemoryToFractionRatio, testutils.SchedulerName)
+				consts.DefaultGPUMemoryToFractionRatio, testutils.SchedulerName, gracePeriod)
 			isInCoolDown, err := sa.Adjust()
 			Expect(isInCoolDown).To(Equal(data.isInCoolDown))
 			Expect(err != nil).To(Equal(data.wantErr))
@@ -181,6 +187,109 @@ var _ = Describe("Scale Adjuster Test Suite", func() {
 					{
 						namespace:  testutils.ScalingPodNamespace,
 						name:       "ns1-pod1",
+						numDevices: ptr.To(int64(1)),
+					},
+				},
+				wantErr:      false,
+				isInCoolDown: false,
+			},
+		),
+		Entry(
+			"single unschedulable GPU fraction pod with grace period 0 - create scaling pod immediately",
+			testData{
+				unschedulablePods: []*corev1.Pod{
+					testutils.CreateUnschedulableFractionPod("pod1", "ns1", "0.7", 1),
+				},
+				scalingPods:              []*corev1.Pod{},
+				unschedulableGracePeriod: ptr.To(int64(0)),
+				remainingPods: []remainingPod{
+					{
+						namespace: "ns1",
+						name:      "pod1",
+					},
+					{
+						namespace:  testutils.ScalingPodNamespace,
+						name:       "ns1-pod1",
+						numDevices: ptr.To(int64(1)),
+					},
+				},
+				wantErr:      false,
+				isInCoolDown: false,
+			},
+		),
+		Entry(
+			"young unschedulable pod with grace period - pod too young, skip creating scaling pod",
+			testData{
+				unschedulablePods: []*corev1.Pod{
+					testutils.CreateUnschedulableFractionPodWithAge("pod1", "ns1", "0.7", 1, 10), // 10 seconds old
+				},
+				scalingPods:              []*corev1.Pod{},
+				unschedulableGracePeriod: ptr.To(int64(30)), // 30 second grace period
+				remainingPods: []remainingPod{
+					{
+						namespace: "ns1",
+						name:      "pod1",
+					},
+					// No scaling pod should be created
+				},
+				wantErr:      false,
+				isInCoolDown: false,
+			},
+		),
+		Entry(
+			"old unschedulable pod with grace period - pod old enough, create scaling pod",
+			testData{
+				unschedulablePods: []*corev1.Pod{
+					testutils.CreateUnschedulableFractionPodWithAge("pod1", "ns1", "0.7", 1, 60), // 60 seconds old
+				},
+				scalingPods:              []*corev1.Pod{},
+				unschedulableGracePeriod: ptr.To(int64(30)), // 30 second grace period
+				remainingPods: []remainingPod{
+					{
+						namespace: "ns1",
+						name:      "pod1",
+					},
+					{
+						namespace:  testutils.ScalingPodNamespace,
+						name:       "ns1-pod1",
+						numDevices: ptr.To(int64(1)),
+					},
+				},
+				wantErr:      false,
+				isInCoolDown: false,
+			},
+		),
+		Entry(
+			"multiple pods with grace period - only old ones get scaling pods",
+			testData{
+				unschedulablePods: []*corev1.Pod{
+					testutils.CreateUnschedulableFractionPodWithAge("pod1", "ns1", "0.7", 1, 10), // 10 seconds old - too young
+					testutils.CreateUnschedulableFractionPodWithAge("pod2", "ns2", "0.7", 1, 60), // 60 seconds old - old enough
+					testutils.CreateUnschedulableFractionPodWithAge("pod3", "ns3", "0.7", 1, 30), // 30 seconds old - exactly at threshold
+				},
+				scalingPods:              []*corev1.Pod{},
+				unschedulableGracePeriod: ptr.To(int64(30)), // 30 second grace period
+				remainingPods: []remainingPod{
+					{
+						namespace: "ns1",
+						name:      "pod1",
+					},
+					{
+						namespace: "ns2",
+						name:      "pod2",
+					},
+					{
+						namespace: "ns3",
+						name:      "pod3",
+					},
+					{
+						namespace:  testutils.ScalingPodNamespace,
+						name:       "ns2-pod2",
+						numDevices: ptr.To(int64(1)),
+					},
+					{
+						namespace:  testutils.ScalingPodNamespace,
+						name:       "ns3-pod3",
 						numDevices: ptr.To(int64(1)),
 					},
 				},

@@ -74,7 +74,8 @@ func Run() error {
 		options.ScalingPodNamespace,
 		consts.DefaultCoolDownSeconds,
 		options.GPUMemoryToFractionRatio,
-		options.SchedulerName)
+		options.SchedulerName,
+		options.UnschedulableGracePeriod)
 
 	podReconciler := &controller.PodReconciler{
 		ScaleAdjuster:      scaleAdjuster,

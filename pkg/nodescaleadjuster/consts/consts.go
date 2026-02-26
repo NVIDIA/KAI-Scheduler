@@ -8,6 +8,7 @@ const (
 	SharedGpuPodNamespace           = "shared-gpu-pod-namespace"
 	ScalingPodContainerName         = "scaling-pod"
 	DefaultCoolDownSeconds          = 60
+	DefaultUnschedulableGracePeriod = 0
 	DefaultScalingPodImageName      = "scaling-pod"
 	DefaultScalingPodImage          = "registry/local/kai-scheduler/scalingpod" + DefaultScalingPodImageName
 	DefaultGPUMemoryToFractionRatio = 0.1

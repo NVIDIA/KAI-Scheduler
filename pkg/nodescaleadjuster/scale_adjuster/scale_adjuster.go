@@ -20,27 +20,29 @@ import (
 )
 
 type ScaleAdjuster struct {
-	client          client.Client
-	scaler          *scaler.Scaler
-	eventMutex      sync.Mutex
-	calculator      *calculator
-	namespace       string
-	lastScaleUpTime int64
-	coolDownTime    int64
-	schedulerName   string
+	client                   client.Client
+	scaler                   *scaler.Scaler
+	eventMutex               sync.Mutex
+	calculator               *calculator
+	namespace                string
+	lastScaleUpTime          int64
+	coolDownTime             int64
+	schedulerName            string
+	unschedulableGracePeriod int64
 }
 
 func NewScaleAdjuster(client client.Client, scaler *scaler.Scaler, namespace string,
-	coolDownTime int64, gpuMemoryToFractionRatio float64, schedulerName string) *ScaleAdjuster {
+	coolDownTime int64, gpuMemoryToFractionRatio float64, schedulerName string, unschedulableGracePeriod int64) *ScaleAdjuster {
 	return &ScaleAdjuster{
-		client,
-		scaler,
-		sync.Mutex{},
-		newCalculator(gpuMemoryToFractionRatio),
-		namespace,
-		-1,
-		coolDownTime,
-		schedulerName,
+		client:                   client,
+		scaler:                   scaler,
+		eventMutex:               sync.Mutex{},
+		calculator:               newCalculator(gpuMemoryToFractionRatio),
+		namespace:                namespace,
+		lastScaleUpTime:          -1,
+		coolDownTime:             coolDownTime,
+		schedulerName:            schedulerName,
+		unschedulableGracePeriod: unschedulableGracePeriod,
 	}
 }
 
@@ -153,6 +155,7 @@ func (sa *ScaleAdjuster) getUnschedulablePods() ([]*corev1.Pod, error) {
 	}
 
 	var pods []*corev1.Pod
+
 	for index, pod := range podsList.Items {
 		if pod.Spec.NodeName != "" {
 			continue
@@ -166,6 +169,18 @@ func (sa *ScaleAdjuster) getUnschedulablePods() ([]*corev1.Pod, error) {
 		if !isPodAlive(&pod) {
 			continue
 		}
+
+		if sa.unschedulableGracePeriod > 0 {
+			podAge := time.Now().Sub(pod.CreationTimestamp.Time)
+			elapsedSeconds := int64(podAge.Seconds())
+
+			if elapsedSeconds < sa.unschedulableGracePeriod {
+				log.Printf("Pod %s/%s has been unscheduled for %d seconds, waiting for grace period of %d seconds",
+					pod.Namespace, pod.Name, elapsedSeconds, sa.unschedulableGracePeriod)
+				continue
+			}
+		}
+
 		pods = append(pods, &podsList.Items[index])
 	}
 

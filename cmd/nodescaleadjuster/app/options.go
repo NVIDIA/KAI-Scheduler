@@ -19,6 +19,7 @@ type Options struct {
 	ScalingPodAppLabel       string
 	ScalingPodServiceAccount string
 	EnableLeaderElection     bool
+	UnschedulableGracePeriod int64
 
 	// k8s client options
 	Qps   int
@@ -55,6 +56,9 @@ func (o *Options) AddFlags() {
 		"leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.Int64Var(&o.UnschedulableGracePeriod,
+		"unschedulable-grace-period", consts.DefaultUnschedulableGracePeriod,
+		fmt.Sprintf("Grace period in seconds before creating scaling pods for unschedulable pods, defaults to %d (disabled)", consts.DefaultUnschedulableGracePeriod))
 	flag.IntVar(&o.Qps, "qps", 50, "Queries per second to the K8s API server")
 	flag.IntVar(&o.Burst, "burst", 300, "Burst to the K8s API server")
 }

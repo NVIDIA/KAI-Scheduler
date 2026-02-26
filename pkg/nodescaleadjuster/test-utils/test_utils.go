@@ -6,6 +6,7 @@ package test_utils
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -46,6 +47,16 @@ func CreateUnschedulableFractionPod(name, namespace string, fractionValue string
 	return CreateUnschedulablePod(name, namespace, annotations)
 }
 
+func CreateUnschedulableFractionPodWithAge(name, namespace string, fractionValue string, numDevices int, ageSeconds int64) *corev1.Pod {
+	annotations := map[string]string{
+		constants.GpuFraction: fractionValue,
+	}
+	if numDevices > 1 {
+		annotations[constants.GpuFractionsNumDevices] = strconv.Itoa(numDevices)
+	}
+	return CreateUnschedulablePodWithAge(name, namespace, annotations, ageSeconds)
+}
+
 func CreateUnschedulablePodWithGpuMemory(name, namespace string, gpuMemory string, numDevices int) *corev1.Pod {
 	annotations := map[string]string{
 		constants.GpuMemory: gpuMemory,
@@ -62,6 +73,32 @@ func CreateUnschedulablePod(name, namespace string, annotations map[string]strin
 			Name:        name,
 			Namespace:   namespace,
 			Annotations: annotations,
+		},
+		Spec: corev1.PodSpec{
+			SchedulerName: SchedulerName,
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodPending,
+			Conditions: []corev1.PodCondition{
+				{
+					Type:   corev1.PodScheduled,
+					Status: corev1.ConditionFalse,
+					Reason: corev1.PodReasonUnschedulable,
+				},
+			},
+		},
+	}
+	return pod
+}
+
+func CreateUnschedulablePodWithAge(name, namespace string, annotations map[string]string, ageSeconds int64) *corev1.Pod {
+	creationTime := metav1.NewTime(time.Now().Add(-time.Duration(ageSeconds) * time.Second))
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              name,
+			Namespace:         namespace,
+			Annotations:       annotations,
+			CreationTimestamp: creationTime,
 		},
 		Spec: corev1.PodSpec{
 			SchedulerName: SchedulerName,
