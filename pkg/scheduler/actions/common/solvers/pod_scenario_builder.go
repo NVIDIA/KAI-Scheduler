@@ -8,7 +8,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/accumulated_scenario_filters"
 	idle_gpus_filter "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/accumulated_scenario_filters/idle_gpus"
-	node_selector_filter "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/accumulated_scenario_filters/node_selector"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/accumulated_scenario_filters/node_affinities"
 	solverscenario "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/scenario"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -50,7 +50,7 @@ func NewPodAccumulatedScenarioBuilder(
 	var scenarioFilters []accumulated_scenario_filters.Interface
 
 	// Filter scenario if it has any pods with node affinities that cannot be satisfied by the available nodes for allocation
-	nodeSelectorFilter := node_selector_filter.NewNodeAffinitiesFilter(scenario, feasibleNodes, session)
+	nodeSelectorFilter := node_affinities.NewNodeAffinitiesFilter(scenario, feasibleNodes, session)
 	if nodeSelectorFilter != nil {
 		scenarioFilters = append(scenarioFilters, nodeSelectorFilter)
 	}

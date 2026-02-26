@@ -1,7 +1,7 @@
 // Copyright 2025 NVIDIA CORPORATION
 // SPDX-License-Identifier: Apache-2.0
 
-package node_selector
+package node_affinities
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	nodeSelectorFilterName = "AccumulatedNodeSelector"
+	nodeAffinitiesFilterName = "AccumulatedNodeAffinities"
 )
 
 type NodeAffinitiesFilter struct {
@@ -75,7 +75,7 @@ func preemptorHasPodsWithNodeAffinities(scenario *scenario.ByNodeScenario) bool 
 }
 
 func (naf *NodeAffinitiesFilter) Name() string {
-	return nodeSelectorFilterName
+	return nodeAffinitiesFilterName
 }
 
 func (naf *NodeAffinitiesFilter) Filter(scenario *scenario.ByNodeScenario) (bool, error) {
@@ -168,7 +168,10 @@ func (naf *NodeAffinitiesFilter) preFilteredNodeNames(
 		return nil, false
 	}
 	if preFilterResult == nil || preFilterResult.NodeNames == nil {
-		// If the preFilterResult is nil or the NodeNames is nil, all nodes given to the prefilter are eligible.
+		// Per the k8s scheduler framework contract, a nil PreFilterResult (or nil NodeNames within it)
+		// means the plugin has no node restriction to apply — all nodes passed to PreFilter remain eligible.
+		// Returning nil here would be misread by the caller as "skip filtering entirely", so we
+		// explicitly expand to the full feasible set.
 		return sets.New(slices.Collect(maps.Keys(naf.feasibleNodes))...), true
 	}
 	return preFilterResult.NodeNames, true
@@ -176,17 +179,12 @@ func (naf *NodeAffinitiesFilter) preFilteredNodeNames(
 
 func (naf *NodeAffinitiesFilter) feasibleNodeInfos() []ksf.NodeInfo {
 	nodes := make([]ksf.NodeInfo, 0, len(naf.feasibleNodes))
-	seenNodeNames := make(map[string]bool, len(naf.feasibleNodes))
 	for name := range naf.feasibleNodes {
-		if seenNodeNames[name] {
-			continue
-		}
 		k8sNodeInfo := naf.allNodeInfos[name]
 		if k8sNodeInfo == nil {
 			continue
 		}
 		nodes = append(nodes, k8sNodeInfo)
-		seenNodeNames[name] = true
 	}
 	return nodes
 }
