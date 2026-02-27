@@ -82,9 +82,6 @@ var _ = Describe("Reclaim DRA", Ordered, func() {
 	})
 
 	AfterEach(func(ctx context.Context) {
-		if CurrentSpecReport().Failed() {
-			return
-		}
 		testCtx.ClusterCleanup(ctx)
 	})
 
