@@ -21,7 +21,18 @@ If the autoscaler later provisions a node that can host only one of the GPU-shar
 
 ### GPU Memory Considerations
 When GPU memory is specified instead of fractions, the number of utility pods created depends on the GPU memory of the new node - information not known in advance.
-To handle this, `node-scale-adjuster` assumes a default value of 0.1 GPU per pod when calculating memory-based requests. 
+To handle this, `node-scale-adjuster` assumes a default value of 0.1 GPU per pod when calculating memory-based requests.
 This means one utility pod is created for every 10 GPU memory requesting pods.
 You can adjust this behavior by changing the `--gpu-memory-to-fraction-ratio` flag in the `node-scale-adjuster` deployment.
+
+### Grace Period Configuration
+By default, `node-scale-adjuster` immediately creates scaling pods when unschedulable GPU-sharing pods are detected.
+In some scenarios, this can race with the default Kubernetes scheduler, causing unnecessary node provisioning when the scheduler was about to place the pod.
+
+To prevent this, you can configure a grace period using the `--unschedulable-grace-period` flag (or `unschedulableGracePeriod` in the KAI Config).
+This setting delays the creation of scaling pods until a pod has been unschedulable for the specified duration (in seconds).
+
+For example, setting `--unschedulable-grace-period=30` means scaling pods will only be created for pods that have been unschedulable for at least 30 seconds.
+The default value is `0`, i.e. scale immediately when an unschedulable pod is found.
+
 More details on supported arguments can be found [here](../../../cmd/nodescaleadjuster/app/options.go)

@@ -3546,6 +3546,12 @@ spec:
                             description: Tag is the tag of the image
                             type: string
                         type: object
+                      unschedulableGracePeriod:
+                        description: UnschedulableGracePeriod is the grace period
+                          in seconds before creating scaling pods for unschedulable
+                          pods
+                        format: int64
+                        type: integer
                     type: object
                   service:
                     properties:
