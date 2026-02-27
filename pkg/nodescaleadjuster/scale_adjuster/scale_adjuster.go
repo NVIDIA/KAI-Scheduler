@@ -166,7 +166,7 @@ func (sa *ScaleAdjuster) getUnschedulablePods() ([]*corev1.Pod, error) {
 		if !isPodAlive(&pod) {
 			continue
 		}
-		if !isPodCurrentlyUnschedulable(&pod) {
+		if !isPodUnschedulable(&pod) {
 			continue
 		}
 		pods = append(pods, &podsList.Items[index])
@@ -183,7 +183,7 @@ func isPodAlive(pod *corev1.Pod) bool {
 	return !slices.Contains([]corev1.PodPhase{corev1.PodSucceeded, corev1.PodFailed}, pod.Status.Phase)
 }
 
-func isPodCurrentlyUnschedulable(pod *corev1.Pod) bool {
+func isPodUnschedulable(pod *corev1.Pod) bool {
 	for _, condition := range pod.Status.Conditions {
 		if condition.Type == corev1.PodScheduled {
 			return condition.Status == corev1.ConditionFalse &&
