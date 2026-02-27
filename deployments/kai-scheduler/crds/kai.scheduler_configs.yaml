@@ -3551,6 +3551,7 @@ spec:
                           in seconds before creating scaling pods for unschedulable
                           pods
                         format: int64
+                        minimum: 0
                         type: integer
                     type: object
                   service:
