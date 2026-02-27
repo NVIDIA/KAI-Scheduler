@@ -56,11 +56,11 @@ func DescribeFillNodeSpecs() bool {
 		})
 
 		AfterAll(func(ctx context.Context) {
-			if err := feature_flags.SetPluginEnabled(ctx, testCtx, "gpupack", false); err != nil {
-				Fail(fmt.Sprintf("Failed to reset gpupack plugin: %v", err))
+			if err := feature_flags.UnsetPlugin(ctx, testCtx, "gpupack"); err != nil {
+				Fail(fmt.Sprintf("Failed to unset gpupack plugin: %v", err))
 			}
-			if err := feature_flags.SetPluginEnabled(ctx, testCtx, "gpuspread", false); err != nil {
-				Fail(fmt.Sprintf("Failed to reset gpuspread plugin: %v", err))
+			if err := feature_flags.UnsetPlugin(ctx, testCtx, "gpuspread"); err != nil {
+				Fail(fmt.Sprintf("Failed to unset gpuspread plugin: %v", err))
 			}
 			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, DefaultPluginName); err != nil {
 				Fail(fmt.Sprintf("Failed to restore default placement strategy: %v", err))

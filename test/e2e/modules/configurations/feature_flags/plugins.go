@@ -20,16 +20,31 @@ import (
 func SetPluginEnabled(
 	ctx context.Context, testCtx *testContext.TestContext, pluginName string, enabled bool,
 ) error {
+	return patchPlugin(ctx, testCtx, func(shard *kaiv1.SchedulingShard) {
+		if shard.Spec.Plugins == nil {
+			shard.Spec.Plugins = make(map[string]kaiv1.PluginConfig)
+		}
+		config := shard.Spec.Plugins[pluginName]
+		config.Enabled = ptr.To(enabled)
+		shard.Spec.Plugins[pluginName] = config
+	})
+}
+
+func UnsetPlugin(
+	ctx context.Context, testCtx *testContext.TestContext, pluginName string,
+) error {
+	return patchPlugin(ctx, testCtx, func(shard *kaiv1.SchedulingShard) {
+		delete(shard.Spec.Plugins, pluginName)
+	})
+}
+
+func patchPlugin(
+	ctx context.Context, testCtx *testContext.TestContext,
+	mutateFn func(shard *kaiv1.SchedulingShard),
+) error {
 	if err := configurations.PatchSchedulingShard(
 		ctx, testCtx, "default",
-		func(shard *kaiv1.SchedulingShard) {
-			if shard.Spec.Plugins == nil {
-				shard.Spec.Plugins = make(map[string]kaiv1.PluginConfig)
-			}
-			config := shard.Spec.Plugins[pluginName]
-			config.Enabled = ptr.To(enabled)
-			shard.Spec.Plugins[pluginName] = config
-		},
+		mutateFn,
 	); err != nil {
 		return err
 	}
