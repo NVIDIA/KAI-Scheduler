@@ -169,16 +169,8 @@ func (sa *ScaleAdjuster) getUnschedulablePods() ([]*corev1.Pod, error) {
 		if !isPodAlive(&pod) {
 			continue
 		}
-
-		if sa.unschedulableGracePeriod > 0 {
-			podAge := time.Now().Sub(pod.CreationTimestamp.Time)
-			elapsedSeconds := int64(podAge.Seconds())
-
-			if elapsedSeconds < sa.unschedulableGracePeriod {
-				log.Printf("Pod %s/%s has been unscheduled for %d seconds, waiting for grace period of %d seconds",
-					pod.Namespace, pod.Name, elapsedSeconds, sa.unschedulableGracePeriod)
-				continue
-			}
+		if !sa.hasExceededGracePeriod(&pod) {
+			continue
 		}
 
 		pods = append(pods, &podsList.Items[index])
@@ -193,4 +185,21 @@ func requestFractionalGPU(pod *corev1.Pod) bool {
 
 func isPodAlive(pod *corev1.Pod) bool {
 	return !slices.Contains([]corev1.PodPhase{corev1.PodSucceeded, corev1.PodFailed}, pod.Status.Phase)
+}
+
+func (sa *ScaleAdjuster) hasExceededGracePeriod(pod *corev1.Pod) bool {
+	if sa.unschedulableGracePeriod <= 0 {
+		return true
+	}
+
+	podAge := time.Now().Sub(pod.CreationTimestamp.Time)
+	elapsedSeconds := int64(podAge.Seconds())
+
+	if elapsedSeconds < sa.unschedulableGracePeriod {
+		log.Printf("Pod %s/%s has been unscheduled for %d seconds, waiting for grace period of %d seconds",
+			pod.Namespace, pod.Name, elapsedSeconds, sa.unschedulableGracePeriod)
+		return false
+	}
+
+	return true
 }
