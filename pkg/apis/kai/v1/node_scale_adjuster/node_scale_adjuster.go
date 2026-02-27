@@ -45,6 +45,7 @@ type Args struct {
 
 	// UnschedulableGracePeriod is the grace period in seconds before creating scaling pods for unschedulable pods
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=0
 	UnschedulableGracePeriod *int64 `json:"unschedulableGracePeriod,omitempty"`
 }
 
