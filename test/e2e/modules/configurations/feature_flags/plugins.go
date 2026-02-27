@@ -7,13 +7,14 @@ package feature_flags
 import (
 	"context"
 
+	"k8s.io/utils/ptr"
+
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/configurations"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/constant"
 	testContext "github.com/NVIDIA/KAI-scheduler/test/e2e/modules/context"
 	"github.com/NVIDIA/KAI-scheduler/test/e2e/modules/wait"
-	"k8s.io/utils/ptr"
 )
 
 func SetPluginEnabled(
