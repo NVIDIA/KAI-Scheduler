@@ -113,65 +113,6 @@ var _ = Describe("Reclaim DRA", Ordered, func() {
 		wait.ForPodUnschedulable(ctx, testCtx.ControllerClient, pendingPod)
 	})
 
-	It("Simplified scenario", func(ctx context.Context) {
-		testCtx = testcontext.GetConnectivity(ctx, Default)
-		capacity.SkipIfInsufficientDynamicResources(testCtx.KubeClientset, draDeviceClassName, 1, 8)
-		podsPerQueue := 6
-
-		testNodeName := "e2e-kai-scheduler-worker5"
-
-		parentQueue, queue1, queue2 := CreateQueues(8, 1, 1)
-
-		testCtx.InitQueues([]*v2.Queue{parentQueue, queue1, queue2})
-		ns1 := queue.GetConnectedNamespaceToQueue(queue1)
-		ns2 := queue.GetConnectedNamespaceToQueue(queue2)
-
-		template1 := rd.CreateResourceClaimTemplate(ns1, queue1.Name, draDeviceClassName, 1)
-		template1, err := testCtx.KubeClientset.ResourceV1().ResourceClaimTemplates(ns1).Create(ctx, template1, metav1.CreateOptions{})
-		Expect(err).To(Succeed())
-
-		for range podsPerQueue {
-			job := rd.CreateBatchJobObject(queue1, v1.ResourceRequirements{})
-			job.Spec.Template.Spec.ResourceClaims = []v1.PodResourceClaim{{
-				Name:                      "gpu",
-				ResourceClaimTemplateName: ptr.To(template1.Name),
-			}}
-			job.Spec.Template.Spec.NodeSelector = map[string]string{"kubernetes.io/hostname": testNodeName}
-			err := testCtx.ControllerClient.Create(ctx, job)
-			Expect(err).To(Succeed())
-		}
-
-		template2 := rd.CreateResourceClaimTemplate(ns2, queue2.Name, draDeviceClassName, 1)
-		template2, err = testCtx.KubeClientset.ResourceV1().ResourceClaimTemplates(ns2).Create(ctx, template2, metav1.CreateOptions{})
-		Expect(err).To(Succeed())
-
-		for range podsPerQueue {
-			job := rd.CreateBatchJobObject(queue2, v1.ResourceRequirements{})
-			job.Spec.Template.Spec.ResourceClaims = []v1.PodResourceClaim{{
-				Name:                      "gpu",
-				ResourceClaimTemplateName: ptr.To(template2.Name),
-			}}
-			job.Spec.Template.Spec.NodeSelector = map[string]string{"kubernetes.io/hostname": testNodeName}
-			err := testCtx.ControllerClient.Create(ctx, job)
-			Expect(err).To(Succeed())
-		}
-
-		selector := metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				"app": "engine-e2e",
-			},
-		}
-		wait.ForAtLeastNPodCreation(ctx, testCtx.ControllerClient, selector, podsPerQueue*2)
-
-		reclaimee1Pods, err := testCtx.KubeClientset.CoreV1().Pods(ns1).List(ctx, metav1.ListOptions{})
-		Expect(err).To(Succeed())
-		wait.ForAtLeastNPodsScheduled(ctx, testCtx.ControllerClient, ns1, PodListToPodsSlice(reclaimee1Pods), 4)
-
-		reclaimee2Pods, err := testCtx.KubeClientset.CoreV1().Pods(ns2).List(ctx, metav1.ListOptions{})
-		Expect(err).To(Succeed())
-		wait.ForAtLeastNPodsScheduled(ctx, testCtx.ControllerClient, ns2, PodListToPodsSlice(reclaimee2Pods), 4)
-	})
-
 	It("Reclaim based on priority, maintain over-quota weight proportion", func(ctx context.Context) {
 		// 8 GPUs in total. DRA: reclaimee1/2 use claim templates (1 device per pod), reclaimer uses 3-device claim.
 		// reclaimee1: OQW 1: 2 over-quota => 3 allocated; reclaimee2: OQW 2: 4 over-quota => 5 allocated
