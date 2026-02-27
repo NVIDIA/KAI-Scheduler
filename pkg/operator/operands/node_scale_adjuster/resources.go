@@ -98,5 +98,10 @@ func argsForKAIConfig(config *node_scale_adjuster.NodeScaleAdjuster, schedulerNa
 			fmt.Sprintf("%f", *config.Args.GPUMemoryToFractionRatio))
 	}
 
+	if config.Args.UnschedulableGracePeriod != nil {
+		args = append(args, "--unschedulable-grace-period",
+			fmt.Sprintf("%d", *config.Args.UnschedulableGracePeriod))
+	}
+
 	return args
 }

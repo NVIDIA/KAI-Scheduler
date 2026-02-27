@@ -9,6 +9,7 @@ import (
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/nodescaleadjuster/consts"
 )
 
 const (
@@ -41,6 +42,10 @@ type Args struct {
 	// GPUMemoryToFractionRatio is the ratio of GPU memory to fraction conversion
 	// +kubebuilder:validation:Optional
 	GPUMemoryToFractionRatio *float64 `json:"gpuMemoryToFractionRatio,omitempty"`
+
+	// UnschedulableGracePeriod is the grace period in seconds before creating scaling pods for unschedulable pods
+	// +kubebuilder:validation:Optional
+	UnschedulableGracePeriod *int64 `json:"unschedulableGracePeriod,omitempty"`
 }
 
 // SetDefaultsWhereNeeded sets default for unset fields
@@ -51,6 +56,7 @@ func (args *Args) SetDefaultsWhereNeeded() {
 
 	args.NodeScaleNamespace = common.SetDefault(args.NodeScaleNamespace, ptr.To(string(constants.DefaultScaleAdjustName)))
 	args.NodeScaleServiceAccount = common.SetDefault(args.NodeScaleServiceAccount, ptr.To(constants.DefaultScaleAdjustName))
+	args.UnschedulableGracePeriod = common.SetDefault(args.UnschedulableGracePeriod, ptr.To(int64(consts.DefaultUnschedulableGracePeriod)))
 }
 
 // SetDefaultsWhereNeeded sets default for unset fields
