@@ -1784,7 +1784,6 @@ func getFillNodeSpreadPackTestsMetadata() []integration_tests_utils.TestTopology
 									{Name: "priority"},
 									{Name: "nodeavailability"},
 									{Name: "resourcetype"},
-									{Name: "gpusharingorder"},
 								},
 							},
 						},

@@ -53,9 +53,6 @@ func DescribeFillNodeSpecs() bool {
 			if err := feature_flags.SetPluginEnabled(ctx, testCtx, "gpuspread", false); err != nil {
 				Fail(fmt.Sprintf("Failed to disable gpuspread plugin: %v", err))
 			}
-			if err := feature_flags.SetPluginEnabled(ctx, testCtx, "gpusharingorder", true); err != nil {
-				Fail(fmt.Sprintf("Failed to enable gpusharingorder plugin: %v", err))
-			}
 		})
 
 		AfterAll(func(ctx context.Context) {
@@ -64,9 +61,6 @@ func DescribeFillNodeSpecs() bool {
 			}
 			if err := feature_flags.SetPluginEnabled(ctx, testCtx, "gpuspread", false); err != nil {
 				Fail(fmt.Sprintf("Failed to reset gpuspread plugin: %v", err))
-			}
-			if err := feature_flags.SetPluginEnabled(ctx, testCtx, "gpusharingorder", false); err != nil {
-				Fail(fmt.Sprintf("Failed to reset gpusharingorder plugin: %v", err))
 			}
 			if err := feature_flags.SetPlacementStrategy(ctx, testCtx, DefaultPluginName); err != nil {
 				Fail(fmt.Sprintf("Failed to restore default placement strategy: %v", err))
