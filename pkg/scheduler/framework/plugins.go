@@ -45,6 +45,7 @@ func GetPluginBuilder(name string) (PluginBuilder, bool) {
 
 // Action management
 var actionMap = map[ActionType]Action{}
+var actionsCleanupFunction func(ssn *Session) = nil
 
 func RegisterAction(act Action) {
 	pluginMutex.Lock()
@@ -53,10 +54,18 @@ func RegisterAction(act Action) {
 	actionMap[act.Name()] = act
 }
 
+func RegisterActionsCleanupFunction(cleanup func(ssn *Session)) {
+	actionsCleanupFunction = cleanup
+}
+
 func GetAction(name string) (Action, bool) {
 	pluginMutex.Lock()
 	defer pluginMutex.Unlock()
 
 	act, found := actionMap[ActionType(name)]
 	return act, found
+}
+
+func GetActionCleanup() func(ssn *Session) {
+	return actionsCleanupFunction
 }

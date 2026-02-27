@@ -10,6 +10,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/dynamic-resource-allocation/cel"
 	"k8s.io/dynamic-resource-allocation/structured"
 	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
@@ -34,6 +35,8 @@ type draPlugin struct {
 	manager       k8sframework.SharedDRAManager
 	celCache      *cel.Cache
 	queueLabelKey string
+
+	bindingRequestAssumptions map[types.UID]*resourceapi.ResourceClaim
 }
 
 // +kubebuilder:rbac:groups="resource.k8s.io",resources=deviceclasses;resourceslices;resourceclaims,verbs=get;list;watch
@@ -47,8 +50,9 @@ func New(pluginArgs framework.PluginArguments) framework.Plugin {
 
 	features := k8s_utils.GetK8sFeatures()
 	return &draPlugin{
-		enabled:  features.EnableDynamicResourceAllocation,
-		celCache: cel.NewCache(maxCelCacheEntries, cel.Features{EnableConsumableCapacity: features.EnableConsumableCapacity}),
+		enabled:                   features.EnableDynamicResourceAllocation,
+		celCache:                  cel.NewCache(maxCelCacheEntries, cel.Features{EnableConsumableCapacity: features.EnableConsumableCapacity}),
+		bindingRequestAssumptions: make(map[types.UID]*resourceapi.ResourceClaim),
 	}
 }
 
@@ -144,7 +148,9 @@ func (drap *draPlugin) assumePendingClaim(claim *schedulingv1alpha2.ResourceClai
 	resources.UpsertReservedFor(updatedClaim, pod)
 	updatedClaim.Status.Allocation = claim.Allocation
 
-	return drap.manager.ResourceClaims().SignalClaimPendingAllocation(updatedClaim.UID, updatedClaim)
+	drap.bindingRequestAssumptions[updatedClaim.UID] = updatedClaim
+
+	return drap.manager.ResourceClaims().AssumeClaimAfterAPICall(updatedClaim)
 }
 
 func (drap *draPlugin) preFilter(task *pod_info.PodInfo, job *podgroup_info.PodGroupInfo) error {
@@ -247,7 +253,11 @@ func (drap *draPlugin) deallocateHandlerFn(_ *framework.Session) func(event *fra
 	}
 }
 
-func (drap *draPlugin) OnSessionClose(_ *framework.Session) {}
+func (drap *draPlugin) OnSessionClose(_ *framework.Session) {
+	for _, claim := range drap.bindingRequestAssumptions {
+		drap.manager.ResourceClaims().AssumedClaimRestore(claim.Namespace, claim.Name)
+	}
+}
 
 func (drap *draPlugin) allocateResourceClaim(task *pod_info.PodInfo, podClaim *v1.PodResourceClaim, node *v1.Node) error {
 	claimName, err := resources.GetResourceClaimName(task.Pod, podClaim)
