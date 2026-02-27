@@ -94,22 +94,19 @@ fi
 if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
     cd ${REPO_ROOT}
     echo "Building docker images with version $PACKAGE_VERSION..."
-    make build VERSION=$PACKAGE_VERSION
+    make build DOCKER_REPO_BASE=localhost:30100 VERSION=$PACKAGE_VERSION
 
     # Start port-forward to local registry
-    kubectl port-forward -n kube-registry deploy/registry 5000:5000 &
+    kubectl port-forward -n kube-registry deploy/registry 30100:5000 &
     PORT_FORWARD_PID=$!
+    trap "kill $PORT_FORWARD_PID 2>/dev/null || true" EXIT
     sleep 2
 
     # Push images to local registry
     echo "Pushing images to local registry..."
     for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
-        new_image=$(echo "$image" | sed -E 's|.*/([^/]+:[^/]+)$|localhost:5000/\1|')
-        docker tag $image $new_image
-        docker push $new_image
+        docker push $image
     done
-
-    kill $PORT_FORWARD_PID 2>/dev/null || true
 
     # Package and install helm chart
     helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
