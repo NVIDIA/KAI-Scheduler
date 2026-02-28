@@ -481,11 +481,12 @@ func TestSnapshotNodes(t *testing.T) {
 			clusterPodAffinityInfo.EXPECT().AddNode(gomock.Any(), gomock.Any()).AnyTimes()
 
 			allPods, _ := clusterInfo.dataLister.ListPods()
-			nodes, _, err := clusterInfo.snapshotNodes(clusterPodAffinityInfo)
+			vectorMap := resource_info.NewResourceVectorMap()
+			nodes, _, err := clusterInfo.snapshotNodes(clusterPodAffinityInfo, vectorMap)
 			if err != nil {
 				assert.FailNow(t, fmt.Sprintf("SnapshotNode got error in test %s", t.Name()), err)
 			}
-			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil, nil)
+			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil, nil, vectorMap)
 
 			assert.Equal(t, len(test.resultNodes), len(nodes))
 			assert.Equal(t, test.resultPodsLen, len(pods))
@@ -1239,7 +1240,7 @@ func TestSnapshotPodGroups(t *testing.T) {
 		existingPods := map[common_info.PodID]*pod_info.PodInfo{}
 		podGroups, err := clusterInfo.snapshotPodGroups(
 			map[common_info.QueueID]*queue_info.QueueInfo{"queue-0": predefinedQueue},
-			existingPods)
+			existingPods, resource_info.NewResourceVectorMap())
 		if err != nil {
 			assert.FailNow(t, fmt.Sprintf("SnapshotNode got error in test %v", name), err)
 		}
@@ -1307,7 +1308,7 @@ func TestSnapshotPodGroups_QueueDoesNotExist_AddsJobFitError(t *testing.T) {
 	existingPods := map[common_info.PodID]*pod_info.PodInfo{}
 	podGroups, err := clusterInfo.snapshotPodGroups(
 		map[common_info.QueueID]*queue_info.QueueInfo{"queue-0": predefinedQueue},
-		existingPods)
+		existingPods, resource_info.NewResourceVectorMap())
 
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(podGroups), "Expected 1 podgroup even with missing queue")
@@ -2502,7 +2503,8 @@ func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
 				clusterPodAffinityInfo: clusterPodAffinityInfo,
 			}
 
-			nodes, _, err := ci.snapshotNodes(clusterPodAffinityInfo)
+			vectorMap := resource_info.NewResourceVectorMap()
+			nodes, _, err := ci.snapshotNodes(clusterPodAffinityInfo, vectorMap)
 			assert.NoError(t, err)
 
 			for nodeName, expectedGPUs := range test.expectedDRAGPUs {

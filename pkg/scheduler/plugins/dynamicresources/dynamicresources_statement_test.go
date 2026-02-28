@@ -22,6 +22,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/eviction_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/dra_fake"
@@ -550,7 +551,7 @@ func TestStatementEvictUnevict_WithDRAClaims(t *testing.T) {
 
 			if test.bindRequest != nil {
 				bindRequestInfo := bindrequest_info.NewBindRequestInfo(test.bindRequest)
-				newTask := pod_info.NewTaskInfoWithBindRequest(task.Pod, bindRequestInfo, ssn.ClusterInfo.ResourceClaims...)
+				newTask := pod_info.NewTaskInfoWithBindRequest(task.Pod, bindRequestInfo, ssn.ClusterInfo.ResourceClaims, resource_info.NewResourceVectorMap())
 
 				for _, podSet := range job.PodSets {
 					if _, exists := podSet.GetPodInfos()[task.UID]; exists {
