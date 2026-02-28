@@ -217,6 +217,13 @@ func (in *GlobalConfig) DeepCopyInto(out *GlobalConfig) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.NodeSelector != nil {
+		in, out := &in.NodeSelector, &out.NodeSelector
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.Tolerations != nil {
 		in, out := &in.Tolerations, &out.Tolerations
 		*out = make([]corev1.Toleration, len(*in))

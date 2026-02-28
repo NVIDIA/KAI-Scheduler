@@ -3244,6 +3244,12 @@ spec:
                     description: NodePoolLabelKey is the label name by with to filter
                       nodes, pods and other resources that the scheduler is watching
                     type: string
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    description: NodeSelector defines node selector for KAI operators
+                      & services
+                    type: object
                   openshift:
                     description: Openshift configures the operator to install on Openshift
                     type: boolean
