@@ -88,7 +88,7 @@ func DescribeFillNodeSpecs() bool {
 			}
 
 			namespace := queue.GetConnectedNamespaceToQueue(testCtx.Queues[0])
-			wait.ForPodsScheduled(ctx, testCtx.ControllerClient, namespace, pods)
+			wait.ForPodsReady(ctx, testCtx.ControllerClient, namespace, pods)
 
 			reservationPods, err := testCtx.KubeClientset.CoreV1().
 				Pods(constant.KaiReservationNamespace).
