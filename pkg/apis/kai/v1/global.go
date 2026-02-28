@@ -35,6 +35,10 @@ type GlobalConfig struct {
 	// +kubebuilder:validation:Optional
 	ImagePullSecrets []string `json:"additionalImagePullSecrets,omitempty"`
 
+	// NodeSelector defines node selector for KAI operators & services
+	// +kubebuilder:validation:Optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
 	// Tolerations defines tolerations for KAI operators & services
 	// +kubebuilder:validation:Optional
 	Tolerations []v1.Toleration `json:"tolerations,omitempty"`
