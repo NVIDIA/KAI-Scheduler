@@ -111,7 +111,7 @@ if [ "$LOCAL_IMAGES_BUILD" = "true" ]; then
     # Package and install helm chart
     helm package ./deployments/kai-scheduler -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
     helm upgrade -i kai-scheduler ./charts/kai-scheduler-$PACKAGE_VERSION.tgz -n kai-scheduler --create-namespace \
-        --set "global.gpuSharing=true" --set "global.registry=localhost:30100" --debug --wait
+        --set "global.gpuSharing=true" --set "global.registry=localhost:30100" --debug --wait --values ${REPO_ROOT}/leader_election_values.yaml
     rm -rf ./charts/kai-scheduler-$PACKAGE_VERSION.tgz
     cd ${REPO_ROOT}/hack
 else

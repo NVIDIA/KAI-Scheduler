@@ -1,0 +1,20 @@
+# Copyright 2026 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+admission:
+  replicas: 3
+binder:
+  replicas: 3
+global:
+  leaderElection: true
+  requireDefaultPodAntiAffinityTerm: true
+operator:
+  replicaCount: 3
+podgroupcontroller:
+  replicas: 3
+podgrouper:
+  replicas: 3
+queuecontroller:
+  replicas: 3
+scheduler:
+  replicas: 3
