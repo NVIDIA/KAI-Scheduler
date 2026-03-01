@@ -1041,5 +1041,22 @@ var _ = Describe("Scale Adjuster Test Suite", func() {
 				isInCoolDown: false,
 			},
 		),
+		Entry(
+			"pending pod without unschedulable condition - nothing to adjust",
+			testData{
+				unschedulablePods: []*corev1.Pod{
+					testutils.CreatePendingFractionPod("pod1", "ns1", "0.7", 1),
+				},
+				scalingPods: []*corev1.Pod{},
+				remainingPods: []remainingPod{
+					{
+						namespace: "ns1",
+						name:      "pod1",
+					},
+				},
+				wantErr:      false,
+				isInCoolDown: false,
+			},
+		),
 	)
 })
