@@ -289,7 +289,7 @@ func pingExternalPrometheus(ctx context.Context, prometheusURL string, timeout i
 
 		// Check if we got a successful response
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			lastErr = fmt.Errorf("external Prometheus returned status code %d, statusURL: %s", resp.StatusCode, statusURL)
 			if attempt < maxRetries {
 				backoff := time.Duration(attempt) * time.Second
@@ -299,7 +299,7 @@ func pingExternalPrometheus(ctx context.Context, prometheusURL string, timeout i
 			continue
 		}
 
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil
 	}
 

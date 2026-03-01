@@ -84,7 +84,7 @@ func DescribeXGBoostSpecs() bool {
 			}()
 			Eventually(func(g Gomega) bool {
 				pods := &v1.PodList{}
-				testCtx.ControllerClient.List(ctx, pods, runtimeClient.InNamespace(xgBoostJob.Namespace))
+				g.Expect(testCtx.ControllerClient.List(ctx, pods, runtimeClient.InNamespace(xgBoostJob.Namespace))).To(Succeed())
 
 				g.Expect(len(pods.Items)).To(Equal(expectedPods))
 				for _, pod := range pods.Items {

@@ -120,7 +120,7 @@ func loadSnapshot(filename string) (*snapshot.Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer zipFile.Close()
+	defer zipFile.Close() //nolint:errcheck
 
 	for _, file := range zipFile.File {
 		if file.Name == snapshot.SnapshotFileName {
@@ -128,7 +128,7 @@ func loadSnapshot(filename string) (*snapshot.Snapshot, error) {
 			if err != nil {
 				return nil, err
 			}
-			defer jsonFile.Close()
+			defer jsonFile.Close() //nolint:errcheck
 
 			var snapshot snapshot.Snapshot
 			err = json.NewDecoder(jsonFile).Decode(&snapshot)
