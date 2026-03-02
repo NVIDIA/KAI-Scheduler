@@ -48,9 +48,6 @@ It can run alongside other schedulers installed on the cluster.
 > [!NOTE]
 > KAI Scheduler is built based on [kube-batch](https://github.com/kubernetes-sigs/kube-batch).
 
-> [!NOTE]
-> KAI Scheduler is built based on [kube-batch](https://github.com/kubernetes-sigs/kube-batch).
-
 ## Prerequisites
 
 Before installing KAI Scheduler, ensure you have:
