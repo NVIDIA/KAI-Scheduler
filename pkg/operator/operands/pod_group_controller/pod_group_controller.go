@@ -62,6 +62,10 @@ func (p *PodGroupController) DesiredState(
 		objects = append(objects, obj...)
 	}
 
+	if vpa := common.BuildVPAFromObjects(kaiConfig.Spec.PodGroupController.VPA, objects, kaiConfig.Spec.Namespace); vpa != nil {
+		objects = append(objects, vpa)
+	}
+
 	p.lastDesiredState = objects
 	return objects, nil
 }

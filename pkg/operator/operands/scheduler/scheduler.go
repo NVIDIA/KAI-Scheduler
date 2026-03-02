@@ -68,6 +68,10 @@ func (s *SchedulerForShard) DesiredState(
 		objects = append(objects, object)
 	}
 
+	if vpa := common.BuildVPAFromObjects(kaiConfig.Spec.Scheduler.VPA, objects, kaiConfig.Spec.Namespace); vpa != nil {
+		objects = append(objects, vpa)
+	}
+
 	s.lastDesiredState = objects
 
 	return s.lastDesiredState, nil

@@ -62,6 +62,10 @@ func (a *Admission) DesiredState(
 		objects = append(objects, newResources...)
 	}
 
+	if vpa := common.BuildVPAFromObjects(kaiConfig.Spec.Admission.VPA, objects, kaiConfig.Spec.Namespace); vpa != nil {
+		objects = append(objects, vpa)
+	}
+
 	a.lastDesiredState = objects
 	return objects, nil
 }

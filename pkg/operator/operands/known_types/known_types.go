@@ -47,6 +47,7 @@ func init() {
 	registerValidatingWebhookConfigurations()
 	registerCustomResourceDefinitions()
 	registerPrometheus()
+	registerVerticalPodAutoscalers()
 }
 
 func SetupKAIConfigOwned(fn *Collectable) {
