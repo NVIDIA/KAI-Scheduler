@@ -13,19 +13,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/binder/common/gpusharingconfigmap"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 )
 
 const (
-	visibleDevicesBC  = "RUNAI-VISIBLE-DEVICES" // Deprecated, this value was replaced with NVIDIA_VISIBLE_DEVICES
-	NumOfGpusEnvVarBC = "RUNAI_NUM_OF_GPUS"     // Deprecated, please use GPU_PORTION env var instead
+	visibleDevicesBC         = "RUNAI-VISIBLE-DEVICES" // Deprecated, this value was replaced with NVIDIA_VISIBLE_DEVICES
+	NumOfGpusEnvVarBC        = "RUNAI_NUM_OF_GPUS"     // Deprecated, please use GPU_PORTION env var instead
+	defaultFractionContainer = 0
 )
 
 func AddGPUSharingEnvVars(container *v1.Container, sharedGpuConfigMapName string) {
 	AddEnvVarToContainer(container, v1.EnvVar{
-		Name: NvidiaVisibleDevices,
+		Name: constants.NvidiaVisibleDevices,
 		ValueFrom: &v1.EnvVarSource{
 			ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-				Key: NvidiaVisibleDevices,
+				Key: constants.NvidiaVisibleDevices,
 				LocalObjectReference: v1.LocalObjectReference{
 					Name: sharedGpuConfigMapName,
 				},
@@ -64,7 +66,7 @@ func SetNvidiaVisibleDevices(
 ) error {
 	nvidiaVisibleDevicesDefinedInSpec := false
 	for _, envVar := range containerRef.Container.Env {
-		if envVar.Name == NvidiaVisibleDevices && envVar.ValueFrom != nil &&
+		if envVar.Name == constants.NvidiaVisibleDevices && envVar.ValueFrom != nil &&
 			envVar.ValueFrom.ConfigMapKeyRef != nil {
 			nvidiaVisibleDevicesDefinedInSpec = true
 		}
@@ -87,7 +89,7 @@ func SetNvidiaVisibleDevices(
 		if _, found := data[visibleDevicesBC]; found {
 			data[visibleDevicesBC] = visibleDevicesValue
 		}
-		data[NvidiaVisibleDevices] = visibleDevicesValue
+		data[constants.NvidiaVisibleDevices] = visibleDevicesValue
 		return nil
 	}
 	err = UpdateConfigMapEnvironmentVariable(ctx, kubeClient, pod, configMapName, updateFunc)
@@ -154,4 +156,43 @@ func UpdateConfigMapEnvironmentVariable(
 	}
 
 	return nil
+}
+
+func GetFractionContainerRef(pod *v1.Pod) (*gpusharingconfigmap.PodContainerRef, error) {
+	defaultContainerRef := &gpusharingconfigmap.PodContainerRef{
+		Container: &pod.Spec.Containers[defaultFractionContainer],
+		Index:     defaultFractionContainer,
+		Type:      gpusharingconfigmap.RegularContainer,
+	}
+
+	name, found := pod.Annotations[constants.GpuFractionContainerName]
+	if !found {
+		return defaultContainerRef, nil
+	}
+
+	for index, container := range pod.Spec.InitContainers {
+		if container.Name != name {
+			continue
+		}
+
+		return &gpusharingconfigmap.PodContainerRef{
+			Container: &pod.Spec.InitContainers[index],
+			Index:     index,
+			Type:      gpusharingconfigmap.InitContainer,
+		}, nil
+	}
+
+	for index, container := range pod.Spec.Containers {
+		if container.Name != name {
+			continue
+		}
+
+		return &gpusharingconfigmap.PodContainerRef{
+			Container: &pod.Spec.Containers[index],
+			Index:     index,
+			Type:      gpusharingconfigmap.RegularContainer,
+		}, nil
+	}
+
+	return nil, fmt.Errorf("container with name %s not found for fraction request", name)
 }

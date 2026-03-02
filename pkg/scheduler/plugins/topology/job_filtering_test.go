@@ -8,13 +8,12 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/samber/lo"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
@@ -66,11 +65,19 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					CPUMillis:  1000,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+						"rack": "rack1",
+					},
 				},
 				"node-2": {
 					CPUMillis:  400,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+						"rack": "rack2",
+					},
 				},
 			},
 			nodesToDomains: map[string]DomainID{
@@ -80,9 +87,111 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				tree := &Info{
 					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
+								{NodeLabel: "zone"},
+								{NodeLabel: "rack"},
+							},
+						},
+					},
+					DomainsByLevel: map[DomainLevel]LevelDomainInfos{
+						"rack": {
+							"rack1.zone1": {
+								ID:                       "rack1.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+							},
+							"rack2.zone1": {
+								ID:                       "rack2.zone1",
+								Level:                    "rack",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+							},
+						},
+						"zone": {
+							"zone1": {
+								ID:                       "zone1",
+								Level:                    "zone",
+								Nodes:                    map[string]*node_info.NodeInfo{},
+								IdleOrReleasingResources: resource_info.NewResource(0, 0, 0),
+							},
+						},
+					},
+				}
+
+				tree.DomainsByLevel[rootLevel] = map[DomainID]*DomainInfo{
+					rootDomainId: tree.DomainsByLevel["zone"]["zone1"],
+				}
+
+				// Set parent relationships
+				tree.DomainsByLevel["zone"]["zone1"].Children = []*DomainInfo{
+					tree.DomainsByLevel["rack"]["rack1.zone1"],
+					tree.DomainsByLevel["rack"]["rack2.zone1"],
+				}
+
+				return tree
+			},
+			domainParent: map[DomainID]DomainID{
+				"rack1.zone1": "zone1",
+				"rack2.zone1": "zone1",
+			},
+			domainLevel: map[DomainID]DomainLevel{
+				"zone1": "zone",
+			},
+			expectedError: "",
+			expectedNodesFirstSubset: map[string]bool{
+				"node-1": true,
+			},
+		},
+		{
+			name: "successful topology allocation - required equal preferred",
+			job: &jobs_fake.TestJobBasic{
+				Name:                "test-job",
+				RequiredCPUsPerTask: 500,
+				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
+					&topology_info.TopologyConstraintInfo{
+						Topology:       "test-topology",
+						RequiredLevel:  "rack",
+						PreferredLevel: "rack",
+					},
+				),
+				Tasks: []*tasks_fake.TestTaskBasic{
+					{State: pod_status.Pending},
+					{State: pod_status.Pending},
+				},
+			},
+			nodes: map[string]nodes_fake.TestNodeBasic{
+				"node-1": {
+					CPUMillis:  1000,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+						"rack": "rack1",
+					},
+				},
+				"node-2": {
+					CPUMillis:  400,
+					GPUs:       6,
+					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+						"rack": "rack2",
+					},
+				},
+			},
+			nodesToDomains: map[string]DomainID{
+				"node-1": "rack1.zone1",
+				"node-2": "rack2.zone1",
+			},
+			setupTopologyTree: func() *Info {
+				tree := &Info{
+					Name: "test-topology",
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 								{NodeLabel: "rack"},
 							},
@@ -160,9 +269,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				return &Info{
 					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 							},
 						},
@@ -196,16 +305,16 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				return &Info{
 					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 							},
 						},
 					},
 				}
 			},
-			expectedJobFitError: "Matching topology nonexistent-topology does not exist",
+			expectedJobFitError: "Requested topology nonexistent-topology does not exist",
 		},
 		{
 			name: "insufficient allocatable pods - no domains found",
@@ -214,7 +323,8 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				RequiredCPUsPerTask: 2000, // Too much for any node
 				RootSubGroupSet: subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName,
 					&topology_info.TopologyConstraintInfo{
-						Topology: "test-topology",
+						Topology:      "test-topology",
+						RequiredLevel: "zone",
 					},
 				),
 				Tasks: []*tasks_fake.TestTaskBasic{
@@ -226,6 +336,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					CPUMillis:  1000,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"zone": "zone1",
+					},
 				},
 			},
 			nodesToDomains: map[string]DomainID{
@@ -234,9 +347,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				tree := &Info{
 					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 							},
 						},
@@ -259,7 +372,7 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 
 				return tree
 			},
-			expectedError: "",
+			expectedJobFitError: "topology test-topology, requirement zone couldn't be satisfied for job </test-job>: not enough resources in zone1 to allocate the job",
 		},
 		{
 			name: "successful allocation with mixed GPU tasks - usePodCountAccounting returns false",
@@ -283,11 +396,19 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 					CPUMillis:  2000,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"rack": "rack1",
+						"zone": "zone1",
+					},
 				},
 				"node-2": {
 					CPUMillis:  2000,
 					GPUs:       6,
 					MaxTaskNum: ptr.To(100),
+					Labels: map[string]string{
+						"rack": "rack2",
+						"zone": "zone1",
+					},
 				},
 			},
 			nodesToDomains: map[string]DomainID{
@@ -297,9 +418,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				tree := &Info{
 					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 								{NodeLabel: "rack"},
 							},
@@ -388,9 +509,9 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				tree := &Info{
 					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 								{NodeLabel: "rack"},
 							},
@@ -433,12 +554,13 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 			domainLevel: map[DomainID]DomainLevel{
 				"zone1": "zone",
 			},
-			expectedError: "topology test-topology doesn't have a required domain level named nonexistent-level",
+			expectedError: "topology constraint error: sub-group  specified 'nonexistent-level' as the required topology constraint level, but the topology tree 'test-topology' does not contain a level with this name",
 		},
 	}
 
-	for _, tt := range tests {
+	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("test %d: %s", i, tt.name)
 			// Setup test data
 			jobName := tt.job.Name
 			clusterPodGroups := append(tt.allocatedPodGroups, tt.job)
@@ -462,26 +584,12 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				}
 			}
 
-			// Setup nodeSetToDomain mapping
-			nodeSetToDomain := map[topologyName]map[nodeSetID]*DomainInfo{}
-			nodeSetToDomain[topologyTree.Name] = map[nodeSetID]*DomainInfo{}
-			domains := []*DomainInfo{}
-			for _, levelDomains := range topologyTree.DomainsByLevel {
-				for _, domain := range levelDomains {
-					domains = append(domains, domain)
-				}
-			}
-			for _, domain := range domains {
-				nodeSetToDomain[topologyTree.Name][getNodeSetID(lo.Values(domain.Nodes))] = domain
-			}
-
 			// Setup plugin
 			plugin := &topologyPlugin{
 				TopologyTrees: map[string]*Info{
 					"test-topology": topologyTree,
 				},
 				subGroupNodeScores: map[subgroupName]map[string]float64{},
-				nodeSetToDomain:    nodeSetToDomain,
 			}
 
 			// Call the function under test
@@ -505,8 +613,8 @@ func TestTopologyPlugin_subsetNodesFn(t *testing.T) {
 				if len(job.JobFitErrors) == 0 {
 					t.Errorf("expected job fit error '%s', but got nil", tt.expectedJobFitError)
 				}
-				if job.JobFitErrors[0].Message != tt.expectedJobFitError {
-					t.Errorf("expected job fit error '%s', but got '%s'", tt.expectedJobFitError, job.JobFitErrors[0].Message)
+				if job.JobFitErrors[0].Messages()[0] != tt.expectedJobFitError {
+					t.Errorf("expected job fit error '%s', but got '%s'", tt.expectedJobFitError, job.JobFitErrors[0].Messages()[0])
 				}
 			}
 
@@ -551,9 +659,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -577,9 +685,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -602,9 +710,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -629,9 +737,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
 						},
@@ -651,9 +759,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
 						},
@@ -661,7 +769,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				},
 			},
 			expectedLevels: nil,
-			expectedError:  "topology test-topology doesn't have a required domain level named nonexistent",
+			expectedError:  "topology constraint error: sub-group test-subgroup specified 'nonexistent' as the required topology constraint level, but the topology tree 'test-topology' does not contain a level with this name",
 		},
 		{
 			name: "preferred placement not found in topology",
@@ -673,9 +781,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
 						},
@@ -683,7 +791,7 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 				},
 			},
 			expectedLevels: nil,
-			expectedError:  "topology test-topology doesn't have a preferred domain level named nonexistent",
+			expectedError:  "topology constraint error: sub-group test-subgroup specified 'nonexistent' as the preferred topology constraint level, but the topology tree 'test-topology' does not contain a level with this name",
 		},
 		{
 			name: "required placement at first level",
@@ -695,9 +803,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -720,9 +828,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -748,9 +856,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
@@ -775,9 +883,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 						},
 					},
@@ -800,9 +908,9 @@ func TestTopologyPlugin_calculateRelevantDomainLevels(t *testing.T) {
 			),
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "region"},
 							{NodeLabel: "zone"},
@@ -871,9 +979,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 	twoRacksOneZoneTree := func() *Info {
 		tree := &Info{
 			Name: "test-topology",
-			TopologyResource: &kueuev1alpha1.Topology{
-				Spec: kueuev1alpha1.TopologySpec{
-					Levels: []kueuev1alpha1.TopologyLevel{
+			TopologyResource: &kaiv1alpha1.Topology{
+				Spec: kaiv1alpha1.TopologySpec{
+					Levels: []kaiv1alpha1.TopologyLevel{
 						{NodeLabel: "zone"},
 						{NodeLabel: "rack"},
 					},
@@ -1117,9 +1225,9 @@ func TestTopologyPlugin_calcTreeAllocatable(t *testing.T) {
 			setupTopologyTree: func() *Info {
 				tree := &Info{
 					Name: "test-topology",
-					TopologyResource: &kueuev1alpha1.Topology{
-						Spec: kueuev1alpha1.TopologySpec{
-							Levels: []kueuev1alpha1.TopologyLevel{
+					TopologyResource: &kaiv1alpha1.Topology{
+						Spec: kaiv1alpha1.TopologySpec{
+							Levels: []kaiv1alpha1.TopologyLevel{
 								{NodeLabel: "zone"},
 							},
 						},
@@ -1346,6 +1454,7 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 		taskOrderFunc      common_info.LessFn
 		expectedDomains    []*DomainInfo
 		expectedError      string
+		expectedFitErrors  []common_info.JobFitError
 	}{
 		{
 			name: "return multi domain",
@@ -1365,9 +1474,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
 						},
@@ -1430,9 +1539,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 							{NodeLabel: "rack"},
 						},
@@ -1459,7 +1568,119 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
 			},
 			expectedDomains: []*DomainInfo{},
-			expectedError:   "no domains found for the job <test-namespace/test-job>, workload topology name: test-topology",
+			expectedFitErrors: []common_info.JobFitError{
+				common_info.NewTopologyFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					"zone1",
+					common_info.UnschedulableWorkloadReason,
+					[]string{"node-group zone1 can allocate only 1 of 2 required pods"},
+				),
+				common_info.NewJobFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					common_info.UnschedulableWorkloadReason,
+					[]string{"topology test-topology, requirement zone couldn't be satisfied for job <test-namespace/test-job>, subgroup test"}),
+			},
+		},
+		{
+			name: "no domains can allocate the job - using IdleOrReleasingResources",
+			job: &podgroup_info.PodGroupInfo{
+				Name:      "test-job",
+				Namespace: "test-namespace",
+				PodSets: map[string]*subgroup_info.PodSet{
+					podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 2, nil).
+						WithPodInfos(map[common_info.PodID]*pod_info.PodInfo{
+							"pod1": {UID: "pod1", Name: "pod1", Status: pod_status.Pending, ResReq: resource_info.NewResourceRequirementsWithGpus(1)},
+							"pod2": {UID: "pod2", Name: "pod2", Status: pod_status.Pending, ResReq: resource_info.NewResourceRequirements(0, 1000, 0)},
+						}),
+				},
+			},
+			topologyConstraint: &topology_info.TopologyConstraintInfo{
+				RequiredLevel: "zone",
+			},
+			topologyTree: &Info{
+				Name: "test-topology",
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
+							{NodeLabel: "zone"},
+							{NodeLabel: "rack"},
+						},
+					},
+				},
+				DomainsByLevel: map[DomainLevel]LevelDomainInfos{
+					"rack": {
+						"rack1.zone1": {
+							ID:                       "rack1.zone1",
+							Level:                    "rack",
+							IdleOrReleasingResources: resource_info.NewResource(500, 0, 0), // Insufficient resources
+							AllocatablePods:          -1,
+						},
+						"rack2.zone2": {
+							ID:                       "rack2.zone2",
+							Level:                    "rack",
+							IdleOrReleasingResources: resource_info.NewResource(600, 0, 0), // Insufficient resources
+							AllocatablePods:          -1,
+						},
+					},
+					"zone": {
+						"zone1": {
+							ID:                       "zone1",
+							Level:                    "zone",
+							IdleOrReleasingResources: resource_info.NewResource(500, 0, 0), // Insufficient resources
+							AllocatablePods:          -1,
+						},
+						"zone2": {
+							ID:                       "zone2",
+							Level:                    "zone",
+							IdleOrReleasingResources: resource_info.NewResource(600, 0, 0), // Insufficient resources
+							AllocatablePods:          -1,
+						},
+					},
+				},
+			},
+			taskOrderFunc: func(l, r interface{}) bool {
+				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
+			},
+			expectedDomains: []*DomainInfo{},
+			expectedFitErrors: []common_info.JobFitError{
+				common_info.NewTopologyFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					"zone1",
+					common_info.UnschedulableWorkloadReason,
+					[]string{
+						"node-group(s) didn't have enough resources: GPUs",
+						"node-group(s) didn't have enough resources: CPU cores",
+					},
+					"zone1 didn't have enough resource: GPUs, requested: 1, available: 0",
+					"zone1 didn't have enough resources: CPU cores, requested: 1, available: 0.5",
+				),
+				common_info.NewTopologyFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					"zone2",
+					common_info.UnschedulableWorkloadReason,
+					[]string{
+						"node-group(s) didn't have enough resources: GPUs",
+						"node-group(s) didn't have enough resources: CPU cores",
+					},
+					"zone2 didn't have enough resource: GPUs, requested: 1, available: 0",
+					"zone2 didn't have enough resources: CPU cores, requested: 1, available: 0.6",
+				),
+				common_info.NewJobFitError(
+					"test-job",
+					"test",
+					"test-namespace",
+					common_info.UnschedulableWorkloadReason,
+					[]string{"topology test-topology, requirement zone couldn't be satisfied for job <test-namespace/test-job>, subgroup test"},
+				),
+			},
 		},
 		{
 			name: "no relevant domain levels",
@@ -1478,9 +1699,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "region"},
 						},
@@ -1500,7 +1721,7 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 				return l.(*pod_info.PodInfo).Name < r.(*pod_info.PodInfo).Name
 			},
 			expectedDomains: nil,
-			expectedError:   "topology test-topology doesn't have a required domain level named zone",
+			expectedError:   "topology constraint error: sub-group test specified 'zone' as the required topology constraint level, but the topology tree 'test-topology' does not contain a level with this name",
 		},
 		{
 			name: "complex topology with multiple levels",
@@ -1521,9 +1742,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "region"},
 							{NodeLabel: "zone"},
@@ -1595,9 +1816,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 						},
 					},
@@ -1651,9 +1872,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "zone"},
 						},
 					},
@@ -1723,9 +1944,9 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 			},
 			topologyTree: &Info{
 				Name: "test-topology",
-				TopologyResource: &kueuev1alpha1.Topology{
-					Spec: kueuev1alpha1.TopologySpec{
-						Levels: []kueuev1alpha1.TopologyLevel{
+				TopologyResource: &kaiv1alpha1.Topology{
+					Spec: kaiv1alpha1.TopologySpec{
+						Levels: []kaiv1alpha1.TopologyLevel{
 							{NodeLabel: "datacenter"},
 							{NodeLabel: "region"},
 							{NodeLabel: "zone"},
@@ -1883,6 +2104,20 @@ func TestTopologyPlugin_getJobAllocatableDomains(t *testing.T) {
 				}
 				if err.Error() != tt.expectedError {
 					t.Errorf("expected error '%s', but got '%s'", tt.expectedError, err.Error())
+				}
+				if len(tt.job.JobFitErrors) != len(tt.expectedFitErrors) {
+					t.Errorf("expected %d fit errors, but got %d", len(tt.expectedFitErrors), len(tt.job.JobFitErrors))
+				}
+				if len(tt.expectedFitErrors) > 0 {
+					for i, expectedFitError := range tt.expectedFitErrors {
+						actualFitError := tt.job.JobFitErrors[i]
+						if !slices.Equal(expectedFitError.Messages(), actualFitError.Messages()) {
+							t.Errorf("expected fit error %d: messages %v, but got %v", i, expectedFitError.Messages(), actualFitError.Messages())
+						}
+						if expectedFitError.DetailedMessage() != actualFitError.DetailedMessage() {
+							t.Errorf("expected fit error %d: detailed message %s, but got %s", i, expectedFitError.DetailedMessage(), actualFitError.DetailedMessage())
+						}
+					}
 				}
 				return
 			}

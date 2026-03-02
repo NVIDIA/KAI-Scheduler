@@ -24,8 +24,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
-
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/configmap_info"
@@ -36,6 +35,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storagecapacity_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclaim_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/storageclass_info"
+	resourceapi "k8s.io/api/resource/v1"
 )
 
 // ClusterInfo is a snapshot of cluster by cache.
@@ -43,6 +43,7 @@ type ClusterInfo struct {
 	Pods                        []*v1.Pod
 	PodGroupInfos               map[common_info.PodGroupID]*podgroup_info.PodGroupInfo
 	Nodes                       map[string]*node_info.NodeInfo
+	ResourceClaims              []*resourceapi.ResourceClaim
 	BindRequests                bindrequest_info.BindRequestMap
 	BindRequestsForDeletedNodes []*bindrequest_info.BindRequestInfo
 	Queues                      map[common_info.QueueID]*queue_info.QueueInfo
@@ -53,7 +54,9 @@ type ClusterInfo struct {
 	CSIDrivers                  map[common_info.CSIDriverID]*csidriver_info.CSIDriverInfo
 	StorageClasses              map[common_info.StorageClassID]*storageclass_info.StorageClassInfo
 	ConfigMaps                  map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo
-	Topologies                  []*kueue.Topology
+	Topologies                  []*kaiv1alpha1.Topology
+
+	MinNodeGPUMemory int64
 }
 
 func NewClusterInfo() *ClusterInfo {
@@ -68,7 +71,7 @@ func NewClusterInfo() *ClusterInfo {
 		StorageClaims:      make(map[storageclaim_info.Key]*storageclaim_info.StorageClaimInfo),
 		StorageCapacities:  make(map[common_info.StorageCapacityID]*storagecapacity_info.StorageCapacityInfo),
 		ConfigMaps:         make(map[common_info.ConfigMapID]*configmap_info.ConfigMapInfo),
-		Topologies:         []*kueue.Topology{},
+		Topologies:         []*kaiv1alpha1.Topology{},
 	}
 }
 

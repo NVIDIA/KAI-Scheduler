@@ -21,6 +21,7 @@ package resource_info
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -59,6 +60,8 @@ func ResourceFromResourceList(rList v1.ResourceList) *Resource {
 			r.memory += float64(rQuant.Value())
 		case GPUResourceName, amdGpuResourceName:
 			r.gpus += float64(rQuant.Value())
+		case v1.ResourcePods:
+			r.scalarResources[rName] += rQuant.Value()
 		default:
 			if IsMigResource(rName) {
 				r.scalarResources[rName] += rQuant.Value()
@@ -141,6 +144,9 @@ func (r *Resource) AddResourceRequirements(req *ResourceRequirements) {
 	}
 	r.BaseResource.Add(&req.BaseResource)
 	r.gpus += req.GPUs()
+	for _, rQuant := range req.draGpuCounts {
+		r.gpus += float64(rQuant)
+	}
 	for migProfile, migCount := range req.MigResources() {
 		r.BaseResource.scalarResources[migProfile] += migCount
 	}
@@ -149,6 +155,9 @@ func (r *Resource) AddResourceRequirements(req *ResourceRequirements) {
 func (r *Resource) SubResourceRequirements(req *ResourceRequirements) {
 	r.BaseResource.Sub(&req.BaseResource)
 	r.gpus -= req.GPUs()
+	for _, rQuant := range req.draGpuCounts {
+		r.gpus -= float64(rQuant)
+	}
 	for migProfile, migCount := range req.MigResources() {
 		r.BaseResource.scalarResources[migProfile] -= migCount
 	}
@@ -158,8 +167,12 @@ func (r *Resource) GPUs() float64 {
 	return r.gpus
 }
 
-func (r *Resource) GetSumGPUs() float64 {
-	var totalMigGPUs float64
+func (r *Resource) ExtendedResourceGpusAsString() string {
+	return strconv.FormatFloat(r.gpus, 'g', 3, 64)
+}
+
+func (r *Resource) GetTotalGPURequest() float64 {
+	var totalGpusQuota float64
 	for resourceName, quant := range r.ScalarResources() {
 		if !IsMigResource(resourceName) {
 			continue
@@ -170,10 +183,11 @@ func (r *Resource) GetSumGPUs() float64 {
 			continue
 		}
 
-		totalMigGPUs += float64(gpuPortion) * float64(quant)
+		totalGpusQuota += float64(gpuPortion) * float64(quant)
 	}
+	totalGpusQuota += r.gpus
 
-	return totalMigGPUs + r.gpus
+	return totalGpusQuota
 }
 
 func (r *Resource) SetGPUs(gpus float64) {
@@ -186,6 +200,16 @@ func (r *Resource) AddGPUs(addGpus float64) {
 
 func (r *Resource) SubGPUs(subGpus float64) {
 	r.gpus -= subGpus
+}
+
+func (r *Resource) MigResources() map[v1.ResourceName]int64 {
+	migResources := make(map[v1.ResourceName]int64)
+	for name, quant := range r.scalarResources {
+		if IsMigResource(name) {
+			migResources[name] = quant
+		}
+	}
+	return migResources
 }
 
 func StringResourceArray(ra []*Resource) string {

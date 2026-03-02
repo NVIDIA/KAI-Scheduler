@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
@@ -18,10 +19,10 @@ import (
 
 func TestJobOrderPlugin_OnSessionOpen(t *testing.T) {
 	ssn := &framework.Session{
-		PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+		ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 			"pg1": {UID: "pg1", Priority: 5, Queue: "q1"},
 			"pg2": {UID: "pg2", Priority: 2, Queue: "q2"},
-		},
+		}},
 		Config: &conf.SchedulerConfiguration{
 			QueueDepthPerAction: map[string]int{"Allocate": 10},
 		},

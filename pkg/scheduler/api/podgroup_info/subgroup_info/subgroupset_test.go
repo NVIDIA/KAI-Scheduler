@@ -44,18 +44,6 @@ func TestAddSubGroup(t *testing.T) {
 	}
 }
 
-func TestAddSubGroupAfterPodSet(t *testing.T) {
-	parent := NewSubGroupSet("parent", nil)
-	podSet := newTestPodSet("podset", 1)
-	parent.AddPodSet(podSet)
-	child := NewSubGroupSet("child", nil)
-	parent.AddSubGroup(child)
-	groups := parent.GetChildGroups()
-	if len(groups) != 0 {
-		t.Errorf("expected no subgroups to be added if podsets present, got %d", len(groups))
-	}
-}
-
 func TestAddPodSet(t *testing.T) {
 	parent := NewSubGroupSet("parent", nil)
 	podSet := newTestPodSet("podset", 2)
@@ -66,18 +54,6 @@ func TestAddPodSet(t *testing.T) {
 	}
 	if ps[0] != podSet {
 		t.Errorf("did not get correct podset after adding")
-	}
-}
-
-func TestAddPodSetAfterSubGroup(t *testing.T) {
-	parent := NewSubGroupSet("parent", nil)
-	child := NewSubGroupSet("child", nil)
-	parent.AddSubGroup(child)
-	podSet := newTestPodSet("podset", 3)
-	parent.AddPodSet(podSet)
-	ps := parent.GetChildPodSets()
-	if len(ps) != 0 {
-		t.Errorf("expected no podsets to be added if subgroup exists, got %d", len(ps))
 	}
 }
 

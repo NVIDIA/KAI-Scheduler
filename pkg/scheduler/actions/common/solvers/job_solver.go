@@ -62,7 +62,7 @@ func (s *JobSolver) Solve(
 		if result == nil || !result.solved {
 			log.InfraLogger.V(5).Infof("No solution found for %d tasks out of %d tasks to allocate for %s",
 				len(pendingTasks), len(tasksToAllocate), pendingJob.Name)
-			continue
+			break
 		}
 
 		if !satisfactorySolution && result.statement != nil {
@@ -89,18 +89,17 @@ func (s *JobSolver) Solve(
 }
 
 func (s *JobSolver) solvePartialJob(ssn *framework.Session, state *solvingState, partialPendingJob *podgroup_info.PodGroupInfo) *solutionResult {
-	scenarioBuilder := NewPodAccumulatedScenarioBuilder(
-		ssn, partialPendingJob, state.recordedVictimsJobs, s.generateVictimsQueue())
-
 	feasibleNodeMap := map[string]*node_info.NodeInfo{}
 	for _, node := range s.feasibleNodes {
 		feasibleNodeMap[node.Name] = node
 	}
-	// recorded victim jobs nodes
 	for _, task := range state.recordedVictimsTasks {
-		node := ssn.Nodes[task.NodeName]
+		node := ssn.ClusterInfo.Nodes[task.NodeName]
 		feasibleNodeMap[task.NodeName] = node
 	}
+
+	scenarioBuilder := NewPodAccumulatedScenarioBuilder(
+		ssn, partialPendingJob, state.recordedVictimsJobs, s.generateVictimsQueue(), feasibleNodeMap)
 
 	for scenarioToSolve := scenarioBuilder.GetValidScenario(); scenarioToSolve != nil; scenarioToSolve =
 		scenarioBuilder.GetNextScenario() {

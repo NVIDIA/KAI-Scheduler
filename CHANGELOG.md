@@ -7,6 +7,116 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Added `global.nodeSelector` propagation from Helm values to Config CR, ensuring operator-created sub-component deployments (admission, binder, scheduler, pod-grouper, etc.) receive the configured nodeSelector [#1102](https://github.com/NVIDIA/KAI-Scheduler/pull/1102) [yuanchen8911](https://github.com/yuanchen8911)
+- Added `plugins` and `actions` fields to SchedulingShard spec, allowing per-shard customization of scheduler plugin/action enablement, priority, and arguments [gshaibi](https://github.com/gshaibi)
+- Added support for Kubeflow Trainer v2 TrainJob workloads via skipTopOwner grouper pattern
+- Added `binder.cdiEnabled` Helm value to allow explicit override of CDI auto-detection for environments without ClusterPolicy
+- Added metric for tracking evicted pods in pod groups, including nodepool, eviction action, and gang size
+- Block scheduling of pods with shared (non-template) DRA GPU claims that lack a queue label or have a mismatched queue label [gshaibi](https://github.com/gshaibi)
+- Added the option to disable prometheus service monitor creation [#810](https://github.com/NVIDIA/KAI-Scheduler/pull/810) [itsomri](https://github.com/itsomri)
+- Fixed prometheus instance deprecation - ensure single instance [#779](https://github.com/NVIDIA/KAI-Scheduler/pull/779) [itsomri](https://github.com/itsomri)
+- Added clear error messages for jobs referencing missing or orphan queues, reporting via events and conditions [#820](https://github.com/NVIDIA/KAI-Scheduler/pull/820) [gshaibi](https://github.com/gshaibi)
+- Added rule selector for resource accounting prometheus [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
+- Made accounting labels configurable [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
+- Added support for Grove hierarchical topology constraints in PodGroup subgroups
+- Added support for n-level queue hierarchies [#858](https://github.com/NVIDIA/KAI-Scheduler/pull/858) [gshaibi](https://github.com/gshaibi)
+- Added labels and annotations propagation from topOwner in SkipTopOwner grouper [#861](https://github.com/NVIDIA/KAI-Scheduler/pull/861) [SiorMeir](https://github.com/siormeir)
+- Added scheduler name match conditions to admission webhooks to improve cluster stability
+- Add Gpu Dra claims and resource slices accounting for the purpose of resource management and quota guarantees. *** This change doesn't support shared gpu claims or gpu claims with FirstAvailable *** [#900](https://github.com/NVIDIA/KAI-Scheduler/pull/900) [davidLif](https://github.com/davidLif) 
+- Added DRA resources recording to snapshot [#830](https://github.com/NVIDIA/KAI-Scheduler/pull/830)
+- Temporarily Prevent device-plugin GPU pods on DRA-only nodes - until translation between device-plugin notation and DRA is implemented
+- Implemented subgroups for pytorchjobs [#935](https://github.com/NVIDIA/KAI-Scheduler/pull/935) [itsomri](https://github.com/itsomri)
+- Made KAI images distroless [#745](https://github.com/NVIDIA/KAI-Scheduler/pull/745) [dttung2905](https://github.com/dttung2905)
+- Allow setting empty gpuPodRuntimeClassName during helm install [#972](https://github.com/NVIDIA/KAI-Scheduler/pull/972) [steved](https://github.com/steved)
+- Created scale tests scenarios for running scale tests for KAI [#967](https://github.com/NVIDIA/KAI-Scheduler/pull/967)
+- Implemented block-level segmentation for pytorchjobs [#938](https://github.com/NVIDIA/KAI-Scheduler/pull/938) [itsomri](https://github.com/itsomri)
+- Added scale test environment setup script and updated service monitors for KAI scheduler [#1031](https://github.com/NVIDIA/KAI-Scheduler/pull/1031)
+- Implemented subgroups for leaderworkerset [#1046](https://github.com/NVIDIA/KAI-Scheduler/pull/1046) [davidLif](https://github.com/davidLif) 
+- Added discovery data to snapshot for more accurate debugging [#1047](https://github.com/NVIDIA/KAI-Scheduler/pull/1047) [itsomri](https://github.com/itsomri)
+- Implemented subgroup segmentation (with topology segment definitions) for leaderworkerset [#1058](https://github.com/NVIDIA/KAI-Scheduler/pull/10586) [davidLif](https://github.com/davidLif)
+
+### Fixed
+- Fixed operator status conditions to be kstatus-compatible for Helm 4 `--wait` support: added `Ready` condition and fixed `Reconciling` condition to properly transition to false after reconciliation completes [#1060](https://github.com/NVIDIA/KAI-Scheduler/pull/1060)
+- Fixed a bug where the node scale adjuster would not check if a pod was unschedulable before creating a scaling pod leading to unnecessary node scaling [#1094](https://github.com/NVIDIA/KAI-Scheduler/pull/1094) [slaupster](https://github.com/slaupster)
+- Fixed admission webhook to skip runtimeClassName injection when gpuPodRuntimeClassName is empty [#1035](https://github.com/NVIDIA/KAI-Scheduler/pull/1035)
+- Fixed topology-migration helm hook failing on OpenShift due to missing `kai-topology-migration` service account in the `kai-system` SCC [#1050](https://github.com/NVIDIA/KAI-Scheduler/pull/1050)
+- Fixed a bug where queue status did not reflect its podgroups resources correctly [#1049](https://github.com/NVIDIA/KAI-Scheduler/pull/1049)
+- Fixed helm uninstall does not remove webhooks [#959](https://github.com/NVIDIA/KAI-Scheduler/pull/959) [faizan-exe](https://github.com/faizan-exe)
+- Fixed security vulnerability where PodGang could reference pods in other namespaces, preventing cross-namespace manipulation
+- Fixed pod controller logging to use request namespace/name instead of empty pod object fields when pod is not found
+- Fixed a bug where topology constrains with equal required and preferred levels would cause preferred level not to be found.
+- Fixed GPU memory pods Fair Share and Queue Order calculations
+- Interpret negative or zero half-life value as disabled [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
+- Handle invalid CSI StorageCapacities gracefully [#817](https://github.com/NVIDIA/KAI-Scheduler/pull/817) [rich7420](https://github.com/rich7420)
+- Embed CRD definitions in binary for env-test and time-aware-simulations to allow binary portability [#818](https://github.com/NVIDIA/KAI-Scheduler/pull/818) [itsomri](https://github.com/itsomri)
+- Fixed missing `podGrouper` configuration in Helm template that prevented podgrouper values from being applied [#860](https://github.com/NVIDIA/KAI-Scheduler/pull/860)
+- Fixed rollback for failed bind attempts [#847](https://github.com/NVIDIA/KAI-Scheduler/pull/847) [itsomri](https://github.com/itsomri)
+- Fixed missing `namespace`, `serviceAccountName`, and `appLabel` fields in `resourceReservation` section of kai-config Helm template [#860](https://github.com/NVIDIA/KAI-Scheduler/pull/891) [dttung2905](https://github.com/dttung2905)
+- If a preferred topology constraint is set, do not try to find a lowest common subtree (as a part of the calculations optimizations) which is lower then the preferred level
+- Added dedicated `usage-prometheus` service for scheduler Prometheus access with configurable instance name [#896](https://github.com/NVIDIA/KAI-Scheduler/pull/896) [itsomri](https://github.com/itsomri)
+- ClusterPolicy CDI parsing for gpu-operator > v25.10.0
+- Fixed missing `repository`, `tag`, and `pullPolicy` fields in `resourceReservationImage` section of kai-config Helm template [#895](https://github.com/NVIDIA/KAI-Scheduler/pull/895) [dttung2905](https://github.com/dttung2905)
+- Fixed a bug in ray gang scheduling where not all worker groups' minMember would be respected [#924](https://github.com/NVIDIA/KAI-Scheduler/pull/924) [itsomri](https://github.com/itsomri)
+- cpu-only nodes calculation in DRA enabled clusters [#944](https://github.com/NVIDIA/KAI-Scheduler/pull/944)
+- enable DRA flag override fix in snapshot-tool [#955](https://github.com/NVIDIA/KAI-Scheduler/pull/955)
+- Fixed ConfigMap predicate to respect the Optional field and now considers ConfigMaps in projected volumes and ephemeral containers
+- Fixed simulations that failed due to pod capacity on node [#969](https://github.com/NVIDIA/KAI-Scheduler/pull/969) [itsomri](https://github.com/itsomri)
+- Fixed a bug where some resource claims would remain marked as bound to devices forever
+
+### Changed
+- Removed the constraint that prohibited direct nesting of subgroups alongside podsets within the same subgroupset.
+- Fixed plugin server (snapshot and job-order endpoints) listening on all interfaces by binding to localhost only.
+- Removed redundant `connection` field from `GlobalConfig` in favor of `Prometheus.ExternalPrometheusUrl` for external Prometheus URL configuration
+
+## [v0.12.0] - 2025-12-24
+
+### Added
+- Introduced native KAI Topology CRD to replace dependency on Kueue's Topology CRD, improving compatibility and simplifying installation
+- Added support for having the default "preemptibility" per top-owner-type read from the default configs configmap in the pod-grouper
+- Added option to profile CPU when running the snapshot tool [#726](https://github.com/NVIDIA/KAI-Scheduler/pull/726) [itsomri](https://github.com/itsomri)
+- GPU resource bookkeeping for DRA enabled resources
+- Add a "tumbling window" usage configuration - calculate a tumbling window size based on a start timne configuration and a duration config field.
+- Added an option to disable prometheus persistency [#764](https://github.com/NVIDIA/KAI-Scheduler/pull/764) [itsomri](https://github.com/itsomri)
+
+### Changed
+- If enabled, prometheus storage size is not inferred from cluster objects, but defaults to 50Gi unless explicitly set in KAI config [#756](https://github.com/NVIDIA/KAI-Scheduler/pull/756) [itsomri](https://github.com/itsomri)
+- When prometheus is disabled, it will remain in the cluster for a grace period equal to it's retention, unless re-enabled [#756](https://github.com/NVIDIA/KAI-Scheduler/pull/756) [itsomri](https://github.com/itsomri)
+
+### Fixed
+- Fixed a bug where the snapshot tool would not load topology objects [#720](https://github.com/NVIDIA/KAI-Scheduler/pull/720) [itsomri](https://github.com/itsomri)
+- Operator to conditionally watch ClusterPolicy based on its existence, preventing errors in its absence
+- Fixed confusing resource division log message [#733](https://github.com/NVIDIA/KAI-Scheduler/pull/733) [itsomri](https://github.com/itsomri)
+- Made post-delete-cleanup resources configurable [#737](https://github.com/NVIDIA/KAI-Scheduler/pull/737) [dttung2905](https://github.com/dttung2905)
+- GPU Memory pods are not reclaimed or consolidated correctly
+- Added missing leases permission for the operator [#753](https://github.com/NVIDIA/KAI-Scheduler/pull/753) [dttung2905](https://github.com/dttung2905)
+- Fixed reclaim/preempt/consolidate actions for topology workloads [#739](https://github.com/NVIDIA/KAI-Scheduler/pull/739)  [itsomri](https://github.com/itsomri)
+- Fixed a bug where the scheduler would not consider topology constraints when calculating the scheduling constraints signature [#761](https://github.com/NVIDIA/KAI-Scheduler/pull/766) [gshaibi](https://github.com/gshaibi)
+- Fixed Dynamo integration by adding Dynamo GVKs to SkipTopOwner table
+- Keep creating service monitors for deprecated prometheus instances [#774](https://github.com/NVIDIA/KAI-Scheduler/pull/774) [itsomri](https://github.com/itsomri)
+- Fix retention duration parsing for deprecated prometheus instances [#774](https://github.com/NVIDIA/KAI-Scheduler/pull/774) [itsomri](https://github.com/itsomri)
+
+### Changed
+- Renamed the previous "tumbling" option for the scheduler usage window type to "cron".
+
+## [v0.10.2] - 2025-11-24
+
+### Fixed
+- Removed the requirement to specify container type for init container gpu fractions [#684](https://github.com/NVIDIA/KAI-Scheduler/pull/684) [itsomri](https://github.com/itsomri)
+- When a status update for a podGroup in the scheduler is flushed due to update conflict, delete the update payload data as well [#691](https://github.com/NVIDIA/KAI-Scheduler/pull/691) [davidLif](https://github.com/davidLif)
+
+## [v0.10.1] - 2025-11-23
+
+### Fixed
+- Fixed scheduler pod group status update conflict [#676](https://github.com/NVIDIA/KAI-Scheduler/pull/676) [davidLif](https://github.com/davidLif) 
+- Fixed gpu request validations for pods [#660](https://github.com/NVIDIA/KAI-Scheduler/pull/660) [itsomri](https://github.com/itsomri)
+
+### Changed
+- Dependabot configuration to update actions in workflows [#651](https://github.com/NVIDIA/KAI-Scheduler/pull/651) [ScottBrenner](https://github.com/ScottBrenner)
+- optimize dependency management by using module cache instead of vendor directory [#645](https://github.com/NVIDIA/KAI-Scheduler/pull/645) [lokielse](https://github.com/lokielse)
+
+## [v0.10.0] - 2025-11-18
+
+### Added
 - Added parent reference to SubGroup struct in PodGroup CRD to create a hierarchical SubGroup structure
 - Added the option to configure the names of the webhook configuration resources.
 - Option to configure reservation pods runtime class.
@@ -14,10 +124,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added enforcement of the `nvidia` runtime class for GPU pods, with the option to enforce a custom runtime class, or disable enforcement entirely.
 - Added a preferred podAntiAffinity term by default for all services, can be set to required instead by setting `global.requireDefaultPodAffinityTerm`
 - Added support for service-level affinities
+- Added [time aware scheduling](docs/timeaware/README.md) capabilities
+- Added option to specify container name and type for fraction containers
 
 ### Fixed
+- (Openshift only) - High CPU usage for the operator pod due to continues reconciles
 - Fixed a bug where the scheduler would not re-try updating podgroup status after failure
 - Fixed a bug where ray workloads gang scheduling would ignore `minReplicas` if autoscaling was not set
+- KAI Config wrong statuses when prometheus operand is enabled
+- GPU-Operator v25.10.0 support for CDI enabled environments
+
+## [v0.9.9] - 20250-12-08
+
+### Added
+- Option to configure reservation pods runtime class.
+
+### Fixed
+- Fixed Helm chart compatibility with Helm 4 wait logic to prevent indefinite hangs during deployment readiness checks
 
 ## [v0.9.1] - 20250-09-15
 

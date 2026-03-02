@@ -52,7 +52,7 @@ func (pp *FairnessTrackerPlugin) OnSessionOpen(ssn *framework.Session) {
 	pp.snapshots = map[common_info.QueueID]resource_info.ResourceRequirements{}
 
 	// Copy fair shares for all queues
-	for queueID, queueInfo := range ssn.Queues {
+	for queueID, queueInfo := range ssn.ClusterInfo.Queues {
 		fairShare := ssn.QueueFairShare(queueInfo)
 		if fairShare != nil {
 			pp.snapshots[queueID] = *fairShare.Clone()

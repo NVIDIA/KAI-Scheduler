@@ -58,10 +58,10 @@ var _ = Describe("Leader worker set Integration", Ordered, func() {
 	It("Leader worker set - 2 groups", func(ctx context.Context) {
 		singleGPURequest := v1.ResourceRequirements{
 			Limits: v1.ResourceList{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 			Requests: v1.ResourceList{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 		numOfGroups := 2
@@ -101,10 +101,10 @@ var _ = Describe("Leader worker set Integration", Ordered, func() {
 	It("Leader worker set - handle leader ready before workers startup policy", func(ctx context.Context) {
 		singleGPURequest := v1.ResourceRequirements{
 			Limits: v1.ResourceList{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 			Requests: v1.ResourceList{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		}
 		numOfGroups := 2

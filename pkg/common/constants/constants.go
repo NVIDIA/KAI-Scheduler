@@ -5,8 +5,9 @@ package constants
 
 const (
 	AppLabelName              = "app"
-	GpuResource               = "nvidia.com/gpu"
+	NvidiaGpuResource         = "nvidia.com/gpu"
 	NvidiaGpuMemory           = "nvidia.com/gpu.memory"
+	GpuResource               = "gpu"
 	UnlimitedResourceQuantity = float64(-1)
 
 	DefaultQueuePriority                  = 100
@@ -31,14 +32,21 @@ const (
 	TopOwnerMetadataKey = "kai.scheduler/top-owner-metadata"
 
 	// Annotations
-	PodGroupAnnotationForPod = "pod-group-name"
-	GpuFraction              = "gpu-fraction"
-	GpuMemory                = "gpu-memory"
-	ReceivedResourceType     = "received-resource-type"
-	GpuFractionsNumDevices   = "gpu-fraction-num-devices"
-	MpsAnnotation            = "mps"
-	StalePodgroupTimeStamp   = "kai.scheduler/stale-podgroup-timestamp"
-	LastStartTimeStamp       = "kai.scheduler/last-start-timestamp"
+	PodGroupAnnotationForPod      = "pod-group-name"
+	GpuFraction                   = "gpu-fraction"
+	GpuFractionContainerName      = "gpu-fraction-container-name"
+	GpuMemory                     = "gpu-memory"
+	ReceivedResourceType          = "received-resource-type"
+	GpuFractionsNumDevices        = "gpu-fraction-num-devices"
+	MpsAnnotation                 = "mps"
+	StalePodgroupTimeStamp        = "kai.scheduler/stale-podgroup-timestamp"
+	LastStartTimeStamp            = "kai.scheduler/last-start-timestamp"
+	GpuSharingConfigMapAnnotation = "runai/shared-gpu-configmap"
+	NvidiaVisibleDevices          = "NVIDIA_VISIBLE_DEVICES"
+
+	// UsageDB Prometheus Selector
+	DefaultAccountingLabelKey   = "kai.scheduler/accounting"
+	DefaultAccountingLabelValue = "true"
 
 	// Labels
 	GPUGroup                 = "runai-gpu-group"

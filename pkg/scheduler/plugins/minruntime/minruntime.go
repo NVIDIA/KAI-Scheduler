@@ -80,7 +80,7 @@ func (mr *minruntimePlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddPreemptVictimFilterFn(mr.preemptFilterFn)
 	ssn.AddReclaimScenarioValidatorFn(mr.reclaimScenarioValidatorFn)
 	ssn.AddPreemptScenarioValidatorFn(mr.preemptScenarioValidatorFn)
-	mr.queues = ssn.Queues
+	mr.queues = ssn.ClusterInfo.Queues
 	mr.preemptProtectionCache = make(map[common_info.PodGroupID]bool)
 	mr.reclaimProtectionCache = make(map[common_info.PodGroupID]map[common_info.PodGroupID]bool)
 	mr.resolver = NewResolver(mr.queues, mr.defaultPreemptMinRuntime, mr.defaultReclaimMinRuntime)

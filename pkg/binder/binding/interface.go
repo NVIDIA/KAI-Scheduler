@@ -13,4 +13,5 @@ import (
 
 type Interface interface {
 	Bind(ctx context.Context, task *v1.Pod, host *v1.Node, bindRequest *v1alpha2.BindRequest) error
+	Rollback(ctx context.Context, task *v1.Pod, host *v1.Node, bindRequest *v1alpha2.BindRequest) error
 }

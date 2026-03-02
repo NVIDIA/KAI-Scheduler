@@ -6,6 +6,7 @@ package dynamicresource
 import (
 	"fmt"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/xyproto/randomstring"
 	corev1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
@@ -33,7 +34,7 @@ func CreateNodeResourceSlice(name, driver, nodeName string, deviceCount int) *re
 			Pool: resourceapi.ResourcePool{
 				Generation:         0,
 				ResourceSliceCount: 1,
-				Name:               fmt.Sprintf("%s-%s", driver, nodeName),
+				Name:               fmt.Sprintf("%s-%s", "gpu-device-name", nodeName),
 			},
 			NodeName: ptr.To(nodeName),
 		},
@@ -41,7 +42,7 @@ func CreateNodeResourceSlice(name, driver, nodeName string, deviceCount int) *re
 
 	for i := range deviceCount {
 		resourceSlice.Spec.Devices = append(resourceSlice.Spec.Devices, resourceapi.Device{
-			Name: fmt.Sprintf("%s-%s-%d", driver, nodeName, i),
+			Name: fmt.Sprintf("%s-%s-%d", "gpu-device-name", nodeName, i),
 			Attributes: map[resourceapi.QualifiedName]resourceapi.DeviceAttribute{
 				"vendor": {
 					StringValue: ptr.To("nvidia"),
@@ -65,11 +66,14 @@ type DeviceRequest struct {
 	Count int
 }
 
-func CreateResourceClaim(name, namespace string, requests ...DeviceRequest) *resourceapi.ResourceClaim {
+func CreateResourceClaim(name, namespace, queueName string, requests ...DeviceRequest) *resourceapi.ResourceClaim {
 	resourceClaim := resourceapi.ResourceClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				constants.DefaultQueueLabel: queueName,
+			},
 		},
 		Spec: resourceapi.ResourceClaimSpec{
 			Devices: resourceapi.DeviceClaim{

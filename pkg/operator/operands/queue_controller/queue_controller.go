@@ -82,3 +82,7 @@ func (q *QueueController) Name() string {
 func (q *QueueController) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
 	return nil
 }
+
+func (q *QueueController) HasMissingDependencies(context.Context, client.Reader, *kaiv1.Config) (string, error) {
+	return "", nil
+}

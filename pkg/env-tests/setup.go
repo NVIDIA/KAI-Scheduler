@@ -5,7 +5,6 @@ package env_tests
 
 import (
 	"fmt"
-	"path/filepath"
 
 	resourceapi "k8s.io/api/resource/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -14,10 +13,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
+	"github.com/NVIDIA/KAI-scheduler/deployments/kai-scheduler/crds"
+	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	kaiv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	kaiv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	kaiv2v2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
 )
 
 func SetupEnvTest(crdDirectoryPaths []string) (*rest.Config, client.Client, *envtest.Environment, error) {
@@ -27,16 +28,21 @@ func SetupEnvTest(crdDirectoryPaths []string) (*rest.Config, client.Client, *env
 		testEnv    *envtest.Environment
 	)
 
-	if crdDirectoryPaths == nil {
-		crdDirectoryPaths = []string{
-			filepath.Join("..", "..", "deployments", "kai-scheduler", "crds"),
-			filepath.Join("..", "..", "deployments", "external-crds"),
-		}
-	}
-
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     crdDirectoryPaths,
 		ErrorIfCRDPathMissing: true,
+	}
+
+	// Use embedded CRDs if no paths provided - this makes the binary self-contained
+	if crdDirectoryPaths == nil {
+		embeddedCRDs, err := crds.LoadEmbeddedCRDs()
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to load embedded CRDs: %w", err)
+		}
+		testEnv = &envtest.Environment{
+			CRDs:                  embeddedCRDs,
+			ErrorIfCRDPathMissing: false,
+		}
 	}
 
 	testEnv.ControlPlane.GetAPIServer().Configure().Append("feature-gates", "DynamicResourceAllocation=true")
@@ -70,9 +76,13 @@ func SetupEnvTest(crdDirectoryPaths []string) (*rest.Config, client.Client, *env
 	if err != nil {
 		return nil, nil, testEnv, fmt.Errorf("failed to add resourceapi scheme: %w", err)
 	}
-	err = kueuev1alpha1.AddToScheme(scheme.Scheme)
+	err = kaiv1.AddToScheme(scheme.Scheme)
 	if err != nil {
-		return nil, nil, testEnv, fmt.Errorf("failed to add kueuev1alpha1 scheme: %w", err)
+		return nil, nil, testEnv, fmt.Errorf("failed to add kaiv1 scheme: %w", err)
+	}
+	err = kaiv1alpha1.AddToScheme(scheme.Scheme)
+	if err != nil {
+		return nil, nil, testEnv, fmt.Errorf("failed to add kaiv1alpha1 scheme: %w", err)
 	}
 	// +kubebuilder:scaffold:scheme
 

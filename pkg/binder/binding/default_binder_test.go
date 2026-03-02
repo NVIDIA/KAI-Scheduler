@@ -107,10 +107,10 @@ func TestBindApplyResourceReceivedType(t *testing.T) {
 				{
 					Env: []v1.EnvVar{
 						{
-							Name: common.NvidiaVisibleDevices,
+							Name: constants.NvidiaVisibleDevices,
 							ValueFrom: &v1.EnvVarSource{
 								ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-									Key: common.NvidiaVisibleDevices,
+									Key: constants.NvidiaVisibleDevices,
 									LocalObjectReference: v1.LocalObjectReference{
 										Name: "my-config-0",
 									},

@@ -82,9 +82,9 @@ var _ = Describe("Topology", Ordered, func() {
 			}
 
 			gpusPerNode := testTopologyData.TopologyNodes[gpuNodesNames[0]].
-				Status.Allocatable[v1.ResourceName(constants.GpuResource)]
+				Status.Allocatable[v1.ResourceName(constants.NvidiaGpuResource)]
 			podResource := v1.ResourceList{
-				v1.ResourceName(constants.GpuResource): gpusPerNode,
+				v1.ResourceName(constants.NvidiaGpuResource): gpusPerNode,
 			}
 
 			pods := createDistributedWorkload(ctx, testCtx, 2, podResource, topologyConstraint)
@@ -111,9 +111,9 @@ var _ = Describe("Topology", Ordered, func() {
 			}
 
 			gpusPerNode := testTopologyData.TopologyNodes[gpuNodesNames[0]].
-				Status.Allocatable[v1.ResourceName(constants.GpuResource)]
+				Status.Allocatable[v1.ResourceName(constants.NvidiaGpuResource)]
 			podResource := v1.ResourceList{
-				v1.ResourceName(constants.GpuResource): gpusPerNode,
+				v1.ResourceName(constants.NvidiaGpuResource): gpusPerNode,
 			}
 
 			pods := createDistributedWorkload(ctx, testCtx, 2, podResource, topologyConstraint)
@@ -141,10 +141,10 @@ var _ = Describe("Topology", Ordered, func() {
 			}
 
 			gpusPerNode := testTopologyData.TopologyNodes[gpuNodesNames[0]].
-				Status.Allocatable[v1.ResourceName(constants.GpuResource)]
+				Status.Allocatable[v1.ResourceName(constants.NvidiaGpuResource)]
 			halfGpusPerNode := int64(gpusPerNode.AsFloat64Slow() / 2)
 			podResource := v1.ResourceList{
-				v1.ResourceName(constants.GpuResource): *resource.NewQuantity(halfGpusPerNode, resource.DecimalSI),
+				v1.ResourceName(constants.NvidiaGpuResource): *resource.NewQuantity(halfGpusPerNode, resource.DecimalSI),
 			}
 
 			pods := createDistributedWorkload(ctx, testCtx, 2, podResource, topologyConstraint)
@@ -171,9 +171,9 @@ var _ = Describe("Topology", Ordered, func() {
 			}
 
 			gpusPerNode := testTopologyData.TopologyNodes[gpuNodesNames[0]].
-				Status.Allocatable[v1.ResourceName(constants.GpuResource)]
+				Status.Allocatable[v1.ResourceName(constants.NvidiaGpuResource)]
 			podResource := v1.ResourceList{
-				v1.ResourceName(constants.GpuResource): gpusPerNode,
+				v1.ResourceName(constants.NvidiaGpuResource): gpusPerNode,
 			}
 
 			pods := createDistributedWorkload(ctx, testCtx, 2, podResource, topologyConstraint)
@@ -224,9 +224,9 @@ var _ = Describe("Topology", Ordered, func() {
 			}
 
 			gpusPerNode := testTopologyData.TopologyNodes[gpuNodesNames[0]].
-				Status.Allocatable[v1.ResourceName(constants.GpuResource)]
+				Status.Allocatable[v1.ResourceName(constants.NvidiaGpuResource)]
 			podResource := v1.ResourceList{
-				v1.ResourceName(constants.GpuResource): gpusPerNode,
+				v1.ResourceName(constants.NvidiaGpuResource): gpusPerNode,
 			}
 
 			pods := createDistributedWorkload(ctx, testCtx, 4, podResource, topologyConstraint)

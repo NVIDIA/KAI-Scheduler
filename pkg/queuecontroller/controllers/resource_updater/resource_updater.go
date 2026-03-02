@@ -18,7 +18,6 @@ import (
 
 type ResourceUpdater struct {
 	client.Client
-	QueueLabelKey string
 }
 
 func (ru *ResourceUpdater) UpdateQueue(ctx context.Context, queue *v2.Queue) error {
@@ -54,18 +53,16 @@ func (ru *ResourceUpdater) sumChildQueueResources(ctx context.Context, queue *v2
 		queue.Status.Allocated = resources.SumResources(q.Status.Allocated, queue.Status.Allocated)
 		queue.Status.AllocatedNonPreemptible = resources.SumResources(q.Status.AllocatedNonPreemptible, queue.Status.AllocatedNonPreemptible)
 		queue.Status.Requested = resources.SumResources(q.Status.Requested, queue.Status.Requested)
-	}
 
+	}
 	return nil
 }
 
 func (ru *ResourceUpdater) sumPodGroupsResources(ctx context.Context, queue *v2.Queue) error {
-	listOption := client.MatchingLabels{
-		ru.QueueLabelKey: queue.Name,
-	}
-
 	queuePodGroups := v2alpha2.PodGroupList{}
-	err := ru.Client.List(ctx, &queuePodGroups, listOption)
+	err := ru.Client.List(ctx, &queuePodGroups, client.MatchingFields{
+		common.PodGroupQueueIndexName: queue.Name,
+	})
 	if err != nil {
 		return err
 	}

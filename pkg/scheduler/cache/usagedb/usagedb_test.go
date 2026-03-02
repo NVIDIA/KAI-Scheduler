@@ -89,14 +89,14 @@ func TestGetResourceUsage(t *testing.T) {
 			name: "fresh data available",
 			setupLister: func(l *UsageLister) {
 				usage := queue_info.NewClusterUsage()
-				usage.Queues["queue1"] = queue_info.QueueUsage{constants.GpuResource: 5}
+				usage.Queues["queue1"] = queue_info.QueueUsage{constants.NvidiaGpuResource: 5}
 				now := time.Now()
 				l.lastUsageData = usage
 				l.lastUsageDataTime = &now
 			},
 			wantUsage: func() *queue_info.ClusterUsage {
 				usage := queue_info.NewClusterUsage()
-				usage.Queues["queue1"] = queue_info.QueueUsage{constants.GpuResource: 5}
+				usage.Queues["queue1"] = queue_info.QueueUsage{constants.NvidiaGpuResource: 5}
 				return usage
 			}(),
 		},

@@ -49,6 +49,11 @@ func (in *Prometheus) DeepCopyInto(out *Prometheus) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.InstanceName != nil {
+		in, out := &in.InstanceName, &out.InstanceName
+		*out = new(string)
+		**out = **in
+	}
 	if in.RetentionPeriod != nil {
 		in, out := &in.RetentionPeriod, &out.RetentionPeriod
 		*out = new(string)
@@ -57,6 +62,11 @@ func (in *Prometheus) DeepCopyInto(out *Prometheus) {
 	if in.SampleInterval != nil {
 		in, out := &in.SampleInterval, &out.SampleInterval
 		*out = new(string)
+		**out = **in
+	}
+	if in.EnablePersistentStorage != nil {
+		in, out := &in.EnablePersistentStorage, &out.EnablePersistentStorage
+		*out = new(bool)
 		**out = **in
 	}
 	if in.StorageSize != nil {
@@ -83,6 +93,16 @@ func (in *Prometheus) DeepCopyInto(out *Prometheus) {
 		in, out := &in.ExternalPrometheusHealthProbe, &out.ExternalPrometheusHealthProbe
 		*out = new(ExternalPrometheusHealthProbe)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.AccountingLabelKey != nil {
+		in, out := &in.AccountingLabelKey, &out.AccountingLabelKey
+		*out = new(string)
+		**out = **in
+	}
+	if in.AccountingLabelValue != nil {
+		in, out := &in.AccountingLabelValue, &out.AccountingLabelValue
+		*out = new(string)
+		**out = **in
 	}
 }
 

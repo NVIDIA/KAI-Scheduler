@@ -81,3 +81,7 @@ func (p *PodGroupController) Name() string {
 func (p *PodGroupController) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
 	return nil
 }
+
+func (p *PodGroupController) HasMissingDependencies(context.Context, client.Reader, *kaiv1.Config) (string, error) {
+	return "", nil
+}

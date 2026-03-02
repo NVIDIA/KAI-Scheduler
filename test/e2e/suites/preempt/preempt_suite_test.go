@@ -13,6 +13,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribePreemptDistributedSpecs()
+var _ = DescribePreemptElasticSpecs()
+var _ = DescribePreemptPodOrderSpecs()
+
 func TestPreempt(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

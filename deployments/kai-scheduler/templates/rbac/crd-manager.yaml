@@ -18,7 +18,7 @@ rules:
     - bindrequests.scheduling.run.ai
     - podgroups.scheduling.run.ai
     - queues.scheduling.run.ai
-    - topologies.kueue.x-k8s.io
+    - topologies.kai.scheduler
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: v1

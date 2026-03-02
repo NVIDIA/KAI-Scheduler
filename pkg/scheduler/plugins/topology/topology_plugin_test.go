@@ -11,6 +11,7 @@ import (
 
 	kubeaischedulerver "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
@@ -22,14 +23,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
-	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 )
 
 func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 	fakeKubeClient := fake.NewSimpleClientset()
 	fakeKubeAISchedulerClient := kubeaischedulerver.NewSimpleClientset()
-	fakeKueueClient := kueuefake.NewSimpleClientset()
 
 	testNodes := []*v1.Node{
 		{
@@ -45,8 +44,8 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 			},
 			Status: v1.NodeStatus{
 				Allocatable: v1.ResourceList{
-					"cpu":                 resource.MustParse("1"),
-					constants.GpuResource: resource.MustParse("1"),
+					"cpu":                       resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			},
 		},
@@ -63,8 +62,8 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 			},
 			Status: v1.NodeStatus{
 				Allocatable: v1.ResourceList{
-					"cpu":                 resource.MustParse("1"),
-					constants.GpuResource: resource.MustParse("1"),
+					"cpu":                       resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			},
 		},
@@ -81,19 +80,19 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 			},
 			Status: v1.NodeStatus{
 				Allocatable: v1.ResourceList{
-					"cpu":                 resource.MustParse("1"),
-					constants.GpuResource: resource.MustParse("3"),
+					"cpu":                       resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("3"),
 				},
 			},
 		},
 	}
 
-	testTopology := &kueuev1alpha1.Topology{
+	testTopology := &kaiv1alpha1.Topology{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-topology",
 		},
-		Spec: kueuev1alpha1.TopologySpec{
-			Levels: []kueuev1alpha1.TopologyLevel{
+		Spec: kaiv1alpha1.TopologySpec{
+			Levels: []kaiv1alpha1.TopologyLevel{
 				{
 					NodeLabel: "test-topology-label/block",
 				},
@@ -125,7 +124,6 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 	schedulerCache := cache.New(&cache.SchedulerCacheParams{
 		KubeClient:                  fakeKubeClient,
 		KAISchedulerClient:          fakeKubeAISchedulerClient,
-		KueueClient:                 fakeKueueClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      false,
@@ -146,7 +144,7 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	_, err = fakeKueueClient.KueueV1alpha1().Topologies().Create(ctx, testTopology, metav1.CreateOptions{})
+	_, err = fakeKubeAISchedulerClient.KaiV1alpha1().Topologies().Create(ctx, testTopology, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	schedulerCache.Run(ctx.Done())
@@ -156,30 +154,32 @@ func TestTopologyPlugin_initializeTopologyTree(t *testing.T) {
 		Config:          schedulerConfig,
 		SchedulerParams: schedulerParams,
 		Cache:           schedulerCache,
-		Nodes: map[string]*node_info.NodeInfo{
-			testNodes[0].Name: {
-				Node:        testNodes[0],
-				Allocatable: resource_info.ResourceFromResourceList(testNodes[0].Status.Allocatable),
-				Idle:        resource_info.NewResource(500, 0, 0),
-				Releasing:   resource_info.NewResource(0, 0, 0),
-				Used:        resource_info.NewResource(500, 0, 1),
+		ClusterInfo: &api.ClusterInfo{
+			Nodes: map[string]*node_info.NodeInfo{
+				testNodes[0].Name: {
+					Node:        testNodes[0],
+					Allocatable: resource_info.ResourceFromResourceList(testNodes[0].Status.Allocatable),
+					Idle:        resource_info.NewResource(500, 0, 0),
+					Releasing:   resource_info.NewResource(0, 0, 0),
+					Used:        resource_info.NewResource(500, 0, 1),
+				},
+				testNodes[1].Name: {
+					Node:        testNodes[1],
+					Allocatable: resource_info.ResourceFromResourceList(testNodes[1].Status.Allocatable),
+					Idle:        resource_info.NewResource(500, 0, 0),
+					Releasing:   resource_info.NewResource(0, 0, 0),
+					Used:        resource_info.NewResource(500, 0, 0),
+				},
+				testNodes[2].Name: {
+					Node:        testNodes[2],
+					Allocatable: resource_info.ResourceFromResourceList(testNodes[2].Status.Allocatable),
+					Idle:        resource_info.NewResource(0, 0, 0),
+					Releasing:   resource_info.NewResource(0, 0, 0),
+					Used:        resource_info.NewResource(1000, 0, 3),
+				},
 			},
-			testNodes[1].Name: {
-				Node:        testNodes[1],
-				Allocatable: resource_info.ResourceFromResourceList(testNodes[1].Status.Allocatable),
-				Idle:        resource_info.NewResource(500, 0, 0),
-				Releasing:   resource_info.NewResource(0, 0, 0),
-				Used:        resource_info.NewResource(500, 0, 0),
-			},
-			testNodes[2].Name: {
-				Node:        testNodes[2],
-				Allocatable: resource_info.ResourceFromResourceList(testNodes[2].Status.Allocatable),
-				Idle:        resource_info.NewResource(0, 0, 0),
-				Releasing:   resource_info.NewResource(0, 0, 0),
-				Used:        resource_info.NewResource(1000, 0, 3),
-			},
+			Topologies: []*kaiv1alpha1.Topology{testTopology},
 		},
-		Topologies: []*kueuev1alpha1.Topology{testTopology},
 	}
 
 	plugin := New(nil)

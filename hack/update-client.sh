@@ -13,10 +13,11 @@ import (
 EOF
 
 go mod tidy
-go mod vendor
+go mod download
 
 SDK_HACK_DIR="$(cd "$(dirname "$(readlink "$0" || echo "$0")")"; pwd)"
-source ${SDK_HACK_DIR}/../vendor/k8s.io/code-generator/kube_codegen.sh
+CODEGEN_PKG=$(go list -m -f '{{.Dir}}' k8s.io/code-generator)
+source ${CODEGEN_PKG}/kube_codegen.sh
 kube::codegen::gen_client \
   --boilerplate ${SDK_HACK_DIR}/boilerplate.go.kb.txt \
   --with-watch \
@@ -24,7 +25,7 @@ kube::codegen::gen_client \
   --output-pkg github.com/NVIDIA/KAI-scheduler/pkg/apis/client \
   ${SDK_HACK_DIR}/../pkg/apis
 
-rm -f generate-dep.go && rm -r vendor && go mod tidy
+rm -f generate-dep.go && go mod tidy
 
 changed_files=$(git diff --name-only | grep pkg/apis/client | grep v1alpha2)
 ${SDK_HACK_DIR}/replace_headers.sh \

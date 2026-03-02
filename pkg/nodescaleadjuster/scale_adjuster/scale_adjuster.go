@@ -166,6 +166,9 @@ func (sa *ScaleAdjuster) getUnschedulablePods() ([]*corev1.Pod, error) {
 		if !isPodAlive(&pod) {
 			continue
 		}
+		if !isPodUnschedulable(&pod) {
+			continue
+		}
 		pods = append(pods, &podsList.Items[index])
 	}
 
@@ -178,4 +181,14 @@ func requestFractionalGPU(pod *corev1.Pod) bool {
 
 func isPodAlive(pod *corev1.Pod) bool {
 	return !slices.Contains([]corev1.PodPhase{corev1.PodSucceeded, corev1.PodFailed}, pod.Status.Phase)
+}
+
+func isPodUnschedulable(pod *corev1.Pod) bool {
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == corev1.PodScheduled {
+			return condition.Status == corev1.ConditionFalse &&
+				condition.Reason == corev1.PodReasonUnschedulable
+		}
+	}
+	return false
 }

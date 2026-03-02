@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribeConditionsSpecs()
+
 func TestPodGroups(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

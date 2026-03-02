@@ -628,6 +628,13 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 					return false, nil, nil
 				},
 			)
+			// Also block patch operations (for annotation updates)
+			kubeAiSchedClient.SchedulingV2alpha2().(*fakeschedulingv2alpha2.FakeSchedulingV2alpha2).PrependReactor(
+				"patch", "podgroups", func(action faketesting.Action) (handled bool, ret runtime.Object, err error) {
+					<-finishUpdatesChan
+					return false, nil, nil
+				},
+			)
 
 			stopCh := make(chan struct{})
 			statusUpdater.Run(stopCh)

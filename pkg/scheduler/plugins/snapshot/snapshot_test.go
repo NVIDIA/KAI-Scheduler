@@ -15,17 +15,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
+	resourcev1beta1 "k8s.io/api/resource/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	version "k8s.io/apimachinery/pkg/version"
+	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/kubernetes/fake"
 
 	kubeaischedulerver "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
-	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
 )
 
 const (
@@ -36,7 +38,14 @@ const (
 func TestSnapshotPlugin(t *testing.T) {
 	fakeKubeClient := fake.NewSimpleClientset()
 	fakeKubeAISchedulerClient := kubeaischedulerver.NewSimpleClientset()
-	fakeKueueClient := kueuefake.NewSimpleClientset()
+	fakeDiscoveryClient := fakeKubeClient.Discovery().(*fakediscovery.FakeDiscovery)
+	fakeDiscoveryClient.FakedServerVersion = &version.Info{
+		Major: "1",
+		Minor: "32+",
+	}
+	fakeKubeClient.Resources = append(fakeKubeClient.Resources, &metav1.APIResourceList{
+		GroupVersion: resourcev1beta1.SchemeGroupVersion.String(),
+	})
 
 	testPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -120,7 +129,7 @@ func TestSnapshotPlugin(t *testing.T) {
 		},
 	}
 
-	testTopology := &kueuev1alpha1.Topology{
+	testTopology := &kaiv1alpha1.Topology{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-topology",
 		},
@@ -150,7 +159,6 @@ func TestSnapshotPlugin(t *testing.T) {
 	schedulerCache := cache.New(&cache.SchedulerCacheParams{
 		KubeClient:                  fakeKubeClient,
 		KAISchedulerClient:          fakeKubeAISchedulerClient,
-		KueueClient:                 fakeKueueClient,
 		SchedulerName:               schedulerParams.SchedulerName,
 		NodePoolParams:              schedulerParams.PartitionParams,
 		RestrictNodeScheduling:      false,
@@ -178,7 +186,7 @@ func TestSnapshotPlugin(t *testing.T) {
 	_, err = fakeKubeAISchedulerClient.SchedulingV2alpha2().PodGroups("default").Create(ctx, testPodGroup, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
-	_, err = fakeKueueClient.KueueV1alpha1().Topologies().Create(ctx, testTopology, metav1.CreateOptions{})
+	_, err = fakeKubeAISchedulerClient.KaiV1alpha1().Topologies().Create(ctx, testTopology, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	schedulerCache.Run(ctx.Done())
@@ -253,4 +261,10 @@ func TestSnapshotPlugin(t *testing.T) {
 	if len(snapshot.RawObjects.Topologies) > 0 {
 		assert.Equal(t, testTopology.Name, snapshot.RawObjects.Topologies[0].Name)
 	}
+
+	assert.NotNil(t, snapshot.Discovery)
+	assert.Equal(t, "1", snapshot.Discovery.ServerVersion.Major)
+	assert.Equal(t, "32+", snapshot.Discovery.ServerVersion.Minor)
+	assert.Len(t, snapshot.Discovery.Resources, 1)
+	assert.Equal(t, resourcev1beta1.SchemeGroupVersion.String(), snapshot.Discovery.Resources[0].GroupVersion)
 }

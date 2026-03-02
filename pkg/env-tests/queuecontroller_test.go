@@ -103,7 +103,7 @@ var _ = Describe("QueueController", Ordered, func() {
 		It("Should update queue status", func(ctx context.Context) {
 			testPod := utils.CreatePodObject(testNamespace.Name, "test-pod", corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			Expect(ctrlClient.Create(ctx, testPod)).To(Succeed(), "Failed to create test pod")
@@ -119,7 +119,7 @@ var _ = Describe("QueueController", Ordered, func() {
 
 			podgroupCopy := podgroup.DeepCopy()
 			podgroupCopy.Status.ResourcesStatus.Allocated = corev1.ResourceList{
-				constants.GpuResource: resource.MustParse("420"),
+				constants.NvidiaGpuResource: resource.MustParse("420"),
 			}
 			Expect(ctrlClient.Status().Patch(ctx, podgroupCopy, client.MergeFrom(&podgroup))).To(Succeed(), "Failed to patch test podgroup status")
 
@@ -135,7 +135,7 @@ var _ = Describe("QueueController", Ordered, func() {
 					return false, nil
 				}
 
-				if queue.Status.Allocated[constants.GpuResource] != resource.MustParse("420") {
+				if queue.Status.Allocated[constants.NvidiaGpuResource] != resource.MustParse("420") {
 					return false, nil
 				}
 

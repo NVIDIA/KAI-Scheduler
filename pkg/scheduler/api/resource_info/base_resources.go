@@ -55,6 +55,9 @@ func (r *BaseResource) Add(other *BaseResource) {
 	r.memory += other.memory
 	for rName, rrValue := range other.scalarResources {
 		r.scalarResources[rName] += rrValue
+		if r.scalarResources[rName] == 0 {
+			delete(r.scalarResources, rName)
+		}
 	}
 }
 
@@ -63,6 +66,9 @@ func (r *BaseResource) Sub(other *BaseResource) {
 	r.memory -= other.memory
 	for rName, rrValue := range other.scalarResources {
 		r.scalarResources[rName] -= rrValue
+		if r.scalarResources[rName] == 0 {
+			delete(r.scalarResources, rName)
+		}
 	}
 }
 

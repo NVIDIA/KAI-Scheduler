@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -41,16 +41,17 @@ type TestTopologyBasic struct {
 	Name string
 	Jobs []*jobs_fake.TestJobBasic
 
-	Nodes                  map[string]nodes_fake.TestNodeBasic
-	Queues                 []TestQueueBasic
-	Departments            []TestDepartmentBasic
-	JobExpectedResults     map[string]TestExpectedResultBasic
-	TaskExpectedResults    map[string]TestExpectedResultBasic
-	ExpectedNodesResources map[string]TestExpectedNodesResources
-	Mocks                  *TestMock
+	Nodes                    map[string]nodes_fake.TestNodeBasic
+	Queues                   []TestQueueBasic
+	Departments              []TestDepartmentBasic
+	DisableDefaultDepartment bool // When true, allows n-level queue hierarchies using only the Queues field
+	JobExpectedResults       map[string]TestExpectedResultBasic
+	TaskExpectedResults      map[string]TestExpectedResultBasic
+	ExpectedNodesResources   map[string]TestExpectedNodesResources
+	Mocks                    *TestMock
 
 	dra_fake.TestDRAObjects
-	Topologies []*kueuev1alpha1.Topology
+	Topologies []*kaiv1alpha1.Topology
 }
 
 type TestMock struct {
@@ -109,6 +110,7 @@ type TestExpectedResultBasic struct {
 	GPUGroups                   []string
 	DontValidateGPUGroup        bool
 	LastStartTimestampOlderThan *time.Duration
+	ExpectedErrorMessage        string
 }
 
 type TestExpectedNodesResources struct {
@@ -122,17 +124,17 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 
 	for jobName, jobExpectedResult := range testMetadata.JobExpectedResults {
 		var sumOfJobRequestedGPU, sumOfJobRequestedMillisCpu, sumOfJobRequestedMemory, sumOfAcceptedGpus float64
-		job, found := ssn.PodGroupInfos[common_info.PodGroupID(jobName)]
+		job, found := ssn.ClusterInfo.PodGroupInfos[common_info.PodGroupID(jobName)]
 		if !found {
 			t.Errorf("Test number: %d, name: %s, has failed. Couldn't find job: %s for expected tasks.", testNumber, testMetadata.Name, jobName)
 		}
-		for _, taskInfo := range ssn.PodGroupInfos[common_info.PodGroupID(jobName)].GetAllPodsMap() {
+		for _, taskInfo := range ssn.ClusterInfo.PodGroupInfos[common_info.PodGroupID(jobName)].GetAllPodsMap() {
 
 			if taskInfo.Status != jobExpectedResult.Status {
 				t.Errorf("Test number: %d, name: %s, has failed. Task name: %s, actual uses status: %s, was expecting status: %s", testNumber, testMetadata.Name, taskInfo.Name, taskInfo.Status, jobExpectedResult.Status)
 				if jobExpectedResult.Status == pod_status.Running {
 					t.Errorf("%v", job.JobFitErrors)
-					t.Errorf("%v", job.NodesFitErrors)
+					t.Errorf("%v", job.TasksFitErrors)
 				}
 			}
 
@@ -193,11 +195,24 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 		if jobExpectedResult.MemoryRequired != 0 && sumOfJobRequestedMemory != jobExpectedResult.MemoryRequired {
 			t.Errorf("Test number: %d, name: %v, has failed. Task name: %v, actual uses Memory: %v, was expecting Memory: %v", testNumber, testMetadata.Name, jobName, sumOfJobRequestedMemory, jobExpectedResult.MemoryRequired)
 		}
+
+		// Validate expected error message for jobs that didn't get allocated
+		if len(jobExpectedResult.ExpectedErrorMessage) > 0 {
+			if len(job.JobFitErrors) == 0 {
+				t.Errorf("Test number: %d, name: %s, has failed. Job: %s expected error message but got no fit errors", testNumber, testMetadata.Name, jobName)
+			} else {
+				actualErrorMessage := common_info.JobFitErrorsToDetailedMessage(job.JobFitErrors)
+				if actualErrorMessage != jobExpectedResult.ExpectedErrorMessage {
+					t.Errorf("Test number: %d, name: %s, has failed. Job: %s\nExpected error message:\n%s\nActual error message:\n%s",
+						testNumber, testMetadata.Name, jobName, jobExpectedResult.ExpectedErrorMessage, actualErrorMessage)
+				}
+			}
+		}
 	}
 
 	if len(testMetadata.TaskExpectedResults) > 0 {
-		for jobId, job := range ssn.PodGroupInfos {
-			for taskId, task := range ssn.PodGroupInfos[jobId].GetAllPodsMap() {
+		for jobId, job := range ssn.ClusterInfo.PodGroupInfos {
+			for taskId, task := range ssn.ClusterInfo.PodGroupInfos[jobId].GetAllPodsMap() {
 				taskExpectedResult, found := testMetadata.TaskExpectedResults[string(taskId)]
 				if !found {
 					continue
@@ -283,7 +298,7 @@ func MatchExpectedAndRealTasks(t *testing.T, testNumber int, testMetadata TestTo
 	}
 
 	for nodeName, nodeExpectedResources := range testMetadata.ExpectedNodesResources {
-		ssnNode, found := ssn.Nodes[nodeName]
+		ssnNode, found := ssn.ClusterInfo.Nodes[nodeName]
 		if !found {
 			t.Errorf("Test number: %d, name: %v, has failed. Couldn't find node: %v for expected nodes resources.", testNumber, testMetadata.Name, nodeName)
 		}

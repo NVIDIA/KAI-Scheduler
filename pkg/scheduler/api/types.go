@@ -76,6 +76,14 @@ type BindRequestMutateFn func(pod *pod_info.PodInfo, nodeName string) map[string
 // PreJobAllocationFn is used for notifying on job allocation start
 type PreJobAllocationFn func(job *podgroup_info.PodGroupInfo)
 
+// CompareQueueFn is used to compare two queues for ordering based on their jobs and victims.
+type CompareQueueFn func(
+	lQ, rQ *queue_info.QueueInfo,
+	lJob, rJob *podgroup_info.PodGroupInfo,
+	lVictims, rVictims []*podgroup_info.PodGroupInfo,
+	minNodeGPUMemory int64,
+) int
+
 type SchedulableResult struct {
 	IsSchedulable bool
 	Reason        v2alpha2.UnschedulableReason

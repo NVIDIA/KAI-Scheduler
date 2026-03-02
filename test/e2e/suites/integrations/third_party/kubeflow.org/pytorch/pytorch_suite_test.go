@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribePytorchSpecs()
+
 func TestPytorch(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

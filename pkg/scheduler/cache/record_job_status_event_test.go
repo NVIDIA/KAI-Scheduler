@@ -20,7 +20,6 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/ptr"
-	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
 
 	kubeaischedulerfake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
 	enginev2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
@@ -275,6 +274,24 @@ func TestRecordJobStatusEvent(t *testing.T) {
 				"pod-2": {"^Node-Pool 'default': OverCapacity: job is over capacity"},
 			},
 		},
+		{
+			name: "queue does not exist error",
+			pods: map[v1.PodPhase][]common_info.PodID{
+				v1.PodPending: {"pod-1"},
+			},
+			nodeErrors:                       map[common_info.PodID]map[string]string{},
+			podErrors:                        map[common_info.PodID]error{},
+			jobErrors:                        newUnschedulabeReasons(map[string]string{string(enginev2alpha2.QueueDoesNotExist): "Queue 'nonexistent-queue' does not exist"}),
+			expectedPodgroupErrorPatterns:    []string{"Queue 'nonexistent-queue' does not exist"},
+			expectedPodgroupConditionReasons: []enginev2alpha2.UnschedulableReason{enginev2alpha2.QueueDoesNotExist},
+			expectedPodgroupEventPatterns:    []string{"Queue 'nonexistent-queue' does not exist"},
+			expectedPodErrorPatterns: map[common_info.PodID][]string{
+				"pod-1": {"Queue 'nonexistent-queue' does not exist"},
+			},
+			expectedPodEventPatterns: map[common_info.PodID][]string{
+				"pod-1": {"Queue 'nonexistent-queue' does not exist"},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var (
@@ -311,7 +328,6 @@ func TestRecordJobStatusEvent(t *testing.T) {
 
 			kubeClient = fake.NewSimpleClientset(podsAsObjects...)
 			kubeAiSchedulerClient := kubeaischedulerfake.NewSimpleClientset(podGroup)
-			kueueClient := kueuefake.NewSimpleClientset()
 
 			if tt.detailedErrors != nil {
 				detailedFitErrors = *tt.detailedErrors
@@ -320,7 +336,6 @@ func TestRecordJobStatusEvent(t *testing.T) {
 			cache := New(&SchedulerCacheParams{
 				KubeClient:                  kubeClient,
 				KAISchedulerClient:          kubeAiSchedulerClient,
-				KueueClient:                 kueueClient,
 				NodePoolParams:              &conf.SchedulingNodePoolParams{},
 				DetailedFitErrors:           detailedFitErrors,
 				FullHierarchyFairness:       true,
@@ -342,17 +357,17 @@ func TestRecordJobStatusEvent(t *testing.T) {
 					fitError := common_info.NewFitError(string(podID), "namespace-1", node, msg)
 					fitErrors.SetNodeError(node, fitError)
 				}
-				podGroupInfo.SetTaskFitError(podGroupInfo.GetAllPodsMap()[podID], fitErrors)
+				podGroupInfo.AddTaskFitErrors(podGroupInfo.GetAllPodsMap()[podID], fitErrors)
 			}
 
 			for podID, err := range tt.podErrors {
 				fitErrors := common_info.NewFitErrors()
 				fitErrors.SetError(err.Error())
-				podGroupInfo.SetTaskFitError(podGroupInfo.GetAllPodsMap()[podID], fitErrors)
+				podGroupInfo.AddTaskFitErrors(podGroupInfo.GetAllPodsMap()[podID], fitErrors)
 			}
 
 			for _, explanation := range tt.jobErrors {
-				podGroupInfo.SetJobFitError(explanation.Reason, explanation.Message, nil)
+				podGroupInfo.AddSimpleJobFitError(explanation.Reason, explanation.Message)
 			}
 
 			err := cache.RecordJobStatusEvent(podGroupInfo)

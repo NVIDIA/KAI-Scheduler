@@ -146,10 +146,10 @@ func getCurrentServiceMonitorState(ctx context.Context, runtimeClient client.Cli
 	if err != nil {
 		// If field indexer is not available, fall back to listing all ServiceMonitor resources
 		// and filter by owner reference manually
-		log.FromContext(ctx).Info("Failed to list ServiceMonitor. error: %v", err)
+		log.FromContext(ctx).Info("Failed to list ServiceMonitor", "error", err)
 		err = runtimeClient.List(ctx, serviceMonitorList)
 		if err != nil {
-			log.FromContext(ctx).Error(err, "Failed to manually list ServiceMonitor resource. error: %v", err)
+			log.FromContext(ctx).Error(err, "Failed to manually list ServiceMonitor resource", "error", err)
 			return nil, err
 		}
 

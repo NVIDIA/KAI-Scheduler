@@ -61,7 +61,7 @@ func TestMutate(t *testing.T) {
 					Containers: []v1.Container{
 						{
 							Resources: v1.ResourceRequirements{
-								Limits: v1.ResourceList{constants.GpuResource: resource.MustParse("1")},
+								Limits: v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
 							},
 						},
 					},
@@ -73,7 +73,34 @@ func TestMutate(t *testing.T) {
 					Containers: []v1.Container{
 						{
 							Resources: v1.ResourceRequirements{
-								Limits: v1.ResourceList{constants.GpuResource: resource.MustParse("1")},
+								Limits: v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
+							},
+						},
+					},
+				},
+			},
+			expectedError: nil,
+		},
+		{
+			name:                   "empty gpuPodRuntimeClassName skips runtimeClass injection",
+			gpuPodRuntimeClassName: "",
+			incomingPod: &v1.Pod{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Resources: v1.ResourceRequirements{
+								Limits: v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
+							},
+						},
+					},
+				},
+			},
+			expectedOutboundPod: &v1.Pod{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Resources: v1.ResourceRequirements{
+								Limits: v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
 							},
 						},
 					},
@@ -90,7 +117,7 @@ func TestMutate(t *testing.T) {
 					Containers: []v1.Container{
 						{
 							Resources: v1.ResourceRequirements{
-								Limits: v1.ResourceList{constants.GpuResource: resource.MustParse("1")},
+								Limits: v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
 							},
 						},
 					},
@@ -102,7 +129,7 @@ func TestMutate(t *testing.T) {
 					Containers: []v1.Container{
 						{
 							Resources: v1.ResourceRequirements{
-								Limits: v1.ResourceList{constants.GpuResource: resource.MustParse("1")},
+								Limits: v1.ResourceList{constants.NvidiaGpuResource: resource.MustParse("1")},
 							},
 						},
 					},

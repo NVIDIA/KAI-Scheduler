@@ -24,10 +24,10 @@ func createScalingPodSpec(
 ) *corev1.Pod {
 	resources := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
-			constants.GpuResource: *resource.NewQuantity(numDevices, resource.DecimalSI),
+			constants.NvidiaGpuResource: *resource.NewQuantity(numDevices, resource.DecimalSI),
 		},
 		Limits: corev1.ResourceList{
-			constants.GpuResource: *resource.NewQuantity(numDevices, resource.DecimalSI),
+			constants.NvidiaGpuResource: *resource.NewQuantity(numDevices, resource.DecimalSI),
 		},
 	}
 	for _, container := range unschedulablePod.Spec.Containers {

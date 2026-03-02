@@ -76,7 +76,7 @@ func (cp *CapacityPolicy) isJobOverCapacity(requestedShare rs.ResourceQuantities
 func getRequiredQuota(tasksToAllocate []*pod_info.PodInfo) *podgroup_info.JobRequirement {
 	quota := podgroup_info.JobRequirement{}
 	for _, pod := range tasksToAllocate {
-		quota.GPU += pod.ResReq.GetSumGPUs()
+		quota.GPU += pod.ResReq.GetGpusQuota()
 		quota.MilliCPU += pod.ResReq.Cpu()
 		quota.Memory += pod.ResReq.Memory()
 	}

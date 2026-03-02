@@ -40,7 +40,7 @@ func FillAllNodesWithJobs(
 		return nil, nil, err
 	}
 
-	for i := 0; i < podFillerSize; i++ {
+	for range podFillerSize {
 		job, jobPod := createFillerJob(ctx, testCtx, testQueue, resources, annotations, labels, priorityClass, targetNodes...)
 		jobs = append(jobs, job)
 		jobPods = append(jobPods, jobPod)

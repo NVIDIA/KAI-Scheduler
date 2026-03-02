@@ -67,6 +67,7 @@ func TestAddFlags(t *testing.T) {
 		GlobalDefaultStalenessGracePeriod: defaultStalenessGracePeriod,
 		NumOfStatusRecordingWorkers:       defaultNumOfStatusRecordingWorkers,
 		NodePoolLabelKey:                  constants.DefaultNodePoolLabelKey,
+		QueueLabelKey:                     constants.DefaultQueueLabel,
 		PluginServerPort:                  8081,
 		CPUWorkerNodeLabelKey:             constants.DefaultCPUWorkerNodeLabelKey,
 		GPUWorkerNodeLabelKey:             constants.DefaultGPUWorkerNodeLabelKey,

@@ -5,6 +5,7 @@ package snapshot
 
 import (
 	"archive/zip"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -14,8 +15,12 @@ import (
 	resourceapi "k8s.io/api/resource/v1"
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	version "k8s.io/apimachinery/pkg/version"
+	discovery "k8s.io/client-go/discovery"
 
-	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	enginev2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
@@ -45,13 +50,19 @@ type RawKubernetesObjects struct {
 	ResourceClaims         []*resourceapi.ResourceClaim      `json:"resourceClaims"`
 	ResourceSlices         []*resourceapi.ResourceSlice      `json:"resourceSlices"`
 	DeviceClasses          []*resourceapi.DeviceClass        `json:"deviceClasses"`
-	Topologies             []*kueue.Topology                 `json:"topologies"`
+	Topologies             []*kaiv1alpha1.Topology           `json:"topologies"`
+}
+
+type DiscoverySnapshot struct {
+	ServerVersion *version.Info             `json:"serverVersion"`
+	Resources     []*metav1.APIResourceList `json:"resources"`
 }
 
 type Snapshot struct {
 	Config          *conf.SchedulerConfiguration `json:"config"`
 	SchedulerParams *conf.SchedulerParams        `json:"schedulerParams"`
 	RawObjects      *RawKubernetesObjects        `json:"rawObjects"`
+	Discovery       *DiscoverySnapshot           `json:"discovery,omitempty"`
 }
 
 type snapshotPlugin struct {
@@ -145,7 +156,7 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 	rawObjects.Topologies, err = dataLister.ListTopologies()
 	if err != nil {
 		log.InfraLogger.Errorf("Error getting raw topologies: %v", err)
-		rawObjects.Topologies = []*kueue.Topology{}
+		rawObjects.Topologies = []*kaiv1alpha1.Topology{}
 	}
 
 	fwork := sp.session.InternalK8sPlugins().FrameworkHandle
@@ -168,10 +179,25 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 		rawObjects.DeviceClasses = []*resourceapi.DeviceClass{}
 	}
 
+	discoverySnapshot := &DiscoverySnapshot{}
+	discoveryClient := sp.session.Cache.KubeClient().Discovery()
+	discoverySnapshot.ServerVersion, err = getServerVersion(request.Context(), discoveryClient)
+	if err != nil {
+		log.InfraLogger.V(2).Warnf("Failed to snapshot server version: %v", err)
+		discoverySnapshot.ServerVersion = nil
+	}
+
+	_, discoverySnapshot.Resources, err = discoveryClient.ServerGroupsAndResources()
+	if err != nil {
+		log.InfraLogger.V(2).Warnf("Failed to snapshot server resources: %v", err)
+		discoverySnapshot.Resources = nil
+	}
+
 	snapshotAndConfig := Snapshot{
 		Config:          sp.session.Config,
 		SchedulerParams: &sp.session.SchedulerParams,
 		RawObjects:      rawObjects,
+		Discovery:       discoverySnapshot,
 	}
 	jsonBytes, err := json.Marshal(snapshotAndConfig)
 	if err != nil {
@@ -204,4 +230,31 @@ func (sp *snapshotPlugin) serveSnapshot(writer http.ResponseWriter, request *htt
 
 func New(_ framework.PluginArguments) framework.Plugin {
 	return &snapshotPlugin{}
+}
+
+func getServerVersion(ctx context.Context, discoveryClient discovery.DiscoveryInterface) (*version.Info, error) {
+	serverVersion, err := discoveryClient.ServerVersion()
+	if err == nil {
+		return serverVersion, nil
+	}
+	if !apierrors.IsNotAcceptable(err) {
+		return nil, err
+	}
+
+	// Fallback for clusters where /version rejects the negotiated content-type (e.g. protobuf).
+	versionResponse, fallbackErr := discoveryClient.RESTClient().
+		Get().
+		AbsPath("/version").
+		SetHeader("Accept", "application/json").
+		DoRaw(ctx)
+	if fallbackErr != nil {
+		return nil, fallbackErr
+	}
+
+	fallbackServerVersion := &version.Info{}
+	if unmarshalErr := json.Unmarshal(versionResponse, fallbackServerVersion); unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+
+	return fallbackServerVersion, nil
 }

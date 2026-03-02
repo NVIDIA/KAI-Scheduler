@@ -87,6 +87,9 @@ type NodeInfo struct {
 	GpuMemorySynced        bool
 	LegacyMIGTasks         map[common_info.PodID]string
 
+	// HasDRAGPUs indicates GPUs were added via DRA ResourceSlices. Temporary fix - remove when device-plugin pods are supported on DRA nodes.
+	HasDRAGPUs bool
+
 	PodAffinityInfo pod_affinity.NodePodAffinityInfo
 
 	GpuSharingNodeInfo
@@ -246,7 +249,7 @@ func (ni *NodeInfo) isTaskStorageAllocatableOnReleasingOrIdle(task *pod_info.Pod
 	return true, nil
 }
 
-func (ni *NodeInfo) FittingError(task *pod_info.PodInfo, isGangTask bool) *common_info.FitError {
+func (ni *NodeInfo) FittingError(task *pod_info.PodInfo, isGangTask bool) *common_info.TasksFitError {
 	enoughResources := ni.lessEqualTaskToNodeResources(task.ResReq, ni.Idle)
 	if !enoughResources {
 		totalUsed := ni.Used.Clone()
@@ -298,6 +301,15 @@ func (ni *NodeInfo) PredicateByNodeResourcesType(task *pod_info.PodInfo) error {
 		return nil
 	}
 
+	// Temporary fix: Reject device-plugin GPU requests on DRA-only nodes.
+	// Remove when device-plugin pods are supported on DRA nodes.
+	if task.ResReq.GPUs() > 0 && ni.HasDRAGPUs {
+		log.InfraLogger.V(4).Infof("Task %s/%s rejected on node %s: device-plugin GPU request on DRA-only node",
+			task.Namespace, task.Name, ni.Name)
+		return common_info.NewFitError(task.Name, task.Namespace, ni.Name,
+			"device-plugin GPU requests cannot be scheduled on DRA-only nodes")
+	}
+
 	migNode := ni.IsMIGEnabled()
 	if !migNode && task.IsMigCandidate() {
 		return common_info.NewFitError(task.Name, task.Namespace, ni.Name,
@@ -345,10 +357,6 @@ func (ni *NodeInfo) isTaskAllocatableOnNonAllocatedResources(
 	}
 
 	return false
-}
-
-func (ni *NodeInfo) shouldAddTaskResources(task *pod_info.PodInfo) bool {
-	return !pod_info.IsResourceReservationTask(task.Pod)
 }
 
 func (ni *NodeInfo) AddTask(task *pod_info.PodInfo) error {
@@ -425,28 +433,27 @@ func (ni *NodeInfo) addTaskStorage(task *pod_info.PodInfo) {
 }
 
 func (ni *NodeInfo) addTaskResources(task *pod_info.PodInfo) {
-	if !ni.shouldAddTaskResources(task) {
-		return
-	}
-
 	log.InfraLogger.V(7).Infof("About to add podsInfo: <%v/%v>, status: <%v>, node: <%s>",
 		task.Namespace, task.Name, task.Status, ni.Name)
 	log.InfraLogger.V(7).Infof("Node info: %+v", ni)
 
-	requestedResourceWithoutSharedGPU := getAcceptedTaskResourceWithoutSharedGPU(task)
+	resourcesToTrack := getAcceptedTaskResourceWithoutSharedGPU(task)
 
-	// the added task will be the only one allocated on the GPU
-	ni.Used.Add(requestedResourceWithoutSharedGPU)
+	if pod_info.IsResourceReservationTask(task.Pod) {
+		// Reservation pod: track all resources except GPUs
+		resourcesToTrack.SetGPUs(0)
+	}
+
+	ni.Used.Add(resourcesToTrack)
 
 	switch task.Status {
 	case pod_status.Releasing:
-		ni.Releasing.Add(requestedResourceWithoutSharedGPU)
-		ni.Idle.Sub(requestedResourceWithoutSharedGPU)
+		ni.Releasing.Add(resourcesToTrack)
+		ni.Idle.Sub(resourcesToTrack)
 	case pod_status.Pipelined:
-		ni.Releasing.Sub(requestedResourceWithoutSharedGPU)
-
+		ni.Releasing.Sub(resourcesToTrack)
 	default:
-		ni.Idle.Sub(requestedResourceWithoutSharedGPU)
+		ni.Idle.Sub(resourcesToTrack)
 	}
 
 	ni.addSharedTaskResources(task)
@@ -476,27 +483,27 @@ func (ni *NodeInfo) RemoveTask(ti *pod_info.PodInfo) error {
 }
 
 func (ni *NodeInfo) removeTaskResources(task *pod_info.PodInfo) {
-	if !ni.shouldAddTaskResources(task) {
-		return
-	}
-
 	log.InfraLogger.V(7).Infof("About to remove podsInfo: <%v/%v>, status: <%v>, node: <%s>",
 		task.Namespace, task.Name, task.Status, ni.Name)
 	log.InfraLogger.V(7).Infof("NodeInfo: %+v", ni)
 
-	requestedResourceWithoutSharedGPU := getAcceptedTaskResourceWithoutSharedGPU(task)
+	resourcesToTrack := getAcceptedTaskResourceWithoutSharedGPU(task)
 
-	// the removed task in the only one currently allocated on the GPU
-	ni.Used.Sub(requestedResourceWithoutSharedGPU)
+	if pod_info.IsResourceReservationTask(task.Pod) {
+		// Reservation pod: untrack all resources except GPUs
+		resourcesToTrack.SetGPUs(0)
+	}
+
+	ni.Used.Sub(resourcesToTrack)
 
 	switch task.Status {
 	case pod_status.Releasing:
-		ni.Releasing.Sub(requestedResourceWithoutSharedGPU)
-		ni.Idle.Add(requestedResourceWithoutSharedGPU)
+		ni.Releasing.Sub(resourcesToTrack)
+		ni.Idle.Add(resourcesToTrack)
 	case pod_status.Pipelined:
-		ni.Releasing.Add(requestedResourceWithoutSharedGPU)
+		ni.Releasing.Add(resourcesToTrack)
 	default:
-		ni.Idle.Add(requestedResourceWithoutSharedGPU)
+		ni.Idle.Add(resourcesToTrack)
 	}
 
 	ni.removeSharedTaskResources(task)
@@ -653,7 +660,7 @@ func (ni *NodeInfo) IsCPUOnlyNode() bool {
 	if ni.IsMIGEnabled() {
 		return false
 	}
-	return ni.Allocatable.GPUs() == 0
+	return ni.Allocatable.GPUs() <= 0 && !ni.HasDRAGPUs
 }
 
 func (ni *NodeInfo) IsMIGEnabled() bool {
@@ -689,7 +696,7 @@ func (ni *NodeInfo) GetMigStrategy() MigStrategy {
 func (ni *NodeInfo) GetRequiredInitQuota(pi *pod_info.PodInfo) *podgroup_info.JobRequirement {
 	quota := podgroup_info.JobRequirement{}
 	if len(pi.ResReq.MigResources()) != 0 {
-		quota.GPU = pi.ResReq.GetSumGPUs()
+		quota.GPU = pi.ResReq.GetGpusQuota()
 	} else {
 		quota.GPU = ni.getGpuMemoryFractionalOnNode(ni.GetResourceGpuMemory(pi.ResReq))
 	}
@@ -716,7 +723,11 @@ func (ni *NodeInfo) setAcceptedResources(pi *pod_info.PodInfo) {
 		pi.ResourceReceivedType = pod_info.ReceivedTypeRegular
 		pi.AcceptedResource.GpuResourceRequirement = *resource_info.NewGpuResourceRequirementWithGpus(
 			pi.ResReq.GPUs(), 0)
+
+		// TODO: improve by getting claims actual status. This approach doesn't support FirstAvailable requests.
+		pi.AcceptedResource.SetDraGpus(pi.ResReq.DraGpuCounts())
 	}
+
 }
 
 func (ni *NodeInfo) lessEqualTaskToNodeResources(
@@ -730,4 +741,15 @@ func (ni *NodeInfo) lessEqualTaskToNodeResources(
 
 func isMigResource(rName string) bool {
 	return strings.HasPrefix(rName, migResourcePrefix)
+}
+
+// AddDRAGPUs adds DRA-based GPU capacity from ResourceSlices to this node's GPU pool.
+// This should be called after the node is created, with the GPU count calculated from ResourceSlices.
+func (ni *NodeInfo) AddDRAGPUs(draGPUs float64) {
+	if draGPUs <= 0 {
+		return
+	}
+
+	ni.Allocatable.AddGPUs(draGPUs)
+	ni.Idle.AddGPUs(draGPUs)
 }

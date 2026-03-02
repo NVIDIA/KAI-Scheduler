@@ -92,6 +92,7 @@ func BuildSchedulerParams(opt *options.ServerOption) *conf.SchedulerParams {
 		SchedulePeriod:                    opt.SchedulePeriod,
 		DetailedFitErrors:                 opt.DetailedFitErrors,
 		UpdatePodEvictionCondition:        opt.UpdatePodEvictionCondition,
+		QueueLabelKey:                     opt.QueueLabelKey,
 	}
 }
 
@@ -105,7 +106,7 @@ func RunApp() error {
 
 	mux := http.NewServeMux()
 	go func() {
-		_ = http.ListenAndServe(fmt.Sprintf(":%d", so.PluginServerPort), mux)
+		_ = http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", so.PluginServerPort), mux)
 	}()
 
 	setupProfiling(so)

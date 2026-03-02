@@ -12,10 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	v12 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
@@ -24,10 +26,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/ptr"
 
-	kueuev1alpha1 "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
-	kueueclient "sigs.k8s.io/kueue/client-go/clientset/versioned"
-	kueuefake "sigs.k8s.io/kueue/client-go/clientset/versioned/fake"
-	kueueinformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 
 	kubeAiSchedulerClient "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	kubeAiSchedulerClientFake "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/fake"
@@ -64,7 +63,6 @@ func TestSnapshot(t *testing.T) {
 	tests := map[string]struct {
 		kubeObjects          []runtime.Object
 		kaiSchedulerObjects  []runtime.Object
-		kueueObjects         []runtime.Object
 		expectedNodes        int
 		expectedDepartments  int
 		expectedQueues       int
@@ -152,7 +150,6 @@ func TestSnapshot(t *testing.T) {
 		clusterInfo := newClusterInfoTests(t, clusterInfoTestParams{
 			kubeObjects:         test.kubeObjects,
 			kaiSchedulerObjects: test.kaiSchedulerObjects,
-			kueueObjects:        test.kueueObjects,
 		})
 		snapshot, err := clusterInfo.Snapshot()
 		assert.Equal(t, nil, err)
@@ -176,9 +173,9 @@ func TestSnapshotUsage(t *testing.T) {
 			usage: &queue_info.ClusterUsage{
 				Queues: map[common_info.QueueID]queue_info.QueueUsage{
 					"queue-1": {
-						corev1.ResourceCPU:          10,
-						corev1.ResourceMemory:       10,
-						commonconstants.GpuResource: 10,
+						corev1.ResourceCPU:                10,
+						corev1.ResourceMemory:             10,
+						commonconstants.NvidiaGpuResource: 10,
 					},
 				},
 			},
@@ -186,9 +183,9 @@ func TestSnapshotUsage(t *testing.T) {
 			expectedUsage: &queue_info.ClusterUsage{
 				Queues: map[common_info.QueueID]queue_info.QueueUsage{
 					"queue-1": {
-						corev1.ResourceCPU:          10,
-						corev1.ResourceMemory:       10,
-						commonconstants.GpuResource: 10,
+						corev1.ResourceCPU:                10,
+						corev1.ResourceMemory:             10,
+						commonconstants.NvidiaGpuResource: 10,
 					},
 				},
 			},
@@ -204,9 +201,9 @@ func TestSnapshotUsage(t *testing.T) {
 			usage: &queue_info.ClusterUsage{
 				Queues: map[common_info.QueueID]queue_info.QueueUsage{
 					"queue-1": {
-						corev1.ResourceCPU:          11,
-						corev1.ResourceMemory:       11,
-						commonconstants.GpuResource: 11,
+						corev1.ResourceCPU:                11,
+						corev1.ResourceMemory:             11,
+						commonconstants.NvidiaGpuResource: 11,
 					},
 				},
 			},
@@ -234,7 +231,6 @@ func TestSnapshotUsage(t *testing.T) {
 		clusterInfo := newClusterInfoTests(t, clusterInfoTestParams{
 			kubeObjects:         []runtime.Object{},
 			kaiSchedulerObjects: []runtime.Object{},
-			kueueObjects:        []runtime.Object{},
 			clusterUsage:        test.usage,
 			clusterUsageErr:     test.err,
 		})
@@ -286,7 +282,8 @@ func TestSnapshotNodes(t *testing.T) {
 					},
 					Status: corev1.NodeStatus{
 						Allocatable: corev1.ResourceList{
-							"cpu": resource.MustParse("10"),
+							"cpu":  resource.MustParse("10"),
+							"pods": resource.MustParse("110"),
 						},
 					},
 				},
@@ -297,13 +294,15 @@ func TestSnapshotNodes(t *testing.T) {
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
 						corev1.ResourceList{
-							"cpu": resource.MustParse("8"),
+							"cpu":  resource.MustParse("8"),
+							"pods": resource.MustParse("109"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
 						corev1.ResourceList{
 							"cpu":    resource.MustParse("2"),
 							"memory": resource.MustParse("0"),
+							"pods":   resource.MustParse("1"),
 						},
 					),
 					Releasing: resource_info.ResourceFromResourceList(
@@ -324,7 +323,8 @@ func TestSnapshotNodes(t *testing.T) {
 					},
 					Status: corev1.NodeStatus{
 						Allocatable: corev1.ResourceList{
-							"cpu": resource.MustParse("10"),
+							"cpu":  resource.MustParse("10"),
+							"pods": resource.MustParse("110"),
 						},
 					},
 				},
@@ -335,7 +335,8 @@ func TestSnapshotNodes(t *testing.T) {
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
 						corev1.ResourceList{
-							"cpu": resource.MustParse("10"),
+							"cpu":  resource.MustParse("10"),
+							"pods": resource.MustParse("110"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
@@ -365,7 +366,8 @@ func TestSnapshotNodes(t *testing.T) {
 					},
 					Status: corev1.NodeStatus{
 						Allocatable: corev1.ResourceList{
-							"cpu": resource.MustParse("10"),
+							"cpu":  resource.MustParse("10"),
+							"pods": resource.MustParse("110"),
 						},
 					},
 				},
@@ -378,7 +380,8 @@ func TestSnapshotNodes(t *testing.T) {
 					},
 					Status: corev1.NodeStatus{
 						Allocatable: corev1.ResourceList{
-							"cpu": resource.MustParse("10"),
+							"cpu":  resource.MustParse("10"),
+							"pods": resource.MustParse("110"),
 						},
 					},
 				},
@@ -390,13 +393,15 @@ func TestSnapshotNodes(t *testing.T) {
 					Name: "node-1",
 					Idle: resource_info.ResourceFromResourceList(
 						corev1.ResourceList{
-							"cpu": resource.MustParse("8"),
+							"cpu":  resource.MustParse("8"),
+							"pods": resource.MustParse("109"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
 						corev1.ResourceList{
 							"cpu":    resource.MustParse("2"),
 							"memory": resource.MustParse("0"),
+							"pods":   resource.MustParse("1"),
 						},
 					),
 					Releasing: resource_info.ResourceFromResourceList(
@@ -420,6 +425,7 @@ func TestSnapshotNodes(t *testing.T) {
 						Allocatable: corev1.ResourceList{
 							"cpu":                   resource.MustParse("10"),
 							"nvidia.com/mig-1g.5gb": resource.MustParse("10"),
+							"pods":                  resource.MustParse("110"),
 						},
 					},
 				},
@@ -433,6 +439,7 @@ func TestSnapshotNodes(t *testing.T) {
 						corev1.ResourceList{
 							"cpu":                   resource.MustParse("6"),
 							"nvidia.com/mig-1g.5gb": resource.MustParse("6"),
+							"pods":                  resource.MustParse("108"),
 						},
 					),
 					Used: resource_info.ResourceFromResourceList(
@@ -440,6 +447,7 @@ func TestSnapshotNodes(t *testing.T) {
 							"cpu":                   resource.MustParse("4"),
 							"memory":                resource.MustParse("0"),
 							"nvidia.com/mig-1g.5gb": resource.MustParse("4"),
+							"pods":                  resource.MustParse("2"),
 						},
 					),
 					Releasing: resource_info.ResourceFromResourceList(
@@ -457,7 +465,7 @@ func TestSnapshotNodes(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			clusterInfo := newClusterInfoTestsInner(
-				t, test.objs, []runtime.Object{}, []runtime.Object{},
+				t, test.objs, []runtime.Object{},
 				&conf.SchedulingNodePoolParams{
 					NodePoolLabelKey:   defaultNodePoolName,
 					NodePoolLabelValue: test.nodePoolName,
@@ -473,11 +481,11 @@ func TestSnapshotNodes(t *testing.T) {
 			clusterPodAffinityInfo.EXPECT().AddNode(gomock.Any(), gomock.Any()).AnyTimes()
 
 			allPods, _ := clusterInfo.dataLister.ListPods()
-			nodes, err := clusterInfo.snapshotNodes(clusterPodAffinityInfo)
+			nodes, _, err := clusterInfo.snapshotNodes(clusterPodAffinityInfo)
 			if err != nil {
 				assert.FailNow(t, fmt.Sprintf("SnapshotNode got error in test %s", t.Name()), err)
 			}
-			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil)
+			pods, err := clusterInfo.addTasksToNodes(allPods, existingPods, nodes, nil, nil)
 
 			assert.Equal(t, len(test.resultNodes), len(nodes))
 			assert.Equal(t, test.resultPodsLen, len(pods))
@@ -529,7 +537,6 @@ func TestBindRequests(t *testing.T) {
 	tests := map[string]struct {
 		kubeObjects             []runtime.Object
 		kaiSchedulerObjects     []runtime.Object
-		kueueObjects            []runtime.Object
 		expectedProcessing      int
 		expectedStale           int
 		expectedForDeletedNodes int
@@ -899,7 +906,6 @@ func TestBindRequests(t *testing.T) {
 			clusterInfoTestParams{
 				kubeObjects:         test.kubeObjects,
 				kaiSchedulerObjects: test.kaiSchedulerObjects,
-				kueueObjects:        test.kueueObjects,
 			},
 		)
 		snapshot, err := clusterInfo.Snapshot()
@@ -949,10 +955,9 @@ func TestBindRequests(t *testing.T) {
 
 func TestSnapshotPodGroups(t *testing.T) {
 	tests := map[string]struct {
-		objs      []runtime.Object
-		kubeObjs  []runtime.Object
-		kueueObjs []runtime.Object
-		results   []*podgroup_info.PodGroupInfo
+		objs     []runtime.Object
+		kubeObjs []runtime.Object
+		results  []*podgroup_info.PodGroupInfo
 	}{
 		"BasicUsage": {
 			objs: []runtime.Object{
@@ -1011,7 +1016,20 @@ func TestSnapshotPodGroups(t *testing.T) {
 					},
 				},
 			},
-			results: []*podgroup_info.PodGroupInfo{},
+			results: []*podgroup_info.PodGroupInfo{
+				{
+					Name:  "podGroup-0",
+					Queue: "queue-1",
+					PodSets: map[string]*subgroup_info.PodSet{
+						podgroup_info.DefaultSubGroup: subgroup_info.NewPodSet(podgroup_info.DefaultSubGroup, 1, nil).
+							WithPodInfos(pod_info.PodsMap{
+								"test-pod": {
+									UID: "test-pod",
+								},
+							}),
+					},
+				},
+			},
 		},
 		"filter unassigned pod groups - no scheduling backoff": {
 			objs: []runtime.Object{
@@ -1215,7 +1233,6 @@ func TestSnapshotPodGroups(t *testing.T) {
 			clusterInfoTestParams{
 				kubeObjects:         test.kubeObjs,
 				kaiSchedulerObjects: test.objs,
-				kueueObjects:        test.kueueObjs,
 			},
 		)
 		predefinedQueue := &queue_info.QueueInfo{Name: "queue-0"}
@@ -1254,6 +1271,55 @@ func TestSnapshotPodGroups(t *testing.T) {
 		}
 
 	}
+}
+
+func TestSnapshotPodGroups_QueueDoesNotExist_AddsJobFitError(t *testing.T) {
+	clusterInfo := newClusterInfoTests(t,
+		clusterInfoTestParams{
+			kubeObjects: []runtime.Object{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pod",
+						Namespace: testNamespace,
+						UID:       types.UID("test-pod-uid"),
+						Annotations: map[string]string{
+							commonconstants.PodGroupAnnotationForPod: "podGroup-missing-queue",
+						},
+					},
+				},
+			},
+			kaiSchedulerObjects: []runtime.Object{
+				&enginev2alpha2.PodGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "podGroup-missing-queue",
+						Namespace: testNamespace,
+						UID:       "ABC",
+					},
+					Spec: enginev2alpha2.PodGroupSpec{
+						Queue: "nonexistent-queue",
+					},
+				},
+			},
+		},
+	)
+
+	predefinedQueue := &queue_info.QueueInfo{Name: "queue-0"}
+	existingPods := map[common_info.PodID]*pod_info.PodInfo{}
+	podGroups, err := clusterInfo.snapshotPodGroups(
+		map[common_info.QueueID]*queue_info.QueueInfo{"queue-0": predefinedQueue},
+		existingPods)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(podGroups), "Expected 1 podgroup even with missing queue")
+
+	pg, found := podGroups[common_info.PodGroupID("podGroup-missing-queue")]
+	assert.True(t, found, "PodGroup not found")
+	assert.Equal(t, "nonexistent-queue", string(pg.Queue))
+
+	// Verify job fit error was added
+	assert.Equal(t, 1, len(pg.JobFitErrors), "Expected 1 job fit error for missing queue")
+	assert.Equal(t, enginev2alpha2.QueueDoesNotExist, pg.JobFitErrors[0].Reason())
+	assert.Contains(t, pg.JobFitErrors[0].Messages()[0], "nonexistent-queue")
 }
 
 func TestSnapshotQueues(t *testing.T) {
@@ -1302,13 +1368,11 @@ func TestSnapshotQueues(t *testing.T) {
 		},
 	}
 	kubeObjs := []runtime.Object{}
-	kueueObjs := []runtime.Object{}
 
 	clusterInfo := newClusterInfoTests(t,
 		clusterInfoTestParams{
 			kubeObjects:         kubeObjs,
 			kaiSchedulerObjects: objs,
-			kueueObjects:        kueueObjs,
 		},
 	)
 	snapshot, err := clusterInfo.Snapshot()
@@ -1374,7 +1438,6 @@ func TestSnapshotFlatHierarchy(t *testing.T) {
 	clusterInfo := newClusterInfoTestsInner(t,
 		[]runtime.Object{},
 		objects,
-		[]runtime.Object{},
 		params,
 		false,
 		nil, nil, // usage and usageErr
@@ -1434,7 +1497,6 @@ func TestGetPodGroupPriority(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         kubeObjects,
 			kaiSchedulerObjects: []runtime.Object{},
-			kueueObjects:        []runtime.Object{},
 		},
 	)
 
@@ -1539,10 +1601,7 @@ func TestSnapshotStorageObjects(t *testing.T) {
 				Queue: "queue-0",
 			},
 		},
-	}
-
-	kueueObjects := []runtime.Object{
-		&kueuev1alpha1.Topology{
+		&kaiv1alpha1.Topology{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "topology-0",
 			},
@@ -1553,7 +1612,6 @@ func TestSnapshotStorageObjects(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         kubeObjects,
 			kaiSchedulerObjects: kubeAiSchedOjbs,
-			kueueObjects:        kueueObjects,
 		},
 	)
 
@@ -1609,7 +1667,6 @@ func TestGetPodGroupPriorityNotExistingPriority(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         []runtime.Object{},
 			kaiSchedulerObjects: []runtime.Object{},
-			kueueObjects:        []runtime.Object{},
 		},
 	)
 
@@ -1632,7 +1689,6 @@ func TestGetDefaultPriority(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         kubeObjects,
 			kaiSchedulerObjects: []runtime.Object{},
-			kueueObjects:        []runtime.Object{},
 		},
 	)
 
@@ -1654,7 +1710,6 @@ func TestGetDefaultPriorityNotExists(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         kubeObjects,
 			kaiSchedulerObjects: []runtime.Object{},
-			kueueObjects:        []runtime.Object{},
 		},
 	)
 	priority, err := getDefaultPriority(clusterInfo.dataLister)
@@ -1667,7 +1722,6 @@ func TestGetDefaultPriorityWithError(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         []runtime.Object{},
 			kaiSchedulerObjects: []runtime.Object{},
-			kueueObjects:        []runtime.Object{},
 		},
 	)
 	priority, err := getDefaultPriority(clusterInfo.dataLister)
@@ -1689,7 +1743,6 @@ func TestPodGroupWithIndex(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         []runtime.Object{},
 			kaiSchedulerObjects: []runtime.Object{},
-			kueueObjects:        []runtime.Object{},
 		},
 	)
 	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
@@ -1710,7 +1763,6 @@ func TestPodGroupWithIndexNonMatching(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         []runtime.Object{},
 			kaiSchedulerObjects: []runtime.Object{},
-			kueueObjects:        []runtime.Object{},
 		},
 	)
 	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
@@ -1731,7 +1783,6 @@ func TestPodGroupWithIndexNoSubGroups(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         []runtime.Object{},
 			kaiSchedulerObjects: []runtime.Object{},
-			kueueObjects:        []runtime.Object{},
 		},
 	)
 	assert.Equal(t, int32(1), podGroupInfo.GetSubGroups()[podgroup_info.DefaultSubGroup].GetMinAvailable())
@@ -1763,7 +1814,6 @@ func TestPodGroupWithIndexWithSubGroups(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         []runtime.Object{},
 			kaiSchedulerObjects: []runtime.Object{},
-			kueueObjects:        []runtime.Object{},
 		},
 	)
 	clusterInfo.setPodGroupWithIndex(podGroup, podGroupInfo)
@@ -1865,7 +1915,6 @@ func TestIsPodGroupUpForScheduler(t *testing.T) {
 			clusterInfoTestParams{
 				kubeObjects:         []runtime.Object{},
 				kaiSchedulerObjects: []runtime.Object{},
-				kueueObjects:        []runtime.Object{},
 			},
 		)
 		result := ci.isPodGroupUpForScheduler(pg)
@@ -1927,6 +1976,11 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 					"kubernetes.io/hostname": "node-1",
 				},
 			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					"pods": resource.MustParse("110"),
+				},
+			},
 		},
 		&storage.CSIStorageCapacity{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1984,7 +2038,6 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         append(kubeObjects, pvc),
 			kaiSchedulerObjects: kubeAiSchedOjbs,
-			kueueObjects:        []runtime.Object{},
 		},
 	)
 	snapshot, err := clusterInfo.Snapshot()
@@ -1999,15 +2052,13 @@ func TestNotSchedulingPodWithTerminatingPVC(t *testing.T) {
 		clusterInfoTestParams{
 			kubeObjects:         append(kubeObjects, pvc),
 			kaiSchedulerObjects: kubeAiSchedOjbs,
-			kueueObjects:        []runtime.Object{},
 		},
 	)
 	snapshot, err = clusterInfo.Snapshot()
 	assert.Equal(t, nil, err)
 	node = snapshot.Nodes["node-1"]
 	task = snapshot.PodGroupInfos["podGroup-0"].GetAllPodsMap()["pod-1"]
-	assert.Equal(t, node.IsTaskAllocatable(task), true)
-
+	assert.Equal(t, node.IsTaskAllocatable(task), true, "Expected task to be allocatable, but got %v", node.IsTaskAllocatable(task))
 }
 
 func createFakePodGroup(name string, schedulingBackoff *int32, nodePoolName string,
@@ -2058,6 +2109,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 						},
 					},
 				}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{
 					{
 						ObjectMeta: metav1.ObjectMeta{
@@ -2070,6 +2122,7 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 						},
 					},
 				}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
 			},
@@ -2077,7 +2130,9 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"listQueues": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return(nil, fmt.Errorf(successErrorMsg))
 			},
@@ -2085,7 +2140,9 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"listPodGroups": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
@@ -2096,7 +2153,9 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"defaultPriorityClass": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{}, nil)
 				mdl.EXPECT().ListResourceUsage().Return(nil, nil)
@@ -2106,7 +2165,9 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 		"getPriorityClassByNameAndPodByPodGroup": {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return([]*schedulingv1alpha2.BindRequest{}, nil)
 				mdl.EXPECT().ListQueues().Return([]*enginev2.Queue{
 					{
@@ -2144,6 +2205,8 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 			func(mdl *data_lister.MockDataLister) {
 				mdl.EXPECT().ListPods().Return([]*corev1.Pod{}, nil)
 				mdl.EXPECT().ListNodes().Return([]*corev1.Node{}, nil)
+				mdl.EXPECT().ListResourceSlicesByNode().Return(map[string][]*resourceapi.ResourceSlice{}, nil)
+				mdl.EXPECT().ListResourceClaims().Return([]*resourceapi.ResourceClaim{}, nil)
 				mdl.EXPECT().ListBindRequests().Return(nil, fmt.Errorf(successErrorMsg))
 			},
 		},
@@ -2158,7 +2221,6 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 			clusterInfoTestParams{
 				kubeObjects:         []runtime.Object{},
 				kaiSchedulerObjects: []runtime.Object{},
-				kueueObjects:        []runtime.Object{},
 			},
 		)
 		test.install(dl)
@@ -2169,10 +2231,9 @@ func TestSnapshotWithListerErrors(t *testing.T) {
 }
 
 func TestNewClusterInfoErrorPartitionSelector(t *testing.T) {
-	kubeFakeClient, kubeAiFakeClient, kueueFakeClient := newFakeClients([]runtime.Object{}, []runtime.Object{}, []runtime.Object{})
+	kubeFakeClient, kubeAiFakeClient := newFakeClients([]runtime.Object{}, []runtime.Object{})
 	informerFactory := informers.NewSharedInformerFactory(kubeFakeClient, 0)
 	kubeAiSchedulerInformerFactory := kubeAiSchedulerInfo.NewSharedInformerFactory(kubeAiFakeClient, 0)
-	kueueInformerFactory := kueueinformer.NewSharedInformerFactory(kueueFakeClient, 0)
 
 	controller := gomock.NewController(t)
 	clusterPodAffinityInfo := pod_affinity.NewMockClusterPodAffinityInfo(controller)
@@ -2183,7 +2244,7 @@ func TestNewClusterInfoErrorPartitionSelector(t *testing.T) {
 		NodePoolLabelKey:   "@!A",
 		NodePoolLabelValue: "!@#",
 	}
-	_, err := New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, nil, params, false, clusterPodAffinityInfo, false, true, nil)
+	_, err := New(informerFactory, kubeAiSchedulerInformerFactory, nil, params, false, clusterPodAffinityInfo, false, true, nil)
 
 	assert.NotNil(t, err)
 }
@@ -2193,10 +2254,9 @@ func fakeIndexFunc(obj interface{}) ([]string, error) {
 }
 
 func TestNewClusterInfoAddIndexerFails(t *testing.T) {
-	kubeFakeClient, kubeAiSchedulerFakeClient, kueueFakeClient := newFakeClients([]runtime.Object{}, []runtime.Object{}, []runtime.Object{})
+	kubeFakeClient, kubeAiSchedulerFakeClient := newFakeClients([]runtime.Object{}, []runtime.Object{})
 	informerFactory := informers.NewSharedInformerFactory(kubeFakeClient, 0)
 	kubeAiSchedulerInformerFactory := kubeAiSchedulerInfo.NewSharedInformerFactory(kubeAiSchedulerFakeClient, 0)
-	kueueInformerFactory := kueueinformer.NewSharedInformerFactory(kueueFakeClient, 0)
 	podInformer := informerFactory.Core().V1().Pods()
 	go podInformer.Informer().Run(nil)
 	for !podInformer.Informer().HasSynced() {
@@ -2214,7 +2274,7 @@ func TestNewClusterInfoAddIndexerFails(t *testing.T) {
 	clusterPodAffinityInfo.EXPECT().UpdateNodeAffinity(gomock.Any()).AnyTimes()
 	clusterPodAffinityInfo.EXPECT().AddNode(gomock.Any(), gomock.Any()).AnyTimes()
 
-	_, err = New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, nil, nil, false,
+	_, err = New(informerFactory, kubeAiSchedulerInformerFactory, nil, nil, false,
 		clusterPodAffinityInfo, false, true, nil)
 	assert.NotNil(t, err, "Expected error for conflicting indexers")
 }
@@ -2222,7 +2282,6 @@ func TestNewClusterInfoAddIndexerFails(t *testing.T) {
 type clusterInfoTestParams struct {
 	kubeObjects         []runtime.Object
 	kaiSchedulerObjects []runtime.Object
-	kueueObjects        []runtime.Object
 	clusterUsage        *queue_info.ClusterUsage
 	clusterUsageErr     error
 }
@@ -2233,18 +2292,16 @@ func newClusterInfoTests(t *testing.T, testParams clusterInfoTestParams) *Cluste
 		NodePoolLabelValue: "",
 	}
 	return newClusterInfoTestsInner(
-		t, testParams.kubeObjects, testParams.kaiSchedulerObjects,
-		testParams.kueueObjects, nodePoolParams, true,
+		t, testParams.kubeObjects, testParams.kaiSchedulerObjects, nodePoolParams, true,
 		testParams.clusterUsage, testParams.clusterUsageErr)
 }
 
-func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects, kueueObjects []runtime.Object,
+func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects []runtime.Object,
 	nodePoolParams *conf.SchedulingNodePoolParams, fullHierarchyFairness bool,
 	clusterUsage *queue_info.ClusterUsage, clusterUsageErr error) *ClusterInfo {
-	kubeFakeClient, kubeAiSchedulerFakeClient, kueueFakeClient := newFakeClients(kubeObjects, kaiSchedulerObjects, kueueObjects)
+	kubeFakeClient, kubeAiSchedulerFakeClient := newFakeClients(kubeObjects, kaiSchedulerObjects)
 	informerFactory := informers.NewSharedInformerFactory(kubeFakeClient, 0)
 	kubeAiSchedulerInformerFactory := kubeAiSchedulerInfo.NewSharedInformerFactory(kubeAiSchedulerFakeClient, 0)
-	kueueInformerFactory := kueueinformer.NewSharedInformerFactory(kueueFakeClient, 0)
 
 	controller := gomock.NewController(t)
 	clusterPodAffinityInfo := pod_affinity.NewMockClusterPodAffinityInfo(controller)
@@ -2255,7 +2312,7 @@ func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects, ku
 	fakeUsageClient.SetResourceUsage(clusterUsage, clusterUsageErr)
 	usageLister := usagedb.NewUsageLister(&fakeUsageClient, ptr.To(10*time.Microsecond), ptr.To(10*time.Second), ptr.To(10*time.Second))
 
-	clusterInfo, _ := New(informerFactory, kubeAiSchedulerInformerFactory, kueueInformerFactory, usageLister, nodePoolParams, false,
+	clusterInfo, _ := New(informerFactory, kubeAiSchedulerInformerFactory, usageLister, nodePoolParams, false,
 		clusterPodAffinityInfo, true, fullHierarchyFairness, nil)
 
 	stopCh := context.Background().Done()
@@ -2263,16 +2320,14 @@ func newClusterInfoTestsInner(t *testing.T, kubeObjects, kaiSchedulerObjects, ku
 	informerFactory.WaitForCacheSync(stopCh)
 	kubeAiSchedulerInformerFactory.Start(stopCh)
 	kubeAiSchedulerInformerFactory.WaitForCacheSync(stopCh)
-	kueueInformerFactory.Start(stopCh)
-	kueueInformerFactory.WaitForCacheSync(stopCh)
 	usageLister.Start(stopCh)
 	usageLister.WaitForCacheSync(stopCh)
 
 	return clusterInfo
 }
 
-func newFakeClients(kubernetesObjects, kaiSchedulerObjects, kueueObjects []runtime.Object) (kubernetes.Interface, kubeAiSchedulerClient.Interface, kueueclient.Interface) {
-	return fake.NewSimpleClientset(kubernetesObjects...), kubeAiSchedulerClientFake.NewSimpleClientset(kaiSchedulerObjects...), kueuefake.NewSimpleClientset(kueueObjects...)
+func newFakeClients(kubernetesObjects, kaiSchedulerObjects []runtime.Object) (kubernetes.Interface, kubeAiSchedulerClient.Interface) {
+	return fake.NewSimpleClientset(kubernetesObjects...), kubeAiSchedulerClientFake.NewSimpleClientset(kaiSchedulerObjects...)
 }
 
 func TestSnapshotPodsInPartition(t *testing.T) {
@@ -2320,7 +2375,6 @@ func TestSnapshotPodsInPartition(t *testing.T) {
 	clusterInfo := newClusterInfoTestsInner(
 		t, clusterObjects,
 		[]runtime.Object{},
-		[]runtime.Object{},
 		&conf.SchedulingNodePoolParams{
 			NodePoolLabelKey:   nodePoolNameLabel,
 			NodePoolLabelValue: "foo",
@@ -2351,4 +2405,133 @@ func newPodOnNode(pod *corev1.Pod, nodeName string) *corev1.Pod {
 	newPod.Spec.NodeName = nodeName
 	newPod.Name = fmt.Sprintf("%s-%s", pod.Name, nodeName)
 	return newPod
+}
+
+func TestSnapshotNodesWithDRAGPUs(t *testing.T) {
+	tests := map[string]struct {
+		nodes           []*corev1.Node
+		resourceSlices  []*resourceapi.ResourceSlice
+		expectedDRAGPUs map[string]float64
+		hasDRAGPUs      map[string]bool
+	}{
+		"Single node with DRA GPUs": {
+			nodes: []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+					Status:     corev1.NodeStatus{Allocatable: corev1.ResourceList{}},
+				},
+			},
+			resourceSlices: []*resourceapi.ResourceSlice{
+				createTestResourceSlice("slice-1", "node-1", "nvidia.com/gpu", 4),
+			},
+			expectedDRAGPUs: map[string]float64{"node-1": 4},
+			hasDRAGPUs:      map[string]bool{"node-1": true},
+		},
+		"Multiple nodes with DRA GPUs": {
+			nodes: []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+					Status:     corev1.NodeStatus{Allocatable: corev1.ResourceList{}},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node-2"},
+					Status:     corev1.NodeStatus{Allocatable: corev1.ResourceList{}},
+				},
+			},
+			resourceSlices: []*resourceapi.ResourceSlice{
+				createTestResourceSlice("slice-1", "node-1", "nvidia.com/gpu", 4),
+				createTestResourceSlice("slice-2", "node-2", "nvidia.com/gpu", 8),
+			},
+			expectedDRAGPUs: map[string]float64{"node-1": 4, "node-2": 8},
+			hasDRAGPUs:      map[string]bool{"node-1": true, "node-2": true},
+		},
+		"Node with no DRA GPUs": {
+			nodes: []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+					Status:     corev1.NodeStatus{Allocatable: corev1.ResourceList{}},
+				},
+			},
+			resourceSlices:  []*resourceapi.ResourceSlice{},
+			expectedDRAGPUs: map[string]float64{"node-1": 0},
+			hasDRAGPUs:      map[string]bool{"node-1": false},
+		},
+		"Two device classes on same node": {
+			nodes: []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+					Status:     corev1.NodeStatus{Allocatable: corev1.ResourceList{}},
+				},
+			},
+			resourceSlices: []*resourceapi.ResourceSlice{
+				createTestResourceSlice("slice-nvidia", "node-1", "nvidia.com/gpu", 4),
+				createTestResourceSlice("slice-amd", "node-1", "amd.com/gpu", 2),
+			},
+			expectedDRAGPUs: map[string]float64{"node-1": 6},
+			hasDRAGPUs:      map[string]bool{"node-1": true},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// Convert slices to map grouped by node name
+			slicesByNode := make(map[string][]*resourceapi.ResourceSlice)
+			for _, slice := range test.resourceSlices {
+				nodeName := ""
+				if slice.Spec.NodeName != nil {
+					nodeName = *slice.Spec.NodeName
+				}
+				slicesByNode[nodeName] = append(slicesByNode[nodeName], slice)
+			}
+
+			mockLister := data_lister.NewMockDataLister(ctrl)
+			mockLister.EXPECT().ListNodes().Return(test.nodes, nil)
+			mockLister.EXPECT().ListResourceSlicesByNode().Return(slicesByNode, nil)
+
+			clusterPodAffinityInfo := pod_affinity.NewMockClusterPodAffinityInfo(ctrl)
+			clusterPodAffinityInfo.EXPECT().UpdateNodeAffinity(gomock.Any()).AnyTimes()
+			clusterPodAffinityInfo.EXPECT().AddNode(gomock.Any(), gomock.Any()).AnyTimes()
+
+			ci := &ClusterInfo{
+				dataLister:             mockLister,
+				nodePoolParams:         &conf.SchedulingNodePoolParams{},
+				nodePoolSelector:       labels.Everything(),
+				clusterPodAffinityInfo: clusterPodAffinityInfo,
+			}
+
+			nodes, _, err := ci.snapshotNodes(clusterPodAffinityInfo)
+			assert.NoError(t, err)
+
+			for nodeName, expectedGPUs := range test.expectedDRAGPUs {
+				nodeInfo, found := nodes[nodeName]
+				assert.True(t, found, "Node %s not found", nodeName)
+				// Check total GPUs (DRA GPUs are merged into Allocatable)
+				actualGPUs := nodeInfo.Allocatable.GPUs()
+				assert.Equal(t, expectedGPUs, actualGPUs, "GPUs mismatch for node %s", nodeName)
+				expectedFlag := test.hasDRAGPUs[nodeName]
+				assert.Equal(t, expectedFlag, nodeInfo.HasDRAGPUs, "HasDRAGPUs mismatch for node %s", nodeName)
+			}
+		})
+	}
+}
+
+func createTestResourceSlice(name, nodeName, driver string, deviceCount int) *resourceapi.ResourceSlice {
+	devices := make([]resourceapi.Device, deviceCount)
+	for i := 0; i < deviceCount; i++ {
+		devices[i] = resourceapi.Device{
+			Name: fmt.Sprintf("device-%d", i),
+		}
+	}
+
+	return &resourceapi.ResourceSlice{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: resourceapi.ResourceSliceSpec{
+			NodeName: ptr.To(nodeName),
+			Driver:   driver,
+			Devices:  devices,
+		},
+	}
 }

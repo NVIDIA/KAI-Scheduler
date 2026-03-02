@@ -55,8 +55,8 @@ type Configs struct {
 	PodLabelSelector       map[string]string
 	NamespaceLabelSelector map[string]string
 
-	DefaultPrioritiesConfigMapName      string
-	DefaultPrioritiesConfigMapNamespace string
+	DefaultConfigPerTypeConfigMapName      string
+	DefaultConfigPerTypeConfigMapNamespace string
 }
 
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
@@ -75,7 +75,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: req.Name}, &pod)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.V(1).Info(fmt.Sprintf("Pod %s/%s not found, was probably deleted", pod.Namespace, pod.Name))
+			logger.V(1).Info(fmt.Sprintf("Pod %s/%s not found, was probably deleted", req.Namespace, req.Name))
 			return ctrl.Result{}, nil
 		}
 
@@ -102,6 +102,10 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	topOwner, allOwners, err := r.podGrouper.GetPodOwners(ctx, &pod)
 	if err != nil {
+		if pod.DeletionTimestamp != nil {
+			logger.V(1).Info(fmt.Sprintf("Pod %s/%s is being deleted, it's ok if the owner is not available", pod.Namespace, pod.Name))
+			return ctrl.Result{}, nil
+		}
 		logger.V(1).Error(err, "Failed to find pod top owner", req.Namespace, req.Name)
 		return ctrl.Result{}, err
 	}
@@ -122,9 +126,9 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	err = r.addPodGroupAnnotationToPod(ctx, &pod, metadata.Name, string(metadata.Owner.UID))
+	err = r.assignPodToGroupAndSubGroup(ctx, &pod, metadata)
 	if err != nil {
-		logger.V(1).Error(err, "Failed to update pod with podgroup annotation", "pod", pod)
+		logger.V(1).Error(err, "Failed to assign pod to group and subgroup", "pod", pod)
 		return ctrl.Result{}, err
 	}
 
@@ -155,21 +159,37 @@ func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager, configs Configs, plug
 		Complete(r)
 }
 
-func (r *PodReconciler) addPodGroupAnnotationToPod(ctx context.Context, pod *v1.Pod, podGroup, jobID string) error {
+func (r *PodReconciler) assignPodToGroupAndSubGroup(ctx context.Context, pod *v1.Pod, metadata *podgroup.Metadata) error {
 	logger := log.FromContext(ctx)
-	if len(pod.Annotations) == 0 {
-		pod.Annotations = map[string]string{}
+
+	currentPG := pod.Annotations[constants.PodGroupAnnotationForPod]
+	currentSubGroup := pod.Labels[constants.SubGroupLabelKey]
+
+	expectedSubGroup := ""
+	if sg := metadata.FindSubGroupForPod(pod.Namespace, pod.Name); sg != nil {
+		expectedSubGroup = sg.Name
 	}
 
-	value, found := pod.Annotations[constants.PodGroupAnnotationForPod]
-	if found && value == podGroup {
+	if currentPG == metadata.Name && currentSubGroup == expectedSubGroup {
 		return nil
 	}
-	logger.V(1).Info("Reconciling podgroup annotation for pod", "pod",
-		fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "old", value, "new", podGroup)
+
+	logger.V(1).Info("Assigning pod to group and subgroup", "pod",
+		fmt.Sprintf("%s/%s", pod.Namespace, pod.Name),
+		"oldPodGroup", currentPG, "newPodGroup", metadata.Name,
+		"oldSubGroup", currentSubGroup, "newSubGroup", expectedSubGroup)
 
 	newPod := pod.DeepCopy()
-	newPod.Annotations[constants.PodGroupAnnotationForPod] = podGroup
+	if newPod.Annotations == nil {
+		newPod.Annotations = map[string]string{}
+	}
+	if newPod.Labels == nil {
+		newPod.Labels = map[string]string{}
+	}
+	newPod.Annotations[constants.PodGroupAnnotationForPod] = metadata.Name
+	if expectedSubGroup != "" {
+		newPod.Labels[constants.SubGroupLabelKey] = expectedSubGroup
+	}
 
 	return r.Client.Patch(ctx, newPod, client.MergeFrom(pod))
 }

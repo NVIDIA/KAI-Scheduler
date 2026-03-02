@@ -31,8 +31,6 @@ const (
 	binPackingPluginName = "binpack"
 	SpreadingPluginName  = "spread"
 	DefaultPluginName    = binPackingPluginName
-
-	gpuIndexEnvVarName = "NVIDIA_VISIBLE_DEVICES"
 )
 
 var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
@@ -82,7 +80,7 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 		It("Schedule on same node", func(ctx context.Context) {
 			pod1 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			pod1, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod1)
@@ -90,7 +88,7 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 
 			pod2 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			pod2, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod2)
@@ -155,7 +153,7 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 		It("Schedule on different nodes", func(ctx context.Context) {
 			pod1 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			pod1, err := rd.CreatePod(ctx, testCtx.KubeClientset, pod1)
@@ -163,7 +161,7 @@ var _ = Describe("Placement strategy", Label(labels.Operated), Ordered, func() {
 
 			pod2 := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 				Limits: map[v1.ResourceName]resource.Quantity{
-					constants.GpuResource: resource.MustParse("1"),
+					constants.NvidiaGpuResource: resource.MustParse("1"),
 				},
 			})
 			pod2, err = rd.CreatePod(ctx, testCtx.KubeClientset, pod2)
@@ -262,7 +260,7 @@ func getGpuIndexOfScheduledFractionPod(ctx context.Context, testCtx *testcontext
 	pod *v1.Pod) (string, error) {
 	for _, container := range pod.Spec.Containers {
 		for _, env := range container.Env {
-			if env.Name == gpuIndexEnvVarName {
+			if env.Name == constants.NvidiaVisibleDevices {
 				configMapName := env.ValueFrom.ConfigMapKeyRef.Name
 				wait.ForConfigMapCreation(ctx, testCtx.ControllerClient, pod.Namespace, configMapName)
 				cm, err := testCtx.KubeClientset.CoreV1().ConfigMaps(pod.Namespace).
@@ -274,5 +272,5 @@ func getGpuIndexOfScheduledFractionPod(ctx context.Context, testCtx *testcontext
 			}
 		}
 	}
-	return "", fmt.Errorf("could not find %s env var in pod", gpuIndexEnvVarName)
+	return "", fmt.Errorf("could not find %s env var in pod", constants.NvidiaVisibleDevices)
 }

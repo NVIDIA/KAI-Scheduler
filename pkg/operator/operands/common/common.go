@@ -31,8 +31,13 @@ var KaiServicesForServiceMonitor = []struct {
 	Name     string
 	Port     string
 	JobLabel string
+
+	LabelSelector map[string]string // optional, if not provided, "app": NAME will be used
+	Namespaces    []string          // optional, if not provided, the service will be monitored in the namespace of the KAI config
 }{
-	{"queuecontroller", "metrics", "queuecontroller"},
+	{"queue-controller", "metrics", "queue-controller", nil, nil},
+	{"kube-state-metrics", "http", "kube-state-metrics",
+		map[string]string{"app.kubernetes.io/name": "kube-state-metrics"}, []string{"monitoring", "default"}},
 }
 
 func AllControllersAvailable(
@@ -42,14 +47,15 @@ func AllControllersAvailable(
 	errorMessages := []string{}
 
 	for _, obj := range objects {
+		objKind := obj.GetObjectKind().GroupVersionKind().Kind
 		err := readerClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 		if err != nil {
 			errorMessages = append(errorMessages, err.Error())
 			continue
 		}
 
-		if slices.Contains(controllerTypes, obj.GetObjectKind().GroupVersionKind().Kind) {
-			available, err := isControllerAvailable(obj)
+		if slices.Contains(controllerTypes, objKind) {
+			available, err := isControllerAvailable(obj, objKind)
 			if err != nil {
 				errorMessages = append(errorMessages, err.Error())
 				continue
@@ -137,6 +143,7 @@ func DeploymentForKAIConfig(
 	deployment.Spec.Template.Labels["app"] = deploymentName
 
 	deployment.Spec.Template.Spec.ServiceAccountName = deploymentName
+	deployment.Spec.Template.Spec.NodeSelector = kaiConfig.Spec.Global.NodeSelector
 	deployment.Spec.Template.Spec.Tolerations = kaiConfig.Spec.Global.Tolerations
 
 	deployment.Spec.Template.Spec.Affinity = MergeAffinities(service.Affinity,
@@ -163,8 +170,8 @@ func PtrFrom[T any](v T) *T {
 	return &v
 }
 
-func isControllerAvailable(obj client.Object) (bool, error) {
-	switch obj.GetObjectKind().GroupVersionKind().Kind {
+func isControllerAvailable(obj client.Object, objKind string) (bool, error) {
+	switch objKind {
 	case "Deployment":
 		deployment, ok := obj.(*appsv1.Deployment)
 		if !ok {
@@ -209,6 +216,25 @@ func AddK8sClientConfigToArgs(k8sClientConfig *kaiv1common.K8sClientConfig, args
 	}
 }
 
+func CheckCRDsAvailable(ctx context.Context, client client.Reader, crdNames ...string) (bool, error) {
+	for _, name := range crdNames {
+		crd := &metav1.PartialObjectMetadata{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "CustomResourceDefinition",
+				APIVersion: "apiextensions.k8s.io/v1",
+			},
+		}
+		err := client.Get(ctx, types.NamespacedName{Name: name}, crd)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to check CRD %s: %w", name, err)
+		}
+	}
+	return true, nil
+}
+
 func CheckPrometheusCRDsAvailable(ctx context.Context, client client.Reader, targetCRDs ...string) (bool, error) {
 	var names []string
 	for _, targetCRD := range targetCRDs {
@@ -221,26 +247,7 @@ func CheckPrometheusCRDsAvailable(ctx context.Context, client client.Reader, tar
 			names = append(names, targetCRD)
 		}
 	}
-
-	for _, name := range names {
-		crd := &metav1.PartialObjectMetadata{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "CustomResourceDefinition",
-				APIVersion: "apiextensions.k8s.io/v1",
-			},
-		}
-		err := client.Get(ctx, types.NamespacedName{
-			Name: name,
-		}, crd)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				return false, nil
-			}
-			return false, fmt.Errorf("failed to check for Prometheus CRD: %w", err)
-		}
-	}
-
-	return true, nil
+	return CheckCRDsAvailable(ctx, client, names...)
 }
 
 func MergeAffinities(localAffinity *v1.Affinity,

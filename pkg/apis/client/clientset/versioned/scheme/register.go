@@ -23,6 +23,7 @@ SPDX-License-Identifier: Apache-2.0
 package scheme
 
 import (
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 	schedulingv1alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	schedulingv2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
@@ -37,6 +38,7 @@ var Scheme = runtime.NewScheme()
 var Codecs = serializer.NewCodecFactory(Scheme)
 var ParameterCodec = runtime.NewParameterCodec(Scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
+	kaiv1alpha1.AddToScheme,
 	schedulingv1alpha2.AddToScheme,
 	schedulingv2.AddToScheme,
 	schedulingv2alpha2.AddToScheme,

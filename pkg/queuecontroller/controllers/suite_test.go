@@ -74,7 +74,6 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "..", "..", "deployments", "kai-scheduler", "crds"),
-			filepath.Join("..", "..", "..", "deployments", "external-crds"),
 		},
 		ErrorIfCRDPathMissing: true,
 	}
@@ -130,7 +129,7 @@ var _ = Describe("QueueController", Ordered, func() {
 			Scheme: mgr.GetScheme(),
 		}
 
-		err = controller.SetupWithManager(mgr, "kai.scheduler/queue", false)
+		err = controller.SetupWithManager(mgr, false)
 		Expect(err).ToNot(HaveOccurred())
 
 		managerDone = make(chan struct{})

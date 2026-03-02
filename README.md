@@ -48,6 +48,9 @@ It can run alongside other schedulers installed on the cluster.
 > [!NOTE]
 > KAI Scheduler is built based on [kube-batch](https://github.com/kubernetes-sigs/kube-batch).
 
+> [!NOTE]
+> KAI Scheduler is built based on [kube-batch](https://github.com/kubernetes-sigs/kube-batch).
+
 ## Prerequisites
 
 Before installing KAI Scheduler, ensure you have:
@@ -91,6 +94,7 @@ When `gpu-operator` <v25.10.0 is installed, the following flag should be added t
 ```
 --set admission.gpuPodRuntimeClassName=null
 ```
+If CDI is enabled also add `--set binder.cdiEnabled=true`.
 
 If CDI is enabled also add `--set binder.cdiEnabled=true`.
 
@@ -130,6 +134,5 @@ Join the [CNCF Slack](https://communityinviter.com/apps/cloud-native/cncf) first
 
 Join the [kai-scheduler mailing list](https://groups.google.com/g/kai-scheduler) to receive updates on biweekly meetings.
 
-### Technical Issues & Feature Requests
-
+### Technical Issues & Feature Requests  
 Please open a [GitHub issue](https://github.com/NVIDIA/KAI-Scheduler/issues/new/choose) for bugs, feature suggestions, or technical help. This helps us keep track of requests and respond effectively.

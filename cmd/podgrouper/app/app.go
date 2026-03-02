@@ -24,7 +24,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
+	v2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2"
 	kubeAiSchedulerV2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	controllers "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper"
 	pluginshub "github.com/NVIDIA/KAI-scheduler/pkg/podgrouper/podgrouper/hub"
@@ -51,7 +51,7 @@ func init() {
 
 type App struct {
 	Mgr               manager.Manager
-	DefaultPluginsHub pluginshub.PluginsHub
+	DefaultPluginsHub *pluginshub.DefaultPluginsHub
 
 	configs    controllers.Configs
 	pluginsHub pluginshub.PluginsHub
@@ -116,7 +116,7 @@ func NewWithScheme(mgrScheme *runtime.Scheme) (*App, error) {
 
 	defaultPluginsHub := pluginshub.NewDefaultPluginsHub(mgr.GetClient(), configs.SearchForLegacyPodGroups,
 		configs.KnativeGangSchedule, configs.SchedulingQueueLabelKey, configs.NodePoolLabelKey,
-		configs.DefaultPrioritiesConfigMapName, configs.DefaultPrioritiesConfigMapNamespace)
+		configs.DefaultConfigPerTypeConfigMapName, configs.DefaultConfigPerTypeConfigMapNamespace)
 
 	app := &App{
 		Mgr:               mgr,
@@ -190,11 +190,11 @@ func getCacheOptions(configs controllers.Configs) cache.Options {
 		&corev1.Pod{}: podByObject,
 	}
 
-	// limit configmap cache to the namespace that contains the configmap of default priorities for pod groups
-	if configs.DefaultPrioritiesConfigMapName != "" && configs.DefaultPrioritiesConfigMapNamespace != "" {
+	// limit configmap cache to the namespace that contains the configmap of default configs for pod groups
+	if configs.DefaultConfigPerTypeConfigMapName != "" && configs.DefaultConfigPerTypeConfigMapNamespace != "" {
 		cacheOptions.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
 			Namespaces: map[string]cache.Config{
-				configs.DefaultPrioritiesConfigMapNamespace: {},
+				configs.DefaultConfigPerTypeConfigMapNamespace: {},
 			},
 		}
 	}

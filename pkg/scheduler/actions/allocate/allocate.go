@@ -52,7 +52,7 @@ func (alloc *allocateAction) Execute(ssn *framework.Session) {
 		FilterUnready:     true,
 		MaxJobsQueueDepth: ssn.GetJobsDepth(framework.Allocate),
 	})
-	jobsOrderByQueues.InitializeWithJobs(ssn.PodGroupInfos)
+	jobsOrderByQueues.InitializeWithJobs(ssn.ClusterInfo.PodGroupInfos)
 
 	log.InfraLogger.V(2).Infof("There are <%d> PodGroupInfos and <%d> Queues in total for scheduling",
 		jobsOrderByQueues.Len(), ssn.CountLeafQueues())
@@ -77,13 +77,13 @@ func (alloc *allocateAction) Execute(ssn *framework.Session) {
 }
 
 func attemptToAllocateJob(ssn *framework.Session, stmt *framework.Statement, job *podgroup_info.PodGroupInfo) (allocated, pipelined bool) {
-	queue := ssn.Queues[job.Queue]
+	queue := ssn.ClusterInfo.Queues[job.Queue]
 
-	resReq := podgroup_info.GetTasksToAllocateInitResource(job, ssn.PodSetOrderFn, ssn.TaskOrderFn, true)
+	resReq := podgroup_info.GetTasksToAllocateInitResource(job, ssn.PodSetOrderFn, ssn.TaskOrderFn, true, ssn.ClusterInfo.MinNodeGPUMemory)
 	log.InfraLogger.V(3).Infof("Attempting to allocate job: <%v/%v> of queue <%v>, resources: <%v>",
 		job.Namespace, job.Name, queue.Name, resReq)
 
-	nodes := maps.Values(ssn.Nodes)
+	nodes := maps.Values(ssn.ClusterInfo.Nodes)
 	if !common.AllocateJob(ssn, stmt, nodes, job, false) {
 		log.InfraLogger.V(3).Infof("Could not allocate resources for job: <%v/%v> of queue <%v>",
 			job.Namespace, job.Name, job.Queue)

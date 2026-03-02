@@ -13,6 +13,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribeAllocateElasticSpecs()
+var _ = DescribeAllocatePodOrderSpecs()
+
 func TestAllocate(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

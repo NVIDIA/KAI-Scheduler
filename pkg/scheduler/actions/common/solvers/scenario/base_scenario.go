@@ -168,7 +168,7 @@ func (s *BaseScenario) String() string {
 }
 
 func (s *BaseScenario) getJobForTask(task *pod_info.PodInfo) *podgroup_info.PodGroupInfo {
-	return s.session.PodGroupInfos[task.Job]
+	return s.session.ClusterInfo.PodGroupInfos[task.Job]
 }
 
 func (s *BaseScenario) GetPreemptor() *podgroup_info.PodGroupInfo {

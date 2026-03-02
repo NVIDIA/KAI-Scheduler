@@ -322,9 +322,9 @@ var _ = Describe("Max Allowed Policy Check", func() {
 					expectedResult: false,
 					expectedDetails: &v2alpha2.QuotaDetails{
 						QueueAllocatedResources: v1.ResourceList{
-							v1.ResourceCPU:        *resource.NewMilliQuantity(0, resource.DecimalSI),
-							v1.ResourceMemory:     *resource.NewQuantity(0, resource.DecimalSI),
-							constants.GpuResource: *resource.NewQuantity(0, resource.DecimalSI),
+							v1.ResourceCPU:              *resource.NewMilliQuantity(0, resource.DecimalSI),
+							v1.ResourceMemory:           *resource.NewQuantity(0, resource.DecimalSI),
+							constants.NvidiaGpuResource: *resource.NewQuantity(0, resource.DecimalSI),
 						},
 					},
 				},

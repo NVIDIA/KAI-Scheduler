@@ -9,9 +9,13 @@ import (
 	"strconv"
 
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/common/resources"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
@@ -52,11 +56,11 @@ type TestNodeBasic struct {
 
 func BuildNodesInfoMap(
 	Nodes map[string]TestNodeBasic, tasksToNodeMap map[string]pod_info.PodsMap,
-	clusterPodAffinityInfo *cache.K8sClusterPodAffinityInfo,
-) map[string]*node_info.NodeInfo {
+	clusterPodAffinityInfo *cache.K8sClusterPodAffinityInfo, draClusterObjects ...runtime.Object) map[string]*node_info.NodeInfo {
 	if clusterPodAffinityInfo == nil {
 		clusterPodAffinityInfo = cache.NewK8sClusterPodAffinityInfo()
 	}
+	slicesByNode := calcResourceSlicesMap(draClusterObjects)
 	nodesInfoMap := map[string]*node_info.NodeInfo{}
 
 	for nodeName, nodeMetadata := range Nodes {
@@ -65,18 +69,37 @@ func BuildNodesInfoMap(
 			tasksOfNode = tasksToNodeMap[nodeName]
 		}
 
-		nodeInfo := buildNodeInfo(nodeName, &nodeMetadata, tasksOfNode, clusterPodAffinityInfo)
+		nodeInfo := buildNodeInfo(nodeName, &nodeMetadata, tasksOfNode, clusterPodAffinityInfo, slicesByNode)
 		if nodeMetadata.GpuMemorySynced != nil {
 			nodeInfo.GpuMemorySynced = *nodeMetadata.GpuMemorySynced
 		}
 		if nodeMetadata.MaxTaskNum != nil {
 			nodeInfo.MaxTaskNum = *nodeMetadata.MaxTaskNum
+			nodeInfo.Allocatable.ScalarResources()[v1.ResourcePods] = int64(*nodeMetadata.MaxTaskNum)
+			usedPods := int64(nodeInfo.Used.Get(v1.ResourcePods))
+			availablePods := int64(*nodeMetadata.MaxTaskNum) - usedPods
+			if availablePods < 0 {
+				availablePods = 0
+			}
+			nodeInfo.Idle.ScalarResources()[v1.ResourcePods] = availablePods
 		}
 		nodesInfoMap[nodeName] = nodeInfo
-
 	}
 
 	return nodesInfoMap
+}
+
+func calcResourceSlicesMap(draClusterObjects []runtime.Object) map[string][]*resourceapi.ResourceSlice {
+	slicesByNode := map[string][]*resourceapi.ResourceSlice{}
+	for _, draObject := range draClusterObjects {
+		if resourceSlice, ok := draObject.(*resourceapi.ResourceSlice); ok {
+			if resourceSlice.Spec.NodeName == nil {
+				continue
+			}
+			slicesByNode[*resourceSlice.Spec.NodeName] = append(slicesByNode[*resourceSlice.Spec.NodeName], resourceSlice)
+		}
+	}
+	return slicesByNode
 }
 
 func BuildNode(node string, capacity *v1.ResourceList, allocatable *v1.ResourceList) *v1.Node {
@@ -91,7 +114,7 @@ func BuildNode(node string, capacity *v1.ResourceList, allocatable *v1.ResourceL
 
 func buildNodeInfo(
 	nodeName string, nodeMetadata *TestNodeBasic, tasksOfNode pod_info.PodsMap,
-	clusterPodAffinityInfo *cache.K8sClusterPodAffinityInfo,
+	clusterPodAffinityInfo *cache.K8sClusterPodAffinityInfo, slicesByNode map[string][]*resourceapi.ResourceSlice,
 ) *node_info.NodeInfo {
 	nodeGpuCount := strconv.Itoa(nodeMetadata.GPUs)
 	nodeAllocatableGPUs := nodeGpuCount
@@ -117,11 +140,17 @@ func buildNodeInfo(
 		migEnabledLabel = "true"
 	}
 
-	nodeResource := resources_fake.BuildResourceList(&cpuMilliOverallVal, &memoryOverallVal, &nodeGpuCount,
+	nodeResource := *resources_fake.BuildResourceList(&cpuMilliOverallVal, &memoryOverallVal, &nodeGpuCount,
 		nodeMetadata.MigInstances)
-	nodeResourceAllocatable := resources_fake.BuildResourceList(&cpuMilliAllocatableVal, &memoryAllocatableVal,
+	if _, found := nodeResource[v1.ResourcePods]; !found {
+		nodeResource[v1.ResourcePods] = resource.MustParse("110")
+	}
+	nodeResourceAllocatable := *resources_fake.BuildResourceList(&cpuMilliAllocatableVal, &memoryAllocatableVal,
 		&nodeAllocatableGPUs, nodeMetadata.MigInstances)
-	node := BuildNode(nodeName, nodeResource, nodeResourceAllocatable)
+	if _, found := nodeResourceAllocatable[v1.ResourcePods]; !found {
+		nodeResourceAllocatable[v1.ResourcePods] = resource.MustParse("110")
+	}
+	node := BuildNode(nodeName, &nodeResource, &nodeResourceAllocatable)
 	node.Labels = map[string]string{
 		commonconstants.GpuCountLabel:    nodeGpuCount,
 		node_info.GpuMemoryLabel:         strconv.Itoa(node_info.DefaultGpuMemory),
@@ -137,6 +166,20 @@ func buildNodeInfo(
 	}
 	podAffinityInfo := cluster_info.NewK8sNodePodAffinityInfo(node, clusterPodAffinityInfo)
 	nodeInfo := node_info.NewNodeInfo(node, podAffinityInfo)
+
+	// Count GPUs from node-specific slices
+	var draGPUCount int64
+	for _, slice := range slicesByNode[nodeName] {
+		if !resources.IsGPUDeviceClass(slice.Spec.Driver) {
+			continue
+		}
+		draGPUCount += int64(len(slice.Spec.Devices))
+	}
+
+	if draGPUCount > 0 {
+		log.InfraLogger.V(6).Infof("Node %s has %d DRA GPUs from ResourceSlices", nodeName, draGPUCount)
+		nodeInfo.AddDRAGPUs(float64(draGPUCount))
+	}
 
 	// Order of node task addition matters
 	sortedTasks := toSorted(tasksOfNode)

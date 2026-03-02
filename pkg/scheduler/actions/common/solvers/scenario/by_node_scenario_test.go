@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
@@ -38,7 +39,7 @@ func TestPodByNodeScenario_VictimsTasksFromNodes(t *testing.T) {
 			name: "Single potential job, 2 pods",
 			fields: fields{
 				session: &framework.Session{
-					PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+					ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 						"pg1": podgroup_info.NewPodGroupInfo("pg1",
 							pod_info.NewTaskInfo(&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -86,7 +87,7 @@ func TestPodByNodeScenario_VictimsTasksFromNodes(t *testing.T) {
 								Phase: v1.PodRunning,
 							},
 						})),
-					},
+					}},
 				},
 				pendingTasksAsJob: podgroup_info.NewPodGroupInfo("123"),
 				potentialVictimsTasks: []*pod_info.PodInfo{
@@ -163,7 +164,7 @@ func TestPodByNodeScenario_VictimsTasksFromNodes(t *testing.T) {
 			name: "No pods on node",
 			fields: fields{
 				session: &framework.Session{
-					PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+					ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 						"pg1": podgroup_info.NewPodGroupInfo("pg1",
 							pod_info.NewTaskInfo(&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -211,7 +212,7 @@ func TestPodByNodeScenario_VictimsTasksFromNodes(t *testing.T) {
 								Phase: v1.PodRunning,
 							},
 						})),
-					},
+					}},
 				},
 				pendingTasksAsJob: podgroup_info.NewPodGroupInfo("123"),
 				potentialVictimsTasks: []*pod_info.PodInfo{
@@ -257,7 +258,7 @@ func TestPodByNodeScenario_VictimsTasksFromNodes(t *testing.T) {
 			name: "Single potential job, return pods from same job on different nodes",
 			fields: fields{
 				session: &framework.Session{
-					PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+					ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 						"pg1": podgroup_info.NewPodGroupInfo("pg1",
 							pod_info.NewTaskInfo(&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -305,7 +306,7 @@ func TestPodByNodeScenario_VictimsTasksFromNodes(t *testing.T) {
 								Phase: v1.PodRunning,
 							},
 						})),
-					},
+					}},
 				},
 				pendingTasksAsJob: podgroup_info.NewPodGroupInfo("123"),
 				potentialVictimsTasks: []*pod_info.PodInfo{
@@ -382,7 +383,7 @@ func TestPodByNodeScenario_VictimsTasksFromNodes(t *testing.T) {
 			name: "Single potential job, return pods from same job on different nodes - get tasks from AddPotentialVictimsTasks",
 			fields: fields{
 				session: &framework.Session{
-					PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
+					ClusterInfo: &api.ClusterInfo{PodGroupInfos: map[common_info.PodGroupID]*podgroup_info.PodGroupInfo{
 						"pg1": podgroup_info.NewPodGroupInfo("pg1",
 							pod_info.NewTaskInfo(&v1.Pod{
 								ObjectMeta: metav1.ObjectMeta{
@@ -430,7 +431,7 @@ func TestPodByNodeScenario_VictimsTasksFromNodes(t *testing.T) {
 								Phase: v1.PodRunning,
 							},
 						})),
-					},
+					}},
 				},
 				pendingTasksAsJob: podgroup_info.NewPodGroupInfo("123"),
 				potentialVictimsTasks: []*pod_info.PodInfo{

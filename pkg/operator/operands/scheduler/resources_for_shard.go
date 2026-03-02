@@ -12,17 +12,18 @@ import (
 	"github.com/spf13/pflag"
 	"golang.org/x/exp/slices"
 
-	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/scheduler/app/options"
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
 	kaiConfigUtils "github.com/NVIDIA/KAI-scheduler/pkg/operator/config"
 	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
+	usagedbapi "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb/api"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 )
 
@@ -125,57 +126,11 @@ func (s *SchedulerForShard) configMapForShard(
 		Kind:       "ConfigMap",
 		APIVersion: "v1",
 	}
-	placementArguments := calculatePlacementArguments(shard.Spec.PlacementStrategy)
 	innerConfig := conf.SchedulerConfiguration{}
 
-	actions := []string{"allocate"}
-	if placementArguments[gpuResource] != spreadStrategy && placementArguments[cpuResource] != spreadStrategy {
-		actions = append(actions, "consolidation")
-	}
-	actions = append(actions, []string{"reclaim", "preempt", "stalegangeviction"}...)
-
+	innerConfig.Tiers = []conf.Tier{{Plugins: resolvePlugins(shard.Spec.Plugins)}}
+	actions := resolveActions(shard.Spec.Actions)
 	innerConfig.Actions = strings.Join(actions, ", ")
-
-	innerConfig.Tiers = []conf.Tier{
-		{
-			Plugins: []conf.PluginOption{
-				{Name: "predicates"},
-				{Name: "proportion"},
-				{Name: "priority"},
-				{Name: "nodeavailability"},
-				{Name: "resourcetype"},
-				{Name: "podaffinity"},
-				{Name: "elastic"},
-				{Name: "kubeflow"},
-				{Name: "ray"},
-				{Name: "subgrouporder"},
-				{Name: "taskorder"},
-				{Name: "nominatednode"},
-				{Name: "dynamicresources"},
-				{Name: "minruntime"},
-				{Name: "topology"},
-				{Name: "snapshot"},
-			},
-		},
-	}
-
-	innerConfig.Tiers[0].Plugins = append(
-		innerConfig.Tiers[0].Plugins,
-		conf.PluginOption{Name: fmt.Sprintf("gpu%s", strings.Replace(placementArguments[gpuResource], "bin", "", 1))},
-		conf.PluginOption{
-			Name:      "nodeplacement",
-			Arguments: placementArguments,
-		},
-	)
-
-	if placementArguments[gpuResource] == binpackStrategy {
-		innerConfig.Tiers[0].Plugins = append(
-			innerConfig.Tiers[0].Plugins,
-			conf.PluginOption{Name: "gpusharingorder"},
-		)
-	}
-
-	addMinRuntimePluginIfNeeded(&innerConfig.Tiers[0].Plugins, shard.Spec.MinRuntime)
 
 	if len(shard.Spec.QueueDepthPerAction) > 0 {
 		if err = validateJobDepthMap(shard, innerConfig, actions); err != nil {
@@ -184,6 +139,12 @@ func (s *SchedulerForShard) configMapForShard(
 		// Set the validated map to the scheduler config
 		innerConfig.QueueDepthPerAction = shard.Spec.QueueDepthPerAction
 	}
+
+	usageDBConfig, err := getUsageDBConfig(shard, kaiConfig)
+	if err != nil {
+		return nil, err
+	}
+	innerConfig.UsageDBConfig = usageDBConfig
 
 	data, marshalErr := yaml.Marshal(&innerConfig)
 	if marshalErr != nil {
@@ -203,6 +164,41 @@ func validateJobDepthMap(shard *kaiv1.SchedulingShard, innerConfig conf.Schedule
 		}
 	}
 	return nil
+}
+
+func getUsageDBConfig(shard *kaiv1.SchedulingShard, kaiConfig *kaiv1.Config) (*usagedbapi.UsageDBConfig, error) {
+	// Check for nil inputs
+	if shard == nil {
+		return nil, fmt.Errorf("shard cannot be nil")
+	}
+	if kaiConfig == nil {
+		return nil, fmt.Errorf("kaiConfig cannot be nil")
+	}
+
+	if shard.Spec.UsageDBConfig == nil {
+		return nil, nil
+	}
+
+	usageDBConfig := shard.Spec.UsageDBConfig.DeepCopy()
+
+	if usageDBConfig.ClientType != "prometheus" {
+		return usageDBConfig, nil
+	}
+
+	if usageDBConfig.ConnectionString == "" && usageDBConfig.ConnectionStringEnvVar == "" {
+		// Use prometheus from config
+		if kaiConfig.Spec.Prometheus != nil &&
+			kaiConfig.Spec.Prometheus.Enabled != nil &&
+			*kaiConfig.Spec.Prometheus.Enabled {
+			usageDBConfig.ConnectionString = fmt.Sprintf("http://usage-prometheus.%s.svc.cluster.local:9090", kaiConfig.Spec.Namespace)
+		} else if kaiConfig.Spec.Prometheus != nil && kaiConfig.Spec.Prometheus.ExternalPrometheusUrl != nil {
+			usageDBConfig.ConnectionString = *kaiConfig.Spec.Prometheus.ExternalPrometheusUrl
+		} else {
+			return nil, fmt.Errorf("prometheus connection string not configured: either enable internal prometheus or configure external TSDB connection URL")
+		}
+	}
+
+	return usageDBConfig, nil
 }
 
 func (s *SchedulerForShard) serviceForShard(
@@ -260,6 +256,7 @@ func buildArgsList(
 		fmt.Sprintf("--%s=%s", "nodepool-label-key", *kaiConfig.Spec.Global.NodePoolLabelKey),
 		fmt.Sprintf("--%s=%s", "partition-label-value", shard.Spec.PartitionLabelValue),
 		fmt.Sprintf("--%s=%s", "resource-reservation-app-label", *kaiConfig.Spec.Binder.ResourceReservation.AppLabel),
+		fmt.Sprintf("--%s=%s", "queue-label-key", *kaiConfig.Spec.Global.QueueLabelKey),
 	}
 
 	if kaiConfig.Spec.Scheduler.SchedulerService.Port != nil {
@@ -287,29 +284,6 @@ func buildArgsList(
 	}
 
 	return args, nil
-}
-
-func calculatePlacementArguments(placementStrategy *kaiv1.PlacementStrategy) map[string]string {
-	return map[string]string{
-		gpuResource: *placementStrategy.GPU, cpuResource: *placementStrategy.CPU,
-	}
-}
-
-func addMinRuntimePluginIfNeeded(plugins *[]conf.PluginOption, minRuntime *kaiv1.MinRuntime) {
-	if minRuntime == nil || (minRuntime.PreemptMinRuntime == nil && minRuntime.ReclaimMinRuntime == nil) {
-		return
-	}
-
-	minRuntimePlugin := conf.PluginOption{Name: "minruntime", Arguments: map[string]string{}}
-
-	if minRuntime.PreemptMinRuntime != nil {
-		minRuntimePlugin.Arguments["defaultPreemptMinRuntime"] = *minRuntime.PreemptMinRuntime
-	}
-	if minRuntime.ReclaimMinRuntime != nil {
-		minRuntimePlugin.Arguments["defaultReclaimMinRuntime"] = *minRuntime.ReclaimMinRuntime
-	}
-
-	*plugins = append(*plugins, minRuntimePlugin)
 }
 
 func configMapName(config *kaiv1.Config, shard *kaiv1.SchedulingShard) string {

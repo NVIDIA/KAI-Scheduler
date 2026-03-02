@@ -5,7 +5,10 @@ package binder
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+
+	"golang.org/x/mod/semver"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -25,7 +28,9 @@ import (
 )
 
 const (
-	defaultResourceName = "binder"
+	defaultResourceName                    = "binder"
+	gpuOperatorVersionDefaultCDIDeprecated = "v25.10.0"
+	versionLabelName                       = "app.kubernetes.io/version"
 )
 
 func (b *Binder) deploymentForKAIConfig(
@@ -43,9 +48,14 @@ func (b *Binder) deploymentForKAIConfig(
 		return nil, err
 	}
 
-	cdiEnabled, err := isCdiEnabled(ctx, runtimeClient)
-	if err != nil {
-		return nil, err
+	var cdiEnabled bool
+	if config.CDIEnabled != nil {
+		cdiEnabled = *config.CDIEnabled
+	} else {
+		cdiEnabled, err = isCdiEnabled(ctx, runtimeClient)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
@@ -140,7 +150,23 @@ func resourceReservationServiceAccount(
 
 	sa.Name = *kaiConfig.Spec.Binder.ResourceReservation.ServiceAccountName
 	sa.Namespace = *kaiConfig.Spec.Binder.ResourceReservation.Namespace
-	sa.ImagePullSecrets = kaiConfigUtils.GetGlobalImagePullSecrets(kaiConfig.Spec.Global)
+
+	imagePullSecrets := make(map[string]bool)
+	for _, secret := range sa.ImagePullSecrets {
+		imagePullSecrets[secret.Name] = true
+	}
+
+	for _, secret := range kaiConfigUtils.GetGlobalImagePullSecrets(kaiConfig.Spec.Global) {
+		if !imagePullSecrets[secret.Name] {
+			imagePullSecrets[secret.Name] = true
+		}
+	}
+
+	sa.ImagePullSecrets = make([]v1.LocalObjectReference, 0, len(imagePullSecrets))
+	for secretName := range imagePullSecrets {
+		sa.ImagePullSecrets = append(sa.ImagePullSecrets, v1.LocalObjectReference{Name: secretName})
+	}
+
 	return []client.Object{sa}, nil
 }
 
@@ -167,6 +193,10 @@ func isCdiEnabled(ctx context.Context, readerClient client.Reader) (bool, error)
 
 	nvidiaClusterPolicy := nvidiaClusterPolicies.Items[0]
 	if nvidiaClusterPolicy.Spec.CDI.Enabled != nil && *nvidiaClusterPolicy.Spec.CDI.Enabled {
+		gpuOperatorVersion, found := nvidiaClusterPolicy.Labels[versionLabelName]
+		if found && semver.Compare(gpuOperatorVersion, gpuOperatorVersionDefaultCDIDeprecated) >= 0 {
+			return true, nil
+		}
 		if nvidiaClusterPolicy.Spec.CDI.Default != nil && *nvidiaClusterPolicy.Spec.CDI.Default {
 			return true, nil
 		}
@@ -231,6 +261,18 @@ func buildArgsList(kaiConfig *kaiv1.Config, config *kaiv1binder.Binder, fakeGPU 
 
 	if config.ResourceReservation.RuntimeClassName != nil && len(*config.ResourceReservation.RuntimeClassName) > 0 {
 		args = append(args, []string{fmt.Sprintf("--runtime-class-name=%s", *config.ResourceReservation.RuntimeClassName)}...)
+	}
+
+	// Serialize and add GPU reservation pod resource configurations
+	if config.ResourceReservation.PodResources != nil {
+		resourceRequirements := v1.ResourceRequirements{
+			Requests: config.ResourceReservation.PodResources.Requests,
+			Limits:   config.ResourceReservation.PodResources.Limits,
+		}
+		resourcesJSON, err := json.Marshal(resourceRequirements)
+		if err == nil {
+			args = append(args, []string{"--resource-reservation-pod-resources", string(resourcesJSON)}...)
+		}
 	}
 
 	return args

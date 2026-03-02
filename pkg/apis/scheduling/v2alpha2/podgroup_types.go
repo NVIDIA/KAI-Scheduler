@@ -343,6 +343,9 @@ const (
 
 	// OverLimit means that the pod group is not schedulable because scheduling it would exceed the queue's limits.
 	OverLimit UnschedulableReason = "OverLimit"
+
+	// QueueDoesNotExist means the pod group references a queue that doesn't exist or has no parent queue.
+	QueueDoesNotExist UnschedulableReason = "QueueDoesNotExist"
 )
 
 func (e UnschedulableExplanations) String() string {

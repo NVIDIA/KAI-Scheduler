@@ -7,11 +7,13 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/api/resource/v1"
 	v14 "k8s.io/api/scheduling/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	listv1 "k8s.io/client-go/listers/core/v1"
+	resourcev1 "k8s.io/client-go/listers/resource/v1"
 	schedv1 "k8s.io/client-go/listers/scheduling/v1"
 	v12 "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
@@ -26,9 +28,8 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/queue_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache/usagedb"
 
-	kueue "sigs.k8s.io/kueue/apis/kueue/v1alpha1"
-	kueueInformer "sigs.k8s.io/kueue/client-go/informers/externalversions"
-	kueueLister "sigs.k8s.io/kueue/client-go/listers/kueue/v1alpha1"
+	kaiv1alpha1Listers "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/listers/kai/v1alpha1"
+	kaiv1alpha1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1alpha1"
 )
 
 type k8sLister struct {
@@ -41,14 +42,18 @@ type k8sLister struct {
 	cmLister       listv1.ConfigMapLister
 	usageLister    *usagedb.UsageLister
 
-	pvcLister             listv1.PersistentVolumeClaimLister
-	storageCapacityLister v12.CSIStorageCapacityLister
-	storageClassLister    v12.StorageClassLister
-	csiDriverLister       v12.CSIDriverLister
+	pvcLister              listv1.PersistentVolumeClaimLister
+	storageCapacityLister  v12.CSIStorageCapacityLister
+	storageClassLister     v12.StorageClassLister
+	csiDriverLister        v12.CSIDriverLister
+	draResourceClaimLister resourcev1.ResourceClaimLister
 
 	bindRequestLister scheudlinglistv1alpha2.BindRequestLister
 
-	kueueTopologyLister kueueLister.TopologyLister
+	kaiTopologyLister kaiv1alpha1Listers.TopologyLister
+
+	resourceSliceLister resourcev1.ResourceSliceLister
+	resourceClaimLister resourcev1.ResourceClaimLister
 
 	partitionSelector labels.Selector
 }
@@ -59,7 +64,6 @@ var _ DataLister = &k8sLister{}
 
 func New(
 	informerFactory informers.SharedInformerFactory, kubeAiSchedulerInformerFactory kubeAiSchedulerInfo.SharedInformerFactory,
-	kueueInformerFactory kueueInformer.SharedInformerFactory,
 	usageLister *usagedb.UsageLister,
 	partitionSelector labels.Selector,
 ) *k8sLister {
@@ -73,14 +77,16 @@ func New(
 		cmLister:       informerFactory.Core().V1().ConfigMaps().Lister(),
 		usageLister:    usageLister,
 
-		pvcLister:             informerFactory.Core().V1().PersistentVolumeClaims().Lister(),
-		storageCapacityLister: informerFactory.Storage().V1().CSIStorageCapacities().Lister(),
-		storageClassLister:    informerFactory.Storage().V1().StorageClasses().Lister(),
-		csiDriverLister:       informerFactory.Storage().V1().CSIDrivers().Lister(),
+		pvcLister:              informerFactory.Core().V1().PersistentVolumeClaims().Lister(),
+		storageCapacityLister:  informerFactory.Storage().V1().CSIStorageCapacities().Lister(),
+		storageClassLister:     informerFactory.Storage().V1().StorageClasses().Lister(),
+		csiDriverLister:        informerFactory.Storage().V1().CSIDrivers().Lister(),
+		draResourceClaimLister: informerFactory.Resource().V1().ResourceClaims().Lister(),
 
-		bindRequestLister: kubeAiSchedulerInformerFactory.Scheduling().V1alpha2().BindRequests().Lister(),
-
-		kueueTopologyLister: kueueInformerFactory.Kueue().V1alpha1().Topologies().Lister(),
+		bindRequestLister:   kubeAiSchedulerInformerFactory.Scheduling().V1alpha2().BindRequests().Lister(),
+		kaiTopologyLister:   kubeAiSchedulerInformerFactory.Kai().V1alpha1().Topologies().Lister(),
+		resourceSliceLister: informerFactory.Resource().V1().ResourceSlices().Lister(),
+		resourceClaimLister: informerFactory.Resource().V1().ResourceClaims().Lister(),
 
 		partitionSelector: partitionSelector,
 	}
@@ -168,8 +174,35 @@ func (k *k8sLister) ListConfigMaps() ([]*v1.ConfigMap, error) {
 	return k.cmLister.List(labels.Everything())
 }
 
-// +kubebuilder:rbac:groups="kueue.x-k8s.io",resources=topologies,verbs=get;list;watch
+// +kubebuilder:rbac:groups="kai.scheduler",resources=topologies,verbs=get;list;watch
 
-func (k *k8sLister) ListTopologies() ([]*kueue.Topology, error) {
-	return k.kueueTopologyLister.List(labels.Everything())
+func (k *k8sLister) ListTopologies() ([]*kaiv1alpha1.Topology, error) {
+	return k.kaiTopologyLister.List(labels.Everything())
+}
+
+// +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceslices,verbs=get;list;watch
+
+func (k *k8sLister) ListResourceSlicesByNode() (map[string][]*resourceapi.ResourceSlice, error) {
+	slices, err := k.resourceSliceLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string][]*resourceapi.ResourceSlice)
+	for _, slice := range slices {
+		nodeName := ""
+		if slice.Spec.AllNodes == nil || !*slice.Spec.AllNodes {
+			if slice.Spec.NodeName != nil {
+				nodeName = *slice.Spec.NodeName
+			}
+		}
+		result[nodeName] = append(result[nodeName], slice)
+	}
+	return result, nil
+}
+
+// +kubebuilder:rbac:groups="resource.k8s.io",resources=resourceclaims,verbs=get;list;watch
+
+func (k *k8sLister) ListResourceClaims() ([]*resourceapi.ResourceClaim, error) {
+	return k.resourceClaimLister.List(labels.Everything())
 }

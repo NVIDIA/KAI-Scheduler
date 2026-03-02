@@ -78,7 +78,7 @@ var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered,
 		configurations.DisableScheduler(ctx, testCtx)
 		lowPriorityPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		})
 		lowPriorityPod.Name = "low-priority-pod"
@@ -88,7 +88,7 @@ var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered,
 
 		highPriorityPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		})
 		highPriorityPod.Name = "high-priority-pod"
@@ -108,7 +108,7 @@ var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered,
 		configurations.DisableScheduler(ctx, testCtx)
 		lowPriorityPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		})
 		lowPriorityPod.Name = "low-priority-pod"
@@ -118,7 +118,7 @@ var _ = Describe("Order jobs allocation queue", Label(labels.Operated), Ordered,
 
 		highPriorityPod := rd.CreatePodObject(testCtx.Queues[0], v1.ResourceRequirements{
 			Limits: map[v1.ResourceName]resource.Quantity{
-				constants.GpuResource: resource.MustParse("1"),
+				constants.NvidiaGpuResource: resource.MustParse("1"),
 			},
 		})
 		highPriorityPod.Name = "high-priority-pod"

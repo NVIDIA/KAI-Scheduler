@@ -1,12 +1,16 @@
 bin/
+.claude/
 .idea/
 charts/
 cover.out
 .DS_Store
 coverage/
 *.test
+.vscode
 launch.json
 coverage.out
+vendor/
+/generate-dep.go
 
 cmd/fairshare-simulator/fairshare-simulator
 cmd/snapshot-tool/snapshot-tool

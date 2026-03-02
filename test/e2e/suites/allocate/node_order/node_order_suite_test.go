@@ -13,6 +13,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribeAffinitySpecs()
+var _ = DescribeResourceTypeSpecs()
+
 func TestNodeOrder(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = DescribeEventsSpecs()
+
 func TestEvents(t *testing.T) {
 	utils.SetLogger()
 	RegisterFailHandler(Fail)

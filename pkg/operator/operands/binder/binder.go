@@ -66,3 +66,7 @@ func (b *Binder) Name() string {
 func (b *Binder) Monitor(ctx context.Context, runtimeReader client.Reader, kaiConfig *kaiv1.Config) error {
 	return nil
 }
+
+func (b *Binder) HasMissingDependencies(context.Context, client.Reader, *kaiv1.Config) (string, error) {
+	return "", nil
+}

@@ -470,6 +470,100 @@ func getAllocationSubGroupsTestsMetadata() []integration_tests_utils.TestTopolog
 		},
 		{
 			TestTopologyBasic: test_utils.TestTopologyBasic{
+				Name: "Allocate job with SubGroups - unbalanced hierarchy structure",
+				Jobs: []*jobs_fake.TestJobBasic{
+					{
+						Name:      "job0",
+						QueueName: "queue0",
+						Priority:  constants.PriorityTrainNumber,
+						RootSubGroupSet: func() *subgroup_info.SubGroupSet {
+							root := subgroup_info.NewSubGroupSet(subgroup_info.RootSubGroupSetName, nil)
+
+							subAb := subgroup_info.NewSubGroupSet("sub-ab", nil)
+							root.AddSubGroup(subAb)
+
+							subAb.AddPodSet(subgroup_info.NewPodSet("sub-a", 2, nil))
+							subAb.AddPodSet(subgroup_info.NewPodSet("sub-b", 2, nil))
+
+							root.AddPodSet(subgroup_info.NewPodSet("sub-c", 1, nil))
+							return root
+						}(),
+						Tasks: []*tasks_fake.TestTaskBasic{
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub-a",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub-a",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub-b",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub-b",
+								RequiredGPUs: ptr.To(int64(1)),
+							},
+							{
+								State:        pod_status.Pending,
+								SubGroupName: "sub-c",
+								RequiredGPUs: ptr.To(int64(4)),
+							},
+						},
+					},
+				},
+				Nodes: map[string]nodes_fake.TestNodeBasic{
+					"node0": {
+						GPUs: 8,
+					},
+				},
+				Queues: []test_utils.TestQueueBasic{
+					{
+						Name:         "queue0",
+						DeservedGPUs: 1,
+					},
+				},
+				Mocks: &test_utils.TestMock{
+					CacheRequirements: &test_utils.CacheMocking{
+						NumberOfCacheBinds: 5,
+					},
+				},
+				TaskExpectedResults: map[string]test_utils.TestExpectedResultBasic{
+					"job0-0": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Binding,
+					},
+					"job0-1": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Binding,
+					},
+					"job0-2": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Binding,
+					},
+					"job0-3": {
+						NodeName:     "node0",
+						GPUsRequired: 1,
+						Status:       pod_status.Binding,
+					},
+					"job0-4": {
+						NodeName:     "node0",
+						GPUsRequired: 4,
+						Status:       pod_status.Binding,
+					},
+				},
+			},
+		},
+		{
+			TestTopologyBasic: test_utils.TestTopologyBasic{
 				Name: "Allocate job with SubGroups - cannot satisfy sub group gang",
 				Jobs: []*jobs_fake.TestJobBasic{
 					{

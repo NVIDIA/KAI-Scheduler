@@ -5,7 +5,6 @@ package subgroup_info
 
 import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/topology_info"
-	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/log"
 )
 
 type SubGroupSet struct {
@@ -25,21 +24,11 @@ func NewSubGroupSet(name string, topologyConstraint *topology_info.TopologyConst
 }
 
 func (sgs *SubGroupSet) AddSubGroup(subGroup *SubGroupSet) {
-	if len(sgs.podSets) > 0 {
-		log.InfraLogger.V(6).Warnf("subgroup %s already references podsets and "+
-			"cannot have additional nested subgroup %s", sgs.GetName(), subGroup.GetName())
-		return
-	}
 	subGroup.SetParent(sgs)
 	sgs.groups = append(sgs.groups, subGroup)
 }
 
 func (sgs *SubGroupSet) AddPodSet(podSet *PodSet) {
-	if len(sgs.groups) > 0 {
-		log.InfraLogger.V(6).Warnf("subgroup %s already has nested subgroups, "+
-			"it cannot references podset %s", sgs.GetName(), podSet.GetName())
-		return
-	}
 	podSet.SetParent(sgs)
 	sgs.podSets = append(sgs.podSets, podSet)
 }

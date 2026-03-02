@@ -29,6 +29,6 @@ func ExtractGPUSharingReceivedResources(ctx context.Context, pod *v1.Pod, kubeCl
 	}
 
 	fractionResource, err := calculateAllocatedFraction(ctx, pod, kubeClient)
-	resources[constants.GpuResource] = fractionResource
+	resources[constants.NvidiaGpuResource] = fractionResource
 	return resources, err
 }

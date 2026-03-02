@@ -66,15 +66,15 @@ func (d *DeployableOperands) Deploy(
 		Controller: ptr.To(true),
 	}
 
-	if createObjectsInCluster(ctx, runtimeClient, reconcilerAsOwnerReference, objectsToCreate) != nil {
+	if err := createObjectsInCluster(ctx, runtimeClient, reconcilerAsOwnerReference, objectsToCreate); err != nil {
 		return err
 	}
 
-	if deleteObjectsInCluster(ctx, runtimeClient, objectsToDelete) != nil {
+	if err := deleteObjectsInCluster(ctx, runtimeClient, objectsToDelete); err != nil {
 		return err
 	}
 
-	if updateObjectsInCluster(ctx, runtimeClient, reconcilerAsOwnerReference, objectsToUpdate) != nil {
+	if err := updateObjectsInCluster(ctx, runtimeClient, reconcilerAsOwnerReference, objectsToUpdate); err != nil {
 		return err
 	}
 	return nil
@@ -300,4 +300,27 @@ func (d *DeployableOperands) Monitor(ctx context.Context, runtimeReader client.R
 		}
 	}
 	return nil
+}
+
+func (d *DeployableOperands) HasMissingDependencies(ctx context.Context, readerClient client.Reader, object client.Object) (string, error) {
+	var missingDependencies string
+	var err error
+
+	kaiConfig, checkForKAIConfig := object.(*kaiv1.Config)
+	if !checkForKAIConfig {
+		return "", nil
+	}
+
+	for _, operand := range d.operands {
+		// Assuming each operand has a HasDependencies method
+		missing, e := operand.HasMissingDependencies(ctx, readerClient, kaiConfig)
+		if e != nil {
+			err = errors.Join(err, e)
+		}
+		if len(missing) > 0 {
+			missingDependencies = missingDependencies + fmt.Sprintf("\n%s is missing %s", operand.Name(), missing)
+		}
+	}
+
+	return missingDependencies, err
 }

@@ -281,7 +281,7 @@ func RunSimulation(
 		a := map[common_info.QueueID]SimulationDataPoint{}
 		for queueID, fairshare := range fairshares {
 			a[queueID] = SimulationDataPoint{
-				Allocation: allocations[queueID][constants.GpuResource],
+				Allocation: allocations[queueID][constants.NvidiaGpuResource],
 				FairShare:  fairshare.GPUs(),
 			}
 		}
@@ -378,7 +378,7 @@ func queueJob(ctx context.Context, ctrlClient client.Client, namespace, queueNam
 		name := randomstring.HumanFriendlyEnglishString(10)
 		testPod := utils.CreatePodObject(namespace, name, corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
-				constants.GpuResource: resource.MustParse(fmt.Sprintf("%d", gpus)),
+				constants.NvidiaGpuResource: resource.MustParse(fmt.Sprintf("%d", gpus)),
 			},
 		})
 		err := ctrlClient.Create(ctx, testPod)

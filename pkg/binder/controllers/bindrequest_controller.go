@@ -113,7 +113,7 @@ func (r *BindRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		var finalError error
 		if r := recover(); r != nil {
 			finalError = fmt.Errorf("Internal Error: %v\n%s", r, string(debug.Stack()))
-			err = fmt.Errorf("Internal Error: %vs", r)
+			err = fmt.Errorf("Internal Error: %v", r)
 		}
 
 		result, err = r.UpdateStatus(ctx, bindRequest, result, err)
@@ -163,6 +163,11 @@ func (r *BindRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		logger.Error(err, "Failed to bind pod to node", "pod", pod.Name, "namespace", pod.Namespace,
 			"node", node.Name)
+
+		if rollbackErr := r.binder.Rollback(ctx, pod, node, bindRequest); rollbackErr != nil {
+			logger.Error(rollbackErr, "Failed to rollback after bind failure", "pod", pod.Name,
+				"namespace", pod.Namespace)
+		}
 	}
 	return result, err
 }
