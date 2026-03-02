@@ -6,11 +6,13 @@ package known_types
 import (
 	"context"
 
+	"github.com/NVIDIA/KAI-scheduler/pkg/operator/operands/common"
 	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -24,13 +26,23 @@ func vpaIndexer(object client.Object) []string {
 }
 
 func registerVerticalPodAutoscalers() {
+	var vpaAvailable bool
 	collectable := &Collectable{
 		Collect: getCurrentVPAState,
 		InitWithManager: func(ctx context.Context, mgr manager.Manager) error {
-			return mgr.GetFieldIndexer().IndexField(ctx, &vpav1.VerticalPodAutoscaler{}, CollectableOwnerKey, vpaIndexer)
+			err := mgr.GetFieldIndexer().IndexField(ctx, &vpav1.VerticalPodAutoscaler{}, CollectableOwnerKey, vpaIndexer)
+			if err != nil {
+				log.FromContext(ctx).Info("VPA CRD not available, skipping field indexer registration")
+				return nil
+			}
+			vpaAvailable = true
+			return nil
 		},
-		InitWithBuilder: func(builder *builder.Builder) *builder.Builder {
-			return builder.Owns(&vpav1.VerticalPodAutoscaler{})
+		InitWithBuilder: func(b *builder.Builder) *builder.Builder {
+			if !vpaAvailable {
+				return b
+			}
+			return b.Owns(&vpav1.VerticalPodAutoscaler{})
 		},
 		InitWithFakeClientBuilder: func(fakeClientBuilder *fake.ClientBuilder) {
 			fakeClientBuilder.WithIndex(&vpav1.VerticalPodAutoscaler{}, CollectableOwnerKey, vpaIndexer)
@@ -67,10 +79,19 @@ func VPAFieldInherit(current, desired client.Object) {
 
 func getCurrentVPAState(ctx context.Context, runtimeClient client.Client, reconciler client.Object) (map[string]client.Object, error) {
 	result := map[string]client.Object{}
+
+	hasVPACRD, err := common.CheckCRDsAvailable(ctx, runtimeClient, "verticalpodautoscalers.autoscaling.k8s.io")
+	if err != nil {
+		return nil, err
+	}
+	if !hasVPACRD {
+		return result, nil
+	}
+
 	vpas := &vpav1.VerticalPodAutoscalerList{}
 	reconcilerKey := getReconcilerKey(reconciler)
 
-	err := runtimeClient.List(ctx, vpas, client.MatchingFields{CollectableOwnerKey: reconcilerKey})
+	err = runtimeClient.List(ctx, vpas, client.MatchingFields{CollectableOwnerKey: reconcilerKey})
 	if err != nil {
 		return nil, err
 	}
