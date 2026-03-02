@@ -97,25 +97,25 @@ func (c *ConfigSpec) SetDefaultsWhereNeeded() {
 	c.Global.SetDefaultWhereNeeded()
 
 	c.QueueController = common.SetDefault(c.QueueController, &queue_controller.QueueController{})
-	c.QueueController.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
+	c.QueueController.SetDefaultsWhereNeeded(c.Global.ReplicaCount, c.Global.VPA)
 
 	c.Binder = common.SetDefault(c.Binder, &binder.Binder{})
-	c.Binder.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
+	c.Binder.SetDefaultsWhereNeeded(c.Global.ReplicaCount, c.Global.VPA)
 
 	c.PodGrouper = common.SetDefault(c.PodGrouper, &pod_grouper.PodGrouper{})
-	c.PodGrouper.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
+	c.PodGrouper.SetDefaultsWhereNeeded(c.Global.ReplicaCount, c.Global.VPA)
 
 	c.Scheduler = common.SetDefault(c.Scheduler, &scheduler.Scheduler{})
-	c.Scheduler.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
+	c.Scheduler.SetDefaultsWhereNeeded(c.Global.ReplicaCount, c.Global.VPA)
 
 	c.PodGroupController = common.SetDefault(c.PodGroupController, &pod_group_controller.PodGroupController{})
-	c.PodGroupController.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
+	c.PodGroupController.SetDefaultsWhereNeeded(c.Global.ReplicaCount, c.Global.VPA)
 
 	c.Admission = common.SetDefault(c.Admission, &admission.Admission{})
-	c.Admission.SetDefaultsWhereNeeded(c.Global.ReplicaCount)
+	c.Admission.SetDefaultsWhereNeeded(c.Global.ReplicaCount, c.Global.VPA)
 
 	c.NodeScaleAdjuster = common.SetDefault(c.NodeScaleAdjuster, &node_scale_adjuster.NodeScaleAdjuster{})
-	c.NodeScaleAdjuster.SetDefaultsWhereNeeded()
+	c.NodeScaleAdjuster.SetDefaultsWhereNeeded(c.Global.VPA)
 
 	c.Prometheus = common.SetDefault(c.Prometheus, &prometheus.Prometheus{})
 	c.Prometheus.SetDefaultsWhereNeeded()
