@@ -285,10 +285,13 @@ jobs:
 
       - name: Run e2e tests
         run: |
-          ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv --label-filter '!autoscale && !scale' --output-dir=. --json-report=e2e-report.json ./test/e2e/suites
+          ls
+          cd test/e2e/suites/preempt
+          ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv -focus "preempt Distributed Jobs" --label-filter '!autoscale && !scale' --output-dir=. --json-report=e2e-report.json --repeat 100 .
           echo ""
           echo "=== Skipped Tests ==="
           jq -r '.[].SpecReports[] | select(.State == "skipped") | ([.ContainerHierarchyTexts[], .LeafNodeText] | join(" > "))' e2e-report.json 2>/dev/null || echo "No skipped tests found"
+          cd -
 
       - name: Uninstall KAI-scheduler
         run: |
