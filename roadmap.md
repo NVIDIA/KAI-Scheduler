@@ -1,7 +1,7 @@
 [License](LICENSE) [Coverage](https://github.com/NVIDIA/KAI-Scheduler/blob/main/.github/workflows/update-coverage-badge.yaml)
 [Ask DeepWiki](https://deepwiki.com/NVIDIA/KAI-Scheduler)
 
-#Roadmap
+# Roadmap
 
 ## High-level overview of the main priorities for 2026
 
