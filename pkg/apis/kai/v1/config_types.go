@@ -35,8 +35,10 @@ const (
 	Deployed              ConditionReason = "deployed"
 	Available             ConditionReason = "available"
 	Reconciled            ConditionReason = "reconciled"
+	Reconciling           ConditionReason = "reconciling"
 	DependenciesFulfilled ConditionReason = "dependencies_fulfilled"
 	Ready                 ConditionReason = "ready"
+	NotReady              ConditionReason = "not_ready"
 )
 
 // ConfigSpec defines the desired state of Config

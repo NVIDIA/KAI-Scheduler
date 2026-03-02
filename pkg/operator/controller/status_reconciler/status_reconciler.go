@@ -120,18 +120,21 @@ func (r *StatusReconciler) getDeployedCondition(ctx context.Context, gen int64) 
 }
 
 func (r *StatusReconciler) getReconcilingCondition(gen int64, isReconciling bool) metav1.Condition {
-	status := metav1.ConditionFalse
-	message := "Reconciliation completed"
 	if isReconciling {
-		status = metav1.ConditionTrue
-		message = "Reconciliation in progress"
+		return metav1.Condition{
+			Type:               string(kaiv1.ConditionTypeReconciling),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(kaiv1.Reconciling),
+			Message:            "Reconciliation in progress",
+			ObservedGeneration: gen,
+			LastTransitionTime: metav1.Now(),
+		}
 	}
-
 	return metav1.Condition{
 		Type:               string(kaiv1.ConditionTypeReconciling),
-		Status:             status,
+		Status:             metav1.ConditionFalse,
 		Reason:             string(kaiv1.Reconciled),
-		Message:            message,
+		Message:            "Reconciliation completed successfully",
 		ObservedGeneration: gen,
 		LastTransitionTime: metav1.Now(),
 	}
@@ -193,7 +196,7 @@ func (r *StatusReconciler) getReadyCondition(gen int64, isReady bool) metav1.Con
 	return metav1.Condition{
 		Type:               string(kaiv1.ConditionTypeReady),
 		Status:             metav1.ConditionFalse,
-		Reason:             string(kaiv1.Ready),
+		Reason:             string(kaiv1.NotReady),
 		Message:            "System is not ready",
 		ObservedGeneration: gen,
 		LastTransitionTime: metav1.Now(),
