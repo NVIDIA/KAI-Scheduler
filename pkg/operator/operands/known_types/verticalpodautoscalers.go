@@ -40,6 +40,31 @@ func registerVerticalPodAutoscalers() {
 	SetupSchedulingShardOwned(collectable)
 }
 
+// VPAFieldInherit copies server-managed metadata fields from the current cluster
+// object into the desired object so reflect.DeepEqual won't trigger false updates.
+func VPAFieldInherit(current, desired client.Object) {
+	if current == nil {
+		return
+	}
+	desired.SetResourceVersion(current.GetResourceVersion())
+	desired.SetUID(current.GetUID())
+	desired.SetCreationTimestamp(current.GetCreationTimestamp())
+	desired.SetGeneration(current.GetGeneration())
+	desired.SetOwnerReferences(current.GetOwnerReferences())
+	desired.SetManagedFields(current.GetManagedFields())
+	desired.SetAnnotations(mergeAnnotations(desired.GetAnnotations(), current.GetAnnotations()))
+
+	currentVPA, ok := current.(*vpav1.VerticalPodAutoscaler)
+	if !ok {
+		return
+	}
+	desiredVPA, ok := desired.(*vpav1.VerticalPodAutoscaler)
+	if !ok {
+		return
+	}
+	desiredVPA.Status = currentVPA.Status
+}
+
 func getCurrentVPAState(ctx context.Context, runtimeClient client.Client, reconciler client.Object) (map[string]client.Object, error) {
 	result := map[string]client.Object{}
 	vpas := &vpav1.VerticalPodAutoscalerList{}
