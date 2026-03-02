@@ -23,7 +23,7 @@ func TestBinder(t *testing.T) {
 var _ = Describe("Binder", func() {
 	It("Set Defaults", func(ctx context.Context) {
 		binder := &Binder{}
-		binder.SetDefaultsWhereNeeded(nil)
+		binder.SetDefaultsWhereNeeded(nil, nil)
 		Expect(*binder.Service.Enabled).To(Equal(true))
 		Expect(*binder.Service.Image.Name).To(Equal("binder"))
 		Expect(binder.Service.Resources.Requests[v1.ResourceCPU]).To(Equal(resource.MustParse("50m")))
@@ -35,14 +35,14 @@ var _ = Describe("Binder", func() {
 		binder := &Binder{}
 		var replicaCount int32
 		replicaCount = 3
-		binder.SetDefaultsWhereNeeded(&replicaCount)
+		binder.SetDefaultsWhereNeeded(&replicaCount, nil)
 		Expect(*binder.Replicas).To(Equal(int32(3)))
 	})
 
 	Context("ResourceReservation PodResources configuration", func() {
 		It("should not set default PodResources when not configured", func(ctx context.Context) {
 			binder := &Binder{}
-			binder.SetDefaultsWhereNeeded(nil)
+			binder.SetDefaultsWhereNeeded(nil, nil)
 
 			// PodResources should be nil when not configured
 			Expect(binder.ResourceReservation.PodResources).To(BeNil())
@@ -64,7 +64,7 @@ var _ = Describe("Binder", func() {
 					PodResources: podResources,
 				},
 			}
-			binder.SetDefaultsWhereNeeded(nil)
+			binder.SetDefaultsWhereNeeded(nil, nil)
 
 			// Configured values should be preserved
 			Expect(binder.ResourceReservation.PodResources).NotTo(BeNil())
@@ -88,7 +88,7 @@ var _ = Describe("Binder", func() {
 					PodResources: podResources,
 				},
 			}
-			binder.SetDefaultsWhereNeeded(nil)
+			binder.SetDefaultsWhereNeeded(nil, nil)
 
 			// Only CPU should be set
 			Expect(binder.ResourceReservation.PodResources).NotTo(BeNil())

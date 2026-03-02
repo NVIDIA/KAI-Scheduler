@@ -23,7 +23,7 @@ var _ = Describe("Scheduler", func() {
 	It("Set Defaults when Service is nil", func(ctx context.Context) {
 		scheduler := &Scheduler{}
 		var replicaCount int32 = 1
-		scheduler.SetDefaultsWhereNeeded(&replicaCount)
+		scheduler.SetDefaultsWhereNeeded(&replicaCount, nil)
 		Expect(scheduler.Service).NotTo(BeNil())
 		Expect(*scheduler.Service.Enabled).To(Equal(true))
 		Expect(*scheduler.Service.Image.Name).To(Equal("scheduler"))
@@ -36,14 +36,14 @@ var _ = Describe("Scheduler", func() {
 	It("Set Defaults with GOGC unset", func(ctx context.Context) {
 		scheduler := &Scheduler{}
 		var replicaCount int32 = 2
-		scheduler.SetDefaultsWhereNeeded(&replicaCount)
+		scheduler.SetDefaultsWhereNeeded(&replicaCount, nil)
 		Expect(*scheduler.GOGC).To(Equal(400))
 	})
 
 	It("Set Defaults with SchedulerService unset", func(ctx context.Context) {
 		scheduler := &Scheduler{}
 		var replicaCount int32 = 3
-		scheduler.SetDefaultsWhereNeeded(&replicaCount)
+		scheduler.SetDefaultsWhereNeeded(&replicaCount, nil)
 		Expect(scheduler.SchedulerService).NotTo(BeNil())
 		Expect(*scheduler.SchedulerService.Type).To(Equal(v1.ServiceTypeClusterIP))
 		Expect(*scheduler.SchedulerService.Port).To(Equal(8080))
@@ -53,14 +53,14 @@ var _ = Describe("Scheduler", func() {
 	It("Replicas set to replicaCount value", func(ctx context.Context) {
 		scheduler := &Scheduler{}
 		var replicaCount int32 = 4
-		scheduler.SetDefaultsWhereNeeded(&replicaCount)
+		scheduler.SetDefaultsWhereNeeded(&replicaCount, nil)
 		Expect(*scheduler.Replicas).To(Equal(int32(4)))
 	})
 
 	It("Replicas default to 1 when replicaCount is nil", func(ctx context.Context) {
 		scheduler := &Scheduler{}
 		var replicaCount *int32
-		scheduler.SetDefaultsWhereNeeded(replicaCount)
+		scheduler.SetDefaultsWhereNeeded(replicaCount, nil)
 		Expect(*scheduler.Replicas).To(Equal(int32(1)))
 	})
 })
