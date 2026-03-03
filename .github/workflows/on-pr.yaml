@@ -192,24 +192,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Move Docker Data to /mnt
-        run: |
-          sudo systemctl stop docker
-          sudo mkdir -p /mnt/docker-data
-          echo '{"data-root": "/mnt/docker-data"}' | sudo tee /etc/docker/daemon.json
-          sudo systemctl start docker
-          docker info | grep "Docker Root Dir"
-      
-      - name: Create images directory
-        run: |
-          sudo mkdir -p /mnt/images
-          sudo chown -R $USER:$USER /mnt/images
-
-      - name: Cache restore
-        uses: actions/cache/restore@v5
+      - name: Setup e2e cluster
+        uses: ./.github/actions/setup-e2e-cluster
         with:
-          path: /mnt/images
-          key:  images-${{ github.sha }}
+          package_version: ${{ needs.build.outputs.package_version }}
 
       - name: Delete restored cache
         continue-on-error: true
@@ -218,46 +204,7 @@ jobs:
         run: |
           gh cache delete "images-${{ github.sha }}" --repo ${{ github.repository }}
 
-      - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.13.0
-        with:
-          cluster_name: kind
-          version: v0.31.0
-          config: ./hack/e2e-kind-config.yaml
-
-      - name: Deploy image registry
-        run: |
-          kubectl apply -f ./hack/local_registry.yaml
-          kubectl wait --for=condition=available --timeout=60s deployment/registry -n kube-registry
-
-      - name: Load docker images to registry
-        env:
-          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
-        run: |
-          kubectl port-forward -n kube-registry deploy/registry 5000:5000 &
-          docker load < /mnt/images/docker_images.tgz
-          for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
-            new_image=$(echo "$image" | sed -E 's|.*/([^/]+:[^/]+)$|localhost:5000/\1|')
-            docker tag $image $new_image
-            docker push $new_image
-          done
-
-      - name: Deploy fake gpu operator
-        run: |
-          helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
-              --version 0.0.71 --values ./hack/fake-gpu-operator-values.yaml --wait
-      
-      - name: Deploy Prometheus Operator
-        run: |
-          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
-          helm repo update prometheus-community
-          helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace \
-          --set "alertmanager.enabled=false" \
-          --set "grafana.enabled=false" \
-          --set "prometheus.enabled=false" \
-          --wait
-
-      - name: install KAI-scheduler
+      - name: Install KAI-scheduler
         env:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
         run: |
@@ -265,23 +212,6 @@ jobs:
             --set "global.gpuSharing=true" --set "global.registry=localhost:30100" --debug --wait
           kubectl create clusterrole pods-patcher --verb=patch --resource=pods
           kubectl create rolebinding fake-status-updater --clusterrole=pods-patcher --serviceaccount=gpu-operator:status-updater -n kai-resource-reservation
-      
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24.4'
-          cache: true
-
-      - name: Install ginkgo
-        run: |
-          go install github.com/onsi/ginkgo/v2/ginkgo@v2.25.3
-
-      - name: Delete images from disk
-        env:
-          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
-        run: |
-          docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
-          sudo rm -rf /mnt/images
 
       - name: Run e2e tests
         run: |
@@ -360,71 +290,11 @@ jobs:
           echo "upgrade_from=$UPGRADE_FROM" >> $GITHUB_OUTPUT
           echo "skip=false" >> $GITHUB_OUTPUT
 
-      - name: Move Docker Data to /mnt
+      - name: Setup e2e cluster
         if: steps.resolve_version.outputs.skip != 'true'
-        run: |
-          sudo systemctl stop docker
-          sudo mkdir -p /mnt/docker-data
-          echo '{"data-root": "/mnt/docker-data"}' | sudo tee /etc/docker/daemon.json
-          sudo systemctl start docker
-          docker info | grep "Docker Root Dir"
-
-      - name: Create images directory
-        if: steps.resolve_version.outputs.skip != 'true'
-        run: |
-          sudo mkdir -p /mnt/images
-          sudo chown -R $USER:$USER /mnt/images
-
-      - name: Cache restore
-        if: steps.resolve_version.outputs.skip != 'true'
-        uses: actions/cache/restore@v5
+        uses: ./.github/actions/setup-e2e-cluster
         with:
-          path: /mnt/images
-          key:  images-${{ github.sha }}
-
-      - name: Create k8s Kind Cluster
-        if: steps.resolve_version.outputs.skip != 'true'
-        uses: helm/kind-action@v1.13.0
-        with:
-          cluster_name: kind
-          version: v0.31.0
-          config: ./hack/e2e-kind-config.yaml
-
-      - name: Deploy image registry
-        if: steps.resolve_version.outputs.skip != 'true'
-        run: |
-          kubectl apply -f ./hack/local_registry.yaml
-          kubectl wait --for=condition=available --timeout=60s deployment/registry -n kube-registry
-
-      - name: Load docker images to registry
-        if: steps.resolve_version.outputs.skip != 'true'
-        env:
-          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
-        run: |
-          kubectl port-forward -n kube-registry deploy/registry 5000:5000 &
-          docker load < /mnt/images/docker_images.tgz
-          for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
-            new_image=$(echo "$image" | sed -E 's|.*/([^/]+:[^/]+)$|localhost:5000/\1|')
-            docker tag $image $new_image
-            docker push $new_image
-          done
-
-      - name: Deploy fake gpu operator
-        if: steps.resolve_version.outputs.skip != 'true'
-        run: |
-          helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
-              --version 0.0.71 --values ./hack/fake-gpu-operator-values.yaml --wait
-
-      - name: Deploy Prometheus Operator
-        if: steps.resolve_version.outputs.skip != 'true'
-        run: |
-          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
-          helm repo update prometheus-community
-          helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace \
-          --set "alertmanager.enabled=false" \
-          --set "grafana.enabled=false" \
-          --set "prometheus.enabled=false" \
-          --wait
+          package_version: ${{ needs.build.outputs.package_version }}
 
       - name: Install previous version of KAI-scheduler
         if: steps.resolve_version.outputs.skip != 'true'
@@ -436,26 +306,6 @@ jobs:
             --set "global.gpuSharing=true" --wait --version "$UPGRADE_FROM_VERSION"
           kubectl create clusterrole pods-patcher --verb=patch --resource=pods
           kubectl create rolebinding fake-status-updater --clusterrole=pods-patcher --serviceaccount=gpu-operator:status-updater -n kai-resource-reservation
-
-      - name: Set up Go
-        if: steps.resolve_version.outputs.skip != 'true'
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24.4'
-          cache: true
-
-      - name: Install ginkgo
-        if: steps.resolve_version.outputs.skip != 'true'
-        run: |
-          go install github.com/onsi/ginkgo/v2/ginkgo@v2.25.3
-
-      - name: Delete images from disk
-        if: steps.resolve_version.outputs.skip != 'true'
-        env:
-          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
-        run: |
-          docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
-          sudo rm -rf /mnt/images/docker_images.tgz
 
       - name: Run upgrade e2e tests
         if: steps.resolve_version.outputs.skip != 'true'
