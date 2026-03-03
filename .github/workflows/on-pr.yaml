@@ -285,7 +285,7 @@ jobs:
 
       - name: Run e2e tests
         run: |
-          ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv --label-filter '!autoscale && !scale' --output-dir=. --json-report=e2e-report.json ./test/e2e/suites
+          ginkgo -r --keep-going --randomize-all --randomize-suites --trace -vv --label-filter '!autoscale && !scale && !upgrade' --output-dir=. --json-report=e2e-report.json ./test/e2e/suites
           echo ""
           echo "=== Skipped Tests ==="
           jq -r '.[].SpecReports[] | select(.State == "skipped") | ([.ContainerHierarchyTexts[], .LeafNodeText] | join(" > "))' e2e-report.json 2>/dev/null || echo "No skipped tests found"
@@ -307,3 +307,159 @@ jobs:
           done
           echo "Pods did not terminate within 60 seconds. Uninstall incomplete."
           exit 1
+
+  e2e-upgrade-tests:
+    name: Run E2E Upgrade Tests
+    needs: [ build, check-build-and-test-required ]
+    if: needs.check-build-and-test-required.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Resolve previous minor version
+        id: resolve_version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Determine current minor version from the target branch
+          TARGET_BRANCH="${{ github.base_ref }}"
+          if [[ "$TARGET_BRANCH" =~ v([0-9]+)\.([0-9]+) ]]; then
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+          else
+            # On main: get the latest release to determine current minor
+            LATEST=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
+            if [[ "$LATEST" =~ v([0-9]+)\.([0-9]+) ]]; then
+              MAJOR="${BASH_REMATCH[1]}"
+              MINOR="${BASH_REMATCH[2]}"
+            else
+              echo "Could not determine current minor version. Skipping upgrade tests."
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          if [ "$MINOR" -eq 0 ]; then
+            echo "No previous minor version exists. Skipping upgrade tests."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          PREV_MINOR="${MAJOR}.$((MINOR - 1))"
+          UPGRADE_FROM=$(gh release list --json tagName -q '.[].tagName' | grep "^v${PREV_MINOR}\." | sort -V | tail -1)
+          if [ -z "$UPGRADE_FROM" ]; then
+            echo "No release found for v${PREV_MINOR}.x. Skipping upgrade tests."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Upgrading from $UPGRADE_FROM"
+          echo "upgrade_from=$UPGRADE_FROM" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+      - name: Move Docker Data to /mnt
+        if: steps.resolve_version.outputs.skip != 'true'
+        run: |
+          sudo systemctl stop docker
+          sudo mkdir -p /mnt/docker-data
+          echo '{"data-root": "/mnt/docker-data"}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl start docker
+          docker info | grep "Docker Root Dir"
+
+      - name: Create images directory
+        if: steps.resolve_version.outputs.skip != 'true'
+        run: |
+          sudo mkdir -p /mnt/images
+          sudo chown -R $USER:$USER /mnt/images
+
+      - name: Cache restore
+        if: steps.resolve_version.outputs.skip != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: /mnt/images
+          key:  images-${{ github.sha }}
+
+      - name: Create k8s Kind Cluster
+        if: steps.resolve_version.outputs.skip != 'true'
+        uses: helm/kind-action@v1.13.0
+        with:
+          cluster_name: kind
+          version: v0.31.0
+          config: ./hack/e2e-kind-config.yaml
+
+      - name: Deploy image registry
+        if: steps.resolve_version.outputs.skip != 'true'
+        run: |
+          kubectl apply -f ./hack/local_registry.yaml
+          kubectl wait --for=condition=available --timeout=60s deployment/registry -n kube-registry
+
+      - name: Load docker images to registry
+        if: steps.resolve_version.outputs.skip != 'true'
+        env:
+          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
+        run: |
+          kubectl port-forward -n kube-registry deploy/registry 5000:5000 &
+          docker load < /mnt/images/docker_images.tgz
+          for image in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION); do
+            new_image=$(echo "$image" | sed -E 's|.*/([^/]+:[^/]+)$|localhost:5000/\1|')
+            docker tag $image $new_image
+            docker push $new_image
+          done
+
+      - name: Deploy fake gpu operator
+        if: steps.resolve_version.outputs.skip != 'true'
+        run: |
+          helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
+              --version 0.0.71 --values ./hack/fake-gpu-operator-values.yaml --wait
+
+      - name: Deploy Prometheus Operator
+        if: steps.resolve_version.outputs.skip != 'true'
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
+          helm repo update prometheus-community
+          helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace \
+          --set "alertmanager.enabled=false" \
+          --set "grafana.enabled=false" \
+          --set "prometheus.enabled=false" \
+          --wait
+
+      - name: Install previous version of KAI-scheduler
+        if: steps.resolve_version.outputs.skip != 'true'
+        env:
+          UPGRADE_FROM_VERSION: ${{ steps.resolve_version.outputs.upgrade_from }}
+        run: |
+          echo "Installing kai-scheduler $UPGRADE_FROM_VERSION from OCI registry..."
+          helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace \
+            --set "global.gpuSharing=true" --wait --version "$UPGRADE_FROM_VERSION"
+          kubectl create clusterrole pods-patcher --verb=patch --resource=pods
+          kubectl create rolebinding fake-status-updater --clusterrole=pods-patcher --serviceaccount=gpu-operator:status-updater -n kai-resource-reservation
+
+      - name: Set up Go
+        if: steps.resolve_version.outputs.skip != 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.4'
+          cache: true
+
+      - name: Install ginkgo
+        if: steps.resolve_version.outputs.skip != 'true'
+        run: |
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.25.3
+
+      - name: Delete images from disk
+        if: steps.resolve_version.outputs.skip != 'true'
+        env:
+          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
+        run: |
+          docker images --format '{{.Repository}}:{{.Tag}}' | grep $PACKAGE_VERSION | xargs docker rmi -f
+          sudo rm -rf /mnt/images/docker_images.tgz
+
+      - name: Run upgrade e2e tests
+        if: steps.resolve_version.outputs.skip != 'true'
+        env:
+          UPGRADE_CHART_PATH: /mnt/images/kai-scheduler-${{ needs.build.outputs.package_version }}.tgz
+        run: |
+          ginkgo -r --keep-going --trace -vv --label-filter 'upgrade' --output-dir=. --json-report=e2e-upgrade-report.json ./test/e2e/suites/upgrade
