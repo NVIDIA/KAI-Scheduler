@@ -260,8 +260,8 @@ jobs:
             MAJOR="${BASH_REMATCH[1]}"
             MINOR="${BASH_REMATCH[2]}"
           else
-            # On main: get the latest release to determine current minor
-            LATEST=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
+            # On main: get the highest semver release to determine current minor
+            LATEST=$(gh release list --limit 200 --json tagName -q '.[].tagName' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
             if [[ "$LATEST" =~ v([0-9]+)\.([0-9]+) ]]; then
               MAJOR="${BASH_REMATCH[1]}"
               MINOR="${BASH_REMATCH[2]}"
@@ -279,7 +279,7 @@ jobs:
           fi
 
           PREV_MINOR="${MAJOR}.$((MINOR - 1))"
-          UPGRADE_FROM=$(gh release list --json tagName -q '.[].tagName' | grep "^v${PREV_MINOR}\." | sort -V | tail -1)
+          UPGRADE_FROM=$(gh release list --limit 200 --json tagName -q '.[].tagName' | grep -E "^v${PREV_MINOR}\.[0-9]+$" | sort -V | tail -1)
           if [ -z "$UPGRADE_FROM" ]; then
             echo "No release found for v${PREV_MINOR}.x. Skipping upgrade tests."
             echo "skip=true" >> $GITHUB_OUTPUT

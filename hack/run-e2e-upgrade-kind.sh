@@ -65,7 +65,7 @@ resolve_previous_minor_version() {
     else
         # On main branch: get the latest release to determine current minor
         local latest_release
-        latest_release=$(curl -sf https://api.github.com/repos/NVIDIA/KAI-Scheduler/releases/latest | jq -r .tag_name)
+        latest_release=$(curl -sf "https://api.github.com/repos/NVIDIA/KAI-Scheduler/releases?per_page=100" | jq -r '.[].tag_name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
         if [[ -n "$latest_release" && "$latest_release" != "null" && "$latest_release" =~ v([0-9]+)\.([0-9]+) ]]; then
             current_minor="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
         fi
@@ -89,9 +89,9 @@ resolve_previous_minor_version() {
 
     # Find the latest release matching the previous minor version
     local previous_release
-    previous_release=$(curl -sf https://api.github.com/repos/NVIDIA/KAI-Scheduler/releases | \
-        jq -r ".[].tag_name" | \
-        grep "^v${previous_minor}\." | \
+    previous_release=$(curl -sf "https://api.github.com/repos/NVIDIA/KAI-Scheduler/releases?per_page=100" | \
+        jq -r '.[].tag_name' | \
+        grep -E "^v${previous_minor}\.[0-9]+$" | \
         sort -V | tail -1)
 
     echo "$previous_release"
