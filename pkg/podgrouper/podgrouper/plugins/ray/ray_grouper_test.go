@@ -239,6 +239,13 @@ var (
 						"groupName":   "best-effort-workers",
 						"replicas":    int64(1),
 						"minReplicas": int64(1),
+						"template": map[string]interface{}{
+							"metadata": map[string]interface{}{
+								"annotations": map[string]interface{}{
+									"kai.scheduler/topology": "test-topology",
+								},
+							},
+						},
 					},
 				},
 			},

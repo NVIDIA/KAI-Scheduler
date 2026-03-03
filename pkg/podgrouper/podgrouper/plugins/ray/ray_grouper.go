@@ -283,7 +283,9 @@ func getTemplateTopologyConstraints(groupSpec map[string]interface{}, groupName 
 		preferred = ""
 	}
 
-	if topology == "" && required == "" && preferred == "" {
+	// Topology by itself is not a valid scheduling constraint for Ray subgroups.
+	// Create subgroup constraints only when at least one placement level is provided.
+	if required == "" && preferred == "" {
 		return nil, nil
 	}
 	if topology == "" {
