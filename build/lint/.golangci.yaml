@@ -1,20 +1,26 @@
 # Copyright 2025 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
 
+version: "2"
+
 run:
   tests: true
   timeout: 5m
 
 output:
   formats:
-    - format: "colored-line-number"
-      path: "stdout"
+    text:
+      path: stdout
+      colors: true
+
+formatters:
+  enable:
+    - gofmt
 
 linters:
-  disable-all: true
+  default: none
   enable:
     # Readability
-    - gofmt
     # - gofumpt
     # - lll
     # - wsl
@@ -30,26 +36,23 @@ linters:
     # - ineffassign
     # - staticcheck
     # - typecheck
-
-issues:
-  exclude-dirs:
-    - "generated"
-  exclude-rules:
-    - path: (.+)_test.go
-      linters:
-        - goconst
-        - errcheck
-        - govet
-        # - gosimple
-        # - ineffassign
-        # - staticcheck
-        # - typecheck
-
-
-linters-settings:
-  lll:
-    line-length: 220
-    tab-width: 1
+  settings:
+    lll:
+      line-length: 220
+      tab-width: 1
+  exclusions:
+    paths:
+      - "generated"
+    rules:
+      - path: (.+)_test.go
+        linters:
+          - goconst
+          - errcheck
+          - govet
+          # - gosimple
+          # - ineffassign
+          # - staticcheck
+          # - typecheck
 
 severity:
-  default-severity: error
+  default: error

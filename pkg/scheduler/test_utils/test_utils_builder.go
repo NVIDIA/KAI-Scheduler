@@ -233,7 +233,7 @@ func BuildPlugins(testMetadata TestTopologyBasic) []conf.Tier {
 		if err != nil {
 			panic(err)
 		}
-		defer os.Remove(confFile.Name())
+		defer os.Remove(confFile.Name()) //nolint:errcheck
 
 		// Marshal the scheduler config to yaml format.
 		data, err := yaml.Marshal(testMetadata.Mocks.SchedulerConf)
@@ -243,7 +243,9 @@ func BuildPlugins(testMetadata TestTopologyBasic) []conf.Tier {
 		if _, err := confFile.Write(data); err != nil {
 			panic(err)
 		}
-		confFile.Close()
+		if err := confFile.Close(); err != nil {
+			panic(err)
+		}
 
 		confFileName = confFile.Name()
 	}

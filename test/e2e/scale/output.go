@@ -44,7 +44,7 @@ func writeTestResults(testName string, success bool, data interface{}) error {
 		GinkgoLogr.Error(err, "Failed to open file")
 		return err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	info, err := file.Stat()
 	if err != nil {

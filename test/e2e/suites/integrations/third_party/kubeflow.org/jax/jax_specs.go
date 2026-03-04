@@ -84,7 +84,7 @@ func DescribeJaxSpecs() bool {
 			}()
 			Eventually(func(g Gomega) bool {
 				pods := &v1.PodList{}
-				testCtx.ControllerClient.List(ctx, pods, runtimeClient.InNamespace(jaxJob.Namespace))
+				g.Expect(testCtx.ControllerClient.List(ctx, pods, runtimeClient.InNamespace(jaxJob.Namespace))).To(Succeed())
 
 				g.Expect(len(pods.Items)).To(Equal(expectedPods))
 				for _, pod := range pods.Items {
