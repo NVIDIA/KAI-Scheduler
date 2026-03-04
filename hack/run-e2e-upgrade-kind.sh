@@ -3,20 +3,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # This script runs upgrade e2e tests for the kai-scheduler.
-# It sets up a kind cluster, installs the previous minor release from OCI,
-# then runs upgrade tests that helm-upgrade to the current version.
+# It reuses setup-e2e-cluster.sh to create a kind cluster with the previous
+# minor release installed, then runs upgrade tests that helm-upgrade to the
+# current version.
 
 set -e
 
 CLUSTER_NAME=${CLUSTER_NAME:-e2e-kai-scheduler}
 
 REPO_ROOT=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/..
-KIND_CONFIG=${REPO_ROOT}/hack/e2e-kind-config.yaml
 GOPATH=${HOME}/go
 GOBIN=${GOPATH}/bin
-
-: ${KIND_K8S_TAG:="v1.34.0"}
-: ${KIND_IMAGE:="kindest/node:${KIND_K8S_TAG}"}
 
 LOCAL_IMAGES_BUILD="false"
 PRESERVE_CLUSTER="false"
@@ -63,7 +60,7 @@ resolve_previous_minor_version() {
     if [[ "$current_branch" =~ v([0-9]+)\.([0-9]+) ]]; then
         current_minor="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
     else
-        # On main branch: get the latest release to determine current minor
+        # On main branch: find the highest semver release
         local latest_release
         latest_release=$(curl -sf "https://api.github.com/repos/NVIDIA/KAI-Scheduler/releases?per_page=100" | jq -r '.[].tag_name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
         if [[ -n "$latest_release" && "$latest_release" != "null" && "$latest_release" =~ v([0-9]+)\.([0-9]+) ]]; then
@@ -108,44 +105,19 @@ if [ -z "$UPGRADE_FROM_VERSION" ]; then
 fi
 echo "Upgrade from version: $UPGRADE_FROM_VERSION"
 
-# Create kind cluster
-kind create cluster \
-    --config ${KIND_CONFIG} \
-    --image ${KIND_IMAGE} \
-    --name $CLUSTER_NAME
+# Save user-provided target version before overriding for setup script
+TARGET_VERSION="$PACKAGE_VERSION"
 
-# Deploy local image registry
-echo "Deploying local image registry..."
-kubectl apply -f ${REPO_ROOT}/hack/local_registry.yaml
-kubectl wait --for=condition=available --timeout=60s deployment/registry -n kube-registry
-
-# Install the fake-gpu-operator
-helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace \
-    --version 0.0.71 --values ${REPO_ROOT}/hack/fake-gpu-operator-values.yaml --wait
-
-# Deploy Prometheus Operator
-echo "Deploying Prometheus Operator..."
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
-helm repo update prometheus-community
-helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace \
-    --set "alertmanager.enabled=false" \
-    --set "grafana.enabled=false" \
-    --set "prometheus.enabled=false" \
-    --wait
-
-# Install the previous version of kai-scheduler from OCI registry
-echo "Installing kai-scheduler $UPGRADE_FROM_VERSION from OCI registry..."
-helm upgrade -i kai-scheduler oci://ghcr.io/nvidia/kai-scheduler/kai-scheduler -n kai-scheduler --create-namespace \
-    --set "global.gpuSharing=true" --wait --version "$UPGRADE_FROM_VERSION"
-
-# Create RBAC for fake-gpu-operator status updates
-kubectl create clusterrole pods-patcher --verb=patch --resource=pods
-kubectl create rolebinding fake-status-updater --clusterrole=pods-patcher --serviceaccount=gpu-operator:status-updater -n kai-resource-reservation
+# Set up the cluster with the previous version installed via setup-e2e-cluster.sh
+export PACKAGE_VERSION="$UPGRADE_FROM_VERSION"
+${REPO_ROOT}/hack/setup-e2e-cluster.sh
 
 echo "Previous version $UPGRADE_FROM_VERSION installed. Building upgrade target..."
 
 # Build the upgrade target (current version)
-if [ -z "$PACKAGE_VERSION" ]; then
+if [ -n "$TARGET_VERSION" ]; then
+    PACKAGE_VERSION="$TARGET_VERSION"
+else
     GIT_REV=$(git rev-parse --short HEAD | sed 's/^0*//')
     PACKAGE_VERSION=0.0.0-$GIT_REV
 fi
