@@ -7,9 +7,12 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/accumulated_scenario_filters"
+	idle_gpus_filter "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/accumulated_scenario_filters/idle_gpus"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/accumulated_scenario_filters/node_affinities"
 	solverscenario "github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/common/solvers/scenario"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/actions/utils"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/common_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/framework"
@@ -29,7 +32,7 @@ type PodAccumulatedScenarioBuilder struct {
 
 func NewPodAccumulatedScenarioBuilder(
 	session *framework.Session, pendingJob *podgroup_info.PodGroupInfo, recordedVictimsJobs []*podgroup_info.PodGroupInfo,
-	victimsJobsQueue *utils.JobsOrderByQueues,
+	victimsJobsQueue *utils.JobsOrderByQueues, feasibleNodes map[string]*node_info.NodeInfo,
 ) *PodAccumulatedScenarioBuilder {
 
 	var scenario *solverscenario.ByNodeScenario = nil
@@ -45,7 +48,21 @@ func NewPodAccumulatedScenarioBuilder(
 	}
 
 	var scenarioFilters []accumulated_scenario_filters.Interface
-	idleGpusScenarioFilter := accumulated_scenario_filters.NewIdleGpusFilter(scenario, session.ClusterInfo.Nodes)
+
+	// Filter scenario if it has any pods with node affinities that cannot be satisfied by the available nodes for allocation
+	nodeSelectorFilter := node_affinities.NewNodeAffinitiesFilter(scenario, feasibleNodes, session)
+	if nodeSelectorFilter != nil {
+		scenarioFilters = append(scenarioFilters, nodeSelectorFilter)
+	}
+
+	// Basic topology-aware gpu capacity filter
+	topologyAwareFilter := idle_gpus_filter.NewTopologyAwareIdleGpusFilter(scenario, session.ClusterInfo.Nodes)
+	if topologyAwareFilter != nil {
+		scenarioFilters = append(scenarioFilters, topologyAwareFilter)
+	}
+
+	// Full cluster-level idle GPUs filter
+	idleGpusScenarioFilter := idle_gpus_filter.NewIdleGpusFilter(scenario, session.ClusterInfo.Nodes)
 	if idleGpusScenarioFilter != nil {
 		scenarioFilters = append(scenarioFilters, idleGpusScenarioFilter)
 	}
