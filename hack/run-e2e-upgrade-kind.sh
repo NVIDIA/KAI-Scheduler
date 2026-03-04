@@ -46,60 +46,43 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# resolve_previous_minor_version resolves the latest release of the previous
-# minor version. For example, if current is v0.13.x, it finds the latest v0.12.x.
-# It uses the git branch name for version branches (v*.*) or the latest release
-# for the main branch.
-resolve_previous_minor_version() {
+# resolve_upgrade_from_version resolves the version to upgrade from.
+# For version branches (v*.*): finds the latest release of the previous minor.
+#   e.g. on v0.14 branch, finds the latest v0.13.x release.
+# For main/other branches: finds the latest release.
+#   e.g. if v0.13.0 is the latest release, upgrade from v0.13.0.
+resolve_upgrade_from_version() {
     local current_branch
     current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
 
-    local current_minor=""
-
-    # Check if the branch name looks like a version branch (e.g. v0.13, release/v0.13)
     if [[ "$current_branch" =~ v([0-9]+)\.([0-9]+) ]]; then
-        current_minor="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
-    else
-        # On main branch: find the highest semver release
-        local latest_release
-        latest_release=$(curl -sf "https://api.github.com/repos/NVIDIA/KAI-Scheduler/releases?per_page=100" | jq -r '.[].tag_name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
-        if [[ -n "$latest_release" && "$latest_release" != "null" && "$latest_release" =~ v([0-9]+)\.([0-9]+) ]]; then
-            current_minor="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+        # Version branch: upgrade from the latest release of the previous minor
+        local major="${BASH_REMATCH[1]}"
+        local minor="${BASH_REMATCH[2]}"
+        if [ "$minor" -eq 0 ]; then
+            echo ""
+            return
         fi
+        local previous_minor="${major}.$((minor - 1))"
+        curl -sf "https://api.github.com/repos/NVIDIA/KAI-Scheduler/releases?per_page=100" | \
+            jq -r '.[].tag_name' | \
+            grep -E "^v${previous_minor}\.[0-9]+$" | \
+            sort -V | tail -1
+    else
+        # Main/other branch: upgrade from the latest release
+        curl -sf "https://api.github.com/repos/NVIDIA/KAI-Scheduler/releases?per_page=100" | \
+            jq -r '.[].tag_name' | \
+            grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | \
+            sort -V | tail -1
     fi
-
-    if [ -z "$current_minor" ]; then
-        echo ""
-        return
-    fi
-
-    local major minor
-    major=$(echo "$current_minor" | cut -d. -f1)
-    minor=$(echo "$current_minor" | cut -d. -f2)
-
-    if [ "$minor" -eq 0 ]; then
-        echo ""
-        return
-    fi
-
-    local previous_minor="${major}.$((minor - 1))"
-
-    # Find the latest release matching the previous minor version
-    local previous_release
-    previous_release=$(curl -sf "https://api.github.com/repos/NVIDIA/KAI-Scheduler/releases?per_page=100" | \
-        jq -r '.[].tag_name' | \
-        grep -E "^v${previous_minor}\.[0-9]+$" | \
-        sort -V | tail -1)
-
-    echo "$previous_release"
 }
 
 # Resolve the version to upgrade from
 if [ -z "$UPGRADE_FROM_VERSION" ]; then
-    echo "Resolving previous minor version to upgrade from..."
-    UPGRADE_FROM_VERSION=$(resolve_previous_minor_version)
+    echo "Resolving version to upgrade from..."
+    UPGRADE_FROM_VERSION=$(resolve_upgrade_from_version)
     if [ -z "$UPGRADE_FROM_VERSION" ]; then
-        echo "Could not resolve a previous minor release. Skipping upgrade tests."
+        echo "Could not resolve a release to upgrade from. Skipping upgrade tests."
         exit 0
     fi
 fi
