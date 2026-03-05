@@ -33,7 +33,7 @@ func registerVerticalPodAutoscalers() {
 		InitWithManager: func(ctx context.Context, mgr manager.Manager) error {
 			err := mgr.GetFieldIndexer().IndexField(ctx, &vpav1.VerticalPodAutoscaler{}, CollectableOwnerKey, vpaIndexer)
 			if err != nil {
-				log.FromContext(ctx).Info("VPA CRD not available, skipping field indexer registration")
+				log.FromContext(ctx).Info("VPA CRD not available, skipping field indexer registration", "error", err)
 				return nil
 			}
 			vpaAvailable = true
