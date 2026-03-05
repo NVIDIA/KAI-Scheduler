@@ -12,6 +12,10 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/ptr"
+
+	kaicommon "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1/common"
 )
 
 func TestScheduler(t *testing.T) {
@@ -62,5 +66,38 @@ var _ = Describe("Scheduler", func() {
 		var replicaCount *int32
 		scheduler.SetDefaultsWhereNeeded(replicaCount, nil)
 		Expect(*scheduler.Replicas).To(Equal(int32(1)))
+	})
+
+	It("inherits globalVPA when VPA is nil", func(ctx context.Context) {
+		scheduler := &Scheduler{}
+		mode := vpav1.UpdateModeOff
+		globalVPA := &kaicommon.VPASpec{
+			Enabled:      ptr.To(true),
+			UpdatePolicy: &vpav1.PodUpdatePolicy{UpdateMode: &mode},
+		}
+		scheduler.SetDefaultsWhereNeeded(ptr.To(int32(1)), globalVPA)
+
+		Expect(scheduler.VPA).To(Equal(globalVPA))
+		Expect(*scheduler.VPA.UpdatePolicy.UpdateMode).To(Equal(vpav1.UpdateModeOff))
+	})
+
+	It("applies defaults to local VPA when UpdateMode is nil", func(ctx context.Context) {
+		scheduler := &Scheduler{
+			VPA: &kaicommon.VPASpec{
+				Enabled:      ptr.To(true),
+				UpdatePolicy: &vpav1.PodUpdatePolicy{},
+			},
+		}
+		scheduler.SetDefaultsWhereNeeded(ptr.To(int32(1)), nil)
+
+		Expect(scheduler.VPA.UpdatePolicy.UpdateMode).NotTo(BeNil())
+		Expect(*scheduler.VPA.UpdatePolicy.UpdateMode).To(Equal(vpav1.UpdateModeInPlaceOrRecreate))
+	})
+
+	It("does not call SetDefaultsWhereNeeded when VPA remains nil", func(ctx context.Context) {
+		scheduler := &Scheduler{}
+		scheduler.SetDefaultsWhereNeeded(ptr.To(int32(1)), nil)
+
+		Expect(scheduler.VPA).To(BeNil())
 	})
 })

@@ -71,6 +71,9 @@ func (s *Scheduler) SetDefaultsWhereNeeded(replicaCount *int32, globalVPA *commo
 	if s.VPA == nil {
 		s.VPA = globalVPA
 	}
+	if s.VPA != nil {
+		s.VPA.SetDefaultsWhereNeeded()
+	}
 }
 
 // Service defines configuration for the scheduler service
