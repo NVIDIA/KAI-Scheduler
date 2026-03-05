@@ -40,6 +40,16 @@ var _ = Describe("VPASpec", func() {
 			Expect(*vpa.UpdatePolicy.UpdateMode).To(Equal(vpav1.UpdateModeOff))
 		})
 
+		It("should set UpdateMode to InPlaceOrRecreate when UpdatePolicy is set but UpdateMode is nil", func() {
+			vpa := &VPASpec{
+				UpdatePolicy: &vpav1.PodUpdatePolicy{},
+			}
+			vpa.SetDefaultsWhereNeeded()
+
+			Expect(vpa.UpdatePolicy.UpdateMode).NotTo(BeNil())
+			Expect(*vpa.UpdatePolicy.UpdateMode).To(Equal(vpav1.UpdateModeInPlaceOrRecreate))
+		})
+
 		It("should not set ResourcePolicy", func() {
 			vpa := &VPASpec{}
 			vpa.SetDefaultsWhereNeeded()

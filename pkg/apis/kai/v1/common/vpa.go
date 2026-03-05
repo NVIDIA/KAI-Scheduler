@@ -29,9 +29,10 @@ func (v *VPASpec) SetDefaultsWhereNeeded() {
 		v.Enabled = ptr.To(false)
 	}
 	if v.UpdatePolicy == nil {
+		v.UpdatePolicy = &vpav1.PodUpdatePolicy{}
+	}
+	if v.UpdatePolicy.UpdateMode == nil {
 		mode := vpav1.UpdateModeInPlaceOrRecreate
-		v.UpdatePolicy = &vpav1.PodUpdatePolicy{
-			UpdateMode: &mode,
-		}
+		v.UpdatePolicy.UpdateMode = &mode
 	}
 }
