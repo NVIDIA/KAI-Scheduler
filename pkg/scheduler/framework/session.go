@@ -36,6 +36,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/k8s_internal"
@@ -451,6 +452,15 @@ func (ssn *Session) OverrideSchedulerName(name string) {
 
 func (ssn *Session) InternalK8sPlugins() *k8splugins.K8sPlugins {
 	return ssn.Cache.InternalK8sPlugins()
+}
+
+// ResourceVectorMap returns the shared vector index map for this scheduling cycle.
+// All vectors created during this cycle use the same map for consistent indexing.
+func (ssn *Session) ResourceVectorMap() *resource_info.ResourceVectorMap {
+	if ssn.ClusterInfo == nil {
+		return resource_info.NewResourceVectorMap()
+	}
+	return ssn.ClusterInfo.ResourceVectorMap
 }
 
 func sortNodesByScore(nodeScores map[float64][]*node_info.NodeInfo) []*node_info.NodeInfo {

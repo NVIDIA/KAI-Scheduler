@@ -27,6 +27,7 @@ import (
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/podgroup_info/subgroup_info"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
 )
@@ -606,7 +607,8 @@ func TestDefaultStatusUpdater_RecordJobStatusEvent(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var podGroups []runtime.Object
-			jobInfos, _, _ := jobs_fake.BuildJobsAndTasksMaps([]*jobs_fake.TestJobBasic{&test.job})
+			vectorMap := resource_info.NewResourceVectorMap()
+			jobInfos, _, _ := jobs_fake.BuildJobsAndTasksMaps([]*jobs_fake.TestJobBasic{&test.job}, vectorMap)
 			for _, job := range jobInfos {
 				podGroups = append(podGroups, job.PodGroup)
 			}
