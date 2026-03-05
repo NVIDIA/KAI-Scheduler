@@ -76,7 +76,7 @@ helm install prometheus prometheus-community/kube-prometheus-stack --namespace m
 # Install VPA and its prerequisites
 if [ "$INSTALL_VPA" = "true" ]; then
     echo "Installing metrics-server (required by VPA recommender)..."
-    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.8.1/components.yaml
     # kind uses self-signed kubelet certs, so metrics-server needs --kubelet-insecure-tls
     kubectl patch deployment metrics-server -n kube-system --type=json \
         -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
