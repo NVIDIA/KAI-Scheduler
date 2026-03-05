@@ -60,7 +60,7 @@ func (mnr *MaxNodeResourcesPredicate) PreFilter(_ context.Context, _ ksf.CycleSt
 	*k8sframework.PreFilterResult, *ksf.Status) {
 
 	draPodClaims := resource_info.GetDraPodClaims(pod, mnr.resourceClaimsMap, mnr.podsToClaimsMap)
-	podInfo := pod_info.NewTaskInfo(pod, draPodClaims...)
+	podInfo := pod_info.NewTaskInfo(pod, draPodClaims, resource_info.NewResourceVectorMap())
 
 	podGpuResources := podInfo.ResReq.GPUs() + float64(podInfo.ResReq.GetDraGpusCount())
 	if podGpuResources > mnr.maxResources.GPUs() {

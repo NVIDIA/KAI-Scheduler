@@ -217,11 +217,12 @@ func TestMaxPodsWithReleasingPods(t *testing.T) {
 	nodePodAffinityInfo := pod_affinity.NewMockNodePodAffinityInfo(gomock.NewController(t))
 	nodePodAffinityInfo.EXPECT().AddPod(gomock.Any()).AnyTimes()
 
-	ni := node_info.NewNodeInfo(node, nodePodAffinityInfo)
+	vectorMap := resource_info.NewResourceVectorMap()
+	ni := node_info.NewNodeInfo(node, nodePodAffinityInfo, vectorMap)
 
 	// Add running pods
 	for _, pod := range runningPods {
-		task := pod_info.NewTaskInfo(pod)
+		task := pod_info.NewTaskInfo(pod, nil, vectorMap)
 		task.Status = pod_status.Running
 		err := ni.AddTask(task)
 		if err != nil {
@@ -230,7 +231,7 @@ func TestMaxPodsWithReleasingPods(t *testing.T) {
 	}
 
 	// Add releasing pod
-	releasingTask := pod_info.NewTaskInfo(releasingPod)
+	releasingTask := pod_info.NewTaskInfo(releasingPod, nil, vectorMap)
 	releasingTask.Status = pod_status.Releasing
 	err := ni.AddTask(releasingTask)
 	if err != nil {
@@ -239,7 +240,7 @@ func TestMaxPodsWithReleasingPods(t *testing.T) {
 
 	// Now try to allocate the preemptor pod - it should succeed because
 	// the releasing pod's resources (including its pod count) are available
-	preemptorTask := pod_info.NewTaskInfo(preemptorPod)
+	preemptorTask := pod_info.NewTaskInfo(preemptorPod, nil, vectorMap)
 	preemptorTask.Status = pod_status.Pending
 
 	// Check if the task is allocatable
@@ -1188,8 +1189,9 @@ func Test_predicatesPlugin_evaluateTaskOnPredicates(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			jobsMap, tasksMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.clusterData.jobs)
-			nodesMap := nodes_fake.BuildNodesInfoMap(tt.clusterData.nodes, tasksMap, nil)
+			vectorMap := resource_info.NewResourceVectorMap()
+			jobsMap, tasksMap, _ := jobs_fake.BuildJobsAndTasksMaps(tt.clusterData.jobs, vectorMap)
+			nodesMap := nodes_fake.BuildNodesInfoMap(tt.clusterData.nodes, tasksMap, nil, vectorMap)
 			ssn := &framework.Session{
 				ClusterInfo: &api.ClusterInfo{
 					Nodes:         nodesMap,

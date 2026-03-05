@@ -25,6 +25,7 @@ import (
 	fakeschedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/client/clientset/versioned/typed/scheduling/v2alpha2/fake"
 	schedulingv2alpha2 "github.com/NVIDIA/KAI-scheduler/pkg/apis/scheduling/v2alpha2"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
+	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/jobs_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/test_utils/tasks_fake"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/utils"
@@ -79,7 +80,8 @@ var _ = Describe("Status Updater - Pod Groups Syncing", func() {
 			})
 		}
 
-		jobInfos, _, _ := jobs_fake.BuildJobsAndTasksMaps(jobs)
+		vectorMap := resource_info.NewResourceVectorMap()
+		jobInfos, _, _ := jobs_fake.BuildJobsAndTasksMaps(jobs, vectorMap)
 		podGroupsOriginals = []*schedulingv2alpha2.PodGroup{}
 
 		for _, job := range jobInfos {

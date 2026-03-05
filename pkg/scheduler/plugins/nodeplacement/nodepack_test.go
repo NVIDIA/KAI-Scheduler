@@ -213,7 +213,11 @@ func buildSingleTestParams(testMetadata testTopologyMetadata) (*framework.Sessio
 		node := nodes_fake.BuildNode(nodeName, nodeResource, nodeResource)
 		clusterPodAffinityInfo := cache.NewK8sClusterPodAffinityInfo()
 		podAffinityInfo := cluster_info.NewK8sNodePodAffinityInfo(node, clusterPodAffinityInfo)
-		nodeInfo := node_info.NewNodeInfo(node, podAffinityInfo)
+		vectorMap := resource_info.NewResourceVectorMap()
+		for resourceName := range node.Status.Allocatable {
+			vectorMap.AddResource(string(resourceName))
+		}
+		nodeInfo := node_info.NewNodeInfo(node, podAffinityInfo, vectorMap)
 		idleResources := resources_fake.BuildResourceList(nil, nil,
 			&nodeMetadata.nodeIdleGPUs, nil)
 		nodeInfo.Idle = resource_info.ResourceFromResourceList(*idleResources)
@@ -279,5 +283,5 @@ func createFakeTask(taskName string) *pod_info.PodInfo {
 				},
 			},
 		},
-	})
+	}, nil, resource_info.NewResourceVectorMap())
 }

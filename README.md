@@ -130,3 +130,17 @@ Join the [kai-scheduler mailing list](https://groups.google.com/g/kai-scheduler)
 
 ### Technical Issues & Feature Requests  
 Please open a [GitHub issue](https://github.com/NVIDIA/KAI-Scheduler/issues/new/choose) for bugs, feature suggestions, or technical help. This helps us keep track of requests and respond effectively.
+
+---
+
+<div align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/cncf/artwork/refs/heads/main/other/cncf/horizontal/color-whitetext/cncf-color-whitetext.svg">
+      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/cncf/artwork/refs/heads/main/other/cncf/horizontal/color/cncf-color.svg">
+      <img width="300" alt="Cloud Native Computing Foundation logo" src="https://raw.githubusercontent.com/cncf/artwork/refs/heads/main/other/cncf/horizontal/color-whitetext/cncf-color-whitetext.svg">
+    </picture>
+    <p>KAI Scheduler is <a href="https://cncf.io">Cloud Native Computing Foundation</a> sandbox project.</p>
+</div>
+
+Copyright Contributors to KAI Scheduler, established as KAI Scheduler a Series of LF Projects, LLC.
+For website terms of use, trademark policy and other project policies please see [lfprojects.org/policies](https://lfprojects.org/policies/).

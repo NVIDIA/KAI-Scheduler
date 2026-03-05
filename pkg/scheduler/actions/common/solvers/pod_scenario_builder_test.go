@@ -298,11 +298,13 @@ func initializeSession(jobsCount, tasksPerJob int) (*framework.Session, []*pod_i
 	nodePodAffinityInfo.EXPECT().AddPod(gomock.Any()).AnyTimes()
 	nodePodAffinityInfo.EXPECT().RemovePod(gomock.Any()).AnyTimes()
 
-	node := node_info.NewNodeInfo(&v1.Node{
+	tempNode := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "node-1",
 		},
-	}, nodePodAffinityInfo)
+	}
+	vectorMap := resource_info.BuildResourceVectorMap([]v1.ResourceList{tempNode.Status.Allocatable})
+	node := node_info.NewNodeInfo(tempNode, nodePodAffinityInfo, vectorMap)
 	for jobID := range jobsCount {
 		queueName := fmt.Sprintf("team-%d", jobID)
 		newJob, jobTasks := createJobWithTasks(tasksPerJob, jobID, queueName, v1.PodRunning, []v1.ResourceRequirements{requireOneGPU()})
@@ -368,7 +370,7 @@ func createJobWithTasks(
 				fmt.Sprintf("pod-%d", taskNum),
 				namespace, jobUID, tasksStatus,
 				podResources,
-			)))
+			), nil, resource_info.NewResourceVectorMap()))
 	}
 
 	newJob := podgroup_info.NewPodGroupInfo(common_info.PodGroupID(strconv.Itoa(jobID)), jobTasks...)
