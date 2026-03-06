@@ -370,6 +370,7 @@ var _ = Describe("Kwok scale test", Ordered, Label(labels.Scale), func() {
 
 					Context("measure reclaim failure time", func() {
 						BeforeAll(func(ctx context.Context) {
+							Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(sanityTestQueue), sanityTestQueue)).To(Succeed())
 							sanityTestQueue.Spec.Resources.GPU.Quota = float64((numberOfNodes * gpusPerNode) - (defaultPodsPerDistributedJob * gpusPerNode) + 1)
 							Expect(testCtx.ControllerClient.Update(ctx, sanityTestQueue)).To(Succeed())
 						})
@@ -378,6 +379,7 @@ var _ = Describe("Kwok scale test", Ordered, Label(labels.Scale), func() {
 							if CurrentSpecReport().Failed() {
 								return
 							}
+							Expect(testCtx.ControllerClient.Get(ctx, runtimeClient.ObjectKeyFromObject(sanityTestQueue), sanityTestQueue)).To(Succeed())
 							sanityTestQueue.Spec.Resources.GPU.Quota = 0
 							Expect(testCtx.ControllerClient.Update(ctx, sanityTestQueue)).To(Succeed())
 						})
