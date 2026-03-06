@@ -63,6 +63,10 @@ func (q *QueueController) DesiredState(
 		objects = append(objects, obj...)
 	}
 
+	if vpa := common.BuildVPAFromObjects(kaiConfig.Spec.QueueController.VPA, objects, kaiConfig.Spec.Namespace); vpa != nil {
+		objects = append(objects, vpa)
+	}
+
 	q.lastDesiredState = objects
 	return objects, nil
 }

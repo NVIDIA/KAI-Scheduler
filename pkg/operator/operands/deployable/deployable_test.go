@@ -21,6 +21,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,6 +54,7 @@ var _ = Describe("Deployable", func() {
 		Expect(kaiv1.AddToScheme(testScheme)).To(Succeed())
 		Expect(apiextensionsv1.AddToScheme(testScheme)).To(Succeed())
 		Expect(monitoringv1.AddToScheme(testScheme)).To(Succeed())
+		Expect(vpav1.AddToScheme(testScheme)).To(Succeed())
 
 		fakeClientBuilder = fake.NewClientBuilder().
 			WithScheme(testScheme).

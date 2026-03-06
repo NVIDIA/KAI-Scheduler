@@ -18,6 +18,7 @@ KIND_CONFIG=${REPO_ROOT}/hack/e2e-kind-config.yaml
 # Parse named parameters
 TEST_THIRD_PARTY_INTEGRATIONS=${TEST_THIRD_PARTY_INTEGRATIONS:-"false"}
 LOCAL_IMAGES_BUILD=${LOCAL_IMAGES_BUILD:-"false"}
+INSTALL_VPA=${INSTALL_VPA:-"false"}
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -29,10 +30,15 @@ while [[ $# -gt 0 ]]; do
       LOCAL_IMAGES_BUILD="true"
       shift
       ;;
+    --install-vpa)
+      INSTALL_VPA="true"
+      shift
+      ;;
     -h|--help)
-      echo "Usage: $0 [--test-third-party-integrations] [--local-images-build]"
+      echo "Usage: $0 [--test-third-party-integrations] [--local-images-build] [--install-vpa]"
       echo "  --test-third-party-integrations: Install third party operators for compatibility testing"
       echo "  --local-images-build: Build and use local images instead of pulling from registry"
+      echo "  --install-vpa: Install Vertical Pod Autoscaler and metrics-server"
       exit 0
       ;;
     *)
@@ -66,6 +72,23 @@ helm install prometheus prometheus-community/kube-prometheus-stack --namespace m
     --set "grafana.enabled=false" \
     --set "prometheus.enabled=false" \
     --wait
+
+# Install VPA and its prerequisites
+if [ "$INSTALL_VPA" = "true" ]; then
+    echo "Installing metrics-server (required by VPA recommender)..."
+    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.8.1/components.yaml
+    # kind uses self-signed kubelet certs, so metrics-server needs --kubelet-insecure-tls
+    kubectl patch deployment metrics-server -n kube-system --type=json \
+        -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+    kubectl wait --for=condition=available --timeout=120s deployment/metrics-server -n kube-system
+
+    echo "Installing Vertical Pod Autoscaler..."
+    VPA_TMPDIR=$(mktemp -d)
+    git clone https://github.com/kubernetes/autoscaler.git "$VPA_TMPDIR/autoscaler"
+    (cd "$VPA_TMPDIR/autoscaler/vertical-pod-autoscaler" && git checkout vertical-pod-autoscaler-1.5.1 && ./hack/vpa-up.sh)
+    rm -rf "$VPA_TMPDIR"
+    echo "VPA installation complete."
+fi
 
 # Install third party operators to check the compatibility with the kai-scheduler
 if [ "$TEST_THIRD_PARTY_INTEGRATIONS" = "true" ]; then

@@ -13,6 +13,10 @@ import (
 
 // GlobalConfig defines the global configuration of the system
 type GlobalConfig struct {
+	// VPA defines the default Vertical Pod Autoscaler configuration for all services
+	// +kubebuilder:validation:Optional
+	VPA *common.VPASpec `json:"vpa,omitempty"`
+
 	// Openshift configures the operator to install on Openshift
 	// +kubebuilder:validation:Optional
 	Openshift *bool `json:"openshift,omitempty"`
@@ -103,6 +107,11 @@ func (g *GlobalConfig) SetDefaultWhereNeeded() {
 	}
 
 	g.RequireDefaultPodAntiAffinityTerm = common.SetDefault(g.RequireDefaultPodAntiAffinityTerm, ptr.To(false))
+
+	if g.VPA == nil {
+		g.VPA = &common.VPASpec{}
+	}
+	g.VPA.SetDefaultsWhereNeeded()
 }
 
 func (g *GlobalConfig) GetSecurityContext() *v1.SecurityContext {

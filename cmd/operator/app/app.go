@@ -8,6 +8,7 @@ import (
 
 	nvidiav1 "github.com/NVIDIA/gpu-operator/api/nvidia/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 
 	"github.com/NVIDIA/KAI-scheduler/cmd/operator/config"
 	kaiv1 "github.com/NVIDIA/KAI-scheduler/pkg/apis/kai/v1"
@@ -45,6 +46,7 @@ func init() {
 	utilruntime.Must(kaiv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(nvidiav1.AddToScheme(scheme))
 	utilruntime.Must(monitoringv1.AddToScheme(scheme))
+	utilruntime.Must(vpav1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

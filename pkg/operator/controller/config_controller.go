@@ -23,6 +23,7 @@ import (
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -83,6 +84,7 @@ func (r *ConfigReconciler) SetOperands(ops []operands.Operand) {
 // +kubebuilder:rbac:groups="nvidia.com",resources=clusterpolicies,verbs=get;list;watch
 // +kubebuilder:rbac:groups="monitoring.coreos.com",resources=prometheuses;servicemonitors,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="scheduling.run.ai",resources=queues,verbs=get;list;watch
+// +kubebuilder:rbac:groups="autoscaling.k8s.io",resources=verticalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -147,6 +149,8 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		known_types.ValidatingWebhookConfigurationFieldInherit)
 	r.deployable.RegisterFieldsInheritFromClusterObjects(&admissionv1.MutatingWebhookConfiguration{},
 		known_types.MutatingWebhookConfigurationFieldInherit)
+	r.deployable.RegisterFieldsInheritFromClusterObjects(&vpav1.VerticalPodAutoscaler{},
+		known_types.VPAFieldInherit)
 	r.StatusReconciler = status_reconciler.New(r.Client, r.deployable)
 
 	builder := ctrl.NewControllerManagedBy(mgr).

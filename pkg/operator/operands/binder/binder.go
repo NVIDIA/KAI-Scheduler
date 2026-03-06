@@ -47,6 +47,10 @@ func (b *Binder) DesiredState(
 		objects = append(objects, newResources...)
 	}
 
+	if vpa := common.BuildVPAFromObjects(kaiConfig.Spec.Binder.VPA, objects, kaiConfig.Spec.Namespace); vpa != nil {
+		objects = append(objects, vpa)
+	}
+
 	b.lastDesiredState = objects
 	return objects, nil
 }
