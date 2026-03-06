@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/exp/maps"
 
+	commonconstants "github.com/NVIDIA/KAI-scheduler/pkg/common/constants"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/NVIDIA/KAI-scheduler/pkg/scheduler/api/resource_info"
@@ -70,7 +71,7 @@ func getAcceptedTaskResourceWithoutSharedGPU(task *pod_info.PodInfo) *resource_i
 	return requestedResourceWithoutSharedGPU
 }
 
-func (ni *NodeInfo) addSharedTaskResources(task *pod_info.PodInfo) {
+func (ni *NodeInfo) addSharedGPUTaskResources(task *pod_info.PodInfo) {
 	if !task.IsSharedGPUAllocation() {
 		return
 	}
@@ -79,14 +80,14 @@ func (ni *NodeInfo) addSharedTaskResources(task *pod_info.PodInfo) {
 		task.Namespace, task.Name, task.Status, ni)
 
 	for _, gpuGroup := range task.GPUGroups {
-		ni.addSharedTaskResourcesPerPodGroup(task, gpuGroup)
+		ni.addSharedGPUTaskResourcesPerPodGroup(task, gpuGroup)
 	}
 
 	log.InfraLogger.V(8).Infof("Added shared podsInfo: <%v/%v>, status: <%v>, node: <%+v>",
 		task.Namespace, task.Name, task.Status, ni)
 }
 
-func (ni *NodeInfo) addSharedTaskResourcesPerPodGroup(task *pod_info.PodInfo, gpuGroup string) {
+func (ni *NodeInfo) addSharedGPUTaskResourcesPerPodGroup(task *pod_info.PodInfo, gpuGroup string) {
 	log.InfraLogger.V(7).Infof(
 		"About to add shared podsInfo: <%v/%v>, gpuGroup: <%v> "+
 			"releasingSharedGPU: <%v> AllocatedSharedGPUsMemory <%v>, UsedSharedGPUsMemory: <%v>",
@@ -96,6 +97,7 @@ func (ni *NodeInfo) addSharedTaskResourcesPerPodGroup(task *pod_info.PodInfo, gp
 
 	ni.UsedSharedGPUsMemory[gpuGroup] += ni.GetResourceGpuMemory(task.ResReq)
 	singleGpu := resource_info.NewSingleGpuVector(ni.VectorMap)
+	gpuIdx := ni.VectorMap.GetIndex(commonconstants.GpuResource)
 
 	switch task.Status {
 	case pod_status.Releasing:
@@ -109,7 +111,7 @@ func (ni *NodeInfo) addSharedTaskResourcesPerPodGroup(task *pod_info.PodInfo, gp
 				ni.ReleasingVector.Add(singleGpu)
 				ni.markSharedGpuAsReleasing(gpuGroup)
 			}
-			if int(ni.GetNumberOfGPUsInNode()) < int(ni.Idle.GPUs())+ni.getNumberOfUsedGPUs() {
+			if int(ni.GetNumberOfGPUsInNode()) < int(ni.IdleVector.Get(gpuIdx))+ni.getNumberOfUsedGPUs() {
 				ni.Idle.SubGPUs(1)
 				ni.IdleVector.Sub(singleGpu)
 			}
@@ -127,7 +129,7 @@ func (ni *NodeInfo) addSharedTaskResourcesPerPodGroup(task *pod_info.PodInfo, gp
 
 		if ni.UsedSharedGPUsMemory[gpuGroup] <= ni.GetResourceGpuMemory(task.ResReq) {
 			// no other fractional was allocated here yet
-			if int(ni.GetNumberOfGPUsInNode()) < int(ni.Idle.GPUs())+ni.getNumberOfUsedGPUs() {
+			if int(ni.GetNumberOfGPUsInNode()) < int(ni.IdleVector.Get(gpuIdx))+ni.getNumberOfUsedGPUs() {
 				ni.Idle.SubGPUs(1)
 				ni.IdleVector.Sub(singleGpu)
 			}
@@ -176,6 +178,7 @@ func (ni *NodeInfo) removeSharedTaskResourcesPerPodGroup(task *pod_info.PodInfo,
 
 	ni.UsedSharedGPUsMemory[gpuGroup] -= ni.GetResourceGpuMemory(task.ResReq)
 	singleGpu := resource_info.NewSingleGpuVector(ni.VectorMap)
+	gpuIdx := ni.VectorMap.GetIndex(commonconstants.GpuResource)
 
 	switch task.Status {
 	case pod_status.Releasing:
@@ -189,7 +192,7 @@ func (ni *NodeInfo) removeSharedTaskResourcesPerPodGroup(task *pod_info.PodInfo,
 
 		if ni.UsedSharedGPUsMemory[gpuGroup] <= 0 {
 			// is this the last releasing task for this gpu
-			if int(ni.GetNumberOfGPUsInNode()) >= int(ni.Idle.GPUs())+ni.getNumberOfUsedGPUs() {
+			if int(ni.GetNumberOfGPUsInNode()) >= int(ni.IdleVector.Get(gpuIdx))+ni.getNumberOfUsedGPUs() {
 				ni.Idle.AddGPUs(1)
 				ni.IdleVector.Add(singleGpu)
 			}
@@ -222,7 +225,7 @@ func (ni *NodeInfo) removeSharedTaskResourcesPerPodGroup(task *pod_info.PodInfo,
 
 		if ni.UsedSharedGPUsMemory[gpuGroup] <= 0 {
 			// no other fractional was allocated here yet
-			if int(ni.GetNumberOfGPUsInNode()) >= int(ni.Idle.GPUs())+ni.getNumberOfUsedGPUs() {
+			if int(ni.GetNumberOfGPUsInNode()) >= int(ni.IdleVector.Get(gpuIdx))+ni.getNumberOfUsedGPUs() {
 				ni.Idle.AddGPUs(1)
 				ni.IdleVector.Add(singleGpu)
 			}
@@ -284,7 +287,8 @@ func (ni *NodeInfo) getNumberOfUsedSharedGPUs() int {
 }
 
 func (ni *NodeInfo) getNumberOfUsedGPUs() int {
-	return int(ni.Used.GPUs()) + ni.getNumberOfUsedSharedGPUs()
+	gpuIdx := ni.VectorMap.GetIndex(commonconstants.GpuResource)
+	return int(ni.UsedVector.Get(gpuIdx)) + ni.getNumberOfUsedSharedGPUs()
 }
 
 func (ni *NodeInfo) GetNumberOfAllocatedSharedGPUs() int {
