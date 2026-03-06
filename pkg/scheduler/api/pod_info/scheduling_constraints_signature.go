@@ -4,6 +4,7 @@
 package pod_info
 
 import (
+	"encoding/binary"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -51,7 +52,7 @@ func schedulingConstraintsSignature(pod *v1.Pod, storageClaims map[storageclaim_
 	// Priority
 	hash.Write([]byte(pod.Spec.PriorityClassName))
 	if pod.Spec.Priority != nil {
-		hash.Write([]byte{byte(*pod.Spec.Priority)})
+		binary.Write(hash, binary.LittleEndian, *pod.Spec.Priority)
 	}
 
 	//TopologySpreadConstraints
@@ -91,7 +92,7 @@ func schedulingConstraintsSignature(pod *v1.Pod, storageClaims map[storageclaim_
 	// Ports
 	for _, container := range append(pod.Spec.Containers, pod.Spec.InitContainers...) {
 		for _, port := range container.Ports {
-			hash.Write([]byte{byte(port.HostPort)})
+			binary.Write(hash, binary.LittleEndian, port.HostPort)
 		}
 	}
 
