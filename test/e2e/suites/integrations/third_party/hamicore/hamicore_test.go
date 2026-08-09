@@ -241,7 +241,7 @@ var _ = Describe("HAMi-core resource isolation", Ordered, func() {
 			if !isKaiVGPUMonitorInstalled(ctx, testCtx.KubeClientset) {
 				Skip(fmt.Sprintf(
 					"kai-vgpu-monitor DaemonSet %q not found in namespace %q; "+
-						"install via hack/third_party_integrations/deploy_isolator.sh",
+						"install via hack/hami/deploy_isolator.sh (--test-hami)",
 					kaiVGPUMonitorDaemonSetName, kaiResourceIsolatorNamespace,
 				))
 			}

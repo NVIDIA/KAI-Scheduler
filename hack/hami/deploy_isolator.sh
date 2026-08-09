@@ -2,8 +2,8 @@
 # Copyright 2026 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
 #
-# Installs kai-resource-isolator with kai-vgpu-monitor enabled so hamicore e2e
-# can scrape hami_* per-container VRAM metrics on :9394.
+# Installs kai-resource-isolator with kai-vgpu-monitor enabled for HAMi/hamicore
+# e2e (see --test-hami in hack/setup-e2e-cluster.sh).
 #
 # Overrides (optional):
 #   ISOLATOR_CHART_REF       OCI ref or local chart path
