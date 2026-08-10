@@ -85,14 +85,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Extra helm --set flags for HAMi/hamicore. Kind e2e has no nvidia RuntimeClass, so clear
-# the defaults that would otherwise reject GPU-fraction pods at admission.
+# Extra helm --set flags for HAMi/hamicore when --test-hami is set.
 HAMI_HELM_SETS=()
 if [ "$TEST_HAMI" = "true" ]; then
   HAMI_HELM_SETS+=(
     --set "binder.plugins.hamicore.enabled=true"
-    --set "binder.resourceReservation.runtimeClassName="
-    --set "admission.gpuFractionRuntimeClassName="
   )
 fi
 
