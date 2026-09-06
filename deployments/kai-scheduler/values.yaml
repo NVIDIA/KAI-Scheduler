@@ -241,6 +241,8 @@ admission:
     metricsPort: 8080
     probePort: 8081
   cdi: false
+  # Enable queue label MatchExpression on admission webhooks (requires pods to have the queue label).
+  queueLabelSelector: false
   gpuFractionRuntimeClassName: nvidia
   affinity: {}
   podDisruptionBudget:
