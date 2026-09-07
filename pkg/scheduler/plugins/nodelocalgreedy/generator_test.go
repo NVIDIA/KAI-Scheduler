@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -66,6 +67,49 @@ func TestNodeLocalGreedyEmitsRecordedVictimsBeforePotentialVictims(t *testing.T)
 	require.ElementsMatch(t, podNames(recordedTasks), podNames(sn.RecordedVictimsTasks()))
 	require.ElementsMatch(t, podNames(victimTasks), podNames(sn.PotentialVictimsTasks()))
 	require.Nil(t, generator.Next())
+}
+
+func TestNodeLocalGreedyCursorResumesAtNextScenario(t *testing.T) {
+	ssn := newGeneratorTestSession(t, map[string]int{"node-1": 1, "node-2": 1})
+	victimJob, _ := addGeneratorTestJob(t, ssn, 2, 1, "team-victim", "node-1", "node-2")
+	pendingJob := addGeneratorTestPendingJob(t, ssn, 1, 10, "team-pending")
+	newGenerator := func() framework.ResumableScenarioGenerator {
+		generator := NewNodeLocalGreedyGenerator(&SolveContext{
+			Session:              ssn,
+			ActionType:           framework.Reclaim,
+			PartialPendingJob:    pendingJob,
+			GenerateVictimsQueue: generatorTestVictimsQueueFactory(ssn, victimJob),
+			FeasibleNodes:        ssn.ClusterInfo.Nodes,
+		})
+		resumable, ok := generator.(framework.ResumableScenarioGenerator)
+		require.True(t, ok)
+		return resumable
+	}
+
+	baseline := newGenerator()
+	var all []string
+	var cursors []framework.ScenarioGeneratorCursor
+	for sn := baseline.Next(); sn != nil; sn = baseline.Next() {
+		all = append(all, generatorScenarioKey(requireByNodeScenario(t, sn)))
+		cursor, ok := baseline.Cursor()
+		require.True(t, ok)
+		cursors = append(cursors, cursor)
+	}
+	require.NotEmpty(t, cursors)
+
+	for index, cursor := range cursors {
+		restored := newGenerator()
+		require.NoError(t, restored.Restore(cursor))
+		remaining := []string{}
+		for sn := restored.Next(); sn != nil; sn = restored.Next() {
+			remaining = append(remaining, generatorScenarioKey(requireByNodeScenario(t, sn)))
+		}
+		require.Equal(t, all[index+1:], remaining)
+	}
+
+	malformed := cursors[0]
+	malformed.Data[len(malformed.Data)-1] = 1
+	require.Error(t, newGenerator().Restore(malformed))
 }
 
 func TestNodeLocalGreedyKeepsWholeVictimJobs(t *testing.T) {
@@ -641,6 +685,11 @@ func podNames(tasks []*pod_info.PodInfo) []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+func generatorScenarioKey(sn *scenario.ByNodeScenario) string {
+	return strings.Join(podNames(sn.RecordedVictimsTasks()), ",") + "|" +
+		strings.Join(podNames(sn.PotentialVictimsTasks()), ",")
 }
 
 func podNamesFromMap(tasks pod_info.PodsMap) []string {

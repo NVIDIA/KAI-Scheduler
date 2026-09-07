@@ -161,6 +161,9 @@ func (s *SchedulerForShard) configMapForShard(
 	if shard.Spec.ScenarioSearchBudgets != nil {
 		innerConfig.ScenarioSearchBudgets = shard.Spec.ScenarioSearchBudgets.DeepCopy()
 	}
+	if shard.Spec.ScenarioSearchCheckpoints != nil {
+		innerConfig.ScenarioSearchCheckpoints = shard.Spec.ScenarioSearchCheckpoints.DeepCopy()
+	}
 
 	if len(shard.Spec.QueueDepthPerAction) > 0 {
 		if err = validateJobDepthMap(shard, innerConfig, actions); err != nil {

@@ -36,34 +36,40 @@ const (
 )
 
 var (
-	currentAction                                  string
-	e2eSchedulingLatency                           prometheus.Gauge
-	openSessionLatency                             prometheus.Gauge
-	closeSessionLatency                            prometheus.Gauge
-	pluginSchedulingLatency                        *prometheus.GaugeVec
-	actionSchedulingLatency                        *prometheus.GaugeVec
-	taskSchedulingLatency                          prometheus.Histogram
-	taskBindLatency                                prometheus.Histogram
-	podgroupsScheduledByAction                     *prometheus.CounterVec
-	podgroupsConsideredByAction                    *prometheus.CounterVec
-	scenariosSimulatedByAction                     *prometheus.CounterVec
-	scenariosFilteredByAction                      *prometheus.CounterVec
-	preemptionAttempts                             prometheus.Counter
-	queueFairShareCPU                              *prometheus.GaugeVec
-	queueFairShareMemory                           *prometheus.GaugeVec
-	queueFairShareGPU                              *prometheus.GaugeVec
-	queueCPUUsage                                  *prometheus.GaugeVec
-	queueMemoryUsage                               *prometheus.GaugeVec
-	queueGPUUsage                                  *prometheus.GaugeVec
-	usageQueryLatency                              *prometheus.HistogramVec
-	podGroupEvictedPodsTotal                       *prometheus.CounterVec
-	scenarioSearchJobsTotal                        *prometheus.CounterVec
-	scenarioSearchActionBudgetConfiguredSeconds    *prometheus.GaugeVec
-	scenarioSearchJobBudgetConfiguredSeconds       prometheus.Gauge
-	scenarioSearchGeneratorBudgetConfiguredSeconds *prometheus.GaugeVec
-	scenarioSearchActionBudgetExhaustedTotal       *prometheus.CounterVec
-	scenarioSearchDurationSeconds                  *prometheus.HistogramVec
-	scenarioSearchScenariosTotal                   *prometheus.CounterVec
+	currentAction                                     string
+	e2eSchedulingLatency                              prometheus.Gauge
+	openSessionLatency                                prometheus.Gauge
+	closeSessionLatency                               prometheus.Gauge
+	pluginSchedulingLatency                           *prometheus.GaugeVec
+	actionSchedulingLatency                           *prometheus.GaugeVec
+	taskSchedulingLatency                             prometheus.Histogram
+	taskBindLatency                                   prometheus.Histogram
+	podgroupsScheduledByAction                        *prometheus.CounterVec
+	podgroupsConsideredByAction                       *prometheus.CounterVec
+	scenariosSimulatedByAction                        *prometheus.CounterVec
+	scenariosFilteredByAction                         *prometheus.CounterVec
+	preemptionAttempts                                prometheus.Counter
+	queueFairShareCPU                                 *prometheus.GaugeVec
+	queueFairShareMemory                              *prometheus.GaugeVec
+	queueFairShareGPU                                 *prometheus.GaugeVec
+	queueCPUUsage                                     *prometheus.GaugeVec
+	queueMemoryUsage                                  *prometheus.GaugeVec
+	queueGPUUsage                                     *prometheus.GaugeVec
+	usageQueryLatency                                 *prometheus.HistogramVec
+	podGroupEvictedPodsTotal                          *prometheus.CounterVec
+	scenarioSearchJobsTotal                           *prometheus.CounterVec
+	scenarioSearchActionBudgetConfiguredSeconds       *prometheus.GaugeVec
+	scenarioSearchJobBudgetConfiguredSeconds          prometheus.Gauge
+	scenarioSearchGeneratorBudgetConfiguredSeconds    *prometheus.GaugeVec
+	scenarioSearchActionBudgetExhaustedTotal          *prometheus.CounterVec
+	scenarioSearchDurationSeconds                     *prometheus.HistogramVec
+	scenarioSearchScenariosTotal                      *prometheus.CounterVec
+	scenarioSearchCheckpointsTotal                    *prometheus.CounterVec
+	scenarioSearchCheckpointEntries                   prometheus.Gauge
+	scenarioSearchCheckpointBitmapBytes               prometheus.Gauge
+	scenarioSearchCheckpointRestoreDurationSeconds    *prometheus.HistogramVec
+	scenarioSearchCheckpointValidationDurationSeconds *prometheus.HistogramVec
+	scenarioSearchStateDigestDurationSeconds          *prometheus.HistogramVec
 )
 
 func init() {
@@ -265,6 +271,23 @@ func InitMetrics(namespace string) {
 			Name:      "scenario_search_scenarios_total",
 			Help:      "Count of bounded-search scenarios by state.",
 		}, []string{"action", "generator", "state"})
+
+	scenarioSearchCheckpointsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{Namespace: namespace, Name: "scenario_search_checkpoints_total", Help: "Checkpoint store operations by result."},
+		[]string{"operation", "result"})
+	scenarioSearchCheckpointEntries = promauto.NewGauge(
+		prometheus.GaugeOpts{Namespace: namespace, Name: "scenario_search_checkpoint_entries", Help: "Current number of scenario search checkpoints."})
+	scenarioSearchCheckpointBitmapBytes = promauto.NewGauge(
+		prometheus.GaugeOpts{Namespace: namespace, Name: "scenario_search_checkpoint_bitmap_bytes", Help: "Reserved scenario checkpoint victim bitmap bytes."})
+	scenarioSearchCheckpointRestoreDurationSeconds = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{Namespace: namespace, Name: "scenario_search_checkpoint_restore_duration_seconds", Help: "Checkpoint restore duration.", Buckets: prometheus.ExponentialBuckets(0.0001, 2, 16)},
+		[]string{"generator", "result"})
+	scenarioSearchCheckpointValidationDurationSeconds = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{Namespace: namespace, Name: "scenario_search_checkpoint_validation_duration_seconds", Help: "Checkpoint validation duration.", Buckets: prometheus.ExponentialBuckets(0.0001, 2, 16)},
+		[]string{"result"})
+	scenarioSearchStateDigestDurationSeconds = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{Namespace: namespace, Name: "scenario_search_state_digest_duration_seconds", Help: "Scenario checkpoint state digest duration.", Buckets: prometheus.ExponentialBuckets(0.0001, 2, 16)},
+		[]string{"phase"})
 }
 
 // UpdateOpenSessionDuration updates latency for open session, including all plugins
@@ -396,6 +419,27 @@ func ObserveScenarioSearchDuration[A ~string](action A, generator string, result
 
 func IncScenarioSearchScenario[A ~string](action A, generator string, state string) {
 	scenarioSearchScenariosTotal.WithLabelValues(string(action), generator, state).Inc()
+}
+
+func IncScenarioSearchCheckpoint(operation, result string) {
+	scenarioSearchCheckpointsTotal.WithLabelValues(operation, result).Inc()
+}
+
+func SetScenarioSearchCheckpointStore(entries, bitmapBytes int) {
+	scenarioSearchCheckpointEntries.Set(float64(entries))
+	scenarioSearchCheckpointBitmapBytes.Set(float64(bitmapBytes))
+}
+
+func ObserveScenarioSearchCheckpointRestore(generator, result string, duration time.Duration) {
+	scenarioSearchCheckpointRestoreDurationSeconds.WithLabelValues(generator, result).Observe(duration.Seconds())
+}
+
+func ObserveScenarioSearchCheckpointValidation(result string, duration time.Duration) {
+	scenarioSearchCheckpointValidationDurationSeconds.WithLabelValues(result).Observe(duration.Seconds())
+}
+
+func ObserveScenarioSearchStateDigest(phase string, duration time.Duration) {
+	scenarioSearchStateDigestDurationSeconds.WithLabelValues(phase).Observe(duration.Seconds())
 }
 
 // Duration get the time since specified start

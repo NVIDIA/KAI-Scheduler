@@ -4,6 +4,8 @@
 package nodelocalgreedy
 
 import (
+	"encoding/binary"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -23,6 +25,7 @@ type nodeLocalGreedyGenerator struct {
 	builder                          *solvers.PodAccumulatedScenarioBuilder
 	scenarios                        []*scenario.ByNodeScenario
 	shouldAdvanceAccumulatedScenario bool
+	nextSubScenarioIndex             uint32
 }
 
 func NewNodeLocalGreedyGenerator(ctx framework.ScenarioGeneratorContext) framework.ScenarioGenerator {
@@ -53,6 +56,7 @@ func (g *nodeLocalGreedyGenerator) Next() api.ScenarioInfo {
 			return nil
 		}
 		g.scenarios = nodeLocalScenarios(g.solveCtx.Session, accumulated)
+		g.nextSubScenarioIndex = 0
 	}
 }
 
@@ -80,7 +84,52 @@ func (g *nodeLocalGreedyGenerator) popScenario() *scenario.ByNodeScenario {
 	}
 	sn := g.scenarios[0]
 	g.scenarios = g.scenarios[1:]
+	g.nextSubScenarioIndex++
 	return sn
+}
+
+const nodeLocalCursorVersion = 1
+
+func (g *nodeLocalGreedyGenerator) Cursor() (framework.ScenarioGeneratorCursor, bool) {
+	if g == nil || g.builder == nil || g.nextSubScenarioIndex == 0 {
+		return framework.ScenarioGeneratorCursor{}, false
+	}
+	var cursor framework.ScenarioGeneratorCursor
+	cursor.Version = nodeLocalCursorVersion
+	cursor.Data[0] = 1
+	binary.BigEndian.PutUint64(cursor.Data[1:9], g.builder.VictimQueuePops())
+	binary.BigEndian.PutUint32(cursor.Data[9:13], g.nextSubScenarioIndex)
+	return cursor, true
+}
+
+func (g *nodeLocalGreedyGenerator) Restore(cursor framework.ScenarioGeneratorCursor) error {
+	if g == nil || cursor.Version != nodeLocalCursorVersion || cursor.Data[0] != 1 {
+		return fmt.Errorf("invalid NodeLocalGreedy cursor")
+	}
+	for _, value := range cursor.Data[13:] {
+		if value != 0 {
+			return fmt.Errorf("invalid NodeLocalGreedy cursor padding")
+		}
+	}
+	if !g.ensureBuilder() {
+		return fmt.Errorf("could not initialize NodeLocalGreedy generator")
+	}
+	if err := g.builder.RestoreVictimQueuePops(binary.BigEndian.Uint64(cursor.Data[1:9])); err != nil {
+		return err
+	}
+	base := g.builder.CurrentValidAccumulatedScenario()
+	if base == nil {
+		return fmt.Errorf("NodeLocalGreedy cursor outer scenario is invalid")
+	}
+	scenarios := nodeLocalScenarios(g.solveCtx.Session, base)
+	next := binary.BigEndian.Uint32(cursor.Data[9:13])
+	if uint64(next) > uint64(len(scenarios)) || next == 0 {
+		return fmt.Errorf("NodeLocalGreedy cursor index is invalid")
+	}
+	g.scenarios = scenarios[next:]
+	g.nextSubScenarioIndex = next
+	g.shouldAdvanceAccumulatedScenario = true
+	return nil
 }
 
 func (g *nodeLocalGreedyGenerator) nextValidAccumulatedScenario() *scenario.ByNodeScenario {

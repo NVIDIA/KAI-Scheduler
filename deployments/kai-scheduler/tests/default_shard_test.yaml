@@ -56,6 +56,16 @@ tests:
           path: spec.scenarioSearchBudgets.maxGeneratorSearchDuration.NodeLocalGreedy
           value: 50ms
 
+  - it: should render scenario search checkpoints
+    set:
+      scheduler:
+        scenarioSearchCheckpoints:
+          maxJobs: 17
+    asserts:
+      - equal:
+          path: spec.scenarioSearchCheckpoints.maxJobs
+          value: 17
+
   - it: should render Go memory limit configuration
     set:
       scheduler:

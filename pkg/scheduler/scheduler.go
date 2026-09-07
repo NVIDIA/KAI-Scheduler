@@ -44,11 +44,12 @@ import (
 )
 
 type Scheduler struct {
-	cache           schedcache.Cache
-	config          *conf.SchedulerConfiguration
-	schedulerParams *conf.SchedulerParams
-	schedulePeriod  time.Duration
-	mux             *http.ServeMux
+	cache               schedcache.Cache
+	config              *conf.SchedulerConfiguration
+	schedulerParams     *conf.SchedulerParams
+	schedulePeriod      time.Duration
+	mux                 *http.ServeMux
+	scenarioCheckpoints *framework.ScenarioCheckpointStore
 }
 
 func NewScheduler(
@@ -102,12 +103,20 @@ func NewScheduler(
 		return nil, fmt.Errorf("Failed to create scheduler cache: %v", err)
 	}
 
+	scenarioCheckpoints := framework.NewScenarioCheckpointStore()
+	if schedulerConf != nil && schedulerConf.ScenarioSearchCheckpoints != nil && schedulerConf.ScenarioSearchCheckpoints.MaxJobs != nil {
+		if err := scenarioCheckpoints.SetMaxJobs(*schedulerConf.ScenarioSearchCheckpoints.MaxJobs); err != nil {
+			return nil, err
+		}
+	}
+
 	scheduler := &Scheduler{
-		config:          schedulerConf,
-		schedulerParams: schedulerParams,
-		cache:           schedulerCache,
-		schedulePeriod:  schedulerParams.SchedulePeriod,
-		mux:             mux,
+		config:              schedulerConf,
+		schedulerParams:     schedulerParams,
+		cache:               schedulerCache,
+		schedulePeriod:      schedulerParams.SchedulePeriod,
+		mux:                 mux,
+		scenarioCheckpoints: scenarioCheckpoints,
 	}
 
 	return scheduler, nil
@@ -132,7 +141,7 @@ func (s *Scheduler) runOnce() {
 
 	defer metrics.UpdateE2eDuration(scheduleStartTime)
 
-	ssn, err := framework.OpenSession(s.cache, s.config, s.schedulerParams, sessionId, s.mux)
+	ssn, err := framework.OpenSession(s.cache, s.config, s.schedulerParams, sessionId, s.mux, s.scenarioCheckpoints)
 	if err != nil {
 		log.InfraLogger.Errorf("Error while opening session, will try again next cycle. \nCause: %+v", err)
 		return

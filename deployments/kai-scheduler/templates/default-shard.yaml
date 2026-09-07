@@ -36,4 +36,8 @@ spec:
   scenarioSearchBudgets:
     {{- toYaml .Values.scheduler.scenarioSearchBudgets | nindent 4 }}
   {{- end }}
+  {{- if .Values.scheduler.scenarioSearchCheckpoints }}
+  scenarioSearchCheckpoints:
+    {{- toYaml .Values.scheduler.scenarioSearchCheckpoints | nindent 4 }}
+  {{- end }}
 {{- end }}

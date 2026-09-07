@@ -80,6 +80,15 @@ type ScenarioSearchBudgets struct {
 	MaxGeneratorSearchDuration map[string]metav1.Duration `json:"maxGeneratorSearchDuration,omitempty"`
 }
 
+// ScenarioSearchCheckpoints configures process-local reclaim search checkpoints.
+type ScenarioSearchCheckpoints struct {
+	// MaxJobs limits the number of reclaim jobs whose search progress may be retained.
+	// Zero disables checkpointing.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4096
+	MaxJobs *int `json:"maxJobs,omitempty"`
+}
+
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // SchedulingShardSpec defines the desired state of SchedulingShard
@@ -136,6 +145,10 @@ type SchedulingShardSpec struct {
 	// +kubebuilder:validation:Optional
 	ScenarioSearchBudgets *ScenarioSearchBudgets `json:"scenarioSearchBudgets,omitempty"`
 
+	// ScenarioSearchCheckpoints configures process-local reclaim search checkpoints.
+	// +kubebuilder:validation:Optional
+	ScenarioSearchCheckpoints *ScenarioSearchCheckpoints `json:"scenarioSearchCheckpoints,omitempty"`
+
 	// Plugins allows overriding plugin configuration. Keys are plugin names.
 	// Built-in plugins can be disabled, reordered, or have their arguments changed.
 	// New plugins can be added by specifying a name not in the default set.
@@ -167,6 +180,16 @@ func (s *SchedulingShardSpec) SetDefaultsWhereNeeded() {
 	s.setDefaultPlugins()
 	s.setDefaultActions()
 	s.ScenarioSearchBudgets = DefaultScenarioSearchBudgets(s.ScenarioSearchBudgets)
+	s.ScenarioSearchCheckpoints = DefaultScenarioSearchCheckpoints(s.ScenarioSearchCheckpoints)
+}
+
+// DefaultScenarioSearchCheckpoints applies the default admission capacity while preserving explicit zero.
+func DefaultScenarioSearchCheckpoints(config *ScenarioSearchCheckpoints) *ScenarioSearchCheckpoints {
+	if config == nil {
+		config = &ScenarioSearchCheckpoints{}
+	}
+	config.MaxJobs = common.SetDefault(config.MaxJobs, ptr.To(32))
+	return config
 }
 
 func DefaultScenarioSearchBudgets(config *ScenarioSearchBudgets) *ScenarioSearchBudgets {

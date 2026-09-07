@@ -4,6 +4,8 @@
 package multinodegang_test
 
 import (
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,6 +15,8 @@ import (
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/actions/common/solvers"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/actions/common/solvers/scenario"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/actions/utils"
+	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api"
+	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/pod_info"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/constants"
@@ -89,6 +93,70 @@ func TestMultiNodeGangGeneratorEmitsScenariosThenUntypedNil(t *testing.T) {
 
 	require.Greater(t, emitted, 0)
 	require.True(t, exhausted, "exhaustion must be signaled with an untyped nil interface")
+}
+
+func TestMultiNodeGangCursorResumesAtNextScenario(t *testing.T) {
+	defer gock.Off()
+
+	test_utils.InitTestingInfrastructure()
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+	ssn := test_utils.BuildSession(test_utils.TestTopologyBasic{
+		Name: "multinodegang cursor",
+		Jobs: []*jobs_fake.TestJobBasic{
+			{Name: "running-job", RequiredGPUsPerTask: 1, Priority: constants.PriorityTrainNumber, QueueName: "queue-0", Tasks: []*tasks_fake.TestTaskBasic{{NodeName: "node-0", State: pod_status.Running}, {NodeName: "node-1", State: pod_status.Running}}},
+			{Name: "pending-job", RequiredGPUsPerTask: 1, Priority: constants.PriorityTrainNumber, QueueName: "queue-1", Tasks: []*tasks_fake.TestTaskBasic{{State: pod_status.Pending}}},
+		},
+		Nodes:  map[string]nodes_fake.TestNodeBasic{"node-0": {GPUs: 1}, "node-1": {GPUs: 1}},
+		Queues: []test_utils.TestQueueBasic{{Name: "queue-0", DeservedGPUs: 1}, {Name: "queue-1", DeservedGPUs: 1}},
+		Mocks:  &test_utils.TestMock{CacheRequirements: &test_utils.CacheMocking{}},
+	}, controller)
+	newGenerator := func() framework.ResumableScenarioGenerator {
+		generator := multinodegang.NewMultiNodeGangGenerator(&solvers.SolveContext{
+			Session: ssn, ActionType: framework.Reclaim, PartialPendingJob: findJobByName(t, ssn, "pending-job"),
+			GenerateVictimsQueue: func() *utils.JobsOrderByQueues { return utils.GetVictimsQueue(ssn, nil) }, FeasibleNodes: ssn.ClusterInfo.Nodes,
+		})
+		resumable, ok := generator.(framework.ResumableScenarioGenerator)
+		require.True(t, ok)
+		return resumable
+	}
+
+	baseline := newGenerator()
+	var all []string
+	var cursors []framework.ScenarioGeneratorCursor
+	for sn := baseline.Next(); sn != nil; sn = baseline.Next() {
+		all = append(all, multiNodeGangScenarioKey(requireMultiNodeGangScenario(t, sn)))
+		cursor, ok := baseline.Cursor()
+		require.True(t, ok)
+		cursors = append(cursors, cursor)
+	}
+	require.NotEmpty(t, cursors)
+	for index, cursor := range cursors {
+		restored := newGenerator()
+		require.NoError(t, restored.Restore(cursor))
+		remaining := []string{}
+		for sn := restored.Next(); sn != nil; sn = restored.Next() {
+			remaining = append(remaining, multiNodeGangScenarioKey(requireMultiNodeGangScenario(t, sn)))
+		}
+		require.Equal(t, all[index+1:], remaining)
+	}
+}
+
+func multiNodeGangScenarioKey(sn *scenario.ByNodeScenario) string {
+	pods := append(append([]*pod_info.PodInfo{}, sn.RecordedVictimsTasks()...), sn.PotentialVictimsTasks()...)
+	ids := make([]string, 0, len(pods))
+	for _, pod := range pods {
+		ids = append(ids, string(pod.UID))
+	}
+	sort.Strings(ids)
+	return strings.Join(ids, ",")
+}
+
+func requireMultiNodeGangScenario(t *testing.T, sn api.ScenarioInfo) *scenario.ByNodeScenario {
+	t.Helper()
+	byNodeScenario, ok := sn.(*scenario.ByNodeScenario)
+	require.True(t, ok)
+	return byNodeScenario
 }
 
 func findJobByName(t *testing.T, ssn *framework.Session, name string) *podgroup_info.PodGroupInfo {

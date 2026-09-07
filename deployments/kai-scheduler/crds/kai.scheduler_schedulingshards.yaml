@@ -195,6 +195,18 @@ spec:
                       before action and generator budgets can stop the job's search.
                     type: string
                 type: object
+              scenarioSearchCheckpoints:
+                description: ScenarioSearchCheckpoints configures process-local reclaim
+                  search checkpoints.
+                properties:
+                  maxJobs:
+                    description: |-
+                      MaxJobs limits the number of reclaim jobs whose search progress may be retained.
+                      Zero disables checkpointing.
+                    maximum: 4096
+                    minimum: 0
+                    type: integer
+                type: object
               usageDBConfig:
                 description: UsageDBConfig defines configuration for the usage db
                   client

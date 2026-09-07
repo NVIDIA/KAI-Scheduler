@@ -310,6 +310,10 @@ func (s *JobSolver) solvePartialJob(
 	for _, node := range s.feasibleNodes {
 		feasibleNodeMap[node.Name] = node
 	}
+	baseFeasibleNodeMap := make(map[string]*node_info.NodeInfo, len(feasibleNodeMap))
+	for name, node := range feasibleNodeMap {
+		baseFeasibleNodeMap[name] = node
+	}
 	for _, task := range state.recordedVictimsTasks {
 		node := ssn.ClusterInfo.Nodes[task.NodeName]
 		feasibleNodeMap[task.NodeName] = node
@@ -325,7 +329,28 @@ func (s *JobSolver) solvePartialJob(
 		FeasibleNodes:        feasibleNodeMap,
 		ProbeK:               probeK,
 	}
+	checkpoint, _ := loadScenarioCheckpoint(solveCtx, baseFeasibleNodeMap, availableGenerator.Name)
+	if checkpoint != nil {
+		state.recordedVictimsTasks = solveCtx.RecordedVictimsTasks
+		state.recordedVictimsJobs = solveCtx.RecordedVictimsJobs
+		for _, task := range state.recordedVictimsTasks {
+			if node := ssn.ClusterInfo.Nodes[task.NodeName]; node != nil {
+				feasibleNodeMap[task.NodeName] = node
+			}
+		}
+	}
 	portfolio := newSingleGeneratorScenarioPortfolio(solveCtx, jobBudget, availableGenerator, generatorBudget)
+	if checkpoint != nil {
+		restoreStarted := time.Now()
+		err := portfolio.RestoreCurrent(checkpoint.GeneratorCursor)
+		if err != nil {
+			deleteScenarioCheckpoint(solveCtx)
+			checkpoint = nil
+			metrics.ObserveScenarioSearchCheckpointRestore(availableGenerator.Name, "failed", time.Since(restoreStarted))
+		} else {
+			metrics.ObserveScenarioSearchCheckpointRestore(availableGenerator.Name, "restored", time.Since(restoreStarted))
+		}
+	}
 
 	for {
 		if jobBudget.Exhausted() {
@@ -344,6 +369,9 @@ func (s *JobSolver) solvePartialJob(
 			if s.failedScenarios.Has(fingerprint) {
 				metrics.IncScenarioSearchScenario(s.actionType, generatorName, scenarioStateDuplicate)
 				portfolio.ObserveCurrentAttempt(scenarioStateDuplicate)
+				if cursor, ok := portfolio.CurrentCursor(); ok {
+					saveScenarioCheckpoint(solveCtx, baseFeasibleNodeMap, generatorName, cursor, state.recordedVictimsTasks, SearchResultDeadlineExhausted)
+				}
 				continue
 			}
 		}
@@ -364,15 +392,23 @@ func (s *JobSolver) solvePartialJob(
 		}
 		if result.solved {
 			portfolio.ObserveCurrentAttempt(string(SearchResultSolved))
+			deleteScenarioCheckpoint(solveCtx)
 			return solvedSearchResult(result, jobBudget.ReducedBudget())
 		}
 		if s.failedScenarios != nil {
 			s.failedScenarios.Insert(fingerprint)
 		}
 		portfolio.ObserveCurrentAttempt(attemptResult)
+		if cursor, ok := portfolio.CurrentCursor(); ok {
+			saveScenarioCheckpoint(solveCtx, baseFeasibleNodeMap, generatorName, cursor, state.recordedVictimsTasks, SearchResultDeadlineExhausted)
+		}
 	}
 
-	return terminalSearchResult(portfolio.StopReason(), jobBudget.ReducedBudget())
+	result := terminalSearchResult(portfolio.StopReason(), jobBudget.ReducedBudget())
+	if result.Reason() != SearchResultDeadlineExhausted {
+		deleteScenarioCheckpoint(solveCtx)
+	}
+	return result
 }
 
 func (s *JobSolver) observeActionBudgetExhausted() {

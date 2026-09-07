@@ -62,6 +62,8 @@ type SchedulerConfiguration struct {
 	UsageDBConfig *usagedbapi.UsageDBConfig `yaml:"usageDBConfig,omitempty" json:"usageDBConfig,omitempty"`
 
 	ScenarioSearchBudgets *kaiv1.ScenarioSearchBudgets `json:"scenarioSearchBudgets,omitempty" yaml:"scenarioSearchBudgets,omitempty"`
+
+	ScenarioSearchCheckpoints *kaiv1.ScenarioSearchCheckpoints `json:"scenarioSearchCheckpoints,omitempty" yaml:"scenarioSearchCheckpoints,omitempty"`
 }
 
 // Tier defines plugin tier

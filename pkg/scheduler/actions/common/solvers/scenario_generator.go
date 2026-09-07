@@ -4,6 +4,7 @@
 package solvers
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/actions/common/solvers/scenario"
@@ -152,6 +153,28 @@ func (p *scenarioPortfolio) CurrentGeneratorName() string {
 		return ""
 	}
 	return p.currentName
+}
+
+func (p *scenarioPortfolio) RestoreCurrent(cursor framework.ScenarioGeneratorCursor) error {
+	if p == nil || len(p.generators) != 1 {
+		return fmt.Errorf("scenario checkpoint requires one generator")
+	}
+	resumable, ok := p.generators[0].(framework.ResumableScenarioGenerator)
+	if !ok {
+		return fmt.Errorf("scenario generator %q is not resumable", p.generators[0].Name())
+	}
+	return resumable.Restore(cursor)
+}
+
+func (p *scenarioPortfolio) CurrentCursor() (framework.ScenarioGeneratorCursor, bool) {
+	if p == nil || p.currentIndex >= len(p.generators) {
+		return framework.ScenarioGeneratorCursor{}, false
+	}
+	resumable, ok := p.generators[p.currentIndex].(framework.ResumableScenarioGenerator)
+	if !ok {
+		return framework.ScenarioGeneratorCursor{}, false
+	}
+	return resumable.Cursor()
 }
 
 func (p *scenarioPortfolio) ObserveCurrentAttempt(result string) {

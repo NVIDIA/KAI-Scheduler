@@ -115,7 +115,7 @@ func main() {
 	}
 
 	ssn, err := framework.OpenSession(
-		schedulerCache, snapshot.Config, snapshot.SchedulerParams, "", &http.ServeMux{},
+		schedulerCache, snapshot.Config, snapshot.SchedulerParams, "", &http.ServeMux{}, nil,
 	)
 	if err != nil {
 		log.InfraLogger.Fatalf(err.Error(), err)

@@ -70,7 +70,8 @@ func TestResolveConfigurationFromFile(t *testing.T) {
 				QueueDepthPerAction: map[string]int{
 					"consolidation": 10,
 				},
-				ScenarioSearchBudgets: defaultScenarioSearchBudgetsForTest(),
+				ScenarioSearchBudgets:     defaultScenarioSearchBudgetsForTest(),
+				ScenarioSearchCheckpoints: defaultScenarioSearchCheckpointsForTest(),
 			},
 			wantErr: false,
 		},
@@ -101,7 +102,8 @@ func TestResolveConfigurationFromFile(t *testing.T) {
 						},
 					},
 				},
-				ScenarioSearchBudgets: defaultScenarioSearchBudgetsForTest(),
+				ScenarioSearchBudgets:     defaultScenarioSearchBudgetsForTest(),
+				ScenarioSearchCheckpoints: defaultScenarioSearchCheckpointsForTest(),
 			},
 			wantErr: false,
 		},
@@ -202,6 +204,10 @@ func defaultScenarioSearchBudgetsForTest() *kaiv1.ScenarioSearchBudgets {
 			constants.GeneratorMultiNodeGang:   scenarioSearchDurationForTest(constants.DefaultMultiNodeGang),
 		},
 	}
+}
+
+func defaultScenarioSearchCheckpointsForTest() *kaiv1.ScenarioSearchCheckpoints {
+	return &kaiv1.ScenarioSearchCheckpoints{MaxJobs: ptr.To(32)}
 }
 
 func scenarioSearchDurationForTest(value string) metav1.Duration {

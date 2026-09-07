@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/cache"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/log"
@@ -30,7 +31,8 @@ import (
 )
 
 func OpenSession(cache cache.Cache, config *conf.SchedulerConfiguration,
-	schedulerParams *conf.SchedulerParams, sessionId string, mux *http.ServeMux) (*Session, error) {
+	schedulerParams *conf.SchedulerParams, sessionId string, mux *http.ServeMux,
+	scenarioCheckpointStore *ScenarioCheckpointStore) (*Session, error) {
 	openSessionStart := time.Now()
 	defer metrics.UpdateOpenSessionDuration(openSessionStart)
 
@@ -43,6 +45,7 @@ func OpenSession(cache cache.Cache, config *conf.SchedulerConfiguration,
 		return nil, err
 	}
 	ssn.Config = config
+	ssn.ScenarioCheckpointStore = scenarioCheckpointStore
 
 	for _, tier := range config.Tiers {
 		for _, pluginOption := range tier.Plugins {
@@ -63,6 +66,14 @@ func OpenSession(cache cache.Cache, config *conf.SchedulerConfiguration,
 
 	if err := ssn.ValidateScenarioGeneratorBudgetKeys(); err != nil {
 		return nil, err
+	}
+	ssn.InitializeScenarioCheckpointState()
+	if scenarioCheckpointStore != nil {
+		liveJobs := make(map[common_info.PodGroupID]struct{}, len(ssn.ClusterInfo.PodGroupInfos))
+		for jobID := range ssn.ClusterInfo.PodGroupInfos {
+			liveJobs[jobID] = struct{}{}
+		}
+		scenarioCheckpointStore.Sweep(liveJobs)
 	}
 
 	return ssn, nil

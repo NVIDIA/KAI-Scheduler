@@ -127,6 +127,10 @@ func loadSchedulerConf(confStr string) (*conf.SchedulerConfiguration, error) {
 		return nil, err
 	}
 	schedulerConf.ScenarioSearchBudgets = kaiv1.DefaultScenarioSearchBudgets(schedulerConf.ScenarioSearchBudgets)
+	schedulerConf.ScenarioSearchCheckpoints = kaiv1.DefaultScenarioSearchCheckpoints(schedulerConf.ScenarioSearchCheckpoints)
+	if maxJobs := *schedulerConf.ScenarioSearchCheckpoints.MaxJobs; maxJobs < 0 || maxJobs > 4096 {
+		return nil, fmt.Errorf("scenarioSearchCheckpoints.maxJobs must be between 0 and 4096")
+	}
 
 	return schedulerConf, nil
 }

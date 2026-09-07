@@ -223,6 +223,8 @@ scenarioSearchBudgets:
         default: 2m0s
     maxJobSearchDuration: 4m0s
     minJobSearchDuration: 0s
+scenarioSearchCheckpoints:
+    maxJobs: 32
 tiers:
     - plugins:
         - name: predicates
@@ -280,6 +282,8 @@ scenarioSearchBudgets:
         default: 2m0s
     maxJobSearchDuration: 4m0s
     minJobSearchDuration: 0s
+scenarioSearchCheckpoints:
+    maxJobs: 32
 tiers:
     - plugins:
         - name: predicates

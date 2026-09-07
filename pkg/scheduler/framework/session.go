@@ -101,15 +101,17 @@ type Session struct {
 	PreJobAllocationFns                   []api.PreJobAllocationFn
 	ScenarioGeneratorRegistrations        []ScenarioGeneratorRegistration
 
-	Config          *conf.SchedulerConfiguration
-	plugins         map[string]Plugin
-	eventHandlers   []*EventHandler
-	SchedulerParams conf.SchedulerParams
-	mux             *http.ServeMux
+	Config                  *conf.SchedulerConfiguration
+	ScenarioCheckpointStore *ScenarioCheckpointStore
+	plugins                 map[string]Plugin
+	eventHandlers           []*EventHandler
+	SchedulerParams         conf.SchedulerParams
+	mux                     *http.ServeMux
 
-	k8sResourceStateCache  sync.Map
-	nodeScoringPool        *ants.Pool
-	scoringPoolWorkerCount int
+	k8sResourceStateCache   sync.Map
+	scenarioCheckpointState *scenarioCheckpointSessionState
+	nodeScoringPool         *ants.Pool
+	scoringPoolWorkerCount  int
 }
 
 func (ssn *Session) Statement() *Statement {
@@ -459,6 +461,7 @@ func (ssn *Session) clear() {
 	ssn.NumaPlacementFn = nil
 	ssn.PreJobAllocationFns = nil
 	ssn.Config = nil
+	ssn.scenarioCheckpointState = nil
 	ssn.k8sResourceStateCache = sync.Map{}
 }
 

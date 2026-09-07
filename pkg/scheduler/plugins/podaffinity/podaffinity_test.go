@@ -268,6 +268,7 @@ func testPodPreferredAffinity(testData testInput, clusterAffinityInfo pod_affini
 		&conf.SchedulerParams{},
 		sessionId,
 		nil,
+		nil,
 	)
 	Expect(err).To(Succeed())
 

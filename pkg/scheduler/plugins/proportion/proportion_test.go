@@ -819,7 +819,7 @@ var _ = Describe("Set Fair Share in Proportion", func() {
 						RestrictSchedulingNodes: testData.isRestrictNode,
 						SchedulerName:           schedulerName,
 					},
-					"1", nil)
+					"1", nil, nil)
 				vectorMap := resource_info.NewResourceVectorMap()
 				if testData.allocatable != nil {
 					for rName := range testData.allocatable.ScalarResources() {

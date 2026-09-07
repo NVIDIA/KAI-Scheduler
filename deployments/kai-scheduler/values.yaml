@@ -187,6 +187,8 @@ scheduler:
   actions: {}
   # Alpha/experimental scenario search time budgets. Values are Go duration strings.
   scenarioSearchBudgets: {}
+  scenarioSearchCheckpoints:
+    maxJobs: 32
   # PDB is created only when scheduler replicas > 1 (global.replicaCount / scheduler.replicas).
   # For HA: set operator.replicaCount: 2 (or override scheduler.replicas in Config).
   podDisruptionBudget:

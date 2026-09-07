@@ -4,6 +4,8 @@
 package solvers
 
 import (
+	"fmt"
+
 	"golang.org/x/exp/slices"
 
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/actions/common/solvers/accumulated_scenario_filters"
@@ -38,7 +40,8 @@ type PodAccumulatedScenarioBuilder struct {
 	// subEmitter, when non-nil, owns the active sub-scenario emission for the current
 	// outer state. Each Get*Scenario call drains one sub-scenario from it; when it
 	// returns nil, outer accumulation resumes.
-	subEmitter *subScenarioEmitter
+	subEmitter      *subScenarioEmitter
+	victimQueuePops uint64
 }
 
 func NewPodAccumulatedScenarioBuilder(
@@ -205,6 +208,7 @@ func (asb *PodAccumulatedScenarioBuilder) outerScenarioValid() bool {
 
 func (asb *PodAccumulatedScenarioBuilder) addNextPotentialVictims() bool {
 	nextVictimJob := asb.victimsJobsQueue.PopNextJob()
+	asb.victimQueuePops++
 
 	potentialVictimTasks, jobHasMoreTasks := podgroup_info.GetTasksToEvict(
 		nextVictimJob, asb.session.SubGroupOrderFn, asb.session.TaskOrderFn,
@@ -246,6 +250,61 @@ func (asb *PodAccumulatedScenarioBuilder) addNextPotentialVictims() bool {
 		asb.lastScenario.AddPotentialVictimsTasks(potentialVictimTasks)
 	}
 	return true
+}
+
+// VictimQueuePops returns queue mutations needed to reconstruct this prefix.
+func (asb *PodAccumulatedScenarioBuilder) VictimQueuePops() uint64 {
+	if asb == nil {
+		return 0
+	}
+	return asb.victimQueuePops
+}
+
+// RestoreVictimQueuePops reconstructs queue and accumulated-victim state without
+// building earlier candidates or invoking solver callbacks.
+func (asb *PodAccumulatedScenarioBuilder) RestoreVictimQueuePops(pops uint64) error {
+	if asb == nil || asb.victimsJobsQueue == nil {
+		return fmt.Errorf("scenario builder is not initialized")
+	}
+	if asb.victimQueuePops != 0 || asb.subEmitter != nil || len(asb.lastScenario.PotentialVictimsTasks()) != 0 {
+		return fmt.Errorf("scenario builder restore requires initial state")
+	}
+	for range pops {
+		if asb.victimsJobsQueue.IsEmpty() {
+			return fmt.Errorf("cursor victim queue pop count exceeds queue")
+		}
+		asb.addNextPotentialVictims()
+	}
+	return nil
+}
+
+func (asb *PodAccumulatedScenarioBuilder) CurrentValidAccumulatedScenario() *solverscenario.ByNodeScenario {
+	if asb == nil || asb.lastScenario == nil || !asb.outerScenarioValid() {
+		return nil
+	}
+	return asb.lastScenario
+}
+
+func (asb *PodAccumulatedScenarioBuilder) RestoreSubScenarioEmitter(nextK, dK int) error {
+	base := asb.CurrentValidAccumulatedScenario()
+	if base == nil || len(base.PotentialVictimsTasks()) == 0 {
+		return fmt.Errorf("cursor requires potential victims")
+	}
+	emitter := newSubScenarioEmitter(asb.session, base, asb.feasibleNodes)
+	if nextK < 0 || nextK > len(emitter.sortedNodes)+1 || dK <= 0 {
+		return fmt.Errorf("invalid sub-scenario cursor")
+	}
+	emitter.nextK = nextK
+	emitter.dK = dK
+	asb.subEmitter = emitter
+	return nil
+}
+
+func (asb *PodAccumulatedScenarioBuilder) SubScenarioCursor() (nextK, dK int, active bool) {
+	if asb == nil || asb.subEmitter == nil {
+		return 0, 0, false
+	}
+	return asb.subEmitter.nextK, asb.subEmitter.dK, true
 }
 
 func (asb *PodAccumulatedScenarioBuilder) isScenarioValid() (bool, string) {
