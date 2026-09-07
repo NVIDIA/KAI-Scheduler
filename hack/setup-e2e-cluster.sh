@@ -89,6 +89,13 @@ helm install prometheus prometheus-community/kube-prometheus-stack --namespace m
     --set "alertmanager.enabled=false" \
     --set "grafana.enabled=false" \
     --set "prometheus.enabled=false" \
+    --set "kubeApiServer.enabled=false" \
+    --set "kubelet.enabled=false" \
+    --set "kubeControllerManager.enabled=false" \
+    --set "coreDns.enabled=false" \
+    --set "kubeEtcd.enabled=false" \
+    --set "kubeScheduler.enabled=false" \
+    --set "kubeProxy.enabled=false" \
     --wait
 
 # Install VPA and its prerequisites
