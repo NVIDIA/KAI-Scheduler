@@ -72,7 +72,7 @@ The proportion plugin’s current queue order is:
 7. Prefer smaller allocatable share.
 8. Tie-break by earlier queue creation time.
 
-As I said before, the desired allocation priority is: high-priority in-quota, low-priority in-quota, regular over quota fairness. 
+The desired allocation priority is: high-priority in-quota, low-priority in-quota, regular over quota fairness. 
 The suggested change is:
 
 Apply the change only if the `InQuotaQueuePriorityStrategy` is enabled.
