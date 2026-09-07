@@ -112,6 +112,7 @@ echo "Deploying Prometheus Operator..."
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
 helm repo update prometheus-community
 helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace \
+    --version 90.0.0 \
     --set "alertmanager.enabled=false" \
     --set "grafana.enabled=false" \
     --set "prometheus.enabled=false" \
