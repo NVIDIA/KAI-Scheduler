@@ -43,7 +43,7 @@ var _ = Describe("SupportedTypes", func() {
 		BeforeEach(func() {
 			kubeClient = fake.NewFakeClient()
 			hub = NewDefaultPluginsHub(
-				kubeClient, false, false, false, queueLabelKey, nodePoolLabelKey, "", "",
+				kubeClient, false, false, false, false, queueLabelKey, nodePoolLabelKey, "", "",
 			)
 		})
 
@@ -136,7 +136,7 @@ var _ = Describe("SupportedTypes", func() {
 			}
 			kubeClient = newHubFakeClientWithScheme(createHubTestKarta(gvk))
 			hub := NewDefaultPluginsHub(
-				kubeClient, false, false, true, queueLabelKey, nodePoolLabelKey, "", "",
+				kubeClient, false, false, false, true, queueLabelKey, nodePoolLabelKey, "", "",
 			)
 
 			plugin := hub.GetPodGrouperPlugin(gvk)
@@ -153,7 +153,7 @@ var _ = Describe("SupportedTypes", func() {
 			}
 			kubeClient = newHubFakeClientWithScheme(createHubTestKarta(gvk))
 			hub := NewDefaultPluginsHub(
-				kubeClient, false, false, true, queueLabelKey, nodePoolLabelKey, "", "",
+				kubeClient, false, false, false, true, queueLabelKey, nodePoolLabelKey, "", "",
 			)
 
 			plugin := hub.GetPodGrouperPlugin(gvk)
@@ -170,7 +170,7 @@ var _ = Describe("SupportedTypes", func() {
 			}
 			kubeClient = newHubFakeClientWithScheme(createHubTestKarta(gvk))
 			hub := NewDefaultPluginsHub(
-				kubeClient, false, false, false, queueLabelKey, nodePoolLabelKey, "", "",
+				kubeClient, false, false, false, false, queueLabelKey, nodePoolLabelKey, "", "",
 			)
 
 			plugin := hub.GetPodGrouperPlugin(gvk)
@@ -192,7 +192,7 @@ var _ = Describe("SupportedTypes", func() {
 			}
 			kubeClient := fake.NewFakeClient(statefulSet)
 			hub := NewDefaultPluginsHub(
-				kubeClient, false, false, false, queueLabelKey, nodePoolLabelKey, "", "",
+				kubeClient, false, false, false, false, queueLabelKey, nodePoolLabelKey, "", "",
 			)
 
 			runner := &unstructured.Unstructured{}
@@ -239,7 +239,7 @@ var _ = Describe("SupportedTypes", func() {
 		BeforeEach(func() {
 			kubeClient = fake.NewFakeClient()
 			hub = NewDefaultPluginsHub(
-				kubeClient, false, false, false, queueLabelKey, nodePoolLabelKey, "", "",
+				kubeClient, false, false, false, false, queueLabelKey, nodePoolLabelKey, "", "",
 			)
 		})
 

@@ -45,6 +45,10 @@ type Args struct {
 	// +kubebuilder:validation:Optional
 	GangScheduleKnative *bool `json:"gangScheduleKnative,omitempty"`
 
+	// GangScheduleDeployment specifies whether to group all the pods of a deployment under a single podgroup. Default is true. Disable to create a podgroup per pod.
+	// +kubebuilder:validation:Optional
+	GangScheduleDeployment *bool `json:"gangScheduleDeployment,omitempty"`
+
 	// GenericKartaFallback specifies whether to enable Karta-backed generic pod grouping fallback for workload GVKs without native plugins. Default is true.
 	// +kubebuilder:validation:Optional
 	GenericKartaFallback *bool `json:"genericKartaFallback,omitempty"`

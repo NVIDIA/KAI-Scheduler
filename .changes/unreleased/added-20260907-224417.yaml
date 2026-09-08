@@ -1,0 +1,3 @@
+kind: Added
+body: |-
+  Config to group all pods of a deployment under a single podgroup

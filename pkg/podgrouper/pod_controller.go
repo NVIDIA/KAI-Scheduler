@@ -50,6 +50,7 @@ type Configs struct {
 	MaxConcurrentReconciles  int
 	SearchForLegacyPodGroups bool
 	KnativeGangSchedule      bool
+	DeploymentGangSchedule   bool
 	GenericKartaFallback     bool
 	SchedulerName            string
 	SchedulingQueueLabelKey  string
