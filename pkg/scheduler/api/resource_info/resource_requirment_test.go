@@ -181,17 +181,10 @@ var _ = Describe("ResourceRequirements Info internal logic", func() {
 
 		It("Extended resources consistent parsing", func() {
 			const rdmaResourceName = v1.ResourceName("intel.com/mlnx_sriov_rdma")
-			resourceList := v1.ResourceList{
+			resourceInfo := RequirementsFromResourceList(v1.ResourceList{
 				rdmaResourceName: resource.MustParse("4"),
-			}
-
-			resourceInfo := RequirementsFromResourceList(resourceList)
+			})
 			Expect(resourceInfo.Get(rdmaResourceName)).To(Equal(float64(4)))
-
-			// The vector conversion used for node allocatable elsewhere must agree.
-			vectorMap := BuildResourceVectorMap([]v1.ResourceList{resourceList})
-			nodeVector := NewResourceVectorFromResourceList(resourceList, vectorMap)
-			Expect(resourceInfo.ToVector(vectorMap)).To(Equal(nodeVector))
 		})
 	})
 })

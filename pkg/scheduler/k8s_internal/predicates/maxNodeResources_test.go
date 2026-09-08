@@ -309,17 +309,19 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 func Test_extendedResourcesAreNotScaledByThousand(t *testing.T) {
 	const rdmaResourceName = v1.ResourceName("intel.com/mlnx_sriov_rdma")
 
-	nodesMap := map[string]*node_info.NodeInfo{
-		"n1": {
-			Allocatable: resource_info.ResourceFromResourceList(v1.ResourceList{
+	node := &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "n1"},
+		Status: v1.NodeStatus{
+			Allocatable: v1.ResourceList{
 				v1.ResourceCPU:                resource.MustParse("96"),
 				v1.ResourceMemory:             resource.MustParse("1000Gi"),
 				resource_info.GPUResourceName: resource.MustParse("8"),
 				v1.ResourcePods:               resource.MustParse("110"),
 				rdmaResourceName:              resource.MustParse("8"),
-			}),
+			},
 		},
 	}
+	nodesMap := map[string]*node_info.NodeInfo{"n1": node_info.NewNodeInfo(node, nil)}
 
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{Name: "name1", Namespace: "n1"},
