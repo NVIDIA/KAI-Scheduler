@@ -23,22 +23,6 @@ import (
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/resource_info"
 )
 
-func buildTestNodes(nodesResourceLists map[string]v1.ResourceList) map[string]*node_info.NodeInfo {
-	var allLists []v1.ResourceList
-	for _, rl := range nodesResourceLists {
-		allLists = append(allLists, rl)
-	}
-	vm := resource_info.BuildResourceVectorMap(allLists)
-	result := make(map[string]*node_info.NodeInfo, len(nodesResourceLists))
-	for name, rl := range nodesResourceLists {
-		result[name] = &node_info.NodeInfo{
-			AllocatableVector: resource_info.NewResourceVectorFromResourceList(rl, vm),
-			VectorMap:         vm,
-		}
-	}
-	return result
-}
-
 func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 	type args struct {
 		nodePoolName       string
@@ -388,6 +372,26 @@ func Test_extendedResourcesAreNotScaledByThousand(t *testing.T) {
 	}
 }
 
+func buildTestNodes(nodesResourceLists map[string]v1.ResourceList) map[string]*node_info.NodeInfo {
+	var allLists []v1.ResourceList
+	for _, rl := range nodesResourceLists {
+		allLists = append(allLists, rl)
+	}
+	vm := resource_info.BuildResourceVectorMap(allLists)
+	result := make(map[string]*node_info.NodeInfo, len(nodesResourceLists))
+	for name, rl := range nodesResourceLists {
+		node := &v1.Node{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Status: v1.NodeStatus{
+				Allocatable: rl,
+				Capacity:    rl,
+			},
+		}
+		result[name] = node_info.NewNodeInfo(node, nil, vm)
+	}
+	return result
+}
+
 func makeDRAResourceSlice(name, nodeName, driver string, deviceCount int) *resourceapi.ResourceSlice {
 	devices := make([]resourceapi.Device, deviceCount)
 	for i := 0; i < deviceCount; i++ {
@@ -417,15 +421,14 @@ func buildNodesFromResourceSlices(slices []*resourceapi.ResourceSlice, nodeBases
 	vm := resource_info.BuildResourceVectorMap(allLists)
 	nodesMap := make(map[string]*node_info.NodeInfo)
 	for nodeName, baseList := range nodeBases {
-		allocVec := resource_info.NewResourceVectorFromResourceList(baseList, vm)
-		ni := &node_info.NodeInfo{
-			Name:              nodeName,
-			AllocatableVector: allocVec,
-			IdleVector:        allocVec.Clone(),
-			ReleasingVector:   resource_info.NewResourceVector(vm),
-			UsedVector:        resource_info.NewResourceVector(vm),
-			VectorMap:         vm,
+		node := &v1.Node{
+			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+			Status: v1.NodeStatus{
+				Allocatable: baseList,
+				Capacity:    baseList,
+			},
 		}
+		ni := node_info.NewNodeInfo(node, nil, vm)
 		var draGPUCount int64
 		for _, slice := range slicesByNode[nodeName] {
 			if resources.IsGPUDeviceClass(slice.Spec.Driver) {
@@ -608,11 +611,14 @@ func buildTestNodesIncremental(scanOrder []string, nodesResourceLists map[string
 	for _, name := range scanOrder {
 		rl := nodesResourceLists[name]
 		vm.AddResourceList(rl)
-		result[name] = &node_info.NodeInfo{
-			Name:              name,
-			AllocatableVector: resource_info.ResourceFromResourceList(rl).ToVector(vm),
-			VectorMap:         vm,
+		node := &v1.Node{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Status: v1.NodeStatus{
+				Allocatable: rl,
+				Capacity:    rl,
+			},
 		}
+		result[name] = node_info.NewNodeInfo(node, nil, vm)
 	}
 	return result, vm
 }
