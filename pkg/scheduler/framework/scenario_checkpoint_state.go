@@ -24,6 +24,14 @@ type scenarioCheckpointSessionState struct {
 	podUniverseDigest [sha256.Size]byte
 	stateDigest       [sha256.Size]byte
 	policyDigest      [sha256.Size]byte
+	podGroups         checkpointDigestAccumulator
+	podEntities       checkpointDigestAccumulator
+	nodeEntities      checkpointDigestAccumulator
+}
+
+type checkpointDigestAccumulator struct {
+	sum   [sha256.Size]byte
+	count uint64
 }
 
 // InitializeScenarioCheckpointState creates snapshot-scoped validation data once.
@@ -35,7 +43,8 @@ func (ssn *Session) InitializeScenarioCheckpointState() {
 	state := &scenarioCheckpointSessionState{}
 	state.pods = checkpointPods(ssn.ClusterInfo.PodGroupInfos)
 	state.podUniverseDigest = digestPodUniverse(state.pods)
-	state.stateDigest = digestSchedulingState(ssn)
+	state.podGroups, state.podEntities, state.nodeEntities = schedulingStateAccumulators(ssn)
+	state.stateDigest = digestSchedulingStateAccumulators(state.podGroups, state.podEntities, state.nodeEntities)
 	state.policyDigest = digestSchedulingPolicy(ssn)
 	ssn.scenarioCheckpointState = state
 	metrics.ObserveScenarioSearchStateDigest("snapshot", time.Since(started))
@@ -74,6 +83,22 @@ func (ssn *Session) ScenarioCheckpointStateDigest() [sha256.Size]byte {
 		return [sha256.Size]byte{}
 	}
 	return state.stateDigest
+}
+
+// UpdateScenarioCheckpointTaskAndNodeDigest applies one statement transition
+// without traversing the session snapshot. Callers capture hashes before mutation.
+func (ssn *Session) UpdateScenarioCheckpointTaskAndNodeDigest(oldPod [sha256.Size]byte, pod *pod_info.PodInfo, oldNode [sha256.Size]byte, node *node_info.NodeInfo) {
+	if ssn == nil || ssn.scenarioCheckpointState == nil {
+		return
+	}
+	started := time.Now()
+	state := ssn.scenarioCheckpointState
+	state.podEntities.remove(oldPod)
+	state.podEntities.add(hashCheckpointPod(pod))
+	state.nodeEntities.remove(oldNode)
+	state.nodeEntities.add(hashCheckpointNode(node))
+	state.stateDigest = digestSchedulingStateAccumulators(state.podGroups, state.podEntities, state.nodeEntities)
+	metrics.ObserveScenarioSearchStateDigest("incremental", time.Since(started))
 }
 
 func (ssn *Session) ScenarioCheckpointPolicyDigest() [sha256.Size]byte {
@@ -122,32 +147,70 @@ func digestPodUniverse(pods []*pod_info.PodInfo) [sha256.Size]byte {
 }
 
 func digestSchedulingState(ssn *Session) [sha256.Size]byte {
-	h := sha256.New()
-	writeCheckpointString(h, "scenario-checkpoint-state-v1")
+	podGroups, pods, nodes := schedulingStateAccumulators(ssn)
+	return digestSchedulingStateAccumulators(podGroups, pods, nodes)
+}
+
+func schedulingStateAccumulators(ssn *Session) (checkpointDigestAccumulator, checkpointDigestAccumulator, checkpointDigestAccumulator) {
+	var podGroups, pods, nodes checkpointDigestAccumulator
+	if ssn == nil || ssn.ClusterInfo == nil {
+		return podGroups, pods, nodes
+	}
 	jobs := make([]*podgroup_info.PodGroupInfo, 0, len(ssn.ClusterInfo.PodGroupInfos))
 	for _, job := range ssn.ClusterInfo.PodGroupInfos {
 		jobs = append(jobs, job)
 	}
-	sort.Slice(jobs, func(i, j int) bool { return jobs[i].UID < jobs[j].UID })
 	for _, job := range jobs {
-		digest := hashCheckpointPodGroup(job)
-		writeCheckpointBytes(h, digest[:])
+		podGroups.add(hashCheckpointPodGroup(job))
 	}
-	pods := checkpointPods(ssn.ClusterInfo.PodGroupInfos)
-	for _, pod := range pods {
-		digest := hashCheckpointPod(pod)
-		writeCheckpointBytes(h, digest[:])
+	for _, pod := range checkpointPods(ssn.ClusterInfo.PodGroupInfos) {
+		pods.add(hashCheckpointPod(pod))
 	}
-	nodes := make([]*node_info.NodeInfo, 0, len(ssn.ClusterInfo.Nodes))
+	nodeInfos := make([]*node_info.NodeInfo, 0, len(ssn.ClusterInfo.Nodes))
 	for _, node := range ssn.ClusterInfo.Nodes {
-		nodes = append(nodes, node)
+		nodeInfos = append(nodeInfos, node)
 	}
-	sort.Slice(nodes, func(i, j int) bool { return nodes[i].Name < nodes[j].Name })
-	for _, node := range nodes {
-		digest := hashCheckpointNode(node)
-		writeCheckpointBytes(h, digest[:])
+	for _, node := range nodeInfos {
+		nodes.add(hashCheckpointNode(node))
+	}
+	return podGroups, pods, nodes
+}
+
+func digestSchedulingStateAccumulators(podGroups, pods, nodes checkpointDigestAccumulator) [sha256.Size]byte {
+	h := sha256.New()
+	writeCheckpointString(h, "scenario-checkpoint-state-v2")
+	for _, accumulator := range []checkpointDigestAccumulator{podGroups, pods, nodes} {
+		writeCheckpointUint64(h, accumulator.count)
+		writeCheckpointBytes(h, accumulator.sum[:])
 	}
 	return digestSum(h)
+}
+
+func (a *checkpointDigestAccumulator) add(value [sha256.Size]byte) {
+	carry := uint16(0)
+	for index := len(a.sum) - 1; index >= 0; index-- {
+		total := uint16(a.sum[index]) + uint16(value[index]) + carry
+		a.sum[index] = byte(total)
+		carry = total >> 8
+	}
+	a.count++
+}
+
+func (a *checkpointDigestAccumulator) remove(value [sha256.Size]byte) {
+	borrow := int16(0)
+	for index := len(a.sum) - 1; index >= 0; index-- {
+		total := int16(a.sum[index]) - int16(value[index]) - borrow
+		if total < 0 {
+			total += 256
+			borrow = 1
+		} else {
+			borrow = 0
+		}
+		a.sum[index] = byte(total)
+	}
+	if a.count > 0 {
+		a.count--
+	}
 }
 
 func digestSchedulingPolicy(ssn *Session) [sha256.Size]byte {

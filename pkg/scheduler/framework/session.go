@@ -405,15 +405,22 @@ func (ssn *Session) updatePodOnNode(pod *pod_info.PodInfo) error {
 		log.InfraLogger.Errorf("Failed to find node: %v", pod.NodeName)
 		return fmt.Errorf("node doesnt exist on cluster")
 	}
+	oldPodDigest := hashCheckpointPod(pod)
+	oldNodeDigest := hashCheckpointNode(node)
 	err := node.UpdateTask(pod)
 	if err != nil {
 		log.InfraLogger.Errorf("Failed to update task <%v/%v> in Session <%v>: %v",
 			pod.Namespace, pod.Name, ssn.ID, err)
+		return err
 	}
-	return err
+	ssn.UpdateScenarioCheckpointTaskAndNodeDigest(oldPodDigest, pod, oldNodeDigest, node)
+	return nil
 }
 
 func (ssn *Session) updatePodOnSession(pod *pod_info.PodInfo, status pod_status.PodStatus) error {
+	oldPodDigest := hashCheckpointPod(pod)
+	node := ssn.ClusterInfo.Nodes[pod.NodeName]
+	oldNodeDigest := hashCheckpointNode(node)
 	job, found := ssn.ClusterInfo.PodGroupInfos[pod.Job]
 	if !found {
 		log.InfraLogger.Errorf("Failed to found Job <%s> in Session <%s> index when binding.",
@@ -425,8 +432,10 @@ func (ssn *Session) updatePodOnSession(pod *pod_info.PodInfo, status pod_status.
 	if err != nil {
 		log.InfraLogger.Errorf("Failed to update task <%v/%v> status to %v in Session <%v>: %v",
 			pod.Namespace, pod.Name, status, ssn.ID, err)
+		return err
 	}
-	return err
+	ssn.UpdateScenarioCheckpointTaskAndNodeDigest(oldPodDigest, pod, oldNodeDigest, node)
+	return nil
 }
 
 func (ssn *Session) clear() {

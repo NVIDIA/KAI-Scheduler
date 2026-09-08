@@ -76,6 +76,8 @@ func (s *Statement) Evict(reclaimeeTask *pod_info.PodInfo, message string,
 		log.InfraLogger.Errorf("Failed to find node: %v", reclaimeeTask.NodeName)
 		return fmt.Errorf("node doesn't exist in sesssion: <%s>", reclaimeeTask.NodeName)
 	}
+	oldPodDigest := hashCheckpointPod(reclaimeeTask)
+	oldNodeDigest := hashCheckpointNode(node)
 
 	previousStatus := reclaimeeTask.Status
 	previousGpuGroup := reclaimeeTask.GPUGroups
@@ -96,6 +98,7 @@ func (s *Statement) Evict(reclaimeeTask *pod_info.PodInfo, message string,
 			reclaimeeTask.Namespace, reclaimeeTask.Name, pod_status.Releasing, s.sessionID, err)
 		return fmt.Errorf("failed to update task <%v/%v>", reclaimeeTask.Namespace, reclaimeeTask.Name)
 	}
+	s.ssn.UpdateScenarioCheckpointTaskAndNodeDigest(oldPodDigest, reclaimeeTask, oldNodeDigest, node)
 
 	for _, eh := range s.ssn.eventHandlers {
 		if eh.DeallocateFunc != nil {
@@ -160,6 +163,8 @@ func (s *Statement) unevict(
 	reclaimee *pod_info.PodInfo, previousStatus pod_status.PodStatus, node *node_info.NodeInfo,
 	previousGpuGroups []string, previousNumaPlacement pod_info.NUMAPlacement,
 	previousResourceClaimInfo bindrequest_info.ResourceClaimInfo, previousIsVirtualStatus bool) error {
+	oldPodDigest := hashCheckpointPod(reclaimee)
+	oldNodeDigest := hashCheckpointNode(node)
 	// Update status in session
 	job, found := s.ssn.ClusterInfo.PodGroupInfos[reclaimee.Job]
 	if found {
@@ -198,6 +203,7 @@ func (s *Statement) unevict(
 			})
 		}
 	}
+	s.ssn.UpdateScenarioCheckpointTaskAndNodeDigest(oldPodDigest, reclaimee, oldNodeDigest, node)
 
 	return nil
 }
@@ -211,6 +217,8 @@ func (s *Statement) Pipeline(task *pod_info.PodInfo, hostname string, updateTask
 			hostname, task.Job, s.sessionID)
 		return fmt.Errorf("failed to find node: <%v> or job: <%v>", hostname, task.Job)
 	}
+	oldPodDigest := hashCheckpointPod(task)
+	oldNodeDigest := hashCheckpointNode(node)
 
 	taskKey := pod_info.PodKey(task.Pod)
 	taskOnNode, foundOnNode := node.PodInfos[taskKey]
@@ -278,6 +286,7 @@ func (s *Statement) Pipeline(task *pod_info.PodInfo, hostname string, updateTask
 			task.Namespace, task.Name, hostname, s.sessionID, err)
 		return err
 	}
+	s.ssn.UpdateScenarioCheckpointTaskAndNodeDigest(oldPodDigest, task, oldNodeDigest, node)
 
 	log.InfraLogger.V(6).Infof("After pipelined Task <%v/%v> to Node <%v>: idle <%v>, used <%v>, releasing <%v>",
 		task.Namespace, task.Name, node.Name, node.IdleVector, node.UsedVector, node.ReleasingVector)
@@ -314,6 +323,8 @@ func (s *Statement) Pipeline(task *pod_info.PodInfo, hostname string, updateTask
 
 func (s *Statement) Allocate(task *pod_info.PodInfo, hostname string) error {
 	node := s.ssn.ClusterInfo.Nodes[hostname]
+	oldPodDigest := hashCheckpointPod(task)
+	oldNodeDigest := hashCheckpointNode(node)
 
 	// Only update status in session
 	job, found := s.ssn.ClusterInfo.PodGroupInfos[task.Job]
@@ -333,6 +344,7 @@ func (s *Statement) Allocate(task *pod_info.PodInfo, hostname string) error {
 
 	if node, found := s.ssn.ClusterInfo.Nodes[hostname]; found {
 		if err := node.AddTask(task); err != nil {
+			s.ssn.UpdateScenarioCheckpointTaskAndNodeDigest(oldPodDigest, task, oldNodeDigest, node)
 			log.InfraLogger.Errorf("Failed to add task <%v/%v> to node <%v> in Session <%v>: %v",
 				task.Namespace, task.Name, hostname, s.sessionID, err)
 			return err
@@ -345,6 +357,7 @@ func (s *Statement) Allocate(task *pod_info.PodInfo, hostname string) error {
 			hostname, s.sessionID)
 		return fmt.Errorf("failed to find node %s", hostname)
 	}
+	s.ssn.UpdateScenarioCheckpointTaskAndNodeDigest(oldPodDigest, task, oldNodeDigest, node)
 
 	// Snapshot the placement before AllocateFunc sets it, so unallocate can restore
 	// it (the plugin's AllocateFunc fills NUMAPlacement for a fresh task).
@@ -413,6 +426,9 @@ func (s *Statement) commitAllocate(task *pod_info.PodInfo) error {
 // unallocate the pod for task
 func (s *Statement) unallocate(task *pod_info.PodInfo, previousNodeName string,
 	previousNumaPlacement pod_info.NUMAPlacement, previousIsVirtualStatus bool) error {
+	oldPodDigest := hashCheckpointPod(task)
+	node := s.ssn.ClusterInfo.Nodes[task.NodeName]
+	oldNodeDigest := hashCheckpointNode(node)
 	// Update status in session
 	job, found := s.ssn.ClusterInfo.PodGroupInfos[task.Job]
 	if found {
@@ -448,6 +464,7 @@ func (s *Statement) unallocate(task *pod_info.PodInfo, previousNodeName string,
 
 	task.NodeName = ""
 	task.NUMAPlacement = previousNumaPlacement.Clone()
+	s.ssn.UpdateScenarioCheckpointTaskAndNodeDigest(oldPodDigest, task, oldNodeDigest, node)
 	return nil
 }
 
@@ -460,6 +477,9 @@ func (s *Statement) unpipeline(
 	previousNumaPlacement pod_info.NUMAPlacement,
 	previousResourceClaimInfo bindrequest_info.ResourceClaimInfo,
 	previousIsVirtualStatus bool) error {
+	oldPodDigest := hashCheckpointPod(task)
+	node := s.ssn.ClusterInfo.Nodes[task.NodeName]
+	oldNodeDigest := hashCheckpointNode(node)
 	// Only update status in session
 	job, found := s.ssn.ClusterInfo.PodGroupInfos[task.Job]
 	if found {
@@ -499,6 +519,7 @@ func (s *Statement) unpipeline(
 
 	task.NodeName = previousNode
 	task.NUMAPlacement = previousNumaPlacement.Clone()
+	s.ssn.UpdateScenarioCheckpointTaskAndNodeDigest(oldPodDigest, task, oldNodeDigest, node)
 
 	return nil
 }
