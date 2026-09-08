@@ -4,6 +4,7 @@
 package nodelocalgreedy
 
 import (
+	"encoding/binary"
 	"fmt"
 	"sort"
 	"strconv"
@@ -87,6 +88,8 @@ func TestNodeLocalGreedyCursorResumesAtNextScenario(t *testing.T) {
 	}
 
 	baseline := newGenerator()
+	_, ok := baseline.Cursor()
+	require.False(t, ok)
 	var all []string
 	var cursors []framework.ScenarioGeneratorCursor
 	for sn := baseline.Next(); sn != nil; sn = baseline.Next() {
@@ -95,7 +98,10 @@ func TestNodeLocalGreedyCursorResumesAtNextScenario(t *testing.T) {
 		require.True(t, ok)
 		cursors = append(cursors, cursor)
 	}
-	require.NotEmpty(t, cursors)
+	require.GreaterOrEqual(t, len(cursors), 2, "fixture must cross node-local sub-scenario positions")
+	require.EqualValues(t, 1, binary.BigEndian.Uint64(cursors[0].Data[1:9]))
+	require.EqualValues(t, 1, binary.BigEndian.Uint32(cursors[0].Data[9:13]))
+	require.EqualValues(t, 2, binary.BigEndian.Uint64(cursors[1].Data[1:9]))
 
 	for index, cursor := range cursors {
 		restored := newGenerator()
@@ -109,6 +115,12 @@ func TestNodeLocalGreedyCursorResumesAtNextScenario(t *testing.T) {
 
 	malformed := cursors[0]
 	malformed.Data[len(malformed.Data)-1] = 1
+	require.Error(t, newGenerator().Restore(malformed))
+	malformed = cursors[0]
+	malformed.Version = 0
+	require.Error(t, newGenerator().Restore(malformed))
+	malformed = cursors[0]
+	binary.BigEndian.PutUint32(malformed.Data[9:13], ^uint32(0))
 	require.Error(t, newGenerator().Restore(malformed))
 }
 

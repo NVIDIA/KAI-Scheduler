@@ -4,6 +4,8 @@
 package framework
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/common_info"
@@ -54,4 +56,45 @@ func TestScenarioCheckpointStoreRejectsBitmapOverProcessLimit(t *testing.T) {
 	key := ScenarioCheckpointKey{Action: Reclaim, JobUID: "large"}
 	require.Equal(t, ScenarioCheckpointRejectedMemory, store.Save(key, ScenarioCheckpoint{RecordedVictims: bitmap}))
 	require.Equal(t, 0, store.Len())
+}
+
+func TestScenarioCheckpointStoreDefaultLimitAndConcurrentUpdates(t *testing.T) {
+	store := NewScenarioCheckpointStore()
+	for index := 0; index < DefaultScenarioCheckpointMaxJobs; index++ {
+		key := ScenarioCheckpointKey{Action: Reclaim, JobUID: common_info.PodGroupID(fmt.Sprintf("job-%d", index))}
+		require.Equal(t, ScenarioCheckpointCreated, store.Save(key, ScenarioCheckpoint{RecordedVictims: []byte{byte(index)}}))
+	}
+	require.Equal(t, ScenarioCheckpointRejectedCapacity, store.Save(ScenarioCheckpointKey{Action: Reclaim, JobUID: "overflow"}, ScenarioCheckpoint{}))
+
+	key := ScenarioCheckpointKey{Action: Reclaim, JobUID: "job-0"}
+	var workers sync.WaitGroup
+	for worker := 0; worker < 8; worker++ {
+		workers.Add(1)
+		go func(value byte) {
+			defer workers.Done()
+			for iteration := 0; iteration < 100; iteration++ {
+				store.Save(key, ScenarioCheckpoint{RecordedVictims: []byte{value}})
+				store.Load(key)
+			}
+		}(byte(worker))
+	}
+	workers.Wait()
+	require.Equal(t, DefaultScenarioCheckpointMaxJobs, store.Len())
+}
+
+func BenchmarkScenarioCheckpointStoreSaveLoad(b *testing.B) {
+	for _, podCount := range []int{16_000, 32_000} {
+		b.Run(fmt.Sprintf("pods=%d", podCount), func(b *testing.B) {
+			store := NewScenarioCheckpointStore()
+			key := ScenarioCheckpointKey{Action: Reclaim, JobUID: "benchmark"}
+			bitmap := make([]byte, (podCount+7)/8)
+			b.SetBytes(int64(len(bitmap)))
+			b.ReportAllocs()
+			b.ResetTimer()
+			for index := 0; index < b.N; index++ {
+				store.Save(key, ScenarioCheckpoint{RecordedVictims: bitmap})
+				store.Load(key)
+			}
+		})
+	}
 }

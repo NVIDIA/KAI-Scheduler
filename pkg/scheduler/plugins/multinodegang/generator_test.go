@@ -122,6 +122,8 @@ func TestMultiNodeGangCursorResumesAtNextScenario(t *testing.T) {
 	}
 
 	baseline := newGenerator()
+	_, ok := baseline.Cursor()
+	require.False(t, ok)
 	var all []string
 	var cursors []framework.ScenarioGeneratorCursor
 	for sn := baseline.Next(); sn != nil; sn = baseline.Next() {
@@ -130,7 +132,7 @@ func TestMultiNodeGangCursorResumesAtNextScenario(t *testing.T) {
 		require.True(t, ok)
 		cursors = append(cursors, cursor)
 	}
-	require.NotEmpty(t, cursors)
+	require.GreaterOrEqual(t, len(cursors), 2, "fixture must cross MultiNodeGang sub-emitter positions")
 	for index, cursor := range cursors {
 		restored := newGenerator()
 		require.NoError(t, restored.Restore(cursor))
@@ -140,6 +142,15 @@ func TestMultiNodeGangCursorResumesAtNextScenario(t *testing.T) {
 		}
 		require.Equal(t, all[index+1:], remaining)
 	}
+	malformed := cursors[0]
+	malformed.Data[len(malformed.Data)-1] = 1
+	require.Error(t, newGenerator().Restore(malformed))
+	malformed = cursors[0]
+	malformed.Version = 0
+	require.Error(t, newGenerator().Restore(malformed))
+	malformed = cursors[0]
+	malformed.Data[0] = 0
+	require.Error(t, newGenerator().Restore(malformed))
 }
 
 func multiNodeGangScenarioKey(sn *scenario.ByNodeScenario) string {

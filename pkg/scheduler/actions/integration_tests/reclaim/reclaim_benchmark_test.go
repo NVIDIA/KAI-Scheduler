@@ -91,6 +91,14 @@ func BenchmarkReclaimManySingleGPUJobsFullCycleWithMinRuntime_500Node(b *testing
 	benchmarkReclaimManySingleGPUJobsFullCycleWithParams(b, manySingleGPUJobsReclaimParamsWithMinRuntime(500), false)
 }
 
+func BenchmarkReclaimManySingleGPUJobsFullCycle_2000Node(b *testing.B) {
+	benchmarkReclaimManySingleGPUJobsFullCycleWithParams(b, defaultManySingleGPUJobsReclaimParams(2000), true)
+}
+
+func BenchmarkReclaimManySingleGPUJobsFullCycle_4000Node(b *testing.B) {
+	benchmarkReclaimManySingleGPUJobsFullCycleWithParams(b, defaultManySingleGPUJobsReclaimParams(4000), true)
+}
+
 func benchmarkReclaimManySingleGPUJobsFullCycle(b *testing.B, numNodes int) {
 	benchmarkReclaimManySingleGPUJobsFullCycleWithParams(b, defaultManySingleGPUJobsReclaimParams(numNodes), false)
 }
