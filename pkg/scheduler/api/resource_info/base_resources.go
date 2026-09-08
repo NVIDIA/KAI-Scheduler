@@ -14,7 +14,7 @@ import (
 
 const (
 	minMilliCPU        float64 = 10
-	minScalarResources int64   = 0
+	minScalarResources int64   = 1
 	MinMemory          float64 = 10 * 1024 * 1024
 	MilliCPUToCores    float64 = 1000
 	MemoryToGB         float64 = 1000 * 1000 * 1000
