@@ -47,9 +47,11 @@ type ScenarioCheckpoint struct {
 	PodUniverseFingerprint [32]byte
 	GeneratorName          string
 	GeneratorCursor        ScenarioGeneratorCursor
-	SolverCursor           JobSolverCursor
-	RecordedVictims        []byte
-	StopReason             string
+	// StateOnly resumes at a fresh next-probe generator without Restore.
+	StateOnly       bool
+	SolverCursor    JobSolverCursor
+	RecordedVictims []byte
+	StopReason      string
 }
 
 type ScenarioCheckpointSaveResult uint8

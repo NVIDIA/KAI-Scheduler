@@ -35,7 +35,19 @@ type JobSolver struct {
 type solvingState struct {
 	recordedVictimsJobs  []*podgroup_info.PodGroupInfo
 	recordedVictimsTasks []*pod_info.PodInfo
+	solverCursor         framework.JobSolverCursor
+	checkpoint           *framework.ScenarioCheckpoint
+	generatorBudget      *generatorSearchBudget
+	lastGeneratorCursor  framework.ScenarioGeneratorCursor
+	lastGeneratorName    string
+	saveSolverState      bool
 }
+
+const (
+	jobSolverPhaseExponential uint8 = 1
+	jobSolverPhaseBinary      uint8 = 2
+	jobSolverPhaseFinal       uint8 = 3
+)
 
 func NewJobsSolver(
 	feasibleNodes []*node_info.NodeInfo,
@@ -167,6 +179,8 @@ func (s *JobSolver) solvePendingJobWithGenerator(
 	generatorBudget *generatorSearchBudget,
 ) *SearchResult {
 	n := len(tasksToAllocate)
+	state.generatorBudget = generatorBudget
+	s.restoreCheckpointedSolverState(ssn, state, pendingJob, tasksToAllocate, availableGenerator)
 	maxSolvedK, searchResult := s.searchMaxSolvableK(
 		ssn, state, pendingJob, tasksToAllocate, jobBudget, availableGenerator, generatorBudget,
 	)
@@ -179,6 +193,47 @@ func (s *JobSolver) solvePendingJobWithGenerator(
 
 	result := s.probeAtK(ssn, state, pendingJob, tasksToAllocate, n, jobBudget, availableGenerator, generatorBudget)
 	return result
+}
+
+// restoreCheckpointedSolverState restores the next probe before the probe state
+// machine starts. solvePartialJob performs generator restore for that same probe.
+func (s *JobSolver) restoreCheckpointedSolverState(
+	ssn *framework.Session,
+	state *solvingState,
+	pendingJob *podgroup_info.PodGroupInfo,
+	tasksToAllocate []*pod_info.PodInfo,
+	availableGenerator framework.ScenarioGeneratorRegistration,
+) {
+	if ssn == nil || ssn.ScenarioCheckpointStore == nil || pendingJob == nil {
+		return
+	}
+	checkpoint, found := ssn.ScenarioCheckpointStore.Load(checkpointKey(s.actionType, pendingJob))
+	if !found {
+		return
+	}
+	if checkpoint.GeneratorName != availableGenerator.Name || checkpoint.SolverCursor.ProbeK == 0 ||
+		int(checkpoint.SolverCursor.ProbeK) > len(tasksToAllocate) {
+		ssn.ScenarioCheckpointStore.Delete(checkpointKey(s.actionType, pendingJob))
+		return
+	}
+	probeK := int(checkpoint.SolverCursor.ProbeK)
+	feasible := make(map[string]*node_info.NodeInfo, len(s.feasibleNodes))
+	for _, node := range s.feasibleNodes {
+		feasible[node.Name] = node
+	}
+	ctx := &SolveContext{
+		Session: ssn, ActionType: s.actionType,
+		PartialPendingJob:    getPartialJobRepresentative(pendingJob, tasksToAllocate[:probeK]),
+		GenerateVictimsQueue: s.generateVictimsQueue, FeasibleNodes: feasible, ProbeK: probeK,
+	}
+	loaded, err := validateScenarioCheckpoint(ctx, feasible, availableGenerator.Name, checkpoint)
+	if err != nil || loaded == nil {
+		return
+	}
+	state.solverCursor = loaded.SolverCursor
+	state.recordedVictimsTasks = ctx.RecordedVictimsTasks
+	state.recordedVictimsJobs = ctx.RecordedVictimsJobs
+	state.checkpoint = loaded
 }
 
 // searchMaxSolvableK returns the largest k in [0, n] for which a probe at k succeeds.
@@ -200,56 +255,103 @@ func (s *JobSolver) searchMaxSolvableK(
 		return 0, nil
 	}
 
-	return searchMaxSolvableK(n, func(k int) *SearchResult {
+	maxSolvedK, result, cursor := searchMaxSolvableKFromCursor(n, state.solverCursor, func(k int) *SearchResult {
 		return s.tryProbeAndDiscard(
 			ssn, state, pendingJob, tasksToAllocate, k, jobBudget, availableGenerator, generatorBudget,
 		)
+	}, func(cursor framework.JobSolverCursor) {
+		state.solverCursor = cursor
+		if !state.saveSolverState {
+			return
+		}
+		s.saveDiscardedProbeState(ssn, state, pendingJob, tasksToAllocate, availableGenerator, cursor)
+		state.saveSolverState = false
 	})
+	state.solverCursor = cursor
+	return maxSolvedK, result
 }
 
 func searchMaxSolvableK(n int, probe func(k int) *SearchResult) (int, *SearchResult) {
+	maxSolvedK, result, _ := searchMaxSolvableKFromCursor(n, framework.JobSolverCursor{}, probe)
+	return maxSolvedK, result
+}
+
+// searchMaxSolvableKFromCursor resumes exponential and binary probing at cursor.ProbeK.
+// The returned cursor identifies either the next probe or the final full-job probe.
+func searchMaxSolvableKFromCursor(
+	n int, cursor framework.JobSolverCursor, probe func(k int) *SearchResult, progress ...func(framework.JobSolverCursor),
+) (int, *SearchResult, framework.JobSolverCursor) {
 	if n == 0 {
-		return 0, nil
+		return 0, nil, framework.JobSolverCursor{}
 	}
-
-	lo := 0
-	var hi int
+	if cursor.Phase == 0 {
+		cursor = framework.JobSolverCursor{Phase: jobSolverPhaseExponential, ProbeK: 1}
+	}
+	if cursor.ProbeK == 0 || int(cursor.ProbeK) > n || int(cursor.Lo) > n || int(cursor.Hi) > n ||
+		(cursor.Phase != jobSolverPhaseExponential && cursor.Phase != jobSolverPhaseBinary && cursor.Phase != jobSolverPhaseFinal) {
+		return 0, terminalSearchResult(SearchResultGeneratorsExhausted, false), framework.JobSolverCursor{}
+	}
+	notify := func() {
+		for _, callback := range progress {
+			callback(cursor)
+		}
+	}
+	notify()
 	var lastUnsolvedResult *SearchResult
-	k := 1
 	for {
-		result := probe(k)
+		if cursor.Phase == jobSolverPhaseFinal {
+			return int(cursor.Lo), lastUnsolvedResult, cursor
+		}
+		result := probe(int(cursor.ProbeK))
 		if shouldStopSearch(result) {
-			return 0, result
+			return 0, result, cursor
 		}
-		if !resultSolved(result) {
+		switch cursor.Phase {
+		case jobSolverPhaseExponential:
+			if resultSolved(result) {
+				cursor.Lo = cursor.ProbeK
+				if int(cursor.Lo) == n {
+					cursor.Phase = jobSolverPhaseFinal
+					cursor.ProbeK = uint32(n)
+					notify()
+					return n, lastUnsolvedResult, cursor
+				}
+				next := int(cursor.ProbeK) * 2
+				if next > n {
+					next = n
+				}
+				cursor.ProbeK = uint32(next)
+				notify()
+				continue
+			}
 			lastUnsolvedResult = result
-			hi = k
-			break
-		}
-		lo = k
-		if k == n {
-			return n, lastUnsolvedResult
-		}
-		k *= 2
-		if k > n {
-			k = n
+			cursor.Hi = cursor.ProbeK
+			if cursor.Hi-cursor.Lo <= 1 {
+				cursor.Phase = jobSolverPhaseFinal
+				cursor.ProbeK = uint32(n)
+				notify()
+				return int(cursor.Lo), lastUnsolvedResult, cursor
+			}
+			cursor.Phase = jobSolverPhaseBinary
+			cursor.ProbeK = (cursor.Lo + cursor.Hi) / 2
+			notify()
+		case jobSolverPhaseBinary:
+			if resultSolved(result) {
+				cursor.Lo = cursor.ProbeK
+			} else {
+				lastUnsolvedResult = result
+				cursor.Hi = cursor.ProbeK
+			}
+			if cursor.Hi-cursor.Lo <= 1 {
+				cursor.Phase = jobSolverPhaseFinal
+				cursor.ProbeK = uint32(n)
+				notify()
+				return int(cursor.Lo), lastUnsolvedResult, cursor
+			}
+			cursor.ProbeK = (cursor.Lo + cursor.Hi) / 2
+			notify()
 		}
 	}
-
-	for hi-lo > 1 {
-		mid := (lo + hi) / 2
-		result := probe(mid)
-		if shouldStopSearch(result) {
-			return 0, result
-		}
-		if resultSolved(result) {
-			lo = mid
-		} else {
-			lastUnsolvedResult = result
-			hi = mid
-		}
-	}
-	return lo, lastUnsolvedResult
 }
 
 // tryProbeAndDiscard probes at k and always discards a solved statement so the session
@@ -276,10 +378,40 @@ func (s *JobSolver) tryProbeAndDiscard(
 		k, len(tasksToAllocate), pendingJob.Name, victimPrintingStruct{solution.victimsTasks})
 	state.recordedVictimsTasks = solution.victimsTasks
 	state.recordedVictimsJobs = solution.victimJobs
+	state.saveSolverState = state.lastGeneratorCursor.Version != 0 && state.lastGeneratorName == availableGenerator.Name
 	if solution.statement != nil {
 		solution.statement.Discard()
 	}
 	return result
+}
+
+func (s *JobSolver) saveDiscardedProbeState(
+	ssn *framework.Session,
+	state *solvingState,
+	pendingJob *podgroup_info.PodGroupInfo,
+	tasksToAllocate []*pod_info.PodInfo,
+	availableGenerator framework.ScenarioGeneratorRegistration,
+	cursor framework.JobSolverCursor,
+) {
+	if ssn == nil || state == nil || cursor.ProbeK == 0 || int(cursor.ProbeK) > len(tasksToAllocate) {
+		return
+	}
+	baseFeasible := make(map[string]*node_info.NodeInfo, len(s.feasibleNodes))
+	for _, node := range s.feasibleNodes {
+		baseFeasible[node.Name] = node
+	}
+	ctx := &SolveContext{
+		Session:              ssn,
+		ActionType:           s.actionType,
+		PartialPendingJob:    getPartialJobRepresentative(pendingJob, tasksToAllocate[:cursor.ProbeK]),
+		GenerateVictimsQueue: s.generateVictimsQueue,
+		FeasibleNodes:        baseFeasible,
+		ProbeK:               int(cursor.ProbeK),
+	}
+	saveScenarioCheckpointStateOnly(ctx, baseFeasible, availableGenerator.Name, state.lastGeneratorCursor.Version, cursor, state.recordedVictimsTasks)
+	// The current search already owns the restored state. Avoid reloading the
+	// checkpoint between probes; only a later session needs the stored form.
+	state.checkpoint = &framework.ScenarioCheckpoint{StateOnly: true}
 }
 
 func (s *JobSolver) probeAtK(
@@ -329,7 +461,11 @@ func (s *JobSolver) solvePartialJob(
 		FeasibleNodes:        feasibleNodeMap,
 		ProbeK:               probeK,
 	}
-	checkpoint, _ := loadScenarioCheckpoint(solveCtx, baseFeasibleNodeMap, availableGenerator.Name)
+	checkpoint := state.checkpoint
+	state.checkpoint = nil
+	if checkpoint == nil {
+		checkpoint, _ = loadScenarioCheckpoint(solveCtx, baseFeasibleNodeMap, availableGenerator.Name)
+	}
 	if checkpoint != nil {
 		state.recordedVictimsTasks = solveCtx.RecordedVictimsTasks
 		state.recordedVictimsJobs = solveCtx.RecordedVictimsJobs
@@ -339,8 +475,8 @@ func (s *JobSolver) solvePartialJob(
 			}
 		}
 	}
-	portfolio := newSingleGeneratorScenarioPortfolio(solveCtx, jobBudget, availableGenerator, generatorBudget)
-	if checkpoint != nil {
+	portfolio := newSingleGeneratorScenarioPortfolio(solveCtx, jobBudget, availableGenerator, state.generatorBudget)
+	if checkpoint != nil && !checkpoint.StateOnly {
 		restoreStarted := time.Now()
 		err := portfolio.RestoreCurrent(checkpoint.GeneratorCursor)
 		if err != nil {
@@ -348,8 +484,16 @@ func (s *JobSolver) solvePartialJob(
 			checkpoint = nil
 			metrics.ObserveScenarioSearchCheckpointRestore(availableGenerator.Name, "failed", time.Since(restoreStarted))
 		} else {
+			// Restore consumes outer action/job time only. Discard the budget created
+			// before restoration so the next generated candidate starts a fresh
+			// generator budget.
+			state.generatorBudget = jobBudget.BeginGenerator(availableGenerator.Name)
+			portfolio.currentBudget = state.generatorBudget
 			metrics.ObserveScenarioSearchCheckpointRestore(availableGenerator.Name, "restored", time.Since(restoreStarted))
 		}
+	} else if checkpoint != nil {
+		state.generatorBudget = jobBudget.BeginGenerator(availableGenerator.Name)
+		portfolio.currentBudget = state.generatorBudget
 	}
 
 	for {
@@ -370,7 +514,7 @@ func (s *JobSolver) solvePartialJob(
 				metrics.IncScenarioSearchScenario(s.actionType, generatorName, scenarioStateDuplicate)
 				portfolio.ObserveCurrentAttempt(scenarioStateDuplicate)
 				if cursor, ok := portfolio.CurrentCursor(); ok {
-					saveScenarioCheckpoint(solveCtx, baseFeasibleNodeMap, generatorName, cursor, state.recordedVictimsTasks, SearchResultDeadlineExhausted)
+					saveScenarioCheckpoint(solveCtx, baseFeasibleNodeMap, generatorName, cursor, state.solverCursor, state.recordedVictimsTasks, SearchResultDeadlineExhausted)
 				}
 				continue
 			}
@@ -391,6 +535,10 @@ func (s *JobSolver) solvePartialJob(
 			attemptResult = scenarioSearchResultValidatorRejected
 		}
 		if result.solved {
+			if cursor, ok := portfolio.CurrentCursor(); ok {
+				state.lastGeneratorCursor = cursor
+				state.lastGeneratorName = generatorName
+			}
 			portfolio.ObserveCurrentAttempt(string(SearchResultSolved))
 			deleteScenarioCheckpoint(solveCtx)
 			return solvedSearchResult(result, jobBudget.ReducedBudget())
@@ -400,7 +548,7 @@ func (s *JobSolver) solvePartialJob(
 		}
 		portfolio.ObserveCurrentAttempt(attemptResult)
 		if cursor, ok := portfolio.CurrentCursor(); ok {
-			saveScenarioCheckpoint(solveCtx, baseFeasibleNodeMap, generatorName, cursor, state.recordedVictimsTasks, SearchResultDeadlineExhausted)
+			saveScenarioCheckpoint(solveCtx, baseFeasibleNodeMap, generatorName, cursor, state.solverCursor, state.recordedVictimsTasks, SearchResultDeadlineExhausted)
 		}
 	}
 

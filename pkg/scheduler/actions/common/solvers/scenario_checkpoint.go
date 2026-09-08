@@ -155,9 +155,6 @@ func decodeRecordedVictims(ssn *framework.Session, bitmap []byte) ([]*pod_info.P
 }
 
 func loadScenarioCheckpoint(ctx *SolveContext, baseFeasible map[string]*node_info.NodeInfo, generatorName string) (*framework.ScenarioCheckpoint, error) {
-	started := time.Now()
-	result := "miss"
-	defer func() { metrics.ObserveScenarioSearchCheckpointValidation(result, time.Since(started)) }()
 	if ctx == nil || !checkpointsEnabled(ctx.Session, ctx.ActionType) || ctx.PartialPendingJob == nil {
 		return nil, nil
 	}
@@ -166,6 +163,19 @@ func loadScenarioCheckpoint(ctx *SolveContext, baseFeasible map[string]*node_inf
 	if !found {
 		return nil, nil
 	}
+	return validateScenarioCheckpoint(ctx, baseFeasible, generatorName, checkpoint)
+}
+
+// validateScenarioCheckpoint validates one already-loaded checkpoint. Keeping loading
+// separate lets JobSolver inspect ProbeK and still perform exactly one store load.
+func validateScenarioCheckpoint(ctx *SolveContext, baseFeasible map[string]*node_info.NodeInfo, generatorName string, checkpoint framework.ScenarioCheckpoint) (*framework.ScenarioCheckpoint, error) {
+	started := time.Now()
+	result := "miss"
+	defer func() { metrics.ObserveScenarioSearchCheckpointValidation(result, time.Since(started)) }()
+	if ctx == nil || !checkpointsEnabled(ctx.Session, ctx.ActionType) || ctx.PartialPendingJob == nil {
+		return nil, nil
+	}
+	key := checkpointKey(ctx.ActionType, ctx.PartialPendingJob)
 	if checkpoint.GeneratorName != generatorName || int(checkpoint.SolverCursor.ProbeK) != ctx.ProbeK {
 		result = "other_generator"
 		return nil, nil
@@ -187,7 +197,7 @@ func loadScenarioCheckpoint(ctx *SolveContext, baseFeasible map[string]*node_inf
 	return &checkpoint, nil
 }
 
-func saveScenarioCheckpoint(ctx *SolveContext, baseFeasible map[string]*node_info.NodeInfo, generatorName string, cursor framework.ScenarioGeneratorCursor, victims []*pod_info.PodInfo, stopReason SearchResultReason) {
+func saveScenarioCheckpoint(ctx *SolveContext, baseFeasible map[string]*node_info.NodeInfo, generatorName string, cursor framework.ScenarioGeneratorCursor, solverCursor framework.JobSolverCursor, victims []*pod_info.PodInfo, stopReason SearchResultReason) {
 	if ctx == nil || !checkpointsEnabled(ctx.Session, ctx.ActionType) || cursor.Version == 0 {
 		return
 	}
@@ -200,9 +210,29 @@ func saveScenarioCheckpoint(ctx *SolveContext, baseFeasible map[string]*node_inf
 		PodUniverseFingerprint: ctx.Session.ScenarioCheckpointPodUniverseDigest(),
 		GeneratorName:          generatorName,
 		GeneratorCursor:        cursor,
-		SolverCursor:           framework.JobSolverCursor{ProbeK: uint32(ctx.ProbeK)},
+		SolverCursor:           solverCursor,
 		RecordedVictims:        bitmap,
 		StopReason:             string(stopReason),
+	})
+}
+
+func saveScenarioCheckpointStateOnly(ctx *SolveContext, baseFeasible map[string]*node_info.NodeInfo, generatorName string, cursorVersion uint16, solverCursor framework.JobSolverCursor, victims []*pod_info.PodInfo) {
+	if ctx == nil || !checkpointsEnabled(ctx.Session, ctx.ActionType) || cursorVersion == 0 {
+		return
+	}
+	bitmap, err := encodeRecordedVictims(ctx.Session, victims)
+	if err != nil {
+		return
+	}
+	ctx.Session.ScenarioCheckpointStore.Save(checkpointKey(ctx.ActionType, ctx.PartialPendingJob), framework.ScenarioCheckpoint{
+		InputFingerprint:       checkpointInputFingerprint(ctx, baseFeasible, generatorName, cursorVersion),
+		PodUniverseFingerprint: ctx.Session.ScenarioCheckpointPodUniverseDigest(),
+		GeneratorName:          generatorName,
+		GeneratorCursor:        framework.ScenarioGeneratorCursor{Version: cursorVersion},
+		StateOnly:              true,
+		SolverCursor:           solverCursor,
+		RecordedVictims:        bitmap,
+		StopReason:             string(SearchResultDeadlineExhausted),
 	})
 }
 

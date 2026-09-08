@@ -86,6 +86,7 @@ type ScenarioCheckpoint struct {
     PodUniverseFingerprint [32]byte
     GeneratorName          string
     GeneratorCursor        ScenarioGeneratorCursor
+    StateOnly              bool
     SolverCursor           JobSolverCursor
     RecordedVictims        []byte
     StopReason             string
@@ -119,6 +120,8 @@ type ResumableScenarioGenerator interface {
 The store validates both fingerprints before reading the bitmap. It then bounds-checks every set ordinal and resolves it through the current Pod table. A missing Pod or inconsistent PodGroup invalidates the checkpoint. This makes ordinal shifts safe: Pod addition, deletion, or replacement changes the universe fingerprint, so the old bitmap is never decoded against the new table.
 
 `Cursor` identifies position after most recently emitted candidate and returns `false` before first emission. Solver records it only after candidate becomes unsolved, validator-rejected, or a known duplicate; emitted but unprocessed candidates never advance progress. Solved candidates delete their checkpoint.
+
+After a successful discarded probe, no candidate from the next probe has been emitted. Such a checkpoint is `StateOnly`: it retains the next solver bounds and recorded victims, carries the generator cursor version for validation, and starts the next probe from a fresh generator without calling `Restore`. This preserves discarded-probe progress even if the outer deadline expires before the next candidate begins.
 
 `Restore` validates a cursor from same generator name and version, then positions next `Next()` call at its successor without calling `Next()` internally. Exact positions distinguish duplicate scenarios. Version `0` is invalid; semantic changes require a new version. Integers use big-endian encoding and unused bytes remain zero.
 
