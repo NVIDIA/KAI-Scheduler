@@ -1,3 +1,0 @@
-kind: Changed
-body: |-
-  Job batch-min-member annotation values below 1 are now rejected instead of silently applied
