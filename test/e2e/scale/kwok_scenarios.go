@@ -49,13 +49,16 @@ const (
 	mixedPreprocessJobsRatio  = 10 // CPU-only preprocessing jobs per queue = numberOfNodes/10
 	mixedSchedulingTargetMins = 2
 
-	// Fractions: half the participating GPUs run 8 pods each, half run 2 => 5 pods per GPU.
-	fractionPodsTarget  = 7000
-	fractionPodsPerGPU  = 5
-	smallGPUFraction    = "0.125"
-	smallFractionPerGPU = 8
-	largeGPUFraction    = "0.5"
-	largeFractionPerGPU = 2
+	// Each fraction configuration gets 7/40 of the cluster GPUs, for 35% total utilization.
+	fractionGPUSharePerConfigNumerator   = 7
+	fractionGPUSharePerConfigDenominator = 40
+
+	// Match the Kubernetes client burst limit without leaving thousands of creates blocked in goroutines.
+	fractionJobCreationWorkers = 300
+	smallGPUFraction           = "0.125"
+	smallFractionPerGPU        = 8
+	largeGPUFraction           = "0.5"
+	largeFractionPerGPU        = 2
 )
 
 // inferenceSubGroups describes one disaggregated inference deployment. zoneLevel/blockLevel/rackLevel are
@@ -332,35 +335,51 @@ func mixedWorkloadsScaleTest(
 func fractionsScaleTest(
 	ctx context.Context, testCtx *testcontext.TestContext, testQueue *v2.Queue, numberOfNodes int,
 ) {
-	fractionGPUs := min(fractionPodsTarget/fractionPodsPerGPU, numberOfNodes*gpusPerNode)
-	smallPods := (fractionGPUs / 2) * smallFractionPerGPU
-	largePods := (fractionGPUs / 2) * largeFractionPerGPU
+	fractionGPUs, smallPods, largePods := fractionWorkloadSize(numberOfNodes)
 	batchLabels := map[string]string{distributedJobBatchLabel: utils.GenerateRandomK8sName(10)}
 
 	schedulerconfig.DisableScheduler(ctx, testCtx)
 	defer schedulerconfig.EnableScheduler(ctx, testCtx)
 
-	var wg sync.WaitGroup
+	totalJobs := smallPods + largePods
+	creationWorkers := min(fractionJobCreationWorkers, totalJobs)
+	jobs := make(chan string)
+
+	var workers sync.WaitGroup
 	var lock sync.Mutex
 	var creationError error
-	createFractionPods := func(count int, fraction string) {
-		for range count {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				defer GinkgoRecover()
-
+	for range creationWorkers {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for fraction := range jobs {
 				if _, err := createFractionJobForKwok(ctx, testCtx, testQueue, fraction, batchLabels); err != nil {
 					lock.Lock()
-					defer lock.Unlock()
 					creationError = errors.Join(creationError, err)
+					lock.Unlock()
 				}
-			}()
-		}
+			}
+		}()
 	}
-	createFractionPods(smallPods, smallGPUFraction)
-	createFractionPods(largePods, largeGPUFraction)
-	wg.Wait()
+
+	submitFractionJobs := func(count int, fraction string) bool {
+		for range count {
+			select {
+			case jobs <- fraction:
+			case <-ctx.Done():
+				lock.Lock()
+				creationError = errors.Join(creationError, ctx.Err())
+				lock.Unlock()
+				return false
+			}
+		}
+		return true
+	}
+	if submitFractionJobs(smallPods, smallGPUFraction) {
+		submitFractionJobs(largePods, largeGPUFraction)
+	}
+	close(jobs)
+	workers.Wait()
 	Expect(creationError).NotTo(HaveOccurred(), "Failed to create some fraction jobs")
 
 	startTime := time.Now()
@@ -375,6 +394,16 @@ func fractionsScaleTest(
 			largeGPUFraction + " pods": largePods,
 			"time":                     endTime.Sub(startTime).String(),
 		})).To(Succeed())
+}
+
+func fractionWorkloadSize(numberOfNodes int) (fractionGPUs, smallPods, largePods int) {
+	clusterGPUs := numberOfNodes * gpusPerNode
+	gpusPerConfig := clusterGPUs * fractionGPUSharePerConfigNumerator / fractionGPUSharePerConfigDenominator
+
+	fractionGPUs = gpusPerConfig * 2
+	smallPods = gpusPerConfig * smallFractionPerGPU
+	largePods = gpusPerConfig * largeFractionPerGPU
+	return fractionGPUs, smallPods, largePods
 }
 
 // waitForBatchToSchedule waits until expectedPods labeled with batchLabels are scheduled in the queue
