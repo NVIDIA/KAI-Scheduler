@@ -8000,6 +8000,11 @@ spec:
                           of the configmap that contains default priorities for pod
                           groups
                         type: string
+                      gangScheduleDeployment:
+                        description: GangScheduleDeployment specifies whether to group
+                          all the pods of a deployment under a single podgroup. Default
+                          is true. Disable to create a podgroup per pod.
+                        type: boolean
                       gangScheduleKnative:
                         description: GangScheduleKnative specifies whether to enable
                           gang scheduling for Knative revisions. Default is true.

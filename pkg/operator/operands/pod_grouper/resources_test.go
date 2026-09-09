@@ -160,6 +160,31 @@ func TestBuildArgsList(t *testing.T) {
 			},
 		},
 		{
+			name: "with gang schedule deployment disabled",
+			config: &kaiv1.Config{
+				Spec: kaiv1.ConfigSpec{
+					Global: &kaiv1.GlobalConfig{
+						SchedulerName:    ptr.To(constants.DefaultSchedulerName),
+						QueueLabelKey:    ptr.To(constants.DefaultQueueLabel),
+						NodePoolLabelKey: ptr.To(constants.DefaultNodePoolLabelKey),
+					},
+					PodGrouper: &pod_grouper.PodGrouper{
+						Replicas: ptr.To(int32(1)),
+						Args: &pod_grouper.Args{
+							GangScheduleDeployment: ptr.To(false),
+						},
+						K8sClientConfig: &common.K8sClientConfig{},
+					},
+				},
+			},
+			expected: []string{
+				"--scheduler-name", constants.DefaultSchedulerName,
+				"--queue-label-key", constants.DefaultQueueLabel,
+				"--nodepool-label-key", constants.DefaultNodePoolLabelKey,
+				"--deployment-gang-schedule=false",
+			},
+		},
+		{
 			name: "with generic Karta fallback disabled",
 			config: &kaiv1.Config{
 				Spec: kaiv1.ConfigSpec{

@@ -119,7 +119,7 @@ func NewWithScheme(mgrScheme *runtime.Scheme) (*App, error) {
 	}
 
 	defaultPluginsHub := pluginshub.NewDefaultPluginsHub(mgr.GetClient(), configs.SearchForLegacyPodGroups,
-		configs.KnativeGangSchedule, configs.GenericKartaFallback, configs.SchedulingQueueLabelKey, configs.NodePoolLabelKey,
+		configs.KnativeGangSchedule, configs.DeploymentGangSchedule, configs.GenericKartaFallback, configs.SchedulingQueueLabelKey, configs.NodePoolLabelKey,
 		configs.DefaultConfigPerTypeConfigMapName, configs.DefaultConfigPerTypeConfigMapNamespace)
 
 	app := &App{
