@@ -57,7 +57,7 @@ var _ = Describe("ResourceRequirements Info internal logic", func() {
 				v1.ResourceName("kai.scheduler/test-resource"): resource.MustParse("1"),
 			}
 			resourceInfo := RequirementsFromResourceList(resourceList)
-			Expect(resourceInfo.Get("kai.scheduler/test-resource")).To(Equal(float64(1000)))
+			Expect(resourceInfo.Get("kai.scheduler/test-resource")).To(Equal(float64(1)))
 
 			newResourceList := resourceInfo.ToResourceList()
 			compareResourceLists(resourceList, newResourceList)
@@ -81,7 +81,7 @@ var _ = Describe("ResourceRequirements Info internal logic", func() {
 			clone := resourceInfo.Clone()
 			Expect(clone.Cpu()).To(Equal(float64(1000)))
 			Expect(clone.Memory()).To(Equal(float64(5000000000)))
-			Expect(clone.Get("kai.scheduler/test-resource")).To(Equal(float64(1000)))
+			Expect(clone.Get("kai.scheduler/test-resource")).To(Equal(float64(1)))
 		})
 	})
 
@@ -177,6 +177,14 @@ var _ = Describe("ResourceRequirements Info internal logic", func() {
 				})
 				Expect(resourceInfo2.LessInAtLeastOneResource(resourceInfo1)).To(BeTrue())
 			})
+		})
+
+		It("Extended resources consistent parsing", func() {
+			const rdmaResourceName = v1.ResourceName("intel.com/mlnx_sriov_rdma")
+			resourceInfo := RequirementsFromResourceList(v1.ResourceList{
+				rdmaResourceName: resource.MustParse("4"),
+			})
+			Expect(resourceInfo.Get(rdmaResourceName)).To(Equal(float64(4)))
 		})
 	})
 })
