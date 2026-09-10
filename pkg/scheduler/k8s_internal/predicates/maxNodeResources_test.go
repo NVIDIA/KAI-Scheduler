@@ -257,3 +257,41 @@ func Test_podToMaxNodeResourcesFiltering(t *testing.T) {
 		})
 	}
 }
+
+func Test_extendedResourcesAreNotScaledByThousand(t *testing.T) {
+	const rdmaResourceName = v1.ResourceName("intel.com/mlnx_sriov_rdma")
+
+	node := &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "n1"},
+		Status: v1.NodeStatus{
+			Allocatable: v1.ResourceList{
+				v1.ResourceCPU:                resource.MustParse("96"),
+				v1.ResourceMemory:             resource.MustParse("1000Gi"),
+				resource_info.GPUResourceName: resource.MustParse("8"),
+				v1.ResourcePods:               resource.MustParse("110"),
+				rdmaResourceName:              resource.MustParse("8"),
+			},
+		},
+	}
+	nodesMap := map[string]*node_info.NodeInfo{"n1": node_info.NewNodeInfo(node, nil)}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "name1", Namespace: "n1"},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name: "c1",
+					Resources: v1.ResourceRequirements{
+						Requests: v1.ResourceList{rdmaResourceName: resource.MustParse("4")},
+						Limits:   v1.ResourceList{rdmaResourceName: resource.MustParse("4")},
+					},
+				},
+			},
+		},
+	}
+
+	mnr := NewMaxNodeResourcesPredicate(nodesMap, "")
+	if _, status := mnr.PreFilter(nil, nil, pod, nil); status != nil {
+		t.Fatalf("PreFilter() rejected a pod requesting 4 %s on a node with 8: %v", rdmaResourceName, status.Message())
+	}
+}
